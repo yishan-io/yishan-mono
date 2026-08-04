@@ -34,10 +34,6 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 		return h.handleWorkspaceClose(ctx, params)
 	case MethodWorkspaceHealth:
 		return h.handleWorkspaceHealth(ctx, params)
-	case MethodWorkspaceRepair:
-		return h.handleWorkspaceRepair(ctx, params)
-	case MethodWorkspaceForget:
-		return h.handleWorkspaceForget(ctx, params)
 	case MethodWorkspaceOpenProject:
 		return h.handleWorkspaceOpenProject(ctx, params)
 	case MethodWorkspaceCloseProject:

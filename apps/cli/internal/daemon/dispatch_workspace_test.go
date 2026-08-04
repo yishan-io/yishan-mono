@@ -606,3 +606,105 @@ func runDispatchWorkspaceTestGitCmd(t *testing.T, dir string, args ...string) {
 		t.Fatalf("git %v: %v\n%s", args, err, string(out))
 	}
 }
+
+func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
+	h := newTestHandler(t)
+	workspacePath := t.TempDir()
+	if _, err := h.manager.Open(workspace.OpenRequest{
+		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
+	}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+	subscriptionID, events := h.events.Subscribe()
+	defer h.events.Unsubscribe(subscriptionID)
+
+	if err := os.RemoveAll(workspacePath); err != nil {
+		t.Fatalf("remove workspace path: %v", err)
+	}
+
+	h.checkWorkspaceHealth(context.Background())
+
+	ws, err := h.manager.GetWorkspace("ws-1")
+	if err != nil {
+		t.Fatalf("get workspace: %v", err)
+	}
+	if ws.State != workspace.WorkspaceStateError || ws.Health != workspace.WorkspaceHealthPathMissing {
+		t.Fatalf("expected error/path-missing, got state=%q health=%q", ws.State, ws.Health)
+	}
+
+	select {
+	case event := <-events:
+		payload, ok := event.Payload.(map[string]any)
+		if !ok || payload["workspaceId"] != "ws-1" || payload["state"] != workspace.WorkspaceStateError {
+			t.Fatalf("unexpected state changed event: %#v", event.Payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected workspace state changed event")
+	}
+}
+
+func TestCheckWorkspaceHealth_KeepsHealthyWorkspaceActive(t *testing.T) {
+	h := newTestHandler(t)
+	workspacePath := t.TempDir()
+	if _, err := h.manager.Open(workspace.OpenRequest{
+		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
+	}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+
+	h.checkWorkspaceHealth(context.Background())
+
+	ws, err := h.manager.GetWorkspace("ws-1")
+	if err != nil {
+		t.Fatalf("get workspace: %v", err)
+	}
+	if ws.State != workspace.WorkspaceStateActive {
+		t.Fatalf("expected healthy workspace to stay active, got %q", ws.State)
+	}
+}
+
+func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
+	h := newTestHandler(t)
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	projectStore := localdb.NewProjectStore(database)
+	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
+	if err := projectStore.Create(context.Background(), &project); err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	h.SetLocalDatabase(database)
+
+	workspacePath := t.TempDir()
+	branch := "feature/health"
+	workspaceStore := localdb.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath, State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+	if _, err := h.manager.Open(workspace.OpenRequest{
+		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "project-1",
+	}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+	if err := os.RemoveAll(workspacePath); err != nil {
+		t.Fatalf("remove workspace path: %v", err)
+	}
+
+	h.checkWorkspaceHealth(context.Background())
+
+	persisted, err := workspaceStore.Get(context.Background(), "ws-1")
+	if err != nil {
+		t.Fatalf("get persisted workspace: %v", err)
+	}
+	if persisted.State != workspace.WorkspaceStateError || persisted.Health == nil || *persisted.Health != workspace.WorkspaceHealthPathMissing {
+		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
+	}
+}

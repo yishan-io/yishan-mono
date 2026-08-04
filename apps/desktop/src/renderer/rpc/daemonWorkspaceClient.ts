@@ -122,6 +122,8 @@ export class DaemonWorkspaceClient {
       workspaces.push({
         id,
         path: normalizeWorktreePath(path),
+        state: readOptionalString(record.state),
+        health: readOptionalString(record.health),
         orgId: readOptionalString(record.orgId),
         projectId: readOptionalString(record.projectId),
         pullRequest: readDaemonWorkspacePullRequest(record.pullRequest),
@@ -340,14 +342,6 @@ export class DaemonWorkspaceClient {
 
   async health(input: Rpc.WorkspaceHealthInput): Promise<Rpc.WorkspaceHealthOutput> {
     return (await this.invoke("workspace.health", input)) as Rpc.WorkspaceHealthOutput;
-  }
-
-  async repair(input: Rpc.WorkspaceRepairInput): Promise<Rpc.WorkspaceRepairOutput> {
-    return (await this.invoke("workspace.repair", input)) as Rpc.WorkspaceRepairOutput;
-  }
-
-  async forget(input: Rpc.WorkspaceForgetInput): Promise<Rpc.WorkspaceForgetOutput> {
-    return (await this.invoke("workspace.forget", input)) as Rpc.WorkspaceForgetOutput;
   }
 
   async openProject(input: Rpc.WorkspaceOpenProjectInput): Promise<Rpc.WorkspaceOpenProjectOutput> {

@@ -49,6 +49,7 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtim
 	server := buildHTTPServer(handler, daemonID, relayStatus)
 	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
 	handler.startWorkspaceCleanupRetry(cleanupCtx)
+	handler.startWorkspaceHealthMonitor(cleanupCtx)
 
 	return &daemonRuntime{
 		listener:      listener,

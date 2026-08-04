@@ -315,6 +315,8 @@ function mapApiData(
         nodeId: workspace.nodeId,
         kind: "managed",
         status: workspace.status,
+        state: workspace.state,
+        health: workspace.health,
       } satisfies WorkspaceItem;
     });
 

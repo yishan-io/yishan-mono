@@ -140,6 +140,7 @@ export function useVisibleWorkspaceTree({
               notificationTone: workspace.notificationTone,
               isCreating: workspace.isCreating,
               lifecycleState: workspace.lifecycleState,
+              health: workspace.health,
             });
           }
         }

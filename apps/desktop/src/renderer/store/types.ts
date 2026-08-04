@@ -56,7 +56,7 @@ export type WorkspaceItem = {
   health?: WorkspaceHealth;
 };
 
-export type WorkspaceLifecycleState = "active" | "degraded" | "closing" | "orphaned" | "stale_index";
+export type WorkspaceLifecycleState = "active" | "error" | "closing";
 
 export type WorkspaceHealth = "path-missing" | "not-worktree";
 

@@ -141,6 +141,7 @@ export function useProjectListTreeData(input: {
           }),
           isCreating,
           lifecycleState: workspace.state,
+          health: workspace.health,
         });
       }
     }

@@ -32,8 +32,6 @@ type UseProjectListTreeHandlersInput = {
   handleWorkspaceInfoMouseEnter: (workspaceId: string, anchorEl: HTMLElement) => void;
   handleWorkspaceInfoMouseLeave: () => void;
   handleRequestWorkspaceDeletion: (projectId: string, workspaceId: string) => void;
-  handleRepairWorkspace: (workspaceId: string) => void;
-  handleForgetWorkspace: (workspaceId: string) => void;
 };
 
 export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInput) {
@@ -62,8 +60,6 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
     handleWorkspaceInfoMouseEnter,
     handleWorkspaceInfoMouseLeave,
     handleRequestWorkspaceDeletion,
-    handleRepairWorkspace,
-    handleForgetWorkspace,
   } = input;
 
   const onExpandedItemsChange = useCallback(
@@ -326,12 +322,6 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
     onWorkspaceMouseLeave: handleWorkspaceInfoMouseLeave,
     onWorkspaceRequestDelete: (workspaceId: string, projectId: string) => {
       handleRequestWorkspaceDeletion(projectId, workspaceId);
-    },
-    onWorkspaceRequestRepair: (workspaceId: string) => {
-      handleRepairWorkspace(workspaceId);
-    },
-    onWorkspaceRequestForget: (workspaceId: string) => {
-      handleForgetWorkspace(workspaceId);
     },
     onRowReorder,
   };

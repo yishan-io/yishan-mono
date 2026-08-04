@@ -31,8 +31,6 @@ interface WorkspaceTreeRowsProps
     | "onWorkspaceMouseEnter"
     | "onWorkspaceMouseLeave"
     | "onWorkspaceRequestDelete"
-    | "onWorkspaceRequestForget"
-    | "onWorkspaceRequestRepair"
     | "selectedNodeId"
     | "selectedProjectId"
     | "selectedWorkspaceId"
@@ -69,8 +67,6 @@ export function WorkspaceTreeRows({
   onWorkspaceMouseEnter,
   onWorkspaceMouseLeave,
   onWorkspaceRequestDelete,
-  onWorkspaceRequestForget,
-  onWorkspaceRequestRepair,
   scrollRef,
   selectedNodeId,
   selectedProjectId,
@@ -136,16 +132,6 @@ export function WorkspaceTreeRows({
             const workspace = workspaceById.get(workspaceId);
             if (workspace) {
               onWorkspaceRequestDelete?.(workspaceId, workspace.projectId);
-            }
-          }}
-          onWorkspaceRequestRepair={() => {
-            if (row.kind === "workspace") {
-              onWorkspaceRequestRepair?.(parseWorkspaceRowId(row.id));
-            }
-          }}
-          onWorkspaceRequestForget={() => {
-            if (row.kind === "workspace") {
-              onWorkspaceRequestForget?.(parseWorkspaceRowId(row.id));
             }
           }}
           onMouseEnter={(event) => {

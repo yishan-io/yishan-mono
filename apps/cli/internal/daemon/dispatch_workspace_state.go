@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
+
+const workspaceHealthCheckInterval = 15 * time.Second
 
 func (h *JSONRPCHandler) handleWorkspaceHealth(ctx context.Context, params json.RawMessage) (any, error) {
 	var req workspaceHealthParams
@@ -22,42 +25,10 @@ func (h *JSONRPCHandler) handleWorkspaceHealth(ctx context.Context, params json.
 		return nil, err
 	}
 
-	state := workspace.WorkspaceStateActive
-	health := ""
-	healthErr := ""
-
-	if _, statErr := os.Stat(ws.Path); statErr != nil {
-		state = workspace.WorkspaceStateDegraded
-		health = workspace.WorkspaceHealthPathMissing
-		healthErr = statErr.Error()
-	}
-
-	if healthErr == "" {
-		isWorktree, checkErr := isGitWorktree(ws.Path)
-		if checkErr != nil {
-			state = workspace.WorkspaceStateDegraded
-			health = workspace.WorkspaceHealthPathMissing
-			healthErr = checkErr.Error()
-		} else if !isWorktree {
-			state = workspace.WorkspaceStateDegraded
-			health = workspace.WorkspaceHealthNotWorktree
-		}
-	}
-
-	if err := h.manager.SetWorkspaceState(req.WorkspaceID, state, health); err != nil {
+	state, health, healthErr, err := h.refreshWorkspaceHealth(ctx, req.WorkspaceID)
+	if err != nil {
 		return nil, err
 	}
-
-	if state == workspace.WorkspaceStateDegraded {
-		h.watchers.Unwatch(ws.Path)
-		h.prTracker.StopTracking(req.WorkspaceID)
-	}
-
-	if err := h.updatePersistedWorkspaceState(ctx, req.WorkspaceID, state, health); err != nil {
-		return nil, err
-	}
-
-	h.emitWorkspaceStateChanged(req.WorkspaceID, state, health, false)
 
 	return workspaceHealthResult{
 		WorkspaceID: req.WorkspaceID,
@@ -68,92 +39,91 @@ func (h *JSONRPCHandler) handleWorkspaceHealth(ctx context.Context, params json.
 	}, nil
 }
 
-func (h *JSONRPCHandler) handleWorkspaceRepair(ctx context.Context, params json.RawMessage) (any, error) {
-	var req workspaceRepairParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
-
-	ws, err := h.manager.GetWorkspace(req.WorkspaceID)
+// refreshWorkspaceHealth re-checks a workspace's path/worktree health,
+// transitions its state (active → error), persists the change, and emits a
+// workspace state changed event. Returns the resolved state, health detail,
+// and any health-check error message.
+func (h *JSONRPCHandler) refreshWorkspaceHealth(ctx context.Context, workspaceID string) (string, string, string, error) {
+	ws, err := h.manager.GetWorkspace(workspaceID)
 	if err != nil {
-		return nil, err
+		return "", "", "", err
 	}
 
-	if ws.State != workspace.WorkspaceStateDegraded {
-		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "workspace is not in degraded state")
+	state := workspace.WorkspaceStateActive
+	health := ""
+	healthErr := ""
+
+	if _, statErr := os.Stat(ws.Path); statErr != nil {
+		state = workspace.WorkspaceStateError
+		health = workspace.WorkspaceHealthPathMissing
+		healthErr = statErr.Error()
 	}
 
-	repaired := false
-	state := ws.State
-	health := ws.Health
-	repairErr := ""
-
-	if ws.Health == workspace.WorkspaceHealthPathMissing {
-		if _, statErr := os.Stat(ws.Path); statErr == nil {
-			repaired = true
-		} else {
-			repairErr = statErr.Error()
-		}
-	} else if ws.Health == workspace.WorkspaceHealthNotWorktree {
+	if healthErr == "" {
 		isWorktree, checkErr := isGitWorktree(ws.Path)
-		if checkErr == nil && isWorktree {
-			repaired = true
-		} else if checkErr != nil {
-			repairErr = checkErr.Error()
+		if checkErr != nil {
+			state = workspace.WorkspaceStateError
+			health = workspace.WorkspaceHealthPathMissing
+			healthErr = checkErr.Error()
+		} else if !isWorktree {
+			state = workspace.WorkspaceStateError
+			health = workspace.WorkspaceHealthNotWorktree
 		}
-	} else {
-		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "unknown health condition: "+ws.Health)
 	}
 
-	if repaired {
-		state = workspace.WorkspaceStateActive
-		health = ""
-		h.watchAndTrack(ws.ID, ws.Path)
+	if err := h.manager.SetWorkspaceState(workspaceID, state, health); err != nil {
+		return "", "", "", err
 	}
 
-	if err := h.manager.SetWorkspaceState(req.WorkspaceID, state, health); err != nil {
-		return nil, err
+	if state == workspace.WorkspaceStateError {
+		h.watchers.Unwatch(ws.Path)
+		h.prTracker.StopTracking(workspaceID)
 	}
 
-	if err := h.updatePersistedWorkspaceState(ctx, req.WorkspaceID, state, health); err != nil {
-		return nil, err
+	if err := h.updatePersistedWorkspaceState(ctx, workspaceID, state, health); err != nil {
+		return "", "", "", err
 	}
 
-	h.emitWorkspaceStateChanged(req.WorkspaceID, state, health, false)
+	h.emitWorkspaceStateChanged(workspaceID, state, health, false)
 
-	return workspaceRepairResult{
-		WorkspaceID: req.WorkspaceID,
-		State:       state,
-		Health:      health,
-		Error:       repairErr,
-	}, nil
+	return state, health, healthErr, nil
 }
 
-func (h *JSONRPCHandler) handleWorkspaceForget(ctx context.Context, params json.RawMessage) (any, error) {
-	var req workspaceForgetParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+// startWorkspaceHealthMonitor periodically re-checks active workspaces whose
+// worktree path disappears while the daemon is running, so the UI can show the
+// error state and offer close-only without requiring a daemon restart.
+func (h *JSONRPCHandler) startWorkspaceHealthMonitor(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(workspaceHealthCheckInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				h.checkWorkspaceHealth(ctx)
+			}
+		}
+	}()
+}
 
-	ws, wsErr := h.manager.GetWorkspace(req.WorkspaceID)
-	if wsErr == nil {
-		h.watchers.Unwatch(ws.Path)
-		h.prTracker.StopTracking(ws.ID)
-		h.manager.RemoveWorkspaceFromMemory(req.WorkspaceID)
+// checkWorkspaceHealth marks active workspaces whose worktree path has
+// disappeared as error (path-missing) so they become close-only in the UI.
+// Only the missing-path condition is monitored here; not-worktree detection
+// stays on demand (workspace.health) to avoid false positives for
+// git-local/primary workspaces that are plain directories.
+func (h *JSONRPCHandler) checkWorkspaceHealth(ctx context.Context) {
+	for _, ws := range h.manager.List() {
+		if ws.State != workspace.WorkspaceStateActive {
+			continue
+		}
+		if _, statErr := os.Stat(ws.Path); statErr == nil {
+			continue
+		}
+		if _, _, _, refreshErr := h.refreshWorkspaceHealth(ctx, ws.ID); refreshErr != nil {
+			log.Warn().Err(refreshErr).Str("workspaceId", ws.ID).Msg("workspace health check failed")
+		}
 	}
-
-	if err := h.closePersistedWorkspace(ctx, req.WorkspaceID); err != nil {
-		return nil, err
-	}
-
-	if wsErr == nil {
-		h.emitWorkspaceStateChanged(req.WorkspaceID, "", "", true)
-	}
-
-	return workspaceForgetResult{
-		WorkspaceID: req.WorkspaceID,
-		Removed:     true,
-	}, nil
 }
 
 func (h *JSONRPCHandler) emitWorkspaceStateChanged(workspaceID string, state string, health string, removed bool) {

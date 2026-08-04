@@ -84,6 +84,8 @@ export type WorkspaceRecord = {
   nodeId: string;
   kind: "primary" | "worktree";
   status: "active" | "closed" | "provisioning";
+  state?: "active" | "error" | "closing";
+  health?: "path-missing" | "not-worktree";
   branch: string | null;
   sourceBranch: string | null;
   localPath: string;

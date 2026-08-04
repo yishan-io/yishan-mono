@@ -371,36 +371,3 @@ export async function renameWorkspaceBranch(input: {
     throw error;
   }
 }
-
-export async function repairWorkspace(workspaceId: string): Promise<void> {
-  try {
-    const client = await getDaemonClient();
-    const result = await client.workspace.repair({ workspaceId });
-    const store = readWorkspaceStoreState();
-    const workspace = store.workspaces.find((item) => item.id === workspaceId);
-    if (workspace && result.state === "active") {
-      await refreshWorkspaceGitChanges(workspaceId);
-    }
-  } catch (error) {
-    console.error("Failed to repair workspace", error);
-    throw error;
-  }
-}
-
-export async function forgetWorkspace(workspaceId: string): Promise<void> {
-  try {
-    const client = await getDaemonClient();
-    await client.workspace.forget({ workspaceId });
-    const store = readWorkspaceStoreState();
-    const previousWorkspaces = store.workspaces;
-    const workspace = store.workspaces.find((item) => item.id === workspaceId);
-    if (workspace) {
-      const projectId = workspace.projectId ?? workspace.repoId;
-      workspaceStore.getState().removeWorkspace({ repoId: projectId, workspaceId });
-    }
-    syncTabStoreWithWorkspace(previousWorkspaces);
-  } catch (error) {
-    console.error("Failed to forget workspace", error);
-    throw error;
-  }
-}

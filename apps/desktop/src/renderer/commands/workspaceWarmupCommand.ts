@@ -14,6 +14,7 @@ type WorkspaceOpenCandidate = {
   projectId?: string;
   repoId?: string;
   worktreePath?: string;
+  state?: "active" | "error" | "closing";
 };
 
 export function buildWorkspaceOpenProjectEntries(
@@ -24,6 +25,11 @@ export function buildWorkspaceOpenProjectEntries(
     const projectId = workspace.projectId ?? workspace.repoId ?? "";
     const worktreePath = workspace.worktreePath?.trim() ?? "";
     if (!projectId || !workspace.id || !worktreePath) {
+      return [];
+    }
+    // Error workspaces are close-only: never warm them up, otherwise a
+    // successful open would clobber the persisted error state back to active.
+    if (workspace.state === "error") {
       return [];
     }
     return [{ workspaceId: workspace.id, worktreePath, projectId, orgId: organizationId }];

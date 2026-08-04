@@ -288,6 +288,68 @@ describe("projectHelpers", () => {
     expect(initialState.selectedWorkspaceId).toBe("workspace-2");
   });
 
+  it("maps daemon lifecycle state and health onto workspace items", () => {
+    const initialState: Parameters<typeof applyHydratedStateFromApiData>[0] = {
+      projects: [],
+      workspaces: [],
+      pullRequestByWorkspaceId: {},
+      latestPullRequestByWorkspaceId: {},
+      gitChangesCountByWorkspaceId: {},
+      gitChangeTotalsByWorkspaceId: {},
+      selectedProjectId: "",
+      selectedWorkspaceId: "",
+      displayProjectIds: [],
+      organizationPreferencesById: {},
+    };
+
+    applyHydratedStateFromApiData(
+      initialState,
+      "org-1",
+      [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-1",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdByUserId: "user-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "repo-1",
+          userId: "user-1",
+          nodeId: "node-1",
+          kind: "worktree",
+          status: "active",
+          state: "error",
+          health: "path-missing",
+          branch: "feature-a",
+          sourceBranch: "main",
+          localPath: "/tmp/repo-1/.worktrees/feature-a",
+          latestPullRequest: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    );
+
+    const mapped = initialState.workspaces.find((workspace) => workspace.id === "workspace-1");
+    expect(mapped?.state).toBe("error");
+    expect(mapped?.health).toBe("path-missing");
+  });
+
   it("maps primary workspace display names to local", () => {
     const initialState = {
       projects: [],
