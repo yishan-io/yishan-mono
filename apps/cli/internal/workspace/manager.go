@@ -3,6 +3,7 @@ package workspace
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,11 +16,9 @@ import (
 )
 
 const (
-	WorkspaceStateActive     = "active"
-	WorkspaceStateDegraded   = "degraded"
-	WorkspaceStateClosing    = "closing"
-	WorkspaceStateOrphaned   = "orphaned"
-	WorkspaceStateStaleIndex = "stale_index"
+	WorkspaceStateActive  = "active"
+	WorkspaceStateError   = "error"
+	WorkspaceStateClosing = "closing"
 
 	WorkspaceHealthPathMissing = "path-missing"
 	WorkspaceHealthNotWorktree = "not-worktree"
@@ -77,6 +76,9 @@ func NewManagerWithStore(store *localdb.WorkspaceStore) *Manager {
 }
 
 // HydrateFromDB restores locally active workspaces from durable storage.
+// A workspace whose worktree is missing or otherwise cannot be opened is
+// registered as error instead of aborting the whole hydration, so daemon
+// bootstrap never fails because of one broken workspace.
 func (m *Manager) HydrateFromDB(ctx context.Context) error {
 	if m.store == nil {
 		return nil
@@ -90,13 +92,82 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 			continue
 		}
 		if err := m.hydrateWorkspace(storedWorkspace); err != nil {
-			return err
+			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping workspace restore")
+			// Any open failure (missing path, path replaced by a file,
+			// permissions, ...) leaves the workspace unusable: register it as
+			// error so the UI offers close-only and it stays closable.
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateError, WorkspaceHealthPathMissing)
+			m.registerErrorWorkspace(storedWorkspace, WorkspaceHealthPathMissing)
+			continue
+		}
+		if isPersistedNotWorktreeError(storedWorkspace) {
+			// Open succeeds for any directory, so a previously-detected
+			// not-worktree error must be preserved, not reset to active.
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateError, WorkspaceHealthNotWorktree)
+			m.registerErrorWorkspace(storedWorkspace, WorkspaceHealthNotWorktree)
+			continue
+		}
+		if storedWorkspace.State != WorkspaceStateActive || (storedWorkspace.Health != nil && *storedWorkspace.Health != "") {
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateActive, "")
 		}
 		if err := m.hydrateWorkspacePullRequest(ctx, storedWorkspace.ID); err != nil {
 			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping PR hydration for workspace")
 		}
 	}
 	return nil
+}
+
+// persistWorkspaceLifecycleState best-effort persists a workspace lifecycle
+// state transition. Persistence failures are logged and never fail hydration.
+func (m *Manager) persistWorkspaceLifecycleState(ctx context.Context, workspaceID string, state string, health string) {
+	if m.store == nil {
+		return
+	}
+	err := m.store.Update(ctx, workspaceID, localdb.WorkspaceUpdate{State: &state, Health: &health})
+	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("failed to persist workspace lifecycle state")
+	}
+}
+
+// isPersistedNotWorktreeError reports whether the stored row carries a
+// previously-detected not-worktree error that must survive rehydration.
+func isPersistedNotWorktreeError(storedWorkspace localdb.Workspace) bool {
+	return storedWorkspace.State == WorkspaceStateError &&
+		storedWorkspace.Health != nil && *storedWorkspace.Health == WorkspaceHealthNotWorktree
+}
+
+// registerErrorWorkspace registers or updates an in-memory workspace as error
+// with the given health detail. Used when a persisted workspace cannot be
+// opened (missing path) or must stay error (not-worktree).
+func (m *Manager) registerErrorWorkspace(storedWorkspace localdb.Workspace, health string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	ws, ok := m.workspaces[storedWorkspace.ID]
+	if !ok {
+		ws = Workspace{
+			ID:        storedWorkspace.ID,
+			Path:      canonicalizeWorkspacePath(storedWorkspace.LocalPath),
+			OrgID:     storedWorkspace.OrganizationID,
+			ProjectID: storedWorkspace.ProjectID,
+		}
+	}
+	ws.State = WorkspaceStateError
+	ws.Health = health
+	m.workspaces[storedWorkspace.ID] = ws
+}
+
+// canonicalizeWorkspacePath resolves a workspace path to its canonical form.
+// Abs errors cannot realistically occur and fall back to the cleaned input.
+func canonicalizeWorkspacePath(path string) string {
+	absolutePath, err := filepath.Abs(path)
+	if err != nil {
+		return filepath.Clean(path)
+	}
+	resolvedPath, err := filepath.EvalSymlinks(absolutePath)
+	if err == nil {
+		return resolvedPath
+	}
+	return filepath.Clean(absolutePath)
 }
 
 func (m *Manager) hydrateWorkspace(storedWorkspace localdb.Workspace) error {
@@ -183,14 +254,7 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 		return Workspace{}, NewRPCError(rpcCodeInvalidParams, "id and path are required")
 	}
 
-	absPath, err := filepath.Abs(req.Path)
-	if err != nil {
-		return Workspace{}, err
-	}
-	resolvedPath, err := filepath.EvalSymlinks(absPath)
-	if err == nil {
-		absPath = resolvedPath
-	}
+	absPath := canonicalizeWorkspacePath(req.Path)
 
 	info, err := os.Stat(absPath)
 	if err != nil {
@@ -301,11 +365,15 @@ func (m *Manager) CloseWorkspace(ctx context.Context, req CloseRequest) (CloseRe
 func (m *Manager) CloseWorkspacePath(ctx context.Context, req ClosePathRequest) (CloseResult, error) {
 	var result CloseResult
 
-	if _, statErr := os.Stat(req.Path); statErr != nil {
+	if info, statErr := os.Stat(req.Path); statErr != nil {
 		if os.IsNotExist(statErr) {
 			return result, nil
 		}
 		return result, statErr
+	} else if !info.IsDir() {
+		// Path exists but is not a directory (e.g. the worktree was replaced
+		// by a regular file): nothing to clean up.
+		return result, nil
 	}
 
 	// Run the post hook before tearing down the workspace so the hook can

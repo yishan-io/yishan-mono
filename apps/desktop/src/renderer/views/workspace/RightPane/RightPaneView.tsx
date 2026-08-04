@@ -12,6 +12,8 @@ export type RightPaneViewProps = {
 /**
  * Renders the right pane tab content panels (files, changes, PR).
  * The tab bar and pane header are managed externally by MainPaneView.
+ * For error (broken) workspaces the right pane is hidden entirely by
+ * MainPaneView; this view only serves healthy workspaces.
  */
 export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPaneViewProps = {}) {
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);

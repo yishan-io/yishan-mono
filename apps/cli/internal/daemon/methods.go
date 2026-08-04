@@ -10,8 +10,6 @@ const (
 	MethodWorkspaceSetActive          = "workspace.setActive"
 	MethodWorkspaceSyncContextLink    = "workspace.syncContextLink"
 	MethodWorkspaceHealth             = "workspace.health"
-	MethodWorkspaceRepair             = "workspace.repair"
-	MethodWorkspaceForget             = "workspace.forget"
 	MethodWorkspaceOpenProject        = "workspace.openProject"
 	MethodWorkspaceCloseProject       = "workspace.closeProject"
 

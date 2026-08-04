@@ -18,6 +18,7 @@ import { LaunchView } from "./LaunchView";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { RightPaneTabBar } from "./RightPane/RightPaneTabBar";
 import { RightPaneView } from "./RightPane/RightPaneView";
+import { WorkspaceErrorStateView } from "./WorkspaceErrorStateView";
 import { WorkspaceSplitPane } from "./WorkspaceSplitPaneView";
 import { removeWebviewsForClosedTabs } from "./browser/webviewRegistry";
 import { disposeTerminalRuntimesForClosedTabs } from "./terminal/terminalRuntimeRegistry";
@@ -33,6 +34,9 @@ export function MainPaneView() {
   const { t } = useTranslation();
   const cmd = useCommands();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
+  const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
+  const isErrorWorkspace = selectedWorkspace?.state === "error";
   const tabs = tabStore((state) => state.tabs);
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
   const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
@@ -110,32 +114,38 @@ export function MainPaneView() {
       <Box sx={{ flex: 1, display: "flex", flexDirection: "row", overflow: "hidden" }}>
         {/* Main content area */}
         <Box sx={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0 }}>
-          {Array.from(workspaceIdsWithTabs).map((wsId) => (
-            <Box
-              key={wsId}
-              sx={{
-                position: "absolute",
-                inset: 0,
-                display: wsId === selectedWorkspaceId ? "flex" : "none",
-                flexDirection: "column",
-              }}
-            >
-              <WorkspaceSplitPane
-                workspaceId={wsId}
-                isActive={wsId === selectedWorkspaceId}
-                workspaceTabs={tabsByWorkspaceId.get(wsId) ?? []}
-              />
-            </Box>
-          ))}
-          {!hasSelectedWorkspaceTabs && (
-            <TabPanel active>
-              <LaunchView workspaceId={selectedWorkspaceId} enabledAgentKinds={enabledAgentKinds} />
-            </TabPanel>
+          {isErrorWorkspace && selectedWorkspace ? (
+            <WorkspaceErrorStateView workspace={selectedWorkspace} />
+          ) : (
+            <>
+              {Array.from(workspaceIdsWithTabs).map((wsId) => (
+                <Box
+                  key={wsId}
+                  sx={{
+                    position: "absolute",
+                    inset: 0,
+                    display: wsId === selectedWorkspaceId ? "flex" : "none",
+                    flexDirection: "column",
+                  }}
+                >
+                  <WorkspaceSplitPane
+                    workspaceId={wsId}
+                    isActive={wsId === selectedWorkspaceId}
+                    workspaceTabs={tabsByWorkspaceId.get(wsId) ?? []}
+                  />
+                </Box>
+              ))}
+              {!hasSelectedWorkspaceTabs && (
+                <TabPanel active>
+                  <LaunchView workspaceId={selectedWorkspaceId} enabledAgentKinds={enabledAgentKinds} />
+                </TabPanel>
+              )}
+            </>
           )}
         </Box>
 
-        {/* Right pane resize separator — hidden when collapsed */}
-        <Box sx={{ display: rightCollapsed ? "none" : "block" }}>
+        {/* Right pane resize separator — hidden when collapsed or the selected workspace is broken */}
+        <Box sx={{ display: rightCollapsed || isErrorWorkspace ? "none" : "block" }}>
           <ColumnSeparator
             orientation="horizontal"
             ariaLabel={t("layout.resize.right")}
@@ -144,10 +154,10 @@ export function MainPaneView() {
           />
         </Box>
 
-        {/* Right pane content — hidden when collapsed but kept mounted so file-tree state survives */}
+        {/* Right pane content — hidden when collapsed or the selected workspace is broken (kept mounted so file-tree state survives) */}
         <Box
           sx={{
-            display: rightCollapsed ? "none" : undefined,
+            display: rightCollapsed || isErrorWorkspace ? "none" : undefined,
             width: rightWidth,
             minWidth: RIGHT_MIN_WIDTH,
             height: "100%",
@@ -157,12 +167,14 @@ export function MainPaneView() {
           <RightPaneView />
         </Box>
 
-        {/* Vertical tab bar — always visible on far right */}
-        <RightPaneTabBar
-          rightCollapsed={rightCollapsed}
-          onToggleRightPane={onToggleRightPane}
-          showRightPane={showRightPane}
-        />
+        {/* Vertical tab bar — hidden for broken workspaces (no tabs allowed) */}
+        {isErrorWorkspace ? null : (
+          <RightPaneTabBar
+            rightCollapsed={rightCollapsed}
+            onToggleRightPane={onToggleRightPane}
+            showRightPane={showRightPane}
+          />
+        )}
       </Box>
       <FileSearchOverlay />
     </Box>

@@ -28,8 +28,6 @@ export function WorkspaceTree({
   onWorkspaceMouseEnter,
   onWorkspaceMouseLeave,
   onWorkspaceRequestDelete,
-  onWorkspaceRequestRepair,
-  onWorkspaceRequestForget,
   createWorkspaceTooltipLabel,
   onProjectCreateWorkspaceClick,
   onProjectActionsClick,
@@ -138,8 +136,6 @@ export function WorkspaceTree({
           onWorkspaceMouseEnter={onWorkspaceMouseEnter}
           onWorkspaceMouseLeave={onWorkspaceMouseLeave}
           onWorkspaceRequestDelete={onWorkspaceRequestDelete}
-          onWorkspaceRequestForget={onWorkspaceRequestForget}
-          onWorkspaceRequestRepair={onWorkspaceRequestRepair}
           scrollRef={scrollRef}
           selectedNodeId={selectedNodeId}
           selectedProjectId={selectedProjectId}

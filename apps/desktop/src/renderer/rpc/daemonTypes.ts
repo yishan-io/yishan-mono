@@ -194,26 +194,6 @@ export type WorkspaceHealthOutput = {
   error?: string;
 };
 
-export type WorkspaceRepairInput = {
-  workspaceId: string;
-};
-
-export type WorkspaceRepairOutput = {
-  workspaceId: string;
-  state: string;
-  health?: string;
-  error?: string;
-};
-
-export type WorkspaceForgetInput = {
-  workspaceId: string;
-};
-
-export type WorkspaceForgetOutput = {
-  workspaceId: string;
-  removed: boolean;
-};
-
 export type WorkspaceOpenProjectInput = {
   workspaces: Array<{
     workspaceId: string;

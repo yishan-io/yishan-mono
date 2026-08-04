@@ -127,3 +127,212 @@ func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 		t.Fatalf("expected only authoritative workspace to remain, got %q", workspaces[0].ID)
 	}
 }
+
+func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
+	manager := NewManager()
+	workspacePath := t.TempDir()
+	if _, err := manager.Open(OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+	if err := os.RemoveAll(workspacePath); err != nil {
+		t.Fatalf("remove workspace path: %v", err)
+	}
+	if err := os.WriteFile(workspacePath, []byte("x"), 0o600); err != nil {
+		t.Fatalf("replace path with file: %v", err)
+	}
+
+	if _, err := manager.CloseWorkspace(context.Background(), CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+		t.Fatalf("close workspace with replaced path: %v", err)
+	}
+	if _, err := manager.GetWorkspace("ws-1"); err == nil {
+		t.Fatal("expected workspace removed from memory after close")
+	}
+}
+
+func openTestManagerStore(t *testing.T, projectID string) (*Manager, *localdb.WorkspaceStore) {
+	t.Helper()
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	projectStore := localdb.NewProjectStore(database)
+	project := localdb.Project{ID: projectID, Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
+	if err := projectStore.Create(context.Background(), &project); err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	store := localdb.NewWorkspaceStore(database)
+	return NewManagerWithStore(store), store
+}
+
+func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
+	manager, store := openTestManagerStore(t, "project-1")
+	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
+	branchMissing := "feature/missing"
+	if err := store.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: "worktree", Status: "active", Branch: &branchMissing, LocalPath: missingPath, State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+	healthyPath := t.TempDir()
+	branchHealthy := "feature/healthy"
+	if err := store.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-2", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: "worktree", Status: "active", Branch: &branchHealthy, LocalPath: healthyPath, State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate manager: %v", err)
+	}
+
+	healthy, err := manager.GetWorkspace("workspace-2")
+	if err != nil {
+		t.Fatalf("expected healthy workspace restored: %v", err)
+	}
+	if healthy.State != WorkspaceStateActive {
+		t.Fatalf("expected healthy workspace active, got %q", healthy.State)
+	}
+
+	broken, err := manager.GetWorkspace("workspace-1")
+	if err != nil {
+		t.Fatalf("expected missing-path workspace registered as error: %v", err)
+	}
+	if broken.State != WorkspaceStateError || broken.Health != WorkspaceHealthPathMissing {
+		t.Fatalf("expected error/path-missing, got state=%q health=%q", broken.State, broken.Health)
+	}
+
+	persisted, err := store.Get(context.Background(), "workspace-1")
+	if err != nil {
+		t.Fatalf("get persisted workspace: %v", err)
+	}
+	if persisted.State != WorkspaceStateError || persisted.Health == nil || *persisted.Health != WorkspaceHealthPathMissing {
+		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
+	}
+	if persisted.Status != "active" {
+		t.Fatalf("expected persisted status to stay active, got %q", persisted.Status)
+	}
+}
+
+func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
+	manager, store := openTestManagerStore(t, "project-1")
+	filePath := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
+		t.Fatalf("write file: %v", err)
+	}
+	branch := "feature/file"
+	if err := store.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: filePath, State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate manager: %v", err)
+	}
+	ws, err := manager.GetWorkspace("workspace-1")
+	if err != nil {
+		t.Fatalf("expected workspace registered as error: %v", err)
+	}
+	if ws.State != WorkspaceStateError || ws.Health != WorkspaceHealthPathMissing {
+		t.Fatalf("expected error/path-missing, got state=%q health=%q", ws.State, ws.Health)
+	}
+	persisted, err := store.Get(context.Background(), "workspace-1")
+	if err != nil {
+		t.Fatalf("get persisted workspace: %v", err)
+	}
+	if persisted.State != WorkspaceStateError || persisted.Health == nil || *persisted.Health != WorkspaceHealthPathMissing {
+		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
+	}
+}
+
+func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
+	manager, store := openTestManagerStore(t, "project-1")
+	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
+	branch := "feature/closed"
+	if err := store.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: "worktree", Status: "closed", Branch: &branch, LocalPath: missingPath, State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate manager: %v", err)
+	}
+	if _, err := manager.GetWorkspace("workspace-1"); err == nil {
+		t.Fatal("expected closed workspace to be skipped, not registered")
+	}
+}
+
+func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testing.T) {
+	manager, store := openTestManagerStore(t, "project-1")
+	workspacePath := t.TempDir()
+	branch := "feature/restored"
+	health := WorkspaceHealthPathMissing
+	if err := store.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
+		State: WorkspaceStateError, Health: &health,
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate manager: %v", err)
+	}
+	workspace, err := manager.GetWorkspace("workspace-1")
+	if err != nil {
+		t.Fatalf("get hydrated workspace: %v", err)
+	}
+	if workspace.State != WorkspaceStateActive || workspace.Health != "" {
+		t.Fatalf("expected restored workspace active with cleared health, got state=%q health=%q", workspace.State, workspace.Health)
+	}
+	persisted, err := store.Get(context.Background(), "workspace-1")
+	if err != nil {
+		t.Fatalf("get persisted workspace: %v", err)
+	}
+	if persisted.State != WorkspaceStateActive || (persisted.Health != nil && *persisted.Health != "") {
+		t.Fatalf("expected persisted active with cleared health, got state=%q health=%v", persisted.State, persisted.Health)
+	}
+}
+
+func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
+	manager, store := openTestManagerStore(t, "project-1")
+	// Plain directory without .git: Open succeeds, but the persisted
+	// not-worktree error must survive rehydration.
+	workspacePath := t.TempDir()
+	branch := "feature/not-worktree"
+	health := WorkspaceHealthNotWorktree
+	if err := store.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
+		State: WorkspaceStateError, Health: &health,
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate manager: %v", err)
+	}
+	workspace, err := manager.GetWorkspace("workspace-1")
+	if err != nil {
+		t.Fatalf("get hydrated workspace: %v", err)
+	}
+	if workspace.State != WorkspaceStateError || workspace.Health != WorkspaceHealthNotWorktree {
+		t.Fatalf("expected preserved error/not-worktree, got state=%q health=%q", workspace.State, workspace.Health)
+	}
+	persisted, err := store.Get(context.Background(), "workspace-1")
+	if err != nil {
+		t.Fatalf("get persisted workspace: %v", err)
+	}
+	if persisted.State != WorkspaceStateError || persisted.Health == nil || *persisted.Health != WorkspaceHealthNotWorktree {
+		t.Fatalf("expected persisted error/not-worktree, got state=%q health=%v", persisted.State, persisted.Health)
+	}
+}

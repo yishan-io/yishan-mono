@@ -19,6 +19,16 @@ function toWorkspaceStatus(value: string | undefined): "active" | "closed" | "pr
   return "active";
 }
 
+function toWorkspaceLifecycleState(value: string | undefined): WorkspaceRecord["state"] {
+  if (value === "active" || value === "error" || value === "closing") return value;
+  return undefined;
+}
+
+function toWorkspaceHealth(value: string | undefined): WorkspaceRecord["health"] {
+  if (value === "path-missing" || value === "not-worktree") return value;
+  return undefined;
+}
+
 function toProjectCommands(value: unknown): ProjectCommandRecord[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.map((item: unknown) => {
@@ -156,6 +166,8 @@ export class DaemonProjectClient {
       nodeId: readOptionalString(record?.nodeId) ?? "",
       kind: toWorkspaceKind(readOptionalString(record?.kind)),
       status: toWorkspaceStatus(readOptionalString(record?.status)),
+      state: toWorkspaceLifecycleState(readOptionalString(record?.state)),
+      health: toWorkspaceHealth(readOptionalString(record?.health)),
       branch: readOptionalString(record?.branch) ?? null,
       sourceBranch: readOptionalString(record?.sourceBranch) ?? null,
       localPath: readOptionalString(record?.localPath) ?? "",

@@ -831,6 +831,46 @@ describe("MainPaneView", () => {
     expect(onToggleLeftPane).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the error state view and hides the right pane and tab bar for a broken workspace", () => {
+    const state = buildStoreState(false);
+    // The mock store's inferred workspace shape is narrow; the runtime store
+    // accepts any WorkspaceItem, so widen through an explicit cast.
+    state.workspaces = [
+      {
+        id: "workspace-1",
+        repoId: "repo-1",
+        branch: "origin/main",
+        title: "Workspace 1",
+        name: "Workspace 1",
+        state: "error",
+        health: "path-missing",
+      },
+    ] as unknown as typeof state.workspaces;
+    state.tabs = [];
+    mocked.stateRef.current = state;
+    mocked.getMainWindowFullscreenState.mockResolvedValue({ isFullscreen: false });
+
+    render(
+      <WorkspacePaneVisibilityProvider
+        value={{
+          leftCollapsed: false,
+          rightCollapsed: false,
+          onToggleLeftPane: vi.fn(),
+          onToggleRightPane: vi.fn(),
+        }}
+      >
+        <MainPaneView />
+      </WorkspacePaneVisibilityProvider>,
+    );
+
+    expect(screen.getByTestId("workspace-error-state")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Close workspace" })).toBeTruthy();
+    expect(screen.queryByTestId("dashboard-sidebar")).toBeNull();
+    expect(screen.queryByRole("button", { name: "files.files" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "files.changes" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "workspace.pr.tab" })).toBeNull();
+  });
+
   it("does not reserve mac controls inset in fullscreen display mode", async () => {
     mocked.stateRef.current = buildStoreState(false);
     mocked.getMainWindowFullscreenState.mockResolvedValue({ isFullscreen: true });
