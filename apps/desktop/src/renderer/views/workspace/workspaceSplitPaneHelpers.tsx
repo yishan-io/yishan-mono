@@ -30,8 +30,21 @@ export function collectPaneLeaves(node: SplitPaneNode | null | undefined): PaneL
   return [...collectPaneLeaves(node.first), ...collectPaneLeaves(node.second)];
 }
 
+export type TabBarDescriptor = {
+  id: string;
+  title: string;
+  pinned: boolean;
+  kind?: string;
+  isDirty?: boolean;
+  isTemporary?: boolean;
+  /** Present for agent-chat tabs: pi resume/runtime session id. */
+  sessionId?: string;
+  /** Present for agent-chat tabs: working directory of the pi process. */
+  cwd?: string;
+};
+
 /** Converts a full WorkspaceTab to the lightweight descriptor used by TabBar/SplitPaneGroup. */
-export function toTabBarDescriptor(tab: WorkspaceTab) {
+export function toTabBarDescriptor(tab: WorkspaceTab): TabBarDescriptor {
   return {
     id: tab.id,
     title: tab.title,
@@ -41,5 +54,7 @@ export function toTabBarDescriptor(tab: WorkspaceTab) {
     isTemporary: ["file", "image", "diff"].includes(tab.kind)
       ? (tab.data as { isTemporary: boolean }).isTemporary
       : false,
+    sessionId: tab.kind === "agent-chat" ? tab.data.sessionId : undefined,
+    cwd: tab.kind === "agent-chat" ? tab.data.cwd : undefined,
   };
 }

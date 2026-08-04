@@ -2,7 +2,9 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchAgentSessionFilePath } from "../commands/agentChatCommands";
+import { copyToClipboard } from "../helpers/clipboard";
 import { TabBar } from "./TabBar";
 
 vi.mock("react-i18next", () => ({
@@ -30,6 +32,8 @@ vi.mock("react-i18next", () => ({
           "tabs.actions.close": "Close",
           "tabs.actions.closeOthers": "Close Others",
           "tabs.actions.closeAll": "Close All",
+          "tabs.actions.copySessionId": "Copy Session ID",
+          "tabs.actions.copySessionFilePath": "Copy Session File Path",
         }) as Record<string, string>
       )[key] ?? key,
   }),
@@ -37,6 +41,14 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
+}));
+
+vi.mock("../helpers/clipboard", () => ({
+  copyToClipboard: vi.fn(),
+}));
+
+vi.mock("../commands/agentChatCommands", () => ({
+  fetchAgentSessionFilePath: vi.fn(() => Promise.resolve("")),
 }));
 
 vi.mock("../shortcuts/shortcutDisplay", () => ({
@@ -395,5 +407,117 @@ describe("TabBar interactions", () => {
 
     const title = screen.getByText("Preview.ts");
     expect((title as HTMLElement).style.fontStyle).toBe("italic");
+  });
+});
+
+describe("TabBar session info context menu", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAgentSessionFilePath).mockReset();
+    vi.mocked(copyToClipboard).mockReset();
+  });
+
+  it("shows copy session info items for agent-chat tabs with a session id", async () => {
+    renderTabBar({
+      tabs: [
+        { id: "a", title: "Tab A", pinned: false },
+        {
+          id: "agent",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          sessionId: "session-abc",
+          cwd: "/fake/cwd",
+        },
+      ],
+      selectedTabId: "agent",
+    });
+
+    fireEvent.contextMenu(getTabWrapperByTitle("Agent Chat"), { clientX: 20, clientY: 20 });
+
+    expect(await screen.findByRole("menuitem", { name: /Copy Session ID/ })).toBeTruthy();
+    expect(await screen.findByRole("menuitem", { name: /Copy Session File Path/ })).toBeTruthy();
+  });
+
+  it("does not show session info items for tabs without a session id", async () => {
+    renderTabBar();
+
+    fireEvent.contextMenu(getTabWrapperByTitle("Tab B"), { clientX: 20, clientY: 20 });
+
+    await screen.findByRole("menuitem", { name: "Close Others" });
+    expect(screen.queryByRole("menuitem", { name: /Copy Session ID/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /Copy Session File Path/ })).toBeNull();
+  });
+
+  it("copies the session id when Copy Session ID is clicked", async () => {
+    renderTabBar({
+      tabs: [
+        {
+          id: "agent",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          sessionId: "session-abc",
+          cwd: "/fake/cwd",
+        },
+      ],
+      selectedTabId: "agent",
+    });
+
+    fireEvent.contextMenu(getTabWrapperByTitle("Agent Chat"), { clientX: 20, clientY: 20 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Copy Session ID/ }));
+
+    expect(copyToClipboard).toHaveBeenCalledWith("session-abc");
+  });
+
+  it("copies the resolved session file path when available", async () => {
+    vi.mocked(fetchAgentSessionFilePath).mockResolvedValue("/fake/sessions/chat_session-abc.jsonl");
+    renderTabBar({
+      tabs: [
+        {
+          id: "agent",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          sessionId: "session-abc",
+          cwd: "/fake/cwd",
+        },
+      ],
+      selectedTabId: "agent",
+    });
+
+    fireEvent.contextMenu(getTabWrapperByTitle("Agent Chat"), { clientX: 20, clientY: 20 });
+    const pathItem = await screen.findByRole("menuitem", { name: /Copy Session File Path/ });
+    await waitFor(() => {
+      expect(pathItem.getAttribute("aria-disabled")).not.toBe("true");
+    });
+    fireEvent.click(pathItem);
+
+    expect(fetchAgentSessionFilePath).toHaveBeenCalledWith("session-abc", "/fake/cwd");
+    expect(copyToClipboard).toHaveBeenCalledWith("/fake/sessions/chat_session-abc.jsonl");
+  });
+
+  it("keeps Copy Session File Path disabled when no transcript exists yet", async () => {
+    vi.mocked(fetchAgentSessionFilePath).mockResolvedValue("");
+    renderTabBar({
+      tabs: [
+        {
+          id: "agent",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          sessionId: "session-abc",
+          cwd: "/fake/cwd",
+        },
+      ],
+      selectedTabId: "agent",
+    });
+
+    fireEvent.contextMenu(getTabWrapperByTitle("Agent Chat"), { clientX: 20, clientY: 20 });
+    const pathItem = await screen.findByRole("menuitem", { name: /Copy Session File Path/ });
+
+    await waitFor(() => {
+      expect(fetchAgentSessionFilePath).toHaveBeenCalled();
+    });
+    expect(pathItem.getAttribute("aria-disabled")).toBe("true");
   });
 });

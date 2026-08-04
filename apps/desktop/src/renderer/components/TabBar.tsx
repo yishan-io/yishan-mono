@@ -23,6 +23,10 @@ type WorkspaceTab = {
   kind?: string;
   isDirty?: boolean;
   isTemporary?: boolean;
+  /** Present for agent-chat tabs: pi resume/runtime session id. */
+  sessionId?: string;
+  /** Present for agent-chat tabs: working directory of the pi process. */
+  cwd?: string;
 };
 
 export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | DesktopAgentKind;
@@ -117,6 +121,8 @@ export function TabBar({
   const closeTabActionLabel = t("tabs.actions.close");
   const closeOthersActionLabel = t("tabs.actions.closeOthers");
   const closeAllActionLabel = t("tabs.actions.closeAll");
+  const copySessionIdActionLabel = t("tabs.actions.copySessionId");
+  const copySessionFilePathActionLabel = t("tabs.actions.copySessionFilePath");
 
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
@@ -407,6 +413,8 @@ export function TabBar({
         closeTabActionLabel={closeTabActionLabel}
         closeOthersActionLabel={closeOthersActionLabel}
         closeAllActionLabel={closeAllActionLabel}
+        copySessionIdActionLabel={copySessionIdActionLabel}
+        copySessionFilePathActionLabel={copySessionFilePathActionLabel}
         tabsLength={tabs.length}
         onClose={closeContextMenu}
         onPromoteTemporaryTab={onPromoteTemporaryTab}
@@ -414,6 +422,8 @@ export function TabBar({
         onCloseTab={onCloseTab}
         onCloseOtherTabs={onCloseOtherTabs}
         onCloseAllTabs={onCloseAllTabs}
+        sessionId={selectedContextTab?.sessionId}
+        cwd={selectedContextTab?.cwd}
       />
 
       <TabRenameDialog
