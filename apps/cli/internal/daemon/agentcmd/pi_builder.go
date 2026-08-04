@@ -16,6 +16,9 @@ func (b piBuilder) Args(prompt, model string, interactive bool) []string {
 	if model != "" {
 		args = append(args, "--model", model)
 	}
+	if !interactive {
+		args = append(args, "--no-session")
+	}
 	return args
 }
 
