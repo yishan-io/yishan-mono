@@ -45,7 +45,7 @@ export function ProviderCredentialDialog({
   initialEnv?: Record<string, string>;
   storedEnvVars?: string[];
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (providerId?: string) => void;
 }) {
   const { t } = useTranslation();
   const { savePiProvider, openPiProviderLogin } = useCommands();
@@ -98,7 +98,7 @@ export function ProviderCredentialDialog({
         return acc;
       }, {});
       await savePiProvider(providerId, trimmedKey, Object.keys(env).length > 0 ? env : undefined);
-      onSaved();
+      onSaved(providerId);
     } catch (err) {
       setError(getErrorMessage(err));
       setIsSaving(false);
@@ -116,7 +116,7 @@ export function ProviderCredentialDialog({
         provider: getPiProviderDisplayName(providerId),
       });
       await openPiProviderLogin({ providerId, tabTitle });
-      onSaved();
+      onSaved(providerId);
     } catch (err) {
       const rawMessage = getErrorMessage(err);
       setError(

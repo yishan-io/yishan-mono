@@ -30,7 +30,9 @@ import { agentChatStore } from "../../store/agentChatStore";
 import { type AgentModel, isAgentSessionBusy } from "../../store/agentChatTypes";
 import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
 import { tabStore } from "../../store/tabStore";
+import { ProviderCredentialDialog } from "../settings/ProviderCredentialDialog";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
+import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";
 
@@ -263,6 +265,15 @@ function AgentChatComposerPaneComponent({
     [sessionId, tabId],
   );
 
+  const { openAddProviderDialog, providerCredentialDialogProps } = useAgentChatProviderAdd({
+    tabId,
+    workspaceId,
+    cwd,
+    paneId,
+    sessionId,
+    sessionState,
+  });
+
   const handleThinkingCycle = useCallback(async () => {
     if (!sessionId) return;
     const currentIdx = THINKING_LEVELS.indexOf(thinkingLevel);
@@ -362,6 +373,7 @@ function AgentChatComposerPaneComponent({
             thinkingLevel={thinkingLevel}
             onModelChange={handleModelChange}
             onThinkingLevelCycle={handleThinkingCycle}
+            onAddProvider={openAddProviderDialog}
           />
         )}
         <AgentChatUsageSummaryLabel tabId={tabId} />
@@ -462,6 +474,7 @@ function AgentChatComposerPaneComponent({
           )}
         </Box>
       </Box>
+      <ProviderCredentialDialog {...providerCredentialDialogProps} />
     </Box>
   );
 }

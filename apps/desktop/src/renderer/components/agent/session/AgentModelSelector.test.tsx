@@ -21,6 +21,8 @@ vi.mock("react-i18next", () => ({
           return "No models";
         case "common.modelPicker.noMatchingModels":
           return "No matching models";
+        case "common.modelPicker.addProvider":
+          return "Add Provider";
         default:
           return key;
       }
@@ -206,5 +208,51 @@ describe("AgentModelSelector", () => {
 
     expect(screen.getByRole("button", { name: "model-0" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "model-39" })).toBeNull();
+  });
+
+  it("does not render the add-provider entry without the onAddProvider prop", () => {
+    const models = buildModels();
+
+    render(
+      <AgentModelSelector
+        models={models}
+        currentModel={models[0] ?? null}
+        thinkingLevel="off"
+        onModelChange={vi.fn()}
+        onThinkingLevelCycle={vi.fn()}
+      />,
+    );
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+
+    expect(screen.queryByRole("button", { name: "Add Provider" })).toBeNull();
+  });
+
+  it("renders the add-provider entry and invokes onAddProvider while closing the menu", () => {
+    const models = buildModels();
+    const onAddProvider = vi.fn();
+
+    render(
+      <AgentModelSelector
+        models={models}
+        currentModel={models[0] ?? null}
+        thinkingLevel="off"
+        onModelChange={vi.fn()}
+        onThinkingLevelCycle={vi.fn()}
+        onAddProvider={onAddProvider}
+      />,
+    );
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+
+    const addProviderButton = screen.getByRole("button", { name: "Add Provider" });
+    expect(addProviderButton).toBeTruthy();
+
+    fireEvent.click(addProviderButton);
+
+    expect(onAddProvider).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("searchbox", { name: "Search models" })).toBeNull();
   });
 });

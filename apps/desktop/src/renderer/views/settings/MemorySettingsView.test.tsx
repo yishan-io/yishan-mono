@@ -89,6 +89,8 @@ describe("MemorySettingsView", () => {
     fireEvent.click(trigger);
 
     expect(screen.getByRole("searchbox", { name: "Search models" })).toBeTruthy();
+    // The shared popup's add-provider entry stays opt-in: memory settings does not wire it.
+    expect(screen.queryByText("common.modelPicker.addProvider")).toBeNull();
   });
 
   it("shows provider-stripped model names in the popup and persists the selected Pi model", async () => {
