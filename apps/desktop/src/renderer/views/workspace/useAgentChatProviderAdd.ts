@@ -7,6 +7,7 @@ import {
   refreshAgentSessionStats,
   stopPiSession,
 } from "../../commands/agentChatCommands";
+import { readTabStoreState } from "../../commands/tabCommands";
 import { delay } from "../../helpers/delay";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { agentChatStore } from "../../store/agentChatStore";
@@ -51,6 +52,7 @@ export function useAgentChatProviderAdd({
       if (!sessionId) {
         return;
       }
+      let restartAttempted = false;
       try {
         await fetchAgentModels({ tabId, sessionId });
 
@@ -64,10 +66,11 @@ export function useAgentChatProviderAdd({
         // get_available_models response event populates the store, so poll the
         // store briefly instead of reading it synchronously.
         const previousSessionId = sessionId;
+        const normalizedProviderId = providerId.trim().toLowerCase();
         let providerVisible = false;
         for (let attempt = 0; attempt < PROVIDER_VISIBLE_POLL_ITERATIONS; attempt += 1) {
           const models = agentChatStore.getState().sessionsByTabId[tabId]?.availableModels ?? [];
-          if (models.some((model) => model.provider?.trim() === providerId)) {
+          if (models.some((model) => model.provider?.trim().toLowerCase() === normalizedProviderId)) {
             providerVisible = true;
             break;
           }
@@ -77,6 +80,19 @@ export function useAgentChatProviderAdd({
           return;
         }
 
+        // Re-check live state right before the restart: a turn may have started
+        // or the tab may have closed during the poll. Never kill a running turn,
+        // and never restart a session that is no longer the one the provider was
+        // saved into.
+        const liveSession = agentChatStore.getState().sessionsByTabId[tabId];
+        const tabStillOpen = readTabStoreState().tabs.some(
+          (candidate) => candidate.id === tabId && candidate.kind === "agent-chat",
+        );
+        if (!tabStillOpen || liveSession?.sessionId !== previousSessionId || isAgentSessionBusy(liveSession?.state)) {
+          return;
+        }
+
+        restartAttempted = true;
         await stopPiSession(tabId);
         const restartedSessionId = await ensurePiSession({
           tabId,
@@ -91,10 +107,13 @@ export function useAgentChatProviderAdd({
         await refreshAgentSessionStats(restartedSessionId);
       } catch (error) {
         const message = getErrorMessage(error);
-        agentChatStore.getState().setTurnError(tabId, message);
-        if (!agentChatStore.getState().sessionsByTabId[tabId]) {
-          // The restart dropped the store session; surface a recoverable error state.
+        const sessionExists = Boolean(agentChatStore.getState().sessionsByTabId[tabId]);
+        if (restartAttempted && sessionExists) {
+          // The restart failed mid-way; escalate to the session error UI so the
+          // tab is recoverable instead of stuck unloaded.
           agentChatStore.getState().setSessionError(tabId, message);
+        } else {
+          agentChatStore.getState().setTurnError(tabId, message);
         }
       }
     },

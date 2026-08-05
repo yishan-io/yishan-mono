@@ -113,6 +113,7 @@ vi.mock("../../commands/agentChatSubagentCommands", () => ({
 
 vi.mock("../../commands/tabCommands", () => ({
   renameTab: vi.fn(),
+  readTabStoreState: () => ({ tabs: mocked.stateRef.current.tabs }),
 }));
 
 vi.mock("../../components/RichComposer", () => ({
@@ -1246,5 +1247,56 @@ describe("AgentChatView", () => {
       paneId: undefined,
     });
     expect(mocked.fetchAgentModels).toHaveBeenCalled();
+  });
+
+  it("never restarts a busy session after a provider save", async () => {
+    seedSession({
+      state: "running",
+      availableModels: [{ id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" }],
+      currentModel: { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" },
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-provider-button")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("add-provider-button"));
+    const dialogProps = mocked.stateRef.current.latestProviderCredentialDialogProps;
+
+    await act(async () => {
+      await dialogProps?.onSaved("deepseek");
+    });
+
+    expect(mocked.stopPiSession).not.toHaveBeenCalled();
+    expect(mocked.fetchAgentModels).toHaveBeenCalled();
+  });
+
+  it("surfaces a session error when the restart fails mid-way", async () => {
+    seedSession({
+      state: "idle",
+      availableModels: [{ id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" }],
+      currentModel: { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" },
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
+    });
+    // The next ensurePiSession call is the restart's; make it fail.
+    mocked.ensurePiSession.mockRejectedValueOnce(new Error("restart boom"));
+
+    fireEvent.click(screen.getByTestId("add-provider-button"));
+    const dialogProps = mocked.stateRef.current.latestProviderCredentialDialogProps;
+
+    await act(async () => {
+      await dialogProps?.onSaved("deepseek");
+    });
+
+    expect(mocked.stopPiSession).toHaveBeenCalledWith("tab-1");
+    expect(agentChatStore.getState().sessionsByTabId["tab-1"]?.state).toBe("error");
+    expect(agentChatStore.getState().sessionsByTabId["tab-1"]?.error).toBe("restart boom");
   });
 });
