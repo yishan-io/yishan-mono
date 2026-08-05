@@ -314,6 +314,8 @@ func TestShouldIndexPath(t *testing.T) {
 		{"/Users/user/.yishan/contexts/my-repo/.my-context/.my-context/MEMORY.md", false},
 		// Global memory path → accepted.
 		{"/Users/user/.yishan/memory/global/MEMORY.md", true},
+		// Nested .my-context under global memory → rejected.
+		{"/Users/user/.yishan/memory/global/.my-context/MEMORY.md", false},
 		// Unresolved worktree symlink path → rejected (caller must resolve first).
 		{"/Users/user/.yishan/worktrees/my-repo/ws/.my-context/MEMORY.md", false},
 		// Non-markdown file → rejected.

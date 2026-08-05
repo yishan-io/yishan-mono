@@ -153,6 +153,10 @@ func scanGlobalDir(globalDir string) ([]diskFile, error) {
 			return nil
 		}
 		if entry.IsDir() {
+			// Skip nested .my-context duplicates, mirroring scanContextDir.
+			if entry.Name() == myContextDir && path != globalDir {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if !strings.HasSuffix(entry.Name(), ".md") {

@@ -367,5 +367,5 @@ func shouldIndexPath(filePath string) bool {
 		// misplacement surfaces instead of being silently absorbed into search.
 		return !strings.Contains(slashed, "/.my-context/")
 	}
-	return strings.Contains(slashed, "/.yishan/memory/")
+	return strings.Contains(slashed, "/.yishan/memory/") && !strings.Contains(slashed, "/.my-context/")
 }

@@ -63,16 +63,14 @@ Recommended structure:
 
 _Last updated: YYYY-MM-DD_
 
-## Locked Decisions
+## Decisions
 
 ## Durable Discoveries
-
-## Open Questions
 ```
 
-### Locked Decisions
+### Decisions
 
-Use for durable choices that should not be casually reopened.
+Use for durable choices that should not be casually reopened. Decisions get superseded over time — record the reason, and note supersessions inline rather than editing history.
 
 Suggested entry shape:
 
@@ -91,12 +89,11 @@ Prefix each item with one label:
 - `[Workflow Trap]`
 - `[Env Trap]`
 - `[Test Trap]`
+- `[Architecture]`
 
-### Open Questions
+Open questions do NOT belong in `MEMORY.md`. A real question is an action to resolve — put it in `TODO.md` (user-level) or the task record (task-scoped). The rare fact that an area is deliberately undecided can be recorded as a `[Known Gap]` discovery.
 
-Use for unresolved questions worth resurfacing later.
-
-Remove them once answered.
+If you use the `memory_store` tool, the valid `section` values are `locked_decisions` and `durable_discoveries`.
 
 ## Rules For `MEMORY.md`
 
@@ -117,12 +114,12 @@ Keep:
 - root causes that took real effort to discover
 - invariants that future edits could plausibly break
 - recurring workflow, environment, or test traps
-- unresolved questions worth resurfacing later
 
 Drop:
 
 - play-by-play implementation logs
 - transient status notes
+- open questions (they belong in `TODO.md` or task records)
 - details obvious from current code or diff
 - task-specific progress that belongs in `notes.md` or `plan.md`
 - one-off trivia with no future reuse

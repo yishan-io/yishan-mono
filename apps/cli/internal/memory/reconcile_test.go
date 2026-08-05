@@ -3,6 +3,7 @@ package memory
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -132,6 +133,26 @@ func TestScanContextDirSkipsNestedMyContext(t *testing.T) {
 	}
 	if got[filepath.Join(nestedDir, "MEMORY.md")] {
 		t.Error("nested .my-context MEMORY.md must not be indexed")
+	}
+}
+
+func TestScanGlobalDirSkipsNestedMyContext(t *testing.T) {
+	globalDir := t.TempDir()
+	mustWriteFile(t, filepath.Join(globalDir, "MEMORY.md"), "# Global Memory\n")
+	mustWriteFile(t, filepath.Join(globalDir, ".my-context", "MEMORY.md"), "should not be indexed\n")
+
+	files, err := scanGlobalDir(globalDir)
+	if err != nil {
+		t.Fatalf("scanGlobalDir: %v", err)
+	}
+
+	for _, f := range files {
+		if strings.Contains(f.Path, string(os.PathSeparator)+".my-context"+string(os.PathSeparator)) {
+			t.Errorf("nested .my-context file must not be indexed, got %q", f.Path)
+		}
+	}
+	if len(files) != 1 {
+		t.Errorf("expected only the canonical MEMORY.md, got %d files", len(files))
 	}
 }
 

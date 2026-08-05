@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
@@ -184,13 +184,28 @@ function resolveProjectRoot(provided: string | undefined, sessionCwd: string): s
   if (provided) {
     return resolve(provided);
   }
-  // Default to the session cwd (pi's ctx.cwd), which is the project root for
-  // desktop agent-chat and sub-agent sessions. If a session type ever runs with
-  // a non-project-root cwd, callers must pass projectRoot explicitly.
   if (!sessionCwd) {
     throw new Error("projectRoot is required when the session working directory is unavailable");
   }
-  return resolve(sessionCwd);
+  return resolveProjectRootFromCwd(sessionCwd);
+}
+
+// The session cwd is not guaranteed to be the project root (a session can
+// start inside a subdirectory). Walk up to the nearest ancestor that carries
+// .my-context or .git so stores never create a misplaced .my-context next to a
+// src/ dir; fall back to the cwd itself (bare dirs — the first-store case).
+function resolveProjectRootFromCwd(cwd: string): string {
+  let current = resolve(cwd);
+  for (;;) {
+    if (existsSync(join(current, ".my-context")) || existsSync(join(current, ".git"))) {
+      return current;
+    }
+    const parent = dirname(current);
+    if (parent === current) {
+      return current;
+    }
+    current = parent;
+  }
 }
 
 function readMemoryFile(memoryPath: string): string {
@@ -228,7 +243,10 @@ function updateMemoryMarkdown(content: string, section: string, entry: string, d
     .slice(headingIndex + 1, nextHeadingIndex)
     .some((line) => line.trim() === formattedEntry);
   if (!hasExistingEntry) {
-    lines.splice(headingIndex + 1, 0, "", formattedEntry);
+    // Append at the END of the section (chronological), matching the Go
+    // summarizer's append order so the overflow trim's keep-latest-3 keeps the
+    // newest entries for both writers.
+    lines.splice(nextHeadingIndex, 0, "", formattedEntry);
   }
 
   return `${lines
@@ -252,13 +270,20 @@ function normalizeMemoryMarkdown(content: string, date: string): string {
     lines.splice(1, 0, "", nextTimestampLine, "");
   }
 
+  // Migrate legacy headings in place: rename "## Locked Decisions" to
+  // "## Decisions" (never leaving a dual-heading file behind) and drop the
+  // retired "## Open Questions" section, matching what the Go summarizer's
+  // rebuild would do.
+  const migrated = lines.map((line) => (line.trim() === "## Locked Decisions" ? "## Decisions" : line));
+  const withoutRetired = migrated.filter((line) => line.trim() !== "## Open Questions");
+
   for (const heading of ["## Decisions", "## Durable Discoveries"]) {
-    if (!lines.includes(heading)) {
-      lines.push("", heading, "");
+    if (!withoutRetired.includes(heading)) {
+      withoutRetired.push("", heading, "");
     }
   }
 
-  return lines.join("\n");
+  return withoutRetired.join("\n");
 }
 
 function getSectionHeading(section: string): string {
