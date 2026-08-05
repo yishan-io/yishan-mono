@@ -112,7 +112,7 @@ Custom config is resolved in this order:
 
 An untrusted project's config files are ignored. A `root` passed to an LSP tool selects files and the server working directory; it does not grant that directory authority to provide project settings. Project settings always come from the trusted Pi session workspace.
 
-Providing custom config replaces the default server map. The following `lsp.json` example intentionally keeps the yishan stack plus two extras:
+A configured config merges over the built-in catalog by server name: naming an existing default server replaces it, new names are added, and unmentioned defaults remain available. Servers you configure are treated as explicit, so an unavailable command reports an error instead of being silently skipped. The following `lsp.json` example overrides the yishan stack servers and adds two extras:
 
 ```json
 {

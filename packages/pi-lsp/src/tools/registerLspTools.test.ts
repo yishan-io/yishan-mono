@@ -36,12 +36,12 @@ describe("registerLspTools", () => {
 
       const untrusted = mockContext({ cwd: project, isProjectTrusted: () => false });
       await expect(execute("trust-test", { server: "missing" }, undefined, undefined, untrusted.ctx)).rejects.toThrow(
-        /Configured LSP servers: user/,
+        /Configured LSP servers: .*user/,
       );
 
       const trusted = mockContext({ cwd: project, isProjectTrusted: () => true });
       await expect(execute("trust-test", { server: "missing" }, undefined, undefined, trusted.ctx)).rejects.toThrow(
-        /Configured LSP servers: project/,
+        /Configured LSP servers: .*project/,
       );
 
       unlinkSync(path.join(project, ".pi", "lsp.json"));

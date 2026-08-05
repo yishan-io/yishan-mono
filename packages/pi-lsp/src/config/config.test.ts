@@ -27,7 +27,7 @@ describe("config loading", () => {
     }
   });
 
-  test("prefers the user config over defaults", () => {
+  test("merges the user config over the built-in catalog", () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "pi-lsp-config-user-"));
     const agentDir = path.join(root, "agent");
     mkdirSync(agentDir);
@@ -35,7 +35,12 @@ describe("config loading", () => {
     const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
     process.env.PI_CODING_AGENT_DIR = agentDir;
     try {
-      expect(loadConfig(root).servers[0]?.name).toBe("user");
+      const config = loadConfig(root);
+      const user = config.servers.find((server) => server.name === "user");
+      expect(user).toBeDefined();
+      expect(user?.isDefault).toBe(false);
+      // Untouched catalog defaults remain available.
+      expect(config.servers.find((server) => server.name === "biome")?.isDefault).toBe(true);
     } finally {
       restoreEnv("PI_CODING_AGENT_DIR", previousAgentDir);
       rmSync(root, { recursive: true, force: true });
@@ -53,8 +58,9 @@ describe("config loading", () => {
     const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
     process.env.PI_CODING_AGENT_DIR = agentDir;
     try {
-      expect(loadConfig(project, { projectTrusted: false }).servers[0]?.name).toBe("user");
-      expect(loadConfig(project, { projectTrusted: true }).servers[0]?.name).toBe("project");
+      const serverNames = (config: { servers: { name: string }[] }) => config.servers.map((server) => server.name);
+      expect(serverNames(loadConfig(project, { projectTrusted: false }))).toContain("user");
+      expect(serverNames(loadConfig(project, { projectTrusted: true }))).toContain("project");
     } finally {
       restoreEnv("PI_CODING_AGENT_DIR", previousAgentDir);
       rmSync(root, { recursive: true, force: true });
@@ -71,12 +77,13 @@ describe("config loading", () => {
     process.env.PI_CODING_AGENT_DIR = agentDir;
     try {
       writeFileSync(path.join(agentDir, "lsp.json"), JSON.stringify(configFor("user")));
-      expect(loadConfig(project).servers[0]?.name).toBe("user");
+      const names = (config: { servers: { name: string }[] }) => config.servers.map((server) => server.name);
+      expect(names(loadConfig(project))).toContain("user");
 
       writeFileSync(path.join(project, ".pi", "lsp.json"), JSON.stringify(configFor("project")));
-      expect(loadConfig(project, { projectTrusted: true }).servers[0]?.name).toBe("project");
+      expect(names(loadConfig(project, { projectTrusted: true }))).toContain("project");
       // Untrusted projects fall back to the user config.
-      expect(loadConfig(project, { projectTrusted: false }).servers[0]?.name).toBe("user");
+      expect(names(loadConfig(project, { projectTrusted: false }))).toContain("user");
     } finally {
       restoreEnv("PI_CODING_AGENT_DIR", previousAgentDir);
       rmSync(root, { recursive: true, force: true });
@@ -127,6 +134,40 @@ describe("config loading", () => {
     }
   });
 
+  test("merges custom servers over the built-in catalog", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "pi-lsp-config-merge-"));
+    const agentDir = path.join(root, "agent");
+    mkdirSync(agentDir);
+    const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+    process.env.PI_CODING_AGENT_DIR = agentDir;
+    try {
+      writeFileSync(
+        path.join(agentDir, "lsp.json"),
+        JSON.stringify({
+          servers: {
+            "my-server": { command: ["my-lsp"], extensions: [".my"] },
+            biome: { command: ["bun", "x", "biome", "lsp-proxy"], extensions: [".ts", ".tsx"] },
+          },
+        }),
+      );
+      const config = loadConfig(root);
+      const names = config.servers.map((server) => server.name);
+      expect(names).toContain("my-server");
+      expect(names).toContain("gopls");
+      // Overriding a default by name replaces it without duplicating.
+      expect(names.filter((name) => name === "biome")).toHaveLength(1);
+      const biome = config.servers.find((server) => server.name === "biome");
+      expect(biome?.command).toEqual(["bun", "x", "biome", "lsp-proxy"]);
+      expect(biome?.isDefault).toBe(false);
+      // Untouched defaults keep their default flag; new names are explicit.
+      expect(config.servers.find((server) => server.name === "gopls")?.isDefault).toBe(true);
+      expect(config.servers.find((server) => server.name === "my-server")?.isDefault).toBe(false);
+    } finally {
+      restoreEnv("PI_CODING_AGENT_DIR", previousAgentDir);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("applies the wrapper shape with timeout and binds runtime servers", () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "pi-lsp-config-wrapper-"));
     const agentDir = path.join(root, "agent");
@@ -156,9 +197,11 @@ describe("config loading", () => {
       );
       const runtime = loadRuntime(project);
       expect(runtime.timeoutMs).toBe(30_000);
-      const server = runtime.servers[0];
-      expect(server?.name).toBe("custom");
+      const server = runtime.servers.find((entry) => entry.name === "custom");
+      expect(server).toBeDefined();
       expect(server?.isDefault).toBe(false);
+      // Catalog defaults still present alongside the custom entry.
+      expect(runtime.servers.find((entry) => entry.name === "biome")?.isDefault).toBe(true);
       expect(server?.diagnosticsSettleMs).toBe(250);
       expect(server?.pushDiagnosticsGraceMs).toBe(375);
       expect(server?.pullDiagnosticsGraceMs).toBe(500);

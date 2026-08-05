@@ -2,7 +2,9 @@
  * pi-lsp configuration loading and normalization.
  *
  * Resolution order: trusted project `<workspace>/.pi/lsp.json` → user
- * `<agent dir>/lsp.json` → the built-in catalog.
+ * `<agent dir>/lsp.json` → the built-in catalog. A configured config merges
+ * over the catalog by server name: naming an existing default replaces it,
+ * new names are added, and unmentioned defaults remain available.
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -49,11 +51,37 @@ export function loadRuntime(cwd = process.cwd(), options: ConfigLoadOptions = {}
  */
 export function loadConfig(cwd = process.cwd(), options: ConfigLoadOptions = {}): LspConfig {
   const found = findConfiguredConfig(cwd, options.projectTrusted === true);
-  return (
-    found ?? {
-      servers: DEFAULT_SERVERS.map((server) => ({ ...server, isDefault: true })),
-    }
-  );
+  return found ? mergeWithDefaults(found) : defaultConfig();
+}
+
+/**
+ * The built-in catalog with default-server flags stamped on each entry.
+ */
+function defaultConfig(): LspConfig {
+  return {
+    servers: DEFAULT_SERVERS.map((server) => ({ ...server, isDefault: true })),
+  };
+}
+
+/**
+ * Merges a configured config over the built-in catalog by server name: a
+ * server named the same as a catalog default replaces it, new names are
+ * added, and unmentioned defaults remain available. A server replaced or
+ * added by the config is treated as explicitly configured, so an
+ * unavailable command reports an error instead of being silently skipped.
+ */
+export function mergeWithDefaults(config: LspConfig): LspConfig {
+  const defaultsByName = new Map(DEFAULT_SERVERS.map((server) => [server.name, server]));
+  const customByName = new Map(config.servers.map((server) => [server.name, server]));
+  const servers: NamedServer[] = [];
+  for (const [name, defaultServer] of defaultsByName) {
+    const custom = customByName.get(name);
+    servers.push(custom ? { ...custom, isDefault: false } : { ...defaultServer, isDefault: true });
+  }
+  for (const [name, custom] of customByName) {
+    if (!defaultsByName.has(name)) servers.push({ ...custom, isDefault: false });
+  }
+  return { timeout: config.timeout, servers };
 }
 
 /**
