@@ -108,7 +108,8 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		log.Warn().Err(err).Msg("remote-to-local API migration skipped — will retry on next restart")
 	}
 	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
-	cleanupStore, err := newWorkspaceCleanupStore(statePath)
+	legacyCleanupPath := filepath.Join(filepath.Dir(statePath), workspaceCleanupFileName)
+	cleanupStore, err := newWorkspaceCleanupStore(database, legacyCleanupPath)
 	if err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
 		return nil, nil, nil, fmt.Errorf("create workspace cleanup store: %w", err)
@@ -147,6 +148,10 @@ func initLocalDatabase(statePath string) (*sql.DB, error) {
 	if err := localdb.Migrate(database); err != nil {
 		_ = database.Close() // cleanup after failed migration
 		return nil, fmt.Errorf("migrate local database: %w", err)
+	}
+	if err := localdb.CleanupLegacyProfileFiles(filepath.Dir(statePath)); err != nil {
+		_ = database.Close() // cleanup after failed legacy-file cleanup
+		return nil, fmt.Errorf("clean up legacy profile files: %w", err)
 	}
 	return database, nil
 }

@@ -8,25 +8,47 @@ import (
 	"github.com/spf13/viper"
 )
 
-func TestLoadContextMigratesLegacyCurrentOrgID(t *testing.T) {
+func TestLoadSettingsFoldsLegacyContextCurrentOrgID(t *testing.T) {
 	dir := t.TempDir()
 	contextPath := filepath.Join(dir, "context.yaml")
+	settingsPath := filepath.Join(dir, "settings.yaml")
+	// Legacy context.yaml uses the original current_org_id key.
 	writeTestFile(t, contextPath, "current_org_id: org-legacy\n")
 
-	cfg, err := LoadContext(contextPath)
+	cfg, err := LoadSettings(settingsPath, viper.New())
 	if err != nil {
-		t.Fatalf("LoadContext error: %v", err)
+		t.Fatalf("LoadSettings error: %v", err)
 	}
 	if cfg.DefaultOrgID != "org-legacy" {
 		t.Fatalf("DefaultOrgID = %q, want %q", cfg.DefaultOrgID, "org-legacy")
 	}
 
-	stored := loadTestConfig(t, contextPath)
+	stored := loadTestConfig(t, settingsPath)
 	if stored.GetString(KeyDefaultOrgID) != "org-legacy" {
 		t.Fatalf("stored default_org_id = %q, want %q", stored.GetString(KeyDefaultOrgID), "org-legacy")
 	}
-	if stored.IsSet("current_org_id") {
-		t.Fatal("expected current_org_id to be removed from context.yaml")
+	if _, err := os.Stat(contextPath); !os.IsNotExist(err) {
+		t.Fatal("expected legacy context.yaml to be removed after fold")
+	}
+}
+
+func TestLoadSettingsRemovesLegacyContextFile(t *testing.T) {
+	dir := t.TempDir()
+	contextPath := filepath.Join(dir, "context.yaml")
+	settingsPath := filepath.Join(dir, "settings.yaml")
+	writeTestFile(t, contextPath, "default_org_id: org-from-context\n")
+	writeTestFile(t, settingsPath, "default_org_id: org-from-settings\n")
+
+	cfg, err := LoadSettings(settingsPath, viper.New())
+	if err != nil {
+		t.Fatalf("LoadSettings error: %v", err)
+	}
+	// settings.yaml wins when it already has the value; context.yaml is retired.
+	if cfg.DefaultOrgID != "org-from-settings" {
+		t.Fatalf("DefaultOrgID = %q, want %q", cfg.DefaultOrgID, "org-from-settings")
+	}
+	if _, err := os.Stat(contextPath); !os.IsNotExist(err) {
+		t.Fatal("expected legacy context.yaml to be removed when settings.yaml has the org")
 	}
 }
 

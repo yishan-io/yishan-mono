@@ -16,6 +16,14 @@ import (
 
 const databaseFileName = "yishan.db"
 
+// legacyProfileFileNames are pre-SQLite state files that no longer have any
+// code references. They are removed on every DB open so old profiles converge
+// on the SQLite-only layout (same pattern as cleanupLegacyMetadataKeys).
+var legacyProfileFileNames = []string{
+	"workspace-index.json",
+	"token-usage-hourly.json.migrated",
+}
+
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
@@ -76,6 +84,23 @@ func Migrate(database *sql.DB) error {
 	}
 	if err := cleanupLegacyMetadataKeys(database); err != nil {
 		return err
+	}
+	return nil
+}
+
+// CleanupLegacyProfileFiles removes profile-local files whose data has moved
+// into SQLite and that have no remaining code references. Missing files are
+// silently ignored so fresh profiles are unaffected. It runs on every daemon
+// database open, alongside the in-DB legacy metadata cleanup.
+func CleanupLegacyProfileFiles(profileDir string) error {
+	if profileDir == "" {
+		return nil
+	}
+	for _, name := range legacyProfileFileNames {
+		path := filepath.Join(profileDir, name)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove legacy profile file %q: %w", path, err)
+		}
 	}
 	return nil
 }
