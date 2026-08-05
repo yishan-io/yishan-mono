@@ -1,5 +1,6 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -22,16 +23,19 @@ const memorySearchSchema = Type.Object({
 });
 
 const memoryReadSchema = Type.Object({
-  projectRoot: Type.String({ description: "Project root containing .my-context/" }),
+  projectRoot: Type.Optional(
+    Type.String({ description: "Project root containing .my-context/. Defaults to the session working directory." }),
+  ),
   path: Type.String({ description: "Relative memory file path under .my-context/" }),
 });
 
 const memoryStoreSchema = Type.Object({
-  projectRoot: Type.String({ description: "Project root containing .my-context/" }),
-  section: Type.Union(
-    [Type.Literal("locked_decisions"), Type.Literal("durable_discoveries"), Type.Literal("open_questions")],
-    { description: "MEMORY.md section to update" },
+  projectRoot: Type.Optional(
+    Type.String({ description: "Project root containing .my-context/. Defaults to the session working directory." }),
   ),
+  section: Type.Union([Type.Literal("locked_decisions"), Type.Literal("durable_discoveries")], {
+    description: "MEMORY.md section to update",
+  }),
   entry: Type.String({ description: "Memory entry text" }),
   date: Type.String({ description: "Entry date in YYYY-MM-DD format" }),
 });
@@ -73,8 +77,9 @@ export function registerMemoryTools(pi: ExtensionAPI, client: MemoryBackendClien
     promptSnippet: "Use memory_read to inspect the full contents of a durable memory file under .my-context/.",
     promptGuidelines: ["Use memory_read only for files under .my-context/."],
     parameters: memoryReadSchema,
-    async execute(_toolCallId, params) {
-      const memoryPath = resolveMemoryPath(params.projectRoot, params.path);
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const projectRoot = resolveProjectRoot(params.projectRoot, ctx.cwd);
+      const memoryPath = resolveMemoryPath(projectRoot, params.path);
       const content = readFileSync(memoryPath, "utf8");
       return {
         content: [{ type: "text", text: content }],
@@ -93,8 +98,9 @@ export function registerMemoryTools(pi: ExtensionAPI, client: MemoryBackendClien
       "Use memory_store only for durable project memory, not task chatter or temporary implementation notes.",
     ],
     parameters: memoryStoreSchema,
-    async execute(_toolCallId, params) {
-      const memoryPath = resolveMemoryPath(params.projectRoot, "MEMORY.md");
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const projectRoot = resolveProjectRoot(params.projectRoot, ctx.cwd);
+      const memoryPath = resolveMemoryPath(projectRoot, "MEMORY.md");
       const previousContent = readMemoryFile(memoryPath);
       const nextContent = updateMemoryMarkdown(previousContent, params.section, params.entry, params.date);
       mkdirSync(dirname(memoryPath), { recursive: true });
@@ -126,6 +132,16 @@ function resolveMemoryPath(projectRoot: string, memoryRelativePath: string): str
     throw new Error("Memory path must be relative to .my-context/");
   }
 
+  // projectRoot must be the project root, not the context directory itself.
+  // Passing "<root>/.my-context" as projectRoot would silently write to a
+  // nested "<root>/.my-context/.my-context/MEMORY.md" duplicate (this exact
+  // misplacement happened in ~/.yishan/contexts/yishan-io/yishan-mono/).
+  if (basename(projectRoot) === ".my-context") {
+    throw new Error(
+      "projectRoot must be the project root (parent of .my-context/), not the .my-context directory itself",
+    );
+  }
+
   const memoryRoot = resolve(projectRoot, ".my-context");
   const memoryPath = resolve(memoryRoot, memoryRelativePath);
   const resolvedRelativePath = relative(memoryRoot, memoryPath);
@@ -133,7 +149,63 @@ function resolveMemoryPath(projectRoot: string, memoryRelativePath: string): str
     throw new Error("Memory path must stay within .my-context/");
   }
 
+  // Reject projectRoots inside the Yishan context store. Project roots never
+  // live under ~/.yishan/contexts/ (context roots are created empty at
+  // provisioning — no top-level MEMORY.md yet — and are the symlink targets of
+  // every worktree's .my-context). Passing a context root as projectRoot would
+  // write into <contextRoot>/.my-context/... — the nested duplicate from the
+  // 2026-08 incident. ~/.yishan/memory/ is rejected too: memory tools are
+  // project-scoped, never global-memory-scoped.
+  if (isUnderYishanStore(projectRoot)) {
+    throw new Error(
+      "projectRoot must be the project root, not a Yishan context/memory directory (~/.yishan/contexts/ or ~/.yishan/memory/)",
+    );
+  }
+
   return memoryPath;
+}
+
+// Yishan keeps canonical project context under ~/.yishan/contexts/<repoKey>/
+// and global memory under ~/.yishan/memory/. Any projectRoot under those
+// stores is a misconfiguration — the real project root is the repo/worktree
+// that symlinks its .my-context to the store.
+function isUnderYishanStore(projectRoot: string): boolean {
+  const home = homedir();
+  for (const subdir of ["contexts", "memory"]) {
+    const rel = relative(join(home, ".yishan", subdir), projectRoot);
+    if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveProjectRoot(provided: string | undefined, sessionCwd: string): string {
+  if (provided) {
+    return resolve(provided);
+  }
+  if (!sessionCwd) {
+    throw new Error("projectRoot is required when the session working directory is unavailable");
+  }
+  return resolveProjectRootFromCwd(sessionCwd);
+}
+
+// The session cwd is not guaranteed to be the project root (a session can
+// start inside a subdirectory). Walk up to the nearest ancestor that carries
+// .my-context or .git so stores never create a misplaced .my-context next to a
+// src/ dir; fall back to the cwd itself (bare dirs — the first-store case).
+function resolveProjectRootFromCwd(cwd: string): string {
+  let current = resolve(cwd);
+  for (;;) {
+    if (existsSync(join(current, ".my-context")) || existsSync(join(current, ".git"))) {
+      return current;
+    }
+    const parent = dirname(current);
+    if (parent === current) {
+      return current;
+    }
+    current = parent;
+  }
 }
 
 function readMemoryFile(memoryPath: string): string {
@@ -150,11 +222,9 @@ function buildEmptyMemoryMarkdown(): string {
     "",
     `_Last updated: ${new Date().toISOString().slice(0, 10)}_`,
     "",
-    "## Locked Decisions",
+    "## Decisions",
     "",
     "## Durable Discoveries",
-    "",
-    "## Open Questions",
     "",
   ].join("\n");
 }
@@ -173,7 +243,10 @@ function updateMemoryMarkdown(content: string, section: string, entry: string, d
     .slice(headingIndex + 1, nextHeadingIndex)
     .some((line) => line.trim() === formattedEntry);
   if (!hasExistingEntry) {
-    lines.splice(headingIndex + 1, 0, "", formattedEntry);
+    // Append at the END of the section (chronological), matching the Go
+    // summarizer's append order so the overflow trim's keep-latest-3 keeps the
+    // newest entries for both writers.
+    lines.splice(nextHeadingIndex, 0, "", formattedEntry);
   }
 
   return `${lines
@@ -197,23 +270,28 @@ function normalizeMemoryMarkdown(content: string, date: string): string {
     lines.splice(1, 0, "", nextTimestampLine, "");
   }
 
-  for (const heading of ["## Locked Decisions", "## Durable Discoveries", "## Open Questions"]) {
-    if (!lines.includes(heading)) {
-      lines.push("", heading, "");
+  // Migrate legacy headings in place: rename "## Locked Decisions" to
+  // "## Decisions" (never leaving a dual-heading file behind) and drop the
+  // retired "## Open Questions" section, matching what the Go summarizer's
+  // rebuild would do.
+  const migrated = lines.map((line) => (line.trim() === "## Locked Decisions" ? "## Decisions" : line));
+  const withoutRetired = migrated.filter((line) => line.trim() !== "## Open Questions");
+
+  for (const heading of ["## Decisions", "## Durable Discoveries"]) {
+    if (!withoutRetired.includes(heading)) {
+      withoutRetired.push("", heading, "");
     }
   }
 
-  return lines.join("\n");
+  return withoutRetired.join("\n");
 }
 
 function getSectionHeading(section: string): string {
   switch (section) {
     case "locked_decisions":
-      return "## Locked Decisions";
+      return "## Decisions";
     case "durable_discoveries":
       return "## Durable Discoveries";
-    case "open_questions":
-      return "## Open Questions";
     default:
       throw new Error(`Unknown memory section: ${section}`);
   }
@@ -224,7 +302,6 @@ function formatEntry(section: string, entry: string, date: string): string {
     case "locked_decisions":
       return `- ${date} - ${entry}`;
     case "durable_discoveries":
-    case "open_questions":
       return `- ${entry}`;
     default:
       throw new Error(`Unknown memory section: ${section}`);

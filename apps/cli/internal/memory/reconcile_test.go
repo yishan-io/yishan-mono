@@ -3,6 +3,7 @@ package memory
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -99,6 +100,69 @@ func TestResolveContextRoot_Missing(t *testing.T) {
 	got := resolveContextRoot(worktree)
 	if got != "" {
 		t.Errorf("want empty string for missing .my-context, got %q", got)
+	}
+}
+
+// ── scanContextDir ────────────────────────────────────────────────────────────
+
+func TestScanContextDirSkipsNestedMyContext(t *testing.T) {
+	contextRoot := t.TempDir()
+
+	// Canonical files: directly under the context root and in a subdir.
+	mustWriteFile(t, filepath.Join(contextRoot, "MEMORY.md"), "# Project Memory\n")
+	mustWriteFile(t, filepath.Join(contextRoot, "archive", "durable-discoveries.md"), "archived\n")
+
+	// The nested duplicate from the 2026-08 incident: <contextRoot>/.my-context/.
+	nestedDir := filepath.Join(contextRoot, ".my-context")
+	mustWriteFile(t, filepath.Join(nestedDir, "MEMORY.md"), "should not be indexed\n")
+
+	files, err := scanContextDir(contextRoot, "proj-1")
+	if err != nil {
+		t.Fatalf("scanContextDir: %v", err)
+	}
+
+	got := map[string]bool{}
+	for _, f := range files {
+		got[f.Path] = true
+	}
+	if !got[filepath.Join(contextRoot, "MEMORY.md")] {
+		t.Error("expected canonical MEMORY.md to be indexed")
+	}
+	if !got[filepath.Join(contextRoot, "archive", "durable-discoveries.md")] {
+		t.Error("expected archive file to be indexed")
+	}
+	if got[filepath.Join(nestedDir, "MEMORY.md")] {
+		t.Error("nested .my-context MEMORY.md must not be indexed")
+	}
+}
+
+func TestScanGlobalDirSkipsNestedMyContext(t *testing.T) {
+	globalDir := t.TempDir()
+	mustWriteFile(t, filepath.Join(globalDir, "MEMORY.md"), "# Global Memory\n")
+	mustWriteFile(t, filepath.Join(globalDir, ".my-context", "MEMORY.md"), "should not be indexed\n")
+
+	files, err := scanGlobalDir(globalDir)
+	if err != nil {
+		t.Fatalf("scanGlobalDir: %v", err)
+	}
+
+	for _, f := range files {
+		if strings.Contains(f.Path, string(os.PathSeparator)+".my-context"+string(os.PathSeparator)) {
+			t.Errorf("nested .my-context file must not be indexed, got %q", f.Path)
+		}
+	}
+	if len(files) != 1 {
+		t.Errorf("expected only the canonical MEMORY.md, got %d files", len(files))
+	}
+}
+
+func mustWriteFile(t *testing.T, path string, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 

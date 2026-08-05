@@ -113,6 +113,12 @@ func scanContextDir(contextRoot string, projectID string) ([]diskFile, error) {
 			return nil
 		}
 		if entry.IsDir() {
+			// Skip nested .my-context duplicates under the context root:
+			// canonical context files never live under a .my-context subdir,
+			// only the misplaced nested-duplicate does.
+			if entry.Name() == myContextDir && path != contextRoot {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if !strings.HasSuffix(entry.Name(), ".md") {
@@ -147,6 +153,10 @@ func scanGlobalDir(globalDir string) ([]diskFile, error) {
 			return nil
 		}
 		if entry.IsDir() {
+			// Skip nested .my-context duplicates, mirroring scanContextDir.
+			if entry.Name() == myContextDir && path != globalDir {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if !strings.HasSuffix(entry.Name(), ".md") {
