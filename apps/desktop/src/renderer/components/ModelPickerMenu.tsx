@@ -1,10 +1,25 @@
-import { Box, Button, ClickAwayListener, List, ListItemButton, ListItemText, Popper, Typography } from "@mui/material";
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  Box,
+  Button,
+  ClickAwayListener,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemText,
+  Popper,
+  Typography,
+} from "@mui/material";
+import { type MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LuPlus } from "react-icons/lu";
 import { FloatingSurface } from "./FloatingSurface";
 import { ProviderMark } from "./ProviderMark";
 import { SearchInput } from "./SearchInput";
-import { type ModelPickerOption, groupModelPickerOptionsByProvider } from "./modelPicker";
+import {
+  type ModelPickerOption,
+  type ModelPickerProviderGroup,
+  groupModelPickerOptionsByProvider,
+} from "./modelPicker";
 
 type ModelPickerMenuProps = {
   anchorEl: HTMLElement | null;
@@ -18,11 +33,15 @@ type ModelPickerMenuProps = {
   onModelSelect: (option: ModelPickerOption) => void;
   clearSelectionLabel?: string;
   onClearSelection?: () => void;
+  /** When set, renders a pinned "Add Provider" footer entry in the provider column. */
+  onAddProvider?: () => void;
 };
 
 const PROVIDER_COLUMN_WIDTH_PX = 156;
 const MODEL_COLUMN_WIDTH_PX = 280;
 const MODEL_ROW_HEIGHT_PX = 32;
+/** Fixed height of the pinned "Add Provider" footer button. */
+const FOOTER_HEIGHT_PX = 32;
 const MODEL_OVERSCAN_ROWS = 5;
 const DROPDOWN_HEIGHT_PX = 320;
 const SEARCH_AREA_HEIGHT_PX = 40;
@@ -47,6 +66,100 @@ function buildModelButtonSx(isSelected: boolean) {
   } as const;
 }
 
+/** Scrollable provider navigation column with an optional pinned "Add Provider" footer. */
+function ProviderColumn({
+  providerGroups,
+  activeProviderGroup,
+  onProviderChange,
+  onAddProvider,
+}: {
+  providerGroups: ModelPickerProviderGroup[];
+  activeProviderGroup: ModelPickerProviderGroup | null;
+  onProviderChange: (providerId: string) => void;
+  onAddProvider?: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Box
+      sx={{
+        width: PROVIDER_COLUMN_WIDTH_PX,
+        height: DROPDOWN_HEIGHT_PX,
+        display: "flex",
+        flexDirection: "column",
+        borderRight: 1,
+        borderColor: "divider",
+        py: 0.5,
+      }}
+    >
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <List dense disablePadding aria-label={t("common.modelPicker.providerListLabel")}>
+          {providerGroups.map((providerGroup) => (
+            <ListItemButton
+              key={providerGroup.providerId}
+              selected={providerGroup.providerId === activeProviderGroup?.providerId}
+              onClick={() => {
+                onProviderChange(providerGroup.providerId);
+              }}
+              sx={{
+                minHeight: MODEL_ROW_HEIGHT_PX,
+                px: 1.5,
+                py: 0.25,
+                "& .MuiListItemText-primary": {
+                  fontSize: 12,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                },
+                "& .MuiListItemText-secondary": {
+                  fontSize: 11,
+                  lineHeight: 1.3,
+                },
+              }}
+            >
+              <Box sx={{ mr: 1, flexShrink: 0, display: "inline-flex" }}>
+                <ProviderMark providerId={providerGroup.providerId} size={18} />
+              </Box>
+              <ListItemText
+                primary={providerGroup.providerName}
+                secondary={t("common.modelPicker.providerCount", { count: providerGroup.models.length })}
+              />
+            </ListItemButton>
+          ))}
+        </List>
+      </Box>
+      {onAddProvider ? (
+        <>
+          <Divider />
+          <ListItemButton
+            onClick={onAddProvider}
+            aria-label={t("common.modelPicker.addProvider")}
+            sx={{
+              justifyContent: "center",
+              flexGrow: 0,
+              height: FOOTER_HEIGHT_PX,
+              px: 1.5,
+              py: 0,
+              borderRadius: 0,
+              fontSize: 11,
+              lineHeight: 1.4,
+              color: "text.secondary",
+              "&:hover": {
+                bgcolor: "action.hover",
+              },
+            }}
+          >
+            <LuPlus size={12} />
+            <Box component="span" sx={{ ml: 0.75, whiteSpace: "nowrap" }}>
+              {t("common.modelPicker.addProvider")}
+            </Box>
+          </ListItemButton>
+        </>
+      ) : null}
+    </Box>
+  );
+}
+
 /** Shared two-column popup model picker with provider navigation and search. */
 export function ModelPickerMenu({
   anchorEl,
@@ -60,6 +173,7 @@ export function ModelPickerMenu({
   onModelSelect,
   clearSelectionLabel,
   onClearSelection,
+  onAddProvider,
 }: ModelPickerMenuProps) {
   const { t } = useTranslation();
   const providerGroups = useMemo(() => groupModelPickerOptionsByProvider(options), [options]);
@@ -136,51 +250,12 @@ export function ModelPickerMenu({
           sx={{ overflow: "hidden" }}
         >
           <Box sx={{ display: "flex", height: DROPDOWN_HEIGHT_PX, maxWidth: "calc(100vw - 32px)" }}>
-            <Box
-              sx={{
-                width: PROVIDER_COLUMN_WIDTH_PX,
-                height: DROPDOWN_HEIGHT_PX,
-                overflowY: "auto",
-                borderRight: 1,
-                borderColor: "divider",
-                py: 0.5,
-              }}
-            >
-              <List dense disablePadding aria-label={t("common.modelPicker.providerListLabel")}>
-                {providerGroups.map((providerGroup) => (
-                  <ListItemButton
-                    key={providerGroup.providerId}
-                    selected={providerGroup.providerId === activeProviderGroup?.providerId}
-                    onClick={() => {
-                      onProviderChange(providerGroup.providerId);
-                    }}
-                    sx={{
-                      minHeight: MODEL_ROW_HEIGHT_PX,
-                      px: 1.5,
-                      py: 0.25,
-                      "& .MuiListItemText-primary": {
-                        fontSize: 12,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      },
-                      "& .MuiListItemText-secondary": {
-                        fontSize: 11,
-                        lineHeight: 1.3,
-                      },
-                    }}
-                  >
-                    <Box sx={{ mr: 1, flexShrink: 0, display: "inline-flex" }}>
-                      <ProviderMark providerId={providerGroup.providerId} size={18} />
-                    </Box>
-                    <ListItemText
-                      primary={providerGroup.providerName}
-                      secondary={t("common.modelPicker.providerCount", { count: providerGroup.models.length })}
-                    />
-                  </ListItemButton>
-                ))}
-              </List>
-            </Box>
+            <ProviderColumn
+              providerGroups={providerGroups}
+              activeProviderGroup={activeProviderGroup}
+              onProviderChange={onProviderChange}
+              onAddProvider={onAddProvider}
+            />
             <Box sx={{ width: MODEL_COLUMN_WIDTH_PX, height: DROPDOWN_HEIGHT_PX, py: 0.5 }}>
               <Box sx={{ height: SEARCH_AREA_HEIGHT_PX, px: 1, pb: 0.5 }}>
                 <SearchInput
@@ -213,8 +288,16 @@ export function ModelPickerMenu({
                 >
                   {onClearSelection && clearSelectionLabel ? (
                     <Box component="li">
-                      <Button fullWidth size="small" onClick={onClearSelection} sx={buildModelButtonSx(selectedModelId === null)}>
-                        <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <Button
+                        fullWidth
+                        size="small"
+                        onClick={onClearSelection}
+                        sx={buildModelButtonSx(selectedModelId === null)}
+                      >
+                        <Box
+                          component="span"
+                          sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        >
                           {clearSelectionLabel}
                         </Box>
                       </Button>
@@ -225,8 +308,17 @@ export function ModelPickerMenu({
 
                     return (
                       <Box key={option.id} component="li">
-                        <Button fullWidth size="small" title={option.name} onClick={() => onModelSelect(option)} sx={buildModelButtonSx(isSelected)}>
-                          <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <Button
+                          fullWidth
+                          size="small"
+                          title={option.name}
+                          onClick={() => onModelSelect(option)}
+                          sx={buildModelButtonSx(isSelected)}
+                        >
+                          <Box
+                            component="span"
+                            sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          >
                             {option.name}
                           </Box>
                         </Button>
@@ -255,8 +347,16 @@ export function ModelPickerMenu({
                   >
                     {onClearSelection && clearSelectionLabel ? (
                       <Box component="li" sx={{ position: "absolute", top: 0, left: 0, right: 0 }}>
-                        <Button fullWidth size="small" onClick={onClearSelection} sx={buildModelButtonSx(selectedModelId === null)}>
-                          <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <Button
+                          fullWidth
+                          size="small"
+                          onClick={onClearSelection}
+                          sx={buildModelButtonSx(selectedModelId === null)}
+                        >
+                          <Box
+                            component="span"
+                            sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          >
                             {clearSelectionLabel}
                           </Box>
                         </Button>
@@ -265,16 +365,33 @@ export function ModelPickerMenu({
                     {virtualizedModels.map((option, index) => {
                       const isSelected = option.id === selectedModelId;
                       const virtualizedIndex = virtualizedStartIndex + index;
-                      const offsetTop = virtualizedIndex * MODEL_ROW_HEIGHT_PX + (onClearSelection && clearSelectionLabel ? MODEL_ROW_HEIGHT_PX : 0);
+                      const offsetTop =
+                        virtualizedIndex * MODEL_ROW_HEIGHT_PX +
+                        (onClearSelection && clearSelectionLabel ? MODEL_ROW_HEIGHT_PX : 0);
 
                       return (
                         <Box
                           key={option.id}
                           component="li"
-                          sx={{ position: "absolute", top: 0, left: 0, right: 0, transform: `translateY(${offsetTop}px)` }}
+                          sx={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            transform: `translateY(${offsetTop}px)`,
+                          }}
                         >
-                          <Button fullWidth size="small" title={option.name} onClick={() => onModelSelect(option)} sx={buildModelButtonSx(isSelected)}>
-                            <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <Button
+                            fullWidth
+                            size="small"
+                            title={option.name}
+                            onClick={() => onModelSelect(option)}
+                            sx={buildModelButtonSx(isSelected)}
+                          >
+                            <Box
+                              component="span"
+                              sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                            >
                               {option.name}
                             </Box>
                           </Button>

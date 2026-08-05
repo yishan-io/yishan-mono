@@ -23,7 +23,7 @@ type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
 type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
 
 /** Reads tab store state for both real Zustand stores and selector-only test doubles. */
-function readTabStoreState(): TabStoreState {
+export function readTabStoreState(): TabStoreState {
   const facade = tabStore as TabStoreFacade;
   if (typeof facade.getState === "function") {
     return facade.getState();

@@ -17,7 +17,8 @@
       "providerCount_one": "{{count}} model",
       "providerCount_other": "{{count}} models",
       "noModels": "No models",
-      "noMatchingModels": "No matching models"
+      "noMatchingModels": "No matching models",
+      "addProvider": "Add Provider"
     }
   }
 }

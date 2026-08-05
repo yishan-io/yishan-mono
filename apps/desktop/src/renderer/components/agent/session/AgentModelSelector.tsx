@@ -1,10 +1,10 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
+import type { AgentModel } from "../../../store/agentChatTypes";
 import { ModelPickerMenu } from "../../ModelPickerMenu";
 import { ProviderMark } from "../../ProviderMark";
 import { type ModelPickerOption, buildModelPickerOption, groupModelPickerOptionsByProvider } from "../../modelPicker";
-import type { AgentModel } from "../../../store/agentChatTypes";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
 import { formatAgentModelLabel } from "./helpers";
 
@@ -14,12 +14,17 @@ type AgentModelSelectorProps = {
   thinkingLevel: string;
   onModelChange: (model: AgentModel) => void;
   onThinkingLevelCycle: () => void;
+  /** Invoked after the popup closes; opens the provider add flow. */
+  onAddProvider?: () => void;
 };
 
 const MODEL_SELECTOR_FONT_SIZE_PX = 12;
 const MODEL_SELECTOR_MAX_WIDTH = "min(48ch, calc(100vw - 120px))";
 
-function getInitialSelectedProvider(selectedOptionId: string | null, modelOptions: ReturnType<typeof buildAgentModelOptions>): string {
+function getInitialSelectedProvider(
+  selectedOptionId: string | null,
+  modelOptions: ReturnType<typeof buildAgentModelOptions>,
+): string {
   if (selectedOptionId) {
     return modelOptions.find((option) => option.id === selectedOptionId)?.providerId ?? "";
   }
@@ -44,12 +49,13 @@ export function AgentModelSelector({
   thinkingLevel,
   onModelChange,
   onThinkingLevelCycle,
+  onAddProvider,
 }: AgentModelSelectorProps) {
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
   const modelOptions = useMemo(() => buildAgentModelOptions(models), [models]);
   const selectedModelId = currentModel?.id ?? null;
   const selectedOption = useMemo(
-    () => (selectedModelId ? modelOptions.find((option) => option.id === selectedModelId) ?? null : null),
+    () => (selectedModelId ? (modelOptions.find((option) => option.id === selectedModelId) ?? null) : null),
     [modelOptions, selectedModelId],
   );
   const providerLabel = selectedOption?.providerName ?? "";
@@ -96,6 +102,11 @@ export function AgentModelSelector({
     },
     [handleMenuClose, models, onModelChange],
   );
+
+  const handleAddProvider = useCallback(() => {
+    handleMenuClose();
+    onAddProvider?.();
+  }, [handleMenuClose, onAddProvider]);
 
   const activeSelectedProvider = groupModelPickerOptionsByProvider(modelOptions).some(
     (providerGroup) => providerGroup.providerId === selectedProvider,
@@ -180,6 +191,7 @@ export function AgentModelSelector({
         onClose={handleMenuClose}
         onProviderChange={setSelectedProvider}
         onModelSelect={handleModelSelect}
+        onAddProvider={onAddProvider ? handleAddProvider : undefined}
       />
       <ThinkingLevelControl thinkingLevel={thinkingLevel} onCycle={onThinkingLevelCycle} />
     </Box>

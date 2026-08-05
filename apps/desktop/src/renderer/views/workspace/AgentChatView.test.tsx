@@ -25,7 +25,14 @@ const mocked = vi.hoisted(() => {
       agentModelSelectorRenderCount: number;
       latestAgentModelSelectorProps: {
         onModelChange: ((model: AgentModel) => void | Promise<void>) | null;
+        onAddProvider: (() => void) | null;
       };
+      latestProviderCredentialDialogProps: {
+        open: boolean;
+        mode: "add" | "edit";
+        onClose: () => void;
+        onSaved: (providerId?: string) => void;
+      } | null;
       latestRichComposerProps: {
         value?: string;
         onChange?: (value: string) => void;
@@ -41,7 +48,9 @@ const mocked = vi.hoisted(() => {
       agentModelSelectorRenderCount: 0,
       latestAgentModelSelectorProps: {
         onModelChange: null,
+        onAddProvider: null,
       },
+      latestProviderCredentialDialogProps: null,
     },
   };
 
@@ -62,6 +71,7 @@ const mocked = vi.hoisted(() => {
     setAgentChatStreamTabVisible: vi.fn(),
     setAgentModel: vi.fn(),
     setAgentThinkingLevel: vi.fn(),
+    stopPiSession: vi.fn().mockResolvedValue(undefined),
     sendAgentPrompt: vi.fn(),
     getDaemonClient: vi.fn().mockResolvedValue({
       events: {
@@ -73,6 +83,7 @@ const mocked = vi.hoisted(() => {
     agentMessageList: vi.fn(({ isWorking }: { isWorking: boolean }) => (
       <div data-testid="agent-message-list">{isWorking ? "working" : "idle"}</div>
     )),
+    delay: vi.fn(async () => {}),
   };
 });
 
@@ -92,6 +103,7 @@ vi.mock("../../commands/agentChatCommands", () => ({
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
   setAgentModel: mocked.setAgentModel,
   setAgentThinkingLevel: mocked.setAgentThinkingLevel,
+  stopPiSession: mocked.stopPiSession,
 }));
 
 vi.mock("../../commands/agentChatSubagentCommands", () => ({
@@ -101,6 +113,7 @@ vi.mock("../../commands/agentChatSubagentCommands", () => ({
 
 vi.mock("../../commands/tabCommands", () => ({
   renameTab: vi.fn(),
+  readTabStoreState: () => ({ tabs: mocked.stateRef.current.tabs }),
 }));
 
 vi.mock("../../components/RichComposer", () => ({
@@ -126,16 +139,46 @@ vi.mock("../../components/agent/transcript/AgentMessageList", () => ({
 }));
 
 vi.mock("../../components/agent/session/AgentModelSelector", () => ({
-  AgentModelSelector: ({ onModelChange }: { onModelChange: (model: AgentModel) => void | Promise<void> }) => {
+  AgentModelSelector: ({
+    onModelChange,
+    onAddProvider,
+  }: {
+    onModelChange: (model: AgentModel) => void | Promise<void>;
+    onAddProvider?: () => void;
+  }) => {
     mocked.stateRef.current.agentModelSelectorRenderCount += 1;
     mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = onModelChange;
-    return <div data-testid="agent-model-selector" />;
+    mocked.stateRef.current.latestAgentModelSelectorProps.onAddProvider = onAddProvider ?? null;
+    return (
+      <div data-testid="agent-model-selector">
+        <button type="button" data-testid="add-provider-button" onClick={() => onAddProvider?.()}>
+          Add Provider
+        </button>
+      </div>
+    );
+  },
+}));
+
+vi.mock("../settings/ProviderCredentialDialog", () => ({
+  ProviderCredentialDialog: (props: {
+    open: boolean;
+    mode: "add" | "edit";
+    onClose: () => void;
+    onSaved: (providerId?: string) => void;
+  }) => {
+    mocked.stateRef.current.latestProviderCredentialDialogProps = props;
+    return props.open ? <div role="dialog" data-testid="provider-credential-dialog" /> : null;
   },
 }));
 
 vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: mocked.getDaemonClient,
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+}));
+
+// Keep the provider-visibility poll (useAgentChatProviderAdd) fast in tests.
+vi.mock("../../helpers/delay", () => ({
+  delay: mocked.delay,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -1128,5 +1171,132 @@ describe("AgentChatView", () => {
 
     expect(mocked.stateRef.current.richComposerRenderCount).toBe(0);
     expect(mocked.stateRef.current.agentModelSelectorRenderCount).toBe(0);
+  });
+
+  it("opens the provider credential dialog from the model popup add-provider entry", async () => {
+    seedSession({
+      state: "idle",
+      availableModels: [{ id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" }],
+      currentModel: { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" },
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-provider-button")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("add-provider-button"));
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(mocked.stateRef.current.latestProviderCredentialDialogProps?.mode).toBe("add");
+  });
+
+  it("refreshes models after a provider save without restarting the session when the provider is visible", async () => {
+    seedSession({
+      state: "idle",
+      availableModels: [{ id: "deepseek/deepseek-chat", provider: "deepseek", name: "deepseek-chat" }],
+      currentModel: { id: "deepseek/deepseek-chat", provider: "deepseek", name: "deepseek-chat" },
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-provider-button")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("add-provider-button"));
+    const dialogProps = mocked.stateRef.current.latestProviderCredentialDialogProps;
+    expect(dialogProps).not.toBeNull();
+
+    await act(async () => {
+      await dialogProps?.onSaved("deepseek");
+    });
+
+    expect(mocked.fetchAgentModels).toHaveBeenCalledWith({ tabId: "tab-1", sessionId: "session-1" });
+    expect(mocked.stopPiSession).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("restarts the pi session when the saved provider's models are still invisible", async () => {
+    seedSession({
+      state: "idle",
+      availableModels: [{ id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" }],
+      currentModel: { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" },
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-provider-button")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("add-provider-button"));
+    const dialogProps = mocked.stateRef.current.latestProviderCredentialDialogProps;
+
+    await act(async () => {
+      await dialogProps?.onSaved("deepseek");
+    });
+
+    expect(mocked.stopPiSession).toHaveBeenCalledWith("tab-1");
+    expect(mocked.ensurePiSession).toHaveBeenCalledWith({
+      tabId: "tab-1",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "session-1",
+      paneId: undefined,
+    });
+    expect(mocked.fetchAgentModels).toHaveBeenCalled();
+  });
+
+  it("never restarts a busy session after a provider save", async () => {
+    seedSession({
+      state: "running",
+      availableModels: [{ id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" }],
+      currentModel: { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" },
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-provider-button")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("add-provider-button"));
+    const dialogProps = mocked.stateRef.current.latestProviderCredentialDialogProps;
+
+    await act(async () => {
+      await dialogProps?.onSaved("deepseek");
+    });
+
+    expect(mocked.stopPiSession).not.toHaveBeenCalled();
+    expect(mocked.fetchAgentModels).toHaveBeenCalled();
+  });
+
+  it("surfaces a session error when the restart fails mid-way", async () => {
+    seedSession({
+      state: "idle",
+      availableModels: [{ id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" }],
+      currentModel: { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "Claude Sonnet 4" },
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
+    });
+    // The next ensurePiSession call is the restart's; make it fail.
+    mocked.ensurePiSession.mockRejectedValueOnce(new Error("restart boom"));
+
+    fireEvent.click(screen.getByTestId("add-provider-button"));
+    const dialogProps = mocked.stateRef.current.latestProviderCredentialDialogProps;
+
+    await act(async () => {
+      await dialogProps?.onSaved("deepseek");
+    });
+
+    expect(mocked.stopPiSession).toHaveBeenCalledWith("tab-1");
+    expect(agentChatStore.getState().sessionsByTabId["tab-1"]?.state).toBe("error");
+    expect(agentChatStore.getState().sessionsByTabId["tab-1"]?.error).toBe("restart boom");
   });
 });
