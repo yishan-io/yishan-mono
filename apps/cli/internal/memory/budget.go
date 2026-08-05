@@ -45,25 +45,16 @@ func trimToBudget(content string, limit int, contextRoot string) (string, []stri
 
 	for len([]rune(buildMemoryMarkdown(sections))) > limit {
 		trimmed := false
-		if len(sections.OpenQuestions) > 0 {
-			if p := overflowEntries(contextRoot, "open-questions", sections.OpenQuestions); p != "" {
-				overflowPaths = append(overflowPaths, p)
-			}
-			sections.OpenQuestions = nil
+		var overflowPath string
+		sections.DurableDiscoveries, overflowPath = trimSectionKeepingLatestEntries(
+			sections.DurableDiscoveries,
+			3,
+			contextRoot,
+			"durable-discoveries",
+		)
+		if overflowPath != "" {
+			overflowPaths = append(overflowPaths, overflowPath)
 			trimmed = true
-		}
-		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
-			var overflowPath string
-			sections.DurableDiscoveries, overflowPath = trimSectionKeepingLatestEntries(
-				sections.DurableDiscoveries,
-				3,
-				contextRoot,
-				"durable-discoveries",
-			)
-			if overflowPath != "" {
-				overflowPaths = append(overflowPaths, overflowPath)
-				trimmed = true
-			}
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
 			var overflowPath string
@@ -71,7 +62,7 @@ func trimToBudget(content string, limit int, contextRoot string) (string, []stri
 				sections.LockedDecisions,
 				3,
 				contextRoot,
-				"locked-decisions",
+				"decisions",
 			)
 			if overflowPath != "" {
 				overflowPaths = append(overflowPaths, overflowPath)

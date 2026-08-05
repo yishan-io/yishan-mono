@@ -33,10 +33,9 @@ const memoryStoreSchema = Type.Object({
   projectRoot: Type.Optional(
     Type.String({ description: "Project root containing .my-context/. Defaults to the session working directory." }),
   ),
-  section: Type.Union(
-    [Type.Literal("locked_decisions"), Type.Literal("durable_discoveries"), Type.Literal("open_questions")],
-    { description: "MEMORY.md section to update" },
-  ),
+  section: Type.Union([Type.Literal("locked_decisions"), Type.Literal("durable_discoveries")], {
+    description: "MEMORY.md section to update",
+  }),
   entry: Type.String({ description: "Memory entry text" }),
   date: Type.String({ description: "Entry date in YYYY-MM-DD format" }),
 });
@@ -208,11 +207,9 @@ function buildEmptyMemoryMarkdown(): string {
     "",
     `_Last updated: ${new Date().toISOString().slice(0, 10)}_`,
     "",
-    "## Locked Decisions",
+    "## Decisions",
     "",
     "## Durable Discoveries",
-    "",
-    "## Open Questions",
     "",
   ].join("\n");
 }
@@ -255,7 +252,7 @@ function normalizeMemoryMarkdown(content: string, date: string): string {
     lines.splice(1, 0, "", nextTimestampLine, "");
   }
 
-  for (const heading of ["## Locked Decisions", "## Durable Discoveries", "## Open Questions"]) {
+  for (const heading of ["## Decisions", "## Durable Discoveries"]) {
     if (!lines.includes(heading)) {
       lines.push("", heading, "");
     }
@@ -267,11 +264,9 @@ function normalizeMemoryMarkdown(content: string, date: string): string {
 function getSectionHeading(section: string): string {
   switch (section) {
     case "locked_decisions":
-      return "## Locked Decisions";
+      return "## Decisions";
     case "durable_discoveries":
       return "## Durable Discoveries";
-    case "open_questions":
-      return "## Open Questions";
     default:
       throw new Error(`Unknown memory section: ${section}`);
   }
@@ -282,7 +277,6 @@ function formatEntry(section: string, entry: string, date: string): string {
     case "locked_decisions":
       return `- ${date} - ${entry}`;
     case "durable_discoveries":
-    case "open_questions":
       return `- ${entry}`;
     default:
       throw new Error(`Unknown memory section: ${section}`);

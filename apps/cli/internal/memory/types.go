@@ -59,15 +59,13 @@ type MemorySearchResult struct {
 type ExtractedKnowledge struct {
 	LockedDecisions    []string
 	DurableDiscoveries []string
-	OpenQuestions      []string
 }
 
 type MemorySection string
 
 const (
-	SectionLockedDecisions    MemorySection = "## Locked Decisions"
+	SectionLockedDecisions    MemorySection = "## Decisions"
 	SectionDurableDiscoveries MemorySection = "## Durable Discoveries"
-	SectionOpenQuestions      MemorySection = "## Open Questions"
 )
 
 // BuiltInSummarizerAgentKind is the fixed agent used for post-session memory summarization.

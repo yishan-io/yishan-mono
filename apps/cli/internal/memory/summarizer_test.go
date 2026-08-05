@@ -12,17 +12,13 @@ func TestParseMemorySections_CurrentStructure(t *testing.T) {
 
 _Last updated: 2026-06-14_
 
-## Locked Decisions
+## Decisions
 
 - 2026-06-14 — Used modernc.org/sqlite. Why: avoids CGO.
 
 ## Durable Discoveries
 
 - [Invariant] 2026-06-14 — .my-context is a symlink to contexts/<repoKey>
-
-## Open Questions
-
-- 2026-06-14 — Should search index archive files by default?
 `
 
 	sections := parseMemorySections(content)
@@ -33,15 +29,16 @@ _Last updated: 2026-06-14_
 	if len(sections.DurableDiscoveries) != 1 {
 		t.Errorf("expected 1 durable discovery, got %d", len(sections.DurableDiscoveries))
 	}
-	if len(sections.OpenQuestions) != 1 {
-		t.Errorf("expected 1 open question, got %d", len(sections.OpenQuestions))
-	}
 }
 
 func TestParseMemorySections_LegacyStructure(t *testing.T) {
 	content := `## My Decisions
 
 - 2026-06-13 — Old decision
+
+## Locked Decisions
+
+- 2026-06-14 — Pre-rename decision
 
 ## What I Learned
 
@@ -54,8 +51,8 @@ func TestParseMemorySections_LegacyStructure(t *testing.T) {
 
 	sections := parseMemorySections(content)
 
-	if len(sections.LockedDecisions) != 1 {
-		t.Errorf("expected 1 locked decision, got %d", len(sections.LockedDecisions))
+	if len(sections.LockedDecisions) != 2 {
+		t.Errorf("expected 2 locked decisions (My Decisions + pre-rename Locked Decisions), got %d", len(sections.LockedDecisions))
 	}
 	if len(sections.DurableDiscoveries) != 2 {
 		t.Errorf("expected 2 durable discoveries, got %d", len(sections.DurableDiscoveries))
@@ -64,7 +61,7 @@ func TestParseMemorySections_LegacyStructure(t *testing.T) {
 
 func TestParseMemorySections_Empty(t *testing.T) {
 	sections := parseMemorySections("")
-	if len(sections.LockedDecisions) != 0 || len(sections.DurableDiscoveries) != 0 || len(sections.OpenQuestions) != 0 {
+	if len(sections.LockedDecisions) != 0 || len(sections.DurableDiscoveries) != 0 {
 		t.Error("empty content should produce empty sections")
 	}
 }
@@ -73,7 +70,6 @@ func TestBuildMemoryMarkdown_RoundTrip(t *testing.T) {
 	sections := memorySections{
 		LockedDecisions:    []string{"2026-06-14 — Used JWT. Why: simple auth."},
 		DurableDiscoveries: []string{"[Test Trap] 2026-06-14 — JWT expiry is 1h"},
-		OpenQuestions:      []string{"2026-06-14 — Should refresh tokens rotate?"},
 	}
 	md := buildMemoryMarkdown(sections)
 
@@ -86,8 +82,8 @@ func TestBuildMemoryMarkdown_RoundTrip(t *testing.T) {
 	if !strings.Contains(md, "- [Test Trap] 2026-06-14 — JWT expiry is 1h") {
 		t.Error("missing durable discovery")
 	}
-	if !strings.Contains(md, "- 2026-06-14 — Should refresh tokens rotate?") {
-		t.Error("missing open question")
+	if strings.Contains(md, "Open Questions") {
+		t.Error("open questions section should not be emitted")
 	}
 }
 
@@ -117,8 +113,7 @@ func TestContainsEntry(t *testing.T) {
 func TestParseExtractedJSON_Valid(t *testing.T) {
 	raw := `{
 		"lockedDecisions": ["2026-06-14 — Used SQLite. Why: lightweight."],
-		"durableDiscoveries": ["[Invariant] 2026-06-14 — FTS5 requires triggers"],
-		"openQuestions": ["2026-06-14 — Should we index archives?"]
+		"durableDiscoveries": ["[Invariant] 2026-06-14 — FTS5 requires triggers"]
 	}`
 
 	knowledge, err := parseExtractedJSON(raw)
@@ -130,9 +125,6 @@ func TestParseExtractedJSON_Valid(t *testing.T) {
 	}
 	if len(knowledge.DurableDiscoveries) != 1 {
 		t.Errorf("expected 1 durable discovery, got %d", len(knowledge.DurableDiscoveries))
-	}
-	if len(knowledge.OpenQuestions) != 1 {
-		t.Errorf("expected 1 open question, got %d", len(knowledge.OpenQuestions))
 	}
 }
 
@@ -169,7 +161,7 @@ func TestMergeAndWrite_AppendsNewEntries(t *testing.T) {
 	memPath := filepath.Join(ctxDir, "MEMORY.md")
 	existing := `# Project Memory
 
-## Locked Decisions
+## Decisions
 
 - 2026-06-13 — Old decision
 
@@ -188,7 +180,6 @@ func TestMergeAndWrite_AppendsNewEntries(t *testing.T) {
 	extracted := ExtractedKnowledge{
 		LockedDecisions:    []string{"2026-06-14 — New decision. Why: important."},
 		DurableDiscoveries: []string{"[Workflow Trap] 2026-06-14 — New learning"},
-		OpenQuestions:      []string{"2026-06-14 — New question?"},
 	}
 
 	written, err := mergeAndWrite(memPath, existing, extracted, ctxDir)
@@ -211,8 +202,8 @@ func TestMergeAndWrite_AppendsNewEntries(t *testing.T) {
 	if !strings.Contains(content, "Old learning") || !strings.Contains(content, "New learning") {
 		t.Error("should preserve and append discoveries")
 	}
-	if !strings.Contains(content, "Old question") || !strings.Contains(content, "New question") {
-		t.Error("should preserve and append open questions")
+	if strings.Contains(content, "question") {
+		t.Error("open questions should be dropped from rebuilt memory")
 	}
 }
 
@@ -308,7 +299,7 @@ func TestTrimSectionKeepingLatestEntries_KeepsMostRecentEntries(t *testing.T) {
 	ctxDir := t.TempDir()
 	entries := []string{"decision one", "decision two", "decision three", "decision four", "decision five"}
 
-	trimmedEntries, overflowPath := trimSectionKeepingLatestEntries(entries, 3, ctxDir, "locked-decisions")
+	trimmedEntries, overflowPath := trimSectionKeepingLatestEntries(entries, 3, ctxDir, "decisions")
 
 	if overflowPath == "" {
 		t.Fatal("expected a non-empty overflow path")
@@ -331,11 +322,11 @@ func TestTrimSectionKeepingLatestEntries_KeepsMostRecentEntries(t *testing.T) {
 	if strings.Contains(content, "decision four") || strings.Contains(content, "decision five") {
 		t.Errorf("overflow file should not contain retained latest entries: %q", content)
 	}
-	if !strings.Contains(content, "# Overflow: Locked Decisions") {
+	if !strings.Contains(content, "# Overflow: Decisions") {
 		t.Error("overflow file should have normalized header")
 	}
-	if !strings.HasPrefix(filepath.Base(overflowPath), "locked-decisions-") {
-		t.Errorf("filename should start with locked-decisions-, got %q", filepath.Base(overflowPath))
+	if !strings.HasPrefix(filepath.Base(overflowPath), "decisions-") {
+		t.Errorf("filename should start with decisions-, got %q", filepath.Base(overflowPath))
 	}
 }
 
@@ -345,7 +336,7 @@ func TestTrimToBudget_KeepsLatestEntriesInMemory(t *testing.T) {
 
 _Last updated: 2026-07-10_
 
-## Locked Decisions
+## Decisions
 
 - decision one
 - decision two
@@ -375,7 +366,15 @@ _Last updated: 2026-07-10_
 		t.Fatalf("expected latest durable discoveries to remain, got: %q", trimmedContent)
 	}
 	if strings.Contains(trimmedContent, "question one") {
-		t.Fatalf("expected open questions to be fully archived, got: %q", trimmedContent)
+		t.Fatalf("expected open questions to be dropped from memory, got: %q", trimmedContent)
+	}
+	// Open questions are provisional content: dropped on overflow, never archived.
+	matches, err := filepath.Glob(filepath.Join(ctxDir, "archive", "open-questions-*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("expected no open-questions archive file (questions are dropped, not archived), got %v", matches)
 	}
 }
 

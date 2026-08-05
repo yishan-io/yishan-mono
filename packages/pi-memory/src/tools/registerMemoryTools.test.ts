@@ -390,7 +390,7 @@ describe("registerMemoryTools", () => {
         "tool-1",
         {
           projectRoot: tempRoot,
-          section: "open_questions",
+          section: "durable_discoveries",
           entry: "First store call creates .my-context?",
           date: "2026-08-05",
         },

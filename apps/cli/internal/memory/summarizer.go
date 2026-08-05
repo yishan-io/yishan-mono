@@ -154,8 +154,7 @@ const summarizationPrompt = `Summarize the following AI coding conversation for 
 Return ONLY valid JSON (no markdown fences, no other text):
 {
   "lockedDecisions": ["YYYY-MM-DD — <decision>. Why: <reason>."],
-  "durableDiscoveries": ["[Root Cause] YYYY-MM-DD — <durable discovery>", "[Invariant] YYYY-MM-DD — <durable discovery>"],
-  "openQuestions": ["YYYY-MM-DD — <unresolved question worth resurfacing>"]
+  "durableDiscoveries": ["[Root Cause] YYYY-MM-DD — <durable discovery>", "[Invariant] YYYY-MM-DD — <durable discovery>"]
 }
 
 Rules:
@@ -186,7 +185,6 @@ func parseExtractedJSON(text string) (ExtractedKnowledge, error) {
 	var raw struct {
 		LockedDecisions    []string `json:"lockedDecisions"`
 		DurableDiscoveries []string `json:"durableDiscoveries"`
-		OpenQuestions      []string `json:"openQuestions"`
 
 		// Transition fallback for older prompts.
 		Decisions []string `json:"decisions"`
@@ -200,7 +198,6 @@ func parseExtractedJSON(text string) (ExtractedKnowledge, error) {
 	return ExtractedKnowledge{
 		LockedDecisions:    firstNonEmptySlice(raw.LockedDecisions, raw.Decisions),
 		DurableDiscoveries: firstNonEmptySlice(raw.DurableDiscoveries, append(raw.Learned, raw.Errors...)),
-		OpenQuestions:      raw.OpenQuestions,
 	}, nil
 }
 
@@ -229,11 +226,6 @@ func mergeAndWrite(memoryPath string, existingContent string, extracted Extracte
 	for _, discovery := range extracted.DurableDiscoveries {
 		if !containsEntry(existing.DurableDiscoveries, discovery) {
 			existing.DurableDiscoveries = append(existing.DurableDiscoveries, discovery)
-		}
-	}
-	for _, question := range extracted.OpenQuestions {
-		if !containsEntry(existing.OpenQuestions, question) {
-			existing.OpenQuestions = append(existing.OpenQuestions, question)
 		}
 	}
 
@@ -267,7 +259,6 @@ func mergeAndWrite(memoryPath string, existingContent string, extracted Extracte
 type memorySections struct {
 	LockedDecisions    []string
 	DurableDiscoveries []string
-	OpenQuestions      []string
 }
 
 func parseMemorySections(content string) memorySections {
@@ -279,14 +270,11 @@ func parseMemorySections(content string) memorySections {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		switch {
-		case strings.HasPrefix(trimmed, string(SectionLockedDecisions)), strings.HasPrefix(trimmed, "## My Decisions"):
+		case strings.HasPrefix(trimmed, string(SectionLockedDecisions)), strings.HasPrefix(trimmed, "## Locked Decisions"), strings.HasPrefix(trimmed, "## My Decisions"):
 			currentSection = "decisions"
 			continue
 		case strings.HasPrefix(trimmed, string(SectionDurableDiscoveries)), strings.HasPrefix(trimmed, "## What I Learned"), strings.HasPrefix(trimmed, "## Errors"):
 			currentSection = "discoveries"
-			continue
-		case strings.HasPrefix(trimmed, string(SectionOpenQuestions)):
-			currentSection = "questions"
 			continue
 		case strings.HasPrefix(trimmed, "## "):
 			currentSection = ""
@@ -301,10 +289,6 @@ func parseMemorySections(content string) memorySections {
 		case "discoveries":
 			if strings.HasPrefix(trimmed, "- ") {
 				sections.DurableDiscoveries = append(sections.DurableDiscoveries, strings.TrimPrefix(trimmed, "- "))
-			}
-		case "questions":
-			if strings.HasPrefix(trimmed, "- ") {
-				sections.OpenQuestions = append(sections.OpenQuestions, strings.TrimPrefix(trimmed, "- "))
 			}
 		}
 	}
@@ -326,12 +310,6 @@ func buildMemoryMarkdown(sections memorySections) string {
 	buf.WriteString(string(SectionDurableDiscoveries) + "\n\n")
 	for _, l := range sections.DurableDiscoveries {
 		buf.WriteString("- " + l + "\n")
-	}
-	buf.WriteString("\n")
-
-	buf.WriteString(string(SectionOpenQuestions) + "\n\n")
-	for _, q := range sections.OpenQuestions {
-		buf.WriteString("- " + q + "\n")
 	}
 
 	return buf.String()
