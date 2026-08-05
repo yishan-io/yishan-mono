@@ -102,6 +102,49 @@ func TestResolveContextRoot_Missing(t *testing.T) {
 	}
 }
 
+// ── scanContextDir ────────────────────────────────────────────────────────────
+
+func TestScanContextDirSkipsNestedMyContext(t *testing.T) {
+	contextRoot := t.TempDir()
+
+	// Canonical files: directly under the context root and in a subdir.
+	mustWriteFile(t, filepath.Join(contextRoot, "MEMORY.md"), "# Project Memory\n")
+	mustWriteFile(t, filepath.Join(contextRoot, "archive", "durable-discoveries.md"), "archived\n")
+
+	// The nested duplicate from the 2026-08 incident: <contextRoot>/.my-context/.
+	nestedDir := filepath.Join(contextRoot, ".my-context")
+	mustWriteFile(t, filepath.Join(nestedDir, "MEMORY.md"), "should not be indexed\n")
+
+	files, err := scanContextDir(contextRoot, "proj-1")
+	if err != nil {
+		t.Fatalf("scanContextDir: %v", err)
+	}
+
+	got := map[string]bool{}
+	for _, f := range files {
+		got[f.Path] = true
+	}
+	if !got[filepath.Join(contextRoot, "MEMORY.md")] {
+		t.Error("expected canonical MEMORY.md to be indexed")
+	}
+	if !got[filepath.Join(contextRoot, "archive", "durable-discoveries.md")] {
+		t.Error("expected archive file to be indexed")
+	}
+	if got[filepath.Join(nestedDir, "MEMORY.md")] {
+		t.Error("nested .my-context MEMORY.md must not be indexed")
+	}
+}
+
+func mustWriteFile(t *testing.T, path string, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // ── fingerprint ───────────────────────────────────────────────────────────────
 
 func TestFingerprint(t *testing.T) {

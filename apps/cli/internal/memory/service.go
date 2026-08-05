@@ -359,6 +359,13 @@ func shouldIndexPath(filePath string) bool {
 	}
 	// Match canonical context dirs and global memory dir.
 	slashed := filepath.ToSlash(filePath)
-	return strings.Contains(slashed, "/.yishan/contexts/") ||
-		strings.Contains(slashed, "/.yishan/memory/")
+	if strings.Contains(slashed, "/.yishan/contexts/") {
+		// Canonical context files live directly under the context root (or its
+		// subdirs). A ".my-context" component under a context root is the
+		// nested duplicate created by a memory_store call whose projectRoot
+		// pointed at the context root itself — never index it, so the
+		// misplacement surfaces instead of being silently absorbed into search.
+		return !strings.Contains(slashed, "/.my-context/")
+	}
+	return strings.Contains(slashed, "/.yishan/memory/")
 }

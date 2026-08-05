@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -22,12 +23,16 @@ const memorySearchSchema = Type.Object({
 });
 
 const memoryReadSchema = Type.Object({
-  projectRoot: Type.String({ description: "Project root containing .my-context/" }),
+  projectRoot: Type.Optional(
+    Type.String({ description: "Project root containing .my-context/. Defaults to the session working directory." }),
+  ),
   path: Type.String({ description: "Relative memory file path under .my-context/" }),
 });
 
 const memoryStoreSchema = Type.Object({
-  projectRoot: Type.String({ description: "Project root containing .my-context/" }),
+  projectRoot: Type.Optional(
+    Type.String({ description: "Project root containing .my-context/. Defaults to the session working directory." }),
+  ),
   section: Type.Union(
     [Type.Literal("locked_decisions"), Type.Literal("durable_discoveries"), Type.Literal("open_questions")],
     { description: "MEMORY.md section to update" },
@@ -73,8 +78,9 @@ export function registerMemoryTools(pi: ExtensionAPI, client: MemoryBackendClien
     promptSnippet: "Use memory_read to inspect the full contents of a durable memory file under .my-context/.",
     promptGuidelines: ["Use memory_read only for files under .my-context/."],
     parameters: memoryReadSchema,
-    async execute(_toolCallId, params) {
-      const memoryPath = resolveMemoryPath(params.projectRoot, params.path);
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const projectRoot = resolveProjectRoot(params.projectRoot, ctx.cwd);
+      const memoryPath = resolveMemoryPath(projectRoot, params.path);
       const content = readFileSync(memoryPath, "utf8");
       return {
         content: [{ type: "text", text: content }],
@@ -93,8 +99,9 @@ export function registerMemoryTools(pi: ExtensionAPI, client: MemoryBackendClien
       "Use memory_store only for durable project memory, not task chatter or temporary implementation notes.",
     ],
     parameters: memoryStoreSchema,
-    async execute(_toolCallId, params) {
-      const memoryPath = resolveMemoryPath(params.projectRoot, "MEMORY.md");
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const projectRoot = resolveProjectRoot(params.projectRoot, ctx.cwd);
+      const memoryPath = resolveMemoryPath(projectRoot, "MEMORY.md");
       const previousContent = readMemoryFile(memoryPath);
       const nextContent = updateMemoryMarkdown(previousContent, params.section, params.entry, params.date);
       mkdirSync(dirname(memoryPath), { recursive: true });
@@ -126,6 +133,16 @@ function resolveMemoryPath(projectRoot: string, memoryRelativePath: string): str
     throw new Error("Memory path must be relative to .my-context/");
   }
 
+  // projectRoot must be the project root, not the context directory itself.
+  // Passing "<root>/.my-context" as projectRoot would silently write to a
+  // nested "<root>/.my-context/.my-context/MEMORY.md" duplicate (this exact
+  // misplacement happened in ~/.yishan/contexts/yishan-io/yishan-mono/).
+  if (basename(projectRoot) === ".my-context") {
+    throw new Error(
+      "projectRoot must be the project root (parent of .my-context/), not the .my-context directory itself",
+    );
+  }
+
   const memoryRoot = resolve(projectRoot, ".my-context");
   const memoryPath = resolve(memoryRoot, memoryRelativePath);
   const resolvedRelativePath = relative(memoryRoot, memoryPath);
@@ -133,7 +150,48 @@ function resolveMemoryPath(projectRoot: string, memoryRelativePath: string): str
     throw new Error("Memory path must stay within .my-context/");
   }
 
+  // Reject projectRoots inside the Yishan context store. Project roots never
+  // live under ~/.yishan/contexts/ (context roots are created empty at
+  // provisioning — no top-level MEMORY.md yet — and are the symlink targets of
+  // every worktree's .my-context). Passing a context root as projectRoot would
+  // write into <contextRoot>/.my-context/... — the nested duplicate from the
+  // 2026-08 incident. ~/.yishan/memory/ is rejected too: memory tools are
+  // project-scoped, never global-memory-scoped.
+  if (isUnderYishanStore(projectRoot)) {
+    throw new Error(
+      "projectRoot must be the project root, not a Yishan context/memory directory (~/.yishan/contexts/ or ~/.yishan/memory/)",
+    );
+  }
+
   return memoryPath;
+}
+
+// Yishan keeps canonical project context under ~/.yishan/contexts/<repoKey>/
+// and global memory under ~/.yishan/memory/. Any projectRoot under those
+// stores is a misconfiguration — the real project root is the repo/worktree
+// that symlinks its .my-context to the store.
+function isUnderYishanStore(projectRoot: string): boolean {
+  const home = homedir();
+  for (const subdir of ["contexts", "memory"]) {
+    const rel = relative(join(home, ".yishan", subdir), projectRoot);
+    if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveProjectRoot(provided: string | undefined, sessionCwd: string): string {
+  if (provided) {
+    return resolve(provided);
+  }
+  // Default to the session cwd (pi's ctx.cwd), which is the project root for
+  // desktop agent-chat and sub-agent sessions. If a session type ever runs with
+  // a non-project-root cwd, callers must pass projectRoot explicitly.
+  if (!sessionCwd) {
+    throw new Error("projectRoot is required when the session working directory is unavailable");
+  }
+  return resolve(sessionCwd);
 }
 
 function readMemoryFile(memoryPath: string): string {
