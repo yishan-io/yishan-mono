@@ -13,6 +13,10 @@ type TabDescriptor = {
   kind?: string;
   isDirty?: boolean;
   isTemporary?: boolean;
+  /** Present for agent-chat tabs: pi resume/runtime session id. */
+  sessionId?: string;
+  /** Present for agent-chat tabs: working directory of the pi process. */
+  cwd?: string;
 };
 
 export type SplitPaneGroupProps = {

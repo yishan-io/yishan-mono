@@ -641,6 +641,16 @@ export type PiListSessionsInput = {
   cwd: string;
 };
 
+export type PiGetSessionFileInput = {
+  sessionId: string;
+  cwd: string;
+};
+
+export type PiGetSessionFileResult = {
+  /** Full transcript path; empty when no transcript exists yet. */
+  filePath: string;
+};
+
 export type PiListActiveSessionsInput = Record<string, never>;
 
 export type PiSessionSummary = {

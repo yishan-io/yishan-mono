@@ -57,6 +57,7 @@ const (
 	MethodPiSend                     = "pi.send"
 	MethodPiListSessions             = "pi.listSessions"
 	MethodPiListActiveSessions       = "pi.listActiveSessions"
+	MethodPiGetSessionFile           = "pi.getSessionFile"
 	MethodPiRename                   = "pi.rename"
 	MethodPiListProviders            = "pi.listProviders"
 	MethodPiSaveProvider             = "pi.saveProvider"

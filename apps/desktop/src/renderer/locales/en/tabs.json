@@ -28,7 +28,9 @@
       "unpin": "Unpin Tab",
       "close": "Close",
       "closeOthers": "Close Others",
-      "closeAll": "Close All"
+      "closeAll": "Close All",
+      "copySessionId": "Copy Session ID",
+      "copySessionFilePath": "Copy Session File Path"
     }
   }
 }

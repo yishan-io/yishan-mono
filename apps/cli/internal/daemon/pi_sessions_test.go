@@ -127,6 +127,73 @@ func TestHandlePiListSessions_RequiresCWD(t *testing.T) {
 	}
 }
 
+func TestHandlePiGetSessionFile_ReturnsMatchingTranscriptPath(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	sessionDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "sessions", testEncodeSessionCWD(cwd))
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+	path := filepath.Join(sessionDir, "2026-07-10T10-00-00-000Z_session-abc.jsonl")
+	if err := os.WriteFile(path, []byte(`{"type":"session","version":3,"id":"session-abc"}`), 0o644); err != nil {
+		t.Fatalf("write session: %v", err)
+	}
+
+	result, err := h.dispatchPi(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{
+		"cwd":       cwd,
+		"sessionId": "session-abc",
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi: %v", err)
+	}
+	resp, ok := result.(map[string]string)
+	if !ok {
+		t.Fatalf("unexpected result type %T", result)
+	}
+	if resp["filePath"] != path {
+		t.Fatalf("expected filePath %q, got %q", path, resp["filePath"])
+	}
+}
+
+func TestHandlePiGetSessionFile_EmptyWhenNoTranscript(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+
+	result, err := h.dispatchPi(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{
+		"cwd":       cwd,
+		"sessionId": "session-abc",
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi: %v", err)
+	}
+	resp, ok := result.(map[string]string)
+	if !ok {
+		t.Fatalf("unexpected result type %T", result)
+	}
+	if resp["filePath"] != "" {
+		t.Fatalf("expected empty filePath, got %q", resp["filePath"])
+	}
+}
+
+func TestHandlePiGetSessionFile_RequiresCWDAndSessionID(t *testing.T) {
+	h := newTestHandler(t)
+
+	_, err := h.dispatchPi(context.Background(), nil, MethodPiGetSessionFile, json.RawMessage(`{}`))
+	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
+
+	_, err = h.dispatchPi(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"sessionId": "session-abc"}))
+	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
+
+	_, err = h.dispatchPi(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"cwd": "/tmp"}))
+	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
+}
+
 func TestHandlePiListActiveSessions_ReturnsLiveSessions(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
@@ -426,10 +493,18 @@ func mustMarshalJSON(t *testing.T, value any) json.RawMessage {
 	return data
 }
 
+// testEncodeSessionCWD mirrors agentmanager.encodeSessionCWD (which matches pi's
+// getDefaultSessionDirPath encoding) so tests can construct session dirs the
+// daemon handlers will resolve. Keep in sync when the encoding changes.
 func testEncodeSessionCWD(cwd string) string {
-	cleanCWD := filepath.Clean(strings.TrimSpace(cwd))
-	normalized := filepath.ToSlash(cleanCWD)
+	cleanCWD := strings.TrimSpace(cwd)
+	absoluteCWD, err := filepath.Abs(cleanCWD)
+	if err != nil {
+		absoluteCWD = filepath.Clean(cleanCWD)
+	}
+	normalized := filepath.ToSlash(absoluteCWD)
 	normalized = strings.TrimPrefix(normalized, "/")
+	normalized = strings.ReplaceAll(normalized, ":", "-")
 	return "--" + strings.ReplaceAll(normalized, "/", "-") + "--"
 }
 

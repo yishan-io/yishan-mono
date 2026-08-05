@@ -1,6 +1,9 @@
 import { Box, Divider, Menu, MenuItem, Typography } from "@mui/material";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { LuColumns2, LuRows2 } from "react-icons/lu";
+import { fetchAgentSessionFilePath } from "../commands/agentChatCommands";
+import { copyToClipboard } from "../helpers/clipboard";
+import { getErrorMessage } from "../helpers/errorHelpers";
 import type { TabBarCreateOption } from "./TabBar";
 
 type CreateMenuOption = {
@@ -151,6 +154,8 @@ type TabContextMenuProps = {
   closeTabActionLabel: string;
   closeOthersActionLabel: string;
   closeAllActionLabel: string;
+  copySessionIdActionLabel: string;
+  copySessionFilePathActionLabel: string;
   tabsLength: number;
   onClose: () => void;
   onPromoteTemporaryTab?: (tabId: string) => void;
@@ -158,6 +163,10 @@ type TabContextMenuProps = {
   onCloseTab: (tabId: string) => void;
   onCloseOtherTabs?: (tabId: string) => void;
   onCloseAllTabs?: (tabId: string) => void;
+  /** Agent-chat session id of the context tab; enables the copy-session-info items. */
+  sessionId?: string;
+  /** Working directory of the agent session; used to resolve the transcript file path. */
+  cwd?: string;
 };
 
 export function TabContextMenu({
@@ -169,6 +178,8 @@ export function TabContextMenu({
   closeTabActionLabel,
   closeOthersActionLabel,
   closeAllActionLabel,
+  copySessionIdActionLabel,
+  copySessionFilePathActionLabel,
   tabsLength,
   onClose,
   onPromoteTemporaryTab,
@@ -176,10 +187,40 @@ export function TabContextMenu({
   onCloseTab,
   onCloseOtherTabs,
   onCloseAllTabs,
+  sessionId,
+  cwd,
 }: TabContextMenuProps) {
+  const open = Boolean(contextMenu);
+  // null while resolving; "" when no transcript exists yet; the path once known.
+  const [sessionFilePath, setSessionFilePath] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !sessionId || !cwd) {
+      setSessionFilePath(null);
+      return;
+    }
+    let cancelled = false;
+    setSessionFilePath(null);
+    fetchAgentSessionFilePath(sessionId, cwd)
+      .then((filePath) => {
+        if (!cancelled) {
+          setSessionFilePath(filePath);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          console.error("Failed to resolve session file path", getErrorMessage(error));
+          setSessionFilePath("");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, sessionId, cwd]);
+
   return (
     <Menu
-      open={Boolean(contextMenu)}
+      open={open}
       onClose={onClose}
       disableRestoreFocus
       anchorReference="anchorPosition"
@@ -241,6 +282,33 @@ export function TabContextMenu({
       >
         {closeAllActionLabel}
       </MenuItem>
+      {sessionId && (
+        <>
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem
+            onClick={() => {
+              // fire-and-forget: clipboard write is best-effort; copyToClipboard swallows errors internally.
+              void copyToClipboard(sessionId);
+              onClose();
+            }}
+            disabled={!contextMenu}
+          >
+            {copySessionIdActionLabel}
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              // fire-and-forget: clipboard write is best-effort; copyToClipboard swallows errors internally.
+              if (sessionFilePath) {
+                void copyToClipboard(sessionFilePath);
+              }
+              onClose();
+            }}
+            disabled={!contextMenu || !sessionFilePath}
+          >
+            {copySessionFilePathActionLabel}
+          </MenuItem>
+        </>
+      )}
     </Menu>
   );
 }

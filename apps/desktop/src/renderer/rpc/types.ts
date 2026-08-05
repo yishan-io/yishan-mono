@@ -115,6 +115,7 @@ export type DaemonRpcClient = {
     send: (input: { sessionId: string; command: unknown }) => Promise<unknown>;
     rename: (input: { sessionId: string; title: string }) => Promise<{ ok: boolean }>;
     listSessions: (input: Rpc.PiListSessionsInput) => Promise<Rpc.PiSessionSummary[]>;
+    getSessionFile: (input: Rpc.PiGetSessionFileInput) => Promise<Rpc.PiGetSessionFileResult>;
     listActiveSessions: (input?: Rpc.PiListActiveSessionsInput) => Promise<Rpc.PiActiveSessionSummary[]>;
     listProviders: (input?: unknown) => Promise<{
       providers: Array<{ provider: string; type: string; source?: string; envVars?: string[] }>;

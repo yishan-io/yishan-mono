@@ -46,6 +46,8 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 		return h.handlePiListSessions(ctx, params)
 	case MethodPiListActiveSessions:
 		return h.handlePiListActiveSessions()
+	case MethodPiGetSessionFile:
+		return h.handlePiGetSessionFile(ctx, params)
 	case MethodPiRename:
 		return h.handlePiRename(params)
 	case MethodPiListProviders:
@@ -430,6 +432,31 @@ func (h *JSONRPCHandler) handlePiListSessions(ctx context.Context, params json.R
 	}
 
 	return summaries, nil
+}
+
+type piGetSessionFileParams struct {
+	CWD       string `json:"cwd"`
+	SessionID string `json:"sessionId"`
+}
+
+func (h *JSONRPCHandler) handlePiGetSessionFile(ctx context.Context, params json.RawMessage) (any, error) {
+	var req piGetSessionFileParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(req.CWD) == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
+	}
+	if strings.TrimSpace(req.SessionID) == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
+	}
+
+	filePath, err := agentmanager.FindSessionFile(ctx, req.CWD, req.SessionID)
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+	}
+
+	return map[string]string{"filePath": filePath}, nil
 }
 
 type piRenameParams struct {

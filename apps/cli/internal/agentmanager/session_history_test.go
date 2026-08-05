@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -158,6 +160,94 @@ func TestListSessionSummaries_PrefersHeaderCWDOverDirectoryCWD(t *testing.T) {
 	}
 	if summaries[0].CWD != headerCWD {
 		t.Fatalf("expected header cwd %q, got %q", headerCWD, summaries[0].CWD)
+	}
+}
+
+func TestFindSessionFile_ReturnsMatchingTranscriptPath(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	sessionDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "sessions", encodeSessionCWD(cwd))
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+
+	targetPath := filepath.Join(sessionDir, "2026-07-10T10-00-00-000Z_session-target.jsonl")
+	if err := os.WriteFile(targetPath, []byte(`{"type":"session","version":3,"id":"session-target"}`), 0o644); err != nil {
+		t.Fatalf("write target session: %v", err)
+	}
+	otherPath := filepath.Join(sessionDir, "2026-07-10T08-00-00-000Z_session-other.jsonl")
+	if err := os.WriteFile(otherPath, []byte(`{"type":"session","version":3,"id":"session-other"}`), 0o644); err != nil {
+		t.Fatalf("write other session: %v", err)
+	}
+
+	filePath, err := FindSessionFile(context.Background(), cwd, "session-target")
+	if err != nil {
+		t.Fatalf("FindSessionFile: %v", err)
+	}
+	if filePath != targetPath {
+		t.Fatalf("expected %q, got %q", targetPath, filePath)
+	}
+}
+
+func TestFindSessionFile_NoMatchReturnsEmpty(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	sessionDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "sessions", encodeSessionCWD(cwd))
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+
+	filePath, err := FindSessionFile(context.Background(), cwd, "session-unknown")
+	if err != nil {
+		t.Fatalf("FindSessionFile: %v", err)
+	}
+	if filePath != "" {
+		t.Fatalf("expected empty path, got %q", filePath)
+	}
+}
+
+func TestFindSessionFile_MissingDirReturnsEmpty(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+
+	filePath, err := FindSessionFile(context.Background(), cwd, "session-unknown")
+	if err != nil {
+		t.Fatalf("FindSessionFile: %v", err)
+	}
+	if filePath != "" {
+		t.Fatalf("expected empty path, got %q", filePath)
+	}
+}
+
+func TestEncodeSessionCWD_MatchesPiEncoding(t *testing.T) {
+	homeDir := t.TempDir()
+
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	encoded := encodeSessionCWD(cwd)
+	if !strings.HasPrefix(encoded, "--") || !strings.HasSuffix(encoded, "--") {
+		t.Fatalf("expected -- wrapping, got %q", encoded)
+	}
+	if strings.Contains(encoded, "/") || strings.Contains(encoded, "\\") {
+		t.Fatalf("expected separators encoded to '-', got %q", encoded)
+	}
+
+	// Colons (drive letters on Windows) must be encoded too; pi replaces [:/\\] with '-'
+	// but on Windows a literal ':' cannot appear in a test path, so exercise it on unix only.
+	if runtime.GOOS != "windows" {
+		colonCWD := filepath.Join(homeDir, "with:colon", "proj")
+		colonEncoded := encodeSessionCWD(colonCWD)
+		if strings.Contains(colonEncoded, ":") {
+			t.Fatalf("expected colon encoded to '-', got %q", colonEncoded)
+		}
+		if !strings.Contains(colonEncoded, "with-colon") {
+			t.Fatalf("expected colon segment encoded as with-colon, got %q", colonEncoded)
+		}
 	}
 }
 

@@ -50,6 +50,38 @@ func (c *sessionPreviewCollector) preview() string {
 	return c.firstReadableText
 }
 
+// FindSessionFile returns the full transcript file path for one session id under
+// cwd, or "" when no matching transcript exists yet (fresh sessions flush lazily).
+func FindSessionFile(ctx context.Context, cwd string, sessionID string) (string, error) {
+	root, err := config.ManagedPiSessionsDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve managed session root: %w", err)
+	}
+
+	sessionDir := filepath.Join(root, encodeSessionCWD(cwd))
+	entries, err := os.ReadDir(sessionDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("read session dir %q: %w", sessionDir, err)
+	}
+
+	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		if !isSessionSummaryFile(entry) {
+			continue
+		}
+		filePath := filepath.Join(sessionDir, entry.Name())
+		if sessionIDFromPath(filePath) == sessionID {
+			return filePath, nil
+		}
+	}
+	return "", nil
+}
+
 // ListSessionSummaries reads managed sessions for one cwd and returns newest-first
 // summaries suitable for session history UI.
 func ListSessionSummaries(ctx context.Context, cwd string) ([]SessionSummary, error) {
@@ -104,10 +136,20 @@ func isSessionSummaryFile(entry os.DirEntry) bool {
 	return !entry.IsDir() && strings.HasSuffix(entry.Name(), ".jsonl")
 }
 
+// encodeSessionCWD maps a cwd to the session subdirectory name pi writes
+// transcripts into. Must mirror pi's getDefaultSessionDirPath encoding
+// (resolve to absolute, strip one leading separator, replace [/\\:] with "-")
+// or session lookups silently miss on paths with drive letters (Windows) or
+// colons.
 func encodeSessionCWD(cwd string) string {
-	cleanCWD := filepath.Clean(strings.TrimSpace(cwd))
-	normalized := filepath.ToSlash(cleanCWD)
+	cleanCWD := strings.TrimSpace(cwd)
+	absoluteCWD, err := filepath.Abs(cleanCWD)
+	if err != nil {
+		absoluteCWD = filepath.Clean(cleanCWD)
+	}
+	normalized := filepath.ToSlash(absoluteCWD)
 	normalized = strings.TrimPrefix(normalized, "/")
+	normalized = strings.ReplaceAll(normalized, ":", "-")
 	return "--" + strings.ReplaceAll(normalized, "/", "-") + "--"
 }
 
