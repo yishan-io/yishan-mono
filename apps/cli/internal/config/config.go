@@ -22,7 +22,7 @@ const (
 	KeyAPIRefreshTokenExpiresAt = "api_refresh_token_expires_at"
 
 	// KeyCurrentOrgID is kept for migration reads from legacy credential.yaml.
-	// New writes go to context.yaml via KeyDefaultOrgID.
+	// New writes go to settings.yaml via KeyDefaultOrgID.
 	KeyCurrentOrgID = "current_org_id"
 
 	KeyMemorySummarizerEnabled   = "memory.summarizer.enabled"
@@ -123,7 +123,7 @@ type Config struct {
 	LogLevel     string
 	LogFormat    string
 	ConfigPath   string
-	ContextPath  string
+	SettingsPath string
 	DefaultOrgID string
 	API          APIConfig
 	Daemon       DaemonConfig
@@ -142,7 +142,6 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 	}
 
 	profileDir := filepath.Dir(configPath)
-	contextPath := ContextFilePath(profileDir)
 	settingsPath := SettingsFilePath(profileDir)
 
 	// Load user preferences from settings.yaml (handles migration from legacy
@@ -159,7 +158,7 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 		LogLevel:     v.GetString("log_level"),
 		LogFormat:    v.GetString("log_format"),
 		ConfigPath:   configPath,
-		ContextPath:  contextPath,
+		SettingsPath: settingsPath,
 		DefaultOrgID: settingsCfg.DefaultOrgID,
 		API: APIConfig{
 			BaseURL:               v.GetString(KeyAPIBaseURL),

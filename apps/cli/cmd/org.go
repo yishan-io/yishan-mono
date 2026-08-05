@@ -173,7 +173,7 @@ Examples:
 		// Set mode: --org-id provided.
 		if strings.TrimSpace(orgID) != "" {
 			orgID = strings.TrimSpace(orgID)
-			if err := config.UpdateContext(appConfig.ContextPath, func(cfg *viper.Viper) {
+			if err := config.UpdateSettings(appConfig.SettingsPath, func(cfg *viper.Viper) {
 				cfg.Set(config.KeyDefaultOrgID, orgID)
 			}); err != nil {
 				return err
@@ -235,7 +235,7 @@ var orgClearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Clear the default organization",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if err := config.UpdateContext(appConfig.ContextPath, func(cfg *viper.Viper) {
+		if err := config.UpdateSettings(appConfig.SettingsPath, func(cfg *viper.Viper) {
 			cfg.Set(config.KeyDefaultOrgID, "")
 		}); err != nil {
 			return err

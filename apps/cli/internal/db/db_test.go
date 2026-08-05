@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -46,8 +47,8 @@ func TestMigrate_IsIdempotent(t *testing.T) {
 	if err := database.QueryRow(`SELECT COUNT(*) FROM _migrations`).Scan(&migrationCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationCount != 5 {
-		t.Fatalf("expected five applied migrations, got %d", migrationCount)
+	if migrationCount != 6 {
+		t.Fatalf("expected six applied migrations, got %d", migrationCount)
 	}
 }
 
@@ -105,6 +106,42 @@ func TestMigrate_CleansUpLegacyMetadataKeys(t *testing.T) {
 		if !exists {
 			t.Fatalf("expected active key %q to be preserved", activeKey)
 		}
+	}
+}
+
+func TestCleanupLegacyProfileFiles_RemovesLegacyFiles(t *testing.T) {
+	profileDir := t.TempDir()
+	for _, name := range legacyProfileFileNames {
+		if err := os.WriteFile(filepath.Join(profileDir, name), []byte(`{}`), 0o600); err != nil {
+			t.Fatalf("seed legacy file %q: %v", name, err)
+		}
+	}
+	// Non-legacy files must survive cleanup.
+	survivorPath := filepath.Join(profileDir, "settings.yaml")
+	if err := os.WriteFile(survivorPath, []byte(`default_org_id: org-1`), 0o600); err != nil {
+		t.Fatalf("seed survivor file: %v", err)
+	}
+
+	if err := CleanupLegacyProfileFiles(profileDir); err != nil {
+		t.Fatalf("cleanup legacy profile files: %v", err)
+	}
+
+	for _, name := range legacyProfileFileNames {
+		if _, err := os.Stat(filepath.Join(profileDir, name)); !os.IsNotExist(err) {
+			t.Fatalf("expected legacy profile file %q to be removed", name)
+		}
+	}
+	if _, err := os.Stat(survivorPath); err != nil {
+		t.Fatalf("expected non-legacy file %q to survive cleanup", survivorPath)
+	}
+}
+
+func TestCleanupLegacyProfileFiles_IgnoresMissingFiles(t *testing.T) {
+	if err := CleanupLegacyProfileFiles(t.TempDir()); err != nil {
+		t.Fatalf("cleanup with no legacy files: %v", err)
+	}
+	if err := CleanupLegacyProfileFiles(""); err != nil {
+		t.Fatalf("cleanup with empty profile dir: %v", err)
 	}
 }
 
