@@ -18,7 +18,8 @@
       "openBrowser": "\u6253\u5f00\u6d4f\u89c8\u5668\u6807\u7b7e",
       "openAgentChat": "\u6253\u5f00 AI \u5bf9\u8bdd",
       "openChat": "\u6253\u5f00\u804a\u5929",
-      "searchFiles": "\u641c\u7d22\u6587\u4ef6"
+      "searchFiles": "\u641c\u7d22\u6587\u4ef6",
+      "openWhiteboard": "\u65b0\u5efa\u767d\u677f"
     }
   }
 }

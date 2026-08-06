@@ -6,6 +6,7 @@
       "label": "Create",
       "chat": "Chat",
       "browser": "Browser",
+      "whiteboard": "Whiteboard",
       "opencode": "OpenCode",
       "codex": "Codex",
       "claude": "Claude",

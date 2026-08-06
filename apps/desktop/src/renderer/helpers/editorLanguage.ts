@@ -172,6 +172,15 @@ export function isAudioFile(path: string): boolean {
   return AUDIO_EXTENSIONS.has(ext);
 }
 
+/** Set of file extensions recognized as excalidraw files. */
+const EXCALIDRAW_EXTENSIONS = new Set(["excalidraw"]);
+
+/** Returns true when the given file path refers to an excalidraw file. */
+export function isExcalidrawFile(path: string): boolean {
+  const ext = getFileExtension(path);
+  return EXCALIDRAW_EXTENSIONS.has(ext);
+}
+
 /**
  * Set of file extensions that should open in an unsupported file view.
  *

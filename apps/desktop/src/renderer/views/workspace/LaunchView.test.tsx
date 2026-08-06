@@ -7,6 +7,7 @@ import { LaunchView } from "./LaunchView";
 const mocks = vi.hoisted(() => ({
   openTab: vi.fn(),
   openWorkspaceFileSearch: vi.fn(),
+  createNewWhiteboard: vi.fn(),
   workspaces: [] as Array<{ id: string; status?: "active" | "closed" | "provisioning"; worktreePath?: string }>,
   progressByWorkspaceId: {} as Record<string, unknown>,
   fetchSessionHistory: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("react-i18next", () => ({
         "launch.hint": "Select an action to get started.",
         "launch.actions.openTerminal": "Open terminal",
         "launch.actions.openBrowser": "Open browser tab",
+        "launch.actions.openWhiteboard": "New whiteboard",
         "launch.actions.searchFiles": "Search files",
         "launch.recent.title": "Recent agent sessions",
         "launch.recent.defaultTitle": "Agent Chat",
@@ -34,6 +36,10 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../commands/agentChatCommands", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
+}));
+
+vi.mock("../../commands/whiteboardCommands", () => ({
+  createNewWhiteboard: mocks.createNewWhiteboard,
 }));
 
 vi.mock("../../hooks/useCommands", () => ({
@@ -123,6 +129,15 @@ describe("LaunchView", () => {
 
     expect(mocks.openTab).toHaveBeenCalledTimes(2);
     expect(mocks.openWorkspaceFileSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a new whiteboard from the launch action", () => {
+    mocks.createNewWhiteboard.mockResolvedValueOnce("whiteboard.excalidraw");
+    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "New whiteboard" }));
+
+    expect(mocks.createNewWhiteboard).toHaveBeenCalledWith("workspace-1");
   });
 
   it("does not show progress detail for active workspaces with stale progress entries", () => {

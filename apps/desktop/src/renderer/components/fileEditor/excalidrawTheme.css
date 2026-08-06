@@ -1,0 +1,45 @@
+/*
+ * Rebinds Excalidraw's UI accent ("primary") palette to the app's brand color.
+ *
+ * The app's `palette.primary.main` (design-token amber) is used as the light
+ * theme accent; dark theme uses `palette.primary.light` — a lighter tint —
+ * so accents stay legible on Excalidraw's dark surfaces (mirroring how
+ * Excalidraw itself lightens its dark-mode primary from #6965db to #a8a5ff).
+ *
+ * The two brand colors are injected as custom properties on the pane wrapper
+ * (`--yishan-primary` / `--yishan-primary-dark`); every shade below is derived
+ * from them with color-mix so the accent stays in-sync with the app theme.
+ *
+ * Specificity: `.excalidraw-yishan .excalidraw` (0,2,0) beats Excalidraw's own
+ * `.excalidraw` (0,1,0), and `.excalidraw-yishan .excalidraw.theme--dark`
+ * (0,3,0) beats `.excalidraw.theme--dark` (0,2,0) — independent of CSS order.
+ */
+.excalidraw-yishan .excalidraw {
+  --color-primary: var(--yishan-primary);
+  --color-primary-hover: color-mix(in srgb, var(--yishan-primary) 93%, #000);
+  --color-primary-darker: color-mix(in srgb, var(--yishan-primary) 88%, #000);
+  --color-primary-darkest: color-mix(in srgb, var(--yishan-primary) 80%, #000);
+  --color-primary-light: color-mix(in srgb, var(--yishan-primary) 12%, #fff);
+  --color-primary-light-darker: color-mix(in srgb, var(--yishan-primary) 20%, #fff);
+  --color-selection: color-mix(in srgb, var(--yishan-primary) 55%, transparent);
+  --color-brand-hover: color-mix(in srgb, var(--yishan-primary) 90%, #000);
+  --color-brand-active: color-mix(in srgb, var(--yishan-primary) 82%, #000);
+  --color-surface-primary-container: color-mix(in srgb, var(--yishan-primary) 14%, #fff);
+  --color-on-primary-container: color-mix(in srgb, var(--yishan-primary) 90%, #000);
+}
+
+/* Dark theme inverts the direction of the shades (like Excalidraw's own
+   dark palette): hovers lighten, container tints darken. */
+.excalidraw-yishan .excalidraw.theme--dark {
+  --color-primary: var(--yishan-primary-dark, var(--yishan-primary));
+  --color-primary-hover: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 90%, #fff);
+  --color-primary-darker: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 84%, #fff);
+  --color-primary-darkest: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 76%, #fff);
+  --color-primary-light: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 22%, #000);
+  --color-primary-light-darker: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 16%, #000);
+  --color-selection: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 75%, #fff);
+  --color-brand-hover: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 85%, #fff);
+  --color-brand-active: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 74%, #fff);
+  --color-surface-primary-container: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 26%, #000);
+  --color-on-primary-container: color-mix(in srgb, var(--yishan-primary-dark, var(--yishan-primary)) 82%, #fff);
+}

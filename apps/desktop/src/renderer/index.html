@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Yishan Desktop</title>
+    <script>
+      // The @excalidraw/excalidraw package reads this at module-eval time and
+      // writes it as the "source" field of every serialized .excalidraw file.
+      // Under the packaged file:// origin it would otherwise be the string "null".
+      window.EXCALIDRAW_EXPORT_SOURCE = "yishan";
+    </script>
   </head>
   <body>
     <div id="app"></div>

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { editorSettingsStore } from "../store/settings/editorSettingsStore";
@@ -170,6 +170,15 @@ vi.mock("../helpers/editorLanguage", () => ({
   isMarkdownFile: (path: string) => {
     return path.endsWith(".md") || path.endsWith(".mdx");
   },
+  isExcalidrawFile: (path: string) => path.endsWith(".excalidraw"),
+}));
+
+const capturedExcalidrawProps: { current: Record<string, unknown> } = { current: {} };
+vi.mock("./fileEditor/ExcalidrawFileEditor", () => ({
+  default: (props: Record<string, unknown>) => {
+    capturedExcalidrawProps.current = props;
+    return <div data-testid="excalidraw-editor" />;
+  },
 }));
 
 vi.mock("./fileTreeIcons", () => ({
@@ -179,6 +188,7 @@ vi.mock("./fileTreeIcons", () => ({
 afterEach(() => {
   cleanup();
   capturedMarkdownPreviewProps.current = {};
+  capturedExcalidrawProps.current = {};
   mockEditorState.editorValue = "";
   mockEditorState.editorFocus = vi.fn();
   mockEditorState.editorFindAction = { run: vi.fn() };
@@ -517,6 +527,26 @@ describe("FileEditor", () => {
         fireEvent.keyDown(previewPane, { key: "Escape" });
       });
       expect(capturedMarkdownPreviewProps.current.findOpen).toBe(false);
+    });
+  });
+
+  describe("Excalidraw dispatch", () => {
+    it("renders the Excalidraw editor for .excalidraw files", async () => {
+      const { getByTestId } = renderWithAppTheme(
+        <FileEditor path="scene.excalidraw" content='{"type":"excalidraw"}' />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId("excalidraw-editor")).toBeTruthy();
+      });
+
+      expect(capturedExcalidrawProps.current.path).toBe("scene.excalidraw");
+    });
+
+    it("renders the Monaco editor for non-excalidraw files", () => {
+      renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
+
+      expect(mockEditorState.createCount).toBe(1);
     });
   });
 });

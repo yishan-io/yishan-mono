@@ -2,7 +2,13 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { buildWorkspaceFileUrl, readFile } from "../../commands/fileCommands";
 import { FileQuickOpenDialog } from "../../components/FileQuickOpenDialog";
-import { isAudioFile, isImageFile, isUnsupportedFileTab, isVideoFile } from "../../helpers/editorLanguage";
+import {
+  isAudioFile,
+  isExcalidrawFile,
+  isImageFile,
+  isUnsupportedFileTab,
+  isVideoFile,
+} from "../../helpers/editorLanguage";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { workspaceUiStore } from "../../store/workspaceUiStore";
@@ -107,7 +113,7 @@ export function FileSearchOverlay() {
 
         const response = await readFile({ workspaceId: selectedWorkspaceId, relativePath: path });
 
-        if (getUtf8ByteLength(response.content) > LARGE_FILE_OPEN_THRESHOLD_BYTES) {
+        if (!isExcalidrawFile(path) && getUtf8ByteLength(response.content) > LARGE_FILE_OPEN_THRESHOLD_BYTES) {
           tabStore.getState().openTab({
             workspaceId: selectedWorkspaceId,
             kind: "file",

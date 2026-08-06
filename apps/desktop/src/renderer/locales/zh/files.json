@@ -74,6 +74,10 @@
       "descriptionLarge": "该文件过大，无法安全地在编辑器标签页中打开。",
       "hint": "建议使用外部应用打开。",
       "hintLarge": "建议使用外部应用或命令行工具查看大文件。"
+    },
+    "excalidraw": {
+      "invalidFileTitle": "无法打开 Excalidraw 文件",
+      "invalidFileDescription": "该文件不是有效的 Excalidraw JSON。"
     }
   }
 }

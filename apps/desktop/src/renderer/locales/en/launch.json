@@ -18,7 +18,8 @@
       "openBrowser": "Open browser tab",
       "openAgentChat": "Open agent chat",
       "openChat": "Open chat",
-      "searchFiles": "Search files"
+      "searchFiles": "Search files",
+      "openWhiteboard": "New whiteboard"
     }
   }
 }

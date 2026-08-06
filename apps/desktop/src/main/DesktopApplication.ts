@@ -31,6 +31,12 @@ function isPathWithinOrEqual(rootPath: string, candidatePath: string): boolean {
   return normalizedCandidatePath === normalizedRootPath || normalizedCandidatePath.startsWith(`${normalizedRootPath}/`);
 }
 
+const ALLOWED_PERMISSIONS = new Set(["media", "clipboard-read", "clipboard-write", "clipboard-sanitized-write"]);
+
+export function isPermissionAllowed(permission: string): boolean {
+  return ALLOWED_PERMISSIONS.has(permission);
+}
+
 /**
  * Owns Electron desktop lifecycle and main window bootstrap.
  */
@@ -83,7 +89,7 @@ export class DesktopApplication {
   private async start(): Promise<void> {
     await app.whenReady();
     this.registerWorkspaceFileProtocol();
-    this.registerMediaPermissionHandlers();
+    this.registerPermissionHandlers();
 
     const defaultAppEntry = process.argv[1];
     if (process.defaultApp && defaultAppEntry) {
@@ -785,13 +791,18 @@ export class DesktopApplication {
     this.mainWindow = mainWindow;
   }
 
-  private registerMediaPermissionHandlers(): void {
+  private registerPermissionHandlers(): void {
     session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-      callback(permission === "media");
+      // Media stays available to all webContents (unchanged behavior); the
+      // clipboard grants are scoped to the main window only so arbitrary
+      // BrowserView <webview> content never gets them.
+      const isMainWindow = _webContents?.id === this.mainWindow?.webContents?.id;
+      callback(isPermissionAllowed(permission) && (permission === "media" || isMainWindow));
     });
 
     session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
-      return permission === "media";
+      const isMainWindow = _webContents?.id === this.mainWindow?.webContents?.id;
+      return isPermissionAllowed(permission) && (permission === "media" || isMainWindow);
     });
   }
 }

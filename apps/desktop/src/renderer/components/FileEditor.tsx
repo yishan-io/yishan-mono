@@ -1,14 +1,16 @@
 import { Box, Typography } from "@mui/material";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { isExcalidrawFile } from "../helpers/editorLanguage";
 import { useGitGutterDecorations } from "../hooks/useGitGutterDecorations";
 import type { MarkdownDefaultViewMode } from "../store/settings/layoutStore";
+import { CliSpinner } from "./CliSpinner";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 import { MarkdownPreviewPane } from "./fileEditor/MarkdownPreviewPane";
 import { MarkdownViewModeActions } from "./fileEditor/MarkdownViewModeActions";
 import { useMarkdownViewMode } from "./fileEditor/useMarkdownViewMode";
 import { useMonacoFileEditor } from "./fileEditor/useMonacoFileEditor";
 
-type FileEditorProps = {
+export type FileEditorProps = {
   workspaceId?: string;
   path: string;
   content: string;
@@ -26,7 +28,7 @@ type FileEditorProps = {
 };
 
 /** Renders a Monaco file editor with markdown preview modes and save shortcuts. */
-export function FileEditor({
+function MonacoFileEditor({
   workspaceId,
   path,
   content,
@@ -282,4 +284,25 @@ export function FileEditor({
       </Box>
     </Box>
   );
+}
+
+const ExcalidrawFileEditor = lazy(() => import("./fileEditor/ExcalidrawFileEditor"));
+
+/** Dispatches to the Excalidraw editor for .excalidraw files, or Monaco for all others. */
+export function FileEditor(props: FileEditorProps) {
+  if (isExcalidrawFile(props.path)) {
+    return (
+      <Suspense
+        fallback={
+          <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <CliSpinner />
+          </Box>
+        }
+      >
+        <ExcalidrawFileEditor {...props} />
+      </Suspense>
+    );
+  }
+
+  return <MonacoFileEditor {...props} />;
 }

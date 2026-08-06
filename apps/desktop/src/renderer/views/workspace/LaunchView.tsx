@@ -6,11 +6,13 @@ import {
   LuCircleX,
   LuGlobe,
   LuLoaderCircle,
+  LuPencil,
   LuSearch,
   LuSparkles,
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
+import { createNewWhiteboard } from "../../commands/whiteboardCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
@@ -95,6 +97,15 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
           title: t("agentChat.title"),
           cwd: selectedWorkspace?.worktreePath || undefined,
         }),
+    },
+    {
+      id: "whiteboard",
+      label: t("launch.actions.openWhiteboard"),
+      shortcutLabel: getShortcutDisplayLabelById("open-whiteboard", platform),
+      icon: <LuPencil size={16} />,
+      onClick: () => {
+        void createNewWhiteboard(workspaceId);
+      },
     },
     {
       id: "browser",
