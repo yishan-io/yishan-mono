@@ -1,6 +1,7 @@
 const FULL_SKILL_MESSAGE_REGEX = /^\s*<skill\b([^>]*)>[\s\S]*?<\/skill>([\s\S]*)$/i;
 const SELF_CLOSING_SKILL_MESSAGE_REGEX = /^\s*<skill\b([^>]*)\/>\s*([\s\S]*)$/i;
 const SKILL_NAME_ATTRIBUTE_REGEX = /\bname="([^"]+)"/i;
+const LEADING_SKILL_COMMAND_REGEX = /^\s*\/skill:([a-zA-Z][\w-]*)(?:\s+([\s\S]*))?$/i;
 const LEADING_SLASH_COMMAND_REGEX = /^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/;
 const MAX_AGENT_SESSION_TITLE_LENGTH = 40;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,8 +19,16 @@ function normalizeSessionText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-/** Parses a leading injected skill XML block and preserves any trailing user content. */
+/** Parses a leading skill command or injected skill XML block and preserves any trailing user content. */
 export function parseSkillMessage(messageText: string): ParsedSkillMessage | null {
+  const skillCommandMatch = messageText.match(LEADING_SKILL_COMMAND_REGEX);
+  if (skillCommandMatch) {
+    return {
+      skillName: skillCommandMatch[1] ?? "",
+      trailingContent: skillCommandMatch[2]?.trim() ?? "",
+    };
+  }
+
   const fullMatch = messageText.match(FULL_SKILL_MESSAGE_REGEX);
   if (fullMatch) {
     const attributes = fullMatch[1] ?? "";

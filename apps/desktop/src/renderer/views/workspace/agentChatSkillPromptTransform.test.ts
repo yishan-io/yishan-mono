@@ -1,11 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { RichComposerSlashCommand } from "../../components/RichComposer";
-
-const getSkillDetailMock = vi.fn();
-
-vi.mock("../../commands/skillCommands", () => ({
-  getSkillDetail: getSkillDetailMock,
-}));
+import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 
 const SLASH_COMMANDS: RichComposerSlashCommand[] = [
   {
@@ -23,42 +18,36 @@ const SLASH_COMMANDS: RichComposerSlashCommand[] = [
 ];
 
 describe("transformAgentChatPromptForSkills", () => {
-  beforeEach(() => {
-    vi.resetModules();
-    getSkillDetailMock.mockReset();
-    getSkillDetailMock.mockResolvedValue({
-      name: "brainstorm",
-      description: "Explore ideas before implementation.",
-      version: "workspace",
-      source: "official",
-      sourceKind: "official",
-      installed: true,
-      installedForAgents: [],
-      official: true,
-      canUpdate: true,
-      hasUpdate: false,
-      files: {
-        "SKILL.md": "# Brainstorm\n\nUse this skill before implementation.",
-      },
-    });
-  });
-
-  it("converts a leading skill slash command into an injected skill prompt", async () => {
-    const { transformAgentChatPromptForSkills } = await import("./agentChatSkillPromptTransform");
-
+  it("rewrites a leading skill slash command to pi's /skill: expansion form", async () => {
     const transformedPrompt = await transformAgentChatPromptForSkills("/brainstorm how it works", SLASH_COMMANDS);
 
-    expect(transformedPrompt).toContain('<skill name="brainstorm">');
-    expect(transformedPrompt).toContain("# Brainstorm");
-    expect(transformedPrompt).toContain("how it works");
+    expect(transformedPrompt).toBe("/skill:brainstorm how it works");
+  });
+
+  it("rewrites a bare skill slash command without trailing text", async () => {
+    const transformedPrompt = await transformAgentChatPromptForSkills("/brainstorm", SLASH_COMMANDS);
+
+    expect(transformedPrompt).toBe("/skill:brainstorm");
   });
 
   it("does not convert non-skill slash commands", async () => {
-    const { transformAgentChatPromptForSkills } = await import("./agentChatSkillPromptTransform");
-
     const transformedPrompt = await transformAgentChatPromptForSkills("/builder fix this", SLASH_COMMANDS);
 
     expect(transformedPrompt).toBe("/builder fix this");
-    expect(getSkillDetailMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves already-prefixed skill commands untouched", async () => {
+    const transformedPrompt = await transformAgentChatPromptForSkills(
+      "/skill:brainstorm make it concrete",
+      SLASH_COMMANDS,
+    );
+
+    expect(transformedPrompt).toBe("/skill:brainstorm make it concrete");
+  });
+
+  it("leaves plain prompts untouched", async () => {
+    const transformedPrompt = await transformAgentChatPromptForSkills("brainstorm this idea", SLASH_COMMANDS);
+
+    expect(transformedPrompt).toBe("brainstorm this idea");
   });
 });

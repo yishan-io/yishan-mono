@@ -175,9 +175,6 @@ export type DaemonRpcClient = {
     list: (input?: undefined) => Promise<Rpc.SkillListResponse>;
     info: (input: { name: string }) => Promise<Rpc.SkillInfo>;
     detail: (input: { name: string }) => Promise<Rpc.SkillDetail>;
-    add: (input: { source: string }) => Promise<Rpc.SkillMutationOkResponse>;
-    remove: (input: { name: string }) => Promise<Rpc.SkillMutationOkResponse>;
-    update: (input: { name: string }) => Promise<Rpc.SkillMutationOkResponse>;
   };
   memory: {
     search: (input: Rpc.MemorySearchInput) => Promise<Rpc.MemorySearchResult[]>;

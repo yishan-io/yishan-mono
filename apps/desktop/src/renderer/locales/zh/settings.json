@@ -287,29 +287,19 @@
       }
     },
     "skills": {
-      "title": "Agent \u6280\u80fd",
-      "description": "\u6d4f\u89c8\u5b98\u65b9\u6280\u80fd\u3001\u4ece\u5916\u90e8\u6765\u6e90\u5b89\u88c5\u7b2c\u4e09\u65b9\u6280\u80fd\uff0c\u5e76\u5728\u684c\u9762\u7aef\u7ba1\u7406\u5b8c\u6574\u6280\u80fd\u751f\u547d\u5468\u671f\u3002",
+      "title": "\u6280\u80fd",
+      "description": "\u6d4f\u89c8\u6280\u80fd\u52a0\u8f7d\u81ea agent \u8fd0\u884c\u65f6\u3002",
       "loadError": "\u52a0\u8f7d\u6280\u80fd\u72b6\u6001\u5931\u8d25\u3002",
       "installed": "\u5df2\u5b89\u88c5",
       "notInstalled": "\u672a\u5b89\u88c5",
       "official": "\u5b98\u65b9",
-      "thirdParty": "\u7b2c\u4e09\u65b9",
       "sourceLabel": "\u4ece\u6765\u6e90\u5b89\u88c5",
-      "sourcePlaceholder": "\u5b98\u65b9\u540d\u79f0\u6216 URL",
-      "confirmRemoveTitle": "\u79fb\u9664\u6280\u80fd\uff1f",
-      "confirmRemoveDescription": "\u786e\u8ba4\u8981\u79fb\u9664 \"{{name}}\" \u5417\uff1f",
       "instruction": "\u4f7f\u7528\u8bf4\u660e",
-      "success": "\u6280\u80fd\u5df2\u5b89\u88c5\u3002\u91cd\u542f Agent \u540e\u751f\u6548\u3002",
-      "actions": {
-        "add": "\u6dfb\u52a0",
-        "adding": "\u6dfb\u52a0\u4e2d...",
-        "cancel": "\u53d6\u6d88",
-        "install": "\u5b89\u88c5",
-        "installing": "\u5b89\u88c5\u4e2d...",
-        "update": "\u66f4\u65b0",
-        "updating": "\u66f4\u65b0\u4e2d...",
-        "uninstall": "\u5378\u8f7d",
-        "uninstalling": "\u5378\u8f7d\u4e2d..."
+      "sourceKinds": {
+        "global": "\u5168\u5c40",
+        "project": "\u9879\u76ee",
+        "package": "\u8f6f\u4ef6\u5305",
+        "settings": "\u8bbe\u7f6e"
       }
     },
     "appearance": {

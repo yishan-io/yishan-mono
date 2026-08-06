@@ -1,40 +1,8 @@
-import { getSkillDetail } from "../../commands/skillCommands";
 import type { RichComposerSlashCommand } from "../../components/RichComposer";
 
-const cachedSkillPromptByName = new Map<string, Promise<string | null>>();
 const LEADING_SKILL_COMMAND_REGEX = /^\/([a-zA-Z][\w-]*)(?=\s|$)([\s\S]*)$/;
 
-function buildSkillPromptMessage(skillName: string, skillMarkdown: string): string {
-  return `<skill name="${skillName}">\n${skillMarkdown.trim()}\n</skill>`;
-}
-
-async function loadSkillPromptMessage(skillName: string): Promise<string | null> {
-  const detail = await getSkillDetail(skillName);
-  const skillMarkdown = detail.files["SKILL.md"]?.trim();
-  if (!skillMarkdown) {
-    return null;
-  }
-  return buildSkillPromptMessage(skillName, skillMarkdown);
-}
-
-/** Loads one skill prompt payload once and reuses it across agent-chat submissions. */
-export async function getCachedSkillPromptMessage(skillName: string): Promise<string | null> {
-  const normalizedSkillName = skillName.trim();
-  if (!normalizedSkillName) {
-    return null;
-  }
-
-  const cachedPrompt = cachedSkillPromptByName.get(normalizedSkillName);
-  if (cachedPrompt) {
-    return cachedPrompt;
-  }
-
-  const nextPrompt = loadSkillPromptMessage(normalizedSkillName).catch(() => null);
-  cachedSkillPromptByName.set(normalizedSkillName, nextPrompt);
-  return nextPrompt;
-}
-
-/** Converts a leading skill slash command into the injected `<skill ...>` prompt format before send. */
+/** Converts a leading skill slash command into pi's native /skill: expansion form before send. */
 export async function transformAgentChatPromptForSkills(
   prompt: string,
   slashCommands: RichComposerSlashCommand[],
@@ -58,11 +26,6 @@ export async function transformAgentChatPromptForSkills(
     return trimmedPrompt;
   }
 
-  const skillPromptMessage = await getCachedSkillPromptMessage(skillName);
-  if (!skillPromptMessage) {
-    return trimmedPrompt;
-  }
-
   const normalizedTrailingContent = trailingContent.trim();
-  return normalizedTrailingContent ? `${skillPromptMessage}\n\n${normalizedTrailingContent}` : skillPromptMessage;
+  return normalizedTrailingContent ? `/skill:${skillName} ${normalizedTrailingContent}` : `/skill:${skillName}`;
 }

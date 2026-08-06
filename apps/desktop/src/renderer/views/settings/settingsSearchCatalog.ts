@@ -275,16 +275,10 @@ const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     keywordKeys: [
       "settings.skills.description",
       "settings.skills.sourceLabel",
-      "settings.skills.sourcePlaceholder",
-      "settings.skills.installed",
+            "settings.skills.installed",
       "settings.skills.notInstalled",
       "settings.skills.official",
-      "settings.skills.thirdParty",
-      "settings.skills.actions.add",
-      "settings.skills.actions.install",
-      "settings.skills.actions.update",
-      "settings.skills.actions.uninstall",
-    ],
+                                  ],
   },
 ];
 const NODES_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [

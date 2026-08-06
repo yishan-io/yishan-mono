@@ -310,28 +310,18 @@
     },
     "skills": {
       "title": "Agent Skills",
-      "description": "Browse official skills, install third-party skills from a source, and manage skill lifecycle from the desktop.",
+      "description": "Browse skills loaded by the agent runtime.",
       "loadError": "Failed to load skill statuses.",
       "installed": "Installed",
       "notInstalled": "Not installed",
       "official": "Official",
-      "thirdParty": "Third-party",
       "sourceLabel": "Install from source",
-      "sourcePlaceholder": "Official name or URL",
-      "confirmRemoveTitle": "Remove skill?",
-      "confirmRemoveDescription": "Are you sure you want to remove \"{{name}}\"?",
       "instruction": "Instruction",
-      "success": "Skill installed. Restart your agent to take effect.",
-      "actions": {
-        "add": "Add",
-        "adding": "Adding...",
-        "cancel": "Cancel",
-        "install": "Install",
-        "installing": "Installing...",
-        "update": "Update",
-        "updating": "Updating...",
-        "uninstall": "Uninstall",
-        "uninstalling": "Uninstalling..."
+      "sourceKinds": {
+        "global": "Global",
+        "project": "Project",
+        "package": "Package",
+        "settings": "Settings"
       }
     },
     "appearance": {

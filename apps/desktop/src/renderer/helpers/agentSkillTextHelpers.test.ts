@@ -8,6 +8,20 @@ describe("parseSkillMessage", () => {
       trailingContent: "how it works",
     });
   });
+
+  it("extracts the skill name and trailing content from a /skill: command", () => {
+    expect(parseSkillMessage("/skill:brainstorm how it works")).toEqual({
+      skillName: "brainstorm",
+      trailingContent: "how it works",
+    });
+  });
+
+  it("extracts a bare /skill: command without trailing content", () => {
+    expect(parseSkillMessage("/skill:brainstorm")).toEqual({
+      skillName: "brainstorm",
+      trailingContent: "",
+    });
+  });
 });
 
 describe("normalizeAgentSessionTitle", () => {
@@ -23,6 +37,14 @@ describe("normalizeAgentSessionTitle", () => {
 
   it("removes leading slash-command syntax from titles", () => {
     expect(normalizeAgentSessionTitle("/brainstorm how it works")).toBe("how it works");
+  });
+
+  it("titles a /skill: command by its trailing text", () => {
+    expect(normalizeAgentSessionTitle("/skill:brainstorm how it works")).toBe("how it works");
+  });
+
+  it("titles a bare /skill: command with a skill marker", () => {
+    expect(normalizeAgentSessionTitle("/skill:brainstorm")).toBe("use skill: brainstorm");
   });
 
   it("collapses plain text titles into one line", () => {
@@ -46,9 +68,9 @@ describe("formatAgentSessionTitle", () => {
   });
 
   it("ignores UUID sessionName and falls back to previewText", () => {
-    expect(
-      formatAgentSessionTitle("preview text", "Fallback", "550e8400-e29b-41d4-a716-446655440000"),
-    ).toBe("preview text");
+    expect(formatAgentSessionTitle("preview text", "Fallback", "550e8400-e29b-41d4-a716-446655440000")).toBe(
+      "preview text",
+    );
   });
 
   it("ignores empty/whitespace sessionName and falls back to previewText", () => {

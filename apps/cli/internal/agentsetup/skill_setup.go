@@ -8,36 +8,6 @@ import (
 	"yishan/apps/cli/internal/memory"
 )
 
-const (
-
-// Exported for use by other packages and tests.
-)
-
-type SkillInstallResult struct {
-	SkillPath string
-}
-
-func EnsureOfficialSkills() ([]*SkillInstallResult, error) {
-	results := make([]*SkillInstallResult, 0, len(OfficialSkillNames()))
-	for _, name := range OfficialSkillNames() {
-		result, err := AddSkill(name)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, result)
-	}
-	return results, nil
-}
-
-func RemoveOfficialSkills() error {
-	for _, name := range OfficialSkillNames() {
-		if err := RemoveSkill(name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // EnsurePersonaSetup writes the initial PERSONA.md template to
 // ~/.yishan/memory/PERSONA.md if the file does not already exist.
 // This is called during `yishan setup` so new users get a starter file.

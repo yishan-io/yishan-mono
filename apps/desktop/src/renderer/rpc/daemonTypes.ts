@@ -581,12 +581,14 @@ export type TerminalSessionLifecycleEvent = {
   session: TerminalSessionSummary;
 };
 
+export type SkillSourceKind = "official" | "url" | "global" | "project" | "package" | "settings";
+
 export type SkillInfo = {
   name: string;
   description: string;
   version: string;
   source: string;
-  sourceKind: string;
+  sourceKind: SkillSourceKind;
   installed: boolean;
   installedForAgents: string[];
   official: boolean;
@@ -600,10 +602,6 @@ export type SkillDetail = SkillInfo & {
 
 export type SkillListResponse = {
   skills: SkillInfo[];
-};
-
-export type SkillMutationOkResponse = {
-  ok: true;
 };
 
 export type MemorySearchInput = {

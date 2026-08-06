@@ -15,6 +15,7 @@ import (
 
 	"yishan/apps/cli/internal/daemon"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
+	"yishan/apps/cli/internal/output"
 )
 
 var mcpCmd = &cobra.Command{
@@ -389,6 +390,59 @@ func textErrorResult(text string) *mcp.CallToolResult {
 
 func init() {
 	rootCmd.AddCommand(mcpCmd)
+	mcpCmd.AddCommand(mcpConfigCmd)
+}
+
+// mcpConfigCmd prints the MCP server config users add to their agent configs
+// to connect to the yishan MCP server. The daemon does not write these files;
+// users opt in by merging the shown entries into their existing config.
+var mcpConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Print MCP server config to add to agent configs",
+	Long: `Print the yishan MCP server entry to add to each agent's config.
+The daemon does not modify agent configs; add the shown entry to your
+existing config file to opt in.`,
+	Args: cobra.NoArgs,
+	RunE: func(_ *cobra.Command, _ []string) error {
+		return output.PrintAny(map[string]any{
+			"instructions": "Add the yishan entry to your existing config (do not replace the whole file).",
+			"configs": map[string]any{
+				"opencode": map[string]any{
+					"path": "$XDG_CONFIG_HOME/opencode/opencode.json",
+					"add": map[string]any{
+						"mcp": map[string]any{
+							"yishan": map[string]any{
+								"type":    "local",
+								"command": []string{"yishan", "mcp"},
+							},
+						},
+					},
+				},
+				"claudeDesktop": map[string]any{
+					"path": "~/.claude/claude_desktop_config.json",
+					"add": map[string]any{
+						"mcpServers": map[string]any{
+							"yishan": map[string]any{
+								"command": "yishan",
+								"args":    []string{"mcp"},
+							},
+						},
+					},
+				},
+				"claudeCode": map[string]any{
+					"path": "~/.claude.json",
+					"add": map[string]any{
+						"mcpServers": map[string]any{
+							"yishan": map[string]any{
+								"command": "yishan",
+								"args":    []string{"mcp"},
+							},
+						},
+					},
+				},
+			},
+		})
+	},
 }
 
 func readDaemonContext(client *daemonclient.PersistentClient) map[string]any {
