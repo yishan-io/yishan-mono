@@ -33,6 +33,7 @@
       "openTerminal": "Open terminal tab",
       "openAgentChat": "Open agent chat tab",
       "openBrowser": "Open browser tab",
+      "openWhiteboard": "Open whiteboard",
       "focusAgentChatComposer": "Focus agent chat input",
       "activateRepoPane": "Activate repository pane",
       "activateFilesPane": "Activate files pane",

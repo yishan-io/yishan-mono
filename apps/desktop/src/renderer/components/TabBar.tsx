@@ -2,7 +2,7 @@ import { Box, IconButton } from "@mui/material";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuClock, LuColumns2, LuGlobe, LuMessageCircle, LuPlus, LuSquareTerminal } from "react-icons/lu";
+import { LuClock, LuColumns2, LuGlobe, LuMessageCircle, LuPencil, LuPlus, LuSquareTerminal } from "react-icons/lu";
 import {
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
@@ -29,13 +29,13 @@ type WorkspaceTab = {
   cwd?: string;
 };
 
-export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | DesktopAgentKind;
+export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | "whiteboard" | DesktopAgentKind;
 
 type AgentCreateOption = DesktopAgentKind;
 
 /** Returns true when one create-menu option targets an agent terminal preset. */
 function isAgentCreateOption(option: TabBarCreateOption): option is AgentCreateOption {
-  return option !== "terminal" && option !== "browser" && option !== "agent-chat";
+  return option !== "terminal" && option !== "browser" && option !== "agent-chat" && option !== "whiteboard";
 }
 
 type TabBarProps = {
@@ -115,6 +115,7 @@ export function TabBar({
     },
     {} as Record<DesktopAgentKind, string>,
   );
+  const whiteboardCreateLabel = t("tabs.createMenu.whiteboard");
   const keepOpenActionLabel = t("tabs.actions.keepOpen");
   const pinTabActionLabel = t("tabs.actions.pin");
   const unpinTabActionLabel = t("tabs.actions.unpin");
@@ -233,6 +234,18 @@ export function TabBar({
     shortcutLabel: string | null;
   }> = [
     {
+      option: "agent-chat",
+      label: createMenuLabel !== "tabs.createMenu.label" ? t("agentChat.title") : "Agent Chat",
+      icon: <LuMessageCircle size={14} />,
+      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
+    },
+    {
+      option: "whiteboard",
+      label: whiteboardCreateLabel,
+      icon: <LuPencil size={14} />,
+      shortcutLabel: getShortcutDisplayLabelById("open-whiteboard", platform),
+    },
+    {
       option: "terminal",
       label: terminalTitle,
       icon: <LuSquareTerminal size={14} />,
@@ -243,12 +256,6 @@ export function TabBar({
       label: browserTitle,
       icon: <LuGlobe size={14} />,
       shortcutLabel: getShortcutDisplayLabelById("open-browser", platform),
-    },
-    {
-      option: "agent-chat",
-      label: createMenuLabel !== "tabs.createMenu.label" ? t("agentChat.title") : "Agent Chat",
-      icon: <LuMessageCircle size={14} />,
-      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
     },
     ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => {
       const label = createLabelByAgentKind[agentKind];
@@ -263,7 +270,6 @@ export function TabBar({
   const createOptions = allCreateOptions.filter(
     (item) => !isAgentCreateOption(item.option) || enabledAgentKindSet.has(item.option),
   );
-  const hasAgentCreateOptions = createOptions.some((item) => isAgentCreateOption(item.option));
 
   // ─── Context menu ─────────────────────────────────────────────────────────
 
@@ -391,7 +397,6 @@ export function TabBar({
         options={createOptions}
         disabled={disabled}
         createMenuLabel={createMenuLabel}
-        hasAgentCreateOptions={hasAgentCreateOptions}
         onCreateTab={onCreateTab}
       />
 

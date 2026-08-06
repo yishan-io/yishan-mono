@@ -1,6 +1,7 @@
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
 import { setSelectedWorkspace } from "../commands/selectionCommands";
+import { createNewWhiteboard } from "../commands/whiteboardCommands";
 import { requestAgentChatComposerFocus } from "../events/agentChatComposerFocus";
 import { reloadWebview } from "../views/workspace/browser/webviewRegistry";
 import { normalizeKeysString } from "./customKeybindings";
@@ -26,6 +27,7 @@ type ShortcutTarget =
   | { command: "tabs.openTerminal" }
   | { command: "tabs.openAgentChat" }
   | { command: "tabs.openBrowser" }
+  | { command: "tabs.openWhiteboard" }
   | { command: "agentChat.focusComposer" }
   | { command: "tabs.selectByIndex" }
   | { command: "workspace.activatePane"; payload: { pane: "repo" | "files" | "changes" | "pr" } }
@@ -178,6 +180,17 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
       url: "",
       reuseExisting: false,
     });
+    event.preventDefault();
+    return true;
+  }
+
+  if (target.command === "tabs.openWhiteboard") {
+    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    if (!workspaceId) {
+      return false;
+    }
+
+    void createNewWhiteboard(workspaceId);
     event.preventDefault();
     return true;
   }
@@ -400,6 +413,14 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+shift+b,command+shift+b",
     target: { command: "tabs.openBrowser" },
+    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+  },
+  {
+    id: "open-whiteboard",
+    descriptionKey: "keybindings.actions.openWhiteboard",
+    scope: "workspace",
+    keys: "ctrl+shift+t,command+shift+t",
+    target: { command: "tabs.openWhiteboard" },
     shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
   },
   {

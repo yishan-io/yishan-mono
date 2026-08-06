@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { createNewWhiteboard } from "../../commands/whiteboardCommands";
 import type { SplitDropRegion } from "../../components/SplitDropZone";
 import { resolveDropResult } from "../../components/SplitDropZone";
 import type { TabBarCreateOption } from "../../components/TabBar";
@@ -101,6 +102,10 @@ export function usePaneTabHandlers({
           title: t("agentChat.title"),
           cwd: workspaceWorktreePath || undefined,
         });
+        return;
+      }
+      if (option === "whiteboard") {
+        void createNewWhiteboard(workspaceId);
         return;
       }
       if (!enabledAgentKindSet.has(option)) return;

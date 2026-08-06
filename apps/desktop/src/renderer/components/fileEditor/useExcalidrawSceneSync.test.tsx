@@ -97,7 +97,14 @@ function fileData(): any {
 }
 
 function sceneJson(elements: unknown[], appState?: Record<string, unknown>) {
-  return JSON.stringify({ type: "excalidraw", version: 2, source: "yishan", elements, appState: appState ?? {}, files: {} });
+  return JSON.stringify({
+    type: "excalidraw",
+    version: 2,
+    source: "yishan",
+    elements,
+    appState: appState ?? {},
+    files: {},
+  });
 }
 
 function makeApi() {
@@ -252,9 +259,7 @@ describe("useExcalidrawSceneSync", () => {
 
   it("surfaces a parse error when no scene is applied yet", () => {
     const onContentChange = vi.fn();
-    const { result, unmount } = renderHook(() =>
-      useExcalidrawSceneSync({ content: "{not json", onContentChange }),
-    );
+    const { result, unmount } = renderHook(() => useExcalidrawSceneSync({ content: "{not json", onContentChange }));
 
     expect(result.current.parseError).toContain("Invalid Excalidraw JSON");
     // Canvas never mounted → initialData is the seeded empty scene, not a crash.

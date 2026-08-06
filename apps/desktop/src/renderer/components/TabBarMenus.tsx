@@ -34,7 +34,6 @@ type CreateTabMenuProps = {
   options: CreateMenuOption[];
   disabled?: boolean;
   createMenuLabel: string;
-  hasAgentCreateOptions: boolean;
   onCreateTab: (option: TabBarCreateOption) => void;
 };
 
@@ -44,9 +43,12 @@ export function CreateTabMenu({
   options,
   disabled,
   createMenuLabel,
-  hasAgentCreateOptions,
   onCreateTab,
 }: CreateTabMenuProps) {
+  // Agent CLI presets (anything beyond the built-in tab kinds) form their own
+  // group, separated from the rest of the menu by a divider.
+  let agentGroupDividerRendered = false;
+
   return (
     <Menu
       anchorEl={anchorEl}
@@ -54,39 +56,51 @@ export function CreateTabMenu({
       onClose={onClose}
       slotProps={{ paper: { sx: { minWidth: 220 } } }}
     >
-      {options.map((item) => (
-        <Box key={item.option}>
-          <MenuItem
-            onClick={() => {
-              onCreateTab(item.option);
-              onClose();
-            }}
-            disabled={disabled}
-            sx={{ gap: 1 }}
-            aria-label={`${createMenuLabel}: ${item.label}`}
-          >
-            {item.icon}
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, width: "100%" }}>
-              <Box component="span">{item.label}</Box>
-              {item.shortcutLabel ? (
-                <Typography
-                  variant="caption"
-                  component="span"
-                  aria-hidden="true"
-                  sx={{
-                    color: "text.secondary",
-                    fontSize: 13,
-                    lineHeight: 1,
-                  }}
-                >
-                  {item.shortcutLabel}
-                </Typography>
-              ) : null}
-            </Box>
-          </MenuItem>
-          {item.option === "agent-chat" && hasAgentCreateOptions ? <Divider sx={{ my: 0.5 }} /> : null}
-        </Box>
-      ))}
+      {options.map((item) => {
+        const isAgentCliOption =
+          item.option !== "terminal" &&
+          item.option !== "browser" &&
+          item.option !== "agent-chat" &&
+          item.option !== "whiteboard";
+        const showGroupDivider = isAgentCliOption && !agentGroupDividerRendered;
+        agentGroupDividerRendered = agentGroupDividerRendered || isAgentCliOption;
+
+        return (
+          <Box key={item.option}>
+            {showGroupDivider ? <Divider sx={{ my: 0.5 }} /> : null}
+            <MenuItem
+              onClick={() => {
+                onCreateTab(item.option);
+                onClose();
+              }}
+              disabled={disabled}
+              sx={{ gap: 1 }}
+              aria-label={`${createMenuLabel}: ${item.label}`}
+            >
+              {item.icon}
+              <Box
+                sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, width: "100%" }}
+              >
+                <Box component="span">{item.label}</Box>
+                {item.shortcutLabel ? (
+                  <Typography
+                    variant="caption"
+                    component="span"
+                    aria-hidden="true"
+                    sx={{
+                      color: "text.secondary",
+                      fontSize: 13,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {item.shortcutLabel}
+                  </Typography>
+                ) : null}
+              </Box>
+            </MenuItem>
+          </Box>
+        );
+      })}
     </Menu>
   );
 }
