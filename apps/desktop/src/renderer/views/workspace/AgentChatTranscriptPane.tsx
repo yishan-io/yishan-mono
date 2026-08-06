@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
+import { THINKING_LEVEL_LABELS } from "../../components/agent/session/ThinkingLevelControl";
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentMessage, AgentModel, AgentQueueState } from "../../store/agentChatTypes";
@@ -22,6 +23,7 @@ type AgentChatTranscriptPaneProps = {
 type AgentChatSubagentDetailFooterProps = {
   model: AgentModel | null;
   usage: AgentMessage["usage"] | null;
+  thinkingLevel: string | null;
 };
 
 function formatCompactTokenCount(value: number): string {
@@ -30,13 +32,15 @@ function formatCompactTokenCount(value: number): string {
   return value.toLocaleString();
 }
 
-function AgentChatSubagentDetailFooter({ model, usage }: AgentChatSubagentDetailFooterProps) {
+function AgentChatSubagentDetailFooter({ model, usage, thinkingLevel }: AgentChatSubagentDetailFooterProps) {
   const contextUsed = usage?.totalTokens ?? usage?.total;
   const contextLabel =
     typeof contextUsed === "number"
       ? `${formatCompactTokenCount(contextUsed)}${model?.contextWindow ? ` / ${formatCompactTokenCount(model.contextWindow)}` : ""} tokens`
       : "Context unavailable";
   const modelLabel = model ? `${model.provider ? `${model.provider} / ` : ""}${model.name}` : "Model unavailable";
+  const thinkingLevelLabel =
+    thinkingLevel !== null ? (THINKING_LEVEL_LABELS[thinkingLevel] ?? THINKING_LEVEL_LABELS.off) : undefined;
 
   return (
     <Box
@@ -44,6 +48,9 @@ function AgentChatSubagentDetailFooter({ model, usage }: AgentChatSubagentDetail
     >
       <Typography variant="caption">Model: {modelLabel}</Typography>
       <Typography variant="caption">Context: {contextLabel}</Typography>
+      {thinkingLevelLabel !== undefined ? (
+        <Typography variant="caption">Thinking: {thinkingLevelLabel}</Typography>
+      ) : null}
     </Box>
   );
 }
@@ -76,6 +83,7 @@ function AgentChatTranscriptPane({
   });
   const queue = agentChatStore((state) => state.sessionsByTabId[tabId]?.queue ?? EMPTY_QUEUE);
   const footerModel = currentModel ?? parentModel;
+  const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? null);
   const latestUsage = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const usage = messages[index]?.usage;
@@ -97,7 +105,8 @@ function AgentChatTranscriptPane({
   );
 
   const isWorking = sessionState === "running" || sessionState === "compacting";
-  const workingLabel = sessionState === "compacting" ? t(`agentChat.compaction.${compactionReason ?? "generic"}`) : undefined;
+  const workingLabel =
+    sessionState === "compacting" ? t(`agentChat.compaction.${compactionReason ?? "generic"}`) : undefined;
 
   return (
     <>
@@ -113,7 +122,9 @@ function AgentChatTranscriptPane({
         queuedMessages={isReadOnlySubagentDetail ? undefined : queue}
         onOpenCompletedSubagent={handleOpenCompletedSubagent}
       />
-      {isReadOnlySubagentDetail ? <AgentChatSubagentDetailFooter model={footerModel} usage={latestUsage} /> : null}
+      {isReadOnlySubagentDetail ? (
+        <AgentChatSubagentDetailFooter model={footerModel} usage={latestUsage} thinkingLevel={thinkingLevel} />
+      ) : null}
     </>
   );
 }

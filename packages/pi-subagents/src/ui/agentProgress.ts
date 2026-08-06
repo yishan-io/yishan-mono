@@ -148,6 +148,7 @@ export function renderAgentLiveTranscripts(ui: ExtensionUIContext, records: Agen
       childSessionId: record.sessionId as string,
       status: record.status,
       messages: record.session?.messages ?? [],
+      thinkingLevel: record.session?.thinkingLevel,
     }));
 
   ui.setWidget(LIVE_TRANSCRIPTS_WIDGET_KEY, agents.length > 0 ? [JSON.stringify({ version: 1, agents })] : undefined);

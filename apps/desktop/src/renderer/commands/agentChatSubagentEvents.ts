@@ -9,6 +9,7 @@ import { normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
 type SubagentLiveTranscript = {
   childSessionId: string;
   messages: AgentMessage[];
+  thinkingLevel?: string;
 };
 
 export function parseSubagentProgressTargets(
@@ -80,7 +81,11 @@ export function parseSubagentLiveTranscripts(event: Record<string, unknown>): Su
       if (!agent || typeof agent !== "object") {
         return [];
       }
-      const { childSessionId, messages } = agent as { childSessionId?: unknown; messages?: unknown };
+      const { childSessionId, messages, thinkingLevel } = agent as {
+        childSessionId?: unknown;
+        messages?: unknown;
+        thinkingLevel?: unknown;
+      };
       if (typeof childSessionId !== "string" || childSessionId.trim().length === 0 || !Array.isArray(messages)) {
         return [];
       }
@@ -91,7 +96,13 @@ export function parseSubagentLiveTranscripts(event: Record<string, unknown>): Su
         const normalizedMessage = normalizeIncomingAgentMessage(message);
         return normalizedMessage ? [normalizedMessage] : [];
       });
-      return [{ childSessionId, messages: normalizedMessages }];
+      return [
+        {
+          childSessionId,
+          messages: normalizedMessages,
+          thinkingLevel: typeof thinkingLevel === "string" ? thinkingLevel : undefined,
+        },
+      ];
     });
   } catch {
     return null;
@@ -119,5 +130,9 @@ export function applySubagentLiveTranscripts(parentTabId: string, transcripts: S
     }
 
     agentChatStore.getState().replaceMessages(detailTab.id, transcript.messages);
+
+    if (transcript.thinkingLevel) {
+      agentChatStore.getState().setThinkingLevel(detailTab.id, transcript.thinkingLevel);
+    }
   }
 }
