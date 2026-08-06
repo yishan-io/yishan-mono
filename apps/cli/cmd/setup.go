@@ -14,15 +14,12 @@ import (
 var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Manage yishan integration with AI agents",
-	Long: `Install yishan integrations such as agent hooks, MCP configs, default Pi extensions,
-and skills that teach AI coding agents how to use the yishan CLI.
+	Long: `Install yishan integrations such as agent hooks, default Pi extensions,
+and shell wrappers for AI coding agents.
 
-Without a subcommand, runs all setup tasks (hook, mcp, extension, skill).`,
+Without a subcommand, runs all setup tasks (hook, extension).`,
 	Example: `  yishan setup
   yishan setup hook
-  yishan setup mcp
-  yishan setup extension
-  yishan setup skill
   yishan setup state`,
 	RunE: runSetupAll,
 }
@@ -57,85 +54,10 @@ Codex, and Cursor agents. These hooks send lifecycle events
 	},
 }
 
-var setupMCPCmd = &cobra.Command{
-	Use:   "mcp",
-	Short: "Configure agent MCP servers to connect to yishan",
-	Long: `Write MCP server configuration for OpenCode and Claude,
-so they can discover the yishan MCP server (yishan mcp)
-and use it to manage workspaces.`,
-	Example: `  yishan setup mcp
-  yishan setup mcp --remove`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		remove, err := cmd.Flags().GetBool("remove")
-		if err != nil {
-			return err
-		}
-		if remove {
-			if err := setup.RemoveMCPConfig(); err != nil {
-				return err
-			}
-			return output.PrintAny(map[string]any{
-				"action":  "removed",
-				"message": "MCP config removed from all agents",
-			})
-		}
-		result, err := setup.EnsureMCPConfig()
-		if err != nil {
-			return err
-		}
-		return output.PrintAny(map[string]any{
-			"action":  "installed",
-			"configs": result.ConfigPaths,
-			"message": "MCP config written for OpenCode and Claude",
-		})
-	},
-}
-
-var setupSkillCmd = &cobra.Command{
-	Use:   "skill",
-	Short: "Skills are installed through Pi packages or user-provided sources",
-	RunE: func(_ *cobra.Command, _ []string) error {
-		return output.PrintAny(map[string]any{"message": "Yishan workflow skills are provided by managed Pi packages. Use yishan skill for third-party skills."})
-	},
-}
-
-var setupExtensionCmd = &cobra.Command{
-	Use:   "extension",
-	Short: "Install or remove the default Pi extension set",
-	Long: `Install the default Yishan Pi extensions into the managed Pi home,
-so Pi sessions started from Yishan get the standard notify, sub-agent, memory, workspace, and ask-user tools.`,
-	Example: `  yishan setup extension
-  yishan setup extension --remove`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		remove, err := cmd.Flags().GetBool("remove")
-		if err != nil {
-			return err
-		}
-		if remove {
-			if err := setup.RemoveDefaultPiExtensionSetup(); err != nil {
-				return err
-			}
-			return output.PrintAny(map[string]any{
-				"action":     "removed",
-				"extensions": setup.DefaultPiExtensionNames(),
-				"message":    "default Pi extensions removed",
-			})
-		}
-		if err := setup.EnsureDefaultPiExtensionSetup(); err != nil {
-			return err
-		}
-		return output.PrintAny(map[string]any{
-			"action":     "installed",
-			"extensions": setup.DefaultPiExtensionNames(),
-			"message":    "default Pi extensions installed",
-		})
-	},
-}
-
 var setupStateCmd = &cobra.Command{
 	Use:   "state",
 	Short: "Show installed yishan integrations",
-	Long:  `List all installed yishan integrations: skills, MCP configs, Pi extensions, hooks, assets, and shell wrappers.`,
+	Long:  `List all installed yishan integrations: Pi extensions, hooks, MCP, assets, and shell wrappers.`,
 	Example: `  yishan setup state
   yishan setup state --output json`,
 	RunE: func(_ *cobra.Command, _ []string) error {
@@ -153,19 +75,9 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 	disablePersona := cliruntime.UsesServiceTokenAuth()
 	setup.EnsureManagedAgentRuntime(disablePersona)
 
-	if _, err := setup.EnsureMCPConfig(); err != nil {
-		log.Warn().Err(err).Msg("setup: MCP config failed")
-		allErrors = append(allErrors, "mcp: "+err.Error())
-	}
 	if err := setup.EnsureDefaultPiExtensionSetup(); err != nil {
 		log.Warn().Err(err).Msg("setup: default pi extension setup failed")
 		allErrors = append(allErrors, "extension: "+err.Error())
-	}
-	for _, skillName := range setup.OfficialSkillNames() {
-		if _, err := setup.AddSkill(skillName); err != nil {
-			log.Warn().Err(err).Str("skill", skillName).Msg("setup: skill install failed")
-			allErrors = append(allErrors, "skill("+skillName+"): "+err.Error())
-		}
 	}
 
 	if err := setup.EnsurePersonaSetup(disablePersona); err != nil {
@@ -183,7 +95,7 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 
 	return output.PrintAny(map[string]any{
 		"action":  "installed",
-		"message": "all setup tasks completed (hooks, mcp, extensions, skill)",
+		"message": "all setup tasks completed (hooks, extensions)",
 	})
 }
 
@@ -204,11 +116,6 @@ func renderSetupState(state *setup.InstalledState) output.RenderData {
 			"installed": state.MCP.Configured,
 			"details":   formatMCPDetails(state.MCP),
 		},
-		{
-			"resource":  "skill",
-			"installed": state.Skill.Installed,
-			"details":   formatSkillDetails(state.Skill),
-		},
 	}
 
 	return output.RenderData{
@@ -223,13 +130,6 @@ func formatExtensionDetails(e setup.ExtensionState) string {
 		return ""
 	}
 	return strings.Join(e.Extensions, ", ")
-}
-
-func formatSkillDetails(s setup.SkillState) string {
-	if !s.Installed {
-		return ""
-	}
-	return s.SkillPath
 }
 
 func formatMCPDetails(m setup.MCPState) string {
@@ -249,13 +149,7 @@ func formatHookDetails(h setup.HookState) string {
 func init() {
 	rootCmd.AddCommand(setupCmd)
 	setupCmd.AddCommand(setupHookCmd)
-	setupCmd.AddCommand(setupMCPCmd)
-	setupCmd.AddCommand(setupExtensionCmd)
-	setupCmd.AddCommand(setupSkillCmd)
 	setupCmd.AddCommand(setupStateCmd)
 
 	setupHookCmd.Flags().Bool("remove", false, "remove managed hook entries from all agents")
-	setupMCPCmd.Flags().Bool("remove", false, "remove the MCP config from all agents")
-	setupExtensionCmd.Flags().Bool("remove", false, "remove the default Pi extensions")
-	setupSkillCmd.Flags().Bool("remove", false, "remove the skill symlinks and clean up")
 }

@@ -6,19 +6,6 @@ import (
 	setup "yishan/apps/cli/internal/agentsetup"
 )
 
-func TestSetupCommandIncludesExtensionSubcommand(t *testing.T) {
-	subcommand, _, err := setupCmd.Find([]string{"extension"})
-	if err != nil {
-		t.Fatalf("find extension subcommand: %v", err)
-	}
-	if subcommand != setupExtensionCmd {
-		t.Fatalf("expected setup extension subcommand, got %q", subcommand.Name())
-	}
-	if subcommand.Flags().Lookup("remove") == nil {
-		t.Fatal("expected setup extension to expose --remove")
-	}
-}
-
 func TestRenderSetupStateIncludesExtensionResource(t *testing.T) {
 	renderData := renderSetupState(&setup.InstalledState{
 		Extension: setup.ExtensionState{

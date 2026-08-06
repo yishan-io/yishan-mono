@@ -1,13 +1,18 @@
-import type { SkillDetail, SkillInfo } from "../rpc/daemonTypes";
+import type { SkillDetail, SkillInfo, SkillSourceKind } from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
 
+const SKILL_SOURCE_KINDS: SkillSourceKind[] = ["official", "url", "global", "project", "package", "settings"];
+
 function parseSkillInfo(entry: Record<string, unknown>): SkillInfo {
+  const sourceKind = typeof entry.sourceKind === "string" ? entry.sourceKind : "";
   return {
     name: typeof entry.name === "string" ? entry.name : "",
     description: typeof entry.description === "string" ? entry.description : "",
     version: typeof entry.version === "string" ? entry.version : "",
     source: typeof entry.source === "string" ? entry.source : "",
-    sourceKind: typeof entry.sourceKind === "string" ? entry.sourceKind : "",
+    sourceKind: SKILL_SOURCE_KINDS.includes(sourceKind as SkillSourceKind)
+      ? (sourceKind as SkillSourceKind)
+      : "settings",
     installed: Boolean(entry.installed),
     installedForAgents: Array.isArray(entry.installedForAgents)
       ? entry.installedForAgents.filter((value): value is string => typeof value === "string")
@@ -31,18 +36,6 @@ export async function listSkills(): Promise<SkillInfo[]> {
   });
 }
 
-/** Installs a skill from an official name or URL source. */
-export async function addSkill(source: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.skill.add({ source });
-}
-
-/** Removes one installed skill by name. */
-export async function removeSkill(name: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.skill.remove({ name });
-}
-
 /** Fetches detailed skill info including file contents. */
 export async function getSkillDetail(name: string): Promise<SkillDetail> {
   const client = await getDaemonClient();
@@ -55,10 +48,4 @@ export async function getSkillDetail(name: string): Promise<SkillDetail> {
         ? Object.fromEntries(Object.entries(entry.files as Record<string, unknown>).map(([k, v]) => [k, String(v)]))
         : {},
   };
-}
-
-/** Reinstalls an installed skill from its recorded source. */
-export async function updateSkill(name: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.skill.update({ name });
 }

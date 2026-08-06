@@ -67,9 +67,6 @@ const (
 
 	MethodSkillList            = "skill.list"
 	MethodSkillInfo            = "skill.info"
-	MethodSkillAdd             = "skill.add"
-	MethodSkillRemove          = "skill.remove"
-	MethodSkillUpdate          = "skill.update"
 	MethodSkillDetail          = "skill.detail"
 	MethodFrontendEventsStream = "events.frontendStream"
 	MethodAppPersistAuthTokens = "app.persistAuthTokens"

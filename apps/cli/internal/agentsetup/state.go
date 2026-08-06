@@ -1,6 +1,8 @@
 package setup
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,31 +10,21 @@ import (
 	"yishan/apps/cli/internal/config"
 )
 
-type InstalledState struct {
-	Skill     SkillState      `json:"skill"`
-	Skills    []PerSkillState `json:"skills,omitempty"`
-	Extension ExtensionState  `json:"extension"`
-	MCP       MCPState        `json:"mcp"`
-	Hooks     HookState       `json:"hooks"`
-	Assets    AssetState      `json:"assets"`
-	Shell     ShellState      `json:"shell"`
-}
+// yishanMCPServerName is the MCP server key users add to agent configs to
+// connect to the yishan MCP server (see `yishan mcp config`).
+const yishanMCPServerName = "yishan"
 
-type SkillState struct {
-	Installed bool   `json:"installed"`
-	SkillPath string `json:"skillPath,omitempty"`
+type InstalledState struct {
+	Extension ExtensionState `json:"extension"`
+	MCP       MCPState       `json:"mcp"`
+	Hooks     HookState      `json:"hooks"`
+	Assets    AssetState     `json:"assets"`
+	Shell     ShellState     `json:"shell"`
 }
 
 type ExtensionState struct {
 	Installed  bool     `json:"installed"`
 	Extensions []string `json:"extensions,omitempty"`
-}
-
-// PerSkillState tracks the install status for one individual skill.
-type PerSkillState struct {
-	Name               string   `json:"name"`
-	Installed          bool     `json:"installed"`
-	InstalledForAgents []string `json:"installedForAgents,omitempty"`
 }
 
 type MCPState struct {
@@ -58,7 +50,6 @@ type ShellState struct {
 
 func GetInstalledState() (*InstalledState, error) {
 	state := &InstalledState{
-		Skill:     SkillState{},
 		Extension: ExtensionState{},
 		MCP:       MCPState{},
 		Hooks:     HookState{},
@@ -76,9 +67,6 @@ func GetInstalledState() (*InstalledState, error) {
 		return nil, err
 	}
 
-	if err := fillSkillState(state, yishanHome); err != nil {
-		return nil, err
-	}
 	fillExtensionState(state)
 	fillMCPState(state, homeDir)
 	fillHookState(state, homeDir)
@@ -86,43 +74,6 @@ func GetInstalledState() (*InstalledState, error) {
 	fillShellState(state, yishanHome)
 
 	return state, nil
-}
-
-func fillSkillState(state *InstalledState, _ string) error {
-	infos, err := ListSkills()
-	if err != nil {
-		return err
-	}
-	piSkillsDir, piErr := config.ManagedPiSkillsDir()
-	for _, info := range infos {
-		if !info.Installed {
-			state.Skills = append(state.Skills, PerSkillState{
-				Name:               info.Name,
-				Installed:          false,
-				InstalledForAgents: info.InstalledForAgents,
-			})
-			continue
-		}
-		state.Skill.Installed = true
-		if piErr == nil {
-			state.Skill.SkillPath = filepath.Join(piSkillsDir, info.Name, "SKILL.md")
-		}
-		state.Skills = append(state.Skills, PerSkillState{
-			Name:               info.Name,
-			Installed:          true,
-			InstalledForAgents: info.InstalledForAgents,
-		})
-	}
-	return nil
-}
-
-func hasInstalledAgent(installedAgents []string, agent string) bool {
-	for _, installedAgent := range installedAgents {
-		if installedAgent == agent {
-			return true
-		}
-	}
-	return false
 }
 
 func fillExtensionState(state *InstalledState) {
@@ -241,4 +192,25 @@ func fillShellState(state *InstalledState, yishanHome string) {
 		state.Shell.Configured = true
 		state.Shell.ShellDir = zshDir
 	}
+}
+
+// readJSONConfig reads a JSON object file, treating a missing file as an
+// empty config (used to inspect agent config files for setup state).
+func readJSONConfig(path string) (map[string]any, error) {
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return map[string]any{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var value map[string]any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
+	}
+	if value == nil {
+		return map[string]any{}, nil
+	}
+	return value, nil
 }

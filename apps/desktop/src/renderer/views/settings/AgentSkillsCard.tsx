@@ -1,25 +1,10 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Snackbar,
-  TextField,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Chip, Dialog, DialogContent, DialogTitle, IconButton, Tooltip, Typography } from "@mui/material";
 import { MarkdownPreview } from "@renderer/components/markdown/MarkdownPreview";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuBadgeCheck, LuCheck, LuTrash2 } from "react-icons/lu";
+import { LuBadgeCheck, LuCheck } from "react-icons/lu";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
-import { addSkill, getSkillDetail, listSkills, removeSkill, updateSkill } from "../../commands/skillCommands";
+import { getSkillDetail, listSkills } from "../../commands/skillCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
@@ -27,14 +12,18 @@ import type { SkillDetail, SkillInfo } from "../../rpc/daemonTypes";
 
 type SkillCardProps = {
   skill: SkillInfo;
-  isBusy: boolean;
-  onInstall: () => void;
-  onUpdate: () => void;
-  onRemove: () => void;
   onClick: () => void;
 };
 
-function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: SkillCardProps) {
+// Skills are installed/updated via the pi ecosystem (npm packages, `npx skill
+// add`), so the settings card only displays them. Discovered-only kinds
+// (package/global/project/settings) get a source label; registry-managed
+// kinds (official/url) show as-is.
+function isRegistryManagedSkill(sourceKind: SkillInfo["sourceKind"]): boolean {
+  return sourceKind === "official" || sourceKind === "url";
+}
+
+function SkillCard({ skill, onClick }: SkillCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -48,7 +37,7 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
         display: "flex",
         flexDirection: "column",
         gap: 1.5,
-        minHeight: 190,
+        minHeight: 150,
         cursor: "pointer",
         "&:hover": { borderColor: "primary.main" },
       }}
@@ -68,6 +57,16 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {!isRegistryManagedSkill(skill.sourceKind) ? (
+            <Tooltip title={t(`settings.skills.sourceKinds.${skill.sourceKind}`)}>
+              <Chip
+                size="small"
+                variant="outlined"
+                label={`${t(`settings.skills.sourceKinds.${skill.sourceKind}`)}: ${skill.source}`}
+                sx={{ fontSize: "0.7rem", height: 22, maxWidth: 220 }}
+              />
+            </Tooltip>
+          ) : null}
           <Chip
             size="small"
             icon={skill.installed ? <LuCheck size={12} /> : undefined}
@@ -99,51 +98,6 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
           ))}
         </Box>
       ) : null}
-      <Box
-        sx={{ mt: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {skill.installed ? (
-            <>
-              {skill.canUpdate ? (
-                <Button
-                  size="small"
-                  variant="text"
-                  disabled={isBusy}
-                  onClick={onUpdate}
-                  startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : undefined}
-                >
-                  {isBusy ? t("settings.skills.actions.updating") : t("settings.skills.actions.update")}
-                </Button>
-              ) : null}
-            </>
-          ) : (
-            <Button
-              size="small"
-              variant="contained"
-              disabled={isBusy}
-              onClick={onInstall}
-              startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : undefined}
-            >
-              {isBusy ? t("settings.skills.actions.installing") : t("settings.skills.actions.install")}
-            </Button>
-          )}
-        </Box>
-        {skill.installed ? (
-          <IconButton
-            disabled={isBusy}
-            onClick={(event) => {
-              event.stopPropagation();
-              onRemove();
-            }}
-            aria-label={t("settings.skills.actions.uninstall")}
-            sx={{ color: "text.secondary", "&:hover": { color: "error.main" } }}
-          >
-            {isBusy ? <CircularProgress size={14} color="inherit" /> : <LuTrash2 size={16} />}
-          </IconButton>
-        ) : null}
-      </Box>
     </Box>
   );
 }
@@ -258,12 +212,7 @@ export function AgentSkillsCard() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
-  const [busySkills, setBusySkills] = useState<Set<string>>(new Set());
-  const [sourceInput, setSourceInput] = useState("");
-  const [isAddingSource, setIsAddingSource] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<SkillInfo | null>(null);
-  const [confirmSkillName, setConfirmSkillName] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const loadSkills = useCallback(async () => {
     setIsLoading(true);
@@ -290,57 +239,6 @@ export function AgentSkillsCard() {
     };
   }, [loadSkills]);
 
-  const runSkillAction = useCallback(
-    async (name: string, action: () => Promise<void>) => {
-      setBusySkills((prev) => new Set(prev).add(name));
-      try {
-        await action();
-        await loadSkills();
-        if (isMountedRef.current) {
-          setSuccessMessage(t("settings.skills.success"));
-        }
-      } catch (error) {
-        if (isMountedRef.current) {
-          setLoadError(getErrorMessage(error));
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setBusySkills((prev) => {
-            const next = new Set(prev);
-            next.delete(name);
-            return next;
-          });
-        }
-      }
-    },
-    [loadSkills, t],
-  );
-
-  const handleAddSource = useCallback(async () => {
-    const trimmedSource = sourceInput.trim();
-    if (!trimmedSource) {
-      return;
-    }
-    setIsAddingSource(true);
-    try {
-      await addSkill(trimmedSource);
-      if (!isMountedRef.current) return;
-      setSourceInput("");
-      await loadSkills();
-      if (isMountedRef.current) {
-        setSuccessMessage(t("settings.skills.success"));
-      }
-    } catch (error) {
-      if (isMountedRef.current) {
-        setLoadError(getErrorMessage(error));
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsAddingSource(false);
-      }
-    }
-  }, [loadSkills, sourceInput, t]);
-
   return (
     <Box>
       <SettingsSectionHeader title={t("settings.skills.title")} description={t("settings.skills.description")} />
@@ -354,27 +252,6 @@ export function AgentSkillsCard() {
                 {loadError}
               </Alert>
             ) : null}
-
-            <Box sx={{ display: "flex", gap: 1, mb: 2, flexDirection: { xs: "column", sm: "row" } }}>
-              <TextField
-                fullWidth
-                placeholder={t("settings.skills.sourcePlaceholder")}
-                value={sourceInput}
-                onChange={(event) => {
-                  setSourceInput(event.target.value);
-                }}
-              />
-              <Button
-                variant="contained"
-                disabled={isAddingSource || sourceInput.trim().length === 0}
-                onClick={() => {
-                  void handleAddSource();
-                }}
-                startIcon={isAddingSource ? <CircularProgress size={14} color="inherit" /> : undefined}
-              >
-                {isAddingSource ? t("settings.skills.actions.adding") : t("settings.skills.actions.add")}
-              </Button>
-            </Box>
 
             {skills.length === 0 && !loadError ? (
               <Typography
@@ -398,18 +275,8 @@ export function AgentSkillsCard() {
                   <SkillCard
                     key={skill.name}
                     skill={skill}
-                    isBusy={busySkills.has(skill.name)}
                     onClick={() => {
                       setSelectedSkill(skill);
-                    }}
-                    onInstall={() => {
-                      void runSkillAction(skill.name, () => addSkill(skill.name));
-                    }}
-                    onUpdate={() => {
-                      void runSkillAction(skill.name, () => updateSkill(skill.name));
-                    }}
-                    onRemove={() => {
-                      setConfirmSkillName(skill.name);
                     }}
                   />
                 ))}
@@ -426,43 +293,6 @@ export function AgentSkillsCard() {
           }}
         />
       ) : null}
-      {confirmSkillName ? (
-        <Dialog open onClose={() => setConfirmSkillName(null)} maxWidth="xs" fullWidth>
-          <DialogTitle>{t("settings.skills.confirmRemoveTitle")}</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2">
-              {t("settings.skills.confirmRemoveDescription", { name: confirmSkillName })}
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button size="small" onClick={() => setConfirmSkillName(null)}>
-              {t("settings.skills.actions.cancel")}
-            </Button>
-            <Button
-              size="small"
-              color="error"
-              variant="contained"
-              onClick={() => {
-                const name = confirmSkillName;
-                setConfirmSkillName(null);
-                void runSkillAction(name, () => removeSkill(name));
-              }}
-            >
-              {t("settings.skills.actions.uninstall")}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      ) : null}
-      <Snackbar
-        open={successMessage !== null}
-        autoHideDuration={4000}
-        onClose={() => setSuccessMessage(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert severity="success" onClose={() => setSuccessMessage(null)} variant="filled">
-          {successMessage}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

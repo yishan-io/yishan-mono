@@ -2,15 +2,33 @@ package daemon
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"testing"
 
 	setup "yishan/apps/cli/internal/agentsetup"
+	"yishan/apps/cli/internal/workspace"
 )
 
-func TestDispatchSkillListIncludesOfficialSkills(t *testing.T) {
+func newSkillTestHandler(t *testing.T) *JSONRPCHandler {
+	t.Helper()
+	return NewJSONRPCHandler(
+		workspace.NewManager(),
+		nil,
+		"node-1",
+		filepath.Join(t.TempDir(), "daemon.log"),
+		nil,
+		filepath.Join(t.TempDir(), "config.yml"),
+		NewAppContextStore(""),
+	)
+}
+
+// TestDispatchSkillListEmptyOnCleanHome verifies skill.list returns no skills
+// when no pi source dirs and no registry exist yet.
+func TestDispatchSkillListEmptyOnCleanHome(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
-	result, err := handleSkillList()
+	handler := newSkillTestHandler(t)
+	result, err := handler.handleSkillList()
 	if err != nil {
 		t.Fatalf("handleSkillList: %v", err)
 	}
@@ -23,7 +41,7 @@ func TestDispatchSkillListIncludesOfficialSkills(t *testing.T) {
 		t.Fatalf("expected []setup.SkillInfo, got %T", payload["skills"])
 	}
 	if len(skills) != 0 {
-		t.Fatalf("expected no standalone official skills, got %#v", skills)
+		t.Fatalf("expected no skills on clean home, got %#v", skills)
 	}
 }
 
