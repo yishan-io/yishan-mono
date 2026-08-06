@@ -103,7 +103,7 @@ describe("renderAgentLiveTranscripts", () => {
 
     renderAgentLiveTranscripts(ui as never, [
       createRecord({
-        session: { messages } as never,
+        session: { messages, thinkingLevel: "low" } as never,
       }),
     ]);
 
@@ -116,6 +116,7 @@ describe("renderAgentLiveTranscripts", () => {
             childSessionId: "child-session-1",
             status: "running",
             messages,
+            thinkingLevel: "low",
           },
         ],
       }),

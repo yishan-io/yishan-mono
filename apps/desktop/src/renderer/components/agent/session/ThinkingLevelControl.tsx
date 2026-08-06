@@ -15,7 +15,7 @@ const ACTIVE_BAR_COUNTS: Record<string, number> = {
 };
 
 const BAR_HEIGHTS = [4, 6, 8, 10, 12];
-const THINKING_LEVEL_LABELS: Record<string, string> = {
+export const THINKING_LEVEL_LABELS: Record<string, string> = {
   off: "Off",
   minimal: "Minimal",
   low: "Low",

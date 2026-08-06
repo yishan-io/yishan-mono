@@ -36,7 +36,7 @@ type AgentSessionData = {
   streamingMessage: AgentMessage | null;
   availableModels: AgentModel[];
   currentModel: AgentModel | null;
-  thinkingLevel: string;
+  thinkingLevel: string | null;
   sessionStats: AgentSessionStats | null;
   queue: AgentQueueState;
   pendingUiRequest: AgentPendingUiRequest | null;
@@ -166,7 +166,7 @@ function emptySession(sessionId: string): AgentSessionData {
     streamingMessage: null,
     availableModels: [],
     currentModel: null,
-    thinkingLevel: "medium",
+    thinkingLevel: null,
     sessionStats: null,
     queue: { steering: [], followUp: [] },
     pendingUiRequest: null,

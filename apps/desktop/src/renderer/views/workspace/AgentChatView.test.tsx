@@ -224,7 +224,7 @@ function seedSession(input?: {
   streamingMessage?: AgentMessage | null;
   availableModels?: AgentModel[];
   currentModel?: AgentModel | null;
-  thinkingLevel?: string;
+  thinkingLevel?: string | null;
   error?: string | null;
   turnError?: string | null;
   pendingUiRequest?: {
@@ -251,7 +251,11 @@ function seedSession(input?: {
   store.setSessionState("tab-1", input?.state ?? "idle");
   store.setAvailableModels("tab-1", input?.availableModels ?? [model]);
   store.setCurrentModel("tab-1", model);
-  store.setThinkingLevel("tab-1", input?.thinkingLevel ?? "medium");
+  if (input?.thinkingLevel === undefined) {
+    store.setThinkingLevel("tab-1", "medium");
+  } else if (input?.thinkingLevel !== null) {
+    store.setThinkingLevel("tab-1", input.thinkingLevel);
+  }
 
   for (const message of input?.messages ?? []) {
     store.appendMessage("tab-1", message);
@@ -1048,6 +1052,64 @@ describe("AgentChatView", () => {
     expect(screen.getByText("Model: Anthropic / Claude Opus 4")).toBeTruthy();
 
     store.removeSession("parent-tab");
+  });
+
+  it("shows the child session thinking level in a subagent footer", () => {
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    seedSession({ thinkingLevel: "low" });
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    expect(screen.getByText("Thinking: Low")).toBeTruthy();
+    expect(screen.getByText("Model: Claude Sonnet 4")).toBeTruthy();
+  });
+
+  it("omits the thinking-level caption when the child session has no recorded level", () => {
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    seedSession({ thinkingLevel: null });
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    expect(screen.queryByText(/Thinking:/)).toBeNull();
+    expect(screen.getByText("Model: Claude Sonnet 4")).toBeTruthy();
   });
 
   it("renders subagent detail as read-only without interactive cancellation", async () => {
