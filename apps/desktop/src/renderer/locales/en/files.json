@@ -74,6 +74,10 @@
       "descriptionLarge": "This file is too large to open safely in an editor tab.",
       "hint": "Try opening it with an external app.",
       "hintLarge": "Use an external app or CLI tools to inspect large files."
+    },
+    "excalidraw": {
+      "invalidFileTitle": "Cannot open Excalidraw file",
+      "invalidFileDescription": "This file is not valid Excalidraw JSON."
     }
   }
 }

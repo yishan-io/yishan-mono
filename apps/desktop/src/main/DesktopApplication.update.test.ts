@@ -20,6 +20,7 @@ vi.mock("electron", () => ({
   session: {
     defaultSession: {
       setPermissionRequestHandler: vi.fn(),
+      setPermissionCheckHandler: vi.fn(),
       setDisplayMediaRequestHandler: vi.fn(),
     },
   },
@@ -92,7 +93,20 @@ vi.mock("./updates/autoUpdateDismissalState", () => ({
   ),
 }));
 
-import { DesktopApplication } from "./DesktopApplication";
+import { DesktopApplication, isPermissionAllowed } from "./DesktopApplication";
+
+describe("isPermissionAllowed", () => {
+  it.each(["media", "clipboard-read", "clipboard-write", "clipboard-sanitized-write"])(
+    "returns true for %s",
+    (permission) => {
+      expect(isPermissionAllowed(permission)).toBe(true);
+    },
+  );
+
+  it.each(["geolocation", "notifications", "unknown-permission", ""])("returns false for %s", (permission) => {
+    expect(isPermissionAllowed(permission)).toBe(false);
+  });
+});
 
 describe("DesktopApplication update dismissal", () => {
   it("suppresses auto update availability when already dismissed today", () => {

@@ -4,6 +4,7 @@ import {
   getLanguageId,
   getSupportedExtensions,
   isAudioFile,
+  isExcalidrawFile,
   isLanguageSupported,
   isUnsupportedFileTab,
   isVideoFile,
@@ -164,6 +165,36 @@ describe("editorLanguage", () => {
 
     it("is case-insensitive", () => {
       expect(isAudioFile("SONG.MP3")).toBe(true);
+    });
+  });
+
+  describe("isExcalidrawFile", () => {
+    it("returns true for .excalidraw files", () => {
+      expect(isExcalidrawFile("a.excalidraw")).toBe(true);
+    });
+
+    it("returns true for .excalidraw files in subdirectories", () => {
+      expect(isExcalidrawFile("dir/b.excalidraw")).toBe(true);
+    });
+
+    it("is case-insensitive", () => {
+      expect(isExcalidrawFile("A.EXCALIDRAW")).toBe(true);
+    });
+
+    it("returns false for non-excalidraw files", () => {
+      expect(isExcalidrawFile("note.txt")).toBe(false);
+    });
+
+    it("returns false for files without extension", () => {
+      expect(isExcalidrawFile("noext")).toBe(false);
+    });
+
+    it("returns false when excalidraw is not the final extension", () => {
+      expect(isExcalidrawFile("a.excalidraw.svg")).toBe(false);
+    });
+
+    it("returns false for empty string", () => {
+      expect(isExcalidrawFile("")).toBe(false);
     });
   });
 

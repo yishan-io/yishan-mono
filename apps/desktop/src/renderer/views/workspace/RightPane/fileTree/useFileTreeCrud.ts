@@ -8,7 +8,13 @@ import {
   renameEntry,
   writeClipboardText,
 } from "@renderer/commands/fileCommands";
-import { isAudioFile, isImageFile, isUnsupportedFileTab, isVideoFile } from "@renderer/helpers/editorLanguage";
+import {
+  isAudioFile,
+  isExcalidrawFile,
+  isImageFile,
+  isUnsupportedFileTab,
+  isVideoFile,
+} from "@renderer/helpers/editorLanguage";
 import type { OpenWorkspaceTabInput, WorkspaceTab } from "@renderer/store/types";
 import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
@@ -124,7 +130,7 @@ export function useFileTreeCrud({
           relativePath: path,
         });
 
-        if (getUtf8ByteLength(response.content) > LARGE_FILE_OPEN_THRESHOLD_BYTES) {
+        if (!isExcalidrawFile(path) && getUtf8ByteLength(response.content) > LARGE_FILE_OPEN_THRESHOLD_BYTES) {
           openTab({
             workspaceId: selectedWorkspaceId,
             kind: "file",

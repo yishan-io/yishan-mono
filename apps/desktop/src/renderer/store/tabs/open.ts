@@ -1,3 +1,4 @@
+import { isExcalidrawFile } from "../../helpers/editorLanguage";
 import type { DiffFileChangeKind, OpenWorkspaceTabInput, WorkspaceTab, WorkspaceTabDataByKind } from "../types";
 import { findExistingTab } from "./shared";
 import type { WorkspaceTabStateSlice } from "./types";
@@ -68,6 +69,7 @@ function createDiffContent(input: {
  * `useOpenTabAutoRefresh` and replaces this placeholder via `refreshFileTabFromDisk`.
  */
 function createFileContent(path: string): string {
+  if (isExcalidrawFile(path)) return "";
   const fileName = getFileName(path);
   const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
 
