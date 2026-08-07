@@ -254,4 +254,26 @@ describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {
     expect(screen.getByTestId("vditor-editor")).toBeTruthy();
     expect(mockEditorState.createCount).toBe(0);
   });
+
+  it("toggles the Vditor editor into view-only mode from the toolbar", async () => {
+    renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
+
+    await screen.findByTestId("vditor-editor");
+    expect(capturedWysiwygProps.current.readOnly).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "View only" }));
+
+    expect(capturedWysiwygProps.current.readOnly).toBe(true);
+    expect(screen.getByRole("button", { name: "Edit" }).getAttribute("aria-pressed")).toBe("true");
+
+    // Toggle back to editing
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(capturedWysiwygProps.current.readOnly).toBe(false);
+  });
+
+  it("does not render the view-only toggle for non-markdown files", () => {
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
+
+    expect(screen.queryByRole("button", { name: "View only" })).toBeNull();
+  });
 });

@@ -497,4 +497,131 @@ describe("VditorFileEditor lifecycle", () => {
     expect(result).toBe(HELLO);
     expect(onContentChange).not.toHaveBeenCalled();
   });
+
+  // ── View-only toggle (readOnly prop) ──
+
+  it("applies setReadOnly(true) when mounted with readOnly=true", async () => {
+    render(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={true}
+        isDark={false}
+        onContentChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockSetReadOnly).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it("toggles setReadOnly when the readOnly prop changes", async () => {
+    const { rerender } = render(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={false}
+        isDark={false}
+        onContentChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onMarkdownChangeFromFactory).not.toBeNull();
+    });
+    mockSetReadOnly.mockClear();
+
+    rerender(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={true}
+        isDark={false}
+        onContentChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockSetReadOnly).toHaveBeenCalledWith(true);
+    });
+
+    mockSetReadOnly.mockClear();
+    rerender(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={false}
+        isDark={false}
+        onContentChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockSetReadOnly).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("suppresses emissions while view-only (readOnly=true)", async () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={true}
+        isDark={false}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onMarkdownChangeFromFactory).not.toBeNull();
+    });
+
+    mockGetValue.mockReturnValue(HELLO);
+    act(() => {
+      onMarkdownChangeFromFactory?.(HELLO);
+    });
+
+    expect(onContentChange).not.toHaveBeenCalled();
+  });
+
+  it("applies external content while view-only (readOnly does not block sync)", async () => {
+    const onContentChange = vi.fn();
+
+    const { rerender } = render(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={true}
+        isDark={false}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onMarkdownChangeFromFactory).not.toBeNull();
+    });
+
+    rerender(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO_WORLD}
+        isDeleted={false}
+        readOnly={true}
+        isDark={false}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    // External content applies in view-only mode so the view stays current.
+    expect(mockSetValue).toHaveBeenCalledWith(HELLO_WORLD);
+  });
 });

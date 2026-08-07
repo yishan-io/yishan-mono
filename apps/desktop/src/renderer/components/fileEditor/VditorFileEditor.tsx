@@ -11,9 +11,9 @@
  * lands in the lazy chunk alongside the factory.
  */
 
+import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type Vditor from "vditor";
-import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { layoutStore } from "../../store/settings/layoutStore";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
@@ -33,6 +33,12 @@ export interface VditorFileEditorProps {
   content: string;
   /** When true, the editor is read-only and suppresses change emissions. */
   isDeleted: boolean;
+  /**
+   * When true, the editor is view-only (user toggled from the toolbar):
+   * contenteditable is off and emissions are suppressed, but external
+   * content changes still apply so the view stays current.
+   */
+  readOnly?: boolean;
   /**
    * Incremented by the parent to request focus on the editor.
    * Initial value must be 0 to avoid focusing on mount.
@@ -89,7 +95,7 @@ const rootEditorStates = new WeakMap<HTMLElement, RootEditorState>();
 const rootEmitters = new WeakMap<HTMLElement, (markdown: string) => void>();
 
 export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEditorProps>(function VditorFileEditor(
-  { path, content, isDeleted, focusRequestKey = 0, isDark, onContentChange },
+  { path, content, isDeleted, readOnly = false, focusRequestKey = 0, isDark, onContentChange },
   ref,
 ) {
   // Content width mirrors the preview's readable/full setting so the editor
@@ -101,8 +107,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   // - preview font size (small/medium/large) scales the editor base font size
   const markdownThemePreference = layoutStore((state) => state.markdownThemePreference);
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
-  const resolvedIsDark =
-    markdownThemePreference === "inherit" ? isDark : markdownThemePreference === "dark";
+  const resolvedIsDark = markdownThemePreference === "inherit" ? isDark : markdownThemePreference === "dark";
   const rootRef = useRef<HTMLDivElement>(null);
   // SVG markup for the shared diagram zoom overlay (opened from a mermaid
   // diagram's expand button).
@@ -112,6 +117,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   const initialContentNormalizedRef = useRef(normalizeMarkdown(content));
   const hasEmittedRef = useRef(false);
   const isDeletedRef = useRef(isDeleted);
+  const readOnlyRef = useRef(readOnly);
   const mountPathRef = useRef(path);
   const pendingFocusRef = useRef(0);
 
@@ -128,6 +134,10 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   useEffect(() => {
     isDeletedRef.current = isDeleted;
   }, [isDeleted]);
+
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+  }, [readOnly]);
 
   // ── Path guard ──
 
@@ -148,7 +158,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
 
     // Apply initial read-only state (F2: mount-with-isDeleted=true was missed)
     try {
-      handle.setReadOnly(isDeletedRef.current);
+      handle.setReadOnly(isDeletedRef.current || readOnlyRef.current);
     } catch (error: unknown) {
       console.error("[VditorFileEditor] setReadOnly on mount failed:", getErrorMessage(error));
     }
@@ -193,7 +203,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
     let destroyed = false;
 
     const emitContent = (nextMarkdown: string) => {
-      if (destroyed || isDeletedRef.current) return;
+      if (destroyed || isDeletedRef.current || readOnlyRef.current) return;
 
       // F1: Gate the first-emission guard to the first emission only.
       if (!hasEmittedRef.current) {
@@ -326,20 +336,20 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
         onError: (message) => console.error("[VditorFileEditor] mermaid re-theme failed:", message),
       });
     }
-  }, [markdownThemePreference, resolvedIsDark]);
+  }, [resolvedIsDark]);
 
-  // ── Read-only for deleted files ──
+  // ── Read-only for deleted files or view-only mode ──
 
   useEffect(() => {
     const handle = handleRef.current;
     if (!handle) return;
 
     try {
-      handle.setReadOnly(isDeleted);
+      handle.setReadOnly(isDeleted || readOnly);
     } catch (error: unknown) {
-      console.error("[VditorFileEditor] setReadOnly for isDeleted failed:", getErrorMessage(error));
+      console.error("[VditorFileEditor] setReadOnly failed:", getErrorMessage(error));
     }
-  }, [isDeleted]);
+  }, [isDeleted, readOnly]);
 
   // ── Focus request ──
 

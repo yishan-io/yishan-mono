@@ -1,9 +1,10 @@
 import { Box, Typography } from "@mui/material";
-import { Suspense, lazy, useCallback, useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { isExcalidrawFile } from "../helpers/editorLanguage";
 import { useGitGutterDecorations } from "../hooks/useGitGutterDecorations";
 import { CliSpinner } from "./CliSpinner";
 import { FileViewerToolbar } from "./FileViewerToolbar";
+import { MarkdownViewToggle } from "./fileEditor/MarkdownViewToggle";
 import type { VditorFileEditorHandle } from "./fileEditor/VditorFileEditor";
 import { useMonacoFileEditor } from "./fileEditor/useMonacoFileEditor";
 
@@ -45,6 +46,9 @@ function MonacoFileEditor({
   const fileEditorRootRef = useRef<HTMLDivElement | null>(null);
   const wysiwygHandleRef = useRef<VditorFileEditorHandle | null>(null);
   const showWysiwygEditorRef = useRef(false);
+  // View-only toggle for markdown files (renders the WYSIWYG surface
+  // read-only, replacing the old preview mode).
+  const [markdownViewOnly, setMarkdownViewOnly] = useState(false);
   const {
     editorHostRef,
     editorRef,
@@ -150,6 +154,9 @@ function MonacoFileEditor({
             </Typography>
           ) : null
         }
+        actions={
+          isMarkdown ? <MarkdownViewToggle viewOnly={markdownViewOnly} onToggle={setMarkdownViewOnly} /> : undefined
+        }
       />
       <Box
         ref={editorHostRef}
@@ -181,6 +188,7 @@ function MonacoFileEditor({
               path={path}
               content={content}
               isDeleted={isDeleted}
+              readOnly={markdownViewOnly}
               focusRequestKey={focusRequestKey}
               isDark={isDark}
               onContentChange={handleMarkdownPreviewContentChange}
