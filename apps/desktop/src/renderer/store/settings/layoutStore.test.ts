@@ -10,7 +10,6 @@ describe("layoutStore", () => {
       rightWidth: DEFAULT_RIGHT_WIDTH,
       themePreference: "system",
       markdownThemePreference: "inherit",
-      markdownDefaultViewMode: "wysiwyg",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
       isMarkdownOutlineVisible: false,
@@ -93,94 +92,6 @@ describe("layoutStore", () => {
     layoutStore.getState().setMarkdownThemePreference("light");
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownThemePreference":"light"');
-  });
-
-  it("hydrates persisted markdown default view mode", () => {
-    window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          leftWidth: DEFAULT_LEFT_WIDTH,
-          rightWidth: DEFAULT_RIGHT_WIDTH,
-          themePreference: "system",
-          markdownDefaultViewMode: "preview",
-        },
-        version: 0,
-      }),
-    );
-
-    void layoutStore.persist.rehydrate();
-
-    expect(layoutStore.getState().markdownDefaultViewMode).toBe("preview");
-  });
-
-  it("persists markdown default view mode", () => {
-    layoutStore.getState().setMarkdownDefaultViewMode("edit");
-
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownDefaultViewMode":"edit"');
-  });
-
-  it("hydrates persisted markdown default view mode 'wysiwyg'", () => {
-    window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          leftWidth: DEFAULT_LEFT_WIDTH,
-          rightWidth: DEFAULT_RIGHT_WIDTH,
-          themePreference: "system",
-          markdownDefaultViewMode: "wysiwyg",
-        },
-        version: 0,
-      }),
-    );
-
-    void layoutStore.persist.rehydrate();
-
-    expect(layoutStore.getState().markdownDefaultViewMode).toBe("wysiwyg");
-  });
-
-  it("migrates v0 'split' default to 'wysiwyg' on rehydrate", () => {
-    window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          leftWidth: DEFAULT_LEFT_WIDTH,
-          rightWidth: DEFAULT_RIGHT_WIDTH,
-          themePreference: "system",
-          markdownDefaultViewMode: "split",
-        },
-        version: 0,
-      }),
-    );
-
-    void layoutStore.persist.rehydrate();
-
-    expect(layoutStore.getState().markdownDefaultViewMode).toBe("wysiwyg");
-  });
-
-  it("preserves explicitly chosen v0 view modes other than 'split' on rehydrate", () => {
-    window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          leftWidth: DEFAULT_LEFT_WIDTH,
-          rightWidth: DEFAULT_RIGHT_WIDTH,
-          themePreference: "system",
-          markdownDefaultViewMode: "edit",
-        },
-        version: 0,
-      }),
-    );
-
-    void layoutStore.persist.rehydrate();
-
-    expect(layoutStore.getState().markdownDefaultViewMode).toBe("edit");
-  });
-
-  it("persists markdown default view mode 'wysiwyg'", () => {
-    layoutStore.getState().setMarkdownDefaultViewMode("wysiwyg");
-
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownDefaultViewMode":"wysiwyg"');
   });
 
   it("persists markdown preview font size and preview width", () => {

@@ -7,20 +7,17 @@ import {
   SettingsSectionHeader,
 } from "../../components/settings";
 import {
-  type MarkdownDefaultViewMode,
   type MarkdownPreviewFontSize,
   type MarkdownPreviewWidth,
   type MarkdownThemePreference,
   layoutStore,
 } from "../../store/settings/layoutStore";
 
-/** Renders markdown editor default view mode preference controls. */
+/** Renders markdown editor preference controls. */
 export function MarkdownSettingsView() {
   const { t } = useTranslation();
   const markdownThemePreference = layoutStore((state) => state.markdownThemePreference);
   const setMarkdownThemePreference = layoutStore((state) => state.setMarkdownThemePreference);
-  const markdownDefaultViewMode = layoutStore((state) => state.markdownDefaultViewMode);
-  const setMarkdownDefaultViewMode = layoutStore((state) => state.setMarkdownDefaultViewMode);
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
   const setMarkdownPreviewFontSize = layoutStore((state) => state.setMarkdownPreviewFontSize);
   const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
@@ -54,29 +51,6 @@ export function MarkdownSettingsView() {
               <MenuItem value="inherit">{t("settings.appearance.markdown.theme.options.inherit")}</MenuItem>
               <MenuItem value="light">{t("settings.appearance.markdown.theme.options.light")}</MenuItem>
               <MenuItem value="dark">{t("settings.appearance.markdown.theme.options.dark")}</MenuItem>
-            </SettingsCompactSelect>
-          }
-        />
-        <SettingsControlRow
-          title={t("settings.appearance.markdown.defaultViewMode.label")}
-          description={t("settings.appearance.markdown.defaultViewMode.description")}
-          control={
-            <SettingsCompactSelect
-              width={240}
-              value={markdownDefaultViewMode}
-              onChange={(event) => {
-                setMarkdownDefaultViewMode(event.target.value as MarkdownDefaultViewMode);
-              }}
-              slotProps={{
-                input: {
-                  "aria-label": t("settings.appearance.markdown.defaultViewMode.label"),
-                },
-              }}
-            >
-              <MenuItem value="edit">{t("settings.appearance.markdown.defaultViewMode.options.edit")}</MenuItem>
-              <MenuItem value="preview">{t("settings.appearance.markdown.defaultViewMode.options.preview")}</MenuItem>
-              <MenuItem value="split">{t("settings.appearance.markdown.defaultViewMode.options.split")}</MenuItem>
-              <MenuItem value="wysiwyg">{t("settings.appearance.markdown.defaultViewMode.options.wysiwyg")}</MenuItem>
             </SettingsCompactSelect>
           }
         />

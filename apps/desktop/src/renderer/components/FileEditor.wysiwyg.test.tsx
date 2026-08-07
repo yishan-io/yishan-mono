@@ -15,33 +15,6 @@ vi.mock("@mui/material", async () => {
   return { ...actual, useMediaQuery: vi.fn(() => false) };
 });
 
-// Capture props passed to MarkdownPreview so tests can inspect findOpen etc.
-const capturedMarkdownPreviewProps: { current: Record<string, unknown> } = { current: {} };
-vi.mock("./markdown/MarkdownPreview", () => ({
-  MarkdownPreview: (props: Record<string, unknown>) => {
-    const checkboxContainerRef = useRef<HTMLDivElement | null>(null);
-    capturedMarkdownPreviewProps.current = props;
-
-    useEffect(() => {
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.dataset.testid = "markdown-preview-checkbox";
-      checkbox.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        (props.onContentChange as ((content: string) => void) | undefined)?.("- [x] Done");
-      });
-      checkboxContainerRef.current?.append(checkbox);
-
-      return () => {
-        checkbox.remove();
-      };
-    }, [props.onContentChange]);
-
-    return <div ref={checkboxContainerRef} />;
-  },
-}));
-
 const mockEditorState: {
   editorValue: string;
   editorFocus: () => void;
@@ -209,7 +182,6 @@ vi.mock("./fileTreeIcons", () => ({
 
 afterEach(() => {
   cleanup();
-  capturedMarkdownPreviewProps.current = {};
   capturedExcalidrawProps.current = {};
   capturedWysiwygProps.current = {};
   mockFlushNowReturn = "";
@@ -234,136 +206,52 @@ afterEach(() => {
   layoutStore.setState({ themePreference: "system" });
 });
 
-describe("FileEditor WYSIWYG", () => {
-  it("defaults markdown files to wysiwyg mode", async () => {
+describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {
+  it("renders the Vditor editor for markdown files without creating Monaco", async () => {
     renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
 
     // The Vditor mock should be rendered (React.lazy may need a tick)
     await screen.findByTestId("vditor-editor");
-    // Monaco should still be created (hidden)
+    // No Monaco instance is created for markdown files anymore
+    expect(mockEditorState.createCount).toBe(0);
+  });
+
+  it("does not render Vditor for non-markdown files", () => {
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
+
+    expect(screen.queryByTestId("vditor-editor")).toBeNull();
     expect(mockEditorState.createCount).toBe(1);
   });
 
-  it("respects configured markdown default mode", () => {
-    renderWithAppTheme(<FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />);
+  it("calls flushNow on the Vditor handle before save", async () => {
+    const onSave = vi.fn();
 
-    expect(screen.getByRole("button", { name: "Preview" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.queryByTestId("vditor-editor")).toBeNull();
+    renderWithAppTheme(<FileEditor path="README.md" content="initial" onSave={onSave} />);
+
+    // Wait for the lazy Vditor editor to mount so the handleRef is available
+    // when the Cmd+S handler fires.
+    await screen.findByTestId("vditor-editor");
+
+    // Set up the flush simulation
+    mockFlushNowReturn = "wysiwyg content";
+
+    // Simulate Cmd+S inside the editor root
+    fireEvent.keyDown(screen.getByTestId("vditor-editor"), { key: "s", metaKey: true });
+
+    // flushNow should have been called and the save must use the flushed content
+    expect(mockFlushNowCalled).toBe(true);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith("wysiwyg content");
   });
 
-  describe("WYSIWYG mode", () => {
-    it("renders Vditor for markdown files by default", async () => {
-      renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
+  it("keeps the Vditor editor mounted when the markdown content changes", async () => {
+    const { rerender } = renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
 
-      await screen.findByTestId("vditor-editor");
-    });
+    await screen.findByTestId("vditor-editor");
 
-    it("renders Monaco in source mode but not Vditor", () => {
-      renderWithAppTheme(<FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="edit" />);
+    rerender(<FileEditor path="README.md" content="# Updated" />);
 
-      expect(screen.queryByTestId("vditor-editor")).toBeNull();
-      expect(mockEditorState.createCount).toBe(1);
-    });
-
-    it("does not render Vditor for non-markdown files", () => {
-      renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
-
-      expect(screen.queryByTestId("vditor-editor")).toBeNull();
-    });
-
-    it("calls flushNow on the Vditor handle before save in wysiwyg mode", async () => {
-      const onSave = vi.fn();
-
-      renderWithAppTheme(<FileEditor path="README.md" content="initial" onSave={onSave} />);
-
-      // Wait for the lazy Vditor editor to mount so the handleRef is available
-      // when the Cmd+S handler fires. Without this, React.lazy may not have
-      // resolved the component yet and flushNow would be skipped.
-      await screen.findByTestId("vditor-editor");
-
-      // Set up the flush simulation
-      mockFlushNowReturn = "wysiwyg content";
-      mockEditorState.editorValue = "monaco content";
-
-      // Simulate Cmd+S on the editor root
-      const monacoDomNode = mockEditorState.editorDomNode;
-      expect(monacoDomNode).toBeTruthy();
-      fireEvent.keyDown(monacoDomNode as HTMLElement, { key: "s", metaKey: true });
-
-      // flushNow should have been called
-      expect(mockFlushNowCalled).toBe(true);
-      // onSave must have been called with the flushed WYSIWYG content
-      expect(onSave).toHaveBeenCalledTimes(1);
-      expect(onSave).toHaveBeenCalledWith("wysiwyg content");
-    });
-
-    it("stays in wysiwyg mode for markdown files when view mode toggled back", async () => {
-      const { getByRole } = renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
-
-      // Default is wysiwyg — Vditor rendered
-      expect(screen.getByTestId("vditor-editor")).toBeTruthy();
-
-      // Switch to source mode
-      fireEvent.click(getByRole("button", { name: "Source editor" }));
-      expect(screen.queryByTestId("vditor-editor")).toBeNull();
-
-      // Switch back to wysiwyg
-      fireEvent.click(getByRole("button", { name: "WYSIWYG" }));
-      expect(screen.getByTestId("vditor-editor")).toBeTruthy();
-    });
-  });
-  describe("preview find bar (Cmd+F)", () => {
-    it("opens the find bar when Cmd+F is pressed in preview-only mode", () => {
-      const { getByTestId } = renderWithAppTheme(
-        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />,
-      );
-
-      // findOpen should start false
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBeFalsy();
-
-      const previewPane = getByTestId("markdown-preview-pane");
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
-      });
-
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(true);
-    });
-
-    it("does not open find bar on Cmd+F in split mode — triggers Monaco find instead", () => {
-      const { getByTestId } = renderWithAppTheme(
-        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="split" />,
-      );
-
-      const previewPane = getByTestId("markdown-preview-pane");
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
-      });
-
-      // find bar should NOT open in split mode
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBeFalsy();
-      // editor focus + find action should have been called
-      expect(mockEditorState.editorFocus).toHaveBeenCalled();
-      expect(mockEditorState.editorFindAction.run).toHaveBeenCalled();
-    });
-
-    it("closes the find bar on Escape when it is open", () => {
-      const { getByTestId } = renderWithAppTheme(
-        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />,
-      );
-
-      const previewPane = getByTestId("markdown-preview-pane");
-
-      // Open it first
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
-      });
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(true);
-
-      // Now close with Escape
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "Escape" });
-      });
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(false);
-    });
+    expect(screen.getByTestId("vditor-editor")).toBeTruthy();
+    expect(mockEditorState.createCount).toBe(0);
   });
 });

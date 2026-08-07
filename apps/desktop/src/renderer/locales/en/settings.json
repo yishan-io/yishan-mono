@@ -81,7 +81,7 @@
       "loadError": "Failed to load service tokens.",
       "empty": "No service tokens have been created yet.",
       "copied": "Copied!",
-      "createdWarning": "Store this token securely \u2014 it will not be shown again.",
+      "createdWarning": "Store this token securely — it will not be shown again.",
       "columns": {
         "name": "Name",
         "token": "Token",
@@ -108,7 +108,7 @@
         "expiresHelp": "Leave empty for a token that never expires.",
         "cancel": "Cancel",
         "create": "Create",
-        "creating": "Creating\u2026"
+        "creating": "Creating…"
       },
       "revokeDialog": {
         "title": "Revoke service token",
@@ -346,16 +346,6 @@
             "dark": "Dark"
           }
         },
-        "defaultViewMode": {
-          "label": "Default markdown view mode",
-          "description": "Choose how markdown files open by default.",
-          "options": {
-            "edit": "Edit",
-            "preview": "Preview",
-            "split": "Split",
-            "wysiwyg": "WYSIWYG"
-          }
-        },
         "previewFontSize": {
           "label": "Preview font size",
           "description": "Control text size in markdown preview.",
@@ -444,7 +434,7 @@
         "label": "Restart Daemon",
         "description": "Stop and start the local daemon process.",
         "action": "Restart",
-        "inProgress": "Restarting\u2026",
+        "inProgress": "Restarting…",
         "success": "Daemon restarted successfully.",
         "failed": "Failed to restart daemon.",
         "terminalCloseFailed": "Failed to close terminal sessions. Please close them manually and try again.",
@@ -635,7 +625,7 @@
         "subscriptionHint": "Supports subscription sign-in via Pi /login, or use an API key below.",
         "signInWithSubscription": "Sign in with subscription",
         "openingSignIn": "Opening Pi sign-in...",
-        "loginTabTitle": "Pi login \u2014 {{provider}}",
+        "loginTabTitle": "Pi login — {{provider}}",
         "signInWithAccount": "Sign in with account",
         "subscriptionTag": "Subscription"
       },

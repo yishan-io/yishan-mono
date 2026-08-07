@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import { useEffect, useRef } from "react";
+import { createElement, forwardRef, useImperativeHandle } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { editorSettingsStore } from "../store/settings/editorSettingsStore";
 import { layoutStore } from "../store/settings/layoutStore";
@@ -14,33 +14,6 @@ vi.mock("@mui/material", async () => {
   const actual = await vi.importActual("@mui/material");
   return { ...actual, useMediaQuery: vi.fn(() => false) };
 });
-
-// Capture props passed to MarkdownPreview so tests can inspect findOpen etc.
-const capturedMarkdownPreviewProps: { current: Record<string, unknown> } = { current: {} };
-vi.mock("./markdown/MarkdownPreview", () => ({
-  MarkdownPreview: (props: Record<string, unknown>) => {
-    const checkboxContainerRef = useRef<HTMLDivElement | null>(null);
-    capturedMarkdownPreviewProps.current = props;
-
-    useEffect(() => {
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.dataset.testid = "markdown-preview-checkbox";
-      checkbox.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        (props.onContentChange as ((content: string) => void) | undefined)?.("- [x] Done");
-      });
-      checkboxContainerRef.current?.append(checkbox);
-
-      return () => {
-        checkbox.remove();
-      };
-    }, [props.onContentChange]);
-
-    return <div ref={checkboxContainerRef} />;
-  },
-}));
 
 const mockEditorState: {
   editorValue: string;
@@ -181,14 +154,39 @@ vi.mock("./fileEditor/ExcalidrawFileEditor", () => ({
   },
 }));
 
+const capturedWysiwygProps: { current: Record<string, unknown> } = { current: {} };
+let mockFlushNowReturn = "";
+let mockFlushNowCalled = false;
+vi.mock("./fileEditor/VditorFileEditor", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: mock ref type in test
+  VditorFileEditor: forwardRef((props: Record<string, unknown>, ref: any) => {
+    capturedWysiwygProps.current = props;
+
+    useImperativeHandle(ref, () => ({
+      flushNow: () => {
+        mockFlushNowCalled = true;
+        // Emit onContentChange to simulate the real flush behavior
+        (props.onContentChange as ((content: string) => void) | undefined)?.(
+          mockFlushNowReturn || (props.content as string),
+        );
+        return mockFlushNowReturn || (props.content as string);
+      },
+    }));
+
+    return createElement("div", { "data-testid": "vditor-editor" });
+  }),
+}));
+
 vi.mock("./fileTreeIcons", () => ({
   getFileTreeIcon: (path: string) => `/icons/${path.split("/").pop()}.svg`,
 }));
 
 afterEach(() => {
   cleanup();
-  capturedMarkdownPreviewProps.current = {};
   capturedExcalidrawProps.current = {};
+  capturedWysiwygProps.current = {};
+  mockFlushNowReturn = "";
+  mockFlushNowCalled = false;
   mockEditorState.editorValue = "";
   mockEditorState.editorFocus = vi.fn();
   mockEditorState.editorFindAction = { run: vi.fn() };
@@ -233,107 +231,14 @@ describe("FileEditor", () => {
     expect(onSave).toHaveBeenCalledWith("saved text");
   });
 
-  it("saves markdown editor content on Cmd+S without relying on Monaco's binding", () => {
-    const onSave = vi.fn();
-
-    renderWithAppTheme(
-      <FileEditor path="README.md" content="initial" defaultMarkdownViewMode="edit" onSave={onSave} />,
-    );
-    mockEditorState.editorValue = "saved text";
-    const monacoDomNode = mockEditorState.editorDomNode;
-
-    expect(monacoDomNode).toBeTruthy();
-    fireEvent.keyDown(monacoDomNode as HTMLElement, { key: "s", metaKey: true });
-
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith("saved text");
-  });
-
-  it("does not save deleted Markdown content on Cmd+S", () => {
-    const onSave = vi.fn();
-    const { getByTestId } = renderWithAppTheme(
-      <FileEditor path="README.md" content="- [x] Done" defaultMarkdownViewMode="preview" isDeleted onSave={onSave} />,
-    );
-
-    fireEvent.keyDown(getByTestId("markdown-preview-pane"), { key: "s", metaKey: true });
-
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it("saves preview-edited Markdown content on Cmd+S", () => {
-    const onSave = vi.fn();
-    const updatedContent = "- [x] Done";
-
-    const { getByTestId } = renderWithAppTheme(
-      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
-    );
-
-    act(() => {
-      (capturedMarkdownPreviewProps.current.onContentChange as (content: string) => void)(updatedContent);
-    });
-    onSave.mockClear();
-    fireEvent.keyDown(getByTestId("markdown-preview-pane"), { key: "s", metaKey: true });
-
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith(updatedContent);
-  });
-
-  it("auto-saves Markdown content after a preview checkbox click", () => {
-    const onSave = vi.fn();
-    const { getByTestId } = renderWithAppTheme(
-      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
-    );
-
-    fireEvent.click(getByTestId("markdown-preview-checkbox"));
-
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith("- [x] Done");
-  });
-
-  it("saves immediately when Cmd+S follows a preview checkbox click", () => {
-    const onSave = vi.fn();
-    const { getByTestId } = renderWithAppTheme(
-      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
-    );
-
-    const checkbox = getByTestId("markdown-preview-checkbox");
-    fireEvent.click(checkbox);
-    onSave.mockClear();
-    fireEvent.keyDown(checkbox, { key: "s", metaKey: true });
-
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith("- [x] Done");
-  });
-
-  it("saves preview-edited Markdown content after switching to source without focusing Monaco", () => {
-    const onSave = vi.fn();
-    const updatedContent = "- [x] Done";
-
-    const { getByRole } = renderWithAppTheme(
-      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
-    );
-
-    act(() => {
-      (capturedMarkdownPreviewProps.current.onContentChange as (content: string) => void)(updatedContent);
-    });
-    onSave.mockClear();
-    const sourceEditorButton = getByRole("button", { name: "Source editor" });
-    fireEvent.click(sourceEditorButton);
-    fireEvent.keyDown(sourceEditorButton, { key: "s", metaKey: true });
-
-    expect(mockEditorState.editorFocus).not.toHaveBeenCalled();
-    expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith(updatedContent);
-  });
-
   it("preserves Monaco selection and scroll position when content is synchronized", () => {
-    const { rerender } = renderWithAppTheme(<FileEditor path="README.md" content="first" />);
+    const { rerender } = renderWithAppTheme(<FileEditor path="src/a.ts" content="first" />);
     const selection = { startLineNumber: 1, startColumn: 3, endLineNumber: 1, endColumn: 3 };
     const scrollPosition = { scrollTop: 96, scrollLeft: 12 };
     mockEditorState.editorSelections = [selection];
     mockEditorState.editorScrollPosition = scrollPosition;
 
-    rerender(<FileEditor path="README.md" content="updated" />);
+    rerender(<FileEditor path="src/a.ts" content="updated" />);
 
     expect(mockEditorState.editorSelections).toEqual([selection]);
     expect(mockEditorState.editorScrollPosition).toEqual(scrollPosition);
@@ -482,6 +387,52 @@ describe("FileEditor", () => {
       renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
       expect(mockEditorState.createCount).toBe(1);
+    });
+  });
+
+  describe("markdown files", () => {
+    it("renders the Vditor editor without creating a Monaco instance", async () => {
+      renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("vditor-editor")).toBeTruthy();
+      });
+
+      expect(mockEditorState.createCount).toBe(0);
+    });
+
+    it("saves markdown content on Cmd+S via the Vditor flush path", async () => {
+      const onSave = vi.fn();
+
+      renderWithAppTheme(<FileEditor path="README.md" content="initial" onSave={onSave} />);
+
+      // Wait for the lazy Vditor editor so the handleRef is available when
+      // the Cmd+S handler fires.
+      await waitFor(() => {
+        expect(screen.getByTestId("vditor-editor")).toBeTruthy();
+      });
+
+      mockFlushNowReturn = "flushed markdown";
+      fireEvent.keyDown(screen.getByTestId("vditor-editor"), { key: "s", metaKey: true });
+
+      expect(mockFlushNowCalled).toBe(true);
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledWith("flushed markdown");
+    });
+
+    it("does not save deleted markdown content on Cmd+S", async () => {
+      const onSave = vi.fn();
+
+      renderWithAppTheme(<FileEditor path="README.md" content="# Hello" isDeleted onSave={onSave} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("vditor-editor")).toBeTruthy();
+      });
+
+      fireEvent.keyDown(screen.getByTestId("vditor-editor"), { key: "s", metaKey: true });
+
+      expect(mockFlushNowCalled).toBe(false);
+      expect(onSave).not.toHaveBeenCalled();
     });
   });
 });

@@ -19,7 +19,6 @@ describe("MarkdownSettingsView", () => {
   afterEach(() => {
     layoutStore.setState({
       markdownThemePreference: "inherit",
-      markdownDefaultViewMode: "split",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
       isMarkdownOutlineVisible: false,

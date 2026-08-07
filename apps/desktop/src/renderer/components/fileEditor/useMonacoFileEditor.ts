@@ -21,7 +21,6 @@ export type UseMonacoFileEditorReturn = {
   editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>;
   editorInstance: monaco.editor.IStandaloneCodeEditor | null;
   currentContent: string;
-  markdownPreviewImmediateUpdateToken: number;
   isMarkdown: boolean;
   handleSaveCurrentContent: () => void;
   handleMarkdownPreviewContentChange: (nextContent: string) => void;
@@ -47,7 +46,6 @@ export function useMonacoFileEditor({
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [editorInstance, setEditorInstance] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [currentContent, setCurrentContent] = useState(content);
-  const [markdownPreviewImmediateUpdateToken, setMarkdownPreviewImmediateUpdateToken] = useState(0);
   const contentRef = useRef(content);
   const onContentChangeRef = useRef(onContentChange);
   const onSaveRef = useRef(onSave);
@@ -79,8 +77,10 @@ export function useMonacoFileEditor({
   }, []);
 
   // ── Create / destroy editor when path or isDeleted changes ──
+  // Markdown files are edited by the Vditor WYSIWYG editor instead — no Monaco
+  // instance is created for them (contentRef stays the shared content source).
   useEffect(() => {
-    if (!editorHostRef.current) {
+    if (isMarkdown || !editorHostRef.current) {
       return;
     }
 
@@ -118,7 +118,7 @@ export function useMonacoFileEditor({
       editorRef.current = null;
       setEditorInstance(null);
     };
-  }, [isDeleted, path]);
+  }, [isDeleted, isMarkdown, path]);
 
   // ── Sync external content changes into the editor ──
   useEffect(() => {
@@ -164,7 +164,6 @@ export function useMonacoFileEditor({
   const handleMarkdownPreviewContentChange = useCallback((nextContent: string) => {
     const editor = editorRef.current;
     contentRef.current = nextContent;
-    setMarkdownPreviewImmediateUpdateToken((token) => token + 1);
 
     if (editor && editor.getValue() !== nextContent) {
       replaceEditorContentPreservingViewState(editor, nextContent);
@@ -180,7 +179,6 @@ export function useMonacoFileEditor({
     editorRef,
     editorInstance,
     currentContent,
-    markdownPreviewImmediateUpdateToken,
     isMarkdown,
     handleSaveCurrentContent,
     handleMarkdownPreviewContentChange,

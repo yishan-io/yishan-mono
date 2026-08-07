@@ -1,14 +1,10 @@
 import { Box, Typography } from "@mui/material";
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef } from "react";
 import { isExcalidrawFile } from "../helpers/editorLanguage";
 import { useGitGutterDecorations } from "../hooks/useGitGutterDecorations";
-import type { MarkdownDefaultViewMode } from "../store/settings/layoutStore";
 import { CliSpinner } from "./CliSpinner";
 import { FileViewerToolbar } from "./FileViewerToolbar";
-import { MarkdownPreviewPane } from "./fileEditor/MarkdownPreviewPane";
-import { MarkdownViewModeActions } from "./fileEditor/MarkdownViewModeActions";
 import type { VditorFileEditorHandle } from "./fileEditor/VditorFileEditor";
-import { useMarkdownViewMode } from "./fileEditor/useMarkdownViewMode";
 import { useMonacoFileEditor } from "./fileEditor/useMonacoFileEditor";
 
 export type FileEditorProps = {
@@ -19,7 +15,6 @@ export type FileEditorProps = {
   isDeleted?: boolean;
   /** When true, diff gutter decorations are suppressed (file is git-ignored). */
   isIgnored?: boolean;
-  defaultMarkdownViewMode?: MarkdownDefaultViewMode;
   focusRequestKey?: number;
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void | Promise<void>;
@@ -28,7 +23,11 @@ export type FileEditorProps = {
   openExternalAppLabel?: string;
 };
 
-/** Renders a Monaco file editor with markdown preview modes and save shortcuts. */
+/**
+ * Renders the file tab editor: Monaco for code files, the Vditor IR editor for
+ * markdown files (no Monaco instance, no preview modes — markdown is edited
+ * directly in the WYSIWYG surface).
+ */
 function MonacoFileEditor({
   workspaceId,
   path,
@@ -36,7 +35,6 @@ function MonacoFileEditor({
   worktreePath,
   isDeleted = false,
   isIgnored = false,
-  defaultMarkdownViewMode = "wysiwyg",
   focusRequestKey = 0,
   onContentChange,
   onSave,
@@ -45,8 +43,6 @@ function MonacoFileEditor({
   openExternalAppLabel = "Open in external app",
 }: FileEditorProps) {
   const fileEditorRootRef = useRef<HTMLDivElement | null>(null);
-  const splitContainerRef = useRef<HTMLDivElement | null>(null);
-  const [editorPaneRatio, setEditorPaneRatio] = useState(0.5);
   const wysiwygHandleRef = useRef<VditorFileEditorHandle | null>(null);
   const showWysiwygEditorRef = useRef(false);
   const {
@@ -54,7 +50,6 @@ function MonacoFileEditor({
     editorRef,
     editorInstance,
     currentContent,
-    markdownPreviewImmediateUpdateToken,
     isMarkdown,
     isDark,
     editorFontSize,
@@ -68,46 +63,13 @@ function MonacoFileEditor({
     onContentChange,
     onSave,
   });
-  const {
-    viewMode,
-    setViewMode,
-    previewFindOpen,
-    setPreviewFindOpen,
-    previewFindQuery,
-    previewFindActiveIndex,
-    handlePreviewFindMatchCountChange,
-    handlePreviewFindQueryChange,
-    handlePreviewFindNext,
-    handlePreviewFindPrev,
-    handlePreviewFindClose,
-  } = useMarkdownViewMode({
-    isMarkdown,
-    defaultMarkdownViewMode,
-  });
 
-  const showWysiwygEditor = isMarkdown && viewMode === "wysiwyg";
-  const showEditor = viewMode === "edit" || viewMode === "split";
-  const showEditorPane = showEditor || showWysiwygEditor;
-  const showPreview = viewMode === "preview" || viewMode === "split";
-
-  // Sync ref for the capture-phase keydown handler (avoids stale-closure risk
-  // when the view mode changes without the effect re-registering).
+  // Markdown always uses the Vditor WYSIWYG editor — no Monaco, no preview modes.
+  const showWysiwygEditor = isMarkdown;
   showWysiwygEditorRef.current = showWysiwygEditor;
 
-  const handleMarkdownPreviewChangeAndSave = useCallback(
-    (nextContent: string) => {
-      handleMarkdownPreviewContentChange(nextContent);
-      if (!isDeleted) {
-        handleSaveCurrentContent();
-      }
-    },
-    [handleMarkdownPreviewContentChange, handleSaveCurrentContent, isDeleted],
-  );
-
   useEffect(() => {
-    void editorPaneRatio;
-
-    if (!showEditor) {
+    if (isMarkdown) {
       return;
     }
 
@@ -118,7 +80,7 @@ function MonacoFileEditor({
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [editorPaneRatio, editorRef, showEditor]);
+  }, [editorRef, isMarkdown]);
 
   useEffect(() => {
     const rootElement = fileEditorRootRef.current;
@@ -136,15 +98,14 @@ function MonacoFileEditor({
       }
 
       // Single Cmd/Ctrl+S save path for every focus target inside the editor
-      // root (toolbar, preview DOM, Monaco, Vditor). Intercepting in the capture
-      // phase also keeps Monaco's internal keybinding service from seeing the event.
+      // root. Intercepting in the capture phase also keeps Monaco's internal
+      // keybinding service from seeing the event.
       event.preventDefault();
       event.stopPropagation();
 
-      // When WYSIWYG is active, flush the Vditor editor so the hidden Monaco
-      // model is current before save. Vditor's input callback is render-based
-      // so flushNow() closes the stale-save
-      // window.
+      // For markdown the save content lives in the Vditor editor — flush it
+      // into the shared content source (contentRef / onContentChange) before
+      // the save handler reads it.
       if (showWysiwygEditorRef.current) {
         wysiwygHandleRef.current?.flushNow();
       }
@@ -157,55 +118,6 @@ function MonacoFileEditor({
       rootElement.removeEventListener("keydown", handleNativeKeyDown, true);
     };
   }, [handleSaveCurrentContent, isDeleted]);
-
-  const handlePreviewKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      const isCmdF = (event.metaKey || event.ctrlKey) && event.key === "f";
-      if (isCmdF) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (viewMode === "split") {
-          editorRef.current?.focus();
-          editorRef.current?.getAction("actions.find")?.run();
-        } else {
-          setPreviewFindOpen(true);
-        }
-        return;
-      }
-
-      if (event.key === "Escape" && previewFindOpen) {
-        event.preventDefault();
-        handlePreviewFindClose();
-      }
-    },
-    [editorRef, handlePreviewFindClose, previewFindOpen, setPreviewFindOpen, viewMode],
-  );
-
-  const handleStartSplitDrag = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (!splitContainerRef.current) {
-      return;
-    }
-
-    event.preventDefault();
-    const rect = splitContainerRef.current.getBoundingClientRect();
-    const minRatio = 0.2;
-    const maxRatio = 0.8;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const x = moveEvent.clientX - rect.left;
-      const rawRatio = x / rect.width;
-      const clampedRatio = Math.min(maxRatio, Math.max(minRatio, rawRatio));
-      setEditorPaneRatio(clampedRatio);
-    };
-
-    const handleMouseUp = () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  }, []);
 
   useGitGutterDecorations({
     editor: editorInstance,
@@ -238,97 +150,42 @@ function MonacoFileEditor({
             </Typography>
           ) : null
         }
-        actions={isMarkdown ? <MarkdownViewModeActions currentMode={viewMode} onSelect={setViewMode} /> : undefined}
       />
-      <Box ref={splitContainerRef} sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
-        <Box
-          ref={editorHostRef}
-          sx={{
-            flex: showPreview && showEditor ? `0 0 ${Math.round(editorPaneRatio * 100)}%` : showEditorPane ? 1 : 0,
-            minHeight: 0,
-            minWidth: 0,
-            display: showEditorPane ? "block" : "none",
-            position: "relative",
-            "& > .monaco-editor": {
-              display: showEditor ? undefined : "none",
-            },
-          }}
-        >
-          {showWysiwygEditor ? (
-            <Suspense
-              fallback={
-                <Box
-                  sx={{
-                    width: "100%",
-                    height: "100%",
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                  }}
-                />
-              }
-            >
-              <VditorFileEditor
-                ref={wysiwygHandleRef}
-                key={path}
-                path={path}
-                content={content}
-                isDeleted={isDeleted}
-                focusRequestKey={focusRequestKey}
-                isDark={isDark}
-                onContentChange={handleMarkdownPreviewContentChange}
+      <Box
+        ref={editorHostRef}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          minWidth: 0,
+          display: "block",
+          position: "relative",
+        }}
+      >
+        {showWysiwygEditor ? (
+          <Suspense
+            fallback={
+              <Box
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                }}
               />
-            </Suspense>
-          ) : null}
-        </Box>
-
-        {showEditor && showPreview ? (
-          <Box
-            role="separator"
-            aria-orientation="vertical"
-            onMouseDown={handleStartSplitDrag}
-            sx={{
-              width: 8,
-              cursor: "col-resize",
-              position: "relative",
-              flexShrink: 0,
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                left: "50%",
-                transform: "translateX(-50%)",
-                top: 0,
-                bottom: 0,
-                width: "1px",
-                bgcolor: "divider",
-              },
-              "&:hover::before": {
-                bgcolor: "primary.main",
-              },
-            }}
-          />
-        ) : null}
-
-        {isMarkdown && showPreview ? (
-          <MarkdownPreviewPane
-            path={path}
-            content={content}
-            worktreePath={worktreePath}
-            isDeleted={isDeleted}
-            showEditor={showEditor}
-            editorPaneRatio={editorPaneRatio}
-            immediateUpdateToken={markdownPreviewImmediateUpdateToken}
-            findOpen={previewFindOpen}
-            findQuery={previewFindQuery}
-            findActiveIndex={previewFindActiveIndex}
-            onKeyDown={handlePreviewKeyDown}
-            onContentChange={handleMarkdownPreviewChangeAndSave}
-            onFindMatchCountChange={handlePreviewFindMatchCountChange}
-            onFindQueryChange={handlePreviewFindQueryChange}
-            onFindNext={handlePreviewFindNext}
-            onFindPrev={handlePreviewFindPrev}
-            onFindClose={handlePreviewFindClose}
-          />
+            }
+          >
+            <VditorFileEditor
+              ref={wysiwygHandleRef}
+              key={path}
+              path={path}
+              content={content}
+              isDeleted={isDeleted}
+              focusRequestKey={focusRequestKey}
+              isDark={isDark}
+              onContentChange={handleMarkdownPreviewContentChange}
+            />
+          </Suspense>
         ) : null}
       </Box>
     </Box>
@@ -340,7 +197,7 @@ const VditorFileEditor = lazy(() =>
 );
 const ExcalidrawFileEditor = lazy(() => import("./fileEditor/ExcalidrawFileEditor"));
 
-/** Dispatches to the Excalidraw editor for .excalidraw files, or Monaco for all others. */
+/** Dispatches to the Excalidraw editor for .excalidraw files, or Monaco/Vditor for all others. */
 export function FileEditor(props: FileEditorProps) {
   if (isExcalidrawFile(props.path)) {
     return (
