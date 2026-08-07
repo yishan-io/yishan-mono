@@ -212,10 +212,6 @@ const APPEARANCE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.appearance.markdown.theme.options.inherit",
       "settings.appearance.markdown.theme.options.light",
       "settings.appearance.markdown.theme.options.dark",
-      "settings.appearance.markdown.defaultViewMode.label",
-      "settings.appearance.markdown.defaultViewMode.options.edit",
-      "settings.appearance.markdown.defaultViewMode.options.preview",
-      "settings.appearance.markdown.defaultViewMode.options.split",
       "settings.appearance.markdown.previewFontSize.label",
       "settings.appearance.markdown.previewFontSize.options.small",
       "settings.appearance.markdown.previewFontSize.options.medium",
@@ -275,10 +271,10 @@ const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     keywordKeys: [
       "settings.skills.description",
       "settings.skills.sourceLabel",
-            "settings.skills.installed",
+      "settings.skills.installed",
       "settings.skills.notInstalled",
       "settings.skills.official",
-                                  ],
+    ],
   },
 ];
 const NODES_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [

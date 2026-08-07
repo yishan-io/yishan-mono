@@ -2,7 +2,8 @@
 
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { createElement, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { i18n } from "../i18n";
 import { editorSettingsStore } from "../store/settings/editorSettingsStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
@@ -207,6 +208,11 @@ afterEach(() => {
 });
 
 describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {
+  beforeEach(async () => {
+    // Ensure translated labels resolve (e.g. the view-only toggle).
+    await i18n.changeLanguage("en");
+  });
+
   it("renders the Vditor editor for markdown files without creating Monaco", async () => {
     renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
 

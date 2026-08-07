@@ -121,6 +121,10 @@ export function createVditorEditor(root: HTMLElement, options: VditorEditorOptio
         mode: "ir",
         height: "100%",
         cache: { enable: false },
+        // Local base for Vditor's runtime assets (icons, i18n, hljs, mermaid) —
+        // copied into the public dir by the vite plugin, so the editor works
+        // offline / behind blocked CDNs (lute is already local via _lutePath).
+        cdn: "./vditor",
         lang: options.lang ?? "en_US",
         // Curated formatting toolbar (hidden in view-only mode via the
         // [data-view-only] CSS rule in vditorTheme.css).

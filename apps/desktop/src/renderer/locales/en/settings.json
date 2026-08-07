@@ -366,7 +366,10 @@
         "outlineVisible": {
           "label": "Show markdown outline",
           "description": "Display the document outline beside markdown files."
-        }
+        },
+        "viewOnly": "View only",
+        "edit": "Edit",
+        "expandDiagram": "Expand diagram"
       },
       "editor": {
         "title": "Editor",

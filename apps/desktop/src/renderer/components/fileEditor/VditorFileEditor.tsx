@@ -13,6 +13,7 @@
 
 import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type Vditor from "vditor";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { i18n } from "../../i18n";
@@ -102,6 +103,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   // Content width mirrors the preview's readable/full setting so the editor
   // and preview stay visually consistent (readable = 860px centered column).
   const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
+  const { t } = useTranslation();
   // Markdown settings from the settings view drive the editor too:
   // - theme override (inherit/light/dark) forces the editor theme independently
   //   of the app theme, matching the preview behavior
@@ -450,8 +452,10 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
     const root = rootRef.current;
     if (!root) return;
 
-    return attachMermaidZoomButtons(root, (svgContent) => setZoomDiagramSvg(svgContent));
-  }, []);
+    return attachMermaidZoomButtons(root, (svgContent) => setZoomDiagramSvg(svgContent), {
+      expandLabel: t("settings.appearance.markdown.expandDiagram"),
+    });
+  }, [t]);
 
   // ── Render ──
 

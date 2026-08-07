@@ -50,33 +50,6 @@
   --vditor-app-font-size: 18px;
 }
 
-/* Explicit light-mode block (same values as the default). */
-
-.vditor-app-editor[data-theme="light"] {
-  --vditor-app-bg: #ffffff;
-  --vditor-app-surface: #ffffff;
-  --vditor-app-foreground: #1f2430;
-  --vditor-app-text-primary: #19211f;
-  --vditor-app-text-secondary: #566761;
-  --vditor-app-border: #dfe3e8;
-  --vditor-app-selection: #ced7ec;
-  --vditor-app-line-highlight: #f1f3f7;
-  --vditor-app-cursor: #2a2a31;
-  --vditor-app-code-bg: rgba(0, 0, 0, 0.06);
-  --vditor-app-code-text: #1f2430;
-  --vditor-app-blockquote-bg: #f6f8f3;
-  --vditor-app-blockquote-border: #afc1bb;
-  --vditor-app-blockquote-text: #566761;
-  --vditor-app-table-border: #c8d8d2;
-  --vditor-app-table-header-bg: #edf3ef;
-  --vditor-app-table-stripe-bg: #f6f8f3;
-  --vditor-app-link-color: #0060b8;
-  --vditor-app-hr-color: #c8d8d2;
-  --vditor-app-diagram-loading-color: #8ca6a0;
-  --vditor-app-diagram-error-color: #f85149;
-  --vditor-app-task-checkbox-border: #afc1bb;
-}
-
 /* ---- Dark theme overrides ---------------------------------------------- */
 
 /* Applied from either source: the wrapper's data-theme attribute OR Vditor's
@@ -107,6 +80,7 @@
   --vditor-app-diagram-loading-color: #8e97ab;
   --vditor-app-diagram-error-color: #f85149;
   --vditor-app-task-checkbox-border: #525964;
+  --vditor-app-hover: rgba(255, 255, 255, 0.08);
 }
 
 /* ---- Editor root ------------------------------------------------------- */

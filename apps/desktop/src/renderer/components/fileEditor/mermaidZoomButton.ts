@@ -31,12 +31,16 @@ function getRenderedMermaidSvg(panel: HTMLElement): string | null {
 }
 
 /** Creates the hover-revealed zoom button for one preview panel. */
-function createZoomButton(panel: HTMLElement, onZoom: (svgContent: string) => void): HTMLButtonElement {
+function createZoomButton(
+  panel: HTMLElement,
+  onZoom: (svgContent: string) => void,
+  expandLabel = "Expand diagram",
+): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = ZOOM_BUTTON_CLASS;
-  button.setAttribute("aria-label", "Expand diagram");
-  button.title = "Expand diagram";
+  button.setAttribute("aria-label", expandLabel);
+  button.title = expandLabel;
   button.innerHTML = MAXIMIZE_ICON_SVG;
   button.style.cssText = [
     "position:absolute",
@@ -71,7 +75,7 @@ function createZoomButton(panel: HTMLElement, onZoom: (svgContent: string) => vo
 }
 
 /** Scans the root for rendered mermaid panels missing a zoom button and attaches one. */
-function scanAndAttach(root: HTMLElement, onZoom: (svgContent: string) => void): void {
+function scanAndAttach(root: HTMLElement, onZoom: (svgContent: string) => void, expandLabel: string): void {
   const panels = root.querySelectorAll<HTMLElement>(".vditor-ir__preview");
   for (const panel of panels) {
     if (panel.hasAttribute(ATTACHED_ATTR)) {
@@ -82,7 +86,7 @@ function scanAndAttach(root: HTMLElement, onZoom: (svgContent: string) => void):
     }
 
     panel.setAttribute(ATTACHED_ATTR, "true");
-    panel.appendChild(createZoomButton(panel, onZoom));
+    panel.appendChild(createZoomButton(panel, onZoom, expandLabel));
   }
 }
 
@@ -93,12 +97,14 @@ function scanAndAttach(root: HTMLElement, onZoom: (svgContent: string) => void):
 export function attachMermaidZoomButtons(
   root: HTMLElement,
   onZoom: (svgContent: string) => void,
+  options: { expandLabel?: string } = {},
 ): () => void {
-  scanAndAttach(root, onZoom);
+  const expandLabel = options.expandLabel ?? "Expand diagram";
+  scanAndAttach(root, onZoom, expandLabel);
 
   // Vditor re-creates preview panels on re-render; watch for new ones.
   const observer = new MutationObserver(() => {
-    scanAndAttach(root, onZoom);
+    scanAndAttach(root, onZoom, expandLabel);
   });
   observer.observe(root, { childList: true, subtree: true });
 

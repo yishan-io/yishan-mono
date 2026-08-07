@@ -13,9 +13,11 @@ import {
 
 vi.mock("../markdown/mermaidIframeRenderer", () => ({
   mermaidIframeRenderer: {
-    render: vi.fn().mockResolvedValue(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="darkblue"/></svg>',
-    ),
+    render: vi
+      .fn()
+      .mockResolvedValue(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="darkblue"/></svg>',
+      ),
   },
 }));
 
@@ -28,7 +30,8 @@ function buildMermaidPanel(): HTMLElement {
   const code = document.createElement("code");
   code.className = "language-mermaid";
   code.setAttribute("data-processed", "true");
-  code.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="red"/></svg>';
+  code.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="red"/></svg>';
   panel.appendChild(code);
   return panel;
 }
@@ -60,9 +63,9 @@ describe("mermaidZoomButton", () => {
 
     button?.click();
     expect(onZoom).toHaveBeenCalledTimes(1);
-    const svgArg = onZoom.mock.calls[0]![0] as string;
+    const svgArg = onZoom.mock.calls[0]?.[0] as string;
     expect(svgArg).toContain("<svg");
-    expect(svgArg).toContain("fill=\"red\"");
+    expect(svgArg).toContain('fill="red"');
   });
 
   it("does not attach to unrendered or non-mermaid panels", () => {
@@ -176,7 +179,7 @@ describe("mermaidZoomButton", () => {
       isDark: true,
       fontFamily: "sans-serif",
     });
-    expect(previewCode.innerHTML).toContain("fill=\"darkblue\"");
+    expect(previewCode.innerHTML).toContain('fill="darkblue"');
     expect(onError).not.toHaveBeenCalled();
   });
 
@@ -228,6 +231,6 @@ describe("mermaidZoomButton", () => {
     await expect(rethemeMermaidDiagrams(root, { isDark: true, onError })).resolves.toBeUndefined();
     expect(onError).toHaveBeenCalledWith("render exploded");
     // Original svg left untouched on failure.
-    expect(previewCode.innerHTML).toContain("fill=\"lightgray\"");
+    expect(previewCode.innerHTML).toContain('fill="lightgray"');
   });
 });
