@@ -368,6 +368,24 @@
   display: block;
 }
 
+/* ---- Mermaid zoom button ------------------------------------------------ */
+
+.vditor-app-editor .vditor-ir__preview {
+  position: relative;
+}
+
+.vditor-app-editor .vditor-mermaid-zoom-btn {
+  opacity: 0;
+}
+
+.vditor-app-editor .vditor-ir__preview:hover .vditor-mermaid-zoom-btn {
+  opacity: 1;
+}
+
+.vditor-app-editor .vditor-mermaid-zoom-btn:hover {
+  background: var(--vditor-app-hover, rgba(0, 0, 0, 0.06));
+}
+
 /* ---- Images ------------------------------------------------------------ */
 
 .vditor-app-editor .vditor-ir img {

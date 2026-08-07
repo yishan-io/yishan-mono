@@ -11,11 +11,13 @@
  * lands in the lazy chunk alongside the factory.
  */
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type Vditor from "vditor";
+import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { layoutStore } from "../../store/settings/layoutStore";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
+import { attachMermaidZoomButtons } from "./mermaidZoomButton";
 import { type VditorEditorHandle, createVditorEditor } from "./vditorEditor";
 import "vditor/dist/index.css";
 import "./vditorTheme.css";
@@ -94,6 +96,9 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   // and preview stay visually consistent (readable = 860px centered column).
   const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
   const rootRef = useRef<HTMLDivElement>(null);
+  // SVG markup for the shared diagram zoom overlay (opened from a mermaid
+  // diagram's expand button).
+  const [zoomDiagramSvg, setZoomDiagramSvg] = useState<string | null>(null);
   const handleRef = useRef<VditorEditorHandle | null>(null);
   const lastEmittedRef = useRef(content);
   const initialContentNormalizedRef = useRef(normalizeMarkdown(content));
@@ -389,6 +394,19 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
     };
   }, []);
 
+  // ── Mermaid zoom button ──
+  // Vditor renders mermaid code blocks into preview panels inside its own DOM;
+  // watch for those panels and attach a hover-revealed expand button that opens
+  // the shared pan/zoom overlay with the rendered SVG (same affordance as the
+  // markdown preview pane).
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    return attachMermaidZoomButtons(root, (svgContent) => setZoomDiagramSvg(svgContent));
+  }, []);
+
   // ── Render ──
 
   return (
@@ -397,6 +415,10 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
       className="vditor-app-editor"
       data-theme={isDark ? "dark" : "light"}
       data-content-width={markdownPreviewWidth}
-    />
+    >
+      {zoomDiagramSvg !== null && (
+        <DiagramZoomOverlay svgContent={zoomDiagramSvg} onClose={() => setZoomDiagramSvg(null)} />
+      )}
+    </div>
   );
 });
