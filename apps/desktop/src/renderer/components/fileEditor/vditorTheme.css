@@ -418,6 +418,20 @@
   display: block;
 }
 
+/* ---- Toolbar ------------------------------------------------------------
+ * Vditor's formatting toolbar, shown in edit mode and hidden in view-only
+ * (the wrapper sets data-view-only = isDeleted || readOnly). */
+
+.vditor-app-editor .vditor-toolbar {
+  border-bottom: 1px solid var(--vditor-app-border);
+  background: var(--vditor-app-surface);
+  padding: 4px 8px;
+}
+
+.vditor-app-editor[data-view-only="true"] .vditor-toolbar {
+  display: none !important;
+}
+
 /* ---- Mermaid zoom button ------------------------------------------------ */
 
 .vditor-app-editor .vditor-ir__preview {
@@ -457,12 +471,6 @@
 
 .vditor-app-editor .vditor-ir del {
   opacity: 0.6;
-}
-
-/* ---- Hide toolbar remnants (empty toolbar:[]) -------------------------- */
-
-.vditor-app-editor .vditor-toolbar {
-  display: none !important;
 }
 
 /* ---- Hide resize handle (not needed in single-editor layout) ----------- */

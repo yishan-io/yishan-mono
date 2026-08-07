@@ -162,14 +162,18 @@ describe("createVditorEditor factory", () => {
     expect(capturedConstructorOptions.current?.cache).toEqual({ enable: false });
   });
 
-  it("passes empty toolbar array", async () => {
+  it("configures the formatting toolbar with curated items", async () => {
     await createEditor(root, {
       defaultValue: "# Hello",
       isDark: false,
       onMarkdownChange,
     });
 
-    expect(capturedConstructorOptions.current?.toolbar).toEqual([]);
+    const toolbar = capturedConstructorOptions.current?.toolbar as Array<string> | undefined;
+    expect(toolbar).toContain("undo");
+    expect(toolbar).toContain("bold");
+    expect(toolbar).toContain("headings");
+    expect(toolbar).toContain("table");
   });
 
   it("passes _lutePath as the mocked lute URL", async () => {

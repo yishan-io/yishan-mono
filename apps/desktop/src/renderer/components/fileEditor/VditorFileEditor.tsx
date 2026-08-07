@@ -456,6 +456,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
       data-theme={resolvedIsDark ? "dark" : "light"}
       data-content-width={markdownPreviewWidth}
       data-font-size={markdownPreviewFontSize}
+      data-view-only={isDeleted || readOnly}
     >
       {zoomDiagramSvg !== null && (
         <DiagramZoomOverlay svgContent={zoomDiagramSvg} onClose={() => setZoomDiagramSvg(null)} />

@@ -65,7 +65,27 @@ export function createVditorEditor(root: HTMLElement, options: VditorEditorOptio
         mode: "ir",
         height: "100%",
         cache: { enable: false },
-        toolbar: [],
+        // Curated formatting toolbar (hidden in view-only mode via the
+        // [data-view-only] CSS rule in vditorTheme.css).
+        toolbar: [
+          "undo",
+          "redo",
+          "|",
+          "headings",
+          "bold",
+          "italic",
+          "strike",
+          "|",
+          "list",
+          "ordered-list",
+          "check",
+          "|",
+          "quote",
+          "code",
+          "inline-code",
+          "link",
+          "table",
+        ],
         theme: options.isDark ? "dark" : "classic",
         // Syntax-highlight theme follows the editor theme: vditor's default
         // (github) is a LIGHT palette whose tokens are unreadable on the dark

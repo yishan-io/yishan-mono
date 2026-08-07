@@ -624,4 +624,44 @@ describe("VditorFileEditor lifecycle", () => {
     // External content applies in view-only mode so the view stays current.
     expect(mockSetValue).toHaveBeenCalledWith(HELLO_WORLD);
   });
+
+  it("sets data-view-only from isDeleted or readOnly (hides the toolbar)", async () => {
+    const { container, rerender } = render(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={false}
+        isDark={false}
+        onContentChange={vi.fn()}
+      />,
+    );
+
+    const rootDiv = container.firstChild as HTMLElement;
+    expect(rootDiv.getAttribute("data-view-only")).toBe("false");
+
+    rerender(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        readOnly={true}
+        isDark={false}
+        onContentChange={vi.fn()}
+      />,
+    );
+    expect(rootDiv.getAttribute("data-view-only")).toBe("true");
+
+    rerender(
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={true}
+        readOnly={false}
+        isDark={false}
+        onContentChange={vi.fn()}
+      />,
+    );
+    expect(rootDiv.getAttribute("data-view-only")).toBe("true");
+  });
 });
