@@ -65,7 +65,6 @@ describe("SettingsView", () => {
     window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
     layoutStore.setState({
       themePreference: "system",
-      markdownDefaultViewMode: "split",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
       isMarkdownOutlineVisible: false,
@@ -162,25 +161,6 @@ describe("SettingsView", () => {
     fireEvent.click(screen.getByTestId("settings-theme-option-dark"));
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"themePreference":"dark"');
-  });
-
-  it("renders markdown default view mode setting and persists changes", () => {
-    render(
-      <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=appearance"]}>
-          <Routes>
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
-        </MemoryRouter>
-      </AppThemePreferenceProvider>,
-    );
-
-    fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.defaultViewMode.label"));
-    fireEvent.click(
-      screen.getByRole("option", { name: "settings.appearance.markdown.defaultViewMode.options.preview" }),
-    );
-
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownDefaultViewMode":"preview"');
   });
 
   it("persists markdown preview font size and preview width", () => {

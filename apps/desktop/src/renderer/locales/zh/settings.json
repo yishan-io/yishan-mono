@@ -324,15 +324,6 @@
             "dark": "\u6df1\u8272"
           }
         },
-        "defaultViewMode": {
-          "label": "\u9ed8\u8ba4 Markdown \u89c6\u56fe\u6a21\u5f0f",
-          "description": "\u9009\u62e9 Markdown \u6587\u4ef6\u9ed8\u8ba4\u6253\u5f00\u65b9\u5f0f\u3002",
-          "options": {
-            "edit": "\u7f16\u8f91",
-            "preview": "\u9884\u89c8",
-            "split": "\u5206\u680f"
-          }
-        },
         "previewFontSize": {
           "label": "\u9884\u89c8\u5b57\u4f53\u5927\u5c0f",
           "description": "\u63a7\u5236 Markdown \u9884\u89c8\u4e2d\u7684\u6587\u672c\u5927\u5c0f\u3002",
@@ -353,22 +344,25 @@
         "outlineVisible": {
           "label": "\u663e\u793a Markdown \u5927\u7eb2",
           "description": "\u5728 Markdown \u6587\u4ef6\u65c1\u663e\u793a\u6587\u6863\u5927\u7eb2\u3002"
-        }
+        },
+        "viewOnly": "\u53ea\u8bfb\u67e5\u770b",
+        "edit": "\u7f16\u8f91",
+        "expandDiagram": "\u653e\u5927\u56fe\u8868"
       },
       "editor": {
-        "title": "编辑器",
-        "description": "配置代码编辑器外观。",
+        "title": "\u7f16\u8f91\u5668",
+        "description": "\u914d\u7f6e\u4ee3\u7801\u7f16\u8f91\u5668\u5916\u89c2\u3002",
         "theme": {
-          "label": "代码主题",
-          "description": "代码主题跟随全局浅色/深色主题。"
+          "label": "\u4ee3\u7801\u4e3b\u9898",
+          "description": "\u4ee3\u7801\u4e3b\u9898\u8ddf\u968f\u5168\u5c40\u6d45\u8272/\u6df1\u8272\u4e3b\u9898\u3002"
         },
         "fontSize": {
-          "label": "字体大小",
-          "description": "控制代码编辑器中的文本大小。"
+          "label": "\u5b57\u4f53\u5927\u5c0f",
+          "description": "\u63a7\u5236\u4ee3\u7801\u7f16\u8f91\u5668\u4e2d\u7684\u6587\u672c\u5927\u5c0f\u3002"
         },
         "wordWrap": {
-          "label": "自动换行",
-          "description": "在代码编辑器中自动换行。"
+          "label": "\u81ea\u52a8\u6362\u884c",
+          "description": "\u5728\u4ee3\u7801\u7f16\u8f91\u5668\u4e2d\u81ea\u52a8\u6362\u884c\u3002"
         }
       }
     },

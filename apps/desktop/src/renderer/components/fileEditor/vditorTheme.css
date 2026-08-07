@@ -1,0 +1,485 @@
+/* ---------------------------------------------------------------------------
+ * Vditor IR Editor Theme
+ *
+ * Scoped dark/light custom-property theme. Values derived from
+ * packages/design-tokens/src/v1/index.ts (SEMANTIC_COLOR_TOKENS,
+ * EDITOR_SURFACE_COLORS, TYPOGRAPHY_TOKENS).
+ *
+ * Root class: .vditor-app-editor
+ * Theme mode:  [data-theme="dark"] | [data-theme="light"]
+ *
+ * Loaded AFTER vditor/dist/index.css so our overrides win.
+ * ------------------------------------------------------------------------ */
+
+/* ---- Base custom properties (light default) ---------------------------- */
+
+.vditor-app-editor {
+  --vditor-app-bg: #ffffff;
+  --vditor-app-surface: #ffffff;
+  --vditor-app-foreground: #1f2430;
+  --vditor-app-text-primary: #19211f;
+  --vditor-app-text-secondary: #566761;
+  --vditor-app-border: #dfe3e8;
+  --vditor-app-selection: #ced7ec;
+  --vditor-app-line-highlight: #f1f3f7;
+  --vditor-app-cursor: #2a2a31;
+  --vditor-app-code-bg: rgba(0, 0, 0, 0.06);
+  --vditor-app-code-text: #1f2430;
+  --vditor-app-blockquote-bg: #f6f8f3;
+  --vditor-app-blockquote-border: #afc1bb;
+  --vditor-app-blockquote-text: #566761;
+  --vditor-app-table-border: #c8d8d2;
+  --vditor-app-table-header-bg: #edf3ef;
+  --vditor-app-table-stripe-bg: #f6f8f3;
+  --vditor-app-link-color: #0060b8;
+  --vditor-app-hr-color: #c8d8d2;
+  --vditor-app-diagram-loading-color: #8ca6a0;
+  --vditor-app-diagram-error-color: #f85149;
+  --vditor-app-task-checkbox-border: #afc1bb;
+  /* Base editor font size; scaled by the settings view's markdown preview
+   * font-size setting via [data-font-size] (matches the preview's 14/16/18). */
+  --vditor-app-font-size: 14px;
+}
+
+/* Markdown preview font-size setting (mirrors the preview pane scale). */
+.vditor-app-editor[data-font-size="medium"] {
+  --vditor-app-font-size: 16px;
+}
+
+.vditor-app-editor[data-font-size="large"] {
+  --vditor-app-font-size: 18px;
+}
+
+/* ---- Dark theme overrides ---------------------------------------------- */
+
+/* Applied from either source: the wrapper's data-theme attribute OR Vditor's
+ * own vditor--dark class (toggled by vditor.setTheme). Theming stays
+ * correct even if one of the two mechanisms is missing or stale. */
+
+.vditor-app-editor[data-theme="dark"],
+.vditor-app-editor.vditor--dark {
+  --vditor-app-bg: #292e36;
+  --vditor-app-surface: #31363f;
+  --vditor-app-foreground: #d4dbe8;
+  --vditor-app-text-primary: #e7ebf0;
+  --vditor-app-text-secondary: #cfd5dd;
+  --vditor-app-border: #4a5160;
+  --vditor-app-selection: rgba(221, 226, 233, 0.12);
+  --vditor-app-line-highlight: #363c46;
+  --vditor-app-cursor: #d7deef;
+  --vditor-app-code-bg: rgba(255, 255, 255, 0.08);
+  --vditor-app-code-text: #d4dbe8;
+  --vditor-app-blockquote-bg: #2e333c;
+  --vditor-app-blockquote-border: #4f7d73;
+  --vditor-app-blockquote-text: #cfd5dd;
+  --vditor-app-table-border: #414754;
+  --vditor-app-table-header-bg: #2e333c;
+  --vditor-app-table-stripe-bg: #313840;
+  --vditor-app-link-color: #79c4ff;
+  --vditor-app-hr-color: #414754;
+  --vditor-app-diagram-loading-color: #8e97ab;
+  --vditor-app-diagram-error-color: #f85149;
+  --vditor-app-task-checkbox-border: #525964;
+  --vditor-app-hover: rgba(255, 255, 255, 0.08);
+}
+
+/* ---- Editor root ------------------------------------------------------- */
+
+.vditor-app-editor {
+  background: var(--vditor-app-bg);
+  color: var(--vditor-app-text-primary);
+  font-family: "Manrope", "SF Pro Text", "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  height: 100%;
+  /* NOTE: no overflow: hidden on the root — the toolbar dropdowns (hint/
+   * panel) must be able to extend past the root bounds without being
+   * clipped. The content area constrains its own overflow (.vditor-content
+   * overflow: hidden, .vditor-ir overflow-y: auto). */
+}
+
+/* Override vditor's default font-family and border on the .vditor wrapper */
+.vditor-app-editor.vditor {
+  font-family: inherit;
+  border: none;
+  border-radius: 0;
+  height: 100%;
+  background: var(--vditor-app-bg);
+}
+
+/* Override vditor's CSS custom properties via our wrapper */
+.vditor-app-editor.vditor[data-theme="light"] {
+  --panel-background-color: var(--vditor-app-bg);
+  --textarea-background-color: var(--vditor-app-bg);
+  --textarea-text-color: var(--vditor-app-text-primary);
+}
+
+.vditor-app-editor.vditor[data-theme="dark"] {
+  --panel-background-color: var(--vditor-app-bg);
+  --textarea-background-color: var(--vditor-app-bg);
+  --textarea-text-color: var(--vditor-app-text-primary);
+}
+
+/* ---- Full-height IR layout --------------------------------------------- */
+
+.vditor-app-editor .vditor-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.vditor-app-editor .vditor-ir {
+  overflow-y: auto;
+  padding: 16px 24px;
+  box-sizing: border-box;
+  color: var(--vditor-app-text-primary);
+  background: var(--vditor-app-bg);
+}
+
+/* ---- Scroll container: the wrapper scrolls, not the contenteditable pre ---
+ *
+ * vditor's own `.vditor-reset` rule sets `overflow: auto`, which makes the
+ * contenteditable `<pre>` the scroll container. Its scrollbar then renders
+ * at the pre's right edge — inset from the pane boundary by the wrapper's
+ * 24px right padding. Neutralize the pre so the wrapper (overflow-y: auto)
+ * scrolls flush against the right edge; the wrapper's padding provides the
+ * content inset. `padding: 0 !important` also beats vditor's inline
+ * `setPadding` (10px 35px) which would otherwise double-pad the content. */
+.vditor-app-editor .vditor-ir pre.vditor-reset {
+  overflow: visible;
+  padding: 0 !important;
+  /* The content text color is owned by our theme (vditor's own light default
+   * `.vditor-reset { color: #24292e }` would stay near-black in dark mode). */
+  color: var(--vditor-app-text-primary);
+  /* Content font size follows the settings view's markdown preview font-size
+   * setting (vditor's own .vditor-reset would fix it at 16px). */
+  font-size: var(--vditor-app-font-size);
+  /* Readable line length, matching the preview's readable mode (860px, centered).
+   * The wrapper still scrolls flush against the pane edge. */
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* Full-width content mode mirrors the preview's "full" setting. */
+.vditor-app-editor[data-content-width="full"] .vditor-ir pre.vditor-reset {
+  max-width: none;
+  margin: 0;
+}
+
+/* ---- Focus-ring suppression (Typora-style: caret is the only affordance) */
+
+.vditor-app-editor .vditor-ir pre.vditor-reset:focus,
+.vditor-app-editor .vditor-ir pre.vditor-reset:focus-visible,
+.vditor-app-editor .vditor-ir:focus,
+.vditor-app-editor .vditor-ir:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ---- Read-only presentation override --------------------------------- */
+
+/* Vditor's .vditor-ir pre.vditor-reset[contenteditable="false"] applies opacity: 0.3
+   + cursor: not-allowed. For a deleted-file read-only view we want the content
+   to remain fully legible with a default cursor. */
+.vditor-app-editor .vditor-ir pre.vditor-reset[contenteditable="false"] {
+  opacity: 1;
+  cursor: default;
+}
+
+
+/* ---- Selection & caret ------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir pre.vditor-reset ::selection {
+  background: var(--vditor-app-selection);
+}
+
+.vditor-app-editor .vditor-ir pre.vditor-reset {
+  caret-color: var(--vditor-app-cursor);
+}
+
+/* ---- Headings ---------------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir .vditor-reset > h1 {
+  font-size: 1.75em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.2em 0 0.5em;
+  color: var(--vditor-app-text-primary);
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--vditor-app-border);
+}
+
+.vditor-app-editor .vditor-ir .vditor-reset > h2 {
+  font-size: 1.45em;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 1.1em 0 0.4em;
+  color: var(--vditor-app-text-primary);
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--vditor-app-border);
+}
+
+.vditor-app-editor .vditor-ir .vditor-reset > h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 1em 0 0.35em;
+  color: var(--vditor-app-text-primary);
+}
+
+.vditor-app-editor .vditor-ir .vditor-reset > h4 {
+  font-size: 1.05em;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 0.9em 0 0.3em;
+  color: var(--vditor-app-text-secondary);
+}
+
+.vditor-app-editor .vditor-ir .vditor-reset > h5,
+.vditor-app-editor .vditor-ir .vditor-reset > h6 {
+  font-size: 0.95em;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0.8em 0 0.25em;
+  color: var(--vditor-app-text-secondary);
+}
+
+/* ---- Paragraphs -------------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir p {
+  margin: 0.5em 0;
+  color: var(--vditor-app-text-primary);
+}
+
+/* ---- Links ------------------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir a,
+.vditor-app-editor .vditor-ir__link {
+  color: var(--vditor-app-link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.vditor-app-editor .vditor-ir a:hover,
+.vditor-app-editor .vditor-ir__link:hover {
+  opacity: 0.8;
+}
+
+/* ---- Inline code ------------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir code {
+  background: var(--vditor-app-code-bg);
+  color: var(--vditor-app-code-text);
+  font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+}
+
+/* ---- Code blocks (fenced code within IR preview) ----------------------- */
+
+.vditor-app-editor .vditor-ir .vditor-ir__preview pre,
+.vditor-app-editor .vditor-ir__preview pre {
+  background: var(--vditor-app-code-bg);
+  color: var(--vditor-app-code-text);
+  font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+  padding: 12px 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.6em 0;
+  line-height: 1.55;
+}
+
+.vditor-app-editor .vditor-ir__preview pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* ---- Blockquote -------------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir blockquote {
+  margin: 0.6em 0;
+  padding: 8px 16px;
+  border-left: 4px solid var(--vditor-app-blockquote-border);
+  background: var(--vditor-app-blockquote-bg);
+  color: var(--vditor-app-blockquote-text);
+  border-radius: 0 4px 4px 0;
+}
+
+.vditor-app-editor .vditor-ir blockquote p {
+  margin: 0.3em 0;
+}
+
+/* ---- Lists ------------------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir ul,
+.vditor-app-editor .vditor-ir ol {
+  padding-left: 1.8em;
+  margin: 0.4em 0;
+}
+
+.vditor-app-editor .vditor-ir li {
+  margin: 0.15em 0;
+}
+
+.vditor-app-editor .vditor-ir li > p {
+  margin: 0;
+}
+
+/* ---- Task list items (.vditor-task from vditor) ------------------------ */
+
+.vditor-app-editor .vditor-task {
+  list-style: none;
+  margin-left: -1.4em;
+}
+
+.vditor-app-editor .vditor-task input[type="checkbox"] {
+  accent-color: var(--vditor-app-text-secondary);
+  margin-right: 0.4em;
+}
+
+/* ---- Tables ------------------------------------------------------------ */
+
+.vditor-app-editor .vditor-ir table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  width: 100%;
+}
+
+.vditor-app-editor .vditor-ir th,
+.vditor-app-editor .vditor-ir td {
+  border: 1px solid var(--vditor-app-table-border);
+  padding: 6px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.vditor-app-editor .vditor-ir th {
+  background: var(--vditor-app-table-header-bg);
+  font-weight: 600;
+  color: var(--vditor-app-text-primary);
+}
+
+/* Vditor's own .vditor-reset table tr paints every row #fafbfc (light) with
+ * no dark override — neutralize it so rows follow the editor surface and
+ * our nth-child striping (the odd rows otherwise stay white in dark mode). */
+.vditor-app-editor .vditor-ir table tr {
+  background: transparent;
+}
+
+.vditor-app-editor .vditor-ir tr:nth-child(even) td {
+  background: var(--vditor-app-table-stripe-bg);
+}
+
+/* ---- Horizontal rule --------------------------------------------------- */
+
+.vditor-app-editor .vditor-ir hr {
+  border: none;
+  border-top: 1px solid var(--vditor-app-hr-color);
+  margin: 1.2em 0;
+  display: block;
+}
+
+/* ---- Diagram / mermaid surface ----------------------------------------- */
+
+.vditor-app-editor .vditor-ir .vditor-ir__preview .language-mermaid,
+.vditor-app-editor .vditor-ir__preview .language-mermaid {
+  margin: 1em 0;
+  padding: 12px;
+  border: 1px solid var(--vditor-app-border);
+  border-radius: 6px;
+  background: var(--vditor-app-surface);
+  min-height: 40px;
+  overflow-x: auto;
+}
+
+.vditor-app-editor .vditor-ir .vditor-ir__preview .language-mermaid svg,
+.vditor-app-editor .vditor-ir__preview .language-mermaid svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ---- Toolbar ------------------------------------------------------------
+ * Vditor's formatting toolbar, shown in edit mode and hidden in view-only
+ * (the wrapper sets data-view-only = isDeleted || readOnly). */
+
+.vditor-app-editor .vditor-toolbar {
+  border-bottom: 1px solid var(--vditor-app-border);
+  background: var(--vditor-app-surface);
+  padding: 4px 8px;
+  /* Stacking context above the content area: toolbar dropdowns (hint/panel)
+   * must always paint over the editor content, never behind it. */
+  position: relative;
+  z-index: 5;
+}
+
+/* More breathing room between toolbar buttons (dividers keep their own). */
+.vditor-app-editor .vditor-toolbar__item {
+  margin-right: 4px;
+}
+
+/* Dropdown popups (headings etc.) ride above everything inside the editor. */
+.vditor-app-editor .vditor-toolbar .vditor-hint,
+.vditor-app-editor .vditor-toolbar .vditor-panel {
+  z-index: 50;
+}
+
+.vditor-app-editor[data-view-only="true"] .vditor-toolbar {
+  display: none !important;
+}
+
+/* ---- Mermaid zoom button ------------------------------------------------ */
+
+.vditor-app-editor .vditor-ir__preview {
+  position: relative;
+}
+
+.vditor-app-editor .vditor-mermaid-zoom-btn {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.vditor-app-editor .vditor-ir__preview:hover .vditor-mermaid-zoom-btn {
+  opacity: 1;
+}
+
+.vditor-app-editor .vditor-mermaid-zoom-btn:hover {
+  background: var(--vditor-app-hover, rgba(0, 0, 0, 0.06));
+}
+
+/* ---- Images ------------------------------------------------------------ */
+
+.vditor-app-editor .vditor-ir img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---- Inline marks (bold, italic, strikethrough) ------------------------ */
+
+.vditor-app-editor .vditor-ir strong {
+  color: var(--vditor-app-text-primary);
+  font-weight: 700;
+}
+
+.vditor-app-editor .vditor-ir em {
+  font-style: italic;
+}
+
+.vditor-app-editor .vditor-ir del {
+  opacity: 0.6;
+}
+
+/* ---- Hide resize handle (not needed in single-editor layout) ----------- */
+
+.vditor-app-editor .vditor-resize {
+  display: none !important;
+}
+
+/* ---- Hide counter ------------------------------------------------------ */
+
+.vditor-app-editor .vditor-counter {
+  display: none !important;
+}

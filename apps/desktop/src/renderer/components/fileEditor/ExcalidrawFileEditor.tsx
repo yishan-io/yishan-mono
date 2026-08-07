@@ -13,8 +13,6 @@ export type ExcalidrawFileEditorProps = {
   isDeleted?: boolean;
   /** Unused by Excalidraw editor; accepted for prop-contract compatibility. */
   isIgnored?: boolean;
-  /** Unused by Excalidraw editor; accepted for prop-contract compatibility. */
-  defaultMarkdownViewMode?: unknown;
   focusRequestKey?: number;
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void | Promise<void>;
