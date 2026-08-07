@@ -95,6 +95,14 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   // Content width mirrors the preview's readable/full setting so the editor
   // and preview stay visually consistent (readable = 860px centered column).
   const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
+  // Markdown settings from the settings view drive the editor too:
+  // - theme override (inherit/light/dark) forces the editor theme independently
+  //   of the app theme, matching the preview behavior
+  // - preview font size (small/medium/large) scales the editor base font size
+  const markdownThemePreference = layoutStore((state) => state.markdownThemePreference);
+  const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
+  const resolvedIsDark =
+    markdownThemePreference === "inherit" ? isDark : markdownThemePreference === "dark";
   const rootRef = useRef<HTMLDivElement>(null);
   // SVG markup for the shared diagram zoom overlay (opened from a mermaid
   // diagram's expand button).
@@ -218,7 +226,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
       state = {
         promise: createVditorEditor(root, {
           defaultValue: content,
-          isDark,
+          isDark: resolvedIsDark,
           onMarkdownChange: (md) => rootEmitters.get(root)?.(md),
         }),
         refCount: 0,
@@ -286,33 +294,39 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   }, [content]);
 
   // ── Dark / light theme ──
-  // Vditor's own theme is set at construction (classic/dark). The root
-  // data-theme attribute drives CSS custom-property overrides in
-  // vditorTheme.css, which are authoritative for the app's design tokens.
-  // Vditor's setTheme only toggles the vditor--dark class, so on an actual
-  // theme change we also re-render already-rendered mermaid diagrams with the
-  // new palette (their SVGs keep the original colors otherwise).
+  // Follows the resolved theme: the app theme, unless the settings view's
+  // markdown theme override (inherit/light/dark) forces one. Vditor's own
+  // theme is set at construction (classic/dark). The root data-theme
+  // attribute drives CSS custom-property overrides in vditorTheme.css, which
+  // are authoritative for the app's design tokens. Vditor's setTheme only
+  // toggles the vditor--dark class and swaps the hljs stylesheet, so on an
+  // actual theme change we also re-render already-rendered mermaid diagrams
+  // with the new palette (their SVGs keep the original colors otherwise).
 
-  const prevIsDarkRef = useRef(isDark);
+  const prevIsDarkRef = useRef(resolvedIsDark);
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    root.setAttribute("data-theme", isDark ? "dark" : "light");
+    root.setAttribute("data-theme", resolvedIsDark ? "dark" : "light");
     // Swap both vditor's shell theme and its syntax-highlight stylesheet
     // (github / github-dark) so existing code blocks re-color immediately.
-    handleRef.current?.vditor.setTheme(isDark ? "dark" : "classic", undefined, isDark ? "github-dark" : "github");
+    handleRef.current?.vditor.setTheme(
+      resolvedIsDark ? "dark" : "classic",
+      undefined,
+      resolvedIsDark ? "github-dark" : "github",
+    );
 
-    const themeChanged = prevIsDarkRef.current !== isDark;
-    prevIsDarkRef.current = isDark;
+    const themeChanged = prevIsDarkRef.current !== resolvedIsDark;
+    prevIsDarkRef.current = resolvedIsDark;
     if (themeChanged) {
       void rethemeMermaidDiagrams(root, {
-        isDark,
+        isDark: resolvedIsDark,
         fontFamily: getComputedStyle(root).fontFamily,
         onError: (message) => console.error("[VditorFileEditor] mermaid re-theme failed:", message),
       });
     }
-  }, [isDark]);
+  }, [markdownThemePreference, resolvedIsDark]);
 
   // ── Read-only for deleted files ──
 
@@ -429,8 +443,9 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
     <div
       ref={rootRef}
       className="vditor-app-editor"
-      data-theme={isDark ? "dark" : "light"}
+      data-theme={resolvedIsDark ? "dark" : "light"}
       data-content-width={markdownPreviewWidth}
+      data-font-size={markdownPreviewFontSize}
     >
       {zoomDiagramSvg !== null && (
         <DiagramZoomOverlay svgContent={zoomDiagramSvg} onClose={() => setZoomDiagramSvg(null)} />

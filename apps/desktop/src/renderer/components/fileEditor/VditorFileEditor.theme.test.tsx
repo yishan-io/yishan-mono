@@ -6,7 +6,9 @@
  */
 
 import { render, waitFor } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { layoutStore } from "../../store/settings/layoutStore";
 import { VditorFileEditor } from "./VditorFileEditor";
 
 // ---------------------------------------------------------------------------
@@ -99,6 +101,11 @@ describe("VditorFileEditor theme", () => {
     capturedCreationOptions = null;
     onMarkdownChangeFromFactory = null;
     mockGetValue.mockReturnValue("# test");
+    // Reset markdown settings to their defaults so tests are isolated.
+    layoutStore.setState({
+      markdownThemePreference: "inherit",
+      markdownPreviewFontSize: "medium",
+    });
     styleEl = addEditorStyles();
   });
 
@@ -206,5 +213,65 @@ describe("VditorFileEditor theme", () => {
     });
 
     expect(rethemeMermaidDiagrams).not.toHaveBeenCalled();
+  });
+
+  // ── Markdown theme override (settings view) ──
+
+  it("forces dark when the markdown theme override is dark even if the app is light", async () => {
+    act(() => {
+      layoutStore.getState().setMarkdownThemePreference("dark");
+    });
+
+    const { container } = render(
+      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={false} isDark={false} onContentChange={vi.fn()} />,
+    );
+
+    const rootDiv = container.firstChild as HTMLElement;
+    expect(rootDiv.getAttribute("data-theme")).toBe("dark");
+    expect(capturedCreationOptions?.isDark).toBe(true);
+
+    await waitFor(() => {
+      expect(mockSetTheme).toHaveBeenCalledWith("dark", undefined, "github-dark");
+    });
+  });
+
+  it("forces light when the markdown theme override is light even if the app is dark", async () => {
+    act(() => {
+      layoutStore.getState().setMarkdownThemePreference("light");
+    });
+
+    const { container } = render(
+      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={false} isDark={true} onContentChange={vi.fn()} />,
+    );
+
+    const rootDiv = container.firstChild as HTMLElement;
+    expect(rootDiv.getAttribute("data-theme")).toBe("light");
+    expect(capturedCreationOptions?.isDark).toBe(false);
+
+    await waitFor(() => {
+      expect(mockSetTheme).toHaveBeenCalledWith("classic", undefined, "github");
+    });
+  });
+
+  it("follows the app theme when the override is inherit", async () => {
+    const { container } = render(
+      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={false} isDark={true} onContentChange={vi.fn()} />,
+    );
+
+    expect((container.firstChild as HTMLElement).getAttribute("data-theme")).toBe("dark");
+  });
+
+  // ── Markdown preview font size (settings view) ──
+
+  it("exposes the markdown preview font size setting as data-font-size", () => {
+    act(() => {
+      layoutStore.getState().setMarkdownPreviewFontSize("large");
+    });
+
+    const { container } = render(
+      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={false} isDark={false} onContentChange={vi.fn()} />,
+    );
+
+    expect((container.firstChild as HTMLElement).getAttribute("data-font-size")).toBe("large");
   });
 });

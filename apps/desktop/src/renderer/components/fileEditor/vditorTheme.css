@@ -36,6 +36,18 @@
   --vditor-app-diagram-loading-color: #8ca6a0;
   --vditor-app-diagram-error-color: #f85149;
   --vditor-app-task-checkbox-border: #afc1bb;
+  /* Base editor font size; scaled by the settings view's markdown preview
+   * font-size setting via [data-font-size] (matches the preview's 14/16/18). */
+  --vditor-app-font-size: 14px;
+}
+
+/* Markdown preview font-size setting (mirrors the preview pane scale). */
+.vditor-app-editor[data-font-size="medium"] {
+  --vditor-app-font-size: 16px;
+}
+
+.vditor-app-editor[data-font-size="large"] {
+  --vditor-app-font-size: 18px;
 }
 
 /* Explicit light-mode block (same values as the default). */
@@ -161,6 +173,9 @@
   /* The content text color is owned by our theme (vditor's own light default
    * `.vditor-reset { color: #24292e }` would stay near-black in dark mode). */
   color: var(--vditor-app-text-primary);
+  /* Content font size follows the settings view's markdown preview font-size
+   * setting (vditor's own .vditor-reset would fix it at 16px). */
+  font-size: var(--vditor-app-font-size);
   /* Readable line length, matching the preview's readable mode (860px, centered).
    * The wrapper still scrolls flush against the pane edge. */
   max-width: 860px;
