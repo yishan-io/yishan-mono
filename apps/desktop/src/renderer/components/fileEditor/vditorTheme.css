@@ -362,6 +362,13 @@
   color: var(--vditor-app-text-primary);
 }
 
+/* Vditor's own .vditor-reset table tr paints every row #fafbfc (light) with
+ * no dark override — neutralize it so rows follow the editor surface and
+ * our nth-child striping (the odd rows otherwise stay white in dark mode). */
+.vditor-app-editor .vditor-ir table tr {
+  background: transparent;
+}
+
 .vditor-app-editor .vditor-ir tr:nth-child(even) td {
   background: var(--vditor-app-table-stripe-bg);
 }
