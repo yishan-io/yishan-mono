@@ -17,6 +17,12 @@ const require = createRequire(import.meta.url);
  * Resolves vditor via require.resolve so it works under both bun's symlink
  * store and CI's `--linker hoisted` layout, and never fails the build when
  * the package (or a single asset) is missing.
+ *
+ * The copy runs in `configResolved` (not `buildStart`): vite 8 indexes the
+ * public dir (`initPublicFiles`) before plugin `buildStart` hooks run in dev,
+ * so assets copied in buildStart are invisible to the dev server (every
+ * request falls through to the SPA fallback and returns index.html).
+ * `configResolved` runs during `resolveConfig`, before that index is built.
  */
 const VDITOR_CDN_ASSETS = [
   "js/icons/ant.js",
@@ -42,7 +48,7 @@ function copyVditorCdnAssets(): Plugin {
   const targetBase = path.resolve(appRoot, "src/renderer/public/vditor/dist");
   return {
     name: "vditor-cdn-assets",
-    buildStart() {
+    configResolved() {
       // Vitest loads this config too — tests don't need the runtime assets.
       if (process.env.VITEST) {
         return;
