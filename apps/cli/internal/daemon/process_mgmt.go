@@ -24,6 +24,73 @@ type StartConfig struct {
 	Stderr     io.Writer
 }
 
+const (
+	daemonStartProbeTimeout = 250 * time.Millisecond
+	daemonStartStopTimeout  = 10 * time.Second
+	daemonStartReadyTimeout = 5 * time.Second
+	daemonStartMaxAttempts  = 3
+)
+
+// StartDaemon starts a detached daemon for the profile and returns the state
+// of the daemon that is now running. It enforces a single live daemon per
+// profile via the exclusive profile lock: an already-healthy daemon is
+// adopted, a stale one is stopped and replaced, and a concurrent start is
+// resolved in favor of the healthy winner.
+func StartDaemon(cfg StartConfig, statePath string) (RuntimeState, error) {
+	lockPath := lockFilePathForState(statePath)
+
+	// Fast path: a healthy daemon already serves this profile. It must also
+	// hold the profile lock; a healthy but unlocked daemon is a pre-lock
+	// legacy process that we replace so it can no longer outlive restarts.
+	if state, err := LoadState(statePath); err == nil {
+		healthy := ProbeHealth(state, daemonStartProbeTimeout)
+		if healthy && IsLockHeld(lockPath) {
+			log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon already running")
+			return state, nil
+		}
+		if healthy {
+			log.Warn().Int("pid", state.PID).Msg("daemon is running without the profile lock; restarting it")
+		}
+		log.Warn().Int("pid", state.PID).Msg("stopping stale daemon")
+		if _, err := Stop(statePath, daemonStartStopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
+			return RuntimeState{}, err
+		}
+	} else if !os.IsNotExist(err) {
+		return RuntimeState{}, err
+	}
+
+	for attempt := 0; attempt < daemonStartMaxAttempts; attempt++ {
+		if _, err := StartDetached(cfg); err != nil {
+			return RuntimeState{}, err
+		}
+
+		state, err := WaitForReady(statePath, daemonStartReadyTimeout)
+		if err == nil {
+			log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon started")
+			return state, nil
+		}
+
+		// Our child did not become ready, likely because another daemon holds
+		// the profile lock. Adopt a healthy holder; stop a stale one and retry.
+		holder, holderErr := LoadState(statePath)
+		if holderErr == nil {
+			if ProbeHealth(holder, daemonStartProbeTimeout) {
+				log.Info().Int("pid", holder.PID).Msg("daemon already running")
+				return holder, nil
+			}
+			if _, stopErr := Stop(statePath, daemonStartStopTimeout); stopErr == nil {
+				continue
+			}
+		}
+		if IsLockHeld(lockPath) {
+			return RuntimeState{}, fmt.Errorf("start daemon: %w (another daemon holds the profile lock %q; run 'yishan daemon status' to inspect)", err, lockPath)
+		}
+		return RuntimeState{}, err
+	}
+
+	return RuntimeState{}, errors.New("failed to start daemon after multiple attempts")
+}
+
 func Stop(statePath string, timeout time.Duration) (RuntimeState, error) {
 	state, err := LoadState(statePath)
 	if err != nil {

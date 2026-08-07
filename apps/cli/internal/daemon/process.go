@@ -91,6 +91,15 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 		return fmt.Errorf("runtime is required")
 	}
 
+	// Enforce a single daemon per profile: hold the exclusive profile lock for
+	// the lifetime of this process. If another live daemon holds it, refuse to
+	// start instead of stacking a duplicate on the same profile.
+	lock, err := AcquireDaemonLock(lockFilePathForState(statePath))
+	if err != nil {
+		return err
+	}
+	defer lock.Release()
+
 	dr, err := bootstrapDaemon(cfg, statePath, runtime)
 	if err != nil {
 		return err

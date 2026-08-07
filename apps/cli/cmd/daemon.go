@@ -101,44 +101,22 @@ func startDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	state, err := daemon.LoadState(statePath)
-	if err == nil {
-		if daemon.IsProcessRunning(state.PID) {
-			if daemon.ProbeHealth(state, 250*time.Millisecond) {
-				log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon already running")
-				return nil
-			}
-
-			log.Warn().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon state exists but health check failed; removing stale state")
-		}
-
-		if err := daemon.RemoveState(statePath); err != nil {
-			return err
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
 	logFile, err := resolveLogFilePath()
 	if err != nil {
 		return err
 	}
 
-	if _, err := daemon.StartDetached(daemon.StartConfig{
+	state, err := daemon.StartDaemon(daemon.StartConfig{
 		Run:        buildRunConfig(""),
 		ConfigPath: appConfig.ConfigPath,
 		LogLevel:   appConfig.LogLevel,
 		LogFile:    logFile,
-	}); err != nil {
-		return err
-	}
-
-	state, err = daemon.WaitForReady(statePath, 5*time.Second)
+	}, statePath)
 	if err != nil {
 		return err
 	}
 
-	log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Str("log_file", logFile).Msg("daemon started")
+	log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Str("log_file", logFile).Msg("daemon running")
 	return nil
 }
 
@@ -224,6 +202,11 @@ func statusDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	lockPath, err := daemon.ResolveLockFilePath(appConfig.ConfigPath)
+	if err != nil {
+		return err
+	}
+
 	logFile, _ := daemon.ResolveLogFilePath(appConfig.ConfigPath)
 
 	state, err := daemon.LoadState(statePath)
@@ -261,15 +244,17 @@ func statusDaemon(_ *cobra.Command, _ []string) error {
 
 	return output.PrintRenderData(output.RenderData{
 		Title:   "daemon",
-		Columns: []string{"running", "pid", "address", "startedAt", "uptime", "statePath", "logFile"},
+		Columns: []string{"running", "pid", "address", "startedAt", "uptime", "lockPath", "lockHolderPID", "statePath", "logFile"},
 		Rows: []map[string]any{{
-			"running":   true,
-			"pid":       state.PID,
-			"address":   net.JoinHostPort(state.Host, strconv.Itoa(state.Port)),
-			"startedAt": state.StartedAt.UTC().Format(time.RFC3339),
-			"uptime":    time.Since(state.StartedAt).Round(time.Second).String(),
-			"statePath": statePath,
-			"logFile":   logFile,
+			"running":       true,
+			"pid":           state.PID,
+			"address":       net.JoinHostPort(state.Host, strconv.Itoa(state.Port)),
+			"startedAt":     state.StartedAt.UTC().Format(time.RFC3339),
+			"uptime":        time.Since(state.StartedAt).Round(time.Second).String(),
+			"lockPath":      lockPath,
+			"lockHolderPID": daemon.LockHolderPID(lockPath),
+			"statePath":     statePath,
+			"logFile":       logFile,
 		}},
 	})
 }
