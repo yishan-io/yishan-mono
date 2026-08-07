@@ -738,6 +738,36 @@ describe("tabs-domain layout and session", () => {
     expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(true);
   });
 
+  it("promotes a temporary file tab to a normal tab when it is edited", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: createBaseState().tabs.map((tab) =>
+        tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
+      ),
+    };
+
+    const patch = updateFileTabContentState(state, "file-1", "a2");
+    const nextFileTab = (patch.tabs ?? []).find((tab) => tab.id === "file-1");
+
+    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(true);
+    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isTemporary : undefined).toBe(false);
+  });
+
+  it("keeps a temporary file tab temporary when content is re-emitted unchanged", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: createBaseState().tabs.map((tab) =>
+        tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
+      ),
+    };
+
+    const patch = updateFileTabContentState(state, "file-1", "a1");
+    const nextFileTab = (patch.tabs ?? []).find((tab) => tab.id === "file-1");
+
+    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(false);
+    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isTemporary : undefined).toBe(true);
+  });
+
   it("clears dirty flag when file tab save is recorded", () => {
     const state = createBaseState();
     const edited = {

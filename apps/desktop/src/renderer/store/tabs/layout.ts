@@ -197,19 +197,24 @@ export function updateFileTabContentState(
   content: string,
 ): Partial<WorkspaceTabStateSlice> {
   return {
-    tabs: state.tabs.map((tab) =>
-      tab.id === tabId && tab.kind === "file"
-        ? {
-            ...tab,
-            data: {
-              ...tab.data,
-              content,
-              isDirty: content !== tab.data.savedContent,
-              isDeleted: false,
-            },
-          }
-        : tab,
-    ),
+    tabs: state.tabs.map((tab) => {
+      if (tab.id !== tabId || tab.kind !== "file") {
+        return tab;
+      }
+      const isDirty = content !== tab.data.savedContent;
+      return {
+        ...tab,
+        data: {
+          ...tab.data,
+          content,
+          isDirty,
+          // Editing a temporary (preview) tab promotes it to a normal tab.
+          // Re-emissions of the saved content (e.g. disk sync) keep it temporary.
+          isTemporary: isDirty ? false : tab.data.isTemporary,
+          isDeleted: false,
+        },
+      };
+    }),
   };
 }
 
