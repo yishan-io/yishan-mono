@@ -13,6 +13,33 @@
 
 /* ---- Base custom properties (light default) ---------------------------- */
 
+.vditor-app-editor {
+  --vditor-app-bg: #ffffff;
+  --vditor-app-surface: #ffffff;
+  --vditor-app-foreground: #1f2430;
+  --vditor-app-text-primary: #19211f;
+  --vditor-app-text-secondary: #566761;
+  --vditor-app-border: #dfe3e8;
+  --vditor-app-selection: #ced7ec;
+  --vditor-app-line-highlight: #f1f3f7;
+  --vditor-app-cursor: #2a2a31;
+  --vditor-app-code-bg: rgba(0, 0, 0, 0.06);
+  --vditor-app-code-text: #1f2430;
+  --vditor-app-blockquote-bg: #f6f8f3;
+  --vditor-app-blockquote-border: #afc1bb;
+  --vditor-app-blockquote-text: #566761;
+  --vditor-app-table-border: #c8d8d2;
+  --vditor-app-table-header-bg: #edf3ef;
+  --vditor-app-table-stripe-bg: #f6f8f3;
+  --vditor-app-link-color: #0060b8;
+  --vditor-app-hr-color: #c8d8d2;
+  --vditor-app-diagram-loading-color: #8ca6a0;
+  --vditor-app-diagram-error-color: #f85149;
+  --vditor-app-task-checkbox-border: #afc1bb;
+}
+
+/* Explicit light-mode block (same values as the default). */
+
 .vditor-app-editor[data-theme="light"] {
   --vditor-app-bg: #ffffff;
   --vditor-app-surface: #ffffff;
@@ -40,7 +67,12 @@
 
 /* ---- Dark theme overrides ---------------------------------------------- */
 
-.vditor-app-editor[data-theme="dark"] {
+/* Applied from either source: the wrapper's data-theme attribute OR Vditor's
+ * own vditor--dark class (toggled by vditor.setTheme). Theming stays
+ * correct even if one of the two mechanisms is missing or stale. */
+
+.vditor-app-editor[data-theme="dark"],
+.vditor-app-editor.vditor--dark {
   --vditor-app-bg: #292e36;
   --vditor-app-surface: #31363f;
   --vditor-app-foreground: #d4dbe8;
@@ -126,6 +158,9 @@
 .vditor-app-editor .vditor-ir pre.vditor-reset {
   overflow: visible;
   padding: 0 !important;
+  /* The content text color is owned by our theme (vditor's own light default
+   * `.vditor-reset { color: #24292e }` would stay near-black in dark mode). */
+  color: var(--vditor-app-text-primary);
   /* Readable line length, matching the preview's readable mode (860px, centered).
    * The wrapper still scrolls flush against the pane edge. */
   max-width: 860px;
