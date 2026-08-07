@@ -16,11 +16,67 @@ import { getErrorMessage } from "../../helpers/errorHelpers";
 // Types
 // ---------------------------------------------------------------------------
 
+/** Languages Vditor ships built-in i18n for (toolbar tooltips etc.). */
+export type VditorLang =
+  | "de_DE"
+  | "en_US"
+  | "es_ES"
+  | "fr_FR"
+  | "ja_JP"
+  | "ko_KR"
+  | "pt_BR"
+  | "ru_RU"
+  | "sv_SE"
+  | "vi_VN"
+  | "zh_CN"
+  | "zh_TW";
+
+/**
+ * Maps the app's runtime language ("en", "zh", …) to a Vditor i18n code.
+ * Falls back to en_US for unsupported languages.
+ */
+export function resolveVditorLang(appLanguage: string | undefined): VditorLang {
+  const base = appLanguage?.split(/[-_]/)[0]?.toLowerCase();
+  if (base === "zh") {
+    return "zh_CN";
+  }
+  if (base === "de") {
+    return "de_DE";
+  }
+  if (base === "es") {
+    return "es_ES";
+  }
+  if (base === "fr") {
+    return "fr_FR";
+  }
+  if (base === "ja") {
+    return "ja_JP";
+  }
+  if (base === "ko") {
+    return "ko_KR";
+  }
+  if (base === "pt") {
+    return "pt_BR";
+  }
+  if (base === "ru") {
+    return "ru_RU";
+  }
+  if (base === "sv") {
+    return "sv_SE";
+  }
+  if (base === "vi") {
+    return "vi_VN";
+  }
+  return "en_US";
+}
+
 export interface VditorEditorOptions {
   /** Initial markdown content to load into the editor. */
   defaultValue: string;
   /** Whether the editor should use dark theme. */
   isDark: boolean;
+  /** Vditor UI language (toolbar tooltips, hints). Defaults to en_US. */
+  lang?: VditorLang;
   /** Called on every user edit with the current markdown string. */
   onMarkdownChange: (markdown: string) => void;
 }
@@ -65,6 +121,7 @@ export function createVditorEditor(root: HTMLElement, options: VditorEditorOptio
         mode: "ir",
         height: "100%",
         cache: { enable: false },
+        lang: options.lang ?? "en_US",
         // Curated formatting toolbar (hidden in view-only mode via the
         // [data-view-only] CSS rule in vditorTheme.css).
         toolbar: [

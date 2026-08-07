@@ -52,6 +52,7 @@ let capturedCreationOptions: {
 let onMarkdownChangeFromFactory: ((markdown: string) => void) | null = null;
 
 vi.mock("./vditorEditor", () => ({
+  resolveVditorLang: (lang?: string) => (lang?.toLowerCase().startsWith("zh") ? "zh_CN" : "en_US"),
   createVditorEditor: vi.fn().mockImplementation(
     (
       _root: HTMLElement,
@@ -197,7 +198,13 @@ describe("VditorFileEditor shared editor instance", () => {
     const onContentChange = vi.fn();
 
     const { container } = render(
-      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={false} isDark={false} onContentChange={onContentChange} />,
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        isDark={false}
+        onContentChange={onContentChange}
+      />,
     );
 
     const rootDiv = container.firstChild as HTMLElement;
@@ -218,7 +225,13 @@ describe("VditorFileEditor shared editor instance", () => {
     const onContentChange = vi.fn();
 
     const { container } = render(
-      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={false} isDark={false} onContentChange={onContentChange} />,
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={false}
+        isDark={false}
+        onContentChange={onContentChange}
+      />,
     );
 
     const rootDiv = container.firstChild as HTMLElement;
@@ -234,7 +247,13 @@ describe("VditorFileEditor shared editor instance", () => {
     const onContentChange = vi.fn();
 
     const { container } = render(
-      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={true} isDark={false} onContentChange={onContentChange} />,
+      <VditorFileEditor
+        path="/test.md"
+        content={HELLO}
+        isDeleted={true}
+        isDark={false}
+        onContentChange={onContentChange}
+      />,
     );
 
     const rootDiv = container.firstChild as HTMLElement;

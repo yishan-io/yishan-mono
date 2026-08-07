@@ -15,10 +15,11 @@ import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type Vditor from "vditor";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import { i18n } from "../../i18n";
 import { layoutStore } from "../../store/settings/layoutStore";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
 import { attachMermaidZoomButtons, rethemeMermaidDiagrams } from "./mermaidZoomButton";
-import { type VditorEditorHandle, createVditorEditor } from "./vditorEditor";
+import { type VditorEditorHandle, createVditorEditor, resolveVditorLang } from "./vditorEditor";
 import "vditor/dist/index.css";
 import "./vditorTheme.css";
 
@@ -108,6 +109,10 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   const markdownThemePreference = layoutStore((state) => state.markdownThemePreference);
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
   const resolvedIsDark = markdownThemePreference === "inherit" ? isDark : markdownThemePreference === "dark";
+  // Vditor UI language (toolbar tooltips etc.) follows the app language. The
+  // editor is created once per file open, so a language switch applies on the
+  // next file open.
+  const vditorLang = resolveVditorLang(i18n.language);
   const rootRef = useRef<HTMLDivElement>(null);
   // SVG markup for the shared diagram zoom overlay (opened from a mermaid
   // diagram's expand button).
@@ -237,6 +242,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
         promise: createVditorEditor(root, {
           defaultValue: content,
           isDark: resolvedIsDark,
+          lang: vditorLang,
           onMarkdownChange: (md) => rootEmitters.get(root)?.(md),
         }),
         refCount: 0,

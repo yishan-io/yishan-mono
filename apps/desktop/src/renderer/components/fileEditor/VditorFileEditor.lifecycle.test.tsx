@@ -44,6 +44,7 @@ let capturedCreationOptions: {
 let onMarkdownChangeFromFactory: ((markdown: string) => void) | null = null;
 
 vi.mock("./vditorEditor", () => ({
+  resolveVditorLang: (lang?: string) => (lang?.toLowerCase().startsWith("zh") ? "zh_CN" : "en_US"),
   createVditorEditor: vi.fn().mockImplementation(
     (
       _root: HTMLElement,

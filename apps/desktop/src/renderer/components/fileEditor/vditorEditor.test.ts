@@ -93,7 +93,7 @@ vi.mock("vditor/dist/js/lute/lute.min.js?url", () => ({
 // SUT — imported AFTER mocks
 // ---------------------------------------------------------------------------
 
-import { createVditorEditor } from "./vditorEditor";
+import { createVditorEditor, resolveVditorLang } from "./vditorEditor";
 import type { VditorEditorOptions } from "./vditorEditor";
 
 // ---------------------------------------------------------------------------
@@ -407,5 +407,39 @@ describe("createVditorEditor factory", () => {
     });
 
     await expect(promise).rejects.toThrow("Cannot find element");
+  });
+
+  it("passes lang to the constructor (defaults to en_US)", async () => {
+    await createEditor(root, {
+      defaultValue: "# Hello",
+      isDark: false,
+      onMarkdownChange,
+    });
+    expect(capturedConstructorOptions.current?.lang).toBe("en_US");
+
+    await createEditor(root, {
+      defaultValue: "# Hello",
+      isDark: false,
+      lang: "zh_CN",
+      onMarkdownChange,
+    });
+    expect(capturedConstructorOptions.current?.lang).toBe("zh_CN");
+  });
+});
+
+describe("resolveVditorLang", () => {
+  it("maps supported app languages to Vditor i18n codes", () => {
+    expect(resolveVditorLang("en")).toBe("en_US");
+    expect(resolveVditorLang("en-US")).toBe("en_US");
+    expect(resolveVditorLang("zh")).toBe("zh_CN");
+    expect(resolveVditorLang("zh-CN")).toBe("zh_CN");
+    expect(resolveVditorLang("de")).toBe("de_DE");
+    expect(resolveVditorLang("ja")).toBe("ja_JP");
+  });
+
+  it("falls back to en_US for undefined or unsupported languages", () => {
+    expect(resolveVditorLang(undefined)).toBe("en_US");
+    expect(resolveVditorLang("fr")).toBe("fr_FR");
+    expect(resolveVditorLang("xx")).toBe("en_US");
   });
 });
