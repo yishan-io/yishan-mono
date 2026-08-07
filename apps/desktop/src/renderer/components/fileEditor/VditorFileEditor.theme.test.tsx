@@ -61,6 +61,13 @@ vi.mock("./vditorEditor", () => ({
   ),
 }));
 
+vi.mock("./mermaidZoomButton", () => ({
+  attachMermaidZoomButtons: vi.fn(() => () => undefined),
+  rethemeMermaidDiagrams: vi.fn(() => Promise.resolve()),
+}));
+
+import { rethemeMermaidDiagrams } from "./mermaidZoomButton";
+
 // ---------------------------------------------------------------------------
 // Minimal required styles
 // ---------------------------------------------------------------------------
@@ -163,8 +170,12 @@ describe("VditorFileEditor theme", () => {
     await waitFor(() => {
       expect(mockSetTheme).toHaveBeenCalledWith("dark");
     });
+    await waitFor(() => {
+      expect(rethemeMermaidDiagrams).toHaveBeenCalled();
+    });
 
     mockSetTheme.mockClear();
+    vi.mocked(rethemeMermaidDiagrams).mockClear();
 
     // Toggle back to light
     rerender(
@@ -180,5 +191,20 @@ describe("VditorFileEditor theme", () => {
     await waitFor(() => {
       expect(mockSetTheme).toHaveBeenCalledWith("classic");
     });
+    await waitFor(() => {
+      expect(rethemeMermaidDiagrams).toHaveBeenCalled();
+    });
+  });
+
+  it("does not re-render mermaid on the initial mount", async () => {
+    render(
+      <VditorFileEditor path="/test.md" content={HELLO} isDeleted={false} isDark={false} onContentChange={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(onMarkdownChangeFromFactory).not.toBeNull();
+    });
+
+    expect(rethemeMermaidDiagrams).not.toHaveBeenCalled();
   });
 });

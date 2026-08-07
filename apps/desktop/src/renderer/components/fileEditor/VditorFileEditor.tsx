@@ -17,7 +17,7 @@ import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { layoutStore } from "../../store/settings/layoutStore";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
-import { attachMermaidZoomButtons } from "./mermaidZoomButton";
+import { attachMermaidZoomButtons, rethemeMermaidDiagrams } from "./mermaidZoomButton";
 import { type VditorEditorHandle, createVditorEditor } from "./vditorEditor";
 import "vditor/dist/index.css";
 import "./vditorTheme.css";
@@ -289,13 +289,27 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   // Vditor's own theme is set at construction (classic/dark). The root
   // data-theme attribute drives CSS custom-property overrides in
   // vditorTheme.css, which are authoritative for the app's design tokens.
-  // Re-creating the editor on theme change is not needed.
+  // Vditor's setTheme only toggles the vditor--dark class, so on an actual
+  // theme change we also re-render already-rendered mermaid diagrams with the
+  // new palette (their SVGs keep the original colors otherwise).
+
+  const prevIsDarkRef = useRef(isDark);
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     root.setAttribute("data-theme", isDark ? "dark" : "light");
     handleRef.current?.vditor.setTheme(isDark ? "dark" : "classic");
+
+    const themeChanged = prevIsDarkRef.current !== isDark;
+    prevIsDarkRef.current = isDark;
+    if (themeChanged) {
+      void rethemeMermaidDiagrams(root, {
+        isDark,
+        fontFamily: getComputedStyle(root).fontFamily,
+        onError: (message) => console.error("[VditorFileEditor] mermaid re-theme failed:", message),
+      });
+    }
   }, [isDark]);
 
   // ── Read-only for deleted files ──

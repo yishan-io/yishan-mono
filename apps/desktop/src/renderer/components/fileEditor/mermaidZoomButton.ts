@@ -13,6 +13,9 @@
  * `DiagramZoomOverlay` with it.
  */
 
+import { getErrorMessage } from "../../helpers/errorHelpers";
+import { mermaidIframeRenderer } from "../markdown/mermaidIframeRenderer";
+
 const ZOOM_BUTTON_CLASS = "vditor-mermaid-zoom-btn";
 const ATTACHED_ATTR = "data-zoom-attached";
 
@@ -105,3 +108,46 @@ export function attachMermaidZoomButtons(
 }
 
 export { ZOOM_BUTTON_CLASS, ATTACHED_ATTR, getRenderedMermaidSvg, createZoomButton };
+
+// ---------------------------------------------------------------------------
+// Theme re-render
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-renders every mermaid diagram in the editor with a new theme.
+ *
+ * Vditor's `setTheme` only toggles the `vditor--dark` class — diagrams already
+ * rendered keep their original palette. Extract each diagram's source from its
+ * marker `<pre>` and re-render the preview panel's SVG with the app's
+ * off-main-thread `mermaidIframeRenderer` (same service the preview pane and
+ * the zoom overlay use).
+ */
+export async function rethemeMermaidDiagrams(
+  root: HTMLElement,
+  options: { isDark: boolean; fontFamily?: string; onError?: (message: string) => void },
+): Promise<void> {
+  const codeBlocks = root.querySelectorAll<HTMLElement>('.vditor-ir__node[data-type="code-block"]');
+  const tasks: Array<Promise<void>> = [];
+
+  for (const block of codeBlocks) {
+    const source = block.querySelector<HTMLElement>(".vditor-ir__marker--pre code.language-mermaid");
+    const preview = block.querySelector<HTMLElement>(".vditor-ir__preview .language-mermaid");
+    const code = source?.textContent?.trim();
+    if (!source || !preview || !code) {
+      continue;
+    }
+
+    tasks.push(
+      mermaidIframeRenderer
+        .render(code, { isDark: options.isDark, fontFamily: options.fontFamily ?? "" })
+        .then((svg) => {
+          preview.innerHTML = svg;
+        })
+        .catch((error: unknown) => {
+          options.onError?.(getErrorMessage(error));
+        }),
+    );
+  }
+
+  await Promise.all(tasks);
+}

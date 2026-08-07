@@ -2,8 +2,24 @@
  * @vitest-environment jsdom
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { ATTACHED_ATTR, ZOOM_BUTTON_CLASS, attachMermaidZoomButtons, getRenderedMermaidSvg } from "./mermaidZoomButton";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ATTACHED_ATTR,
+  ZOOM_BUTTON_CLASS,
+  attachMermaidZoomButtons,
+  getRenderedMermaidSvg,
+  rethemeMermaidDiagrams,
+} from "./mermaidZoomButton";
+
+vi.mock("../markdown/mermaidIframeRenderer", () => ({
+  mermaidIframeRenderer: {
+    render: vi.fn().mockResolvedValue(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="darkblue"/></svg>',
+    ),
+  },
+}));
+
+import { mermaidIframeRenderer } from "../markdown/mermaidIframeRenderer";
 
 /** Builds a fake Vditor IR code-block preview panel with a rendered mermaid. */
 function buildMermaidPanel(): HTMLElement {
@@ -18,6 +34,10 @@ function buildMermaidPanel(): HTMLElement {
 }
 
 describe("mermaidZoomButton", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     document.body.innerHTML = "";
   });
@@ -123,5 +143,91 @@ describe("mermaidZoomButton", () => {
     const panel = buildMermaidPanel();
     panel.querySelector(".language-mermaid")?.removeAttribute("data-processed");
     expect(getRenderedMermaidSvg(panel)).toBeNull();
+  });
+
+  // ── Theme re-render ──
+
+  it("re-renders mermaid previews with the new theme and source from the marker pre", async () => {
+    const root = document.createElement("div");
+    const block = document.createElement("div");
+    block.className = "vditor-ir__node";
+    block.setAttribute("data-type", "code-block");
+    const source = document.createElement("pre");
+    source.className = "vditor-ir__marker--pre";
+    const sourceCode = document.createElement("code");
+    sourceCode.className = "language-mermaid";
+    sourceCode.textContent = "graph LR; A-->B";
+    source.appendChild(sourceCode);
+    const preview = document.createElement("div");
+    preview.className = "vditor-ir__preview";
+    const previewCode = document.createElement("code");
+    previewCode.className = "language-mermaid";
+    previewCode.setAttribute("data-processed", "true");
+    previewCode.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="lightgray"/></svg>';
+    preview.appendChild(previewCode);
+    block.append(source, preview);
+    root.appendChild(block);
+
+    const onError = vi.fn();
+    await rethemeMermaidDiagrams(root, { isDark: true, fontFamily: "sans-serif", onError });
+
+    expect(mermaidIframeRenderer.render).toHaveBeenCalledWith("graph LR; A-->B", {
+      isDark: true,
+      fontFamily: "sans-serif",
+    });
+    expect(previewCode.innerHTML).toContain("fill=\"darkblue\"");
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("skips blocks without a mermaid source or preview", async () => {
+    const root = document.createElement("div");
+    const block = document.createElement("div");
+    block.className = "vditor-ir__node";
+    block.setAttribute("data-type", "code-block");
+    // javascript code block — no mermaid
+    const source = document.createElement("pre");
+    source.className = "vditor-ir__marker--pre";
+    const sourceCode = document.createElement("code");
+    sourceCode.className = "language-javascript";
+    sourceCode.textContent = "const a = 1;";
+    source.appendChild(sourceCode);
+    block.appendChild(source);
+    root.appendChild(block);
+
+    await rethemeMermaidDiagrams(root, { isDark: true });
+
+    expect(mermaidIframeRenderer.render).not.toHaveBeenCalled();
+  });
+
+  it("reports render failures via onError without throwing", async () => {
+    vi.mocked(mermaidIframeRenderer.render).mockRejectedValueOnce(new Error("render exploded"));
+
+    const root = document.createElement("div");
+    const block = document.createElement("div");
+    block.className = "vditor-ir__node";
+    block.setAttribute("data-type", "code-block");
+    const source = document.createElement("pre");
+    source.className = "vditor-ir__marker--pre";
+    const sourceCode = document.createElement("code");
+    sourceCode.className = "language-mermaid";
+    sourceCode.textContent = "graph LR; A-->B";
+    source.appendChild(sourceCode);
+    const preview = document.createElement("div");
+    preview.className = "vditor-ir__preview";
+    const previewCode = document.createElement("code");
+    previewCode.className = "language-mermaid";
+    previewCode.setAttribute("data-processed", "true");
+    previewCode.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50" fill="lightgray"/></svg>';
+    preview.appendChild(previewCode);
+    block.append(source, preview);
+    root.appendChild(block);
+
+    const onError = vi.fn();
+    await expect(rethemeMermaidDiagrams(root, { isDark: true, onError })).resolves.toBeUndefined();
+    expect(onError).toHaveBeenCalledWith("render exploded");
+    // Original svg left untouched on failure.
+    expect(previewCode.innerHTML).toContain("fill=\"lightgray\"");
   });
 });
