@@ -118,7 +118,10 @@
   font-size: 14px;
   line-height: 1.7;
   height: 100%;
-  overflow: hidden;
+  /* NOTE: no overflow: hidden on the root — the toolbar dropdowns (hint/
+   * panel) must be able to extend past the root bounds without being
+   * clipped. The content area constrains its own overflow (.vditor-content
+   * overflow: hidden, .vditor-ir overflow-y: auto). */
 }
 
 /* Override vditor's default font-family and border on the .vditor wrapper */
@@ -426,6 +429,16 @@
   border-bottom: 1px solid var(--vditor-app-border);
   background: var(--vditor-app-surface);
   padding: 4px 8px;
+  /* Stacking context above the content area: toolbar dropdowns (hint/panel)
+   * must always paint over the editor content, never behind it. */
+  position: relative;
+  z-index: 5;
+}
+
+/* Dropdown popups (headings etc.) ride above everything inside the editor. */
+.vditor-app-editor .vditor-toolbar .vditor-hint,
+.vditor-app-editor .vditor-toolbar .vditor-panel {
+  z-index: 50;
 }
 
 .vditor-app-editor[data-view-only="true"] .vditor-toolbar {
