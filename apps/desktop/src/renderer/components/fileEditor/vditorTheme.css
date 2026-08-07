@@ -435,6 +435,11 @@
   z-index: 5;
 }
 
+/* More breathing room between toolbar buttons (dividers keep their own). */
+.vditor-app-editor .vditor-toolbar__item {
+  margin-right: 4px;
+}
+
 /* Dropdown popups (headings etc.) ride above everything inside the editor. */
 .vditor-app-editor .vditor-toolbar .vditor-hint,
 .vditor-app-editor .vditor-toolbar .vditor-panel {
