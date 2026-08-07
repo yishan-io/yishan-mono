@@ -34,6 +34,9 @@ describe("mermaidZoomButton", () => {
     const button = panel.querySelector<HTMLButtonElement>(`.${ZOOM_BUTTON_CLASS}`);
     expect(button).not.toBeNull();
     expect(panel.getAttribute(ATTACHED_ATTR)).toBe("true");
+    // Opacity must NOT be inline — the stylesheet hover rule is what reveals
+    // the button (an inline opacity: 0 would beat the :hover rule forever).
+    expect(button?.style.opacity).toBe("");
 
     button?.click();
     expect(onZoom).toHaveBeenCalledTimes(1);

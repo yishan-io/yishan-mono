@@ -39,8 +39,8 @@ function createZoomButton(panel: HTMLElement, onZoom: (svgContent: string) => vo
     "position:absolute",
     "top:4px",
     "right:4px",
-    "opacity:0",
-    "transition:opacity 0.15s",
+    // NOTE: do NOT set opacity/transition inline — the hover-reveal rules in
+    // vditorTheme.css (.vditor-mermaid-zoom-btn) must win over inline styles.
     "background:var(--vditor-app-surface, #ffffff)",
     "border:1px solid var(--vditor-app-border, rgba(0,0,0,0.15))",
     "border-radius:4px",
