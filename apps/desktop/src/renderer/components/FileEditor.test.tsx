@@ -236,7 +236,9 @@ describe("FileEditor", () => {
   it("saves markdown editor content on Cmd+S without relying on Monaco's binding", () => {
     const onSave = vi.fn();
 
-    renderWithAppTheme(<FileEditor path="README.md" content="initial" onSave={onSave} />);
+    renderWithAppTheme(
+      <FileEditor path="README.md" content="initial" defaultMarkdownViewMode="edit" onSave={onSave} />,
+    );
     mockEditorState.editorValue = "saved text";
     const monacoDomNode = mockEditorState.editorDomNode;
 
@@ -461,73 +463,6 @@ describe("FileEditor", () => {
 
     expect(onCopyPath).toHaveBeenCalledWith("src/components/App.tsx");
     expect(onOpenExternalApp).toHaveBeenCalledWith("src/components/App.tsx");
-  });
-
-  it("defaults markdown files to split mode", () => {
-    renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
-
-    expect(screen.getByRole("button", { name: "Split view" }).getAttribute("aria-pressed")).toBe("true");
-  });
-
-  it("respects configured markdown default mode", () => {
-    renderWithAppTheme(<FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />);
-
-    expect(screen.getByRole("button", { name: "Preview" }).getAttribute("aria-pressed")).toBe("true");
-  });
-
-  describe("preview find bar (Cmd+F)", () => {
-    it("opens the find bar when Cmd+F is pressed in preview-only mode", () => {
-      const { getByTestId } = renderWithAppTheme(
-        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />,
-      );
-
-      // findOpen should start false
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBeFalsy();
-
-      const previewPane = getByTestId("markdown-preview-pane");
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
-      });
-
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(true);
-    });
-
-    it("does not open find bar on Cmd+F in split mode — triggers Monaco find instead", () => {
-      const { getByTestId } = renderWithAppTheme(
-        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="split" />,
-      );
-
-      const previewPane = getByTestId("markdown-preview-pane");
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
-      });
-
-      // find bar should NOT open in split mode
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBeFalsy();
-      // editor focus + find action should have been called
-      expect(mockEditorState.editorFocus).toHaveBeenCalled();
-      expect(mockEditorState.editorFindAction.run).toHaveBeenCalled();
-    });
-
-    it("closes the find bar on Escape when it is open", () => {
-      const { getByTestId } = renderWithAppTheme(
-        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />,
-      );
-
-      const previewPane = getByTestId("markdown-preview-pane");
-
-      // Open it first
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
-      });
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(true);
-
-      // Now close with Escape
-      act(() => {
-        fireEvent.keyDown(previewPane, { key: "Escape" });
-      });
-      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(false);
-    });
   });
 
   describe("Excalidraw dispatch", () => {

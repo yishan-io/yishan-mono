@@ -4,12 +4,13 @@ import { immer } from "zustand/middleware/immer";
 import type { AppThemePreference } from "../../theme";
 
 export const LAYOUT_STORE_STORAGE_KEY = "yishan-layout-store";
+export const LAYOUT_STORE_VERSION = 1 as const;
 export const DEFAULT_LEFT_WIDTH = 320;
 export const DEFAULT_RIGHT_WIDTH = 400;
 
 export type LinkTarget = "built-in" | "external";
 export type MarkdownThemePreference = "inherit" | "light" | "dark";
-export type MarkdownDefaultViewMode = "edit" | "preview" | "split";
+export type MarkdownDefaultViewMode = "edit" | "preview" | "split" | "wysiwyg";
 export type MarkdownPreviewFontSize = "small" | "medium" | "large";
 export type MarkdownPreviewWidth = "readable" | "full";
 
@@ -52,7 +53,7 @@ export const layoutStore = create<LayoutStoreState>()(
       rightWidth: DEFAULT_RIGHT_WIDTH,
       themePreference: "system",
       markdownThemePreference: "inherit" as MarkdownThemePreference,
-      markdownDefaultViewMode: "split" as MarkdownDefaultViewMode,
+      markdownDefaultViewMode: "wysiwyg" as MarkdownDefaultViewMode,
       markdownPreviewFontSize: "medium" as MarkdownPreviewFontSize,
       markdownPreviewWidth: "readable" as MarkdownPreviewWidth,
       isMarkdownOutlineVisible: false,
@@ -109,6 +110,19 @@ export const layoutStore = create<LayoutStoreState>()(
     {
       name: LAYOUT_STORE_STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
+      version: LAYOUT_STORE_VERSION,
+      migrate: (persistedState, version) => {
+        if (version < LAYOUT_STORE_VERSION) {
+          const state = persistedState as { markdownDefaultViewMode?: MarkdownDefaultViewMode } | null;
+          if (state && "markdownDefaultViewMode" in state && state.markdownDefaultViewMode === "split") {
+            // v0 shipped with "split" as the implicit default. The WYSIWYG editor is
+            // the intended default now, so one-time migrate the old default value.
+            // Explicitly chosen "edit" / "preview" values are preserved.
+            return { ...state, markdownDefaultViewMode: "wysiwyg" };
+          }
+        }
+        return (persistedState ?? {}) as LayoutStoreState;
+      },
       partialize: (state) => ({
         leftWidth: state.leftWidth,
         rightWidth: state.rightWidth,

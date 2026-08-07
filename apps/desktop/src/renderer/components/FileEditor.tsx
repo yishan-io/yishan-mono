@@ -7,6 +7,7 @@ import { CliSpinner } from "./CliSpinner";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 import { MarkdownPreviewPane } from "./fileEditor/MarkdownPreviewPane";
 import { MarkdownViewModeActions } from "./fileEditor/MarkdownViewModeActions";
+import type { VditorFileEditorHandle } from "./fileEditor/VditorFileEditor";
 import { useMarkdownViewMode } from "./fileEditor/useMarkdownViewMode";
 import { useMonacoFileEditor } from "./fileEditor/useMonacoFileEditor";
 
@@ -35,7 +36,7 @@ function MonacoFileEditor({
   worktreePath,
   isDeleted = false,
   isIgnored = false,
-  defaultMarkdownViewMode = "split",
+  defaultMarkdownViewMode = "wysiwyg",
   focusRequestKey = 0,
   onContentChange,
   onSave,
@@ -46,6 +47,8 @@ function MonacoFileEditor({
   const fileEditorRootRef = useRef<HTMLDivElement | null>(null);
   const splitContainerRef = useRef<HTMLDivElement | null>(null);
   const [editorPaneRatio, setEditorPaneRatio] = useState(0.5);
+  const wysiwygHandleRef = useRef<VditorFileEditorHandle | null>(null);
+  const showWysiwygEditorRef = useRef(false);
   const {
     editorHostRef,
     editorRef,
@@ -82,8 +85,14 @@ function MonacoFileEditor({
     defaultMarkdownViewMode,
   });
 
+  const showWysiwygEditor = isMarkdown && viewMode === "wysiwyg";
   const showEditor = viewMode === "edit" || viewMode === "split";
+  const showEditorPane = showEditor || showWysiwygEditor;
   const showPreview = viewMode === "preview" || viewMode === "split";
+
+  // Sync ref for the capture-phase keydown handler (avoids stale-closure risk
+  // when the view mode changes without the effect re-registering).
+  showWysiwygEditorRef.current = showWysiwygEditor;
 
   const handleMarkdownPreviewChangeAndSave = useCallback(
     (nextContent: string) => {
@@ -127,10 +136,19 @@ function MonacoFileEditor({
       }
 
       // Single Cmd/Ctrl+S save path for every focus target inside the editor
-      // root (toolbar, preview DOM, Monaco). Intercepting in the capture phase
-      // also keeps Monaco's internal keybinding service from seeing the event.
+      // root (toolbar, preview DOM, Monaco, Vditor). Intercepting in the capture
+      // phase also keeps Monaco's internal keybinding service from seeing the event.
       event.preventDefault();
       event.stopPropagation();
+
+      // When WYSIWYG is active, flush the Vditor editor so the hidden Monaco
+      // model is current before save. Vditor's input callback is render-based
+      // so flushNow() closes the stale-save
+      // window.
+      if (showWysiwygEditorRef.current) {
+        wysiwygHandleRef.current?.flushNow();
+      }
+
       handleSaveCurrentContent();
     };
 
@@ -226,12 +244,43 @@ function MonacoFileEditor({
         <Box
           ref={editorHostRef}
           sx={{
-            flex: showPreview && showEditor ? `0 0 ${Math.round(editorPaneRatio * 100)}%` : showEditor ? 1 : 0,
+            flex: showPreview && showEditor ? `0 0 ${Math.round(editorPaneRatio * 100)}%` : showEditorPane ? 1 : 0,
             minHeight: 0,
             minWidth: 0,
-            display: showEditor ? "block" : "none",
+            display: showEditorPane ? "block" : "none",
+            position: "relative",
+            "& > .monaco-editor": {
+              display: showEditor ? undefined : "none",
+            },
           }}
-        />
+        >
+          {showWysiwygEditor ? (
+            <Suspense
+              fallback={
+                <Box
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                  }}
+                />
+              }
+            >
+              <VditorFileEditor
+                ref={wysiwygHandleRef}
+                key={path}
+                path={path}
+                content={content}
+                isDeleted={isDeleted}
+                focusRequestKey={focusRequestKey}
+                isDark={isDark}
+                onContentChange={handleMarkdownPreviewContentChange}
+              />
+            </Suspense>
+          ) : null}
+        </Box>
 
         {showEditor && showPreview ? (
           <Box
@@ -286,6 +335,9 @@ function MonacoFileEditor({
   );
 }
 
+const VditorFileEditor = lazy(() =>
+  import("./fileEditor/VditorFileEditor").then((m) => ({ default: m.VditorFileEditor })),
+);
 const ExcalidrawFileEditor = lazy(() => import("./fileEditor/ExcalidrawFileEditor"));
 
 /** Dispatches to the Excalidraw editor for .excalidraw files, or Monaco for all others. */

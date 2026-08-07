@@ -76,6 +76,7 @@ export function MarkdownSettingsView() {
               <MenuItem value="edit">{t("settings.appearance.markdown.defaultViewMode.options.edit")}</MenuItem>
               <MenuItem value="preview">{t("settings.appearance.markdown.defaultViewMode.options.preview")}</MenuItem>
               <MenuItem value="split">{t("settings.appearance.markdown.defaultViewMode.options.split")}</MenuItem>
+              <MenuItem value="wysiwyg">{t("settings.appearance.markdown.defaultViewMode.options.wysiwyg")}</MenuItem>
             </SettingsCompactSelect>
           }
         />

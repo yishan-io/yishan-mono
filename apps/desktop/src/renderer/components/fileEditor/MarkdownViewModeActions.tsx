@@ -1,6 +1,6 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
 import type { ReactNode } from "react";
-import { LuCode, LuColumns2, LuEye } from "react-icons/lu";
+import { LuCode, LuColumns2, LuEye, LuPenLine } from "react-icons/lu";
 import type { MarkdownViewMode } from "./types";
 
 const toggleButtonStyles = {
@@ -40,6 +40,13 @@ export function MarkdownViewModeActions({ currentMode, onSelect }: MarkdownViewM
         onSelect={onSelect}
       />
       <Box sx={{ width: "1px", height: 14, bgcolor: "divider", mx: 0.5 }} />
+      <MarkdownViewModeToggle
+        mode="wysiwyg"
+        currentMode={currentMode}
+        icon={<LuPenLine size={14} />}
+        tooltip="WYSIWYG"
+        onSelect={onSelect}
+      />
     </>
   );
 }

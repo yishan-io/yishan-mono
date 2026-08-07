@@ -352,7 +352,8 @@
           "options": {
             "edit": "Edit",
             "preview": "Preview",
-            "split": "Split"
+            "split": "Split",
+            "wysiwyg": "WYSIWYG"
           }
         },
         "previewFontSize": {
