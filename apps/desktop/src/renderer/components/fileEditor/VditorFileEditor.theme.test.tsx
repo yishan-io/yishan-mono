@@ -168,7 +168,7 @@ describe("VditorFileEditor theme", () => {
     );
 
     await waitFor(() => {
-      expect(mockSetTheme).toHaveBeenCalledWith("dark");
+      expect(mockSetTheme).toHaveBeenCalledWith("dark", undefined, "github-dark");
     });
     await waitFor(() => {
       expect(rethemeMermaidDiagrams).toHaveBeenCalled();
@@ -189,7 +189,7 @@ describe("VditorFileEditor theme", () => {
     );
 
     await waitFor(() => {
-      expect(mockSetTheme).toHaveBeenCalledWith("classic");
+      expect(mockSetTheme).toHaveBeenCalledWith("classic", undefined, "github");
     });
     await waitFor(() => {
       expect(rethemeMermaidDiagrams).toHaveBeenCalled();

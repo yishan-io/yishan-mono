@@ -67,6 +67,14 @@ export function createVditorEditor(root: HTMLElement, options: VditorEditorOptio
         cache: { enable: false },
         toolbar: [],
         theme: options.isDark ? "dark" : "classic",
+        // Syntax-highlight theme follows the editor theme: vditor's default
+        // (github) is a LIGHT palette whose tokens are unreadable on the dark
+        // code surface.
+        preview: {
+          hljs: {
+            style: options.isDark ? "github-dark" : "github",
+          },
+        },
         value: options.defaultValue,
         _lutePath: luteUrl,
         input(markdown: string): void {

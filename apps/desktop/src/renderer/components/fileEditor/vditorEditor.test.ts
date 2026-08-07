@@ -190,6 +190,8 @@ describe("createVditorEditor factory", () => {
     });
 
     expect(capturedConstructorOptions.current?.theme).toBe("classic");
+    // Light mode uses the light syntax-highlight palette (github).
+    expect(capturedConstructorOptions.current?.preview).toMatchObject({ hljs: { style: "github" } });
   });
 
   it("uses theme 'dark' when isDark is true", async () => {
@@ -200,6 +202,9 @@ describe("createVditorEditor factory", () => {
     });
 
     expect(capturedConstructorOptions.current?.theme).toBe("dark");
+    // Dark mode swaps the syntax-highlight palette so tokens stay readable
+    // on the dark code surface (github tokens would be too dark).
+    expect(capturedConstructorOptions.current?.preview).toMatchObject({ hljs: { style: "github-dark" } });
   });
 
   it("passes defaultValue as the initial value", async () => {

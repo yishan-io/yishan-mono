@@ -299,7 +299,9 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
     const root = rootRef.current;
     if (!root) return;
     root.setAttribute("data-theme", isDark ? "dark" : "light");
-    handleRef.current?.vditor.setTheme(isDark ? "dark" : "classic");
+    // Swap both vditor's shell theme and its syntax-highlight stylesheet
+    // (github / github-dark) so existing code blocks re-color immediately.
+    handleRef.current?.vditor.setTheme(isDark ? "dark" : "classic", undefined, isDark ? "github-dark" : "github");
 
     const themeChanged = prevIsDarkRef.current !== isDark;
     prevIsDarkRef.current = isDark;
