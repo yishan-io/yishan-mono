@@ -98,7 +98,7 @@ func (h *JSONRPCHandler) handleProjectCreate(ctx context.Context, params json.Ra
 	workspaces := make([]localdb.Workspace, 0)
 	nodeID := strings.TrimSpace(req.NodeID)
 	localPath := strings.TrimSpace(req.LocalPath)
-	if nodeID != "" && localPath != "" {
+	if nodeID != "" && localPath != "" && h.localDatabase != nil {
 		workspaceRecord := &localdb.Workspace{
 			OrganizationID: req.OrganizationID,
 			ProjectID:      project.ID,

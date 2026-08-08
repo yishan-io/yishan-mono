@@ -520,6 +520,46 @@ func TestSyncContextLink_NonGitLeavesExistingSymlinkAlone(t *testing.T) {
 	}
 }
 
+func TestSyncContextLink_NonGitEnableLeavesStaleSymlinkAlone(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	m := NewManager()
+
+	worktree := filepath.Join(home, "folder")
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatalf("setup worktree: %v", err)
+	}
+	target := filepath.Join(home, "contexts", "old-repo")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatalf("setup target: %v", err)
+	}
+	linkPath := filepath.Join(worktree, ContextLinkName)
+	if err := os.Symlink(target, linkPath); err != nil {
+		t.Fatalf("setup symlink: %v", err)
+	}
+
+	// Enabling for a non-git project must not follow the stale symlink and
+	// write the marker into the old repo's shared context dir.
+	result, err := m.SyncContextLink(SyncContextLinkRequest{
+		RepoKey:       "",
+		NonGit:        true,
+		Enabled:       true,
+		WorktreePaths: []string{worktree},
+	})
+	if err != nil {
+		t.Fatalf("sync context link: %v", err)
+	}
+	if len(result.Updated) != 1 {
+		t.Fatalf("expected path processed, got %+v", result)
+	}
+	if _, err := os.Lstat(linkPath); err != nil {
+		t.Fatalf("expected symlink untouched: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(target, ContextMarkerName)); !os.IsNotExist(err) {
+		t.Fatalf("expected marker NOT written into the symlink target, got err=%v", err)
+	}
+}
+
 func TestAppendExcludePattern_AppendsToNewFile(t *testing.T) {
 	root := t.TempDir()
 	excludePath := filepath.Join(root, "info", "exclude")

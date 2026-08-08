@@ -119,19 +119,35 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 // ensureNonGitContextDir creates a real `.my-context` directory inside the
 // worktree for a non-git project, marking it as daemon-owned with a marker
 // file. Idempotent: an existing marked directory is left untouched, and no
-// git exclude is written (there is no `.git` to exclude from).
+// git exclude is written (there is no `.git` to exclude from). A leftover
+// symlink (folder was a git project before) is left alone so the marker can
+// never land inside the old project's shared context dir.
 func ensureNonGitContextDir(worktreePath string) error {
 	dir := filepath.Join(worktreePath, ContextLinkName)
+	if info, err := os.Lstat(dir); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			// Symlink owned by the git-project path; leave alone.
+			return nil
+		}
+		if info.IsDir() {
+			marker := filepath.Join(dir, ContextMarkerName)
+			if _, err := os.Stat(marker); err == nil {
+				return nil
+			} else if !os.IsNotExist(err) {
+				return fmt.Errorf("inspect context marker: %w", err)
+			}
+			if err := os.WriteFile(marker, []byte("yishan context root\n"), 0o644); err != nil {
+				return fmt.Errorf("write context marker: %w", err)
+			}
+			return nil
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect context dir: %w", err)
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("ensure context dir: %w", err)
 	}
-	marker := filepath.Join(dir, ContextMarkerName)
-	if _, err := os.Stat(marker); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("inspect context marker: %w", err)
-	}
-	if err := os.WriteFile(marker, []byte("yishan context root\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ContextMarkerName), []byte("yishan context root\n"), 0o644); err != nil {
 		return fmt.Errorf("write context marker: %w", err)
 	}
 	return nil

@@ -229,8 +229,13 @@ func (h *JSONRPCHandler) forwardMemoryFileChanges(worktreePath string, relPaths 
 			resolved = r
 		}
 		if h.memory.ShouldIndex(resolved) {
-			if err := h.memory.OnFileChanged(abs, worktreePath, projectID); err != nil {
-				log.Warn().Err(err).Str("path", abs).Msg("memory index update failed")
+			// Index under the resolved path: for a .my-context symlink this is
+			// the canonical ~/.yishan/contexts/… target that reconcile also
+			// indexes, so a custom-path git worktree cannot create a second
+			// row under its symlink path. For a real (non-git) .my-context
+			// directory resolved == abs, so nothing changes there.
+			if err := h.memory.OnFileChanged(resolved, worktreePath, projectID); err != nil {
+				log.Warn().Err(err).Str("path", resolved).Msg("memory index update failed")
 			}
 		}
 	}

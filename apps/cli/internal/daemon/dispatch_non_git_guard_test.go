@@ -207,14 +207,57 @@ func TestHandleWorkspaceCreate_RejectsProjectIDForNonGitProject(t *testing.T) {
 	requireRPCError(t, err, "cannot create a workspace for a non-git project")
 }
 
-func TestHandleWorkspaceCreate_RejectsUnresolvableProject(t *testing.T) {
+func TestHandleWorkspaceCreate_AllowsUnresolvableProject(t *testing.T) {
 	handler, _ := newNonGitGuardTestHandler(t)
+
+	// The agent MCP workspace_create tool sends only repoKey + sourcePath and
+	// no projectId; desktop-created projects carry a NULL repoKey in the local
+	// db, so the repoKey lookup misses. The guard must fall through to the
+	// existing direct-create flow instead of rejecting a git project.
+	result, err := handler.handleWorkspaceCreate(
+		context.Background(),
+		marshalParams(t, map[string]any{
+			"repoKey":        "owner/desktop-created-repo",
+			"sourcePath":     t.TempDir(),
+			"targetBranch":   "feature-x",
+			"sourceBranch":   "main",
+			"organizationId": "org-1",
+			"nodeId":         "node-1",
+		}),
+	)
+	if err != nil {
+		t.Fatalf("unresolvable repoKey must fall through to the create flow: %v", err)
+	}
+	record, ok := result.(map[string]any)
+	if !ok || record["status"] != "pending" {
+		t.Fatalf("expected pending create result, got %v", result)
+	}
+}
+
+func TestHandleWorkspaceCreate_RejectsNonGitViaSourcePath(t *testing.T) {
+	handler, plainFolder := newNonGitGuardTestHandler(t)
+
+	// The non-git project's primary workspace row lives in the local db with
+	// LocalPath = the folder (persisted by project.create). With that row, a
+	// workspace.create targeting the folder is identified as non-git even when
+	// the request carries no projectId and an unresolvable repoKey.
+	if err := localdb.NewWorkspaceStore(handler.localDatabase).Create(context.Background(), &localdb.Workspace{
+		OrganizationID: "org-1",
+		ProjectID:      "project-unknown",
+		NodeID:         "node-1",
+		Kind:           "primary",
+		Status:         "active",
+		LocalPath:      plainFolder,
+		State:          "active",
+	}); err != nil {
+		t.Fatalf("persist primary workspace: %v", err)
+	}
 
 	_, err := handler.handleWorkspaceCreate(
 		context.Background(),
 		marshalParams(t, map[string]any{
-			"projectId":      "project-missing",
-			"sourcePath":     t.TempDir(),
+			"repoKey":        "owner/lookup-miss",
+			"sourcePath":     plainFolder,
 			"targetBranch":   "feature-x",
 			"sourceBranch":   "main",
 			"organizationId": "org-1",

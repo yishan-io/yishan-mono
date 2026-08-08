@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 	createflow "yishan/apps/cli/internal/workspace/createflow"
 
@@ -94,35 +95,60 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 }
 
 // guardWorkspaceCreateProject rejects workspace.create for non-git projects
-// (sourceType "unknown"). The target project resolves from `projectId`, or
-// from `repoKey` when the project id is missing (the agent MCP workspace_create
-// tool sends only repoKey + sourcePath). A request that resolves to no project
-// is also rejected: workspace creation can only target a git project.
+// (sourceType "unknown"). The target project resolves from `projectId`, then
+// `repoKey`, then the workspace whose local path matches `sourcePath` (the
+// agent MCP workspace_create tool sends only repoKey + sourcePath, and
+// desktop-created projects carry a NULL repoKey in the local db). A request
+// that cannot be positively identified as non-git falls through to the
+// existing create flow, which keeps working for git projects whose local
+// record is missing or lacks a repoKey.
 func (h *JSONRPCHandler) guardWorkspaceCreateProject(ctx context.Context, req workspaceCreateParams) error {
 	if h.localDatabase == nil {
 		return nil
 	}
-	projectStore := h.projectStore()
 	projectID := strings.TrimSpace(req.ProjectID)
 	if projectID == "" {
-		repoKey := strings.TrimSpace(req.RepoKey)
-		if repoKey == "" {
-			return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
-		}
-		project, err := projectStore.GetByRepoKey(ctx, repoKey)
-		if err != nil {
-			return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
-		}
-		projectID = project.ID
+		projectID = h.resolveWorkspaceCreateProjectID(ctx, req)
 	}
-	project, err := projectStore.Get(ctx, projectID)
+	if projectID == "" {
+		return nil
+	}
+	project, err := h.projectStore().Get(ctx, projectID)
 	if err != nil {
-		return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
+		return nil
 	}
 	if project.SourceType == "unknown" {
 		return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
 	}
 	return nil
+}
+
+// resolveWorkspaceCreateProjectID finds the target project from `repoKey`
+// (local project records carry it only for API-imported projects), then from
+// the workspace whose local path matches the requested sourcePath — the
+// reliable signal for the direct-create and agent paths, where the folder is
+// already a known workspace.
+func (h *JSONRPCHandler) resolveWorkspaceCreateProjectID(ctx context.Context, req workspaceCreateParams) string {
+	repoKey := strings.TrimSpace(req.RepoKey)
+	if repoKey != "" {
+		if project, err := h.projectStore().GetByRepoKey(ctx, repoKey); err == nil {
+			return project.ID
+		}
+	}
+	sourcePath := strings.TrimSpace(req.SourcePath)
+	if sourcePath == "" {
+		return ""
+	}
+	workspaces, err := localdb.NewWorkspaceStore(h.localDatabase).List(ctx)
+	if err != nil {
+		return ""
+	}
+	for _, workspace := range workspaces {
+		if strings.TrimSpace(workspace.LocalPath) == sourcePath && strings.TrimSpace(workspace.ProjectID) != "" {
+			return workspace.ProjectID
+		}
+	}
+	return ""
 }
 
 func generateWorkspaceID() string {
