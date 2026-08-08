@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../helpers/platform";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNaming";
 import { useCommands } from "../../../hooks/useCommands";
@@ -48,8 +49,19 @@ export function CreateWorkspaceDialogView({
 
   useDialogRegistration(open);
 
+  // Non-git projects have no worktrees; keep the dialog closed even if it was
+  // already open when the target project changed.
+  const targetProject = projects.find((item) => item.id === projectId);
+  const isTargetNonGit = Boolean(projectId) && !supportsGitFeatures(targetProject?.sourceType);
+
   const isRenameMode = mode === "rename";
-  const selectableProjects = isRenameMode ? projects : filterVisibleProjects(projects, displayProjectIds);
+  // Create mode: only git-capable projects can receive worktrees, so non-git
+  // projects are excluded from the project dropdown.
+  const selectableProjects = isRenameMode
+    ? projects
+    : filterVisibleProjects(projects, displayProjectIds).filter((project) =>
+        supportsGitFeatures(project.sourceType),
+      );
   const branchInputPlaceholder = isRenameMode
     ? t("workspace.rename.branchNameLabel")
     : t("workspace.create.branchNameLabel");
@@ -216,7 +228,7 @@ export function CreateWorkspaceDialogView({
 
   return (
     <Dialog
-      open={open}
+      open={open && !isTargetNonGit}
       onClose={onClose}
       onKeyDown={handleDialogKeyDown}
       fullWidth

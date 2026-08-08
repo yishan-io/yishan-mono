@@ -341,3 +341,44 @@ describe("CreateWorkspaceDialogView create flow", () => {
     expect(getMockedCommands().createWorkspace).not.toHaveBeenCalled();
   });
 });
+
+describe("CreateWorkspaceDialogView non-git exclusion", () => {
+  setupCreateWorkspaceDialogViewTests();
+
+  it("excludes non-git projects from the create dialog project dropdown", async () => {
+    const state = workspaceStore.getState();
+    workspaceStore.setState(
+      {
+        ...state,
+        displayProjectIds: ["repo-1", "repo-2", "repo-plain"],
+        projects: [
+          ...state.projects,
+          {
+            id: "repo-plain",
+            key: "repo-plain",
+            name: "Plain Folder",
+            path: "/tmp/plain-folder",
+            localPath: "/tmp/plain-folder",
+            worktreePath: "/tmp/plain-folder",
+            sourceType: "unknown",
+            defaultBranch: "",
+            missing: false,
+          },
+        ],
+      },
+      true,
+    );
+
+    renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
+
+    const repoSelect = screen.getAllByRole("combobox")[0];
+    if (!repoSelect) {
+      throw new Error("Repository select not found");
+    }
+    fireEvent.mouseDown(repoSelect);
+
+    expect(screen.queryByRole("option", { name: "Plain Folder" })).toBeNull();
+    expect(screen.getByRole("option", { name: "Repo One" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Repo Two" })).toBeTruthy();
+  });
+});

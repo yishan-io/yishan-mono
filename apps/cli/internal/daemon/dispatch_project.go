@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
@@ -61,6 +62,9 @@ type projectCreateParams struct {
 	RepoURL        *string                  `json:"repoUrl,omitempty"`
 	SourceType     string                   `json:"sourceType,omitempty"`
 	Commands       []localdb.ProjectCommand `json:"commands,omitempty"`
+	NodeID         string                   `json:"nodeId,omitempty"`
+	LocalPath      string                   `json:"localPath,omitempty"`
+	ContextEnabled *bool                    `json:"contextEnabled,omitempty"`
 }
 
 func (h *JSONRPCHandler) handleProjectCreate(ctx context.Context, params json.RawMessage) (any, error) {
@@ -68,17 +72,53 @@ func (h *JSONRPCHandler) handleProjectCreate(ctx context.Context, params json.Ra
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
+	// Mirror the api-service default: context is enabled unless explicitly
+	// disabled. The Go zero value would otherwise make every desktop-created
+	// project start with context off and skip the create-time context sync.
+	contextEnabled := true
+	if req.ContextEnabled != nil {
+		contextEnabled = *req.ContextEnabled
+	}
 	project := &localdb.Project{
 		Name:           req.Name,
 		OrganizationID: req.OrganizationID,
 		SourceType:     req.SourceType,
 		RepoURL:        req.RepoURL,
 		Commands:       req.Commands,
+		ContextEnabled: contextEnabled,
 	}
 	if err := h.projectStore().Create(ctx, project); err != nil {
 		return nil, err
 	}
-	return project, nil
+
+	// A local-folder project (git-local or non-git) gets its single primary
+	// workspace row here, mirroring the api-service contract: the project
+	// folder itself is the primary workspace, persisted so snapshot reloads
+	// and daemon restarts keep it visible and openable.
+	workspaces := make([]localdb.Workspace, 0)
+	nodeID := strings.TrimSpace(req.NodeID)
+	localPath := strings.TrimSpace(req.LocalPath)
+	if nodeID != "" && localPath != "" {
+		workspaceRecord := &localdb.Workspace{
+			OrganizationID: req.OrganizationID,
+			ProjectID:      project.ID,
+			NodeID:         nodeID,
+			Kind:           workspace.KindPrimary,
+			Status:         "active",
+			LocalPath:      localPath,
+			State:          workspace.WorkspaceStateActive,
+		}
+		if err := localdb.NewWorkspaceStore(h.localDatabase).Create(ctx, workspaceRecord); err != nil {
+			return nil, err
+		}
+		workspaces = append(workspaces, *workspaceRecord)
+	}
+
+	type projectWithWorkspaces struct {
+		localdb.Project
+		Workspaces []localdb.Workspace `json:"workspaces"`
+	}
+	return projectWithWorkspaces{Project: *project, Workspaces: workspaces}, nil
 }
 
 type projectUpdateParams struct {

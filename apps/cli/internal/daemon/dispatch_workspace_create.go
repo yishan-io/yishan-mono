@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"yishan/apps/cli/internal/workspace"
@@ -16,6 +17,9 @@ import (
 func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.RawMessage) (any, error) {
 	var req workspaceCreateParams
 	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if err := h.guardWorkspaceCreateProject(ctx, req); err != nil {
 		return nil, err
 	}
 	prepared, err := h.prepareWorkspaceCreate(ctx, req)
@@ -87,6 +91,38 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 			h.publishWorkspaceCreateCompleted(prepared, created, warnings)
 		},
 	}, reportProgress)
+}
+
+// guardWorkspaceCreateProject rejects workspace.create for non-git projects
+// (sourceType "unknown"). The target project resolves from `projectId`, or
+// from `repoKey` when the project id is missing (the agent MCP workspace_create
+// tool sends only repoKey + sourcePath). A request that resolves to no project
+// is also rejected: workspace creation can only target a git project.
+func (h *JSONRPCHandler) guardWorkspaceCreateProject(ctx context.Context, req workspaceCreateParams) error {
+	if h.localDatabase == nil {
+		return nil
+	}
+	projectStore := h.projectStore()
+	projectID := strings.TrimSpace(req.ProjectID)
+	if projectID == "" {
+		repoKey := strings.TrimSpace(req.RepoKey)
+		if repoKey == "" {
+			return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
+		}
+		project, err := projectStore.GetByRepoKey(ctx, repoKey)
+		if err != nil {
+			return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
+		}
+		projectID = project.ID
+	}
+	project, err := projectStore.Get(ctx, projectID)
+	if err != nil {
+		return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
+	}
+	if project.SourceType == "unknown" {
+		return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
+	}
+	return nil
 }
 
 func generateWorkspaceID() string {

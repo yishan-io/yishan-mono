@@ -112,4 +112,33 @@ describe("DaemonProjectClient", () => {
     expect(workspace?.state).toBeUndefined();
     expect(workspace?.health).toBeUndefined();
   });
+
+  it("forwards nodeId, localPath, and contextEnabled on project.create", async () => {
+    const invoke = vi.fn(async () => ({
+      id: "project-1",
+      name: "Plain Folder",
+      sourceType: "unknown",
+      contextEnabled: true,
+      workspaces: [],
+    }));
+
+    const client = new DaemonProjectClient(invoke);
+    await client.create("org-1", {
+      name: "Plain Folder",
+      sourceTypeHint: "unknown",
+      nodeId: "node-1",
+      localPath: "/tmp/plain-folder",
+      contextEnabled: true,
+    });
+
+    expect(invoke).toHaveBeenCalledWith("project.create", {
+      name: "Plain Folder",
+      organizationId: "org-1",
+      sourceType: "unknown",
+      repoUrl: undefined,
+      nodeId: "node-1",
+      localPath: "/tmp/plain-folder",
+      contextEnabled: true,
+    });
+  });
 });

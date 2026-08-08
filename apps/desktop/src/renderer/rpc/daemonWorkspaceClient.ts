@@ -287,7 +287,8 @@ export class DaemonWorkspaceClient {
   async syncContextLink(input: Rpc.WorkspaceSyncContextLinkInput): Promise<Rpc.WorkspaceSyncContextLinkResponse> {
     const record = asRecord(input);
     const repoKey = readOptionalString(record?.repoKey);
-    if (!repoKey) {
+    const nonGit = readOptionalBoolean(record?.nonGit) ?? false;
+    if (!repoKey && !nonGit) {
       throw new Error("repoKey is required");
     }
     const enabled = readOptionalBoolean(record?.enabled) ?? false;
@@ -301,7 +302,8 @@ export class DaemonWorkspaceClient {
     );
 
     const result = (await this.invoke("workspace.syncContextLink", {
-      repoKey,
+      repoKey: repoKey ?? "",
+      nonGit,
       enabled,
       worktreePaths: normalizedPaths,
     })) as Partial<Rpc.WorkspaceSyncContextLinkResponse> | null | undefined;

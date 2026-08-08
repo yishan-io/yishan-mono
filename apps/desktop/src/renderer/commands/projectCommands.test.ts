@@ -424,6 +424,8 @@ describe("projectCommands", () => {
       name: "Repo 1",
       sourceTypeHint: "git",
       repoUrl: "https://github.com/test/repo-1.git",
+      nodeId: undefined,
+      localPath: "/tmp/repo-1",
       contextEnabled: true,
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);
@@ -436,6 +438,201 @@ describe("projectCommands", () => {
         }),
       }),
     );
+  });
+
+  it("creates a non-git project from a plain local folder without throwing", async () => {
+    const appendRepo = vi.fn();
+    const addWorkspace = vi.fn();
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    workspaceStore.setState({
+      projects: [
+        {
+          id: "project-plain",
+          key: "project-plain",
+          repoKey: null,
+          name: "Plain Folder",
+          path: "/tmp/plain-folder",
+          missing: false,
+          localPath: "/tmp/plain-folder",
+          gitUrl: "",
+          worktreePath: "/tmp/plain-folder",
+          sourceType: "unknown",
+          contextEnabled: true,
+        },
+      ],
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-plain",
+          repoId: "project-plain",
+          name: "local",
+          title: "local",
+          sourceBranch: "",
+          branch: "",
+          summaryId: "workspace-1",
+          worktreePath: "/tmp/plain-folder",
+        },
+      ],
+      createProject: appendRepo,
+      addWorkspace,
+    });
+    rpcMocks.gitInspect.mockResolvedValueOnce({
+      isGitRepository: false,
+    });
+    rpcMocks.createProject.mockResolvedValueOnce({
+      id: "project-plain",
+      name: "Plain Folder",
+      sourceType: "unknown",
+      repoProvider: null,
+      repoUrl: null,
+      repoKey: null,
+      contextEnabled: true,
+      workspaces: [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "project-plain",
+          userId: "user-1",
+          nodeId: "node-1",
+          kind: "primary",
+          status: "active",
+          branch: null,
+          sourceBranch: null,
+          localPath: "/tmp/plain-folder",
+          latestPullRequest: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+    rpcMocks.updateProject.mockResolvedValueOnce({
+      id: "project-plain",
+      name: "Plain Folder",
+      icon: "folder",
+      color: "#1E66F5",
+      contextEnabled: true,
+      setupScript: "",
+      postScript: "",
+      commands: [],
+    });
+
+    await createProject({
+      name: "Plain Folder",
+      path: "/tmp/plain-folder",
+    });
+
+    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", {
+      name: "Plain Folder",
+      sourceTypeHint: "unknown",
+      repoUrl: undefined,
+      nodeId: undefined,
+      localPath: "/tmp/plain-folder",
+      contextEnabled: true,
+    });
+    expect(appendRepo).toHaveBeenCalledTimes(1);
+    expect(appendRepo.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        backendProject: expect.objectContaining({
+          sourceType: "unknown",
+          defaultBranch: null,
+        }),
+      }),
+    );
+    expect(addWorkspace).toHaveBeenCalledWith({
+      projectId: "project-plain",
+      workspaceId: "workspace-1",
+      name: "local",
+      sourceBranch: "",
+      branch: "",
+      worktreePath: "/tmp/plain-folder",
+      nodeId: "node-1",
+    });
+    // Non-git projects sync context with an empty repoKey + nonGit flag.
+    expect(rpcMocks.workspaceSyncContextLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoKey: "",
+        nonGit: true,
+        enabled: true,
+      }),
+    );
+  });
+
+  it("adds and opens the primary workspace returned by the daemon for a non-git folder", async () => {
+    const appendRepo = vi.fn();
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    // Keep the real addWorkspace so the returned primary workspace lands in
+    // the store and the import-open path can run.
+    workspaceStore.setState({ createProject: appendRepo });
+    rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: false });
+    // The daemon project.create now returns the primary workspace row.
+    rpcMocks.createProject.mockResolvedValueOnce({
+      id: "project-plain",
+      name: "Plain Folder",
+      sourceType: "unknown",
+      repoProvider: null,
+      repoUrl: null,
+      repoKey: null,
+      contextEnabled: true,
+      workspaces: [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "project-plain",
+          userId: "user-1",
+          nodeId: "node-1",
+          kind: "primary",
+          status: "active",
+          branch: null,
+          sourceBranch: null,
+          localPath: "/tmp/plain-folder",
+          latestPullRequest: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+    rpcMocks.updateProject.mockResolvedValueOnce({
+      id: "project-plain",
+      name: "Plain Folder",
+      icon: "folder",
+      color: "#1E66F5",
+      contextEnabled: true,
+      setupScript: "",
+      postScript: "",
+      commands: [],
+    });
+
+    await createProject({
+      name: "Plain Folder",
+      path: "/tmp/plain-folder",
+    });
+
+    // The project row + its primary workspace reach the store, and the
+    // workspace is opened on the daemon immediately.
+    expect(appendRepo).toHaveBeenCalledTimes(1);
+    const state = workspaceStore.getState();
+    expect(state.workspaces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "workspace-1",
+          projectId: "project-plain",
+          sourceBranch: "",
+          branch: "",
+          worktreePath: "/tmp/plain-folder",
+          nodeId: "node-1",
+        }),
+      ]),
+    );
+    expect(rpcMocks.workspaceOpenProject).toHaveBeenCalledWith({
+      workspaces: [
+        {
+          workspaceId: "workspace-1",
+          worktreePath: "/tmp/plain-folder",
+          projectId: "project-plain",
+          orgId: "org-1",
+        },
+      ],
+    });
   });
 
   it("opens imported local primary workspace immediately on the daemon", async () => {
@@ -491,6 +688,8 @@ describe("projectCommands", () => {
       name: "Repo 1",
       sourceTypeHint: "git",
       repoUrl: "https://github.com/test/repo-1.git",
+      nodeId: undefined,
+      localPath: "/tmp/repo-1",
       contextEnabled: true,
     });
   });

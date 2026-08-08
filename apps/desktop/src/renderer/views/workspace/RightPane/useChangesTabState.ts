@@ -8,6 +8,7 @@ import type {
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
@@ -46,12 +47,13 @@ export function useChangesTabState() {
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const selectedWorkspaceSourceBranch = workspaceStore((state) => {
     const workspace = state.workspaces.find((w) => w.id === state.selectedWorkspaceId);
-    const raw =
-      workspace?.sourceBranch?.trim() ||
-      (state.projects ?? [])
-        .find((project) => project.id === (workspace?.projectId ?? workspace?.repoId))
-        ?.defaultBranch?.trim() ||
-      "main";
+    const project = (state.projects ?? []).find((p) => p.id === (workspace?.projectId ?? workspace?.repoId));
+    // Non-git projects have no branches: no source branch means the commit
+    // comparison path never fires daemon git RPCs from this mounted tab.
+    if (!supportsGitFeatures(project?.sourceType)) {
+      return "";
+    }
+    const raw = workspace?.sourceBranch?.trim() || project?.defaultBranch?.trim() || "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
   });
   const workspaceGitRefreshVersion = workspaceStore((state) => {

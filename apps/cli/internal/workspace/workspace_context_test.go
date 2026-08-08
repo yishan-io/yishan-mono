@@ -361,6 +361,165 @@ func TestSyncContextLink_AppliesEnabledThenDisabledAcrossWorktrees(t *testing.T)
 	}
 }
 
+func TestSyncContextLink_NonGitEnabledCreatesMarkedRealDir(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	m := NewManager()
+
+	worktree := filepath.Join(home, "plain-folder")
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatalf("setup worktree: %v", err)
+	}
+
+	result, err := m.SyncContextLink(SyncContextLinkRequest{
+		RepoKey:       "",
+		NonGit:        true,
+		Enabled:       true,
+		WorktreePaths: []string{worktree},
+	})
+	if err != nil {
+		t.Fatalf("sync context link: %v", err)
+	}
+	if len(result.Updated) != 1 {
+		t.Fatalf("expected 1 updated, got %+v", result)
+	}
+
+	dir := filepath.Join(worktree, ContextLinkName)
+	info, err := os.Lstat(dir)
+	if err != nil {
+		t.Fatalf("expected context dir at %s: %v", dir, err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		t.Fatalf("expected real directory, got symlink")
+	}
+	if !info.IsDir() {
+		t.Fatalf("expected directory")
+	}
+	marker := filepath.Join(dir, ContextMarkerName)
+	markerInfo, err := os.Stat(marker)
+	if err != nil {
+		t.Fatalf("expected marker file: %v", err)
+	}
+	if markerInfo.IsDir() {
+		t.Fatalf("expected marker to be a file")
+	}
+}
+
+func TestSyncContextLink_NonGitEnabledIsIdempotent(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	m := NewManager()
+
+	worktree := filepath.Join(home, "plain-folder")
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatalf("setup worktree: %v", err)
+	}
+
+	for i := 0; i < 2; i++ {
+		result, err := m.SyncContextLink(SyncContextLinkRequest{
+			RepoKey:       "",
+			NonGit:        true,
+			Enabled:       true,
+			WorktreePaths: []string{worktree},
+		})
+		if err != nil {
+			t.Fatalf("sync context link (run %d): %v", i+1, err)
+		}
+		if len(result.Updated) != 1 {
+			t.Fatalf("expected 1 updated on run %d, got %+v", i+1, result)
+		}
+	}
+
+	// A user file inside the dir survives a re-run.
+	sentinel := filepath.Join(worktree, ContextLinkName, "MEMORY.md")
+	if err := os.WriteFile(sentinel, []byte("keep"), 0o644); err != nil {
+		t.Fatalf("write sentinel: %v", err)
+	}
+}
+
+func TestSyncContextLink_NonGitDisabledRemovesOnlyMarkedDir(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	m := NewManager()
+
+	markedWorktree := filepath.Join(home, "marked")
+	userWorktree := filepath.Join(home, "user")
+	for _, p := range []string{markedWorktree, userWorktree} {
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatalf("setup %s: %v", p, err)
+		}
+	}
+
+	// Marked dir (daemon-owned).
+	if err := ensureNonGitContextDir(markedWorktree); err != nil {
+		t.Fatalf("ensure marked dir: %v", err)
+	}
+	// Unmarked user dir with content.
+	userDir := filepath.Join(userWorktree, ContextLinkName)
+	if err := os.MkdirAll(userDir, 0o755); err != nil {
+		t.Fatalf("setup user dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(userDir, "notes.md"), []byte("keep me"), 0o644); err != nil {
+		t.Fatalf("write user notes: %v", err)
+	}
+
+	result, err := m.SyncContextLink(SyncContextLinkRequest{
+		RepoKey:       "",
+		NonGit:        true,
+		Enabled:       false,
+		WorktreePaths: []string{markedWorktree, userWorktree},
+	})
+	if err != nil {
+		t.Fatalf("sync context link: %v", err)
+	}
+	if len(result.Updated) != 2 {
+		t.Fatalf("expected both paths processed, got %+v", result)
+	}
+
+	if _, err := os.Lstat(filepath.Join(markedWorktree, ContextLinkName)); !os.IsNotExist(err) {
+		t.Fatalf("expected marked dir removed, got err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(userDir, "notes.md")); err != nil {
+		t.Fatalf("expected user dir preserved: %v", err)
+	}
+}
+
+func TestSyncContextLink_NonGitLeavesExistingSymlinkAlone(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	m := NewManager()
+
+	worktree := filepath.Join(home, "folder")
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatalf("setup worktree: %v", err)
+	}
+	target := filepath.Join(home, "contexts", "repo_abc")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatalf("setup target: %v", err)
+	}
+	linkPath := filepath.Join(worktree, ContextLinkName)
+	if err := os.Symlink(target, linkPath); err != nil {
+		t.Fatalf("setup symlink: %v", err)
+	}
+
+	// Disabling for a non-git project must not remove a git-project symlink.
+	result, err := m.SyncContextLink(SyncContextLinkRequest{
+		RepoKey:       "",
+		NonGit:        true,
+		Enabled:       false,
+		WorktreePaths: []string{worktree},
+	})
+	if err != nil {
+		t.Fatalf("sync context link: %v", err)
+	}
+	if len(result.Updated) != 1 {
+		t.Fatalf("expected path processed without error, got %+v", result)
+	}
+	if _, err := os.Lstat(linkPath); err != nil {
+		t.Fatalf("expected symlink untouched: %v", err)
+	}
+}
+
 func TestAppendExcludePattern_AppendsToNewFile(t *testing.T) {
 	root := t.TempDir()
 	excludePath := filepath.Join(root, "info", "exclude")

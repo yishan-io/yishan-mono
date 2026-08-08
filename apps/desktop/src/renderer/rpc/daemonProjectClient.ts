@@ -71,27 +71,11 @@ export class DaemonProjectClient {
       organizationId: orgId,
       sourceType: input.sourceTypeHint,
       repoUrl: input.repoUrl?.trim() || undefined,
+      nodeId: input.nodeId?.trim() || undefined,
+      localPath: input.localPath?.trim() || undefined,
+      contextEnabled: input.contextEnabled,
     });
-    const record = asRecord(result);
-    return {
-      id: readOptionalString(record?.id) ?? "",
-      name: readOptionalString(record?.name) ?? "",
-      sourceType: toSourceType(readOptionalString(record?.sourceType)),
-      repoProvider: readOptionalString(record?.repoProvider) ?? null,
-      repoUrl: readOptionalString(record?.repoUrl) ?? null,
-      repoKey: readOptionalString(record?.repoKey) ?? null,
-      contextEnabled: readOptionalBoolean(record?.contextEnabled) ?? true,
-      icon: readOptionalString(record?.icon) ?? "folder",
-      color: readOptionalString(record?.color) ?? "#1E66F5",
-      setupScript: readOptionalString(record?.setupScript) ?? "",
-      postScript: readOptionalString(record?.postScript) ?? "",
-      commands: toProjectCommands(record?.commands),
-      organizationId: readOptionalString(record?.organizationId) ?? orgId,
-      createdByUserId: readOptionalString(record?.createdByUserId) ?? "",
-      createdAt: readOptionalString(record?.createdAt) ?? "",
-      updatedAt: readOptionalString(record?.updatedAt) ?? "",
-      workspaces: [],
-    };
+    return this.parseProjectWithWorkspaces(result);
   }
 
   async update(

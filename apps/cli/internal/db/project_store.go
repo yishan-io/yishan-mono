@@ -102,6 +102,21 @@ func (store *ProjectStore) Get(ctx context.Context, projectID string) (Project, 
 	return project, nil
 }
 
+// GetByRepoKey returns a project by its repo key, which is unique per
+// organization in the API source of truth. Returns ErrProjectNotFound when no
+// local project carries the key.
+func (store *ProjectStore) GetByRepoKey(ctx context.Context, repoKey string) (Project, error) {
+	row := store.database.QueryRowContext(ctx, `SELECT `+projectColumns+` FROM projects WHERE repo_key = ? LIMIT 1`, repoKey)
+	project, err := scanProject(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Project{}, fmt.Errorf("get project by repo key %q: %w", repoKey, ErrProjectNotFound)
+	}
+	if err != nil {
+		return Project{}, fmt.Errorf("get project by repo key %q: %w", repoKey, err)
+	}
+	return project, nil
+}
+
 // Update applies the supplied mutable fields to a project.
 func (store *ProjectStore) Update(ctx context.Context, projectID string, update ProjectUpdate) error {
 	query, arguments, err := buildProjectUpdate(update)

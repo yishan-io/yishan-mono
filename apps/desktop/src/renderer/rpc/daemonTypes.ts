@@ -163,6 +163,7 @@ export type ReloadAuthConfigOutput = {
 
 export type WorkspaceSyncContextLinkInput = {
   repoKey: string;
+  nonGit?: boolean;
   enabled: boolean;
   worktreePaths: string[];
 };

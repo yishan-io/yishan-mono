@@ -96,7 +96,7 @@ export class ProjectService {
       repoKey = inferred.repoKey;
     }
 
-    if ((sourceType === "git" || sourceType === "git-local") && nodeId) {
+    if (nodeId) {
       await assertNodeOwnedByActor(this.db, nodeId, input.actorUserId);
     }
 
@@ -123,7 +123,7 @@ export class ProjectService {
 
       const createdWorkspaces: ProjectWithWorkspacesView["workspaces"] = [];
 
-      if ((sourceType === "git" || sourceType === "git-local") && nodeId && localPath) {
+      if (nodeId && localPath) {
         const insertedWorkspaces = await tx
           .insert(workspaces)
           .values({

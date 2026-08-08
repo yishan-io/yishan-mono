@@ -3,11 +3,56 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"yishan/apps/cli/internal/workspace"
 )
 
+// gitWorkspaceRefParams is the minimal request shape shared by git.* methods
+// that target a workspace by ID, used by the non-git capability guard.
+type gitWorkspaceRefParams struct {
+	WorkspaceID string `json:"workspaceId"`
+}
+
+// guardGitProjectCapability rejects git.* methods for workspaces whose project
+// is non-git (sourceType "unknown"). git.inspectPath is exempt: it is
+// path-based and the desktop uses it to classify a folder before a project
+// exists. Workspaces without a resolvable project association pass through so
+// the per-method handlers keep surfacing their normal errors.
+func (h *JSONRPCHandler) guardGitProjectCapability(ctx context.Context, params json.RawMessage) error {
+	var req gitWorkspaceRefParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil
+	}
+	workspaceID := strings.TrimSpace(req.WorkspaceID)
+	if workspaceID == "" {
+		return nil
+	}
+	ws, err := h.manager.GetWorkspace(workspaceID)
+	if err != nil {
+		return err
+	}
+	projectID := strings.TrimSpace(ws.ProjectID)
+	if projectID == "" || h.localDatabase == nil {
+		return nil
+	}
+	project, err := h.projectStore().Get(ctx, projectID)
+	if err != nil {
+		// Unresolvable project record: do not block on lookup failures.
+		return nil
+	}
+	if project.SourceType == "unknown" {
+		return workspace.NewRPCError(rpcCodeInvalidParams, "project is not a git repository — git operations are unavailable")
+	}
+	return nil
+}
+
 func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params json.RawMessage) (any, error) {
+	if method != MethodGitInspectPath {
+		if err := h.guardGitProjectCapability(ctx, params); err != nil {
+			return nil, err
+		}
+	}
 	switch method {
 	case MethodGitStatus:
 		var req gitStatusParams

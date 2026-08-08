@@ -318,6 +318,13 @@ func TestShouldIndexPath(t *testing.T) {
 		{"/Users/user/.yishan/memory/global/.my-context/MEMORY.md", false},
 		// Unresolved worktree symlink path → rejected (caller must resolve first).
 		{"/Users/user/.yishan/worktrees/my-repo/ws/.my-context/MEMORY.md", false},
+		// Canonical context root nested duplicate → still rejected (regression).
+		{"/Users/user/.yishan/contexts/my-repo/.my-context/architecture/notes.md", false},
+		// Project-root real .my-context (non-git project) → accepted.
+		{"/Users/user/code/plain-project/.my-context/MEMORY.md", true},
+		{"/Users/user/code/plain-project/.my-context/architecture/notes.md", true},
+		// Nested .my-context inside a project-root real dir → rejected.
+		{"/Users/user/code/plain-project/.my-context/.my-context/MEMORY.md", false},
 		// Non-markdown file → rejected.
 		{"/Users/user/.yishan/contexts/my-repo/state.json", false},
 		// Unrelated path → rejected.

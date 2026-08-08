@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../components/PaneHeader";
 import { getRendererPlatform } from "../../../helpers/platform";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab } from "../../../store/workspaceUiStore";
@@ -23,11 +24,18 @@ export type RightPaneTabBarProps = {
 export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPane }: RightPaneTabBarProps) {
   const { t } = useTranslation();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const selectedWorkspace = workspaceStore((state) =>
+    state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
+  );
+  const selectedProject = workspaceStore((state) =>
+    state.projects.find((project) => project.id === (selectedWorkspace?.projectId ?? selectedWorkspace?.repoId)),
+  );
   const activeRightPaneTab = workspaceUiStore(
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );
   const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
   const changesCount = workspaceStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
+  const gitCapable = supportsGitFeatures(selectedProject?.sourceType);
 
   const handleTabClick = (tab: WorkspaceRightPaneTab) => {
     if (rightCollapsed) {
@@ -49,35 +57,39 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
       shortcutId: "activate-files-pane",
       icon: <LuFolderTree size={18} />,
     },
-    {
-      value: "changes",
-      label: t("files.changes"),
-      shortcutId: "activate-changes-pane",
-      icon: (
-        <Badge
-          badgeContent={changesCount}
-          color="primary"
-          max={99}
-          invisible={changesCount <= 0}
-          sx={{
-            "& .MuiBadge-badge": {
-              minWidth: 14,
-              height: 14,
-              fontSize: 9,
-              lineHeight: 1,
-            },
-          }}
-        >
-          <LuGitBranch size={18} />
-        </Badge>
-      ),
-    },
-    {
-      value: "pr",
-      label: t("workspace.pr.tab"),
-      shortcutId: "activate-pr-pane",
-      icon: <LuGitPullRequest size={18} />,
-    },
+    ...(gitCapable
+      ? [
+          {
+            value: "changes" as const,
+            label: t("files.changes"),
+            shortcutId: "activate-changes-pane",
+            icon: (
+              <Badge
+                badgeContent={changesCount}
+                color="primary"
+                max={99}
+                invisible={changesCount <= 0}
+                sx={{
+                  "& .MuiBadge-badge": {
+                    minWidth: 14,
+                    height: 14,
+                    fontSize: 9,
+                    lineHeight: 1,
+                  },
+                }}
+              >
+                <LuGitBranch size={18} />
+              </Badge>
+            ),
+          },
+          {
+            value: "pr" as const,
+            label: t("workspace.pr.tab"),
+            shortcutId: "activate-pr-pane",
+            icon: <LuGitPullRequest size={18} />,
+          },
+        ]
+      : []),
   ];
 
   return (

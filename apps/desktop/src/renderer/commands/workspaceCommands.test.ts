@@ -648,6 +648,35 @@ describe("workspaceCommands", () => {
     });
   });
 
+  it("skips git refresh for a non-git workspace", async () => {
+    const setWorkspaceGitChangesCount = vi.fn();
+    const setWorkspaceGitChangeTotals = vi.fn();
+    workspaceStore.setState({
+      projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-plain",
+          repoId: "project-plain",
+          name: "local",
+          title: "local",
+          summaryId: "workspace-1",
+          sourceBranch: "",
+          branch: "",
+          worktreePath: "/tmp/plain-folder",
+        },
+      ],
+      setWorkspaceGitChangesCount,
+      setWorkspaceGitChangeTotals,
+    });
+
+    await refreshWorkspaceGitChanges("workspace-1");
+
+    expect(rpcMocks.listGitChanges).not.toHaveBeenCalled();
+    expect(rpcMocks.getBranchDiffSummary).not.toHaveBeenCalled();
+    expect(setWorkspaceGitChangesCount).not.toHaveBeenCalled();
+  });
+
   it("combines branch diff summary with uncommitted changes when sourceBranch is configured", async () => {
     const setWorkspaceGitChangesCount = vi.fn();
     const setWorkspaceGitChangeTotals = vi.fn();
@@ -1021,6 +1050,22 @@ describe("workspaceCommands", () => {
     expect(eventListener).toHaveBeenCalledTimes(1);
     const dispatchedEvent = eventListener.mock.calls[0]?.[0] as CustomEvent<{ repoId: string }>;
     expect(dispatchedEvent.detail.repoId).toBe("repo-1");
+
+    window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
+  });
+
+  it("does not dispatch open-create-workspace event for a non-git project", () => {
+    workspaceStore.setState({
+      selectedProjectId: "project-plain",
+      projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
+    });
+
+    const eventListener = vi.fn();
+    window.addEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
+
+    openCreateWorkspaceDialog();
+
+    expect(eventListener).not.toHaveBeenCalled();
 
     window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
   });

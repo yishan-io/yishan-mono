@@ -89,10 +89,9 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     }
 
     const daemonClient = await getDaemonClient();
-    const projectsWithWorkspaces = (await daemonClient.project.listByOrg(
-      selectedOrganization.id,
-      { withWorkspaces: true },
-    )) as ProjectWithWorkspacesRecord[];
+    const projectsWithWorkspaces = (await daemonClient.project.listByOrg(selectedOrganization.id, {
+      withWorkspaces: true,
+    })) as ProjectWithWorkspacesRecord[];
     const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
 
@@ -165,10 +164,6 @@ export async function createProject(input: {
     inferredNodeId = sessionStore.getState().daemonId?.trim();
     const localRepositoryMetadata = await inspectLocalRepository(normalizedPath);
 
-    if (!localRepositoryMetadata.isGitRepository) {
-      throw new Error("The selected folder is not a git repository. Please choose a valid git repository folder.");
-    }
-
     inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
     inferredSourceTypeHint = inferredRemoteUrl
       ? "git"
@@ -198,6 +193,8 @@ export async function createProject(input: {
       name: normalizedName,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
+      nodeId: inferredNodeId,
+      localPath: isLocalSource ? normalizedPath : undefined,
       contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
     })) as ProjectWithWorkspacesRecord;
   } catch (error) {
@@ -247,12 +244,15 @@ export async function createProject(input: {
 
   for (const workspace of workspaces) {
     const workspaceName = workspace.kind === "primary" ? "local" : workspace.branch?.trim() || "workspace";
+    // Non-git projects have no branches: store an empty branch instead of
+    // fabricating "main" so nothing downstream mistakes the project for git.
+    const isNonGitProject = project.sourceType === "unknown";
     workspaceStore.getState().addWorkspace({
       projectId: workspace.projectId ?? project.id,
       workspaceId: workspace.id,
       name: workspaceName,
-      sourceBranch: workspace.branch?.trim() || "main",
-      branch: workspace.branch?.trim() || "main",
+      sourceBranch: isNonGitProject ? "" : workspace.branch?.trim() || "main",
+      branch: isNonGitProject ? "" : workspace.branch?.trim() || "main",
       worktreePath: workspace.localPath,
       nodeId: workspace.nodeId,
     });
@@ -381,25 +381,28 @@ export async function updateProjectConfig(
 }
 
 /**
- * Asks the local daemon to add or remove the `.my-context` symlink in every
- * known workspace worktree for the given project. Failures are logged but do
- * not throw so the user-facing project update is still considered successful.
+ * Asks the local daemon to add or remove the `.my-context` link in every
+ * known workspace worktree for the given project. Git projects use the
+ * shared per-repo context root via a symlink; non-git projects use a real
+ * `.my-context` directory in each worktree (`nonGit: true`, no repoKey).
+ * Failures are logged but do not throw so the user-facing project update is
+ * still considered successful.
  */
 async function syncProjectContextLinks(input: {
   projectId: string;
   repoKey: string | null;
   enabled: boolean;
 }): Promise<void> {
-  const repoKey = input.repoKey?.trim();
-  if (!repoKey) {
+  const state = workspaceStore.getState();
+  const project = state.projects.find((item) => item.id === input.projectId);
+  const isNonGit = project?.sourceType === "unknown";
+  const repoKey = isNonGit ? "" : (input.repoKey?.trim() ?? "");
+  if (!isNonGit && !repoKey) {
     if (import.meta.env.DEV) {
       console.debug("[projectCommands] skip context sync: missing repoKey", input);
     }
     return;
   }
-
-  const state = workspaceStore.getState();
-  const project = state.projects.find((item) => item.id === input.projectId);
   const candidatePaths = new Set<string>();
 
   for (const workspace of state.workspaces) {
@@ -429,6 +432,7 @@ async function syncProjectContextLinks(input: {
     const client = await getDaemonClient();
     const result = await client.workspace.syncContextLink({
       repoKey,
+      nonGit: isNonGit,
       enabled: input.enabled,
       worktreePaths: Array.from(candidatePaths),
     });

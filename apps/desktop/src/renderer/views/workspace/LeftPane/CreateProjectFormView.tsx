@@ -96,11 +96,7 @@ export function CreateProjectFormView({
     const selectedPath = await openLocalFolderDialog(repoDraft.path.trim() || undefined);
     if (selectedPath) {
       const sourceInspection = await inspectLocalProjectSource(selectedPath);
-      if (sourceInspection.sourceTypeHint === "unknown") {
-        setPathError(t("project.form.notAGitRepo"));
-      } else {
-        setPathError(null);
-      }
+      setPathError(null);
       setRepoDraft((previous) => {
         const nextName = previous.nameEdited ? previous.name : deriveDefaultProjectName(selectedPath);
         return {
