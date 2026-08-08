@@ -56,6 +56,11 @@ func (h *JSONRPCHandler) retryPendingWorkspaceCleanups(ctx context.Context) {
 			log.Warn().Err(cleanupErr).Str("workspaceId", item.WorkspaceID).Str("path", item.Path).Msg("pending workspace cleanup retry failed")
 			continue
 		}
+		// Mark the workspace record closed before dropping the retry entry so
+		// hydration on the next daemon start does not resurrect it as active.
+		if closeErr := h.closePersistedWorkspace(ctx, item.WorkspaceID); closeErr != nil {
+			log.Warn().Err(closeErr).Str("workspaceId", item.WorkspaceID).Msg("failed to mark persisted workspace closed after cleanup")
+		}
 		if err := h.cleanupStore.Remove(item.WorkspaceID); err != nil {
 			log.Warn().Err(err).Str("workspaceId", item.WorkspaceID).Msg("failed to remove completed pending workspace cleanup")
 			continue

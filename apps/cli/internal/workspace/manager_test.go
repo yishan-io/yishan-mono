@@ -149,6 +149,24 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 	}
 }
 
+func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
+	manager := NewManager()
+	workspacePath := t.TempDir()
+	if _, err := manager.Open(OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+
+	if _, err := manager.CloseWorkspace(context.Background(), CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+		t.Fatalf("close workspace with non-git path: %v", err)
+	}
+	if _, err := manager.GetWorkspace("ws-1"); err == nil {
+		t.Fatal("expected workspace removed from memory after close")
+	}
+	if _, err := os.Stat(workspacePath); err != nil {
+		t.Fatalf("expected leftover directory to remain after close: %v", err)
+	}
+}
+
 func openTestManagerStore(t *testing.T, projectID string) (*Manager, *localdb.WorkspaceStore) {
 	t.Helper()
 	database, err := localdb.Open(t.TempDir())
