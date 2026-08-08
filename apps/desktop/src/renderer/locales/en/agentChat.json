@@ -32,6 +32,12 @@
       }
     },
     "scrollToBottom": "Scroll to bottom",
+    "turn": {
+      "working": "working…",
+      "worked": "Worked {{duration}}",
+      "collapse": "Collapse turn",
+      "expand": "Expand turn"
+    },
     "compaction": {
       "generic": "Compacting context…",
       "manual": "Compacting context…",

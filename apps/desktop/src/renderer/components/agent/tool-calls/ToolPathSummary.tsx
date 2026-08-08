@@ -7,11 +7,14 @@ export function ToolPathSummary({
   path,
   suffix = null,
   inlineSuffix = false,
+  truncate = false,
 }: {
   icon: ReactNode;
   path: string;
   suffix?: ReactNode;
   inlineSuffix?: boolean;
+  /** Renders the value on a single line with ellipsis truncation. */
+  truncate?: boolean;
 }) {
   return (
     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.75, minWidth: 0, flex: 1 }}>
@@ -32,10 +35,13 @@ export function ToolPathSummary({
       <Typography
         variant="body2"
         component="pre"
+        title={truncate ? path : undefined}
         sx={{
           fontFamily: "monospace",
           fontSize: "0.75rem",
-          whiteSpace: "pre-wrap",
+          whiteSpace: truncate ? "nowrap" : "pre-wrap",
+          overflow: truncate ? "hidden" : undefined,
+          textOverflow: truncate ? "ellipsis" : undefined,
           m: 0,
           minWidth: 0,
           flex: 1,

@@ -32,6 +32,12 @@
       }
     },
     "scrollToBottom": "滚动到底部",
+    "turn": {
+      "working": "工作中…",
+      "worked": "耗时 {{duration}}",
+      "collapse": "折叠对话回合",
+      "expand": "展开对话回合"
+    },
     "compaction": {
       "generic": "正在压缩上下文…",
       "manual": "正在压缩上下文…",

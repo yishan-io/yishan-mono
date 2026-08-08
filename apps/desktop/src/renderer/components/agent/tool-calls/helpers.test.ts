@@ -7,6 +7,7 @@ import {
   parseLspDiagnosticsSummary,
   parseLspFixSummary,
   parseWorkspaceListCount,
+  summarizeToolCalls,
 } from "./helpers";
 
 describe("parseWorkspaceListCount", () => {
@@ -251,5 +252,45 @@ describe("LSP parsers against the real extension formatters", () => {
       status: "computed",
       path: "src/a.ts",
     });
+  });
+});
+
+describe("summarizeToolCalls", () => {
+  it("groups read and bash calls with pluralization", () => {
+    const calls = [
+      { toolCall: { id: "1", name: "read", type: "toolCall" as const, arguments: {} } },
+      { toolCall: { id: "2", name: "read", type: "toolCall" as const, arguments: {} } },
+      { toolCall: { id: "3", name: "bash", type: "toolCall" as const, arguments: {} } },
+    ];
+
+    expect(summarizeToolCalls(calls)).toEqual(["2 files read", "1 command ran"]);
+  });
+
+  it("keeps first-seen category order", () => {
+    const calls = [
+      { toolCall: { id: "1", name: "bash", type: "toolCall" as const, arguments: {} } },
+      { toolCall: { id: "2", name: "read", type: "toolCall" as const, arguments: {} } },
+    ];
+
+    expect(summarizeToolCalls(calls)).toEqual(["1 command ran", "1 file read"]);
+  });
+
+  it("counts edits, writes and greps into their own categories", () => {
+    const calls = [
+      { toolCall: { id: "1", name: "edit", type: "toolCall" as const, arguments: {} } },
+      { toolCall: { id: "2", name: "write", type: "toolCall" as const, arguments: {} } },
+      { toolCall: { id: "3", name: "grep", type: "toolCall" as const, arguments: {} } },
+    ];
+
+    expect(summarizeToolCalls(calls)).toEqual(["2 files edited", "1 file searched"]);
+  });
+
+  it("lists unknown tools by name", () => {
+    const calls = [
+      { toolCall: { id: "1", name: "web_fetch", type: "toolCall" as const, arguments: {} } },
+      { toolCall: { id: "2", name: "web_fetch", type: "toolCall" as const, arguments: {} } },
+    ];
+
+    expect(summarizeToolCalls(calls)).toEqual(["2 web_fetch calls"]);
   });
 });

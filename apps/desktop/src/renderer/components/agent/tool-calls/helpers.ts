@@ -18,6 +18,59 @@ export type AgentToolCallCardProps = {
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
+/** One tool call paired with its merged result, grouped at turn level. */
+export type GroupedToolCall = {
+  toolCall: Extract<AgentContentBlock, { type: "toolCall" }>;
+  result?: AgentMessage | null;
+};
+
+/** Builds the Codex-style group summary lines, e.g. ["2 files read", "1 command ran"]. */
+export function summarizeToolCalls(calls: GroupedToolCall[]): string[] {
+  const counts = new Map<string, number>();
+
+  for (const call of calls) {
+    const key = getToolCallCategoryKey(call.toolCall.name);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  const lines: string[] = [];
+  for (const [key, count] of counts) {
+    lines.push(buildSummaryLine(key, count));
+  }
+  return lines;
+}
+
+function getToolCallCategoryKey(name: string): string {
+  switch (name) {
+    case "read":
+      return "read";
+    case "bash":
+      return "bash";
+    case "edit":
+    case "write":
+      return "edited";
+    case "grep":
+      return "searched";
+    default:
+      return `used:${name}`;
+  }
+}
+
+function buildSummaryLine(key: string, count: number): string {
+  switch (key) {
+    case "read":
+      return `${count} ${count === 1 ? "file" : "files"} read`;
+    case "bash":
+      return `${count} ${count === 1 ? "command" : "commands"} ran`;
+    case "edited":
+      return `${count} ${count === 1 ? "file" : "files"} edited`;
+    case "searched":
+      return `${count} ${count === 1 ? "file" : "files"} searched`;
+    default:
+      return `${count} ${key.slice("used:".length)} ${count === 1 ? "call" : "calls"}`;
+  }
+}
+
 /** Simple line-change counts derived from a unified diff patch. */
 export type DiffStats = {
   added: number;
