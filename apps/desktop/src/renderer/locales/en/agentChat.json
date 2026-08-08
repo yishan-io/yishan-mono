@@ -32,6 +32,24 @@
       }
     },
     "scrollToBottom": "Scroll to bottom",
+    "turn": {
+      "working": "working…",
+      "worked": "Worked {{duration}}",
+      "collapse": "Collapse turn",
+      "expand": "Expand turn"
+    },
+    "toolGroup": {
+      "read_one": "{{count}} file read",
+      "read_other": "{{count}} files read",
+      "bash_one": "{{count}} command ran",
+      "bash_other": "{{count}} commands ran",
+      "edited_one": "{{count}} file edited",
+      "edited_other": "{{count}} files edited",
+      "searched_one": "{{count}} file searched",
+      "searched_other": "{{count}} files searched",
+      "used_one": "{{count}} {{toolName}} call",
+      "used_other": "{{count}} {{toolName}} calls"
+    },
     "compaction": {
       "generic": "Compacting context…",
       "manual": "Compacting context…",

@@ -1,4 +1,4 @@
-import { Box, Collapse, Typography } from "@mui/material";
+import { Box, Collapse, IconButton, Typography } from "@mui/material";
 import { useState } from "react";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 import type { AgentThinkingSignature } from "../../../store/agentChatTypes";
@@ -35,7 +35,7 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
         <Typography
           variant="caption"
           sx={{
-            color: "text.secondary",
+            color: "text.disabled",
             flexShrink: 0,
           }}
         >
@@ -58,17 +58,17 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
           </Typography>
         ) : null}
         {hasExpandableDetails ? (
-          <Box
-            component="span"
+          <IconButton
+            aria-expanded={open}
             aria-label="Toggle thought details"
-            sx={{ display: "inline-flex", alignItems: "center", color: "text.secondary" }}
+            sx={{ width: 20, height: 20, flexShrink: 0, color: "text.secondary" }}
           >
             {open ? (
               <LuChevronDown data-testid="thinking-chevron-down" size={14} />
             ) : (
               <LuChevronRight data-testid="thinking-chevron-right" size={14} />
             )}
-          </Box>
+          </IconButton>
         ) : null}
       </Box>
       {hasExpandableDetails ? (

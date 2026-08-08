@@ -21,17 +21,23 @@ vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: virtualizerMocks.useVirtualizer,
 }));
 
-vi.mock("./AgentMessage", () => ({
-  AgentMessage: ({
-    message,
-    mergedToolResults,
+vi.mock("./AgentTurn", () => ({
+  AgentTurn: ({
+    turn,
   }: {
-    message: AgentMessageType;
-    mergedToolResults: Record<string, AgentMessageType | undefined>;
+    turn: {
+      id: string;
+      items: { message: { id: string }; mergedToolResults: Record<string, AgentMessageType | undefined> }[];
+    };
   }) => (
-    <div data-testid="agent-message-row">
-      <span>{message.id}</span>
-      <span data-testid={`merged-count-${message.id}`}>{Object.keys(mergedToolResults).length}</span>
+    <div data-testid="agent-turn-row">
+      <span>{turn.id}</span>
+      {turn.items.map((item) => (
+        <span key={item.message.id}>
+          {item.message.id}
+          <span data-testid={`merged-count-${item.message.id}`}>{Object.keys(item.mergedToolResults).length}</span>
+        </span>
+      ))}
     </div>
   ),
 }));
@@ -41,6 +47,14 @@ vi.mock("./QueuedMessageList", () => ({
     steering.length + followUp.length > 0 ? <div data-testid="queued-message-list" /> : null,
 }));
 
+vi.mock("./UserMessageRow", () => ({
+  UserMessageRow: ({ message }: { message: AgentMessageType }) => (
+    <div data-testid="user-row">
+      <span>{message.id}</span>
+    </div>
+  ),
+}));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -48,24 +62,22 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
-  it("renders only virtual rows and registers each row for dynamic-height measurement", () => {
-    const messages = Array.from(
-      { length: 10 },
-      (_, index): AgentMessageType => ({
-        id: `assistant-${index}`,
-        role: "assistant",
-        content: [{ type: "text", text: `Message ${index}` }],
-      }),
-    );
+  it("renders only virtual rows (standalone user messages and turns) and registers each for dynamic-height measurement", () => {
+    const messages = Array.from({ length: 10 }, (_, index): AgentMessageType[] => [
+      { id: `user-${index}`, role: "user", content: `Prompt ${index}` },
+      { id: `assistant-${index}`, role: "assistant", content: [{ type: "text", text: `Message ${index}` }] },
+    ]).flat();
 
     render(<AgentMessageList tabId="tab-virtual" isActive messages={messages} emptyPrompt="empty" />);
 
-    expect(screen.getAllByTestId("agent-message-row")).toHaveLength(2);
-    expect(screen.getByText("assistant-0")).toBeTruthy();
-    expect(screen.getByText("assistant-9")).toBeTruthy();
-    expect(screen.queryByText("assistant-1")).toBeNull();
-    expect(screen.getByText("assistant-0").closest("[data-index]")?.getAttribute("data-index")).toBe("0");
-    expect(screen.getByText("assistant-9").closest("[data-index]")?.getAttribute("data-index")).toBe("9");
+    expect(screen.getAllByTestId("user-row")).toHaveLength(1);
+    expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
+    expect(screen.getByText("user-0")).toBeTruthy();
+    expect(screen.queryByText("user-1")).toBeNull();
+    expect(screen.getByText("user-0").closest("[data-index]")?.getAttribute("data-index")).toBe("0");
+    const turnRow = screen.getByTestId("agent-turn-row");
+    expect(turnRow.textContent).toContain("assistant-9");
+    expect(turnRow.closest("[data-index]")?.getAttribute("data-index")).toBe("19");
   });
 
   it.each([
@@ -115,7 +127,7 @@ describe("AgentMessageList", () => {
 
     render(<AgentMessageList tabId="tab-1" isActive messages={messages} emptyPrompt="empty" />);
 
-    expect(screen.getAllByTestId("agent-message-row")).toHaveLength(1);
+    expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
     expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");
     expect(screen.queryByText("tool-result-1")).toBeNull();
   });
@@ -172,7 +184,7 @@ describe("AgentMessageList", () => {
     render(<AgentMessageList tabId="tab-delayed" isActive messages={messages} emptyPrompt="empty" />);
 
     expect(screen.getByTestId("merged-count-assistant-tools").textContent).toBe("3");
-    expect(screen.getAllByTestId("agent-message-row")).toHaveLength(4);
+    expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
     expect(screen.queryByText("bash-result")).toBeNull();
     expect(screen.queryByText("read-result")).toBeNull();
     expect(screen.queryByText("custom-result")).toBeNull();
@@ -250,6 +262,31 @@ describe("AgentMessageList", () => {
     );
 
     expect(screen.getByText("working…")).toBeTruthy();
+  });
+
+  it("hides the bottom working indicator when a working turn header already shows it", () => {
+    render(
+      <AgentMessageList
+        tabId="tab-working-turn"
+        isActive
+        messages={[
+          {
+            id: "assistant-1",
+            role: "assistant",
+            content: [{ type: "text", text: "Done writing files." }],
+          },
+        ]}
+        trailingMessage={{
+          id: "assistant-streaming",
+          role: "assistant",
+          content: [{ type: "text", text: "Streaming…" }],
+        }}
+        emptyPrompt="empty"
+        isWorking
+      />,
+    );
+
+    expect(screen.queryByText("working…")).toBeNull();
   });
 
   it("keeps a manually scrolled transcript position when messages arrive", () => {

@@ -5,9 +5,11 @@ import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
 import type { AgentMessage as AgentMessageType, AgentQueueState } from "../../../store/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
-import { AgentMessage } from "./AgentMessage";
+import { AgentTurn } from "./AgentTurn";
 import { QueuedMessageList } from "./QueuedMessageList";
+import { UserMessageRow } from "./UserMessageRow";
 import type { AgentToolResultMap } from "./helpers";
+import { buildTranscriptRows } from "./turnModel";
 
 const EMPTY_MIN_HEIGHT = 320;
 const BOTTOM_SCROLL_THRESHOLD_PX = 48;
@@ -152,7 +154,6 @@ function AgentMessageListComponent({
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const wasActiveRef = useRef(false);
   const hasRenderedTranscriptRef = useRef(false);
-  const displayMessageIdsRef = useRef<string[]>([]);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     const display = buildDisplayMessages(source);
@@ -164,13 +165,16 @@ function AgentMessageListComponent({
     }
     return display;
   }, [messages, trailingMessage]);
-  displayMessageIdsRef.current = displayMessages.map((displayMessage) => displayMessage.message.id);
-  const getVirtualMessageKey = useCallback((index: number) => displayMessageIdsRef.current[index] ?? index, []);
+  const rows = useMemo(() => buildTranscriptRows(displayMessages), [displayMessages]);
+  const rowIdsRef = useRef<string[]>([]);
+  rowIdsRef.current = rows.map((row) => (row.kind === "user" ? `user:${row.message.id}` : row.turn.id));
+  const getVirtualMessageKey = useCallback((index: number) => rowIdsRef.current[index] ?? index, []);
   const queuedCount = (queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0);
-  const renderedItemCount = displayMessages.length + (isWorking ? 1 : 0) + queuedCount;
+  const hasWorkingTurn = rows.some((row) => row.kind === "turn" && row.turn.isWorking);
+  const renderedItemCount = rows.length + (isWorking && !hasWorkingTurn ? 1 : 0) + queuedCount;
   const previousRenderedItemCountRef = useRef(renderedItemCount);
   const virtualizer = useVirtualizer({
-    count: displayMessages.length,
+    count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => MESSAGE_ESTIMATED_HEIGHT_PX,
     overscan: MESSAGE_VIRTUALIZER_OVERSCAN,
@@ -195,7 +199,6 @@ function AgentMessageListComponent({
       setIsScrollToBottomVisible(!isScrolledNearBottom(element));
     }
   }, [displayMessages.length, renderedItemCount, tabId]);
-
   const scrollToLatestMessage = useCallback(() => {
     const element = scrollRef.current;
     if (!element || renderedItemCount === 0) {
@@ -350,12 +353,11 @@ function AgentMessageListComponent({
         >
           <Box sx={{ height: virtualMessageTotalSize, position: "relative", width: "100%" }}>
             {virtualMessages.map((virtualMessage) => {
-              const displayMessage = displayMessages[virtualMessage.index];
-              if (!displayMessage) {
+              const row = rows[virtualMessage.index];
+              if (!row) {
                 return null;
               }
 
-              const { message, mergedToolResults, isStreaming } = displayMessage;
               return (
                 <Box
                   key={virtualMessage.key}
@@ -369,18 +371,20 @@ function AgentMessageListComponent({
                     width: "100%",
                   }}
                 >
-                  <AgentMessage
-                    message={message}
-                    mergedToolResults={mergedToolResults}
-                    workspacePath={workspacePath}
-                    isStreaming={isStreaming}
-                    onOpenCompletedSubagent={onOpenCompletedSubagent}
-                  />
+                  {row.kind === "user" ? (
+                    <UserMessageRow message={row.message} />
+                  ) : (
+                    <AgentTurn
+                      turn={row.turn}
+                      workspacePath={workspacePath}
+                      onOpenCompletedSubagent={onOpenCompletedSubagent}
+                    />
+                  )}
                 </Box>
               );
             })}
           </Box>
-          {isWorking && (
+          {isWorking && !hasWorkingTurn && (
             <Box
               data-testid="agent-turn-working-indicator"
               sx={{
