@@ -394,6 +394,12 @@ func (m *Manager) CloseWorkspacePath(ctx context.Context, req ClosePathRequest) 
 
 	mainWorktreePath, err := m.gits.MainWorktreePath(ctx, req.Path)
 	if err != nil {
+		if isNotGitRepositoryError(err) {
+			// Directory exists but git registration is gone: nothing left to
+			// tear down via git, and the error can never resolve on retry.
+			// The leftover directory is deliberately not removed.
+			return result, nil
+		}
 		return result, err
 	}
 

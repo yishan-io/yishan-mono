@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/gitexec"
+	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
@@ -176,4 +177,16 @@ func coalesceNonEmpty(values ...string) string {
 
 func splitNonEmptyLines(input string) []string {
 	return gitexec.SplitNonEmptyLines(input)
+}
+
+// isNotGitRepositoryError reports whether err is an RPC error carrying git's
+// "not a git repository" diagnostic. A worktree directory that still exists
+// but has lost its git registration (no .git file/dir) can never be resolved
+// by retrying, so callers treat it as an already-gone state.
+func isNotGitRepositoryError(err error) bool {
+	var rpcErr *rpcerror.Error
+	if !errors.As(err, &rpcErr) {
+		return false
+	}
+	return strings.Contains(rpcErr.Message, "not a git repository")
 }
