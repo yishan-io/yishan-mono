@@ -333,6 +333,10 @@
 .vditor-app-editor .vditor-task {
   list-style: none;
   margin-left: -1.4em;
+  /* vditor's own rule sets `word-break` to `break-all` here, which splits
+   * English words mid-word in checkbox list items (e.g. TODO files). Restore
+   * the same word-boundary breaking the rest of the content uses. */
+  word-break: break-word;
 }
 
 .vditor-app-editor .vditor-task input[type="checkbox"] {
