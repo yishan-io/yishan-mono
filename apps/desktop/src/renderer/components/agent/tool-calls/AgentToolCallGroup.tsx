@@ -1,12 +1,18 @@
 import { Box, IconButton, Typography } from "@mui/material";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight, LuLayers } from "react-icons/lu";
 import { ThinkingBlock } from "../transcript/ThinkingBlock";
 import type { TurnWorkingBlock } from "../transcript/turnModel";
 import { AgentToolCallCard } from "./AgentToolCallCard";
-import { type CompletedSubagentOpenTarget, summarizeToolCalls } from "./helpers";
+import { type CompletedSubagentOpenTarget, type ToolCallSummaryItem, summarizeToolCalls } from "./helpers";
+
+/** Persists expanded tool-run groups across virtualized row unmounts (mirrors savedScrollTopByTabId). */
+const expandedToolRunIds = new Set<string>();
 
 type AgentToolCallGroupProps = {
+  /** Stable identity for this tool run, used for collapse-state persistence. */
+  id: string;
   /** All working blocks of the turn (thinking + tool calls) in original order. */
   blocks: TurnWorkingBlock[];
   /** Whether the owning turn is still running. */
@@ -16,19 +22,20 @@ type AgentToolCallGroupProps = {
 };
 
 /**
- * Collapsed-by-default group for the working content of one turn, Codex-style:
- * thinking blocks and tool calls stay in order inside the group. While the
- * turn is running the collapsed group shows only the latest working block; the
- * summary header ("read 3 files · ran 2 commands") is always expandable to
- * reveal everything.
+ * Collapsed-by-default group for one tool run, Codex-style: thinking blocks and
+ * tool calls stay in order inside the group. While the turn is running the
+ * collapsed group shows only the latest working block; the summary header
+ * ("2 files read · 1 command ran") is always expandable to reveal everything.
  */
 export function AgentToolCallGroup({
+  id,
   blocks,
   isTurnWorking,
   workspacePath,
   onOpenCompletedSubagent,
 }: AgentToolCallGroupProps) {
-  const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(() => expandedToolRunIds.has(id));
   if (blocks.length === 0) {
     return null;
   }
@@ -55,16 +62,29 @@ export function AgentToolCallGroup({
     );
   }
 
-  const summary = summarizeToolCalls(
-    toolCalls.map((block) => ({ toolCall: block.toolCall, result: block.result })),
-  ).join(" · ");
+  const toggleOpen = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        expandedToolRunIds.add(id);
+      } else {
+        expandedToolRunIds.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const summary = formatToolCallSummary(
+    summarizeToolCalls(toolCalls.map((block) => ({ toolCall: block.toolCall, result: block.result }))),
+    t,
+  );
   const latestBlock = blocks[blocks.length - 1];
 
   return (
     <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5 }}>
       <Box
         data-testid="agent-tool-call-group-header"
-        onClick={() => setOpen(!open)}
+        onClick={toggleOpen}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -152,4 +172,19 @@ export function AgentToolCallGroup({
       ) : null}
     </Box>
   );
+}
+
+function formatToolCallSummary(
+  items: ToolCallSummaryItem[],
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  return items
+    .map((item) => {
+      const options: Record<string, unknown> = { count: item.count };
+      if (item.toolName !== undefined) {
+        options.toolName = item.toolName;
+      }
+      return t(`agentChat.toolGroup.${item.key}`, options);
+    })
+    .join(" · ");
 }

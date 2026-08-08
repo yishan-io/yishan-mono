@@ -264,6 +264,31 @@ describe("AgentMessageList", () => {
     expect(screen.getByText("working…")).toBeTruthy();
   });
 
+  it("hides the bottom working indicator when a working turn header already shows it", () => {
+    render(
+      <AgentMessageList
+        tabId="tab-working-turn"
+        isActive
+        messages={[
+          {
+            id: "assistant-1",
+            role: "assistant",
+            content: [{ type: "text", text: "Done writing files." }],
+          },
+        ]}
+        trailingMessage={{
+          id: "assistant-streaming",
+          role: "assistant",
+          content: [{ type: "text", text: "Streaming…" }],
+        }}
+        emptyPrompt="empty"
+        isWorking
+      />,
+    );
+
+    expect(screen.queryByText("working…")).toBeNull();
+  });
+
   it("keeps a manually scrolled transcript position when messages arrive", () => {
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);

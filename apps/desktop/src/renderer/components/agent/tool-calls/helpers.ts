@@ -24,20 +24,29 @@ export type GroupedToolCall = {
   result?: AgentMessage | null;
 };
 
-/** Builds the Codex-style group summary lines, e.g. ["2 files read", "1 command ran"]. */
-export function summarizeToolCalls(calls: GroupedToolCall[]): string[] {
-  const counts = new Map<string, number>();
+/** One summary line of a tool-call group, formatted via i18n in the UI. */
+export type ToolCallSummaryItem = {
+  key: "read" | "bash" | "edited" | "searched" | "used";
+  count: number;
+  toolName?: string;
+};
+
+/** Builds the Codex-style group summary counts, e.g. [{ key: "read", count: 2 }, { key: "bash", count: 1 }]. */
+export function summarizeToolCalls(calls: GroupedToolCall[]): ToolCallSummaryItem[] {
+  const counts = new Map<string, ToolCallSummaryItem>();
 
   for (const call of calls) {
-    const key = getToolCallCategoryKey(call.toolCall.name);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const categoryKey = getToolCallCategoryKey(call.toolCall.name);
+    const existing = counts.get(categoryKey);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      const { key, toolName } = parseToolCallCategoryKey(categoryKey);
+      counts.set(categoryKey, { key, count: 1, ...(toolName !== undefined ? { toolName } : {}) });
+    }
   }
 
-  const lines: string[] = [];
-  for (const [key, count] of counts) {
-    lines.push(buildSummaryLine(key, count));
-  }
-  return lines;
+  return [...counts.values()];
 }
 
 function getToolCallCategoryKey(name: string): string {
@@ -56,19 +65,11 @@ function getToolCallCategoryKey(name: string): string {
   }
 }
 
-function buildSummaryLine(key: string, count: number): string {
-  switch (key) {
-    case "read":
-      return `${count} ${count === 1 ? "file" : "files"} read`;
-    case "bash":
-      return `${count} ${count === 1 ? "command" : "commands"} ran`;
-    case "edited":
-      return `${count} ${count === 1 ? "file" : "files"} edited`;
-    case "searched":
-      return `${count} ${count === 1 ? "file" : "files"} searched`;
-    default:
-      return `${count} ${key.slice("used:".length)} ${count === 1 ? "call" : "calls"}`;
+function parseToolCallCategoryKey(categoryKey: string): { key: ToolCallSummaryItem["key"]; toolName?: string } {
+  if (categoryKey.startsWith("used:")) {
+    return { key: "used", toolName: categoryKey.slice("used:".length) };
   }
+  return { key: categoryKey as ToolCallSummaryItem["key"] };
 }
 
 /** Simple line-change counts derived from a unified diff patch. */

@@ -6,6 +6,27 @@ import type { AgentMessage } from "../../../store/agentChatTypes";
 import type { TurnWorkingBlock } from "../transcript/turnModel";
 import { AgentToolCallGroup } from "./AgentToolCallGroup";
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      const count = typeof options?.count === "number" ? String(options.count) : "";
+      const toolName = typeof options?.toolName === "string" ? options.toolName : "";
+      const translations: Record<string, string> = {
+        "agentChat.toolGroup.read_one": "{{count}} file read",
+        "agentChat.toolGroup.read_other": "{{count}} files read",
+        "agentChat.toolGroup.bash_one": "{{count}} command ran",
+        "agentChat.toolGroup.bash_other": "{{count}} commands ran",
+        "agentChat.toolGroup.edited_other": "{{count}} files edited",
+        "agentChat.toolGroup.searched_other": "{{count}} files searched",
+        "agentChat.toolGroup.used_other": "{{count}} {{toolName}} calls",
+      };
+      const pluralKey = `${key}_${count === "1" ? "one" : "other"}`;
+      const template = translations[pluralKey] ?? translations[key] ?? key;
+      return template.replace("{{count}}", count).replace("{{toolName}}", toolName);
+    },
+  }),
+}));
+
 vi.mock("../transcript/ThinkingBlock", () => ({
   ThinkingBlock: ({ thinking }: { thinking: string }) => <div data-testid="thinking-block">{thinking}</div>,
 }));
@@ -42,7 +63,7 @@ function thinkingBlock(id: string, thinking = "thinking"): TurnWorkingBlock {
 
 describe("AgentToolCallGroup", () => {
   it("renders nothing for an empty block list", () => {
-    render(<AgentToolCallGroup blocks={[]} isTurnWorking={false} />);
+    render(<AgentToolCallGroup id="g-empty" blocks={[]} isTurnWorking={false} />);
 
     expect(screen.queryByTestId("agent-tool-call-group")).toBeNull();
   });
@@ -50,6 +71,7 @@ describe("AgentToolCallGroup", () => {
   it("shows the Codex-style summary counts in the header", () => {
     render(
       <AgentToolCallGroup
+        id="g-summary"
         blocks={[toolCallBlock("r1"), toolCallBlock("r2"), toolCallBlock("b1", "bash")]}
         isTurnWorking={false}
       />,
@@ -61,6 +83,7 @@ describe("AgentToolCallGroup", () => {
   it("keeps thinking blocks inside the group alongside their tool calls", () => {
     render(
       <AgentToolCallGroup
+        id="g-thinking"
         blocks={[thinkingBlock("t1", "check first"), toolCallBlock("r1"), toolCallBlock("b1", "bash")]}
         isTurnWorking={false}
       />,
@@ -76,6 +99,7 @@ describe("AgentToolCallGroup", () => {
   it("shows only the latest working block while the turn is working and the group is collapsed", () => {
     render(
       <AgentToolCallGroup
+        id="g-latest"
         blocks={[thinkingBlock("t1"), toolCallBlock("r1"), toolCallBlock("b1", "bash")]}
         isTurnWorking
       />,
@@ -88,7 +112,9 @@ describe("AgentToolCallGroup", () => {
   });
 
   it("shows only the header when the turn finished and the group is collapsed", () => {
-    render(<AgentToolCallGroup blocks={[toolCallBlock("r1"), toolCallBlock("r2")]} isTurnWorking={false} />);
+    render(
+      <AgentToolCallGroup id="g-done" blocks={[toolCallBlock("r1"), toolCallBlock("r2")]} isTurnWorking={false} />,
+    );
 
     expect(screen.getByText("2 files read")).toBeTruthy();
     expect(screen.queryByTestId("agent-tool-call-group-latest")).toBeNull();
@@ -96,7 +122,9 @@ describe("AgentToolCallGroup", () => {
   });
 
   it("expands to reveal every block and collapses again on header click", () => {
-    render(<AgentToolCallGroup blocks={[toolCallBlock("r1"), toolCallBlock("b1", "bash")]} isTurnWorking />);
+    render(
+      <AgentToolCallGroup id="g-toggle" blocks={[toolCallBlock("r1"), toolCallBlock("b1", "bash")]} isTurnWorking />,
+    );
 
     fireEvent.click(screen.getByTestId("agent-tool-call-group-header"));
 
@@ -109,7 +137,9 @@ describe("AgentToolCallGroup", () => {
   });
 
   it("renders thinking-only turns without group chrome", () => {
-    render(<AgentToolCallGroup blocks={[thinkingBlock("t1", "just thinking")]} isTurnWorking={false} />);
+    render(
+      <AgentToolCallGroup id="g-thinking-only" blocks={[thinkingBlock("t1", "just thinking")]} isTurnWorking={false} />,
+    );
 
     expect(screen.getByTestId("thinking-block").textContent).toBe("just thinking");
     expect(screen.queryByTestId("agent-tool-call-group-header")).toBeNull();

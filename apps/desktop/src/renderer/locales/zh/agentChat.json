@@ -38,6 +38,13 @@
       "collapse": "折叠对话回合",
       "expand": "展开对话回合"
     },
+    "toolGroup": {
+      "read": "读取 {{count}} 个文件",
+      "bash": "运行 {{count}} 条命令",
+      "edited": "编辑 {{count}} 个文件",
+      "searched": "搜索 {{count}} 个文件",
+      "used": "调用 {{toolName}} {{count}} 次"
+    },
     "compaction": {
       "generic": "正在压缩上下文…",
       "manual": "正在压缩上下文…",

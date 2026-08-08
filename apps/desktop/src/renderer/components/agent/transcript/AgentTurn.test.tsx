@@ -103,7 +103,7 @@ function buildTurn(messages: { message: AgentMessage; isStreaming?: boolean }[])
 
 describe("AgentTurn", () => {
   it("shows a working title while the turn is still running", () => {
-    const turn = buildTurn([{ message: thinkingAndSummaryMessage("a1"), isStreaming: true }]);
+    const turn = buildTurn([{ message: thinkingAndSummaryMessage("w-a1"), isStreaming: true }]);
 
     render(<AgentTurn turn={turn} />);
 
@@ -112,7 +112,7 @@ describe("AgentTurn", () => {
   });
 
   it("shows the worked duration title after the turn ends", () => {
-    const turn = buildTurn([{ message: assistantMessage("a1", { durationMs: 42_000 }) }]);
+    const turn = buildTurn([{ message: assistantMessage("d-a1", { durationMs: 42_000 }) }]);
 
     render(<AgentTurn turn={turn} />);
 
@@ -123,7 +123,7 @@ describe("AgentTurn", () => {
     const turn = buildTurn([
       {
         message: {
-          id: "a1",
+          id: "togg-a1",
           role: "assistant",
           content: [
             { type: "thinking", thinking: "planning…" },
@@ -149,7 +149,7 @@ describe("AgentTurn", () => {
     const turn = buildTurn([
       {
         message: {
-          id: "a1",
+          id: "col-a1",
           role: "assistant",
           content: [
             { type: "thinking", thinking: "planning…" },
@@ -173,7 +173,7 @@ describe("AgentTurn", () => {
     const turn = buildTurn([
       {
         message: {
-          id: "a1",
+          id: "wk-a1",
           role: "assistant",
           content: [
             { type: "thinking", thinking: "planning…" },
@@ -195,14 +195,14 @@ describe("AgentTurn", () => {
     const turn = buildTurn([
       {
         message: {
-          id: "a1",
+          id: "sm-a1",
           role: "assistant",
           content: [{ type: "toolCall", id: "read-call", name: "read", arguments: { path: "src/a.ts" } }],
         },
       },
       {
         message: {
-          id: "a2",
+          id: "sm-a2",
           role: "assistant",
           content: [
             { type: "thinking", thinking: "let me compose the answer" },
@@ -226,7 +226,7 @@ describe("AgentTurn", () => {
   });
 
   it("does not render any user message content", () => {
-    const turn = buildTurn([{ message: assistantMessage("a1", { durationMs: 1000 }) }]);
+    const turn = buildTurn([{ message: assistantMessage("um-a1", { durationMs: 1000 }) }]);
 
     render(<AgentTurn turn={turn} />);
 
@@ -235,7 +235,7 @@ describe("AgentTurn", () => {
 
   it("renders unmatched tool results via the tool result content renderer", () => {
     const turn = buildTurn([
-      { message: assistantMessage("a1", { durationMs: 1000 }) },
+      { message: assistantMessage("tr-a1", { durationMs: 1000 }) },
       { message: { id: "orphan-result", role: "toolResult", toolCallId: "missing", content: "out" } },
     ]);
 
@@ -248,7 +248,7 @@ describe("AgentTurn", () => {
     const turn = buildTurn([
       {
         message: {
-          id: "a1",
+          id: "seq-a1",
           role: "assistant",
           content: [
             { type: "thinking", thinking: "check the files" },
@@ -258,22 +258,22 @@ describe("AgentTurn", () => {
         },
         isStreaming: true,
       },
-      { message: toolCallMessage("a2", ["edit-call"]) },
+      { message: toolCallMessage("seq-a2", ["edit-call"]) },
     ]);
 
     render(<AgentTurn turn={turn} />);
 
     const group = screen.getByTestId("tool-call-group");
-    expect(group.textContent).toContain("thinking:a1-thinking-0");
+    expect(group.textContent).toContain("thinking:seq-a1-thinking-0");
     expect(group.textContent).toContain("read-call,bash-call,edit-call");
     expect(group.textContent).toContain("working");
   });
 
   it("splits tool runs when a normal text message appears in the middle", () => {
     const turn = buildTurn([
-      { message: toolCallMessage("a1", ["read-call"]) },
-      { message: { id: "a2", role: "assistant", content: [{ type: "text", text: "checking results" }] } },
-      { message: toolCallMessage("a3", ["bash-call"]) },
+      { message: toolCallMessage("sp-a1", ["read-call"]) },
+      { message: { id: "sp-a2", role: "assistant", content: [{ type: "text", text: "checking results" }] } },
+      { message: toolCallMessage("sp-a3", ["bash-call"]) },
     ]);
 
     render(<AgentTurn turn={turn} />);

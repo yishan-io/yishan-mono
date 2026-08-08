@@ -88,7 +88,7 @@ export function buildTranscriptRows(displayMessages: TurnItem[]): TranscriptRow[
       currentTurn.isWorking = true;
     }
     if (typeof item.message.durationMs === "number") {
-      currentTurn.workedDurationMs = item.message.durationMs;
+      currentTurn.workedDurationMs = (currentTurn.workedDurationMs ?? 0) + item.message.durationMs;
     }
   }
 
@@ -192,14 +192,14 @@ export function buildTurnSections(
   return sections;
 }
 
-/** Returns the elapsed working time for a turn, using the live start time while it is still streaming. */
-export function getTurnWorkedDurationMs(turn: Turn, nowMs: number): number | null {
+/**
+ * Returns the elapsed working time for a finished turn: the accumulated
+ * durationMs of its assistant messages, or a timestamp-derived fallback for
+ * history-loaded turns that lack durationMs. While the turn is still working
+ * the header shows "working…" instead, so returns null.
+ */
+export function getTurnWorkedDurationMs(turn: Turn): number | null {
   if (turn.isWorking) {
-    const streamingItem = turn.items.find((item) => item.isStreaming);
-    const startedAtMs = streamingItem?.message.startedAtMs;
-    if (typeof startedAtMs === "number" && Number.isFinite(startedAtMs)) {
-      return Math.max(0, nowMs - startedAtMs);
-    }
     return null;
   }
 

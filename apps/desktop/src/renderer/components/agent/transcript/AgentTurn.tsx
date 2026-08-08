@@ -1,5 +1,5 @@
 import { Box, CircularProgress, IconButton, Paper, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 import { AgentToolCallGroup } from "../tool-calls/AgentToolCallGroup";
@@ -9,6 +9,7 @@ import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolResultMessageContent } from "./ToolResultMessageContent";
 import {
   type Turn,
+  type TurnSection,
   buildTurnSections,
   extractTurnSummaryText,
   extractTurnSummaryThinking,
@@ -16,39 +17,42 @@ import {
   getTurnWorkedDurationMs,
 } from "./turnModel";
 
+/** Persists per-turn collapse state across virtualized row unmounts (mirrors savedScrollTopByTabId). */
+const collapsedTurnIds = new Set<string>();
+
 type AgentTurnProps = {
   turn: Turn;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
-/** Live elapsed-time ticker used while the working turn is mounted. */
-function useLiveElapsed(isWorking: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!isWorking) {
-      return;
-    }
-    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [isWorking]);
-  return now;
-}
-
 /**
  * Renders one assistant turn (the collapsible unit of the transcript, starting
  * at the assistant message): a status header ("working…" while running,
- * "worked Xs" after it ends) with a collapse toggle. Collapsing hides only the
- * working content (thinking, tool calls); the final summary text of the last
- * assistant message stays visible below the header.
+ * "Worked Xs" after it ends) with a collapse toggle. Collapsing hides only the
+ * working content (thinking, tool calls); the final summary message's thinking
+ * and text stay visible below the header.
  */
 export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: AgentTurnProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(true);
-  const now = useLiveElapsed(turn.isWorking);
+  const [open, setOpen] = useState(() => !collapsedTurnIds.has(turn.id));
   const isExpanded = open || turn.isWorking;
-  const workedDurationMs = getTurnWorkedDurationMs(turn, now);
+  const workedDurationMs = getTurnWorkedDurationMs(turn);
   const collapseLabel = isExpanded ? t("agentChat.turn.collapse") : t("agentChat.turn.expand");
+  const handleToggle = () => {
+    if (turn.isWorking) {
+      return;
+    }
+    setOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        collapsedTurnIds.delete(turn.id);
+      } else {
+        collapsedTurnIds.add(turn.id);
+      }
+      return next;
+    });
+  };
 
   const summaryText = useMemo(() => extractTurnSummaryText(turn.items), [turn.items]);
   const summaryItemId = useMemo(() => {
@@ -87,18 +91,14 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
     >
       <Box
         data-testid="agent-turn-header"
-        onClick={() => {
-          if (!turn.isWorking) {
-            setOpen(!open);
-          }
-        }}
+        onClick={handleToggle}
         sx={{
           display: "flex",
           alignItems: "center",
           gap: 1,
           px: 1.5,
           py: 0.5,
-          cursor: turn.isWorking ? "default" : "pointer",
+          cursor: turn.isWorking || !hasCollapsibleContent ? "default" : "pointer",
         }}
       >
         {turn.isWorking ? <CircularProgress size={14} thickness={5} aria-hidden /> : null}
@@ -109,17 +109,19 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
               ? t("agentChat.turn.worked", { duration: formatTurnDuration(workedDurationMs) })
               : null}
         </Typography>
-        <IconButton
-          aria-expanded={isExpanded}
-          aria-label={collapseLabel}
-          sx={{ width: 20, height: 20, flexShrink: 0, color: "text.secondary" }}
-        >
-          {isExpanded ? (
-            <LuChevronDown data-testid="turn-chevron-down" size={14} />
-          ) : (
-            <LuChevronRight data-testid="turn-chevron-right" size={14} />
-          )}
-        </IconButton>
+        {hasCollapsibleContent ? (
+          <IconButton
+            aria-expanded={isExpanded}
+            aria-label={collapseLabel}
+            sx={{ width: 20, height: 20, flexShrink: 0, color: "text.secondary" }}
+          >
+            {isExpanded ? (
+              <LuChevronDown data-testid="turn-chevron-down" size={14} />
+            ) : (
+              <LuChevronRight data-testid="turn-chevron-right" size={14} />
+            )}
+          </IconButton>
+        ) : null}
       </Box>
       {isExpanded && hasCollapsibleContent ? (
         <Box data-testid="agent-turn-body" sx={{ px: 1.5, py: 0.5, display: "flex", flexDirection: "column", gap: 1 }}>
@@ -133,7 +135,8 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
               />
             ) : (
               <AgentToolCallGroup
-                key={`${turn.id}-run-${sectionIndex}`}
+                key={getRunKey(turn.id, section)}
+                id={getRunKey(turn.id, section)}
                 blocks={section.blocks}
                 isTurnWorking={turn.isWorking}
                 workspacePath={workspacePath}
@@ -193,4 +196,11 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
       ) : null}
     </Paper>
   );
+}
+
+function getRunKey(turnId: string, section: Extract<TurnSection, { kind: "toolRun" }>): string {
+  const firstBlockId = section.blocks[0]?.id;
+  // Key by the first block id so streaming reflows (new text sections inserted
+  // before this run) do not remount the group and reset its expansion state.
+  return firstBlockId ? `${turnId}-run-${firstBlockId}` : `${turnId}-run-${section.blocks.length}`;
 }

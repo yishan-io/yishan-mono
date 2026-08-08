@@ -126,15 +126,14 @@ describe("buildTranscriptRows", () => {
     expect(turnRow?.kind === "turn" && turnRow.turn.isWorking).toBe(true);
   });
 
-  it("records the duration of the last assistant message", () => {
-    const rows = rowsOf([
+  it("accumulates durations across the turn's assistant messages", () => {
+    const row = firstTurn([
       item(userMessage("u1")),
       item(assistantMessage("a1", { durationMs: 1500 })),
       item(assistantMessage("a2", { durationMs: 43000 })),
     ]);
 
-    const turnRow = rows[1];
-    expect(turnRow?.kind === "turn" ? turnRow.turn.workedDurationMs : null).toBe(43000);
+    expect(row.turn.workedDurationMs).toBe(44500);
   });
 });
 
@@ -281,23 +280,16 @@ describe("buildTurnSections", () => {
 });
 
 describe("getTurnWorkedDurationMs", () => {
-  it("returns the recorded duration for a finished turn", () => {
+  it("returns the accumulated duration for a finished turn", () => {
     const row = firstTurn([item(userMessage("u1")), item(assistantMessage("a1", { durationMs: 2500 }))]);
 
-    expect(getTurnWorkedDurationMs(row.turn, 0)).toBe(2500);
+    expect(getTurnWorkedDurationMs(row.turn)).toBe(2500);
   });
 
-  it("computes live elapsed time for a working turn from startedAtMs", () => {
-    const startedAtMs = 1_000_000;
-    const row = firstTurn([item(userMessage("u1")), item(assistantMessage("a1", { startedAtMs }), true)]);
+  it("returns null while the turn is still working (header shows working…)", () => {
+    const row = firstTurn([item(userMessage("u1")), item(assistantMessage("a1", { startedAtMs: 1_000_000 }), true)]);
 
-    expect(getTurnWorkedDurationMs(row.turn, 1_005_000)).toBe(5000);
-  });
-
-  it("returns null while working when no start time is known", () => {
-    const row = firstTurn([item(userMessage("u1")), item(assistantMessage("a1"), true)]);
-
-    expect(getTurnWorkedDurationMs(row.turn, 1_000_000)).toBeNull();
+    expect(getTurnWorkedDurationMs(row.turn)).toBeNull();
   });
 
   it("derives the worked time from timestamps when durationMs is absent (history-loaded turns)", () => {
@@ -306,13 +298,13 @@ describe("getTurnWorkedDurationMs", () => {
       item(assistantMessage("a1", { timestamp: 1_042_000 })),
     ]);
 
-    expect(getTurnWorkedDurationMs(row.turn, 0)).toBe(42_000);
+    expect(getTurnWorkedDurationMs(row.turn)).toBe(42_000);
   });
 
   it("returns null for a finished turn with no duration data at all", () => {
     const row = firstTurn([item(assistantMessage("a1"))]);
 
-    expect(getTurnWorkedDurationMs(row.turn, 0)).toBeNull();
+    expect(getTurnWorkedDurationMs(row.turn)).toBeNull();
   });
 });
 
