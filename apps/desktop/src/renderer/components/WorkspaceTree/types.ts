@@ -7,6 +7,8 @@ export type WorkspaceTreeProject = {
   name: string;
   icon?: string | null;
   color?: string | null;
+  /** False for non-git projects; hides workspace-creation affordances. */
+  supportsGitFeatures?: boolean;
 };
 
 export type WorkspaceTreeNode = {
@@ -39,6 +41,8 @@ export type WorkspaceTreeRow = {
   kind: "project" | "node" | "workspace";
   parentId: string | null;
   hasChildren: boolean;
+  /** False for non-git projects; hides workspace-creation affordances. */
+  supportsGitFeatures?: boolean;
   icon?: string | null;
   color?: string | null;
   nodeKind?: "managed" | "external";

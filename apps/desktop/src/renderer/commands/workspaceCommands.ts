@@ -1,5 +1,6 @@
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import { isWorkspaceNotFoundError } from "../helpers/errorHelpers";
+import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../helpers/projectHelpers";
 import {
   computeUniqueGitChangeFileCount,
@@ -62,6 +63,12 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
   const store = readWorkspaceStoreState();
   const workspace = store.workspaces.find((workspace) => workspace.id === workspaceId);
   if (!workspace) {
+    return;
+  }
+
+  // Non-git projects have no git state to poll.
+  const project = store.projects.find((item) => item.id === (workspace.projectId ?? workspace.repoId));
+  if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }
 
@@ -223,6 +230,12 @@ export function openCreateWorkspaceDialog() {
   const projectId = selectedProjectId || selectedWorkspaceProjectId || selectedWorkspaceRepoId || fallbackProjectId;
 
   if (!projectId) {
+    return;
+  }
+
+  // Non-git projects have no worktrees: never surface the create dialog.
+  const project = state.projects.find((item) => item.id === projectId);
+  if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }
 

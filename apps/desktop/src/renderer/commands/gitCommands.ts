@@ -1,3 +1,4 @@
+import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import type { GitChangesBySection } from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { workspaceStore } from "../store/workspaceStore";
@@ -57,6 +58,17 @@ export async function readBranchComparisonDiff(params: {
 /** Lists git changes grouped by section for one workspace. */
 export async function listGitChanges(params: { workspaceId: string }) {
   const workspaceId = params.workspaceId.trim();
+
+  // Non-git projects have no git state: return empty sections instead of
+  // hitting the daemon guard, which would surface a noisy RPC error from
+  // mount-time consumers (file-tree badges, changes tab).
+  const store = workspaceStore.getState();
+  const workspace = store.workspaces.find((item) => item.id === workspaceId);
+  const project = store.projects.find((item) => item.id === (workspace?.projectId ?? workspace?.repoId));
+  if (!supportsGitFeatures(project?.sourceType)) {
+    return { staged: [], unstaged: [], untracked: [] };
+  }
+
   const inFlightRequest = inFlightListGitChangesByWorkspaceId.get(workspaceId);
   if (inFlightRequest) {
     return await inFlightRequest;

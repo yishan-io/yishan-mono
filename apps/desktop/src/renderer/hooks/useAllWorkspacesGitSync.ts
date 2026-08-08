@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
+import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import { workspaceStore } from "../store/workspaceStore";
 
 /**
@@ -93,6 +94,7 @@ export function useAllWorkspacesGitSync() {
     const selectedWorkspaceId = state.selectedWorkspaceId;
     const lastSeen = lastSeenVersionByWorktreePath.current;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
+    const projectByProjectId = new Map(state.projects.map((project) => [project.id, project]));
 
     for (const workspaceId of refreshStateByWorkspaceId.current.keys()) {
       if (!activeWorkspaceIds.has(workspaceId)) {
@@ -123,6 +125,12 @@ export function useAllWorkspacesGitSync() {
 
       // Skip the selected workspace - it's already handled by WorkspaceView's own effect
       if (workspace.id === selectedWorkspaceId) {
+        continue;
+      }
+
+      // Non-git projects have no git state to poll.
+      const project = projectByProjectId.get(workspace.projectId ?? workspace.repoId);
+      if (!supportsGitFeatures(project?.sourceType)) {
         continue;
       }
 

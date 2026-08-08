@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { supportsGitFeatures } from "../../helpers/projectGitCapability";
 import type { WorkspaceTreeNode, WorkspaceTreeProject, WorkspaceTreeRow, WorkspaceTreeWorkspace } from "./types";
 
 type UseVisibleWorkspaceTreeInput = {
@@ -119,6 +120,7 @@ export function useVisibleWorkspaceTree({
             hasChildren: true,
             icon: project.icon,
             color: project.color,
+            supportsGitFeatures: project.supportsGitFeatures ?? supportsGitFeatures(undefined),
           });
 
           if (!expandedSet.has(projectRowId)) {
@@ -161,6 +163,7 @@ export function useVisibleWorkspaceTree({
         hasChildren: projectWorkspaces.length > 0,
         icon: project.icon,
         color: project.color,
+        supportsGitFeatures: project.supportsGitFeatures ?? supportsGitFeatures(undefined),
       });
 
       if (!expandedSet.has(projectRowId) || projectWorkspaces.length === 0) {

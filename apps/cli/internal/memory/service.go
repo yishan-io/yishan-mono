@@ -367,5 +367,17 @@ func shouldIndexPath(filePath string) bool {
 		// misplacement surfaces instead of being silently absorbed into search.
 		return !strings.Contains(slashed, "/.my-context/")
 	}
-	return strings.Contains(slashed, "/.yishan/memory/") && !strings.Contains(slashed, "/.my-context/")
+	if strings.Contains(slashed, "/.yishan/memory/") {
+		return !strings.Contains(slashed, "/.my-context/")
+	}
+	// Other paths under the managed ~/.yishan root (e.g. worktree symlink paths)
+	// are never indexed directly — the caller resolves .my-context symlinks to
+	// their canonical target first.
+	if strings.Contains(slashed, "/.yishan/") {
+		return false
+	}
+	// Project-root real `.my-context` directories (non-git projects): index
+	// .md files under `/.my-context/`, except a nested `.my-context` inside
+	// one (the same misplacement pattern, now inside the project dir itself).
+	return strings.Contains(slashed, "/.my-context/") && !strings.Contains(slashed, "/.my-context/.my-context/")
 }

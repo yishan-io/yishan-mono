@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../store/workspaceUiStore";
 import { ChangesTabView } from "./ChangesTabView";
@@ -17,11 +18,27 @@ export type RightPaneViewProps = {
  */
 export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPaneViewProps = {}) {
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const selectedWorkspace = workspaceStore((state) =>
+    state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
+  );
+  const selectedProject = workspaceStore((state) =>
+    state.projects.find((project) => project.id === (selectedWorkspace?.projectId ?? selectedWorkspace?.repoId)),
+  );
   const activeRightPaneTab = workspaceUiStore(
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );
 
-  const activeTab = activeRightPaneTab === "changes" ? "changes" : activeRightPaneTab === "pr" ? "pr" : "files";
+  // Non-git projects only have the files pane: fall back when the persisted
+  // tab points at a git-only tab (changes/PR).
+  const gitCapable = supportsGitFeatures(selectedProject?.sourceType);
+  const activeTab =
+    !gitCapable || activeRightPaneTab === "files"
+      ? "files"
+      : activeRightPaneTab === "changes"
+        ? "changes"
+        : activeRightPaneTab === "pr"
+          ? "pr"
+          : "files";
 
   return (
     <Box

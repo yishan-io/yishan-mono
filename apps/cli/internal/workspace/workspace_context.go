@@ -9,12 +9,16 @@ import (
 )
 
 // SyncContextLinkRequest applies the project-level `contextEnabled` flag to a
-// set of existing workspace worktree paths. When enabled, the per-repo context
-// folder is ensured and a `.my-context` symlink is created in each worktree.
-// When disabled, only symlinks pointing at this repo's context folder are
-// removed; user-created folders and unrelated symlinks are left alone.
+// set of existing workspace worktree paths. For git projects (`NonGit: false`)
+// the per-repo context folder is ensured and a `.my-context` symlink is created
+// in each worktree; when disabled, only symlinks pointing at this repo's
+// context folder are removed. For non-git projects (`NonGit: true`) each
+// worktree gets a real `.my-context` directory marked as daemon-owned; when
+// disabled, only the marked directory is removed. User-created folders and
+// unrelated symlinks are left alone in both modes.
 type SyncContextLinkRequest struct {
 	RepoKey       string   `json:"repoKey"`
+	NonGit        bool     `json:"nonGit"`
 	Enabled       bool     `json:"enabled"`
 	WorktreePaths []string `json:"worktreePaths"`
 }
@@ -32,16 +36,17 @@ type SyncContextLinkResult struct {
 // the result rather than aborting, which matches the UI semantics: the user
 // flipped a single toggle and expects best-effort propagation.
 func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkResult, error) {
-	repoKey, err := safeRelativePath(req.RepoKey, "repoKey")
-	if err != nil {
-		return SyncContextLinkResult{}, err
+	var contextPath string
+	if !req.NonGit {
+		repoKey, err := safeRelativePath(req.RepoKey, "repoKey")
+		if err != nil {
+			return SyncContextLinkResult{}, err
+		}
+		contextPath, err = DefaultContextPath(repoKey)
+		if err != nil {
+			return SyncContextLinkResult{}, err
+		}
 	}
-
-	contextPath, err := DefaultContextPath(repoKey)
-	if err != nil {
-		return SyncContextLinkResult{}, err
-	}
-
 	result := SyncContextLinkResult{
 		Updated: make([]string, 0, len(req.WorktreePaths)),
 		Skipped: make([]string, 0),
@@ -74,17 +79,28 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 		paths = append(paths, path)
 
 		var opErr error
-		if !req.Enabled {
-			opErr = removeContextLink(contextPath, path)
-			if opErr != nil {
-				result.Errors[path] = opErr.Error()
-				continue
+		ranOp := false
+		if req.NonGit {
+			ranOp = true
+			if req.Enabled {
+				opErr = ensureNonGitContextDir(path)
+			} else {
+				opErr = removeNonGitContextDir(path)
 			}
+		} else if !req.Enabled {
+			ranOp = true
+			opErr = removeContextLink(contextPath, path)
+		}
+		if opErr != nil {
+			result.Errors[path] = opErr.Error()
+			continue
+		}
+		if ranOp {
 			result.Updated = append(result.Updated, path)
 		}
 	}
 
-	if !req.Enabled {
+	if req.NonGit || !req.Enabled {
 		return result, nil
 	}
 
@@ -98,6 +114,74 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 	}
 
 	return result, nil
+}
+
+// ensureNonGitContextDir creates a real `.my-context` directory inside the
+// worktree for a non-git project, marking it as daemon-owned with a marker
+// file. Idempotent: an existing marked directory is left untouched, and no
+// git exclude is written (there is no `.git` to exclude from). A leftover
+// symlink (folder was a git project before) is left alone so the marker can
+// never land inside the old project's shared context dir.
+func ensureNonGitContextDir(worktreePath string) error {
+	dir := filepath.Join(worktreePath, ContextLinkName)
+	if info, err := os.Lstat(dir); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			// Symlink owned by the git-project path; leave alone.
+			return nil
+		}
+		if info.IsDir() {
+			marker := filepath.Join(dir, ContextMarkerName)
+			if _, err := os.Stat(marker); err == nil {
+				return nil
+			} else if !os.IsNotExist(err) {
+				return fmt.Errorf("inspect context marker: %w", err)
+			}
+			if err := os.WriteFile(marker, []byte("yishan context root\n"), 0o644); err != nil {
+				return fmt.Errorf("write context marker: %w", err)
+			}
+			return nil
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect context dir: %w", err)
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("ensure context dir: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ContextMarkerName), []byte("yishan context root\n"), 0o644); err != nil {
+		return fmt.Errorf("write context marker: %w", err)
+	}
+	return nil
+}
+
+// removeNonGitContextDir removes `<worktreePath>/.my-context` only when it is a
+// real directory carrying the daemon-owned marker file. Symlinks (from a
+// previous git-project setup) and unmarked user directories are left untouched.
+// Returns nil when there is nothing to remove.
+func removeNonGitContextDir(worktreePath string) error {
+	dir := filepath.Join(worktreePath, ContextLinkName)
+	info, err := os.Lstat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("inspect context dir: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		// Symlink owned by the git-project path; leave alone.
+		return nil
+	}
+	marker := filepath.Join(dir, ContextMarkerName)
+	if _, err := os.Stat(marker); err != nil {
+		if os.IsNotExist(err) {
+			// User-created folder without the marker; leave alone.
+			return nil
+		}
+		return fmt.Errorf("inspect context marker: %w", err)
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		return fmt.Errorf("remove context dir: %w", err)
+	}
+	return nil
 }
 
 // ensureContextLink creates the per-repo context directory (if missing) and

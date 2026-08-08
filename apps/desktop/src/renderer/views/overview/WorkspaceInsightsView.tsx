@@ -258,7 +258,7 @@ function ClosedTabContent({
                   </Typography>
                 </Box>
                 <Box component="td" sx={{ ...tdSx, fontFamily: "monospace" }}>
-                  {ws.branch ?? "-"}
+                  {ws.branch || "-"}
                 </Box>
                 <Box component="td" sx={tdNumericSx}>
                   {formatHours(ws.lifetimeHours)}
@@ -405,7 +405,7 @@ function PrimaryTabContent({
                   </Typography>
                 </Box>
                 <Box component="td" sx={{ ...tdSx, fontFamily: "monospace" }}>
-                  {ws.branch ?? "-"}
+                  {ws.branch || "-"}
                 </Box>
                 <Box component="td" sx={tdNumericSx}>
                   {formatTokens(ws.totalTokens)}

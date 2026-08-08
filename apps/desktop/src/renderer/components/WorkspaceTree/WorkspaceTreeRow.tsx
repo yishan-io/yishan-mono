@@ -316,19 +316,21 @@ export function WorkspaceTreeRowView({
       ) : null}
       {row.kind === "project" ? (
         <>
-          <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"}>
-            <IconButton
-              className="project-actions"
-              aria-label="workspace.actions.add"
-              onClick={(event) => {
-                event.stopPropagation();
-                onProjectCreateWorkspaceClick?.(event);
-              }}
-              sx={{ ml: "auto" }}
-            >
-              <LuPlus size={14} />
-            </IconButton>
-          </Tooltip>
+          {row.supportsGitFeatures !== false ? (
+            <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"}>
+              <IconButton
+                className="project-actions"
+                aria-label="workspace.actions.add"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onProjectCreateWorkspaceClick?.(event);
+                }}
+                sx={{ ml: "auto" }}
+              >
+                <LuPlus size={14} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
           <IconButton
             className="project-actions"
             aria-label="Project actions"
@@ -336,6 +338,9 @@ export function WorkspaceTreeRowView({
               event.stopPropagation();
               onProjectActionsClick?.(event);
             }}
+            // With no add-workspace button (non-git projects) the auto margin
+            // moves here so the actions stay pinned to the row's right edge.
+            sx={row.supportsGitFeatures === false ? { ml: "auto" } : undefined}
           >
             <LuEllipsis size={14} />
           </IconButton>

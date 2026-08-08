@@ -11,6 +11,7 @@ type TestState = {
     gitUrl?: string;
     worktreePath: string;
     contextEnabled?: boolean;
+    sourceType?: string;
     icon?: string;
     color?: string;
     setupScript?: string;
@@ -205,6 +206,42 @@ describe("createWorkspaceRepoActions", () => {
       "workspace-2": { additions: 9, deletions: 4 },
     });
     expect(state.pullRequestByWorkspaceId).toEqual({});
+  });
+
+  it("keeps the backend sourceType on created projects so git gates apply", () => {
+    const harness = createHarness();
+
+    harness.actions.createProject({
+      name: "Plain Folder",
+      source: "local",
+      path: "/tmp/plain-folder",
+      organizationId: "org-1",
+      backendProject: {
+        id: "repo-plain",
+        name: "Plain Folder",
+        key: "repo-plain",
+        repoKey: null,
+        localPath: "/tmp/plain-folder",
+        worktreePath: "/tmp/plain-folder",
+        gitUrl: "",
+        repoUrl: null,
+        contextEnabled: true,
+        sourceType: "unknown",
+        repoProvider: null,
+        icon: "folder",
+        color: "#1E66F5",
+        setupScript: "",
+        postScript: "",
+        defaultBranch: null,
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        createdByUserId: "user-1",
+      },
+    });
+
+    const state = harness.getState();
+    const created = state.projects.find((project) => project.id === "repo-plain");
+    expect(created?.sourceType).toBe("unknown");
   });
 
   it("hydrates state from backend snapshot", () => {

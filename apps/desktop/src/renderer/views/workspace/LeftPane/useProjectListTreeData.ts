@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { api } from "../../../api/client";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
 import { resolveWorkspaceNotificationTone } from "../../../helpers/workspaceNotification";
@@ -86,6 +87,7 @@ export function useProjectListTreeData(input: {
     name: project.name,
     icon: project.icon,
     color: project.color,
+    supportsGitFeatures: supportsGitFeatures(project.sourceType),
   }));
 
   const treeNodes = (nodesQuery.data ?? []).map((node) => ({

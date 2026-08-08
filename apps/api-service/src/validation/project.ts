@@ -15,19 +15,14 @@ export const organizationProjectListQuerySchema = z.object({
     .transform((value) => value === "true"),
 });
 
-export const createProjectBodySchema = z
-  .object({
-    name: nonEmptyStringSchema,
-    sourceTypeHint: z.enum(["unknown", "git-local", "git"]).optional(),
-    repoUrl: nonEmptyStringSchema.optional(),
-    nodeId: nonEmptyStringSchema.optional(),
-    localPath: nonEmptyStringSchema.optional(),
-    contextEnabled: z.boolean().optional(),
-  })
-  .refine((input) => !(input.localPath && input.sourceTypeHint === "unknown"), {
-    message:
-      "sourceTypeHint must be 'git' or 'git-local' when a local path is provided — the folder must be a git repository",
-  });
+export const createProjectBodySchema = z.object({
+  name: nonEmptyStringSchema,
+  sourceTypeHint: z.enum(["unknown", "git-local", "git"]).optional(),
+  repoUrl: nonEmptyStringSchema.optional(),
+  nodeId: nonEmptyStringSchema.optional(),
+  localPath: nonEmptyStringSchema.optional(),
+  contextEnabled: z.boolean().optional(),
+});
 
 export const updateProjectBodySchema = z
   .object({

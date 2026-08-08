@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { workspaceStore } from "../store/workspaceStore";
 import {
   commitGitChanges,
   getGitAuthorName,
@@ -150,5 +151,29 @@ describe("gitCommands", () => {
     expect(mocks.getGitAuthorName).toHaveBeenCalledWith({ workspaceId: "workspace-author-forward" });
     expect(mocks.pushGitBranch).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
     expect(mocks.publishGitBranch).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+  });
+
+  it("returns empty git sections for a non-git workspace without calling the daemon", async () => {
+    workspaceStore.setState({
+      projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
+      workspaces: [
+        {
+          id: "workspace-plain",
+          projectId: "project-plain",
+          repoId: "project-plain",
+          name: "local",
+          title: "local",
+          sourceBranch: "",
+          branch: "",
+          summaryId: "workspace-plain",
+          worktreePath: "/tmp/plain-folder",
+        },
+      ],
+    });
+
+    const result = await listGitChanges({ workspaceId: "workspace-plain" });
+
+    expect(result).toEqual({ staged: [], unstaged: [], untracked: [] });
+    expect(mocks.listGitChanges).not.toHaveBeenCalled();
   });
 });

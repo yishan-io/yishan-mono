@@ -35,6 +35,34 @@ const prTabState = {
   isLoading: false,
 };
 
+const workspaceStoreState: { current: Record<string, unknown> } = {
+  current: {
+    selectedWorkspaceId: "workspace-1",
+    workspaces: [{ id: "workspace-1", worktreePath: "/tmp/repo" }],
+    projects: [],
+    gitChangesCountByWorkspaceId: {},
+    tabs: [
+      {
+        id: "tab-file-a",
+        workspaceId: "workspace-1",
+        title: "a.ts",
+        pinned: false,
+        kind: "file",
+        data: {
+          path: "a.ts",
+          content: "",
+          savedContent: "",
+          isDirty: false,
+          isTemporary: false,
+        },
+      },
+    ],
+    openTab: (...args: unknown[]) => openTab(...args),
+    closeTab: (...args: unknown[]) => closeTab(...args),
+    setLastUsedExternalAppId: (...args: unknown[]) => setLastUsedExternalAppId(...args),
+  },
+};
+
 function asEntries(paths: string[]) {
   return paths.map((path) => ({ path, isIgnored: false }));
 }
@@ -159,31 +187,7 @@ vi.mock("./useWorkspacePullRequestState", () => ({
 }));
 
 vi.mock("../../../store/workspaceStore", () => ({
-  workspaceStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      selectedWorkspaceId: "workspace-1",
-      workspaces: [{ id: "workspace-1", worktreePath: "/tmp/repo" }],
-      gitChangesCountByWorkspaceId: {},
-      tabs: [
-        {
-          id: "tab-file-a",
-          workspaceId: "workspace-1",
-          title: "a.ts",
-          pinned: false,
-          kind: "file",
-          data: {
-            path: "a.ts",
-            content: "",
-            savedContent: "",
-            isDirty: false,
-            isTemporary: false,
-          },
-        },
-      ],
-      openTab: (...args: unknown[]) => openTab(...args),
-      closeTab: (...args: unknown[]) => closeTab(...args),
-      setLastUsedExternalAppId: (...args: unknown[]) => setLastUsedExternalAppId(...args),
-    }),
+  workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -519,5 +523,26 @@ describe("RightPaneView delete flow", () => {
 
     workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
     expect(await screen.findByTestId("mock-changes-tab")).toBeTruthy();
+  });
+
+  it("falls back to the files pane for a non-git workspace", async () => {
+    const previousProjects = workspaceStoreState.current.projects;
+    const previousWorkspaces = workspaceStoreState.current.workspaces;
+    workspaceStoreState.current.projects = [{ id: "project-1", sourceType: "unknown" }];
+    workspaceStoreState.current.workspaces = [{ id: "workspace-1", projectId: "project-1", worktreePath: "/tmp/repo" }];
+
+    render(<RightPaneView />);
+
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
+    // The persisted tab points at the git-only changes pane, but the files pane
+    // is what renders for a non-git workspace: files visible, changes hidden.
+    const fileManager = screen.getByTestId("mock-file-manager");
+    expect(fileManager.parentElement && window.getComputedStyle(fileManager.parentElement).visibility).toBe("visible");
+    const changesTab = screen.getByTestId("mock-changes-tab");
+    expect(changesTab.parentElement && window.getComputedStyle(changesTab.parentElement).visibility).toBe("hidden");
+    expect(screen.getByTestId("dashboard-sidebar")).toBeTruthy();
+
+    workspaceStoreState.current.projects = previousProjects;
+    workspaceStoreState.current.workspaces = previousWorkspaces;
   });
 });
