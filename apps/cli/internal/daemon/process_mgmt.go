@@ -31,32 +31,107 @@ const (
 	daemonStartMaxAttempts  = 3
 )
 
+// startDecision is what StartDaemon must do about an existing daemon before
+// spawning, resolved from the profile lock and state files.
+type startDecision int
+
+const (
+	// startAdopt: a healthy daemon already owns the profile (verified as the
+	// live lock holder); return its state instead of starting a new one.
+	startAdopt startDecision = iota
+	// startReplace: a live daemon owns the profile but is unhealthy or
+	// unverifiable; stop it and start a fresh one.
+	startReplace
+	// startFresh: no live daemon owns the profile; safe to start a new one.
+	startFresh
+	// startRefuse: a live holder exists but cannot be identified; starting is
+	// refused because spawning would risk a duplicate daemon.
+	startRefuse
+)
+
+// planStart decides how StartDaemon must handle an existing daemon before
+// spawning. The flock holder is the ownership authority: a healthy holder is
+// adopted, an unhealthy or unverifiable holder is stopped and replaced, and
+// starting is refused while a live but unidentifiable holder exists — even
+// when daemon.state.json is missing or stale.
+//
+// state is nil when the state file is missing or stale (LoadState removes
+// stale files for dead pids). stateHealthy is the ProbeHealth result of the
+// recorded state.
+func planStart(lockHeld bool, holderPID int, holderAlive bool, state *RuntimeState, stateHealthy bool) (startDecision, int) {
+	if !lockHeld {
+		// No flock holder. A state-recorded daemon is a pre-lock legacy
+		// process: replace it so it can no longer outlive restarts without a
+		// lock to arbitrate ownership.
+		if state != nil {
+			return startReplace, state.PID
+		}
+		return startFresh, 0
+	}
+
+	if holderPID > 0 && holderAlive {
+		// The live lock holder is identified. Adopt it only when the state
+		// file verifies it is healthy; anything else is stopped and replaced.
+		if state != nil && state.PID == holderPID && stateHealthy {
+			return startAdopt, 0
+		}
+		return startReplace, holderPID
+	}
+
+	// The lock is held but the holder cannot be identified from the lock
+	// file. Trust a healthy state record, stop a stale one, and refuse when
+	// there is no way to identify the holder at all.
+	if state != nil && stateHealthy {
+		return startAdopt, 0
+	}
+	if state != nil {
+		return startReplace, state.PID
+	}
+	return startRefuse, 0
+}
+
+// resolveStartAction inspects the profile lock and state files and returns
+// what StartDaemon must do before spawning, plus the pid to stop when the
+// decision is startReplace.
+func resolveStartAction(lockPath, statePath string, probeTimeout time.Duration) (startDecision, int, RuntimeState) {
+	lockHeld := IsLockHeld(lockPath)
+	holderPID := LockHolderPID(lockPath)
+
+	loaded, err := LoadState(statePath)
+	var state RuntimeState
+	var stateHealthy bool
+	var statePtr *RuntimeState
+	if err == nil {
+		state = loaded
+		stateHealthy = ProbeHealth(state, probeTimeout)
+		statePtr = &state
+	}
+
+	decision, pid := planStart(lockHeld, holderPID, holderPID > 0 && IsProcessRunning(holderPID), statePtr, stateHealthy)
+	return decision, pid, state
+}
+
 // StartDaemon starts a detached daemon for the profile and returns the state
-// of the daemon that is now running. It enforces a single live daemon per
-// profile via the exclusive profile lock: an already-healthy daemon is
-// adopted, a stale one is stopped and replaced, and a concurrent start is
-// resolved in favor of the healthy winner.
+// of the daemon that is now running. Ownership is keyed off the exclusive
+// profile lock, never the state file: a healthy lock holder is adopted, an
+// unhealthy or unverifiable one is stopped and replaced, and a new daemon is
+// never spawned while a live holder exists — even when daemon.state.json is
+// missing or stale.
 func StartDaemon(cfg StartConfig, statePath string) (RuntimeState, error) {
 	lockPath := lockFilePathForState(statePath)
 
-	// Fast path: a healthy daemon already serves this profile. It must also
-	// hold the profile lock; a healthy but unlocked daemon is a pre-lock
-	// legacy process that we replace so it can no longer outlive restarts.
-	if state, err := LoadState(statePath); err == nil {
-		healthy := ProbeHealth(state, daemonStartProbeTimeout)
-		if healthy && IsLockHeld(lockPath) {
-			log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon already running")
-			return state, nil
-		}
-		if healthy {
-			log.Warn().Int("pid", state.PID).Msg("daemon is running without the profile lock; restarting it")
-		}
-		log.Warn().Int("pid", state.PID).Msg("stopping stale daemon")
-		if _, err := Stop(statePath, daemonStartStopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
+	decision, pid, existing := resolveStartAction(lockPath, statePath, daemonStartProbeTimeout)
+	switch decision {
+	case startAdopt:
+		log.Info().Int("pid", existing.PID).Str("address", net.JoinHostPort(existing.Host, strconv.Itoa(existing.Port))).Msg("daemon already running")
+		return existing, nil
+	case startReplace:
+		log.Warn().Int("pid", pid).Msg("stopping existing daemon before start")
+		if err := StopPID(pid, daemonStartStopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
 			return RuntimeState{}, err
 		}
-	} else if !os.IsNotExist(err) {
-		return RuntimeState{}, err
+	case startRefuse:
+		return RuntimeState{}, fmt.Errorf("start daemon: another daemon holds the profile lock %q; run 'yishan daemon status' to inspect", lockPath)
 	}
 
 	for attempt := 0; attempt < daemonStartMaxAttempts; attempt++ {
@@ -70,27 +145,56 @@ func StartDaemon(cfg StartConfig, statePath string) (RuntimeState, error) {
 			return state, nil
 		}
 
-		// Our child did not become ready, likely because another daemon holds
-		// the profile lock. Adopt a healthy holder; stop a stale one and retry.
-		holder, holderErr := LoadState(statePath)
-		if holderErr == nil {
-			if ProbeHealth(holder, daemonStartProbeTimeout) {
-				log.Info().Int("pid", holder.PID).Msg("daemon already running")
-				return holder, nil
+		// Our child did not become ready, likely because another daemon won
+		// the profile lock. Re-resolve the holder: adopt it, replace it, or
+		// refuse — never spawn alongside a live holder.
+		decision, pid, existing := resolveStartAction(lockPath, statePath, daemonStartProbeTimeout)
+		switch decision {
+		case startAdopt:
+			log.Info().Int("pid", existing.PID).Msg("daemon already running")
+			return existing, nil
+		case startReplace:
+			if stopErr := StopPID(pid, daemonStartStopTimeout); stopErr != nil && !errors.Is(stopErr, ErrNotRunning) {
+				return RuntimeState{}, stopErr
 			}
-			if _, stopErr := Stop(statePath, daemonStartStopTimeout); stopErr == nil {
-				continue
-			}
-		}
-		if IsLockHeld(lockPath) {
+			continue
+		case startRefuse:
 			return RuntimeState{}, fmt.Errorf("start daemon: %w (another daemon holds the profile lock %q; run 'yishan daemon status' to inspect)", err, lockPath)
+		default:
+			return RuntimeState{}, err
 		}
-		return RuntimeState{}, err
 	}
 
 	return RuntimeState{}, errors.New("failed to start daemon after multiple attempts")
 }
 
+// stopProcess sends SIGTERM to pid and waits up to timeout for the process
+// to exit. It is the shared signal+wait path for Stop and StopPID.
+func stopProcess(pid int, timeout time.Duration) error {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return fmt.Errorf("find daemon process %d: %w", pid, err)
+	}
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		return fmt.Errorf("stop daemon process %d: %w", pid, err)
+	}
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if !IsProcessRunning(pid) {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return fmt.Errorf("timed out waiting for daemon process %d to stop", pid)
+}
+
+// Stop stops the daemon recorded in the profile state file and waits for it
+// to exit. It returns ErrNotRunning when the state file is missing or the
+// recorded process is no longer alive. The state file is left in place: it
+// is an address book written at start, and stale entries are cleaned by
+// readers (LoadState, statusDaemon).
 func Stop(statePath string, timeout time.Duration) (RuntimeState, error) {
 	state, err := LoadState(statePath)
 	if err != nil {
@@ -100,26 +204,25 @@ func Stop(statePath string, timeout time.Duration) (RuntimeState, error) {
 		return RuntimeState{}, fmt.Errorf("load daemon state: %w", err)
 	}
 
-	process, err := os.FindProcess(state.PID)
-	if err != nil {
-		return RuntimeState{}, fmt.Errorf("find daemon process %d: %w", state.PID, err)
+	if err := stopProcess(state.PID, timeout); err != nil {
+		return RuntimeState{}, err
 	}
-	if err := process.Signal(syscall.SIGTERM); err != nil {
-		return RuntimeState{}, fmt.Errorf("stop daemon process %d: %w", state.PID, err)
-	}
+	return state, nil
+}
 
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if !IsProcessRunning(state.PID) {
-			if err := RemoveState(statePath); err != nil {
-				log.Warn().Err(err).Msg("failed to remove daemon state file")
-			}
-			return state, nil
-		}
-		time.Sleep(200 * time.Millisecond)
+// StopPID stops the daemon process with the given pid — typically the live
+// lock holder resolved from the profile lock file — and waits for it to
+// exit. It returns ErrNotRunning when the pid is not a live process. It is
+// used when the state file is missing or stale and a state-based Stop cannot
+// resolve the daemon.
+func StopPID(pid int, timeout time.Duration) error {
+	if pid <= 0 {
+		return ErrNotRunning
 	}
-
-	return RuntimeState{}, fmt.Errorf("timed out waiting for daemon process %d to stop", state.PID)
+	if !IsProcessRunning(pid) {
+		return ErrNotRunning
+	}
+	return stopProcess(pid, timeout)
 }
 
 func StartDetached(cfg StartConfig) (int, error) {
@@ -224,9 +327,33 @@ func WaitForReady(statePath string, timeout time.Duration) (RuntimeState, error)
 	return RuntimeState{}, fmt.Errorf("timed out waiting for daemon to become ready")
 }
 
+// resolveStopPID returns the pid of the daemon that currently owns the
+// profile and must be stopped before a restart: the live lock holder when it
+// can be identified from the lock file, otherwise the state-recorded legacy
+// daemon. It returns 0 when no live daemon owns the profile.
+func resolveStopPID(lockPath, statePath string) int {
+	lockHeld := IsLockHeld(lockPath)
+	holderPID := LockHolderPID(lockPath)
+	if lockHeld && holderPID > 0 && IsProcessRunning(holderPID) {
+		return holderPID
+	}
+
+	state, err := LoadState(statePath)
+	if err != nil {
+		return 0
+	}
+	// A state-recorded daemon without a live lock holder is a pre-lock
+	// legacy process.
+	return state.PID
+}
+
+// Restart stops the daemon that owns the profile — found via the lock file
+// when the state file is missing or stale — and starts a fresh one.
 func Restart(cfg StartConfig, statePath string, stopTimeout time.Duration, readyTimeout time.Duration) (RuntimeState, error) {
-	if _, err := Stop(statePath, stopTimeout); err != nil {
-		if !errors.Is(err, ErrNotRunning) {
+	lockPath := lockFilePathForState(statePath)
+
+	if pid := resolveStopPID(lockPath, statePath); pid > 0 {
+		if err := StopPID(pid, stopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
 			return RuntimeState{}, err
 		}
 	}
