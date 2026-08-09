@@ -20,7 +20,7 @@ export function BashToolCard({ toolCall, result = null }: AgentToolCallCardProps
     <ToolCardShell isError={result?.isError === true}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
-          <ToolPathSummary icon={<LuSquareTerminal size={14} />} path={command} />
+          <ToolPathSummary icon={<LuSquareTerminal size={14} />} path={command} wrap={open} />
         </ToolExpandableSummary>
       </ToolSummaryPanel>
       <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} />

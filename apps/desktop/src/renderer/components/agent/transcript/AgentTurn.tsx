@@ -1,5 +1,5 @@
 import { Box, CircularProgress, IconButton, Paper, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 import { AgentToolCallGroup } from "../tool-calls/AgentToolCallGroup";
@@ -14,6 +14,7 @@ import {
   extractTurnSummaryText,
   extractTurnSummaryThinking,
   formatTurnDuration,
+  getTurnLiveElapsedMs,
   getTurnWorkedDurationMs,
 } from "./turnModel";
 
@@ -28,16 +29,17 @@ type AgentTurnProps = {
 
 /**
  * Renders one assistant turn (the collapsible unit of the transcript, starting
- * at the assistant message): a status header ("working…" while running,
- * "Worked Xs" after it ends) with a collapse toggle. Collapsing hides only the
- * working content (thinking, tool calls); the final summary message's thinking
- * and text stay visible below the header.
+ * at the assistant message): a status header (live elapsed like "working 12s"
+ * while running, "Worked Xs" after it ends) with a collapse toggle. Collapsing
+ * hides only the working content (thinking, tool calls); the final summary
+ * message's thinking and text stay visible below the header.
  */
 export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: AgentTurnProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(() => !collapsedTurnIds.has(turn.id));
   const isExpanded = open || turn.isWorking;
   const workedDurationMs = getTurnWorkedDurationMs(turn);
+  const liveElapsedMs = getTurnLiveElapsedMs(turn, useLiveNow(turn.isWorking));
   const collapseLabel = isExpanded ? t("agentChat.turn.collapse") : t("agentChat.turn.expand");
   const handleToggle = () => {
     if (turn.isWorking) {
@@ -77,6 +79,7 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
     return item?.isStreaming ?? false;
   }, [summaryItemId, turn.items]);
   const hasCollapsibleContent = sections.length > 0 || turn.items.some((item) => item.message.role === "toolResult");
+  const lastToolRunSectionIndex = getLastToolRunSectionIndex(sections);
 
   return (
     <Paper
@@ -104,7 +107,9 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
         {turn.isWorking ? <CircularProgress size={14} thickness={5} aria-hidden /> : null}
         <Typography variant="body2" sx={{ color: "text.disabled" }}>
           {turn.isWorking
-            ? t("agentChat.turn.working")
+            ? liveElapsedMs !== null
+              ? t("agentChat.turn.workingDuration", { duration: formatTurnDuration(liveElapsedMs) })
+              : t("agentChat.turn.working")
             : workedDurationMs !== null
               ? t("agentChat.turn.worked", { duration: formatTurnDuration(workedDurationMs) })
               : null}
@@ -138,7 +143,7 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
                 key={getRunKey(turn.id, section)}
                 id={getRunKey(turn.id, section)}
                 blocks={section.blocks}
-                isTurnWorking={turn.isWorking}
+                showLatestBlock={turn.isWorking && sectionIndex === lastToolRunSectionIndex}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
@@ -203,4 +208,35 @@ function getRunKey(turnId: string, section: Extract<TurnSection, { kind: "toolRu
   // Key by the first block id so streaming reflows (new text sections inserted
   // before this run) do not remount the group and reset its expansion state.
   return firstBlockId ? `${turnId}-run-${firstBlockId}` : `${turnId}-run-${section.blocks.length}`;
+}
+
+function getLastToolRunSectionIndex(sections: TurnSection[]): number {
+  // The "live" run is the last section that actually holds tool calls; a
+  // trailing thought-only section must not steal the latest-command slot.
+  for (let index = sections.length - 1; index >= 0; index -= 1) {
+    const section = sections[index];
+    if (section?.kind === "toolRun" && section.blocks.some((block) => block.kind === "toolCall")) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+/** Ticks once per second while `active`, giving the live elapsed header its clock. */
+function useLiveNow(active: boolean, intervalMs = 1000): number {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    const id = window.setInterval(() => {
+      setNow(Date.now());
+    }, intervalMs);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [active, intervalMs]);
+
+  return now;
 }

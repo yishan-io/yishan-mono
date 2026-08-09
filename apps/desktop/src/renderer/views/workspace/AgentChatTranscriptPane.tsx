@@ -105,6 +105,7 @@ function AgentChatTranscriptPane({
   );
 
   const isWorking = sessionState === "running" || sessionState === "compacting";
+  const isTurnRunning = sessionState === "running";
   const workingLabel =
     sessionState === "compacting" ? t(`agentChat.compaction.${compactionReason ?? "generic"}`) : undefined;
 
@@ -118,6 +119,7 @@ function AgentChatTranscriptPane({
         emptyPrompt="Send a message to start the conversation."
         workspacePath={cwd}
         isWorking={isWorking}
+        isTurnRunning={isTurnRunning}
         workingLabel={workingLabel}
         queuedMessages={isReadOnlySubagentDetail ? undefined : queue}
         onOpenCompletedSubagent={handleOpenCompletedSubagent}

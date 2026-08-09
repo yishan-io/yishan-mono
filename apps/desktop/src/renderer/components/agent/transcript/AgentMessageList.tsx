@@ -29,6 +29,8 @@ type AgentMessageListProps = {
   workspacePath?: string;
   isWorking?: boolean;
   workingLabel?: string;
+  /** Whether the session is actively running a turn (not compacting); keeps the last turn's header as the single working indicator. */
+  isTurnRunning?: boolean;
   queuedMessages?: AgentQueueState;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
@@ -147,6 +149,7 @@ function AgentMessageListComponent({
   workspacePath,
   isWorking = false,
   workingLabel,
+  isTurnRunning = false,
   queuedMessages,
   onOpenCompletedSubagent,
 }: AgentMessageListProps) {
@@ -165,7 +168,7 @@ function AgentMessageListComponent({
     }
     return display;
   }, [messages, trailingMessage]);
-  const rows = useMemo(() => buildTranscriptRows(displayMessages), [displayMessages]);
+  const rows = useMemo(() => buildTranscriptRows(displayMessages, isTurnRunning), [displayMessages, isTurnRunning]);
   const rowIdsRef = useRef<string[]>([]);
   rowIdsRef.current = rows.map((row) => (row.kind === "user" ? `user:${row.message.id}` : row.turn.id));
   const getVirtualMessageKey = useCallback((index: number) => rowIdsRef.current[index] ?? index, []);
