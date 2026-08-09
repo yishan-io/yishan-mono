@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentsSettingsView } from "./AgentsSettingsView";
 
 const mocked = {
@@ -11,12 +11,23 @@ const mocked = {
   updateAgentDefinition: vi.fn(),
   removeAgentDefinition: vi.fn(),
   restoreAgentDefinition: vi.fn(),
+  listAgentModels: vi.fn(),
+  setAgentModelThinking: vi.fn(),
 };
+
+const AVAILABLE_MODELS = [
+  { id: "anthropic/claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
+  { id: "anthropic/claude-opus-4-5", name: "Claude Opus 4.5" },
+];
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => (params ? key.replace("{{name}}", String(params.name)) : key),
   }),
+}));
+
+vi.mock("../../../commands/agentCommands", () => ({
+  listAgentModels: () => mocked.listAgentModels(),
 }));
 
 vi.mock("../../../commands/customizeCommands", () => ({
@@ -27,23 +38,39 @@ vi.mock("../../../commands/customizeCommands", () => ({
   updateAgentDefinition: (input: { name: string; content: string }) => mocked.updateAgentDefinition(input),
   removeAgentDefinition: (name: string) => mocked.removeAgentDefinition(name),
   restoreAgentDefinition: (name: string) => mocked.restoreAgentDefinition(name),
+  setAgentModelThinking: (name: string, model: string, thinking: string) =>
+    mocked.setAgentModelThinking(name, model, thinking),
 }));
 
 const OFFICIAL = {
   name: "general",
   description: "General-purpose sub-agent",
+  model: "",
+  thinking: "",
   official: true,
 };
 
 const USER = {
   name: "my-helper",
   description: "My custom helper",
+  model: "",
+  thinking: "",
   official: false,
 };
 
 const USER_CONTENT = "---\nname: my-helper\ndescription: My custom helper\n---\n# body\n";
 
 describe("AgentsSettingsView", () => {
+  beforeEach(() => {
+    mocked.listAgentModels.mockResolvedValue({
+      agentKind: "pi",
+      models: AVAILABLE_MODELS,
+      source: "test",
+      fetchedAt: 0,
+      cacheExpiry: 0,
+    });
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -102,6 +129,65 @@ describe("AgentsSettingsView", () => {
         content: "## Steps\n1. Do\n",
       }),
     );
+  });
+
+  it("create dialog passes the entered model and thinking level", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([OFFICIAL]);
+    mocked.createAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("general");
+    fireEvent.click(screen.getByTestId("create-agent-button"));
+    fireEvent.change(screen.getByLabelText("settings.customize.agents.dialogs.create.nameLabel"), {
+      target: { value: "model-helper" },
+    });
+    fireEvent.change(screen.getByLabelText("settings.customize.agents.dialogs.create.contentLabel"), {
+      target: { value: "# body\n" },
+    });
+    // Model picker: open the menu and select a model.
+    fireEvent.click(screen.getByLabelText("Select model"));
+    fireEvent.click(await screen.findByText("Claude Opus 4.5"));
+    // Thinking control: cycle once (medium -> high).
+    fireEvent.click(screen.getByLabelText(/Thinking level:/));
+
+    fireEvent.click(screen.getByTestId("create-agent-submit"));
+
+    await waitFor(() =>
+      expect(mocked.createAgentDefinition).toHaveBeenCalledWith({
+        name: "model-helper",
+        description: "",
+        content: "# body\n",
+      }),
+    );
+    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("model-helper", "anthropic/claude-opus-4-5", "high");
+  });
+
+  it("editing patches model and thinking into the frontmatter", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({
+      ...USER,
+      content: USER_CONTENT,
+      model: "anthropic/claude-sonnet-4-5",
+      thinking: "high",
+    });
+    mocked.updateAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+
+    await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
+    fireEvent.click(screen.getByTestId("agent-detail-save"));
+
+    await waitFor(() =>
+      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
+        name: "my-helper",
+        content: USER_CONTENT,
+      }),
+    );
+    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("my-helper", "anthropic/claude-sonnet-4-5", "high");
   });
 
   it("editing an official agent shows the overwrite confirmation before saving", async () => {

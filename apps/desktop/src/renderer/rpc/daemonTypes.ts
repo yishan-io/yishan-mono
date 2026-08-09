@@ -628,6 +628,8 @@ export type PiExtensionMutationInput = {
 export type AgentDefinitionInfo = {
   name: string;
   description: string;
+  model: string;
+  thinking: string;
   official: boolean;
 };
 
@@ -643,6 +645,12 @@ export type AgentDefinitionCreateInput = {
   name: string;
   description: string;
   content: string;
+};
+
+export type AgentDefinitionSetModelThinkingInput = {
+  name: string;
+  model: string;
+  thinking: string;
 };
 
 export type AgentDefinitionUpdateInput = {

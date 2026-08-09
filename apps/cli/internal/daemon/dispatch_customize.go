@@ -49,6 +49,8 @@ func (h *JSONRPCHandler) dispatchCustomizeAgents(method string, params json.RawM
 		return h.handleCustomizeAgentsDetail(params)
 	case MethodCustomizeAgentsCreate:
 		return h.handleCustomizeAgentsCreate(params)
+	case MethodCustomizeAgentsSetModelThinking:
+		return h.handleCustomizeAgentsSetModelThinking(params)
 	case MethodCustomizeAgentsUpdate:
 		return h.handleCustomizeAgentsUpdate(params)
 	case MethodCustomizeAgentsRemove:
@@ -96,6 +98,21 @@ func (h *JSONRPCHandler) handleCustomizeAgentsCreate(params json.RawMessage) (an
 		return nil, agentOperationError(err)
 	}
 	return map[string]any{"created": true}, nil
+}
+
+func (h *JSONRPCHandler) handleCustomizeAgentsSetModelThinking(params json.RawMessage) (any, error) {
+	var req struct {
+		Name     string `json:"name"`
+		Model    string `json:"model"`
+		Thinking string `json:"thinking"`
+	}
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if err := setup.SetPiAgentOverrides(req.Name, req.Model, req.Thinking); err != nil {
+		return nil, agentOperationError(err)
+	}
+	return map[string]any{"updated": true}, nil
 }
 
 func (h *JSONRPCHandler) handleCustomizeAgentsUpdate(params json.RawMessage) (any, error) {
@@ -159,7 +176,8 @@ func agentOperationError(err error) error {
 		errors.Is(err, setup.ErrAgentAlreadyExists) ||
 		errors.Is(err, setup.ErrAgentNotFound) ||
 		errors.Is(err, setup.ErrOfficialAgentCannotBeRemoved) ||
-		errors.Is(err, setup.ErrAgentNotManaged) {
+		errors.Is(err, setup.ErrAgentNotManaged) ||
+		errors.Is(err, setup.ErrInvalidAgentThinking) {
 		return workspace.NewRPCError(rpcCodeInvalidParams, err.Error())
 	}
 	return workspace.NewRPCError(rpcCodeServerError, err.Error())

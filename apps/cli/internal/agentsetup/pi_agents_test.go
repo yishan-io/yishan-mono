@@ -107,8 +107,112 @@ func TestCreatePiAgent_WritesFrontMatterAndBody(t *testing.T) {
 	if meta.Description != "Multi-line\ndescription \"quoted\"" {
 		t.Fatalf("frontmatter description = %q", meta.Description)
 	}
+	if strings.Contains(string(content), "model:") || strings.Contains(string(content), "thinking:") {
+		t.Fatalf("model/thinking must live in agent.overrides.json, not frontmatter: %q", string(content))
+	}
 	if !strings.Contains(string(content), "read_only: false") {
 		t.Fatalf("expected read_only: false in frontmatter, got %q", string(content))
+	}
+}
+
+func TestSetPiAgentOverrides_UpsertsAndRemovesEntry(t *testing.T) {
+	withPiHome(t)
+	homeDir, _ := os.UserHomeDir()
+	overridesPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "agent.overrides.json")
+
+	if err := SetPiAgentOverrides("general", "anthropic/claude-sonnet-4-5", "high"); err != nil {
+		t.Fatalf("SetPiAgentOverrides: %v", err)
+	}
+	overrides, err := loadAgentOverrides()
+	if err != nil {
+		t.Fatalf("loadAgentOverrides: %v", err)
+	}
+	if overrides["general"].Model != "anthropic/claude-sonnet-4-5" || overrides["general"].Thinking != "high" {
+		t.Fatalf("expected override written, got %#v", overrides["general"])
+	}
+	content, err := os.ReadFile(overridesPath)
+	if err != nil {
+		t.Fatalf("read overrides file: %v", err)
+	}
+	if !strings.Contains(string(content), "general") {
+		t.Fatalf("expected overrides file to contain agent, got %q", string(content))
+	}
+
+	// Clearing both values removes the entry.
+	if err := SetPiAgentOverrides("general", "", ""); err != nil {
+		t.Fatalf("SetPiAgentOverrides clear: %v", err)
+	}
+	overrides, err = loadAgentOverrides()
+	if err != nil {
+		t.Fatalf("loadAgentOverrides: %v", err)
+	}
+	if _, exists := overrides["general"]; exists {
+		t.Fatalf("expected override entry removed, got %#v", overrides)
+	}
+}
+
+func TestEffectiveAgentConfig_OverridesWinOverFrontmatter(t *testing.T) {
+	withPiAgentsDir(t)
+	agentsDir := filepath.Join(os.Getenv("HOME"), ".yishan", "pi", "agent", "agents")
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
+		t.Fatalf("mkdir agents dir: %v", err)
+	}
+	// Frontmatter carries a model/thinking default...
+	content := "---\nname: general\ndescription: General\nmodel: default/model\nthinking: low\n---\n# body\n"
+	if err := os.WriteFile(filepath.Join(agentsDir, "general.md"), []byte(content), 0o644); err != nil {
+		t.Fatalf("write agent: %v", err)
+	}
+	// ...and the runtime overrides file overrides it.
+	if err := SetPiAgentOverrides("general", "anthropic/claude-opus-4-5", "xhigh"); err != nil {
+		t.Fatalf("SetPiAgentOverrides: %v", err)
+	}
+
+	agents, err := ListPiAgents()
+	if err != nil {
+		t.Fatalf("ListPiAgents: %v", err)
+	}
+	var general *PiAgentInfo
+	for i := range agents {
+		if agents[i].Name == "general" {
+			general = &agents[i]
+		}
+	}
+	if general == nil {
+		t.Fatalf("expected general agent, got %#v", agents)
+	}
+	if general.Model != "anthropic/claude-opus-4-5" || general.Thinking != "xhigh" {
+		t.Fatalf("expected overrides to win, got model=%q thinking=%q", general.Model, general.Thinking)
+	}
+
+	// Removing the override falls back to the frontmatter values.
+	if err := SetPiAgentOverrides("general", "", ""); err != nil {
+		t.Fatalf("clear override: %v", err)
+	}
+	agents, err = ListPiAgents()
+	if err != nil {
+		t.Fatalf("ListPiAgents: %v", err)
+	}
+	for i := range agents {
+		if agents[i].Name == "general" {
+			general = &agents[i]
+		}
+	}
+	if general.Model != "default/model" || general.Thinking != "low" {
+		t.Fatalf("expected frontmatter fallback after clear, got model=%q thinking=%q", general.Model, general.Thinking)
+	}
+}
+
+func TestSetPiAgentOverrides_RejectsInvalidThinking(t *testing.T) {
+	withPiAgentsDir(t)
+	for _, thinking := range []string{"ultra", "HIGH", "1", "deep"} {
+		if err := SetPiAgentOverrides("x", "", thinking); !errors.Is(err, ErrInvalidAgentThinking) {
+			t.Fatalf("expected ErrInvalidAgentThinking for %q, got %v", thinking, err)
+		}
+	}
+	for _, thinking := range []string{"", "off", "minimal", "low", "medium", "high", "xhigh"} {
+		if err := SetPiAgentOverrides("ok-helper", "", thinking); err != nil {
+			t.Fatalf("unexpected error for thinking %q: %v", thinking, err)
+		}
 	}
 }
 

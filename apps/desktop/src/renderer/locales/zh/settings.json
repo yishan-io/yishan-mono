@@ -641,12 +641,12 @@
     },
     "customize": {
       "title": "\u81ea\u5b9a\u4e49",
-      "description": "\u7ba1\u7406\u5de5\u4f5c\u533a\u5b89\u88c5\u7684\u6269\u5c55\u3001\u6280\u80fd\u548c\u4ee3\u7406\u5b9a\u4e49\u3002",
+      "description": "\u7ba1\u7406\u5de5\u4f5c\u533a\u5b89\u88c5\u7684\u6269\u5c55\u3001\u6280\u80fd\u548c\u667a\u80fd\u4f53\u5b9a\u4e49\u3002",
       "comingSoon": "\u6b64\u9762\u677f\u5373\u5c06\u63a8\u51fa\u3002",
       "panels": {
         "extensions": "\u6269\u5c55",
         "skills": "\u6280\u80fd",
-        "agents": "\u4ee3\u7406"
+        "agents": "\u667a\u80fd\u4f53"
       },
       "extensions": {
         "title": "\u6269\u5c55",
@@ -670,7 +670,7 @@
           },
           "remove": {
             "title": "\u79fb\u9664\u6269\u5c55",
-            "description": "\u79fb\u9664 {{name}}\uff1f\u8be5\u6269\u5c55\u5c06\u4ece\u4f60\u7684\u4ee3\u7406\u8fd0\u884c\u65f6\u5378\u8f7d\u3002",
+            "description": "\u79fb\u9664 {{name}}\uff1f\u8be5\u6269\u5c55\u5c06\u4ece\u4f60\u7684\u667a\u80fd\u4f53\u8fd0\u884c\u65f6\u5378\u8f7d\u3002",
             "confirm": "\u79fb\u9664"
           }
         },
@@ -688,56 +688,56 @@
         }
       },
       "agents": {
-        "title": "\u4ee3\u7406\u5b9a\u4e49",
-        "description": "\u521b\u5efa\u65b0\u4ee3\u7406\u6216\u8986\u76d6\u5b98\u65b9\u4ee3\u7406\u3002",
+        "title": "\u667a\u80fd\u4f53\u5b9a\u4e49",
+        "description": "\u521b\u5efa\u65b0\u667a\u80fd\u4f53\u6216\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53\u3002",
         "official": "\u5b98\u65b9",
         "managed": "\u6258\u7ba1",
-        "empty": "\u5c1a\u65e0\u4ee3\u7406\u5b9a\u4e49\u3002",
+        "empty": "\u5c1a\u65e0\u667a\u80fd\u4f53\u5b9a\u4e49\u3002",
         "userInstalled": "\u7528\u6237\u521b\u5efa",
         "actions": {
-          "create": "\u521b\u5efa\u4ee3\u7406",
+          "create": "\u521b\u5efa\u667a\u80fd\u4f53",
           "edit": "\u7f16\u8f91",
           "remove": "\u79fb\u9664",
           "restore": "\u6062\u590d"
         },
         "dialogs": {
           "create": {
-            "title": "\u521b\u5efa\u4ee3\u7406",
+            "title": "\u521b\u5efa\u667a\u80fd\u4f53",
             "nameLabel": "\u540d\u79f0",
             "nameHelp": "\u5c0f\u5199\u5b57\u6bcd\u3001\u6570\u5b57\u548c\u77ed\u6a2a\u7ebf\u3002\u5b98\u65b9\u540d\u79f0\u4fdd\u7559\u2014\u2014\u8986\u76d6\u8bf7\u4f7f\u7528\u201c\u7f16\u8f91\u201d\u3002",
             "descriptionLabel": "\u63cf\u8ff0",
             "contentLabel": "\u63d0\u793a\u8bcd",
-            "contentPlaceholder": "\u63cf\u8ff0\u8be5\u4ee3\u7406\u7684\u804c\u8d23\u3001\u5173\u6ce8\u70b9\u4ee5\u53ca\u6c47\u62a5\u65b9\u5f0f\u2026\u2026"
+            "contentPlaceholder": "\u63cf\u8ff0\u8be5\u667a\u80fd\u4f53\u7684\u804c\u8d23\u3001\u5173\u6ce8\u70b9\u4ee5\u53ca\u6c47\u62a5\u65b9\u5f0f\u2026\u2026"
           },
           "edit": {
-            "officialHint": "\u8fd9\u662f\u5b98\u65b9\u4ee3\u7406\u3002\u4fdd\u5b58\u5c06\u8986\u76d6\u5b98\u65b9\u5b9a\u4e49\uff0c\u968f\u65f6\u53ef\u4ee5\u6062\u590d\u3002",
+            "officialHint": "\u8fd9\u662f\u5b98\u65b9\u667a\u80fd\u4f53\u3002\u4fdd\u5b58\u5c06\u8986\u76d6\u5b98\u65b9\u5b9a\u4e49\uff0c\u968f\u65f6\u53ef\u4ee5\u6062\u590d\u3002",
             "contentLabel": "\u5b9a\u4e49\uff08frontmatter + \u63d0\u793a\u8bcd\uff09"
           },
           "overwrite": {
-            "title": "\u8986\u76d6\u5b98\u65b9\u4ee3\u7406",
-            "description": "\u8986\u76d6\u5b98\u65b9\u4ee3\u7406 {{name}}\uff1f\u5b98\u65b9\u5b9a\u4e49\u5c06\u88ab\u66ff\u6362\uff0c\u76f4\u5230\u4f60\u6062\u590d\u5b83\u3002",
+            "title": "\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53",
+            "description": "\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53 {{name}}\uff1f\u5b98\u65b9\u5b9a\u4e49\u5c06\u88ab\u66ff\u6362\uff0c\u76f4\u5230\u4f60\u6062\u590d\u5b83\u3002",
             "confirm": "\u8986\u76d6"
           },
           "remove": {
-            "title": "\u79fb\u9664\u4ee3\u7406",
-            "description": "\u79fb\u9664 {{name}}\uff1f\u4ee3\u7406\u5b9a\u4e49\u5c06\u88ab\u5220\u9664\u3002",
+            "title": "\u79fb\u9664\u667a\u80fd\u4f53",
+            "description": "\u79fb\u9664 {{name}}\uff1f\u667a\u80fd\u4f53\u5b9a\u4e49\u5c06\u88ab\u5220\u9664\u3002",
             "confirm": "\u79fb\u9664"
           },
           "restore": {
-            "title": "\u6062\u590d\u5b98\u65b9\u4ee3\u7406",
+            "title": "\u6062\u590d\u5b98\u65b9\u667a\u80fd\u4f53",
             "description": "\u5c06 {{name}} \u6062\u590d\u4e3a\u5b98\u65b9\u5b9a\u4e49\uff1f\u6240\u6709\u7f16\u8f91\u5c06\u88ab\u4e22\u5f03\u3002",
             "confirm": "\u6062\u590d"
           }
         },
         "errors": {
-          "nameRequired": "\u8bf7\u8f93\u5165\u4ee3\u7406\u540d\u79f0\u3002",
-          "contentRequired": "\u8bf7\u8f93\u5165\u4ee3\u7406\u63d0\u793a\u8bcd\u3002"
+          "nameRequired": "\u8bf7\u8f93\u5165\u667a\u80fd\u4f53\u540d\u79f0\u3002",
+          "contentRequired": "\u8bf7\u8f93\u5165\u667a\u80fd\u4f53\u63d0\u793a\u8bcd\u3002"
         },
         "messages": {
-          "created": "\u4ee3\u7406\u5df2\u521b\u5efa\u3002",
-          "updated": "\u4ee3\u7406\u5df2\u66f4\u65b0\u3002",
-          "removed": "\u4ee3\u7406\u5df2\u79fb\u9664\u3002",
-          "restored": "\u4ee3\u7406\u5df2\u6062\u590d\u3002"
+          "created": "\u667a\u80fd\u4f53\u5df2\u521b\u5efa\u3002",
+          "updated": "\u667a\u80fd\u4f53\u5df2\u66f4\u65b0\u3002",
+          "removed": "\u667a\u80fd\u4f53\u5df2\u79fb\u9664\u3002",
+          "restored": "\u667a\u80fd\u4f53\u5df2\u6062\u590d\u3002"
         },
         "columns": {
           "name": "\u540d\u79f0"

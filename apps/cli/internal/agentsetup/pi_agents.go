@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/rs/zerolog/log"
 
 	"yishan/apps/cli/internal/config"
 )
@@ -36,6 +39,9 @@ var (
 	// ErrAgentNotManaged is returned when restoring a name with no shipped
 	// official source (user agents have no managed source to restore).
 	ErrAgentNotManaged = errors.New("agent has no managed official source")
+	// ErrInvalidAgentThinking is returned when the thinking level is not one
+	// of the pi-supported values (off|minimal|low|medium|high|xhigh).
+	ErrInvalidAgentThinking = errors.New("invalid agent thinking level")
 )
 
 // agentNamePattern is the slug allowed for new agent names: lowercase
@@ -43,10 +49,13 @@ var (
 var agentNamePattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 // PiAgentInfo is one agent definition's metadata. Name is the file basename
-// without .md — the identity pi uses at runtime.
+// without .md — the identity pi uses at runtime. Model and Thinking mirror
+// the agent frontmatter's optional per-agent overrides.
 type PiAgentInfo struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Model       string `json:"model"`
+	Thinking    string `json:"thinking"`
 	Official    bool   `json:"official"`
 }
 
@@ -84,9 +93,12 @@ func ListPiAgents() ([]PiAgentInfo, error) {
 			return nil, fmt.Errorf("read pi agent %s: %w", entry.Name(), err)
 		}
 		meta := parseAgentFrontMatter(content)
+		model, thinking := effectiveAgentConfig(name, meta)
 		agents = append(agents, PiAgentInfo{
 			Name:        name,
 			Description: meta.Description,
+			Model:       model,
+			Thinking:    thinking,
 			Official:    isManagedPiAgentName(name),
 		})
 	}
@@ -107,10 +119,13 @@ func GetPiAgentDetail(name string) (*PiAgentDetail, error) {
 		return nil, err
 	}
 	meta := parseAgentFrontMatter(content)
+	model, thinking := effectiveAgentConfig(name, meta)
 	return &PiAgentDetail{
 		PiAgentInfo: PiAgentInfo{
 			Name:        name,
 			Description: meta.Description,
+			Model:       model,
+			Thinking:    thinking,
 			Official:    isManagedPiAgentName(name),
 		},
 		Content: string(content),
@@ -120,7 +135,8 @@ func GetPiAgentDetail(name string) (*PiAgentDetail, error) {
 // CreatePiAgent writes a new user agent definition: validated lowercase slug,
 // not a managed official name, no existing file. The daemon builds the
 // frontmatter (name, description, read_only: false) around the caller's
-// prompt body.
+// prompt body. Model and thinking level live in the runtime overrides file
+// (agent.overrides.json) via SetPiAgentOverrides, not in the frontmatter.
 func CreatePiAgent(name string, description string, content string) error {
 	trimmedName := strings.TrimSpace(name)
 	if !agentNamePattern.MatchString(trimmedName) {
@@ -134,6 +150,124 @@ func CreatePiAgent(name string, description string, content string) error {
 	}
 	full := "---\nname: " + trimmedName + "\ndescription: " + yamlQuotedScalar(strings.TrimSpace(description)) + "\nread_only: false\n---\n\n" + content
 	return writePiAgentFile(trimmedName, full)
+}
+
+// ValidateAgentThinking reports whether a thinking level is one of the
+// pi-supported values (off|minimal|low|medium|high|xhigh). Empty is valid
+// (no override).
+func ValidateAgentThinking(thinking string) error {
+	trimmed := strings.TrimSpace(thinking)
+	if trimmed == "" {
+		return nil
+	}
+	for _, level := range allowedAgentThinkingLevels {
+		if trimmed == level {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: %q (use off|minimal|low|medium|high|xhigh)", ErrInvalidAgentThinking, trimmed)
+}
+
+// allowedAgentThinkingLevels mirrors pi's ALLOWED_THINKING_LEVELS.
+var allowedAgentThinkingLevels = []string{"off", "minimal", "low", "medium", "high", "xhigh"}
+
+// agentOverride is one per-agent runtime override entry in
+// <agentDir>/agent.overrides.json, patching model/thinking onto an agent
+// definition at load time without modifying the definition file.
+type agentOverride struct {
+	Model    string `json:"model,omitempty"`
+	Thinking string `json:"thinking,omitempty"`
+}
+
+// SetPiAgentOverrides writes (or removes) the runtime model/thinking override
+// for one agent in <agentDir>/agent.overrides.json. Both values empty removes
+// the entry. The file is the pi-subagents runtime override source and the
+// effective model/thinking the desktop surfaces.
+func SetPiAgentOverrides(name string, model string, thinking string) error {
+	trimmedName := strings.TrimSpace(name)
+	if err := validateAgentPathName(trimmedName); err != nil {
+		return err
+	}
+	if err := ValidateAgentThinking(thinking); err != nil {
+		return err
+	}
+	overrides, err := loadAgentOverrides()
+	if err != nil {
+		return err
+	}
+	model = strings.TrimSpace(model)
+	thinking = strings.TrimSpace(thinking)
+	if model == "" && thinking == "" {
+		delete(overrides, trimmedName)
+	} else {
+		overrides[trimmedName] = agentOverride{Model: model, Thinking: thinking}
+	}
+	return saveAgentOverrides(overrides)
+}
+
+// loadAgentOverrides reads <agentDir>/agent.overrides.json. A missing file is
+// an empty set; a corrupt file degrades to an empty set with a warning so the
+// panel never fails on malformed user content.
+func loadAgentOverrides() (map[string]agentOverride, error) {
+	overrides := map[string]agentOverride{}
+	path, err := agentOverridesPath()
+	if err != nil {
+		return nil, err
+	}
+	content, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return overrides, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read agent overrides: %w", err)
+	}
+	if err := json.Unmarshal(content, &overrides); err != nil {
+		log.Warn().Err(err).Str("path", path).Msg("agent overrides file unreadable; treating as empty")
+		return map[string]agentOverride{}, nil
+	}
+	return overrides, nil
+}
+
+func saveAgentOverrides(overrides map[string]agentOverride) error {
+	path, err := agentOverridesPath()
+	if err != nil {
+		return err
+	}
+	content, err := json.MarshalIndent(overrides, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		return fmt.Errorf("write agent overrides: %w", err)
+	}
+	return nil
+}
+
+func agentOverridesPath() (string, error) {
+	agentDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve managed pi agent dir: %w", err)
+	}
+	return filepath.Join(agentDir, "agent.overrides.json"), nil
+}
+
+// effectiveAgentConfig merges a definition's frontmatter model/thinking with
+// the runtime overrides file; overrides win.
+func effectiveAgentConfig(name string, frontMatter agentFrontMatter) (model string, thinking string) {
+	model, thinking = frontMatter.Model, frontMatter.Thinking
+	overrides, err := loadAgentOverrides()
+	if err != nil {
+		return model, thinking
+	}
+	if override, ok := overrides[name]; ok {
+		if override.Model != "" {
+			model = override.Model
+		}
+		if override.Thinking != "" {
+			thinking = override.Thinking
+		}
+	}
+	return model, thinking
 }
 
 // UpdatePiAgent overwrites an agent definition (official or user) with the
@@ -296,6 +430,8 @@ func yamlQuotedScalar(value string) string {
 type agentFrontMatter struct {
 	Name        string
 	Description string
+	Model       string
+	Thinking    string
 }
 
 // parseAgentFrontMatter extracts name and description from an agent file's
@@ -332,6 +468,10 @@ func parseAgentFrontMatter(content []byte) agentFrontMatter {
 			meta.Name = value
 		case "description":
 			meta.Description = value
+		case "model":
+			meta.Model = value
+		case "thinking":
+			meta.Thinking = value
 		}
 	}
 	return meta

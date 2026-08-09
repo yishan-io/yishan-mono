@@ -194,6 +194,7 @@ export type DaemonRpcClient = {
       update: (input: Rpc.AgentDefinitionUpdateInput) => Promise<{ updated: boolean }>;
       remove: (input: Rpc.AgentDefinitionNameInput) => Promise<{ removed: boolean }>;
       restore: (input: Rpc.AgentDefinitionNameInput) => Promise<{ restored: boolean }>;
+      setModelThinking: (input: Rpc.AgentDefinitionSetModelThinkingInput) => Promise<{ updated: boolean }>;
     };
   };
   memory: {

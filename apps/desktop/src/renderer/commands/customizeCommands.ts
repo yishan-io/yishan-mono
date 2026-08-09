@@ -18,6 +18,8 @@ function parseAgentDefinition(entry: Record<string, unknown>): AgentDefinitionIn
   return {
     name: typeof entry.name === "string" ? entry.name : "",
     description: typeof entry.description === "string" ? entry.description : "",
+    model: typeof entry.model === "string" ? entry.model : "",
+    thinking: typeof entry.thinking === "string" ? entry.thinking : "",
     official: Boolean(entry.official),
   };
 }
@@ -99,4 +101,11 @@ export async function removeAgentDefinition(name: string): Promise<void> {
 export async function restoreAgentDefinition(name: string): Promise<void> {
   const client = await getDaemonClient();
   await client.customize.agents.restore({ name });
+}
+
+/** Sets (or clears) the runtime model/thinking override for one agent in
+ * agent.overrides.json. */
+export async function setAgentModelThinking(name: string, model: string, thinking: string): Promise<void> {
+  const client = await getDaemonClient();
+  await client.customize.agents.setModelThinking({ name, model, thinking });
 }
