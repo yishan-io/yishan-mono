@@ -7,6 +7,8 @@ function parsePiExtension(entry: Record<string, unknown>): PiExtensionInfo {
     description: typeof entry.description === "string" ? entry.description : "",
     source: typeof entry.source === "string" ? entry.source : "",
     version: typeof entry.version === "string" ? entry.version : "",
+    latestVersion: typeof entry.latestVersion === "string" ? entry.latestVersion : "",
+    hasUpdate: Boolean(entry.hasUpdate),
     official: Boolean(entry.official),
     installed: Boolean(entry.installed),
   };

@@ -109,7 +109,6 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
           {t("common.actions.cancel")}
         </Button>
         <Button
-          variant="contained"
           disabled={isSaving || !detail}
           data-testid="agent-detail-save"
           onClick={() => {
@@ -232,12 +231,7 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
         <Button onClick={onClose} disabled={isSubmitting}>
           {t("common.actions.cancel")}
         </Button>
-        <Button
-          variant="contained"
-          disabled={isSubmitting}
-          onClick={() => void handleCreate()}
-          data-testid="create-agent-submit"
-        >
+        <Button disabled={isSubmitting} onClick={() => void handleCreate()} data-testid="create-agent-submit">
           {t("settings.customize.agents.actions.create")}
         </Button>
       </DialogActions>

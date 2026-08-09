@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"yishan/apps/cli/internal/config"
 )
@@ -23,14 +26,17 @@ const PiExtensionSourceLocalFile = "local file"
 // settings.json. Source is the pi package spec (npm:, git:, https:, local
 // path) or PiExtensionSourceLocalFile for extensions array entries;
 // Description is the installed package's package.json description (empty
-// when not installed or absent).
+// when not installed or absent). LatestVersion/HasUpdate are filled by
+// CheckPiExtensionUpdates.
 type PiExtensionInfo struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Source      string `json:"source"`
-	Version     string `json:"version"`
-	Official    bool   `json:"official"`
-	Installed   bool   `json:"installed"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	Source        string `json:"source"`
+	Version       string `json:"version"`
+	LatestVersion string `json:"latestVersion"`
+	HasUpdate     bool   `json:"hasUpdate"`
+	Official      bool   `json:"official"`
+	Installed     bool   `json:"installed"`
 }
 
 // ListPiExtensions enumerates the extensions pi would load from the agent
@@ -121,6 +127,112 @@ func RemovePiExtension(ctx context.Context, source string) error {
 // re-fetches the package at its latest version.
 func UpdatePiExtension(ctx context.Context, source string) error {
 	return runPiCommand(ctx, "install", source)
+}
+
+// npmVersionTimeout bounds each registry version check so a stalled registry
+// cannot hold the extensions list hostage.
+const npmVersionTimeout = 15 * time.Second
+
+// extensionUpdateCacheTTL controls how long a checked latest-version result is
+// reused before the registry is queried again. The cache keeps repeated list
+// loads (panel mount + reload after every install/update/remove) fast.
+const extensionUpdateCacheTTL = 30 * time.Minute
+
+// npmRegistryBase is the registry the update check queries; injectable for
+// tests. Scoped names are path-escaped (@scope/pkg -> @scope%2Fpkg).
+var npmRegistryBase = "https://registry.npmjs.org"
+
+// registryClient is a shared HTTP client with a short overall timeout; the
+// per-request context deadline still applies.
+var registryClient = &http.Client{Timeout: npmVersionTimeout}
+
+// latestVersionFetcher is injectable so tests can stub registry responses.
+var latestVersionFetcher = fetchLatestVersionFromRegistry
+
+// extensionUpdateCache is a small TTL cache of checked latest versions,
+// keyed by package name.
+type extensionUpdateCacheEntry struct {
+	latest  string
+	fetched time.Time
+}
+
+var extensionUpdateCache = struct {
+	sync.Mutex
+	entries map[string]extensionUpdateCacheEntry
+}{entries: map[string]extensionUpdateCacheEntry{}}
+
+// CheckPiExtensionUpdates fills LatestVersion/HasUpdate for installed npm
+// packages by querying the registry concurrently over HTTP (no npm
+// subprocess), with a TTL cache so repeated loads are instant. Git and
+// local-file sources have no cheap registry check and keep empty update
+// info; any check failure degrades to no-update info rather than failing the
+// list. ListPiExtensions itself stays network-free.
+func CheckPiExtensionUpdates(ctx context.Context, extensions []PiExtensionInfo) {
+	var wg sync.WaitGroup
+	for i := range extensions {
+		ext := &extensions[i]
+		if !ext.Installed || ext.Source == PiExtensionSourceLocalFile || !strings.HasPrefix(ext.Source, "npm:") {
+			continue
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			checkCtx, cancel := context.WithTimeout(ctx, npmVersionTimeout)
+			defer cancel()
+			latest := cachedOrFetchLatestVersion(checkCtx, ext.Name)
+			if latest == "" || latest == ext.Version {
+				return
+			}
+			ext.LatestVersion = latest
+			ext.HasUpdate = true
+		}()
+	}
+	wg.Wait()
+}
+
+// cachedOrFetchLatestVersion returns the cached latest version when fresh,
+// otherwise fetches it from the registry and stores it.
+func cachedOrFetchLatestVersion(ctx context.Context, name string) string {
+	extensionUpdateCache.Lock()
+	if entry, ok := extensionUpdateCache.entries[name]; ok && time.Since(entry.fetched) < extensionUpdateCacheTTL {
+		extensionUpdateCache.Unlock()
+		return entry.latest
+	}
+	extensionUpdateCache.Unlock()
+
+	latest, err := latestVersionFetcher(ctx, name)
+	if err != nil {
+		return ""
+	}
+	extensionUpdateCache.Lock()
+	extensionUpdateCache.entries[name] = extensionUpdateCacheEntry{latest: latest, fetched: time.Now()}
+	extensionUpdateCache.Unlock()
+	return latest
+}
+
+// fetchLatestVersionFromRegistry queries the registry for the dist-tag
+// latest version of a package via GET <registry>/<name>/latest.
+func fetchLatestVersionFromRegistry(ctx context.Context, name string) (string, error) {
+	url := npmRegistryBase + "/" + url.PathEscape(name) + "/latest"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("build registry request for %s: %w", name, err)
+	}
+	resp, err := registryClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch registry metadata for %s: %w", name, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("registry responded %d for %s", resp.StatusCode, name)
+	}
+	var metadata struct {
+		Version string `json:"version"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&metadata); err != nil {
+		return "", fmt.Errorf("decode registry metadata for %s: %w", name, err)
+	}
+	return metadata.Version, nil
 }
 
 // packageEntrySource extracts the source spec from a packages array entry:

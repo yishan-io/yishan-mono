@@ -44,6 +44,9 @@ const EXTENSION_TABLE_SX = {
   "& tbody tr:last-of-type td": {
     borderBottom: "none",
   },
+  "& .MuiTableCell-body": {
+    py: 1.25,
+  },
 };
 
 type AddExtensionDialogProps = {
@@ -107,7 +110,7 @@ function AddExtensionDialog({ onClose, onInstalled }: AddExtensionDialogProps) {
         <Button onClick={onClose} disabled={isSubmitting}>
           {t("common.actions.cancel")}
         </Button>
-        <Button variant="contained" disabled={isSubmitting} onClick={() => void handleInstall()}>
+        <Button disabled={isSubmitting} onClick={() => void handleInstall()}>
           {t("settings.customize.extensions.dialogs.add.install")}
         </Button>
       </DialogActions>
@@ -176,7 +179,6 @@ export function ExtensionsSettingsView() {
       <SettingsCard>
         <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
           <Button
-            variant="contained"
             onClick={() => {
               setIsAddDialogOpen(true);
             }}
@@ -199,14 +201,13 @@ export function ExtensionsSettingsView() {
                 <TableRow>
                   <TableCell>{t("settings.customize.extensions.columns.name")}</TableCell>
                   <TableCell>{t("settings.customize.extensions.columns.version")}</TableCell>
-                  <TableCell>{t("settings.customize.extensions.columns.status")}</TableCell>
                   <TableCell align="right" />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {extensions.length === 0 && !loadError ? (
                   <TableRow>
-                    <TableCell colSpan={4}>
+                    <TableCell colSpan={3}>
                       <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
                         {t("settings.customize.extensions.empty")}
                       </Typography>
@@ -221,6 +222,9 @@ export function ExtensionsSettingsView() {
                         <TableCell>
                           <Box>
                             <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+                              <Box component="span" sx={{ fontWeight: 600, wordBreak: "break-all" }}>
+                                {extension.name}
+                              </Box>
                               {extension.official ? (
                                 <Tooltip title={t("settings.customize.extensions.official")}>
                                   <Box component="span" sx={{ display: "inline-flex", color: "primary.main" }}>
@@ -234,15 +238,9 @@ export function ExtensionsSettingsView() {
                                   </Box>
                                 </Tooltip>
                               )}
-                              <Box component="span" sx={{ fontWeight: 600, wordBreak: "break-all" }}>
-                                {extension.name}
-                              </Box>
                             </Box>
                             {extension.description ? (
-                              <Typography
-                                variant="caption"
-                                sx={{ color: "text.secondary", display: "block", wordBreak: "break-all" }}
-                              >
+                              <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
                                 {extension.description}
                               </Typography>
                             ) : null}
@@ -250,38 +248,39 @@ export function ExtensionsSettingsView() {
                         </TableCell>
                         <TableCell>
                           {extension.version ? (
-                            <Typography variant="body2">{`v${extension.version}`}</Typography>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                              <Typography variant="body2">{`v${extension.version}`}</Typography>
+                              {extension.hasUpdate && extension.latestVersion ? (
+                                <>
+                                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                                    →
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: "primary.main" }}>
+                                    {`v${extension.latestVersion}`}
+                                  </Typography>
+                                </>
+                              ) : null}
+                            </Box>
                           ) : null}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            label={
-                              extension.installed
-                                ? t("settings.customize.extensions.installed")
-                                : t("settings.customize.extensions.notInstalled")
-                            }
-                            color={extension.installed ? "success" : "default"}
-                            variant={extension.installed ? "filled" : "outlined"}
-                            sx={{ fontSize: "0.7rem", height: 22 }}
-                          />
                         </TableCell>
                         <TableCell align="right">
                           {!isLocalFile ? (
                             <Box sx={{ display: "inline-flex", gap: 0.5 }}>
-                              <Button
-                                size="small"
-                                disabled={isOperating || !extension.installed}
-                                onClick={() =>
-                                  void runOperation(
-                                    extension.source,
-                                    () => updateExtension(extension.source),
-                                    "settings.customize.extensions.messages.updated",
-                                  )
-                                }
-                              >
-                                {t("settings.customize.extensions.actions.update")}
-                              </Button>
+                              {extension.hasUpdate ? (
+                                <Button
+                                  size="small"
+                                  disabled={isOperating}
+                                  onClick={() =>
+                                    void runOperation(
+                                      extension.source,
+                                      () => updateExtension(extension.source),
+                                      "settings.customize.extensions.messages.updated",
+                                    )
+                                  }
+                                >
+                                  {t("settings.customize.extensions.actions.update")}
+                                </Button>
+                              ) : null}
                               {!extension.official ? (
                                 <Button
                                   size="small"

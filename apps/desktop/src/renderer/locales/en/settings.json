@@ -324,7 +324,6 @@
         "package": "Package",
         "settings": "Settings"
       },
-      "officialHint": "Updated via the Extensions panel",
       "actions": {
         "add": "Add skill",
         "update": "Update",
@@ -356,10 +355,7 @@
       },
       "empty": "No skills installed.",
       "columns": {
-        "name": "Name",
-        "description": "Description",
-        "source": "Source",
-        "status": "Status"
+        "name": "Name"
       }
     },
     "appearance": {
@@ -725,8 +721,7 @@
         },
         "columns": {
           "name": "Name",
-          "version": "Version",
-          "status": "Status"
+          "version": "Version"
         }
       },
       "agents": {
@@ -740,7 +735,7 @@
           "create": "Create agent",
           "edit": "Edit",
           "remove": "Remove",
-          "restore": "Restore to official"
+          "restore": "Restore"
         },
         "dialogs": {
           "create": {

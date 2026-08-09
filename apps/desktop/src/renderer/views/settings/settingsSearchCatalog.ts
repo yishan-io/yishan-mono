@@ -16,7 +16,7 @@ import {
   BiUser,
   BiWorld,
 } from "react-icons/bi";
-import { LuHammer } from "react-icons/lu";
+import { LuHammer, LuPuzzle } from "react-icons/lu";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
@@ -90,7 +90,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
     titleKey: "settings.sections.system",
     items: [
       { tab: "integrations", labelKey: "settings.items.integrations", icon: BiPlug },
-      { tab: "customize", labelKey: "settings.items.customize", icon: BiPlug },
+      { tab: "customize", labelKey: "settings.items.customize", icon: LuPuzzle },
       { tab: "computerUse", labelKey: "settings.items.computerUse", icon: BiCommand },
       { tab: "workspace", labelKey: "settings.items.workspace", icon: BiGitBranch },
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
@@ -271,7 +271,7 @@ const CUSTOMIZE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "customize-extensions",
     tab: "customize",
-    icon: BiPlug,
+    icon: LuPuzzle,
     labelKey: "settings.customize.extensions.title",
     sectionLabelKey: "settings.items.customize",
     keywordKeys: [

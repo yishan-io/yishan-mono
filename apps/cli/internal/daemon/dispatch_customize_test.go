@@ -13,7 +13,7 @@ func TestDispatchCustomizeExtensionsList_OnCleanHome(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 
-	result, err := handler.handleCustomizeExtensionsList()
+	result, err := handler.handleCustomizeExtensionsList(context.Background())
 	if err != nil {
 		t.Fatalf("handleCustomizeExtensionsList: %v", err)
 	}

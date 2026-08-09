@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuBadgeCheck, LuCheck, LuRefreshCw } from "react-icons/lu";
+import { LuBadgeCheck } from "react-icons/lu";
 import { listSkills, removeSkill, updateAllSkills, updateSkill } from "../../commands/skillCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { SettingsCard } from "../../components/settings";
@@ -47,6 +47,9 @@ const SKILL_TABLE_SX = {
   },
   "& tbody tr:last-of-type td": {
     borderBottom: "none",
+  },
+  "& .MuiTableCell-body": {
+    py: 1.25,
   },
 };
 
@@ -110,7 +113,6 @@ export function AgentSkillsCard() {
         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mb: 1.5 }}>
           <Button
             size="small"
-            variant="outlined"
             disabled={isUpdatingAll}
             onClick={() => {
               setIsUpdatingAll(true);
@@ -118,12 +120,10 @@ export function AgentSkillsCard() {
                 setIsUpdatingAll(false);
               });
             }}
-            startIcon={<LuRefreshCw size={14} />}
           >
             {t("settings.skills.actions.updateAll")}
           </Button>
           <Button
-            variant="contained"
             onClick={() => {
               setIsAddDialogOpen(true);
             }}
@@ -145,16 +145,13 @@ export function AgentSkillsCard() {
               <TableHead>
                 <TableRow>
                   <TableCell>{t("settings.skills.columns.name")}</TableCell>
-                  <TableCell>{t("settings.skills.columns.description")}</TableCell>
-                  <TableCell>{t("settings.skills.columns.source")}</TableCell>
-                  <TableCell>{t("settings.skills.columns.status")}</TableCell>
                   <TableCell align="right" />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {skills.length === 0 && !loadError ? (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={2}>
                       <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
                         {t("settings.skills.empty")}
                       </Typography>
@@ -167,45 +164,33 @@ export function AgentSkillsCard() {
                     return (
                       <TableRow key={skill.name} data-testid={`skill-row-${skill.name}`}>
                         <TableCell>
-                          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-                            <Box component="span" sx={{ fontWeight: 600 }}>
-                              {skill.name}
+                          <Box>
+                            <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+                              <Box component="span" sx={{ fontWeight: 600 }}>
+                                {skill.name}
+                              </Box>
+                              {skill.official ? (
+                                <Tooltip title={t("settings.skills.official")}>
+                                  <Box component="span" sx={{ display: "inline-flex", color: "primary.main" }}>
+                                    <LuBadgeCheck size={16} />
+                                  </Box>
+                                </Tooltip>
+                              ) : null}
                             </Box>
-                            {skill.official ? (
-                              <Tooltip title={t("settings.skills.official")}>
-                                <Box component="span" sx={{ display: "inline-flex", color: "primary.main" }}>
-                                  <LuBadgeCheck size={16} />
-                                </Box>
-                              </Tooltip>
+                            {!isRegistryManagedSkill(skill.sourceKind) ? (
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "text.secondary", display: "block", wordBreak: "break-all" }}
+                              >
+                                {`${t(`settings.skills.sourceKinds.${skill.sourceKind}`)}: ${skill.source}`}
+                              </Typography>
+                            ) : null}
+                            {skill.description ? (
+                              <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
+                                {skill.description}
+                              </Typography>
                             ) : null}
                           </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                            {skill.description}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {!isRegistryManagedSkill(skill.sourceKind) ? (
-                            <Tooltip title={t(`settings.skills.sourceKinds.${skill.sourceKind}`)}>
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={`${t(`settings.skills.sourceKinds.${skill.sourceKind}`)}: ${skill.source}`}
-                                sx={{ fontSize: "0.7rem", height: 22, maxWidth: 220 }}
-                              />
-                            </Tooltip>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            icon={skill.installed ? <LuCheck size={12} /> : undefined}
-                            label={skill.installed ? t("settings.skills.installed") : t("settings.skills.notInstalled")}
-                            color={skill.installed ? "success" : "default"}
-                            variant={skill.installed ? "filled" : "outlined"}
-                            sx={{ fontSize: "0.7rem", height: 22 }}
-                          />
                         </TableCell>
                         <TableCell align="right">
                           <Box sx={{ display: "inline-flex", gap: 0.5 }}>
@@ -229,7 +214,6 @@ export function AgentSkillsCard() {
                                       "settings.skills.messages.updated",
                                     )
                                   }
-                                  startIcon={<LuRefreshCw size={14} />}
                                 >
                                   {t("settings.skills.actions.update")}
                                 </Button>
@@ -244,10 +228,6 @@ export function AgentSkillsCard() {
                                   {t("settings.skills.actions.remove")}
                                 </Button>
                               </>
-                            ) : skill.official ? (
-                              <Typography variant="caption" sx={{ color: "text.secondary", alignSelf: "center" }}>
-                                {t("settings.skills.officialHint")}
-                              </Typography>
                             ) : null}
                           </Box>
                         </TableCell>

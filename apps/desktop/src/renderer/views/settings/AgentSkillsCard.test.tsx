@@ -58,14 +58,13 @@ describe("AgentSkillsCard", () => {
     vi.clearAllMocks();
   });
 
-  it("renders official skills read-only with a hint and no lifecycle actions", async () => {
+  it("renders official skills read-only with no lifecycle actions", async () => {
     mocked.listSkills.mockResolvedValue([OFFICIAL]);
 
     render(<AgentSkillsCard />);
 
     expect(await screen.findByText("starting-task")).toBeTruthy();
     expect(screen.getByText(/Start tasks/)).toBeTruthy();
-    expect(screen.getByText("settings.skills.officialHint")).toBeTruthy();
     expect(screen.queryByText("settings.skills.actions.update")).toBeNull();
     expect(screen.queryByText("settings.skills.actions.remove")).toBeNull();
   });

@@ -28,6 +28,8 @@ const OFFICIAL = {
   name: "@yishan-io/pi-notify",
   source: "npm:@yishan-io/pi-notify",
   version: "1.2.3",
+  latestVersion: "2.0.0",
+  hasUpdate: true,
   official: true,
   installed: true,
 };
@@ -36,6 +38,8 @@ const USER = {
   name: "pi-web-fetch",
   source: "npm:pi-web-fetch",
   version: "0.4.0",
+  latestVersion: "0.4.0",
+  hasUpdate: false,
   official: false,
   installed: true,
 };
@@ -44,6 +48,8 @@ const LOCAL_FILE = {
   name: "local-ext.ts",
   source: "local file",
   version: "",
+  latestVersion: "",
+  hasUpdate: false,
   official: false,
   installed: true,
 };
@@ -129,5 +135,21 @@ describe("ExtensionsSettingsView", () => {
     fireEvent.click(screen.getByText("settings.customize.extensions.actions.update"));
 
     await waitFor(() => expect(mocked.updateExtension).toHaveBeenCalledWith("npm:@yishan-io/pi-notify"));
+  });
+
+  it("shows the latest version and update only when a new version is available", async () => {
+    mocked.listExtensions.mockResolvedValue([OFFICIAL, USER]);
+
+    render(<ExtensionsSettingsView />);
+
+    await screen.findByText("@yishan-io/pi-notify");
+    // Official has a newer version: latest shown, update button present.
+    expect(screen.getByText("v1.2.3")).toBeTruthy();
+    expect(screen.getByText("v2.0.0")).toBeTruthy();
+    expect(screen.getAllByText("settings.customize.extensions.actions.update").length).toBeGreaterThan(0);
+    // User is up to date: no latest version, no update button.
+    const userRow = screen.getByTestId("extension-row-pi-web-fetch");
+    expect(within(userRow).queryByText("settings.customize.extensions.actions.update")).toBeNull();
+    expect(within(userRow).queryByText(/v0\.5/)).toBeNull();
   });
 });

@@ -168,7 +168,7 @@ func agentOperationError(err error) error {
 func (h *JSONRPCHandler) dispatchCustomizeExtensions(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodCustomizeExtensionsList:
-		return h.handleCustomizeExtensionsList()
+		return h.handleCustomizeExtensionsList(ctx)
 	case MethodCustomizeExtensionsInstall:
 		return h.handleCustomizeExtensionsInstall(ctx, params)
 	case MethodCustomizeExtensionsRemove:
@@ -180,11 +180,12 @@ func (h *JSONRPCHandler) dispatchCustomizeExtensions(ctx context.Context, method
 	}
 }
 
-func (h *JSONRPCHandler) handleCustomizeExtensionsList() (any, error) {
+func (h *JSONRPCHandler) handleCustomizeExtensionsList(ctx context.Context) (any, error) {
 	extensions, err := setup.ListPiExtensions()
 	if err != nil {
 		return nil, fmt.Errorf("list pi extensions: %w", err)
 	}
+	setup.CheckPiExtensionUpdates(ctx, extensions)
 	return map[string]any{"extensions": extensions}, nil
 }
 

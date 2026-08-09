@@ -187,7 +187,7 @@ export function AddSkillDialog({ onClose, onAdded }: AddSkillDialogProps) {
         <Button onClick={onClose} disabled={isSubmitting}>
           {t("common.actions.cancel")}
         </Button>
-        <Button variant="contained" disabled={isSubmitting} onClick={() => void handleAdd()}>
+        <Button disabled={isSubmitting} onClick={() => void handleAdd()}>
           {t("settings.skills.dialogs.add.install")}
         </Button>
       </DialogActions>

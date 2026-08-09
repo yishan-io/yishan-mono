@@ -37,6 +37,9 @@ const AGENT_TABLE_SX = {
   "& tbody tr:last-of-type td": {
     borderBottom: "none",
   },
+  "& .MuiTableCell-body": {
+    py: 1.25,
+  },
 };
 
 /**
@@ -98,7 +101,6 @@ export function AgentsSettingsView() {
       <SettingsCard>
         <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
           <Button
-            variant="contained"
             onClick={() => {
               setIsCreateOpen(true);
             }}
@@ -164,10 +166,7 @@ export function AgentsSettingsView() {
                             ) : null}
                           </Box>
                           {agent.description ? (
-                            <Typography
-                              variant="caption"
-                              sx={{ color: "text.secondary", display: "block", wordBreak: "break-all" }}
-                            >
+                            <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
                               {agent.description}
                             </Typography>
                           ) : null}

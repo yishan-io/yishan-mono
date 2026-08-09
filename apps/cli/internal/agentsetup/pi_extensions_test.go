@@ -3,6 +3,9 @@ package setup
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -160,6 +163,156 @@ func TestListPiExtensions_ReportsPackageDescription(t *testing.T) {
 	}
 	if user.Description != "Fetch web pages as markdown" {
 		t.Fatalf("expected package description, got %q", user.Description)
+	}
+}
+
+// resetExtensionUpdateCache clears the shared update cache so tests are
+// order-independent.
+func resetExtensionUpdateCache() {
+	extensionUpdateCache.Lock()
+	extensionUpdateCache.entries = map[string]extensionUpdateCacheEntry{}
+	extensionUpdateCache.Unlock()
+}
+
+func TestCheckPiExtensionUpdates_FillsLatestVersion(t *testing.T) {
+	resetExtensionUpdateCache()
+	withPiHome(t)
+	writeAgentSettings(t, []string{"npm:pi-web-fetch", "npm:@yishan-io/pi-task"}, nil)
+	writeNPMPackage(t, "pi-web-fetch", nil, nil)       // installed 1.2.3
+	writeNPMPackage(t, "@yishan-io/pi-task", nil, nil) // installed 1.2.3
+
+	originalFetcher := latestVersionFetcher
+	defer func() {
+		latestVersionFetcher = originalFetcher
+	}()
+	latestVersionFetcher = func(_ context.Context, name string) (string, error) {
+		if name == "pi-web-fetch" {
+			return "2.0.0", nil // newer than installed
+		}
+		return "1.2.3", nil // same as installed
+	}
+
+	extensions, err := ListPiExtensions()
+	if err != nil {
+		t.Fatalf("ListPiExtensions: %v", err)
+	}
+	CheckPiExtensionUpdates(context.Background(), extensions)
+
+	byName := extensionsByName(extensions)
+	fetch := byName["pi-web-fetch"]
+	if !fetch.HasUpdate || fetch.LatestVersion != "2.0.0" {
+		t.Fatalf("expected update info for pi-web-fetch, got %#v", fetch)
+	}
+	task := byName["@yishan-io/pi-task"]
+	if task.HasUpdate || task.LatestVersion != "" {
+		t.Fatalf("expected no update info when versions match, got %#v", task)
+	}
+}
+
+func TestCheckPiExtensionUpdates_SkipsUninstalledAndLocalFile(t *testing.T) {
+	resetExtensionUpdateCache()
+	withPiHome(t)
+	writeAgentSettings(t, []string{"npm:pi-web-fetch", "npm:@yishan-io/pi-task"}, nil)
+	writeNPMPackage(t, "pi-web-fetch", nil, nil) // installed
+	// @yishan-io/pi-task is listed but NOT installed.
+
+	fetchCount := 0
+	originalFetcher := latestVersionFetcher
+	defer func() {
+		latestVersionFetcher = originalFetcher
+	}()
+	latestVersionFetcher = func(_ context.Context, name string) (string, error) {
+		fetchCount++
+		return "9.9.9", nil
+	}
+
+	extensions, err := ListPiExtensions()
+	if err != nil {
+		t.Fatalf("ListPiExtensions: %v", err)
+	}
+	CheckPiExtensionUpdates(context.Background(), extensions)
+	if fetchCount != 1 {
+		t.Fatalf("expected exactly one registry fetch (installed package only), got %d", fetchCount)
+	}
+}
+
+func TestCheckPiExtensionUpdates_FailureDegradesGracefully(t *testing.T) {
+	resetExtensionUpdateCache()
+	withPiHome(t)
+	writeAgentSettings(t, []string{"npm:pi-web-fetch"}, nil)
+	writeNPMPackage(t, "pi-web-fetch", nil, nil)
+
+	originalFetcher := latestVersionFetcher
+	defer func() {
+		latestVersionFetcher = originalFetcher
+	}()
+	latestVersionFetcher = func(_ context.Context, name string) (string, error) {
+		return "", fmt.Errorf("registry unreachable")
+	}
+
+	extensions, err := ListPiExtensions()
+	if err != nil {
+		t.Fatalf("ListPiExtensions: %v", err)
+	}
+	CheckPiExtensionUpdates(context.Background(), extensions) // must not error
+
+	fetch := extensionsByName(extensions)["pi-web-fetch"]
+	if fetch.HasUpdate || fetch.LatestVersion != "" {
+		t.Fatalf("expected no update info on registry failure, got %#v", fetch)
+	}
+}
+
+func TestCheckPiExtensionUpdates_CachesResultsWithinTTL(t *testing.T) {
+	resetExtensionUpdateCache()
+	withPiHome(t)
+	writeAgentSettings(t, []string{"npm:pi-web-fetch"}, nil)
+	writeNPMPackage(t, "pi-web-fetch", nil, nil)
+
+	fetchCount := 0
+	originalFetcher := latestVersionFetcher
+	defer func() {
+		latestVersionFetcher = originalFetcher
+	}()
+	latestVersionFetcher = func(_ context.Context, name string) (string, error) {
+		fetchCount++
+		return "2.0.0", nil
+	}
+
+	extensions, err := ListPiExtensions()
+	if err != nil {
+		t.Fatalf("ListPiExtensions: %v", err)
+	}
+	for round := 0; round < 3; round++ {
+		CheckPiExtensionUpdates(context.Background(), extensions)
+	}
+	if fetchCount != 1 {
+		t.Fatalf("expected registry fetched once within TTL, got %d fetches", fetchCount)
+	}
+}
+
+func TestFetchLatestVersionFromRegistry_EncodesScopedNameAndParsesVersion(t *testing.T) {
+	originalBase := npmRegistryBase
+	originalClient := registryClient
+	defer func() {
+		npmRegistryBase = originalBase
+		registryClient = originalClient
+	}()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.EscapedPath() != "/@yishan-io%2Fpi-task/latest" {
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"name":"@yishan-io/pi-task","version":"2.0.0"}`))
+	}))
+	defer server.Close()
+	npmRegistryBase = server.URL
+	registryClient = server.Client()
+
+	version, err := fetchLatestVersionFromRegistry(context.Background(), "@yishan-io/pi-task")
+	if err != nil {
+		t.Fatalf("fetchLatestVersionFromRegistry: %v", err)
+	}
+	if version != "2.0.0" {
+		t.Fatalf("expected version 2.0.0, got %q", version)
 	}
 }
 

@@ -611,6 +611,8 @@ export type PiExtensionInfo = {
   description: string;
   source: string;
   version: string;
+  latestVersion: string;
+  hasUpdate: boolean;
   official: boolean;
   installed: boolean;
 };
