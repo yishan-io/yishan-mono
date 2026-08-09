@@ -65,11 +65,13 @@ func defaultNPMPackagesRootResolver() (string, error) {
 }
 
 // agentSettings mirrors the subset of pi's agent settings.json the daemon
-// needs for skill discovery. Package entries can be plain strings or objects
-// ({source, filter}); only string sources are enumerated.
+// needs for skill discovery and extension management. Package entries can be
+// plain strings or objects ({source, filter}); only string sources are
+// enumerated. Extensions are local .ts/dir paths listed read-only.
 type agentSettings struct {
-	Packages []json.RawMessage `json:"packages"`
-	Skills   []string          `json:"skills"`
+	Packages   []json.RawMessage `json:"packages"`
+	Skills     []string          `json:"skills"`
+	Extensions []string          `json:"extensions"`
 }
 
 func defaultAgentSettingsLoader() (*agentSettings, error) {

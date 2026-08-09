@@ -344,10 +344,10 @@ describe("SettingsView", () => {
     expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
   });
 
-  it("renders skills panel when skills tab is selected", () => {
+  it("renders skills panel when the customize tab deep-links to skills", () => {
     render(
       <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=skills"]}>
+        <MemoryRouter initialEntries={["/settings?tab=customize&focus=skills"]}>
           <Routes>
             <Route path="/settings" element={<SettingsView />} />
           </Routes>

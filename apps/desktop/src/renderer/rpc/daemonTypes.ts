@@ -59,7 +59,8 @@ export type ApiNamespace =
   | "events"
   | "skill"
   | "memory"
-  | "project";
+  | "project"
+  | "customize";
 
 export type ProcedureSubscriptionOptions = {
   namespace: ApiNamespace;
@@ -603,6 +604,52 @@ export type SkillDetail = SkillInfo & {
 
 export type SkillListResponse = {
   skills: SkillInfo[];
+};
+
+export type PiExtensionInfo = {
+  name: string;
+  description: string;
+  source: string;
+  version: string;
+  official: boolean;
+  installed: boolean;
+};
+
+export type PiExtensionListResponse = {
+  extensions: PiExtensionInfo[];
+};
+
+export type PiExtensionMutationInput = {
+  source: string;
+};
+
+export type AgentDefinitionInfo = {
+  name: string;
+  description: string;
+  official: boolean;
+};
+
+export type AgentDefinitionListResponse = {
+  agents: AgentDefinitionInfo[];
+};
+
+export type AgentDefinitionDetail = AgentDefinitionInfo & {
+  content: string;
+};
+
+export type AgentDefinitionCreateInput = {
+  name: string;
+  description: string;
+  content: string;
+};
+
+export type AgentDefinitionUpdateInput = {
+  name: string;
+  content: string;
+};
+
+export type AgentDefinitionNameInput = {
+  name: string;
 };
 
 export type MemorySearchInput = {

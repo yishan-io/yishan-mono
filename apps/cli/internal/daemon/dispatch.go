@@ -26,6 +26,8 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 			return h.dispatchComputer(ctx, method, params)
 		case "skill":
 			return h.dispatchSkill(ctx, method, params)
+		case "customize":
+			return h.dispatchCustomize(ctx, method, params)
 		case "memory":
 			return h.dispatchMemory(method, params)
 		case "project":

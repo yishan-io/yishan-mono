@@ -175,6 +175,26 @@ export type DaemonRpcClient = {
     list: (input?: undefined) => Promise<Rpc.SkillListResponse>;
     info: (input: { name: string }) => Promise<Rpc.SkillInfo>;
     detail: (input: { name: string }) => Promise<Rpc.SkillDetail>;
+    add: (input: { source: string }) => Promise<{ added: boolean }>;
+    remove: (input: { name: string }) => Promise<{ removed: boolean }>;
+    update: (input: { name: string }) => Promise<{ updated: boolean }>;
+    updateAll: (input?: undefined) => Promise<{ updated: boolean }>;
+  };
+  customize: {
+    extensions: {
+      list: (input?: undefined) => Promise<Rpc.PiExtensionListResponse>;
+      install: (input: Rpc.PiExtensionMutationInput) => Promise<{ installed: boolean }>;
+      remove: (input: Rpc.PiExtensionMutationInput) => Promise<{ removed: boolean }>;
+      update: (input: Rpc.PiExtensionMutationInput) => Promise<{ updated: boolean }>;
+    };
+    agents: {
+      list: (input?: undefined) => Promise<Rpc.AgentDefinitionListResponse>;
+      detail: (input: Rpc.AgentDefinitionNameInput) => Promise<Rpc.AgentDefinitionDetail>;
+      create: (input: Rpc.AgentDefinitionCreateInput) => Promise<{ created: boolean }>;
+      update: (input: Rpc.AgentDefinitionUpdateInput) => Promise<{ updated: boolean }>;
+      remove: (input: Rpc.AgentDefinitionNameInput) => Promise<{ removed: boolean }>;
+      restore: (input: Rpc.AgentDefinitionNameInput) => Promise<{ restored: boolean }>;
+    };
   };
   memory: {
     search: (input: Rpc.MemorySearchInput) => Promise<Rpc.MemorySearchResult[]>;

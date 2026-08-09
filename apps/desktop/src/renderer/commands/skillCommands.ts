@@ -49,3 +49,27 @@ export async function getSkillDetail(name: string): Promise<SkillDetail> {
         : {},
   };
 }
+
+/** Installs a skill package globally (~/.agents/skills) via the skills CLI. */
+export async function addSkill(source: string): Promise<void> {
+  const client = await getDaemonClient();
+  await client.skill.add({ source });
+}
+
+/** Removes an installed skill by name (user-installed skills only). */
+export async function removeSkill(name: string): Promise<void> {
+  const client = await getDaemonClient();
+  await client.skill.remove({ name });
+}
+
+/** Updates one installed skill to its latest version. */
+export async function updateSkill(name: string): Promise<void> {
+  const client = await getDaemonClient();
+  await client.skill.update({ name });
+}
+
+/** Updates every installed global skill via the skills CLI. */
+export async function updateAllSkills(): Promise<void> {
+  const client = await getDaemonClient();
+  await client.skill.updateAll(undefined);
+}

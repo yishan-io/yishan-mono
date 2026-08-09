@@ -35,16 +35,22 @@ import { MemberSettingsView } from "./settings/MemberSettingsView";
 import { MemorySettingsView } from "./settings/MemorySettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
 import { ServiceTokenSettingsView } from "./settings/ServiceTokenSettingsView";
-import { SkillsSettingsView } from "./settings/SkillsSettingsView";
 import { TerminalSettingsView } from "./settings/TerminalSettingsView";
 import { WorkspaceSettingsView } from "./settings/WorkspaceSettingsView";
+import { CustomizeSettingsView } from "./settings/customize/CustomizeSettingsView";
 import { DaemonSettingsView } from "./settings/daemon/DaemonSettingsView";
 import { NotificationSettingsView } from "./settings/notifications/NotificationSettingsView";
 import {
   type NotificationSettingsFocusItemId,
   isNotificationSettingsFocusItemId,
 } from "./settings/notifications/notificationSettingsCatalog";
-import { SETTINGS_NAV_SECTIONS, SETTINGS_SEARCH_CATALOG, type SettingsTab } from "./settings/settingsSearchCatalog";
+import {
+  type CustomizeFocusItemId,
+  SETTINGS_NAV_SECTIONS,
+  SETTINGS_SEARCH_CATALOG,
+  type SettingsTab,
+  isCustomizeFocusItemId,
+} from "./settings/settingsSearchCatalog";
 
 type SettingsSearchResult = {
   id: string;
@@ -52,7 +58,7 @@ type SettingsSearchResult = {
   icon: typeof BiCog;
   label: string;
   sectionLabel: string;
-  focusItemId?: NotificationSettingsFocusItemId;
+  focusItemId?: NotificationSettingsFocusItemId | CustomizeFocusItemId;
   rank: number;
 };
 
@@ -112,6 +118,7 @@ export function SettingsView() {
   const selectedTabParam = searchParams.get("tab");
   const focusedItemParam = searchParams.get("focus");
   const focusedNotificationItemId = isNotificationSettingsFocusItemId(focusedItemParam) ? focusedItemParam : undefined;
+  const focusedCustomizeItem = isCustomizeFocusItemId(focusedItemParam) ? focusedItemParam : undefined;
   const shouldReserveMacWindowControlsInset = getRendererPlatform() === "darwin";
 
   const selectedTab = useMemo<SettingsTab>(() => {
@@ -120,6 +127,7 @@ export function SettingsView() {
       selectedTabParam === "agents" ||
       selectedTabParam === "appearance" ||
       selectedTabParam === "computerUse" ||
+      selectedTabParam === "customize" ||
       selectedTabParam === "daemon" ||
       selectedTabParam === "integrations" ||
       selectedTabParam === "keybindings" ||
@@ -131,7 +139,6 @@ export function SettingsView() {
       selectedTabParam === "notifications" ||
       selectedTabParam === "providers" ||
       selectedTabParam === "serviceTokens" ||
-      selectedTabParam === "skills" ||
       selectedTabParam === "terminal" ||
       selectedTabParam === "workspace"
     ) {
@@ -212,13 +219,13 @@ export function SettingsView() {
         </SettingsErrorBoundary>
       ),
       serviceTokens: <ServiceTokenSettingsView />,
-      skills: <SkillsSettingsView />,
+      customize: <CustomizeSettingsView focus={focusedCustomizeItem} />,
       terminal: <TerminalSettingsView />,
       keybindings: <KeybindingsSettingsView />,
       memory: <MemorySettingsView />,
       workspace: <WorkspaceSettingsView />,
     }),
-    [focusedNotificationItemId, setThemePreference, t, themePreference],
+    [focusedNotificationItemId, focusedCustomizeItem, setThemePreference, t, themePreference],
   );
 
   return (
@@ -267,7 +274,8 @@ export function SettingsView() {
                     const Icon = result.icon;
                     const isSelected =
                       selectedTab === result.tab &&
-                      (result.focusItemId === undefined || focusedNotificationItemId === result.focusItemId);
+                      (result.focusItemId === undefined ||
+                        (typeof result.focusItemId === "string" && focusedItemParam === result.focusItemId));
                     return (
                       <ListItemButton
                         key={result.id}

@@ -28,6 +28,7 @@ export type SettingsTab =
   | "agents"
   | "appearance"
   | "computerUse"
+  | "customize"
   | "daemon"
   | "integrations"
   | "keybindings"
@@ -38,7 +39,6 @@ export type SettingsTab =
   | "notifications"
   | "providers"
   | "serviceTokens"
-  | "skills"
   | "terminal"
   | "workspace";
 
@@ -58,8 +58,14 @@ export type SettingsSearchCatalogItem = {
   labelKey: string;
   sectionLabelKey: string;
   keywordKeys: string[];
-  focusItemId?: NotificationSettingsFocusItemId;
+  focusItemId?: NotificationSettingsFocusItemId | CustomizeFocusItemId;
 };
+
+export type CustomizeFocusItemId = "extensions" | "skills" | "agents";
+
+export function isCustomizeFocusItemId(value: string | null | undefined): value is CustomizeFocusItemId {
+  return value === "extensions" || value === "skills" || value === "agents";
+}
 
 export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
   {
@@ -84,7 +90,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
     titleKey: "settings.sections.system",
     items: [
       { tab: "integrations", labelKey: "settings.items.integrations", icon: BiPlug },
-      { tab: "skills", labelKey: "settings.items.skills", icon: LuHammer },
+      { tab: "customize", labelKey: "settings.items.customize", icon: BiPlug },
       { tab: "computerUse", labelKey: "settings.items.computerUse", icon: BiCommand },
       { tab: "workspace", labelKey: "settings.items.workspace", icon: BiGitBranch },
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
@@ -261,13 +267,46 @@ const LINKS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
+const CUSTOMIZE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+  {
+    id: "customize-extensions",
+    tab: "customize",
+    icon: BiPlug,
+    labelKey: "settings.customize.extensions.title",
+    sectionLabelKey: "settings.items.customize",
+    keywordKeys: [
+      "settings.customize.extensions.description",
+      "settings.customize.extensions.official",
+      "settings.customize.extensions.userInstalled",
+      "settings.customize.extensions.installed",
+      "settings.customize.extensions.actions.add",
+      "settings.customize.extensions.actions.update",
+      "settings.customize.extensions.actions.remove",
+    ],
+    focusItemId: "extensions",
+  },
+  {
+    id: "customize-agents",
+    tab: "customize",
+    icon: BiBot,
+    labelKey: "settings.customize.agents.title",
+    sectionLabelKey: "settings.items.customize",
+    keywordKeys: [
+      "settings.customize.agents.description",
+      "settings.customize.agents.official",
+      "settings.customize.agents.managed",
+    ],
+    focusItemId: "agents",
+  },
+];
+
 const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "skills-manager",
-    tab: "skills",
+    tab: "customize",
     icon: LuHammer,
     labelKey: "settings.skills.title",
-    sectionLabelKey: "settings.items.skills",
+    sectionLabelKey: "settings.items.customize",
     keywordKeys: [
       "settings.skills.description",
       "settings.skills.sourceLabel",
@@ -275,6 +314,7 @@ const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.skills.notInstalled",
       "settings.skills.official",
     ],
+    focusItemId: "skills",
   },
 ];
 const NODES_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
@@ -472,6 +512,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...LANGUAGE_SEARCH_ITEMS,
   ...LINKS_SEARCH_ITEMS,
   ...SKILLS_SEARCH_ITEMS,
+  ...CUSTOMIZE_SEARCH_ITEMS,
   ...MEMBERS_SEARCH_ITEMS,
   ...NODES_SEARCH_ITEMS,
   ...KEYBINDINGS_SEARCH_ITEMS,
