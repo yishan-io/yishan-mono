@@ -1,6 +1,6 @@
 import type { WorkspaceAccess } from "./types";
 
-export const WRITE_CAPABLE_TOOL_NAMES = new Set(["write", "edit", "bash", "apply_patch"]);
+export const WRITE_CAPABLE_TOOL_NAMES = new Set(["write", "edit", "bash", "apply_patch", "lsp_fix"]);
 
 /** Returns whether any declared tool can mutate workspace state. */
 export function hasWriteCapableTools(tools: string[] | undefined): boolean {

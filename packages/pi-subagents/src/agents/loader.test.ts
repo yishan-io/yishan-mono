@@ -166,6 +166,31 @@ Prompt body`,
     ]);
   });
 
+  it("accepts extension-registered LSP tools in agent tool lists", () => {
+    const tempDir = createTempDir();
+    const filePath = writeAgentFile(
+      tempDir,
+      "LspAgent.md",
+      `---
+name: LspAgent
+description: Implement and verify changes
+tools:
+  - read
+  - bash
+  - lsp_diagnostics
+  - lsp_fix
+---
+
+Prompt body`,
+    );
+
+    const result = loadAgentDefinitionFile({ filePath, source: "user" });
+
+    expect(result.agent).toBeDefined();
+    expect(result.agent?.tools).toEqual(["read", "bash", "lsp_diagnostics", "lsp_fix"]);
+    expect(result.diagnostics).toEqual([]);
+  });
+
   it("loads conflicting read_only frontmatter but emits a diagnostic", () => {
     const tempDir = createTempDir();
     const filePath = writeAgentFile(

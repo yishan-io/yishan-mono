@@ -79,13 +79,13 @@ Override precedence:
 
 ### builder
 - Purpose: implement one scoped task from a plan or task brief
-- Default tools: `read`, `grep`, `glob`, `bash`, `apply_patch`
+- Default tools: `read`, `grep`, `glob`, `bash`, `apply_patch`, `lsp_diagnostics`, `lsp_fix`
 - Default mode: writable when needed
 - Default model: unset
 
 ### code-reviewer
 - Purpose: review code changes for bugs, regressions, and missing tests
-- Default tools: `read`, `grep`, `glob`, `bash`
+- Default tools: `read`, `grep`, `glob`, `bash`, `lsp_diagnostics`
 - Default mode: read-only
 - Default model: unset
 
@@ -97,7 +97,7 @@ Override precedence:
 
 ### task-reviewer
 - Purpose: review one task-sized implementation for requirements compliance
-- Default tools: `read`, `grep`, `glob`, `bash`
+- Default tools: `read`, `grep`, `glob`, `bash`, `lsp_diagnostics`
 - Default mode: read-only
 - Default model: unset
 
