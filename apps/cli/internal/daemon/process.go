@@ -107,11 +107,6 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	defer dr.closeListener()
 	defer dr.closeLocalDatabase()
 	defer dr.cleanupCtxCancel()
-	defer func() {
-		if err := RemoveState(statePath); err != nil {
-			log.Warn().Err(err).Msg("failed to remove daemon state file")
-		}
-	}()
 
 	sc, err := startServing(cfg, dr)
 	if err != nil {
