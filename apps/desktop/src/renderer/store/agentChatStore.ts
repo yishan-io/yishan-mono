@@ -31,6 +31,8 @@ type AgentSubagentProgressTarget = {
 type AgentSessionData = {
   sessionId: string;
   state: AgentSessionState;
+  /** Whether the agent has started (turn_start) but not yet ended (turn_end) the current turn. */
+  isTurnActive: boolean;
   compactionReason: AgentCompactionReason;
   messages: AgentMessage[];
   streamingMessage: AgentMessage | null;
@@ -58,6 +60,7 @@ type AgentChatStoreState = {
   // Actions
   initSession: (tabId: string, sessionId: string) => void;
   setSessionState: (tabId: string, state: AgentSessionState) => void;
+  setTurnActive: (tabId: string, active: boolean) => void;
   setCompactionReason: (tabId: string, reason: AgentCompactionReason) => void;
   setSessionError: (tabId: string, error: string) => void;
   setTurnError: (tabId: string, error: string) => void;
@@ -161,6 +164,7 @@ function emptySession(sessionId: string): AgentSessionData {
   return {
     sessionId,
     state: "idle",
+    isTurnActive: false,
     compactionReason: null,
     messages: [],
     streamingMessage: null,
@@ -247,6 +251,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (session) {
           session.state = sessionState;
+        }
+      });
+    },
+
+    setTurnActive: (tabId, active) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.isTurnActive = active;
         }
       });
     },

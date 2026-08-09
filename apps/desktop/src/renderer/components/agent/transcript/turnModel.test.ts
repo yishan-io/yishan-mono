@@ -451,9 +451,58 @@ describe("buildTurnSections", () => {
     expect(sections).toHaveLength(1);
     const run = sections[0];
     if (run?.kind === "toolRun") {
-      expect(
-        run.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id)),
-      ).toEqual(["thinking", "bash-1", "mem-1", "thinking", "read-1", "bash-2", "read-2", "read-3"]);
+      expect(run.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "thinking",
+        "bash-1",
+        "mem-1",
+        "thinking",
+        "read-1",
+        "bash-2",
+        "read-2",
+        "read-3",
+      ]);
+    }
+  });
+
+  it("splits the stack around a standalone thinking-only message", () => {
+    const a1: AgentMessage = {
+      id: "a1",
+      role: "assistant",
+      content: [{ type: "toolCall", id: "read-1", name: "read", arguments: {} }],
+    };
+    const a2: AgentMessage = {
+      id: "a2",
+      role: "assistant",
+      content: [{ type: "thinking", thinking: "mid thought" }],
+    };
+    const a3: AgentMessage = {
+      id: "a3",
+      role: "assistant",
+      content: [{ type: "toolCall", id: "bash-1", name: "bash", arguments: {} }],
+    };
+    const a4: AgentMessage = {
+      id: "a4",
+      role: "assistant",
+      content: [{ type: "text", text: "summary" }],
+    };
+    const row = firstTurn([item(userMessage("u1")), item(a1), item(a2), item(a3), item(a4)]);
+
+    const sections = buildTurnSections(row.turn.items, "a4", "summary");
+
+    // The standalone thought splits the previous run; the following command
+    // joins it as its preamble (same grouping as [thinking, toolCall] in one
+    // message).
+    expect(sections.map((section) => (section.kind === "toolRun" ? "run" : section.kind))).toEqual(["run", "run"]);
+    const firstRun = sections[0];
+    const thoughtRun = sections[1];
+    if (firstRun?.kind === "toolRun") {
+      expect(firstRun.blocks.map((block) => (block.kind === "toolCall" ? block.toolCall.id : ""))).toEqual(["read-1"]);
+    }
+    if (thoughtRun?.kind === "toolRun") {
+      expect(thoughtRun.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "thinking",
+        "bash-1",
+      ]);
     }
   });
 

@@ -82,6 +82,7 @@ function AgentChatTranscriptPane({
     );
   });
   const queue = agentChatStore((state) => state.sessionsByTabId[tabId]?.queue ?? EMPTY_QUEUE);
+  const isTurnActive = agentChatStore((state) => state.sessionsByTabId[tabId]?.isTurnActive ?? false);
   const footerModel = currentModel ?? parentModel;
   const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? null);
   const latestUsage = useMemo(() => {
@@ -105,7 +106,7 @@ function AgentChatTranscriptPane({
   );
 
   const isWorking = sessionState === "running" || sessionState === "compacting";
-  const isTurnRunning = sessionState === "running";
+  const isTurnRunning = sessionState === "running" && isTurnActive;
   const workingLabel =
     sessionState === "compacting" ? t(`agentChat.compaction.${compactionReason ?? "generic"}`) : undefined;
 

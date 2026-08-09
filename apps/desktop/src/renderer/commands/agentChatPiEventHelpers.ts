@@ -361,6 +361,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       agentChatStore.getState().clearPendingUiRequest(tabId);
       agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       agentChatStore.getState().setCompactionReason(tabId, null);
+      agentChatStore.getState().setTurnActive(tabId, false);
       agentChatStore.getState().setSessionState(tabId, "idle");
       // fire-and-forget: stats refresh cannot affect chat lifecycle after settlement.
       void refreshAgentSessionStats(sessionId).catch((error) => {
@@ -485,6 +486,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     }
 
     case "turn_start":
+      agentChatStore.getState().setTurnActive(tabId, true);
       break;
 
     case "compaction_start":
@@ -494,6 +496,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
     case "turn_end":
       agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      agentChatStore.getState().setTurnActive(tabId, false);
       break;
 
     case "compaction_end": {

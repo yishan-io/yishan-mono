@@ -11,6 +11,9 @@ const MAX_COLLAPSED_HEIGHT_PX = 160;
 const OVERFLOW_TOLERANCE_PX = 1;
 const FADE_HEIGHT_PX = 56;
 
+/** Persists expanded user messages across virtualized row unmounts (mirrors collapsedTurnIds). */
+const expandedUserMessageIds = new Set<string>();
+
 type UserMessageRowProps = {
   message: AgentMessage;
 };
@@ -24,7 +27,18 @@ type UserMessageRowProps = {
  */
 export function UserMessageRow({ message }: UserMessageRowProps) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(() => expandedUserMessageIds.has(message.id));
+  const handleToggleExpanded = () => {
+    setExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        expandedUserMessageIds.add(message.id);
+      } else {
+        expandedUserMessageIds.delete(message.id);
+      }
+      return next;
+    });
+  };
   const contentRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const messageText = extractMessageText(message.content);
@@ -50,7 +64,9 @@ export function UserMessageRow({ message }: UserMessageRowProps) {
     return () => {
       observer.disconnect();
     };
-  }, [messageText]);
+    // Rows remount per message (virtualizer keys by message id), so the
+    // measurement runs once per mounted message; no message-derived deps needed.
+  }, []);
 
   return (
     <Paper
@@ -86,8 +102,7 @@ export function UserMessageRow({ message }: UserMessageRowProps) {
               right: 0,
               height: FADE_HEIGHT_PX,
               pointerEvents: "none",
-              background: (theme) =>
-                `linear-gradient(to top, ${theme.palette.action.selected}, transparent)`,
+              background: (theme) => `linear-gradient(to top, ${theme.palette.action.selected}, transparent)`,
             }}
           />
         ) : null}
@@ -106,10 +121,8 @@ export function UserMessageRow({ message }: UserMessageRowProps) {
           {isOverflowing ? (
             <IconButton
               size="small"
-              aria-label={
-                expanded ? t("agentChat.userMessage.showLess") : t("agentChat.userMessage.showMore")
-              }
-              onClick={() => setExpanded(!expanded)}
+              aria-label={expanded ? t("agentChat.userMessage.showLess") : t("agentChat.userMessage.showMore")}
+              onClick={handleToggleExpanded}
               sx={{
                 color: "text.secondary",
                 "&:hover": {

@@ -1325,6 +1325,46 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-extension-ui-auto"]?.pendingUiAutoResponse).toBeNull();
   });
 
+  it("marks the turn active on turn_start and inactive on turn_end", () => {
+    const tabId = "tab-turn-lifecycle";
+    agentChatStore.getState().initSession(tabId, "session-turn-lifecycle");
+    const session = () => agentChatStore.getState().sessionsByTabId[tabId];
+
+    expect(session()?.isTurnActive).toBe(false);
+
+    handleAgentPiEvent({
+      sessionId: "session-turn-lifecycle",
+      tabId,
+      workspaceId: "workspace-1",
+      event: { type: "turn_start" },
+    });
+    expect(session()?.isTurnActive).toBe(true);
+
+    handleAgentPiEvent({
+      sessionId: "session-turn-lifecycle",
+      tabId,
+      workspaceId: "workspace-1",
+      event: { type: "turn_end" },
+    });
+    expect(session()?.isTurnActive).toBe(false);
+  });
+
+  it("marks the turn inactive when the agent settles", () => {
+    const tabId = "tab-turn-settled";
+    agentChatStore.getState().initSession(tabId, "session-turn-settled");
+    agentChatStore.getState().setTurnActive(tabId, true);
+
+    handleAgentPiEvent({
+      sessionId: "session-turn-settled",
+      tabId,
+      workspaceId: "workspace-1",
+      event: { type: "agent_settled" },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.isTurnActive).toBe(false);
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.state).toBe("idle");
+  });
+
   it("clears pending auto responses when an agent settles", () => {
     agentChatStore.getState().initSession("tab-extension-ui-agent-end", "session-extension-ui-agent-end");
     agentChatStore.getState().setPendingUiAutoResponse("tab-extension-ui-agent-end", {
