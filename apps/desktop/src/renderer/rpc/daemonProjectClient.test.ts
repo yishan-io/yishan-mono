@@ -141,4 +141,92 @@ describe("DaemonProjectClient", () => {
       contextEnabled: true,
     });
   });
+
+  it("loads and normalizes persisted list preferences", async () => {
+    const invoke = vi.fn(async () => ({
+      version: 1,
+      by_project: {
+        projectOrderIds: ["project-2", "project-1"],
+        nodeOrderByParentId: { "project:project-1": ["node-a"] },
+        foldedProjectIds: ["project-2"],
+        foldedNodeKeys: [],
+      },
+      by_node: {
+        projectOrderIds: [],
+        nodeOrderByParentId: { "root:node": ["node-b"] },
+        foldedProjectIds: [],
+        foldedNodeKeys: ["node-a:project-1"],
+      },
+      workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
+    }));
+
+    const client = new DaemonProjectClient(invoke);
+    const preferences = await client.getListPreferences("org-1");
+
+    expect(invoke).toHaveBeenCalledWith("project.getListPreferences", { organizationId: "org-1" });
+    expect(preferences.by_project.projectOrderIds).toEqual(["project-2", "project-1"]);
+    expect(preferences.by_project.nodeOrderByParentId["project:project-1"]).toEqual(["node-a"]);
+    expect(preferences.by_node.foldedNodeKeys).toEqual(["node-a:project-1"]);
+    expect(preferences.workspaceOrderByParentId["project-1:node-a"]).toEqual(["workspace-1"]);
+  });
+
+  it("normalizes malformed list preference payloads to safe defaults", async () => {
+    const invoke = vi.fn(async () => ({
+      version: "latest",
+      by_project: { projectOrderIds: "not-an-array", nodeOrderByParentId: [1, 2] },
+      by_node: undefined,
+    }));
+
+    const client = new DaemonProjectClient(invoke);
+    const preferences = await client.getListPreferences("org-1");
+
+    expect(preferences.version).toBe(1);
+    expect(preferences.by_project.projectOrderIds).toEqual([]);
+    expect(preferences.by_project.nodeOrderByParentId).toEqual({});
+    expect(preferences.workspaceOrderByParentId).toEqual({});
+    expect(preferences.by_node.foldedProjectIds).toEqual([]);
+  });
+
+  it("persists list preferences with the org id", async () => {
+    const invoke = vi.fn(async () => ({ ok: true }));
+    const client = new DaemonProjectClient(invoke);
+
+    const result = await client.setListPreferences("org-1", {
+      version: 1,
+      by_project: {
+        projectOrderIds: ["project-1"],
+        nodeOrderByParentId: {},
+        foldedProjectIds: [],
+        foldedNodeKeys: [],
+      },
+      by_node: {
+        projectOrderIds: [],
+        nodeOrderByParentId: {},
+        foldedProjectIds: [],
+        foldedNodeKeys: [],
+      },
+      workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
+    });
+
+    expect(invoke).toHaveBeenCalledWith("project.setListPreferences", {
+      organizationId: "org-1",
+      preferences: {
+        version: 1,
+        by_project: {
+          projectOrderIds: ["project-1"],
+          nodeOrderByParentId: {},
+          foldedProjectIds: [],
+          foldedNodeKeys: [],
+        },
+        by_node: {
+          projectOrderIds: [],
+          nodeOrderByParentId: {},
+          foldedProjectIds: [],
+          foldedNodeKeys: [],
+        },
+        workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
+      },
+    });
+    expect(result).toEqual({ ok: true });
+  });
 });

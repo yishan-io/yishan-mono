@@ -1,4 +1,5 @@
 import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../api";
+import type { ProjectListModePreference, ProjectListPreference } from "./daemonTypes";
 import { asRecord, readOptionalBoolean, readOptionalString } from "./helpers";
 
 type InvokeFn = (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
@@ -38,6 +39,40 @@ function toProjectCommands(value: unknown): ProjectCommandRecord[] | undefined {
       command: String(record?.command ?? ""),
     };
   });
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function toStringArrayMap(value: unknown): Record<string, string[]> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result: Record<string, string[]> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    result[key] = toStringArray(entry);
+  }
+  return result;
+}
+
+function parseProjectListModePreference(value: unknown): ProjectListModePreference {
+  const record = asRecord(value);
+  return {
+    projectOrderIds: toStringArray(record?.projectOrderIds),
+    nodeOrderByParentId: toStringArrayMap(record?.nodeOrderByParentId),
+    foldedProjectIds: toStringArray(record?.foldedProjectIds),
+    foldedNodeKeys: toStringArray(record?.foldedNodeKeys),
+  };
+}
+
+export function parseProjectListPreference(value: unknown): ProjectListPreference {
+  const record = asRecord(value);
+  return {
+    version: typeof record?.version === "number" ? record.version : 1,
+    by_project: parseProjectListModePreference(record?.by_project),
+    by_node: parseProjectListModePreference(record?.by_node),
+    workspaceOrderByParentId: toStringArrayMap(record?.workspaceOrderByParentId),
+  };
 }
 
 export class DaemonProjectClient {
@@ -106,6 +141,17 @@ export class DaemonProjectClient {
 
   async delete(_orgId: string, projectId: string): Promise<void> {
     await this.invoke("project.delete", { id: projectId });
+  }
+
+  async getListPreferences(orgId: string): Promise<ProjectListPreference> {
+    const result = await this.invoke("project.getListPreferences", { organizationId: orgId });
+    return parseProjectListPreference(result);
+  }
+
+  async setListPreferences(orgId: string, preferences: ProjectListPreference): Promise<{ ok: boolean }> {
+    const result = await this.invoke("project.setListPreferences", { organizationId: orgId, preferences });
+    const record = asRecord(result);
+    return { ok: record?.ok === true };
   }
 
   private parseProjectWithWorkspaces(item: unknown): ProjectWithWorkspacesRecord {

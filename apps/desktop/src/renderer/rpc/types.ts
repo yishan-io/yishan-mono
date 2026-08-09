@@ -231,6 +231,8 @@ export type DaemonRpcClient = {
       },
     ) => Promise<unknown>;
     delete: (orgId: string, projectId: string) => Promise<void>;
+    getListPreferences: (orgId: string) => Promise<Rpc.ProjectListPreference>;
+    setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) => Promise<{ ok: boolean }>;
   };
   overview: {
     getTokenUsage: (input: { range: string; projectId?: string; granularity: string }) => Promise<unknown>;

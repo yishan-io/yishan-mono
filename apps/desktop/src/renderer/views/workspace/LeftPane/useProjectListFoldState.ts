@@ -1,25 +1,24 @@
 import { useEffect, useState } from "react";
+import { sessionStore } from "../../../store/sessionStore";
 import { workspaceStore } from "../../../store/workspaceStore";
-
-type HierarchyMode = "by_project" | "by_node";
-
-type FoldState = {
-  foldedProjectIds: string[];
-  foldedNodeKeys: string[];
-};
-
-type OrderState = {
-  projectOrderIds: string[];
-  nodeOrderByParentId: Record<string, string[]>;
-};
+import {
+  EMPTY_FOLD_STATE,
+  EMPTY_ORDER_STATE,
+  type FoldState,
+  type HierarchyMode,
+  type OrderState,
+} from "./projectListPreferences";
+import { useProjectListPersistence } from "./useProjectListPersistence";
 
 export type ProjectListFoldStateResult = {
   projectOrderIds: string[];
   nodeOrderByParentId: Record<string, string[]>;
+  workspaceOrderByParentId: Record<string, string[]>;
   foldedProjectIds: string[];
   foldedNodeKeys: string[];
   setProjectOrderIds: (next: string[]) => void;
   setNodeOrderByParentId: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void;
+  setWorkspaceOrderByParentId: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void;
   setFoldedProjectIds: (updater: string[] | ((prev: string[]) => string[])) => void;
   setFoldedNodeKeys: (updater: string[] | ((prev: string[]) => string[])) => void;
   toggleProjectFold: (projectId: string) => void;
@@ -27,32 +26,45 @@ export type ProjectListFoldStateResult = {
 };
 
 /**
- * Manages per-hierarchy-mode fold and order state for the project list.
+ * Owns the left-pane project list fold and order state and persists it per
+ * organization via useProjectListPersistence.
  *
- * State is stored per mode so that switching between by_project and by_node
- * gives a fully isolated, clean state for each mode without cross-mode bleed.
+ * Project/node order and fold state are stored per mode so that switching
+ * between by_project and by_node gives a fully isolated arrangement for each
+ * mode without cross-mode bleed. Workspace order is shared across modes: the
+ * same workspaces hang under the same projectId:nodeId groups in both modes,
+ * so reordering workspaces in one mode must apply to the other.
  */
 export function useProjectListFoldState(): ProjectListFoldStateResult {
   const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
   const workspaceListHierarchyMode = workspaceStore((state) => state.workspaceListHierarchyMode);
   const activeHierarchyMode: HierarchyMode = workspaceListHierarchyMode === "by_node" ? "by_node" : "by_project";
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId) ?? "";
 
   const [foldStateByMode, setFoldStateByMode] = useState<Record<HierarchyMode, FoldState>>({
-    by_project: { foldedProjectIds: [], foldedNodeKeys: [] },
-    by_node: { foldedProjectIds: [], foldedNodeKeys: [] },
+    by_project: EMPTY_FOLD_STATE,
+    by_node: EMPTY_FOLD_STATE,
   });
 
   const [orderStateByMode, setOrderStateByMode] = useState<Record<HierarchyMode, OrderState>>({
-    by_project: { projectOrderIds: [], nodeOrderByParentId: {} },
-    by_node: { projectOrderIds: [], nodeOrderByParentId: {} },
+    by_project: EMPTY_ORDER_STATE,
+    by_node: EMPTY_ORDER_STATE,
   });
 
-  // Keep projectOrderIds in sync with the filter: remove any ID that is no
-  // longer in displayProjectIds so that re-checked projects are appended to
-  // the end of the list (treated as new) rather than snapping back to their
-  // old position. Applied only to the by_project mode bucket since
-  // displayProjectIds does not affect by_node project order (controlled by
-  // per-node drag order instead).
+  const [workspaceOrderByParentId, updateWorkspaceOrderByParentId] = useState<Record<string, string[]>>({}); // shared across modes
+
+  useProjectListPersistence({
+    organizationId: selectedOrganizationId,
+    orderStateByMode,
+    foldStateByMode,
+    workspaceOrderByParentId,
+    setFoldStateByMode,
+    setOrderStateByMode,
+    setWorkspaceOrderByParentId: updateWorkspaceOrderByParentId,
+  });
+
+  // Prune by_project order ids no longer in the display filter so re-checked
+  // projects append at the end; by_node order is unaffected by the filter.
   useEffect(() => {
     setOrderStateByMode((current) => {
       const prev = current.by_project.projectOrderIds;
@@ -77,7 +89,6 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
       [activeHierarchyMode]: { ...current[activeHierarchyMode], projectOrderIds: next },
     }));
   };
-
   const setNodeOrderByParentId = (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => {
     setOrderStateByMode((current) => ({
       ...current,
@@ -87,10 +98,12 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
       },
     }));
   };
+  const setWorkspaceOrderByParentId = (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => {
+    updateWorkspaceOrderByParentId((current) => updater(current));
+  };
 
   const foldedProjectIds = foldStateByMode[activeHierarchyMode].foldedProjectIds;
   const foldedNodeKeys = foldStateByMode[activeHierarchyMode].foldedNodeKeys;
-
   const setFoldedProjectIds = (updater: string[] | ((prev: string[]) => string[])) => {
     setFoldStateByMode((current) => ({
       ...current,
@@ -101,7 +114,6 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
       },
     }));
   };
-
   const setFoldedNodeKeys = (updater: string[] | ((prev: string[]) => string[])) => {
     setFoldStateByMode((current) => ({
       ...current,
@@ -121,10 +133,12 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
   return {
     projectOrderIds,
     nodeOrderByParentId,
+    workspaceOrderByParentId,
     foldedProjectIds,
     foldedNodeKeys,
     setProjectOrderIds,
     setNodeOrderByParentId,
+    setWorkspaceOrderByParentId,
     setFoldedProjectIds,
     setFoldedNodeKeys,
     toggleProjectFold,
