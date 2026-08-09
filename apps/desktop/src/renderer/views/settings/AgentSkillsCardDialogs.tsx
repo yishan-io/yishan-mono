@@ -184,7 +184,7 @@ export function AddSkillDialog({ onClose, onAdded }: AddSkillDialogProps) {
         ) : null}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={isSubmitting}>
+        <Button color="inherit" onClick={onClose} disabled={isSubmitting}>
           {t("common.actions.cancel")}
         </Button>
         <Button disabled={isSubmitting} onClick={() => void handleAdd()}>
@@ -210,7 +210,9 @@ export function RemoveSkillDialog({ skill, onClose, onConfirm }: RemoveSkillDial
         <Typography variant="body2">{t("settings.skills.dialogs.remove.description", { name: skill.name })}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("common.actions.cancel")}</Button>
+        <Button color="inherit" onClick={onClose}>
+          {t("common.actions.cancel")}
+        </Button>
         <Button color="error" variant="contained" onClick={onConfirm}>
           {t("settings.skills.dialogs.remove.confirm")}
         </Button>

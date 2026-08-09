@@ -183,7 +183,7 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={isSaving}>
+        <Button color="inherit" onClick={onClose} disabled={isSaving}>
           {t("common.actions.cancel")}
         </Button>
         <Button
@@ -209,7 +209,7 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowOverwriteConfirm(false)} disabled={isSaving}>
+            <Button color="inherit" onClick={() => setShowOverwriteConfirm(false)} disabled={isSaving}>
               {t("common.actions.cancel")}
             </Button>
             <Button
@@ -315,7 +315,7 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={isSubmitting}>
+        <Button color="inherit" onClick={onClose} disabled={isSubmitting}>
           {t("common.actions.cancel")}
         </Button>
         <Button disabled={isSubmitting} onClick={() => void handleCreate()} data-testid="create-agent-submit">
@@ -353,7 +353,9 @@ export function ConfirmDialog({
         <Typography variant="body2">{t(descriptionKey, { name })}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("common.actions.cancel")}</Button>
+        <Button color="inherit" onClick={onClose}>
+          {t("common.actions.cancel")}
+        </Button>
         <Button color={confirmColor} variant="contained" onClick={onConfirm}>
           {t(confirmKey)}
         </Button>

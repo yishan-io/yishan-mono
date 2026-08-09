@@ -107,7 +107,7 @@ function AddExtensionDialog({ onClose, onInstalled }: AddExtensionDialogProps) {
         ) : null}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={isSubmitting}>
+        <Button color="inherit" onClick={onClose} disabled={isSubmitting}>
           {t("common.actions.cancel")}
         </Button>
         <Button disabled={isSubmitting} onClick={() => void handleInstall()}>
@@ -335,6 +335,7 @@ export function ExtensionsSettingsView() {
           </DialogContent>
           <DialogActions>
             <Button
+              color="inherit"
               onClick={() => {
                 setRemoveCandidate(null);
               }}
