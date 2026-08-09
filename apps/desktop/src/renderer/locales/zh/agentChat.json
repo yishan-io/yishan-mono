@@ -32,11 +32,16 @@
       }
     },
     "scrollToBottom": "滚动到底部",
+    "userMessage": {
+      "showMore": "展开",
+      "showLess": "收起"
+    },
     "turn": {
       "working": "工作中…",
       "worked": "耗时 {{duration}}",
       "collapse": "折叠对话回合",
-      "expand": "展开对话回合"
+      "expand": "展开对话回合",
+      "workingDuration": "工作中 {{duration}}"
     },
     "toolGroup": {
       "read": "读取 {{count}} 个文件",

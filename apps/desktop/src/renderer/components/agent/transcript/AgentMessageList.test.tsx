@@ -289,6 +289,42 @@ describe("AgentMessageList", () => {
     expect(screen.queryByText("working…")).toBeNull();
   });
 
+  it("keeps the bottom indicator hidden while the session is running a turn without a streaming message", () => {
+    render(
+      <AgentMessageList
+        tabId="tab-running-turn"
+        isActive
+        messages={[
+          {
+            id: "assistant-1",
+            role: "assistant",
+            content: [{ type: "text", text: "Done writing files." }],
+          },
+        ]}
+        emptyPrompt="empty"
+        isWorking
+        isTurnRunning
+      />,
+    );
+
+    expect(screen.queryByText("working…")).toBeNull();
+  });
+
+  it("shows the bottom working indicator when running but no turn exists yet", () => {
+    render(
+      <AgentMessageList
+        tabId="tab-pre-chunk"
+        isActive
+        messages={[{ id: "user-1", role: "user", content: "Prompt" }]}
+        emptyPrompt="empty"
+        isWorking
+        isTurnRunning
+      />,
+    );
+
+    expect(screen.getByText("working…")).toBeTruthy();
+  });
+
   it("keeps a manually scrolled transcript position when messages arrive", () => {
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);

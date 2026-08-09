@@ -15,22 +15,22 @@ type AgentToolCallGroupProps = {
   id: string;
   /** All working blocks of the turn (thinking + tool calls) in original order. */
   blocks: TurnWorkingBlock[];
-  /** Whether the owning turn is still running. */
-  isTurnWorking: boolean;
+  /** Whether the collapsed group should show its latest block (live last run of a working turn). */
+  showLatestBlock: boolean;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
 /**
  * Collapsed-by-default group for one tool run, Codex-style: thinking blocks and
- * tool calls stay in order inside the group. While the turn is running the
- * collapsed group shows only the latest working block; the summary header
- * ("2 files read · 1 command ran") is always expandable to reveal everything.
+ * tool calls stay in order inside the group. While the run's turn is still
+ * working, the live (last) run shows its latest working block under the summary
+ * header; finished runs show only the summary header.
  */
 export function AgentToolCallGroup({
   id,
   blocks,
-  isTurnWorking,
+  showLatestBlock,
   workspacePath,
   onOpenCompletedSubagent,
 }: AgentToolCallGroupProps) {
@@ -44,12 +44,13 @@ export function AgentToolCallGroup({
     return block.kind === "toolCall";
   });
   if (toolCalls.length === 0) {
-    // No tool calls in this turn — render the thinking blocks directly without group chrome.
+    // No tool calls in this section — render the thinking blocks standalone
+    // (full width, no stack chrome) so they never read as part of the tool stack.
     const thinkingBlocks = blocks.filter((block): block is Extract<TurnWorkingBlock, { kind: "thinking" }> => {
       return block.kind === "thinking";
     });
     return (
-      <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5, pl: 1.5, display: "flex", flexDirection: "column" }}>
+      <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5, display: "flex", flexDirection: "column" }}>
         {thinkingBlocks.map((block) => (
           <ThinkingBlock
             key={block.id}
@@ -143,7 +144,7 @@ export function AgentToolCallGroup({
             ),
           )}
         </Box>
-      ) : isTurnWorking && latestBlock ? (
+      ) : showLatestBlock && latestBlock ? (
         <Box
           data-testid="agent-tool-call-group-latest"
           sx={{

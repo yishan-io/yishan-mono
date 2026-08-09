@@ -16,6 +16,8 @@ export type Turn = {
   workedDurationMs: number | null;
   /** Timestamp of the preceding user message; used to derive worked time for history-loaded turns that lack durationMs. */
   startTimestampMs?: number;
+  /** When the turn began working (first assistant item's startedAtMs); base for the live elapsed header. */
+  startedAtMs?: number;
 };
 
 /** One row of the transcript: a standalone user message or a collapsible assistant turn. */
@@ -51,8 +53,12 @@ export type TurnWorkingBlock =
  * never part of a collapsible turn. Unmatched tool result messages (no owning
  * tool call in the transcript) stay visible inside the current turn so no
  * message content is lost.
+ *
+ * When `isWorking` is true (the session is actively running), the last turn is
+ * kept marked as working even between messages of the same turn so the turn
+ * header stays the single working indicator for the whole turn.
  */
-export function buildTranscriptRows(displayMessages: TurnItem[]): TranscriptRow[] {
+export function buildTranscriptRows(displayMessages: TurnItem[], isWorking = false): TranscriptRow[] {
   const rows: TranscriptRow[] = [];
   let currentTurn: Turn | null = null;
   let lastUserTimestamp: number | undefined;
@@ -87,8 +93,20 @@ export function buildTranscriptRows(displayMessages: TurnItem[]): TranscriptRow[
     if (item.isStreaming) {
       currentTurn.isWorking = true;
     }
+    if (currentTurn.startedAtMs === undefined && typeof item.message.startedAtMs === "number") {
+      currentTurn.startedAtMs = item.message.startedAtMs;
+    }
     if (typeof item.message.durationMs === "number") {
       currentTurn.workedDurationMs = (currentTurn.workedDurationMs ?? 0) + item.message.durationMs;
+    }
+  }
+
+  if (isWorking) {
+    // Only the trailing turn can be the running one; when the last row is a
+    // user message the new turn has not started emitting yet.
+    const lastRow = rows[rows.length - 1];
+    if (lastRow?.kind === "turn") {
+      lastRow.turn.isWorking = true;
     }
   }
 
@@ -145,6 +163,8 @@ export function buildTurnSections(
     }
     const isSummaryItem = item.message.id === summaryItemId && summaryText !== null;
     const isSummaryMessage = item.message.id === summaryItemId;
+    // Thoughts of a message that also carries text belong to that text, not the tool stack.
+    const messageHasText = blocks.some((block) => block.type === "text" && block.text.trim().length > 0);
 
     blocks.forEach((block, blockIndex) => {
       if (block.type === "thinking") {
@@ -154,6 +174,14 @@ export function buildTurnSections(
         // The last (summary) message's thinking stays with the message, outside the tool stack.
         if (isSummaryMessage) {
           return;
+        }
+        // A thought of a message that also contains text belongs with that text,
+        // and a thought after the message's final command is not part of the stack
+        // either: flush the run and let the thinking render standalone. Thoughts of
+        // pure working messages (tool calls only) keep travelling with the run, so
+        // consecutive tool rounds stay one stack.
+        if (messageHasText || blockIndex > lastToolCallIndex) {
+          flushRun();
         }
         if (!currentRun) {
           currentRun = [];
@@ -193,10 +221,29 @@ export function buildTurnSections(
 }
 
 /**
+ * Returns the live elapsed working time for a running turn (base: the turn's
+ * first assistant message start, falling back to the preceding user message
+ * timestamp). Returns null when the turn is not working or no start time is
+ * known, in which case the header falls back to the plain working label.
+ */
+export function getTurnLiveElapsedMs(turn: Turn, nowMs: number): number | null {
+  if (!turn.isWorking) {
+    return null;
+  }
+
+  const startMs = turn.startedAtMs ?? turn.startTimestampMs;
+  if (typeof startMs !== "number" || !Number.isFinite(startMs)) {
+    return null;
+  }
+
+  return Math.max(0, nowMs - startMs);
+}
+
+/**
  * Returns the elapsed working time for a finished turn: the accumulated
  * durationMs of its assistant messages, or a timestamp-derived fallback for
  * history-loaded turns that lack durationMs. While the turn is still working
- * the header shows "working…" instead, so returns null.
+ * the header shows the live elapsed time instead, so returns null.
  */
 export function getTurnWorkedDurationMs(turn: Turn): number | null {
   if (turn.isWorking) {

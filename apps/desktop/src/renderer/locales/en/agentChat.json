@@ -32,11 +32,16 @@
       }
     },
     "scrollToBottom": "Scroll to bottom",
+    "userMessage": {
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
     "turn": {
       "working": "working…",
       "worked": "Worked {{duration}}",
       "collapse": "Collapse turn",
-      "expand": "Expand turn"
+      "expand": "Expand turn",
+      "workingDuration": "working {{duration}}"
     },
     "toolGroup": {
       "read_one": "{{count}} file read",

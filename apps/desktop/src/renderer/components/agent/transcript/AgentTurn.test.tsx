@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage } from "../../../store/agentChatTypes";
 import { AgentTurn } from "./AgentTurn";
@@ -11,6 +11,7 @@ vi.mock("react-i18next", () => ({
     t: (key: string, options?: Record<string, string>) => {
       const translations: Record<string, string> = {
         "agentChat.turn.working": "working…",
+        "agentChat.turn.workingDuration": "working {{duration}}",
         "agentChat.turn.worked": "Worked {{duration}}",
       };
       const template = translations[key] ?? key;
@@ -36,16 +37,16 @@ vi.mock("./ToolResultMessageContent", () => ({
 vi.mock("../tool-calls/AgentToolCallGroup", () => ({
   AgentToolCallGroup: ({
     blocks,
-    isTurnWorking,
+    showLatestBlock,
   }: {
     blocks: { kind: "thinking" | "toolCall"; id: string; toolCall?: { id: string } }[];
-    isTurnWorking: boolean;
+    showLatestBlock: boolean;
   }) => (
     <div data-testid="tool-call-group">
       <span>
         {blocks.map((block) => (block.kind === "toolCall" ? block.toolCall?.id : `thinking:${block.id}`)).join(",")}
       </span>
-      <span>{isTurnWorking ? "working" : "done"}</span>
+      <span>{showLatestBlock ? "live" : "done"}</span>
     </div>
   ),
 }));
@@ -53,6 +54,7 @@ vi.mock("../tool-calls/AgentToolCallGroup", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 function assistantMessage(id: string, overrides: Partial<AgentMessage> = {}): AgentMessage {
@@ -109,6 +111,44 @@ describe("AgentTurn", () => {
 
     expect(screen.getByText("working…")).toBeTruthy();
     expect(screen.queryByText(/^worked /)).toBeNull();
+  });
+
+  it("shows a live elapsed duration that counts up while the turn is working", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+    const turn = buildTurn([
+      {
+        message: { ...thinkingAndSummaryMessage("w-live"), startedAtMs: 1_000_000 },
+        isStreaming: true,
+      },
+    ]);
+
+    render(<AgentTurn turn={turn} />);
+
+    expect(screen.getByText("working 0ms")).toBeTruthy();
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+    expect(screen.getByText("working 5s")).toBeTruthy();
+  });
+
+  it("stops counting and shows the worked duration when the turn ends", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+    const workingTurn = buildTurn([
+      { message: { ...assistantMessage("end-a1"), startedAtMs: 1_000_000 }, isStreaming: true },
+    ]);
+    const { rerender } = render(<AgentTurn turn={workingTurn} />);
+
+    expect(screen.getByText("working 0ms")).toBeTruthy();
+
+    const doneTurn = buildTurn([{ message: assistantMessage("end-a1", { durationMs: 7_000 }) }]);
+    rerender(<AgentTurn turn={doneTurn} />);
+
+    expect(screen.getByText("Worked 7s")).toBeTruthy();
+    expect(screen.queryByText(/^working/)).toBeNull();
   });
 
   it("shows the worked duration title after the turn ends", () => {
@@ -266,14 +306,54 @@ describe("AgentTurn", () => {
     const group = screen.getByTestId("tool-call-group");
     expect(group.textContent).toContain("thinking:seq-a1-thinking-0");
     expect(group.textContent).toContain("read-call,bash-call,edit-call");
-    expect(group.textContent).toContain("working");
+    expect(group.textContent).toContain("live");
   });
 
-  it("splits tool runs when a normal text message appears in the middle", () => {
+  it("marks only the last tool run as live while the turn is working", () => {
     const turn = buildTurn([
-      { message: toolCallMessage("sp-a1", ["read-call"]) },
-      { message: { id: "sp-a2", role: "assistant", content: [{ type: "text", text: "checking results" }] } },
-      { message: toolCallMessage("sp-a3", ["bash-call"]) },
+      { message: toolCallMessage("lr-a1", ["read-call"]), isStreaming: true },
+      { message: { id: "lr-a2", role: "assistant", content: [{ type: "text", text: "checking results" }] } },
+      { message: toolCallMessage("lr-a3", ["bash-call"]) },
+    ]);
+
+    render(<AgentTurn turn={turn} />);
+
+    const groups = screen.getAllByTestId("tool-call-group");
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.textContent).toContain("done");
+    expect(groups[1]?.textContent).toContain("live");
+    expect(screen.getByTestId("markdown-content").textContent).toBe("checking results");
+  });
+
+  it("hides the latest block from every tool run once the turn is done", () => {
+    const turn = buildTurn([
+      { message: toolCallMessage("dn-a1", ["read-call"]) },
+      { message: { id: "dn-a2", role: "assistant", content: [{ type: "text", text: "checking results" }] } },
+      { message: toolCallMessage("dn-a3", ["bash-call"]) },
+    ]);
+
+    render(<AgentTurn turn={turn} />);
+
+    const groups = screen.getAllByTestId("tool-call-group");
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.textContent).toContain("done");
+    expect(groups[1]?.textContent).toContain("done");
+  });
+
+  it("keeps the command run live when a trailing thought follows it", () => {
+    const turn = buildTurn([
+      {
+        message: {
+          id: "th-a1",
+          role: "assistant",
+          content: [
+            { type: "toolCall", id: "read-call", name: "read", arguments: { path: "src/a.ts" } },
+            { type: "thinking", thinking: "post-command thought" },
+          ],
+        },
+        isStreaming: true,
+      },
+      { message: { id: "th-a2", role: "assistant", content: [{ type: "text", text: "done" }] } },
     ]);
 
     render(<AgentTurn turn={turn} />);
@@ -281,7 +361,8 @@ describe("AgentTurn", () => {
     const groups = screen.getAllByTestId("tool-call-group");
     expect(groups).toHaveLength(2);
     expect(groups[0]?.textContent).toContain("read-call");
-    expect(groups[1]?.textContent).toContain("bash-call");
-    expect(screen.getByTestId("markdown-content").textContent).toBe("checking results");
+    expect(groups[0]?.textContent).toContain("live");
+    expect(groups[1]?.textContent).toContain("thinking");
+    expect(groups[1]?.textContent).toContain("done");
   });
 });
