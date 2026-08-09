@@ -285,6 +285,19 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
     }
     workspaceCreateProgressStore.getState().clearWorkspaceCreateProgress(payload.workspaceId);
 
+    // A task run started as a Pi session (desktop connected) shows up as an
+    // agent chat tab; the tab's own lifecycle hook attaches to the session.
+    const taskRunSessionId = payload.taskRunSessionId?.trim();
+    if (taskRunSessionId && payload.worktreePath) {
+      tabStore.getState().openTab({
+        workspaceId: payload.workspaceId,
+        kind: "agent-chat",
+        ...(payload.taskRunTitle?.trim() ? { title: payload.taskRunTitle.trim() } : {}),
+        cwd: payload.worktreePath,
+        sessionId: taskRunSessionId,
+      });
+    }
+
     return Boolean(existing);
   },
   applyWorkspaceCreateFailedEvent: (payload) => {

@@ -75,6 +75,9 @@ export type RpcSchema = {
         worktreePath: string;
         lifecycleScriptWarnings?: unknown[];
         taskRunStatus?: "started" | "failed";
+        /** Present when the task run started as a Pi session (agent chat tab). */
+        taskRunSessionId?: string;
+        taskRunTitle?: string;
       };
       workspaceCreateFailed: {
         workspaceId: string;

@@ -9,6 +9,10 @@ type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
 
 const SOCKET_CONNECT_RETRY_COUNT = 30;
 const SOCKET_CONNECT_RETRY_DELAY_MS = 500;
+// Identifies the Yishan desktop app to the daemon. The daemon uses this to
+// decide how workspace task runs execute: agent chat tab when a desktop UI is
+// connected, pi CLI terminal otherwise (headless/remote daemons).
+const DESKTOP_WS_CLIENT_PARAM = "client=desktop";
 const API_NAMESPACES = new Set<ApiNamespace>([
   "app",
   "computer",
@@ -55,6 +59,12 @@ function invalidateDaemonDiscovery(): void {
   daemonWsUrlPromise = null;
 }
 
+/** Appends the desktop client marker to a daemon WebSocket URL. */
+function withDesktopClientParam(wsUrl: string): string {
+  const separator = wsUrl.includes("?") ? "&" : "?";
+  return `${wsUrl}${separator}${DESKTOP_WS_CLIENT_PARAM}`;
+}
+
 async function getDaemonWsUrl(): Promise<string> {
   if (!daemonWsUrlPromise) {
     daemonWsUrlPromise = getDesktopHostBridge()
@@ -81,7 +91,7 @@ async function openSocketWithRetry(): Promise<WebSocket> {
   for (let attempt = 0; attempt <= SOCKET_CONNECT_RETRY_COUNT; attempt += 1) {
     try {
       invalidateDaemonDiscovery();
-      const wsUrl = await getDaemonWsUrl();
+      const wsUrl = withDesktopClientParam(await getDaemonWsUrl());
       return await new Promise<WebSocket>((resolvePromise, rejectPromise) => {
         const socket = new WebSocket(wsUrl);
         let settled = false;

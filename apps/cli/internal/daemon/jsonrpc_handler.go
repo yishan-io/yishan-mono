@@ -63,6 +63,13 @@ type JSONRPCHandler struct {
 	piSessionsMu sync.Mutex
 	piSessions   map[string]*piSessionState
 
+	// desktopConns tracks live WebSocket connections tagged as the Yishan
+	// desktop app (client=desktop). Used to decide how task runs attached to
+	// workspace creation execute: agent chat tab when a desktop UI is
+	// connected, pi CLI terminal otherwise (headless/remote daemons).
+	desktopConnsMu sync.Mutex
+	desktopConns   map[*wsConnState]struct{}
+
 	// stoppingPiSessions tracks pi session ids whose teardown (pi.stop) is in
 	// flight, so concurrent pi.start/pi.attach cannot bind to a dying process.
 	stoppingPiSessions map[string]struct{}
@@ -133,6 +140,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		settingsPath:         config.SettingsFilePath(filepath.Dir(configPath)),
 		agentUsage:           make(map[string]map[string]struct{}),
 		piSessions:           make(map[string]*piSessionState),
+		desktopConns:         make(map[*wsConnState]struct{}),
 		stoppingPiSessions:   make(map[string]struct{}),
 		remoteStreamSubs:     make(map[string]map[*wsConnState]struct{}),
 		fileCacheSubID:       fileCacheSubID,
@@ -248,6 +256,16 @@ func (h *JSONRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	connState := newWSConnState(conn)
+	if r.URL.Query().Get("client") == "desktop" {
+		h.desktopConnsMu.Lock()
+		h.desktopConns[connState] = struct{}{}
+		h.desktopConnsMu.Unlock()
+		connState.AddCloseHook(func() {
+			h.desktopConnsMu.Lock()
+			delete(h.desktopConns, connState)
+			h.desktopConnsMu.Unlock()
+		})
+	}
 	defer connState.Close()
 	connCtx, cancelConn := context.WithCancel(context.Background())
 	defer cancelConn()
