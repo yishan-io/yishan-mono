@@ -12,6 +12,8 @@ import (
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/workspace"
 	terminalruntime "yishan/apps/cli/internal/workspace/terminal"
+
+	"github.com/rs/zerolog/log"
 )
 
 // piSessionState tracks the desktop connection and recovery metadata for one live pi session.
@@ -21,6 +23,10 @@ type piSessionState struct {
 	tabID       string
 	workspaceID string
 	cwd         string
+	// taskRun marks sessions started by a workspace-create task run. When such a
+	// session exits before any client attaches, pi.start fails closed instead of
+	// spawning a fresh idle twin that silently loses the task.
+	taskRun bool
 }
 
 // piActiveSessionSummary describes one live pi session the desktop can recover.
@@ -100,6 +106,24 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	// wait runs again after ErrSessionExists below because the stop's marker
 	// may be set after this first check.
 	h.waitForStoppingSession(ctx, req.SessionID)
+
+	// A task-run session whose pi process exited before any client attached
+	// leaves a stale registry entry (readStdout only unregisters the process
+	// manager). Its prompt was already consumed by the dead process, so
+	// spawning a fresh process under the same session id would produce a
+	// silent idle tab that never ran the task. Fail closed instead.
+	h.piSessionsMu.Lock()
+	taskRunState, exists := h.piSessions[req.SessionID]
+	h.piSessionsMu.Unlock()
+	if exists && taskRunState.taskRun {
+		if _, alive := h.agentMgr.Session(req.SessionID); !alive {
+			h.piSessionsMu.Lock()
+			delete(h.piSessions, req.SessionID)
+			h.piSessionsMu.Unlock()
+			log.Warn().Str("sessionId", req.SessionID).Msg("pi.start: task run session ended before attach")
+			return nil, workspace.NewRPCError(rpcCodeNotFound, "task run session ended before it could be attached: "+req.SessionID)
+		}
+	}
 
 	args := []string{"--mode", "rpc", "--name", req.TabID, "--approve"}
 	if req.Resume {

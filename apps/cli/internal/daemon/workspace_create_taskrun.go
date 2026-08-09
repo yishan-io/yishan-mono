@@ -2,8 +2,10 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
+	"yishan/apps/cli/internal/agentmanager"
 	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/terminal"
@@ -11,27 +13,139 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// taskRunSessionInfo describes a task run started as a Pi RPC session (agent
+// chat tab). Non-nil only when the chat-tab path was taken; the desktop uses
+// it to open the agent chat tab for the run.
+type taskRunSessionInfo struct {
+	sessionID string
+	title     string
+}
+
 func (h *JSONRPCHandler) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any) {
 	completionPayload := map[string]any{"workspaceId": created.ID, "worktreePath": created.Path, "lifecycleScriptWarnings": warnings}
-	taskRunStatus := h.maybeStartTaskRun(context.Background(), prepared, created)
+	taskRunStatus, taskRunSession := h.maybeStartTaskRun(prepared, created)
 	if taskRunStatus != "" {
 		completionPayload["taskRunStatus"] = taskRunStatus
+	}
+	if taskRunSession != nil {
+		completionPayload["taskRunSessionId"] = taskRunSession.sessionID
+		completionPayload["taskRunTitle"] = taskRunSession.title
 	}
 	h.events.Publish(frontendEvent{Topic: "workspaceCreateCompleted", Payload: completionPayload})
 	h.relayWorkspaceCreateCompleted(prepared, completionPayload)
 }
 
-func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace) string {
+// maybeStartTaskRun starts the task run attached to a workspace create.
+//
+// When a desktop UI is connected to this daemon, the run executes as a Pi RPC
+// session so the desktop can show it as an agent chat tab. Otherwise (headless
+// daemon, remote service node) the run executes in a terminal via the agent
+// CLI, matching the pre-existing behavior.
+func (h *JSONRPCHandler) maybeStartTaskRun(prepared preparedWorkspaceCreate, created workspace.Workspace) (string, *taskRunSessionInfo) {
 	if prepared.localCreate == nil || prepared.localCreate.TaskRun == nil {
-		return ""
+		return "", nil
 	}
 	taskRun := prepared.localCreate.TaskRun
+	if h.hasDesktopUI() {
+		return h.startTaskRunChatSession(created, taskRun)
+	}
+	return h.startTaskRunTerminal(created, taskRun), nil
+}
+
+func (h *JSONRPCHandler) startTaskRunChatSession(created workspace.Workspace, taskRun *workspace.TaskRunConfig) (string, *taskRunSessionInfo) {
+	sessionID := "task-" + created.ID
+	tabID := sessionID
+	paneID := "pane-" + sessionID
+
+	args := []string{"--mode", "rpc", "--name", tabID, "--approve", "--session-id", sessionID}
+	if strings.TrimSpace(taskRun.Model) != "" {
+		args = append(args, "--model", strings.TrimSpace(taskRun.Model))
+	}
+	extraEnv, err := buildPiStartExtraEnv(piStartParams{
+		TabID:       tabID,
+		PaneID:      paneID,
+		WorkspaceID: created.ID,
+	})
+	if err != nil {
+		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build pi session env")
+		return "failed", nil
+	}
+
+	h.agentLifecycleMu.Lock()
+	if err := h.agentLifecycleCtx.Err(); err != nil {
+		h.agentLifecycleMu.Unlock()
+		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: daemon is shutting down")
+		return "failed", nil
+	}
+	session, startErr := h.agentMgr.Start(h.agentLifecycleCtx, agentmanager.StartOptions{
+		SessionID:   sessionID,
+		TabID:       tabID,
+		WorkspaceID: created.ID,
+		Binary:      "pi",
+		Args:        args,
+		CWD:         created.Path,
+		ExtraEnv:    extraEnv,
+		OnEvent:     h.makePiEventCallback(sessionID),
+	})
+	h.agentLifecycleMu.Unlock()
+	if startErr != nil {
+		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start pi session")
+		return "failed", nil
+	}
+
+	h.piSessionsMu.Lock()
+	h.piSessions[sessionID] = &piSessionState{
+		session:     session,
+		tabID:       tabID,
+		workspaceID: created.ID,
+		cwd:         created.Path,
+		taskRun:     true,
+	}
+	h.piSessionsMu.Unlock()
+
+	promptCmd, marshalErr := json.Marshal(map[string]any{"type": "prompt", "message": taskRun.Prompt})
+	if marshalErr != nil {
+		h.cleanupTaskRunSession(sessionID)
+		log.Warn().Err(marshalErr).Str("workspaceId", created.ID).Msg("task run: failed to encode prompt")
+		return "failed", nil
+	}
+	if sendErr := session.Send(promptCmd); sendErr != nil {
+		h.cleanupTaskRunSession(sessionID)
+		log.Warn().Err(sendErr).Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to send prompt to pi session")
+		return "failed", nil
+	}
+	log.Info().Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Str("prompt", taskRun.Prompt).Msg("task run: pi session started")
+	return "started", &taskRunSessionInfo{sessionID: sessionID, title: buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind)}
+}
+
+// cleanupTaskRunSession stops a just-started task run pi session and removes it
+// from the registry when the run cannot proceed (e.g. prompt send failed).
+func (h *JSONRPCHandler) cleanupTaskRunSession(sessionID string) {
+	// Mark the session as stopping before the (potentially slow) process
+	// teardown so a concurrent pi.start/pi.attach cannot bind to a dying
+	// process, mirroring handlePiStop.
+	h.piSessionsMu.Lock()
+	if _, exists := h.piSessions[sessionID]; exists {
+		h.stoppingPiSessions[sessionID] = struct{}{}
+	}
+	h.piSessionsMu.Unlock()
+
+	if err := h.agentMgr.Stop(sessionID); err != nil {
+		log.Warn().Err(err).Str("sessionId", sessionID).Msg("task run: failed to stop pi session after prompt failure")
+	}
+	h.piSessionsMu.Lock()
+	delete(h.piSessions, sessionID)
+	delete(h.stoppingPiSessions, sessionID)
+	h.piSessionsMu.Unlock()
+}
+
+func (h *JSONRPCHandler) startTaskRunTerminal(created workspace.Workspace, taskRun *workspace.TaskRunConfig) string {
 	cmd, buildErr := agentcmd.BuildRunCommand(taskRun.AgentKind, taskRun.Prompt, taskRun.Model, true)
 	if buildErr != nil {
 		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build agent command")
 		return "failed"
 	}
-	resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{
+	resp, startErr := h.manager.Terminals().Start(context.Background(), created.Path, terminal.StartRequest{
 		WorkspaceID: created.ID,
 		TabID:       "task-" + created.ID,
 		PaneID:      "pane-task-" + created.ID,
@@ -49,6 +163,15 @@ func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared prepare
 	}
 	log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Str("prompt", taskRun.Prompt).Msg("task run: terminal session started")
 	return "started"
+}
+
+// hasDesktopUI reports whether a Yishan desktop app connection is currently
+// attached to this daemon. Task runs switch to agent chat tab execution when
+// true; headless daemons (remote service nodes) keep the pi CLI terminal.
+func (h *JSONRPCHandler) hasDesktopUI() bool {
+	h.desktopConnsMu.Lock()
+	defer h.desktopConnsMu.Unlock()
+	return len(h.desktopConns) > 0
 }
 
 func buildTaskRunTerminalTitle(prompt string, agentKind string) string {

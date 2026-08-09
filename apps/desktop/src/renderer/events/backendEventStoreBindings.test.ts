@@ -1594,7 +1594,7 @@ describe("createBackendEventStoreBindings", () => {
     stopBindings();
   });
 
-  it("does not let workspace-create completion open a second task-run terminal tab", () => {
+  it("opens an agent chat tab when workspace-create completion carries a task-run session", () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -1636,7 +1636,6 @@ describe("createBackendEventStoreBindings", () => {
       subscribeGitChanged: gitHarness.subscribeGitChanged,
       subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      subscribeTerminalSessionChanged: terminalSessionHarness.subscribeTerminalSessionChanged,
       subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
       incrementFileTreeRefreshVersion,
       incrementGitRefreshVersion,
@@ -1647,39 +1646,26 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     const stopBindings = startBindings();
-    terminalSessionHarness.emit({
-      action: "created",
-      sessionId: "term-task-1",
-      workspaceId: "workspace-1",
-      tabId: "task-tab-1",
-      paneId: "pane-task-1",
-      title: "Task: investigate bug",
-      agentKind: "opencode",
-      pid: 1234,
-      status: "running",
-    } as RpcFrontendMessagePayload<"terminalSessionChanged">);
     createCompletedHarness.emit({
       workspaceId: "workspace-1",
       worktreePath: "/tmp/workspace-1",
-      taskRunSessionId: "term-task-1",
-      taskRunAgentKind: "opencode",
-      taskRunPrompt: "investigate bug",
-      taskRunTabId: "task-tab-1",
-      taskRunPaneId: "pane-task-1",
+      taskRunSessionId: "chat-task-1",
+      taskRunTitle: "Task: investigate bug",
+      taskRunStatus: "started",
     } as RpcFrontendMessagePayload<"workspaceCreateCompleted">);
 
     expect(tabStore.getState().tabs).toHaveLength(1);
     expect(tabStore.getState().tabs[0]).toMatchObject({
-      id: "task-tab-1",
-      kind: "terminal",
+      kind: "agent-chat",
+      workspaceId: "workspace-1",
       title: "Task: investigate bug",
-      data: { sessionId: "term-task-1", paneId: "pane-task-1", agentKind: "opencode" },
+      data: { sessionId: "chat-task-1", cwd: "/tmp/workspace-1", sessionView: "full" },
     });
 
     stopBindings();
   });
 
-  it("creates the delegated task-run terminal tab when workspace completion arrives first", () => {
+  it("creates the task-run terminal tab from terminal.session.changed when completion carries no task-run session", () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
