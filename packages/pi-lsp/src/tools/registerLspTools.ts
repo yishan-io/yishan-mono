@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 /**
  * Registers the lsp_diagnostics and lsp_fix tools on the Pi API.
  */
@@ -87,7 +88,7 @@ export function registerLspTools(pi: ExtensionAPI): void {
       }
 
       const sections = results.map(({ route, result }) => `${route.reason}\n\n${textFromResult(result)}`);
-      if (reportSkippedServers(selected.skipped, results, params.paths)) {
+      if (reportSkippedServers(selected.skipped, results, params.paths, selected.root)) {
         sections.push(
           `Skipped unavailable default LSP server(s): ${selected.skipped
             .map((route) => route.server.name)
@@ -147,19 +148,52 @@ function textFromResult(result: { content?: Array<{ type?: string; text?: string
 }
 
 /**
- * Decides whether skipped default servers are worth reporting as text:
- * always when nothing ran (the list explains why), otherwise only when an
- * explicitly requested path matches a skipped server's extension. Servers
- * the user never configured and whose languages are not in scope stay quiet,
- * so a workspace-wide scan does not list every uninstalled catalog server.
+ * Decides whether skipped default servers are worth reporting as text.
+ *
+ * When something ran, skipped servers are reported only when an explicitly
+ * requested path is in scope for them: a directory entry is in scope for
+ * every server (it would have been scanned), and a file entry only for
+ * servers matching its extension. When nothing ran, the list explains why
+ * and is reported when the request is in scope (or in full for a
+ * workspace-wide scan). Servers the user never configured and whose
+ * languages are not in scope stay quiet, so a workspace-wide scan does not
+ * list every uninstalled catalog server.
  */
 export function reportSkippedServers(
   skipped: DiagnosticRoute[],
   results: unknown[],
   paths: string[] | undefined,
+  root: string,
 ): boolean {
-  if (results.length === 0) return true;
+  if (results.length === 0) {
+    return paths?.length ? skippedRelevantToPaths(skipped, paths, root) : true;
+  }
   if (!paths?.length) return false;
-  const requested = new Set(paths.map((entry) => path.extname(entry).toLowerCase()).filter(Boolean));
-  return skipped.some((route) => route.server.extensions.some((ext) => requested.has(ext.toLowerCase())));
+  return skippedRelevantToPaths(skipped, paths, root);
+}
+
+/**
+ * Whether any skipped server is relevant to the explicitly requested paths.
+ */
+function skippedRelevantToPaths(skipped: DiagnosticRoute[], paths: string[], root: string): boolean {
+  const entries = paths.filter((entry) => entry.length > 0);
+  if (entries.length === 0) return false;
+  return skipped.some((route) => entries.some((entry) => pathInScopeForServer(entry, root, route.server)));
+}
+
+/**
+ * Whether one requested path is in scope for a server: directories always
+ * (the server would scan them), files only when the extension matches. A
+ * missing path falls back to its file extension, so a typo or not-yet-
+ * created file still reports the right server.
+ */
+function pathInScopeForServer(entry: string, root: string, server: DiagnosticRoute["server"]): boolean {
+  const resolved = path.resolve(root, entry);
+  try {
+    if (statSync(resolved).isDirectory()) return true;
+  } catch {
+    // Path does not exist yet; fall through to the extension check.
+  }
+  const extension = path.extname(entry).toLowerCase();
+  return extension.length > 0 && server.extensions.some((ext) => ext.toLowerCase() === extension);
 }
