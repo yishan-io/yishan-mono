@@ -8,6 +8,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import type { AgentDefinition, AgentRunMode } from "../agents/types";
+import { resolveChildExtensionFactories } from "./childExtensions";
 import type { ChildSessionDescriptor, ParentSessionReference } from "./sessionRelationship";
 import { recordChildSessionMetadata } from "./sessionRelationship";
 
@@ -39,12 +40,14 @@ export interface CreateChildAgentSessionResult {
 export async function createChildAgentSession(
   options: CreateChildAgentSessionOptions,
 ): Promise<CreateChildAgentSessionResult> {
+  const extensionFactories = await resolveChildExtensionFactories();
   const services = await createAgentSessionServices({
     cwd: options.cwd,
     resourceLoaderOptions: {
       noExtensions: true,
       noPromptTemplates: true,
       noThemes: true,
+      extensionFactories,
       appendSystemPrompt: [options.agentDefinition.systemPrompt],
     },
   });

@@ -32,6 +32,10 @@ pi install ./packages/pi-subagents
 
 The package manifest exposes the extension from `./extensions`.
 
+## Child-session extensions
+
+Child sessions are isolated: they load with `noExtensions: true`, so settings.json packages do not run inside sub-agents. Extension tools that should reach sub-agents are forwarded explicitly as inline factories via `resolveChildExtensionFactories()` (`src/runtime/childExtensions.ts`). Today this forwards the optional `@yishan-io/pi-lsp` factory (when installed) so `lsp_diagnostics`/`lsp_fix` work in child sessions; any future extension whose tools belong in sub-agents must be added there.
+
 ## Agent definition locations
 
 This package ships built-in agents inside the package:
