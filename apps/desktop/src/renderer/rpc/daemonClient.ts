@@ -115,6 +115,9 @@ export class DaemonClient {
       },
     ) => this._projectClient.update(orgId, projectId, config),
     delete: (orgId: string, projectId: string) => this._projectClient.delete(orgId, projectId),
+    getListPreferences: (orgId: string) => this._projectClient.getListPreferences(orgId),
+    setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) =>
+      this._projectClient.setListPreferences(orgId, preferences),
   };
 
   readonly overview = {

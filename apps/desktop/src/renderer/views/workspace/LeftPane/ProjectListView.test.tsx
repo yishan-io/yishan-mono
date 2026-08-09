@@ -182,6 +182,26 @@ vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
+vi.mock("../../../store/sessionStore", () => ({
+  sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
+    selector({ selectedOrganizationId: "" }),
+  ),
+}));
+
+vi.mock("../../../rpc/rpcTransport", () => ({
+  getDaemonClient: vi.fn(async () => ({
+    project: {
+      getListPreferences: vi.fn(async () => ({
+        version: 1,
+        by_project: { projectOrderIds: [], nodeOrderByParentId: {}, foldedProjectIds: [], foldedNodeKeys: [] },
+        by_node: { projectOrderIds: [], nodeOrderByParentId: {}, foldedProjectIds: [], foldedNodeKeys: [] },
+        workspaceOrderByParentId: {},
+      })),
+      setListPreferences: vi.fn(async () => ({ ok: true })),
+    },
+  })),
+}));
+
 vi.mock("../../../store/chatStore", () => ({
   chatStore: mocked.workspaceStore,
 }));

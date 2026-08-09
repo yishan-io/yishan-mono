@@ -40,11 +40,19 @@ export type ProjectListTreeDataResult = {
 export function useProjectListTreeData(input: {
   projectOrderIds: string[];
   nodeOrderByParentId: Record<string, string[]>;
+  workspaceOrderByParentId: Record<string, string[]>;
   foldedProjectIds: string[];
   foldedNodeKeys: string[];
   workspaceListHierarchyMode: "by_project" | "by_node";
 }): ProjectListTreeDataResult {
-  const { projectOrderIds, nodeOrderByParentId, foldedProjectIds, foldedNodeKeys, workspaceListHierarchyMode } = input;
+  const {
+    projectOrderIds,
+    nodeOrderByParentId,
+    workspaceOrderByParentId,
+    foldedProjectIds,
+    foldedNodeKeys,
+    workspaceListHierarchyMode,
+  } = input;
 
   const projects = workspaceStore((state) => state.projects) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
@@ -115,6 +123,16 @@ export function useProjectListTreeData(input: {
 
       const parentNodeOrder = nodeOrderByParentId[`project:${project.id}`] ?? [];
       const nodeRankById = new Map(parentNodeOrder.map((nodeId, index) => [nodeId, index]));
+      const workspaceRankCache = new Map<string, Map<string, number>>();
+      const getWorkspaceRank = (projectId: string, nodeId: string, workspaceId: string) => {
+        const parentKey = `${projectId}:${nodeId}`;
+        let rankById = workspaceRankCache.get(parentKey);
+        if (!rankById) {
+          rankById = new Map((workspaceOrderByParentId[parentKey] ?? []).map((id, index) => [id, index]));
+          workspaceRankCache.set(parentKey, rankById);
+        }
+        return rankById.get(workspaceId) ?? Number.MAX_SAFE_INTEGER;
+      };
       const sortedWorkspaces = [...displayedWorkspaces].sort((a, b) => {
         const nodeA = a.nodeId?.trim() || "unknown";
         const nodeB = b.nodeId?.trim() || "unknown";
@@ -122,6 +140,13 @@ export function useProjectListTreeData(input: {
         const rankB = nodeRankById.get(nodeB) ?? Number.MAX_SAFE_INTEGER;
         if (rankA !== rankB) {
           return rankA - rankB;
+        }
+        if (nodeA === nodeB) {
+          const workspaceRankA = getWorkspaceRank(project.id, nodeA, a.id);
+          const workspaceRankB = getWorkspaceRank(project.id, nodeB, b.id);
+          if (workspaceRankA !== workspaceRankB) {
+            return workspaceRankA - workspaceRankB;
+          }
         }
         return 0;
       });
@@ -174,6 +199,7 @@ export function useProjectListTreeData(input: {
     filteredProjects,
     gitChangeTotalsByWorkspaceId,
     nodeOrderByParentId,
+    workspaceOrderByParentId,
     workspaceListHierarchyMode,
     workspaceAgentStatusByWorkspaceId,
     workspaceByProjectId,

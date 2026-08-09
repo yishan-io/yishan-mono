@@ -9,11 +9,13 @@ type UseProjectListTreeHandlersInput = {
   filteredProjects: Array<{ id: string }>;
   projectOrderIds: string[];
   nodeOrderByParentId: Record<string, string[]>;
+  workspaceOrderByParentId: Record<string, string[]>;
   foldedProjectIds: string[];
   setFoldedProjectIds: (updater: string[] | ((prev: string[]) => string[])) => void;
   setFoldedNodeKeys: (updater: string[] | ((prev: string[]) => string[])) => void;
   setProjectOrderIds: (next: string[]) => void;
   setNodeOrderByParentId: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void;
+  setWorkspaceOrderByParentId: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void;
   setSelectedRepoId: (projectId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
   reorderWorkspace: (input: {
@@ -41,11 +43,13 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
     filteredProjects,
     projectOrderIds,
     nodeOrderByParentId,
+    workspaceOrderByParentId,
     foldedProjectIds,
     setFoldedProjectIds,
     setFoldedNodeKeys,
     setProjectOrderIds,
     setNodeOrderByParentId,
+    setWorkspaceOrderByParentId,
     setSelectedRepoId,
     setSelectedWorkspaceId,
     reorderWorkspace,
@@ -235,6 +239,34 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
         const draggedId = draggedRowId.replace(/^workspace:/, "");
         const targetId = targetRowId.replace(/^workspace:/, "");
         reorderWorkspace({ draggedWorkspaceId: draggedId, targetWorkspaceId: targetId, position });
+        // Record the intra-node workspace order in the persisted order bucket
+        // (keyed projectId:nodeId) so the reorder survives snapshot reloads
+        // and app restarts. Mirrors the same-project same-node guard of the
+        // store-level reorderWorkspace action.
+        const draggedWorkspace = treeWorkspaces.find((workspace) => workspace.id === draggedId);
+        const targetWorkspace = treeWorkspaces.find((workspace) => workspace.id === targetId);
+        if (
+          draggedWorkspace &&
+          targetWorkspace &&
+          draggedWorkspace.projectId === targetWorkspace.projectId &&
+          draggedWorkspace.nodeId === targetWorkspace.nodeId
+        ) {
+          const parentKey = `${draggedWorkspace.projectId}:${draggedWorkspace.nodeId}`;
+          const liveWorkspaceIds = treeWorkspaces
+            .filter(
+              (workspace) =>
+                workspace.projectId === draggedWorkspace.projectId && workspace.nodeId === draggedWorkspace.nodeId,
+            )
+            .map((workspace) => workspace.id);
+          const currentOrder = reconcileOrder(workspaceOrderByParentId[parentKey] ?? [], liveWorkspaceIds);
+          const nextOrder = reorderIds({
+            ids: currentOrder,
+            draggedId,
+            targetId,
+            position,
+          });
+          setWorkspaceOrderByParentId((current) => ({ ...current, [parentKey]: nextOrder }));
+        }
         return;
       }
 
@@ -305,7 +337,9 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
       reorderWorkspace,
       setNodeOrderByParentId,
       setProjectOrderIds,
+      setWorkspaceOrderByParentId,
       treeWorkspaces,
+      workspaceOrderByParentId,
       workspaceListHierarchyMode,
     ],
   );

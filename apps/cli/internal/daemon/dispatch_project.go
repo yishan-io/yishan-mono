@@ -23,6 +23,10 @@ func (h *JSONRPCHandler) dispatchProject(ctx context.Context, method string, par
 		return h.handleProjectDelete(ctx, params)
 	case MethodProjectListWithWkspaces:
 		return h.handleProjectListWithWorkspaces(ctx, params)
+	case MethodProjectGetListPreferences:
+		return h.handleProjectGetListPreferences(ctx, params)
+	case MethodProjectSetListPreferences:
+		return h.handleProjectSetListPreferences(ctx, params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown project method: "+method)
 	}
@@ -30,6 +34,10 @@ func (h *JSONRPCHandler) dispatchProject(ctx context.Context, method string, par
 
 func (h *JSONRPCHandler) projectStore() *localdb.ProjectStore {
 	return localdb.NewProjectStore(h.localDatabase)
+}
+
+func (h *JSONRPCHandler) projectListPreferenceStore() *localdb.ProjectListPreferenceStore {
+	return localdb.NewProjectListPreferenceStore(h.localDatabase)
 }
 
 type projectListParams struct {
@@ -194,4 +202,39 @@ func (h *JSONRPCHandler) handleProjectListWithWorkspaces(ctx context.Context, pa
 		results = append(results, projectWithWorkspaces{Project: project, Workspaces: workspaces})
 	}
 	return results, nil
+}
+
+type projectGetListPreferencesParams struct {
+	OrganizationID string `json:"organizationId"`
+}
+
+func (h *JSONRPCHandler) handleProjectGetListPreferences(ctx context.Context, params json.RawMessage) (any, error) {
+	var req projectGetListPreferencesParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(req.OrganizationID) == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "organizationId is required")
+	}
+	return h.projectListPreferenceStore().Get(ctx, req.OrganizationID)
+}
+
+type projectSetListPreferencesParams struct {
+	OrganizationID string                        `json:"organizationId"`
+	Preferences    localdb.ProjectListPreference `json:"preferences"`
+}
+
+func (h *JSONRPCHandler) handleProjectSetListPreferences(ctx context.Context, params json.RawMessage) (any, error) {
+	var req projectSetListPreferencesParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(req.OrganizationID) == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "organizationId is required")
+	}
+	req.Preferences.Version = localdb.ProjectListPreferencesVersion
+	if err := h.projectListPreferenceStore().Set(ctx, req.OrganizationID, req.Preferences); err != nil {
+		return nil, err
+	}
+	return map[string]bool{"ok": true}, nil
 }
