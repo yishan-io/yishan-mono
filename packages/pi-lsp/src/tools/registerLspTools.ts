@@ -1,6 +1,8 @@
 /**
  * Registers the lsp_diagnostics and lsp_fix tools on the Pi API.
  */
+import path from "node:path";
+
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
@@ -9,7 +11,7 @@ import { resolveRoot } from "../helpers/files";
 import { textResult } from "./result";
 import { DEFAULT_FILE_LIMIT, runDiagnostics } from "./runDiagnostics";
 import { runFix } from "./runFix";
-import { selectDiagnosticRoutes, selectFixServer } from "./selectServers";
+import { type DiagnosticRoute, selectDiagnosticRoutes, selectFixServer } from "./selectServers";
 
 /**
  * Statusline key used while LSP tools are running.
@@ -56,10 +58,12 @@ export function registerLspTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "lsp_diagnostics",
     label: "LSP: Diagnostics",
-    description: "Run diagnostics using configured, language-agnostic LSP server routes.",
-    promptSnippet: "Get diagnostics from configured LSP servers selected by file extension",
+    description:
+      "Run LSP diagnostics (lint/type errors) on files or directories via a configured server such as biome or gopls. Use after editing files for fast, file-scoped feedback before slower repo-wide checks.",
+    promptSnippet: "Run LSP diagnostics on changed files via the configured server",
     promptGuidelines: [
-      "Use lsp_diagnostics when files need diagnostics from a configured LSP server.",
+      "Use lsp_diagnostics after editing a file to catch lint and type issues scoped to that file; it is faster than a full repo check and works where no repo check script exists.",
+      "Pass the specific files you changed in paths rather than scanning the whole workspace when you know the scope.",
       "Use the server parameter only when the user asks for a specific configured LSP server or multiple servers match the same extension.",
       "If a configured server command is missing, report the configuration error and suggest installing it or updating the server's command in lsp.json.",
     ],
@@ -83,7 +87,7 @@ export function registerLspTools(pi: ExtensionAPI): void {
       }
 
       const sections = results.map(({ route, result }) => `${route.reason}\n\n${textFromResult(result)}`);
-      if (selected.skipped.length) {
+      if (reportSkippedServers(selected.skipped, results, params.paths)) {
         sections.push(
           `Skipped unavailable default LSP server(s): ${selected.skipped
             .map((route) => route.server.name)
@@ -110,10 +114,12 @@ export function registerLspTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "lsp_fix",
     label: "LSP: Fix",
-    description: "Apply source fixes or import organization using configured LSP server routes.",
+    description:
+      "Apply LSP source fixes to a file, e.g. biome safe fixes or organize imports, and optionally write them back.",
     promptSnippet: "Apply configured LSP source fixes to a file",
     promptGuidelines: [
-      "Use lsp_fix for files handled by a configured LSP code-action server.",
+      "Use lsp_fix when lsp_diagnostics reports fixable diagnostics on a file, or when the file needs import organization.",
+      "Pass write: true to persist the fix; without it the result is a preview of the edits.",
       "Use kind when the server needs a specific source action kind such as source.organizeImports.",
     ],
     parameters: fixSchema,
@@ -138,4 +144,22 @@ export function registerLspTools(pi: ExtensionAPI): void {
  */
 function textFromResult(result: { content?: Array<{ type?: string; text?: string }> }): string {
   return result.content?.find((item) => item.type === "text")?.text ?? "";
+}
+
+/**
+ * Decides whether skipped default servers are worth reporting as text:
+ * always when nothing ran (the list explains why), otherwise only when an
+ * explicitly requested path matches a skipped server's extension. Servers
+ * the user never configured and whose languages are not in scope stay quiet,
+ * so a workspace-wide scan does not list every uninstalled catalog server.
+ */
+export function reportSkippedServers(
+  skipped: DiagnosticRoute[],
+  results: unknown[],
+  paths: string[] | undefined,
+): boolean {
+  if (results.length === 0) return true;
+  if (!paths?.length) return false;
+  const requested = new Set(paths.map((entry) => path.extname(entry).toLowerCase()).filter(Boolean));
+  return skipped.some((route) => route.server.extensions.some((ext) => requested.has(ext.toLowerCase())));
 }

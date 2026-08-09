@@ -4,7 +4,8 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 
 import { mockContext, mockPi, restoreEnv } from "../../test/support";
-import { registerLspTools } from "./registerLspTools";
+import { registerLspTools, reportSkippedServers } from "./registerLspTools";
+import type { DiagnosticRoute } from "./selectServers";
 
 describe("registerLspTools", () => {
   test("registers the diagnostics and fix tools", () => {
@@ -49,5 +50,24 @@ describe("registerLspTools", () => {
       restoreEnv("PI_CODING_AGENT_DIR", previousAgentDir);
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test("skipped-server reporting stays quiet for unrelated or unscoped requests", () => {
+    const skipped = [
+      {
+        server: { name: "rust-analyzer", extensions: [".rs"] },
+        reason: "rust-analyzer command missing",
+        files: [],
+      },
+    ] as unknown as DiagnosticRoute[];
+    // Nothing ran: the skip list is the only output, so it must be reported.
+    expect(reportSkippedServers(skipped, [], undefined)).toBe(true);
+    // A workspace-wide scan with results: unconfigured defaults stay quiet.
+    expect(reportSkippedServers(skipped, [{}], undefined)).toBe(false);
+    // Explicit paths that match a skipped server's extension are reported.
+    expect(reportSkippedServers(skipped, [{}], ["src/main.rs"])).toBe(true);
+    // Explicit paths with no extension or a different language stay quiet.
+    expect(reportSkippedServers(skipped, [{}], ["Makefile"])).toBe(false);
+    expect(reportSkippedServers(skipped, [{}], ["src/app.ts"])).toBe(false);
   });
 });
