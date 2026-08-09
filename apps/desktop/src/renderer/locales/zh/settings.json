@@ -23,10 +23,10 @@
       "nodes": "\u8282\u70b9",
       "notifications": "\u901a\u77e5",
       "serviceTokens": "\u670d\u52a1\u4ee4\u724c",
-      "skills": "\u6280\u80fd",
       "terminal": "\u7ec8\u7aef",
       "workspace": "\u5de5\u4f5c\u533a",
-      "providers": "\u6a21\u578b\u63d0\u4f9b\u5546"
+      "providers": "\u6a21\u578b\u63d0\u4f9b\u5546",
+      "customize": "\u81ea\u5b9a\u4e49"
     },
     "nodes": {
       "title": "\u8282\u70b9",
@@ -288,7 +288,7 @@
     },
     "skills": {
       "title": "\u6280\u80fd",
-      "description": "\u6d4f\u89c8\u6280\u80fd\u52a0\u8f7d\u81ea agent \u8fd0\u884c\u65f6\u3002",
+      "description": "\u5b89\u88c5\u3001\u66f4\u65b0\u548c\u79fb\u9664\u7528\u6237\u5b89\u88c5\u7684\u6280\u80fd\u3002\u5b98\u65b9\u6280\u80fd\u901a\u8fc7\u201c\u6269\u5c55\u201d\u9762\u677f\u66f4\u65b0\u3002",
       "loadError": "\u52a0\u8f7d\u6280\u80fd\u72b6\u6001\u5931\u8d25\u3002",
       "installed": "\u5df2\u5b89\u88c5",
       "notInstalled": "\u672a\u5b89\u88c5",
@@ -300,6 +300,39 @@
         "project": "\u9879\u76ee",
         "package": "\u8f6f\u4ef6\u5305",
         "settings": "\u8bbe\u7f6e"
+      },
+      "actions": {
+        "add": "\u6dfb\u52a0\u6280\u80fd",
+        "update": "\u66f4\u65b0",
+        "remove": "\u79fb\u9664",
+        "updateAll": "\u5168\u90e8\u66f4\u65b0",
+        "view": "\u67e5\u770b"
+      },
+      "dialogs": {
+        "add": {
+          "title": "\u6dfb\u52a0\u6280\u80fd",
+          "description": "\u4ece\u6280\u80fd CLI \u63a5\u53d7\u7684\u4ed3\u5e93\u6216 URL \u5168\u5c40\u5b89\u88c5\u6280\u80fd\uff08~/.agents/skills\uff09\uff0c\u4f8b\u5982 owner/repo \u6216 https://github.com/owner/repo\u3002",
+          "placeholder": "owner/repo",
+          "install": "\u5b89\u88c5"
+        },
+        "remove": {
+          "title": "\u79fb\u9664\u6280\u80fd",
+          "description": "\u79fb\u9664 {{name}}\uff1f\u8be5\u6280\u80fd\u5c06\u4ece ~/.agents/skills \u5378\u8f7d\u3002",
+          "confirm": "\u79fb\u9664"
+        }
+      },
+      "errors": {
+        "sourceRequired": "\u8bf7\u5148\u8f93\u5165\u6280\u80fd\u6e90\u3002"
+      },
+      "messages": {
+        "added": "\u6280\u80fd\u5df2\u5b89\u88c5\u3002",
+        "updated": "\u6280\u80fd\u5df2\u66f4\u65b0\u3002",
+        "removed": "\u6280\u80fd\u5df2\u79fb\u9664\u3002",
+        "updatedAll": "\u6240\u6709\u6280\u80fd\u5df2\u66f4\u65b0\u3002"
+      },
+      "empty": "\u5c1a\u672a\u5b89\u88c5\u6280\u80fd\u3002",
+      "columns": {
+        "name": "\u540d\u79f0"
       }
     },
     "appearance": {
@@ -603,6 +636,109 @@
       "errors": {
         "noWorkspace": "\u8bf7\u5148\u6253\u5f00\u4e00\u4e2a\u5de5\u4f5c\u533a\u518d\u767b\u5f55\u3002",
         "loginLaunchFailed": "\u6253\u5f00 Pi \u767b\u5f55\u5931\u8d25\uff1a{{message}}"
+      }
+    },
+    "customize": {
+      "title": "\u81ea\u5b9a\u4e49",
+      "description": "\u7ba1\u7406\u5de5\u4f5c\u533a\u5b89\u88c5\u7684\u6269\u5c55\u3001\u6280\u80fd\u548c\u667a\u80fd\u4f53\u5b9a\u4e49\u3002",
+      "panels": {
+        "extensions": "\u6269\u5c55",
+        "skills": "\u6280\u80fd",
+        "agents": "\u667a\u80fd\u4f53"
+      },
+      "extensions": {
+        "title": "\u6269\u5c55",
+        "description": "\u6d4f\u89c8\u3001\u5b89\u88c5\u3001\u66f4\u65b0\u548c\u79fb\u9664 pi \u6269\u5c55\uff08\u5b98\u65b9\u4e0e\u7528\u6237\u5b89\u88c5\uff09\u3002",
+        "official": "\u5b98\u65b9",
+        "userInstalled": "\u7528\u6237\u5b89\u88c5",
+        "installed": "\u5df2\u5b89\u88c5",
+        "empty": "\u5c1a\u672a\u5b89\u88c5\u6269\u5c55\u3002",
+        "actions": {
+          "add": "\u6dfb\u52a0\u6269\u5c55",
+          "update": "\u66f4\u65b0",
+          "remove": "\u79fb\u9664"
+        },
+        "dialogs": {
+          "add": {
+            "title": "\u6dfb\u52a0\u6269\u5c55",
+            "description": "\u7c98\u8d34 pi \u5305\u6e90\uff1anpm:<name>\uff08\u4f8b\u5982 npm:@yishan-io/pi-notify\uff09\u3001git:<owner>/<repo>@<ref>\u3001https:// URL \u6216\u672c\u5730\u8def\u5f84\u3002",
+            "placeholder": "npm:my-extension",
+            "install": "\u5b89\u88c5"
+          },
+          "remove": {
+            "title": "\u79fb\u9664\u6269\u5c55",
+            "description": "\u79fb\u9664 {{name}}\uff1f\u8be5\u6269\u5c55\u5c06\u4ece\u4f60\u7684\u667a\u80fd\u4f53\u8fd0\u884c\u65f6\u5378\u8f7d\u3002",
+            "confirm": "\u79fb\u9664"
+          }
+        },
+        "errors": {
+          "sourceRequired": "\u8bf7\u5148\u8f93\u5165\u5305\u6e90\u3002"
+        },
+        "messages": {
+          "installed": "\u6269\u5c55\u5df2\u5b89\u88c5\u3002",
+          "updated": "\u6269\u5c55\u5df2\u66f4\u65b0\u3002",
+          "removed": "\u6269\u5c55\u5df2\u79fb\u9664\u3002"
+        },
+        "columns": {
+          "name": "\u540d\u79f0",
+          "version": "\u7248\u672c"
+        }
+      },
+      "agents": {
+        "title": "\u667a\u80fd\u4f53\u5b9a\u4e49",
+        "description": "\u521b\u5efa\u65b0\u667a\u80fd\u4f53\u6216\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53\u3002",
+        "official": "\u5b98\u65b9",
+        "managed": "\u6258\u7ba1",
+        "empty": "\u5c1a\u65e0\u667a\u80fd\u4f53\u5b9a\u4e49\u3002",
+        "userInstalled": "\u7528\u6237\u521b\u5efa",
+        "actions": {
+          "create": "\u521b\u5efa\u667a\u80fd\u4f53",
+          "edit": "\u7f16\u8f91",
+          "remove": "\u79fb\u9664",
+          "restore": "\u6062\u590d"
+        },
+        "dialogs": {
+          "create": {
+            "title": "\u521b\u5efa\u667a\u80fd\u4f53",
+            "nameLabel": "\u540d\u79f0",
+            "nameHelp": "\u5c0f\u5199\u5b57\u6bcd\u3001\u6570\u5b57\u548c\u77ed\u6a2a\u7ebf\u3002\u5b98\u65b9\u540d\u79f0\u4fdd\u7559\u2014\u2014\u8986\u76d6\u8bf7\u4f7f\u7528\u201c\u7f16\u8f91\u201d\u3002",
+            "descriptionLabel": "\u63cf\u8ff0",
+            "contentLabel": "\u63d0\u793a\u8bcd",
+            "contentPlaceholder": "\u63cf\u8ff0\u8be5\u667a\u80fd\u4f53\u7684\u804c\u8d23\u3001\u5173\u6ce8\u70b9\u4ee5\u53ca\u6c47\u62a5\u65b9\u5f0f\u2026\u2026"
+          },
+          "edit": {
+            "officialHint": "\u8fd9\u662f\u5b98\u65b9\u667a\u80fd\u4f53\u3002\u4fdd\u5b58\u5c06\u8986\u76d6\u5b98\u65b9\u5b9a\u4e49\uff0c\u968f\u65f6\u53ef\u4ee5\u6062\u590d\u3002",
+            "contentLabel": "\u5b9a\u4e49\uff08frontmatter + \u63d0\u793a\u8bcd\uff09"
+          },
+          "overwrite": {
+            "title": "\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53",
+            "description": "\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53 {{name}}\uff1f\u5b98\u65b9\u5b9a\u4e49\u5c06\u88ab\u66ff\u6362\uff0c\u76f4\u5230\u4f60\u6062\u590d\u5b83\u3002",
+            "confirm": "\u8986\u76d6"
+          },
+          "remove": {
+            "title": "\u79fb\u9664\u667a\u80fd\u4f53",
+            "description": "\u79fb\u9664 {{name}}\uff1f\u667a\u80fd\u4f53\u5b9a\u4e49\u5c06\u88ab\u5220\u9664\u3002",
+            "confirm": "\u79fb\u9664"
+          },
+          "restore": {
+            "title": "\u6062\u590d\u5b98\u65b9\u667a\u80fd\u4f53",
+            "description": "\u5c06 {{name}} \u6062\u590d\u4e3a\u5b98\u65b9\u5b9a\u4e49\uff1f\u6240\u6709\u7f16\u8f91\u5c06\u88ab\u4e22\u5f03\u3002",
+            "confirm": "\u6062\u590d"
+          }
+        },
+        "errors": {
+          "nameRequired": "\u8bf7\u8f93\u5165\u667a\u80fd\u4f53\u540d\u79f0\u3002",
+          "contentRequired": "\u8bf7\u8f93\u5165\u667a\u80fd\u4f53\u63d0\u793a\u8bcd\u3002"
+        },
+        "messages": {
+          "created": "\u667a\u80fd\u4f53\u5df2\u521b\u5efa\u3002",
+          "updated": "\u667a\u80fd\u4f53\u5df2\u66f4\u65b0\u3002",
+          "removed": "\u667a\u80fd\u4f53\u5df2\u79fb\u9664\u3002",
+          "restored": "\u667a\u80fd\u4f53\u5df2\u6062\u590d\u3002"
+        },
+        "columns": {
+          "name": "\u540d\u79f0"
+        }
       }
     }
   }

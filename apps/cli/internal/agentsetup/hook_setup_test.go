@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -160,9 +161,9 @@ func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	originalExecCommand := execCommand
+	originalExecCommand := execCommandContext
 	defer func() {
-		execCommand = originalExecCommand
+		execCommandContext = originalExecCommand
 	}()
 
 	type recordedCall struct {
@@ -171,7 +172,7 @@ func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 		cmd  *exec.Cmd
 	}
 	calls := make([]recordedCall, 0, 5)
-	execCommand = func(name string, args ...string) *exec.Cmd {
+	execCommandContext = func(_ context.Context, name string, args ...string) *exec.Cmd {
 		cmd := exec.Command("true")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
 		return cmd
@@ -203,13 +204,13 @@ func TestRemoveManagedAgentRuntimeDoesNotRemovePiExtensions(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	originalExecCommand := execCommand
+	originalExecCommand := execCommandContext
 	defer func() {
-		execCommand = originalExecCommand
+		execCommandContext = originalExecCommand
 	}()
 
 	wasCalled := false
-	execCommand = func(name string, args ...string) *exec.Cmd {
+	execCommandContext = func(_ context.Context, name string, args ...string) *exec.Cmd {
 		wasCalled = true
 		return exec.Command("true")
 	}

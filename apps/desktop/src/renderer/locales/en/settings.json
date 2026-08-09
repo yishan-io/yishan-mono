@@ -23,10 +23,10 @@
       "nodes": "Nodes",
       "notifications": "Notifications",
       "serviceTokens": "Service Tokens",
-      "skills": "Skills",
       "terminal": "Terminal",
       "workspace": "Workspace",
-      "providers": "Providers"
+      "providers": "Providers",
+      "customize": "Customize"
     },
     "nodes": {
       "title": "Nodes",
@@ -309,8 +309,8 @@
       }
     },
     "skills": {
-      "title": "Agent Skills",
-      "description": "Browse skills loaded by the agent runtime.",
+      "title": "Skills",
+      "description": "Install, update, and remove user-installed skills. Official skills are updated via the Extensions panel.",
       "loadError": "Failed to load skill statuses.",
       "installed": "Installed",
       "notInstalled": "Not installed",
@@ -322,6 +322,39 @@
         "project": "Project",
         "package": "Package",
         "settings": "Settings"
+      },
+      "actions": {
+        "add": "Add skill",
+        "update": "Update",
+        "remove": "Remove",
+        "updateAll": "Update all",
+        "view": "View"
+      },
+      "dialogs": {
+        "add": {
+          "title": "Add skill",
+          "description": "Install a skill globally (~/.agents/skills) from a repository or URL the skills CLI accepts, e.g. owner/repo or https://github.com/owner/repo.",
+          "placeholder": "owner/repo",
+          "install": "Install"
+        },
+        "remove": {
+          "title": "Remove skill",
+          "description": "Remove {{name}}? The skill will be uninstalled from ~/.agents/skills.",
+          "confirm": "Remove"
+        }
+      },
+      "errors": {
+        "sourceRequired": "Enter a skill source first."
+      },
+      "messages": {
+        "added": "Skill installed.",
+        "updated": "Skill updated.",
+        "removed": "Skill removed.",
+        "updatedAll": "All skills updated."
+      },
+      "empty": "No skills installed.",
+      "columns": {
+        "name": "Name"
       }
     },
     "appearance": {
@@ -640,6 +673,109 @@
       "errors": {
         "noWorkspace": "Open a workspace first to sign in.",
         "loginLaunchFailed": "Failed to open Pi sign-in: {{message}}"
+      }
+    },
+    "customize": {
+      "title": "Customize",
+      "description": "Manage extensions, skills, and agent definitions installed for your workspace.",
+      "panels": {
+        "extensions": "Extensions",
+        "skills": "Skills",
+        "agents": "Agents"
+      },
+      "extensions": {
+        "title": "Extensions",
+        "description": "Browse, install, update, and remove pi extensions (official and user-installed).",
+        "official": "Official",
+        "userInstalled": "User installed",
+        "installed": "Installed",
+        "empty": "No extensions installed.",
+        "actions": {
+          "add": "Add extension",
+          "update": "Update",
+          "remove": "Remove"
+        },
+        "dialogs": {
+          "add": {
+            "title": "Add extension",
+            "description": "Paste a pi package source: npm:<name> (e.g. npm:@yishan-io/pi-notify), git:<owner>/<repo>@<ref>, an https:// URL, or a local path.",
+            "placeholder": "npm:my-extension",
+            "install": "Install"
+          },
+          "remove": {
+            "title": "Remove extension",
+            "description": "Remove {{name}}? The extension will be uninstalled from your agent runtime.",
+            "confirm": "Remove"
+          }
+        },
+        "errors": {
+          "sourceRequired": "Enter a package source first."
+        },
+        "messages": {
+          "installed": "Extension installed.",
+          "updated": "Extension updated.",
+          "removed": "Extension removed."
+        },
+        "columns": {
+          "name": "Name",
+          "version": "Version"
+        }
+      },
+      "agents": {
+        "title": "Agent definitions",
+        "description": "Create new agents or overwrite official ones.",
+        "official": "Official",
+        "managed": "Managed",
+        "empty": "No agent definitions yet.",
+        "userInstalled": "User created",
+        "actions": {
+          "create": "Create agent",
+          "edit": "Edit",
+          "remove": "Remove",
+          "restore": "Restore"
+        },
+        "dialogs": {
+          "create": {
+            "title": "Create agent",
+            "nameLabel": "Name",
+            "nameHelp": "Lowercase letters, digits, and dashes. Official names are reserved — use Edit to overwrite them.",
+            "descriptionLabel": "Description",
+            "contentLabel": "Prompt",
+            "contentPlaceholder": "Describe what this agent does, what it should look for, and how it should report…"
+          },
+          "edit": {
+            "officialHint": "This is an official agent. Saving overwrites the shipped definition; you can restore it anytime.",
+            "contentLabel": "Definition (frontmatter + prompt)"
+          },
+          "overwrite": {
+            "title": "Overwrite official agent",
+            "description": "Overwrite the official agent {{name}}? The shipped definition is replaced until you restore it.",
+            "confirm": "Overwrite"
+          },
+          "remove": {
+            "title": "Remove agent",
+            "description": "Remove {{name}}? The agent definition will be deleted.",
+            "confirm": "Remove"
+          },
+          "restore": {
+            "title": "Restore official agent",
+            "description": "Restore {{name}} to the shipped official definition? Any edits will be discarded.",
+            "confirm": "Restore"
+          }
+        },
+        "errors": {
+          "nameRequired": "Enter an agent name.",
+          "contentRequired": "Enter the agent prompt."
+        },
+        "messages": {
+          "created": "Agent created.",
+          "updated": "Agent updated.",
+          "removed": "Agent removed.",
+          "restored": "Agent restored."
+        },
+        "columns": {
+          "name": "Name"
+        }
       }
     }
   }

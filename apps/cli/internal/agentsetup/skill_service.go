@@ -135,9 +135,24 @@ func buildDiscoveredSkillInfo(skill DiscoveredSkill) SkillInfo {
 		SourceKind:         skill.SourceKind,
 		Installed:          true,
 		InstalledForAgents: installedAgentsForSkill(skill.Name),
-		Official:           false,
+		Official:           isOfficialPackageSkill(skill),
 		CanUpdate:          false,
 	}
+}
+
+// isOfficialPackageSkill reports whether a discovered skill ships inside an
+// official @yishan-io package (installed via pi and updated through the
+// extensions panel) as opposed to being user-installed via the skills CLI.
+func isOfficialPackageSkill(skill DiscoveredSkill) bool {
+	if skill.SourceKind != SkillSourcePackage {
+		return false
+	}
+	npmRoot, err := npmPackagesRootResolver()
+	if err != nil {
+		return false
+	}
+	officialRoot := filepath.Join(npmRoot, "@yishan-io")
+	return strings.HasPrefix(skill.SourcePath, officialRoot+string(filepath.Separator))
 }
 
 func readInstalledSkillFiles(name string) (map[string][]byte, error) {

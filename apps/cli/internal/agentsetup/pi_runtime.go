@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,7 +22,9 @@ const (
 )
 
 var (
-	execCommand = exec.Command
+	// execCommandContext is injectable so tests can stub the pi/skills CLI
+	// invocations and assert args + env without running real commands.
+	execCommandContext = exec.CommandContext
 
 	defaultPiExtensionNames = []string{
 		piNotifyExtensionName,
@@ -35,60 +38,60 @@ var (
 	}
 )
 
+// EnsureDefaultPiExtensions installs every official extension. Setup runs
+// outside the RPC request lifecycle, so it uses a background context; the
+// RPC-facing mutations receive the caller's context.
 func EnsureDefaultPiExtensions() error {
-	return installPiExtensions(defaultPiExtensionNames)
+	return installPiExtensions(context.Background(), defaultPiExtensionNames)
 }
 
 func RemoveDefaultPiExtensions() error {
-	return removePiExtensions(defaultPiExtensionNames)
+	return removePiExtensions(context.Background(), defaultPiExtensionNames)
 }
 
 func DefaultPiExtensionNames() []string {
 	return append([]string(nil), defaultPiExtensionNames...)
 }
 
-func installPiExtensions(names []string) error {
+func installPiExtensions(ctx context.Context, names []string) error {
 	for _, name := range names {
-		if err := installPiExtension(name); err != nil {
+		if err := InstallPiExtension(ctx, piExtensionInstallSource(name)); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func removePiExtensions(names []string) error {
+func removePiExtensions(ctx context.Context, names []string) error {
 	for _, name := range names {
-		if err := removePiExtension(name); err != nil {
+		// pi uninstall matches by source identity, so the npm: prefix is
+		// required — a bare package name never matches (pi reports "No
+		// matching package found").
+		if err := RemovePiExtension(ctx, piExtensionInstallSource(name)); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func installPiExtension(name string) error {
-	return runPiCommand("install", piExtensionInstallSource(name))
 }
 
 func piExtensionInstallSource(name string) string {
 	return "npm:" + name
 }
 
-func removePiExtension(name string) error {
-	return runPiCommand("uninstall", name)
-}
-
-func runPiCommand(args ...string) error {
-	cmd, err := newPiCommand(args...)
+func runPiCommand(ctx context.Context, args ...string) error {
+	cmd, err := newPiCommand(ctx, args...)
 	if err != nil {
 		return err
 	}
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("pi %s failed: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 func isManagedPiExtensionInstalled(name string) bool {
-	cmd, err := newPiCommand("package", "list")
+	cmd, err := newPiCommand(context.Background(), "package", "list")
 	if err != nil {
 		return false
 	}
@@ -99,12 +102,12 @@ func isManagedPiExtensionInstalled(name string) bool {
 	return strings.Contains(string(out), name)
 }
 
-func newPiCommand(args ...string) (*exec.Cmd, error) {
+func newPiCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
 	env, err := managedPiEnv()
 	if err != nil {
 		return nil, err
 	}
-	cmd := execCommand("pi", args...)
+	cmd := execCommandContext(ctx, "pi", args...)
 	cmd.Env = env
 	return cmd, nil
 }
@@ -114,5 +117,14 @@ func managedPiEnv() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
 	}
-	return append(os.Environ(), config.PiAgentDirEnvKey+"="+piAgentDir), nil
+	// Drop any inherited PI_CODING_AGENT_DIR so the managed value wins
+	// regardless of how the platform resolves duplicate env keys.
+	filtered := os.Environ()[:0:0]
+	for _, entry := range os.Environ() {
+		if strings.HasPrefix(entry, config.PiAgentDirEnvKey+"=") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return append(filtered, config.PiAgentDirEnvKey+"="+piAgentDir), nil
 }

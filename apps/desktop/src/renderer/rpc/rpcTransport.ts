@@ -27,6 +27,7 @@ const API_NAMESPACES = new Set<ApiNamespace>([
   "memory",
   "pi",
   "project",
+  "customize",
 ]);
 const desktopRpcEventListeners = new Set<DesktopRpcEventListener>();
 const daemonConnectionStatusListeners = new Set<(status: DaemonConnectionStatus) => void>();
@@ -367,6 +368,7 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         notification: proxyClient.notification,
         events: proxyClient.events,
         skill: proxyClient.skill,
+        customize: proxyClient.customize,
         memory: proxyClient.memory,
         pi: proxyClient.pi,
         project: transportClient.project,

@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -132,9 +133,9 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 		}
 	}
 
-	originalExecCommand := execCommand
+	originalExecCommand := execCommandContext
 	defer func() {
-		execCommand = originalExecCommand
+		execCommandContext = originalExecCommand
 	}()
 
 	type recordedCall struct {
@@ -143,7 +144,7 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 		cmd  *exec.Cmd
 	}
 	calls := make([]recordedCall, 0, 5)
-	execCommand = func(name string, args ...string) *exec.Cmd {
+	execCommandContext = func(_ context.Context, name string, args ...string) *exec.Cmd {
 		cmd := exec.Command("true")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
 		return cmd
@@ -201,10 +202,22 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 			t.Fatalf("write managed pi agent file %s: %v", fileName, err)
 		}
 	}
+	// Seed the manifest with the hashes of the managed writes, and modify one
+	// file afterwards so the teardown must preserve it (user edit).
+	manifest := managedAgentManifest{Files: map[string]string{}}
+	for _, fileName := range managedPiAgentFileNames {
+		manifest.Files[fileName] = fileSHA256(filepath.Join(managedPiAgentsDir, fileName))
+	}
+	if err := saveManagedAgentManifest(managedPiAgentsDir, manifest); err != nil {
+		t.Fatalf("save managed pi agent manifest: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(managedPiAgentsDir, "general.md"), []byte("user edit\n"), 0o644); err != nil {
+		t.Fatalf("modify general.md: %v", err)
+	}
 
-	originalExecCommand := execCommand
+	originalExecCommand := execCommandContext
 	defer func() {
-		execCommand = originalExecCommand
+		execCommandContext = originalExecCommand
 	}()
 
 	type recordedCall struct {
@@ -213,7 +226,7 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 		cmd  *exec.Cmd
 	}
 	calls := make([]recordedCall, 0, 5)
-	execCommand = func(name string, args ...string) *exec.Cmd {
+	execCommandContext = func(_ context.Context, name string, args ...string) *exec.Cmd {
 		cmd := exec.Command("true")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
 		return cmd
@@ -226,7 +239,7 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 		t.Fatalf("expected 8 pi extension uninstall calls, got %d", len(calls))
 	}
 
-	expectedArgs := [][]string{{"uninstall", piNotifyExtensionName}, {"uninstall", piSubagentsExtensionName}, {"uninstall", piMemoryExtensionName}, {"uninstall", piTaskExtensionName}, {"uninstall", piDevFlowExtensionName}, {"uninstall", piWorkspaceExtensionName}, {"uninstall", piAskExtensionName}, {"uninstall", piLspExtensionName}}
+	expectedArgs := [][]string{{"uninstall", piExtensionInstallSource(piNotifyExtensionName)}, {"uninstall", piExtensionInstallSource(piSubagentsExtensionName)}, {"uninstall", piExtensionInstallSource(piMemoryExtensionName)}, {"uninstall", piExtensionInstallSource(piTaskExtensionName)}, {"uninstall", piExtensionInstallSource(piDevFlowExtensionName)}, {"uninstall", piExtensionInstallSource(piWorkspaceExtensionName)}, {"uninstall", piExtensionInstallSource(piAskExtensionName)}, {"uninstall", piExtensionInstallSource(piLspExtensionName)}}
 	for index, call := range calls {
 		if call.name != "pi" {
 			t.Fatalf("expected pi command, got %q", call.name)
@@ -242,8 +255,18 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 		}
 	}
 	for _, fileName := range append(append([]string{}, managedPiAgentFileNames...), staleManagedPiAgentFileNames...) {
+		if fileName == "general.md" {
+			// general.md was user-modified: teardown must preserve it.
+			if _, err := os.Stat(filepath.Join(managedPiAgentsDir, fileName)); os.IsNotExist(err) {
+				t.Fatalf("expected user-modified %s to be preserved, err=%v", fileName, err)
+			}
+			continue
+		}
 		if _, err := os.Stat(filepath.Join(managedPiAgentsDir, fileName)); !os.IsNotExist(err) {
 			t.Fatalf("expected managed pi agent file %s removed, err=%v", fileName, err)
 		}
+	}
+	if _, err := os.Stat(filepath.Join(managedPiAgentsDir, ".managed.json")); !os.IsNotExist(err) {
+		t.Fatalf("expected managed pi agent manifest removed, err=%v", err)
 	}
 }
