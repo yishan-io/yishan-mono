@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"yishan/apps/cli/internal/workspace"
@@ -78,6 +79,11 @@ func (h *JSONRPCHandler) refreshWorkspaceHealth(ctx context.Context, workspaceID
 	if state == workspace.WorkspaceStateError {
 		h.watchers.Unwatch(ws.Path)
 		h.prTracker.StopTracking(workspaceID)
+	} else if ws.State == workspace.WorkspaceStateError {
+		// Recovery from error back to active: re-register the filesystem watcher
+		// that was removed on the error transition, so file-change events (which
+		// drive the Git Changes tab) resume without a daemon restart.
+		h.watchAndTrack(workspaceID, ws.Path)
 	}
 
 	if err := h.updatePersistedWorkspaceState(ctx, workspaceID, state, health); err != nil {
@@ -172,4 +178,22 @@ func (h *JSONRPCHandler) summarizeUsedAgents(workspaceID string, closeReq worksp
 func (h *JSONRPCHandler) watchAndTrack(workspaceID string, path string) {
 	h.watchers.Watch(workspaceID, path)
 	h.prTracker.EnsureTracked(path, true)
+}
+
+// watchActiveWorkspaces registers filesystem watchers for every active
+// workspace restored at daemon boot. HydrateFromDB restores workspaces into
+// the manager but never registers watchers, and the desktop's openProject
+// warmup skips already-registered workspaces, so without this step no watcher
+// would ever be created for pre-existing workspaces after a daemon restart
+// and file-change events (which drive the Git Changes tab) would stop flowing.
+func (h *JSONRPCHandler) watchActiveWorkspaces() {
+	for _, ws := range h.manager.List() {
+		if ws.State != workspace.WorkspaceStateActive {
+			continue
+		}
+		if strings.TrimSpace(ws.Path) == "" {
+			continue
+		}
+		h.watchAndTrack(ws.ID, ws.Path)
+	}
 }

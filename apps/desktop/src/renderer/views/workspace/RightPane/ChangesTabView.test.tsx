@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChangesTabView } from "./ChangesTabView";
 
@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => ({
         sourceBranch: "main",
       },
     ],
+    gitRefreshVersionByWorktreePath: {},
   },
 }));
 
@@ -94,6 +95,7 @@ describe("ChangesTabView", () => {
           sourceBranch: "main",
         },
       ],
+      gitRefreshVersionByWorktreePath: {},
     };
     mocks.listGitChanges.mockResolvedValue({ unstaged: [], staged: [], untracked: [] });
     mocks.listGitCommitsToTarget.mockResolvedValue({
@@ -115,6 +117,7 @@ describe("ChangesTabView", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -153,6 +156,99 @@ describe("ChangesTabView", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to load workspace git changes", expect.any(Error));
   });
 
+  it("keeps the previously loaded change list when a refresh fails transiently", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.listGitChanges.mockReset();
+    mocks.listGitChanges
+      .mockResolvedValueOnce({
+        unstaged: [{ path: "agent-edit.ts", kind: "modified", additions: 1, deletions: 0 }],
+        staged: [],
+        untracked: [],
+      })
+      .mockRejectedValueOnce(new Error("index.lock exists"));
+
+    const rendered = render(<ChangesTabView />);
+    expect(await screen.findByTestId("changes-file-unstaged-agent-edit.ts")).toBeTruthy();
+
+    // Simulate a watcher-driven refresh bump arriving while git is busy.
+    mocks.workspaceState = {
+      ...mocks.workspaceState,
+      gitRefreshVersionByWorktreePath: { "/tmp/repo": 1 },
+    };
+    rendered.rerender(<ChangesTabView />);
+
+    await waitFor(() => {
+      // >= 2 (not exactly 2): a delayed retry could fire on a stalled CI.
+      expect(mocks.listGitChanges.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // The previously loaded list survives the failed refresh instead of being
+    // wiped with no retry.
+    expect(screen.getByTestId("changes-file-unstaged-agent-edit.ts")).toBeTruthy();
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to load workspace git changes", expect.any(Error));
+  });
+
+  it("clears the list when a different workspace fails its first load", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.listGitChanges.mockReset();
+    mocks.listGitChanges
+      .mockResolvedValueOnce({
+        unstaged: [{ path: "ws-a.ts", kind: "modified", additions: 1, deletions: 0 }],
+        staged: [],
+        untracked: [],
+      })
+      .mockRejectedValueOnce(new Error("index.lock exists"));
+
+    const rendered = render(<ChangesTabView />);
+    expect(await screen.findByTestId("changes-file-unstaged-ws-a.ts")).toBeTruthy();
+
+    mocks.workspaceState = {
+      selectedWorkspaceId: "workspace-2",
+      workspaces: [
+        {
+          id: "workspace-2",
+          worktreePath: "/tmp/repo-2",
+          sourceBranch: "main",
+        },
+      ],
+      gitRefreshVersionByWorktreePath: {},
+    };
+    rendered.rerender(<ChangesTabView />);
+
+    await waitFor(() => {
+      expect(mocks.listGitChanges.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Workspace A's files must not leak into workspace B's view.
+    expect(screen.queryByTestId("changes-file-unstaged-ws-a.ts")).toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to load workspace git changes", expect.any(Error));
+  });
+
+  it("retries a failed refresh so transient git failures self-heal", async () => {
+    vi.useFakeTimers();
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.listGitChanges.mockReset();
+    mocks.listGitChanges.mockRejectedValue(new Error("index.lock exists"));
+
+    render(<ChangesTabView />);
+
+    // First refresh fails; a retry is scheduled.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mocks.listGitChanges.mock.calls.length).toBeGreaterThanOrEqual(1);
+
+    // Advancing past the retry delay triggers a fresh attempt.
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+      await Promise.resolve();
+    });
+    expect(mocks.listGitChanges.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to load workspace git changes", expect.any(Error));
+  });
+
   it("does not apply a stale workspace response after switching workspaces", async () => {
     let resolveFirstRequest: ((response: GitChangesResponse) => void) | undefined;
     let resolveSecondRequest: ((response: GitChangesResponse) => void) | undefined;
@@ -184,6 +280,7 @@ describe("ChangesTabView", () => {
           sourceBranch: "main",
         },
       ],
+      gitRefreshVersionByWorktreePath: {},
     };
     rendered.rerender(<ChangesTabView />);
     await waitFor(() => {

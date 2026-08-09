@@ -81,6 +81,15 @@ func New(sink Sink, onGitChanged func(worktreePath string)) *Watchers {
 	}
 }
 
+// IsWatching reports whether a watcher is currently registered for the given
+// worktree path.
+func (ws *Watchers) IsWatching(worktreePath string) bool {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	_, ok := ws.entries[worktreePath]
+	return ok
+}
+
 func (ws *Watchers) Watch(workspaceID string, worktreePath string) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()

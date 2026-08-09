@@ -26,6 +26,9 @@ import {
 
 export { normalizeWorkspaceRelativePath } from "./changesTabHelpers";
 
+const GIT_CHANGES_REFRESH_RETRY_MS = 5_000;
+const MAX_GIT_CHANGES_REFRESH_RETRIES = 3;
+
 export function useChangesTabState() {
   const { t } = useTranslation();
   const [repoChangesBySection, setRepoChangesBySection] = useState<RepoChangesBySection>(
@@ -40,6 +43,9 @@ export function useChangesTabState() {
   const commitComparisonRequestIdRef = useRef(0);
   const repoChangesLoadRequestIdRef = useRef(0);
   const pendingWorkspaceSwitchLoadPathRef = useRef<string | null>(null);
+  const retryRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const consecutiveRefreshRetriesRef = useRef(0);
+  const loadedWorkspaceRequestKeyRef = useRef<string | null>(null);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspace = workspaceStore((state) =>
     state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
@@ -116,7 +122,14 @@ export function useChangesTabState() {
     [listGitCommitsToTarget, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
+  const refreshChangesRef = useRef<() => Promise<void>>(async () => {});
+
   const refreshChanges = useCallback(async () => {
+    // A fresh attempt supersedes any pending retry.
+    if (retryRefreshTimerRef.current) {
+      clearTimeout(retryRefreshTimerRef.current);
+      retryRefreshTimerRef.current = null;
+    }
     const requestId = repoChangesLoadRequestIdRef.current + 1;
     repoChangesLoadRequestIdRef.current = requestId;
     const shouldShowLoadingForRequest =
@@ -141,6 +154,8 @@ export function useChangesTabState() {
       if (!isCurrentRequest()) {
         return;
       }
+      loadedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;
+      consecutiveRefreshRetriesRef.current = 0;
       const dedupedResponse: RepoChangesBySection = {
         unstaged: dedupeRepoChangeFiles(
           response.unstaged.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) })),
@@ -166,14 +181,31 @@ export function useChangesTabState() {
       if (!isCurrentRequest()) {
         return;
       }
-      setRepoChangesBySection(createEmptyRepoChangesBySection());
-      setRepoCommitComparison(createEmptyRepoCommitComparison());
+      // Transient git failures (for example index.lock while an agent runs git
+      // operations) must not wipe the previously loaded list. Preserve it when
+      // the workspace did not change; only clear when the workspace switched so
+      // another workspace's files never leak in. Schedule a bounded retry so a
+      // refresh that raced a busy git index self-heals.
+      if (loadedWorkspaceRequestKeyRef.current !== selectedWorkspaceRequestKey) {
+        setRepoChangesBySection(createEmptyRepoChangesBySection());
+        setRepoCommitComparison(createEmptyRepoCommitComparison());
+      }
       if (shouldShowLoadingForRequest && isCurrentRequest()) {
         pendingWorkspaceSwitchLoadPathRef.current = null;
         setIsRepoChangesLoading(false);
       }
       if (!isWorkspaceNotFoundError(error)) {
         console.error("Failed to load workspace git changes", error);
+        if (consecutiveRefreshRetriesRef.current < MAX_GIT_CHANGES_REFRESH_RETRIES) {
+          consecutiveRefreshRetriesRef.current += 1;
+          if (retryRefreshTimerRef.current) {
+            clearTimeout(retryRefreshTimerRef.current);
+          }
+          retryRefreshTimerRef.current = setTimeout(() => {
+            retryRefreshTimerRef.current = null;
+            void refreshChangesRef.current();
+          }, GIT_CHANGES_REFRESH_RETRY_MS);
+        }
       }
     }
   }, [
@@ -184,6 +216,7 @@ export function useChangesTabState() {
     selectedWorkspaceSourceBranch,
     selectedWorkspaceWorktreePath,
   ]);
+  refreshChangesRef.current = refreshChanges;
 
   useEffect(() => {
     if (!selectedWorkspaceWorktreePath) {
@@ -191,7 +224,12 @@ export function useChangesTabState() {
       setIsRepoChangesLoading(false);
       return;
     }
+    if (retryRefreshTimerRef.current) {
+      clearTimeout(retryRefreshTimerRef.current);
+      retryRefreshTimerRef.current = null;
+    }
     pendingWorkspaceSwitchLoadPathRef.current = selectedWorkspaceWorktreePath;
+    consecutiveRefreshRetriesRef.current = 0;
     setIsRepoChangesLoading(true);
   }, [selectedWorkspaceWorktreePath]);
 
@@ -241,6 +279,15 @@ export function useChangesTabState() {
       cancelled = true;
     };
   }, [refreshChanges, selectedWorkspaceWorktreePath, workspaceGitRefreshVersion]);
+
+  useEffect(() => {
+    return () => {
+      if (retryRefreshTimerRef.current) {
+        clearTimeout(retryRefreshTimerRef.current);
+        retryRefreshTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const repoChanges: ProjectGitChangesSection[] = useMemo(
     () => [
