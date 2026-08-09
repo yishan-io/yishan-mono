@@ -114,6 +114,7 @@ func TestEnsureManagedPiAgentsAlsoInstallsManagedPiRootFiles(t *testing.T) {
 func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	fakePiPath := stubManagedPiEnvWithFakeBinary(t, "pi")
 
 	sourceDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "npm", "node_modules", "@yishan-io", "pi-subagents", "agents")
 	sourceAgentContents := map[string]string{
@@ -160,8 +161,8 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
 	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}, {"install", piExtensionInstallSource(piLspExtensionName)}}
 	for index, call := range calls {
-		if call.name != "pi" {
-			t.Fatalf("expected pi command, got %q", call.name)
+		if call.name != fakePiPath {
+			t.Fatalf("expected pi command resolved to %q, got %q", fakePiPath, call.name)
 		}
 		if strings.Join(call.args, "|") != strings.Join(expectedArgs[index], "|") {
 			t.Fatalf("expected args %v, got %v", expectedArgs[index], call.args)
@@ -186,6 +187,7 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	fakePiPath := stubManagedPiEnvWithFakeBinary(t, "pi")
 
 	managedPiAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
 	managedPiAgentsDir := filepath.Join(managedPiAgentDir, "agents")
@@ -241,8 +243,8 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 
 	expectedArgs := [][]string{{"uninstall", piExtensionInstallSource(piNotifyExtensionName)}, {"uninstall", piExtensionInstallSource(piSubagentsExtensionName)}, {"uninstall", piExtensionInstallSource(piMemoryExtensionName)}, {"uninstall", piExtensionInstallSource(piTaskExtensionName)}, {"uninstall", piExtensionInstallSource(piDevFlowExtensionName)}, {"uninstall", piExtensionInstallSource(piWorkspaceExtensionName)}, {"uninstall", piExtensionInstallSource(piAskExtensionName)}, {"uninstall", piExtensionInstallSource(piLspExtensionName)}}
 	for index, call := range calls {
-		if call.name != "pi" {
-			t.Fatalf("expected pi command, got %q", call.name)
+		if call.name != fakePiPath {
+			t.Fatalf("expected pi command resolved to %q, got %q", fakePiPath, call.name)
 		}
 		if strings.Join(call.args, "|") != strings.Join(expectedArgs[index], "|") {
 			t.Fatalf("expected args %v, got %v", expectedArgs[index], call.args)

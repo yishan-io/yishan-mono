@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"yishan/apps/cli/internal/gitexec"
 )
 
 func (s *FileService) List(root string, path string, recursive bool) ([]FileEntry, error) {
@@ -174,7 +176,10 @@ func isGitIgnoredPath(root string, path string) bool {
 		return false
 	}
 
-	cmd := exec.Command("git", "-C", root, "check-ignore", "--quiet", "--", normalizedPath)
+	cmd, ok := gitexec.DefaultRunner().Command("-C", root, "check-ignore", "--quiet", "--", normalizedPath)
+	if !ok {
+		return false
+	}
 	err := cmd.Run()
 	if err == nil {
 		return true
@@ -195,7 +200,10 @@ func gitIgnoredPathSet(root string, entries []FileEntry) (map[string]bool, bool)
 		input.WriteByte(0)
 	}
 
-	cmd := exec.Command("git", "-C", root, "check-ignore", "-z", "--stdin")
+	cmd, ok := gitexec.DefaultRunner().Command("-C", root, "check-ignore", "-z", "--stdin")
+	if !ok {
+		return nil, false
+	}
 	cmd.Stdin = &input
 	output, err := cmd.Output()
 	if err != nil && len(output) == 0 {
@@ -254,11 +262,25 @@ func (s *FileService) listGitFiles(root string, path string) ([]FileEntry, bool,
 	waitGroup.Add(2)
 	go func() {
 		defer waitGroup.Done()
-		normalOutput, normalErr = exec.CommandContext(ctx, "git", args...).Output()
+		gitCmd, ok := gitexec.DefaultRunner().CommandContext(ctx, args...)
+		if !ok {
+			// git unavailable: fall through to the walkFiles fallback in List,
+			// matching the old bare-`git` exec error path.
+			normalErr = errors.New("git executable not found")
+			return
+		}
+		normalOutput, normalErr = gitCmd.Output()
 	}()
 	go func() {
 		defer waitGroup.Done()
-		ignoredOutput, ignoredErr = exec.CommandContext(ctx, "git", ignoredArgs...).Output()
+		gitCmd, ok := gitexec.DefaultRunner().CommandContext(ctx, ignoredArgs...)
+		if !ok {
+			// Fail closed (same as the normal listing) instead of treating
+			// "git unavailable" as "git reports no ignored files".
+			ignoredErr = errors.New("git executable not found")
+			return
+		}
+		ignoredOutput, ignoredErr = gitCmd.Output()
 	}()
 	waitGroup.Wait()
 

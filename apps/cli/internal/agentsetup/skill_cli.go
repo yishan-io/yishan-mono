@@ -107,8 +107,21 @@ func runSkillsCommand(ctx context.Context, args ...string) error {
 }
 
 func newSkillsCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
-	cmd := execCommandContext(ctx, "npx", append([]string{"--yes", "skills"}, args...)...)
-	cmd.Env = os.Environ()
+	env, err := managedPiEnv()
+	if err != nil {
+		return nil, err
+	}
+	// Resolve npx against the managed env's PATH before exec, same as the pi
+	// commands: GUI-launched daemons run with a minimal PATH where npx (nvm,
+	// Homebrew, ...) is not findable, and exec.Command resolves bare names
+	// against the current process's own PATH (Go 1.19+ caches the LookPath
+	// result in Cmd.Err at construction time).
+	npxPath := resolveManagedBinary("npx", env)
+	if npxPath == "" {
+		return nil, fmt.Errorf("npx executable not found in resolved PATH")
+	}
+	cmd := execCommandContext(ctx, npxPath, append([]string{"--yes", "skills"}, args...)...)
+	cmd.Env = env
 	return cmd, nil
 }
 
