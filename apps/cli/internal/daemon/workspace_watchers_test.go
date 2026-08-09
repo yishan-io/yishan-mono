@@ -1,11 +1,13 @@
 package daemon
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
@@ -165,5 +167,142 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	}
 	if len(entries) != 3 {
 		t.Fatalf("expected refreshed entries after full invalidation event, got %+v", entries)
+	}
+}
+
+func TestJSONRPCHandler_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *testing.T) {
+	root := evalSymlinks(t, t.TempDir())
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	projectStore := localdb.NewProjectStore(database)
+	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
+	if err := projectStore.Create(context.Background(), &project); err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	workspaceStore := localdb.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: project.ID, NodeID: "node-1",
+		Kind: "worktree", Status: "active", LocalPath: root, State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	manager := workspace.NewManagerWithStore(workspaceStore)
+	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
+	defer handler.Shutdown()
+
+	// Hydration alone must not register watchers (the regression this guards):
+	// without the explicit watch step, file-change events stop flowing after a
+	// daemon restart.
+	if handler.watchers.IsWatching(root) {
+		t.Fatal("expected no watcher before hydration")
+	}
+
+	// Drive the same helper buildHandler uses at boot so removing the watch
+	// step from the bootstrap sequence fails this test.
+	if err := hydrateAndWatchWorkspaces(handler, manager); err != nil {
+		t.Fatalf("hydrate and watch workspaces: %v", err)
+	}
+
+	hydratedWorkspace, err := manager.GetWorkspace("workspace-1")
+	if err != nil {
+		t.Fatalf("get hydrated workspace: %v", err)
+	}
+	if !handler.watchers.IsWatching(hydratedWorkspace.Path) {
+		t.Fatalf("expected watcher registered for hydrated workspace path %q", hydratedWorkspace.Path)
+	}
+}
+
+func TestJSONRPCHandler_HealthRecoveryRewatchesWorkspace(t *testing.T) {
+	root := evalSymlinks(t, t.TempDir())
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	manager := workspace.NewManager()
+	if _, err := manager.Open(workspace.OpenRequest{ID: "workspace-1", Path: root}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
+	defer handler.Shutdown()
+
+	handler.watchActiveWorkspaces()
+	if !handler.watchers.IsWatching(root) {
+		t.Fatal("expected watcher registered for active workspace")
+	}
+
+	// Path disappears: health check transitions to error and drops the watcher.
+	movedPath := filepath.Join(t.TempDir(), "workspace-moved")
+	if err := os.Rename(root, movedPath); err != nil {
+		t.Fatalf("move workspace path: %v", err)
+	}
+	if _, _, _, err := handler.refreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
+		t.Fatalf("refresh health (error transition): %v", err)
+	}
+	if handler.watchers.IsWatching(root) {
+		t.Fatal("expected watcher dropped after error transition")
+	}
+
+	// Path returns: health check recovers the workspace to active and must
+	// re-register the watcher so file-change events resume.
+	if err := os.Rename(movedPath, root); err != nil {
+		t.Fatalf("restore workspace path: %v", err)
+	}
+	if _, _, _, err := handler.refreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
+		t.Fatalf("refresh health (recovery): %v", err)
+	}
+	if !handler.watchers.IsWatching(root) {
+		t.Fatal("expected watcher re-registered after error-to-active recovery")
+	}
+}
+
+func TestJSONRPCHandler_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
+	root := evalSymlinks(t, t.TempDir())
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	manager := workspace.NewManager()
+	if _, err := manager.Open(workspace.OpenRequest{
+		ID:        "workspace-1",
+		Path:      root,
+		ProjectID: "project-1",
+		OrgID:     "org-1",
+	}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
+	defer handler.Shutdown()
+
+	workspaceID, didOpen, err := handler.openProjectWorkspace(workspaceOpenProjectEntry{
+		WorkspaceID:  "workspace-1",
+		WorktreePath: root,
+		ProjectID:    "project-1",
+		OrgID:        "org-1",
+	})
+	if err != nil {
+		t.Fatalf("openProjectWorkspace: %v", err)
+	}
+	if didOpen {
+		t.Fatal("expected open to be skipped for already-open workspace")
+	}
+	if workspaceID != "workspace-1" {
+		t.Fatalf("unexpected workspace id %q", workspaceID)
+	}
+	// The desktop warmup skips already-open workspaces; the watcher must still
+	// be registered so file-change events flow (the Git Changes tab depends on
+	// them).
+	if !handler.watchers.IsWatching(root) {
+		t.Fatal("expected watcher registered on openProject skip path")
 	}
 }

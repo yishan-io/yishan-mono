@@ -128,9 +128,9 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		_ = database.Close() // cleanup after failed daemon bootstrap
 		return nil, nil, nil, err
 	}
-	if err := workspaceManager.HydrateFromDB(context.Background()); err != nil {
+	if err := hydrateAndWatchWorkspaces(handler, workspaceManager); err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
-		return nil, nil, nil, fmt.Errorf("restore persisted workspaces: %w", err)
+		return nil, nil, nil, err
 	}
 	if handler.tokenUsage != nil {
 		handler.tokenUsage.StartStartupScan()
@@ -138,6 +138,19 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 
 	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
 	return handler, relayStatus, database, nil
+}
+
+// hydrateAndWatchWorkspaces restores persisted workspaces into the manager and
+// registers a filesystem watcher for every active one. Hydration itself never
+// registers watchers, and the desktop's openProject warmup skips
+// already-registered workspaces, so without the watch step file-change events
+// (which drive the Git Changes tab) would stop flowing after a daemon restart.
+func hydrateAndWatchWorkspaces(handler *JSONRPCHandler, workspaceManager *workspace.Manager) error {
+	if err := workspaceManager.HydrateFromDB(context.Background()); err != nil {
+		return fmt.Errorf("restore persisted workspaces: %w", err)
+	}
+	handler.watchActiveWorkspaces()
+	return nil
 }
 
 func initLocalDatabase(statePath string) (*sql.DB, error) {
