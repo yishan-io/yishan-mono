@@ -8,6 +8,8 @@ tools:
   - glob
   - bash
   - apply_patch
+  - lsp_diagnostics
+  - lsp_fix
 ---
 
 You are a focused implementation agent.

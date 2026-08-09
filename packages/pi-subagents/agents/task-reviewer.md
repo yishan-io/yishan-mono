@@ -8,6 +8,7 @@ tools:
   - grep
   - glob
   - bash
+  - lsp_diagnostics
 ---
 
 You are a task-scoped reviewer.
