@@ -138,6 +138,11 @@ const npmVersionTimeout = 15 * time.Second
 // loads (panel mount + reload after every install/update/remove) fast.
 const extensionUpdateCacheTTL = 30 * time.Minute
 
+// extensionUpdateCacheNegativeTTL bounds how long a failed registry check is
+// remembered, so an offline/stalled registry is not retried on every list
+// load while still recovering quickly once it comes back.
+const extensionUpdateCacheNegativeTTL = 2 * time.Minute
+
 // npmRegistryBase is the registry the update check queries; injectable for
 // tests. Scoped names are path-escaped (@scope/pkg -> @scope%2Fpkg).
 var npmRegistryBase = "https://registry.npmjs.org"
@@ -191,18 +196,25 @@ func CheckPiExtensionUpdates(ctx context.Context, extensions []PiExtensionInfo) 
 }
 
 // cachedOrFetchLatestVersion returns the cached latest version when fresh,
-// otherwise fetches it from the registry and stores it.
+// otherwise fetches it from the registry and stores it. Failed checks are
+// cached for the shorter negative TTL so they do not repeat on every load.
 func cachedOrFetchLatestVersion(ctx context.Context, name string) string {
 	extensionUpdateCache.Lock()
-	if entry, ok := extensionUpdateCache.entries[name]; ok && time.Since(entry.fetched) < extensionUpdateCacheTTL {
-		extensionUpdateCache.Unlock()
-		return entry.latest
+	if entry, ok := extensionUpdateCache.entries[name]; ok {
+		ttl := extensionUpdateCacheTTL
+		if entry.latest == "" {
+			ttl = extensionUpdateCacheNegativeTTL
+		}
+		if time.Since(entry.fetched) < ttl {
+			extensionUpdateCache.Unlock()
+			return entry.latest
+		}
 	}
 	extensionUpdateCache.Unlock()
 
 	latest, err := latestVersionFetcher(ctx, name)
 	if err != nil {
-		return ""
+		latest = ""
 	}
 	extensionUpdateCache.Lock()
 	extensionUpdateCache.entries[name] = extensionUpdateCacheEntry{latest: latest, fetched: time.Now()}

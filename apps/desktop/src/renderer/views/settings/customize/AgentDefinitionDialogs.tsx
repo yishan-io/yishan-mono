@@ -16,6 +16,7 @@ import { listAgentModels } from "../../../commands/agentCommands";
 import {
   createAgentDefinition,
   getAgentDefinitionDetail,
+  removeAgentDefinition,
   setAgentModelThinking,
   updateAgentDefinition,
 } from "../../../commands/customizeCommands";
@@ -69,7 +70,20 @@ function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChang
     };
   }, []);
 
-  const currentModel = useMemo(() => models.find((candidate) => candidate.id === model) ?? null, [models, model]);
+  // When the seeded model id is not in the fetched list (provider removed or
+  // list fetch failed), surface it as a synthetic option so the configured
+  // value stays visible instead of showing a bare "Select model".
+  const effectiveModels = useMemo(() => {
+    if (model !== "" && !models.some((candidate) => candidate.id === model)) {
+      return [{ id: model, name: model, provider: model.split("/")[0] ?? "" }, ...models];
+    }
+    return models;
+  }, [model, models]);
+
+  const currentModel = useMemo(
+    () => effectiveModels.find((candidate) => candidate.id === model) ?? null,
+    [effectiveModels, model],
+  );
 
   const handleThinkingCycle = useCallback(() => {
     const currentIdx = THINKING_LEVELS.indexOf(thinking as (typeof THINKING_LEVELS)[number]);
@@ -79,7 +93,7 @@ function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChang
 
   return (
     <AgentModelSelector
-      models={models}
+      models={effectiveModels}
       currentModel={currentModel}
       thinkingLevel={thinking}
       onModelChange={(nextModel) => onModelChange(nextModel.id)}
@@ -101,6 +115,8 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
   const [content, setContent] = useState("");
   const [model, setModel] = useState("");
   const [thinking, setThinking] = useState("");
+  const [initialModel, setInitialModel] = useState("");
+  const [initialThinking, setInitialThinking] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
@@ -114,6 +130,8 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
         setContent(result.content);
         setModel(result.model);
         setThinking(result.thinking);
+        setInitialModel(result.model);
+        setInitialThinking(result.thinking);
       })
       .catch((error) => {
         if (!cancelled) {
@@ -130,7 +148,12 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
     setSaveError(null);
     try {
       await updateAgentDefinition({ name: agent.name, content });
-      await setAgentModelThinking(agent.name, model.trim(), thinking);
+      // Only write the runtime override when the user explicitly changed the
+      // model/thinking selector; otherwise the frontmatter (as edited) stays
+      // authoritative and is never shadowed by the seeded effective value.
+      if (model.trim() !== initialModel || thinking !== initialThinking) {
+        await setAgentModelThinking(agent.name, model.trim(), thinking);
+      }
       onChanged("settings.customize.agents.messages.updated");
       onClose();
     } catch (error) {
@@ -260,8 +283,15 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
     setIsSubmitting(true);
     setError(null);
     try {
-      await createAgentDefinition({ name: name.trim(), description: description.trim(), content });
-      await setAgentModelThinking(name.trim(), model.trim(), thinking);
+      const createdName = name.trim();
+      await createAgentDefinition({ name: createdName, description: description.trim(), content });
+      try {
+        await setAgentModelThinking(createdName, model.trim(), thinking);
+      } catch (overrideError) {
+        // Roll back so a retry does not dead-end on "agent already exists".
+        await removeAgentDefinition(createdName).catch(() => undefined);
+        throw overrideError;
+      }
       onCreated();
       onClose();
     } catch (createError) {

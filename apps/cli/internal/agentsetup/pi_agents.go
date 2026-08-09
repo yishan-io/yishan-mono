@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/rs/zerolog/log"
@@ -171,6 +172,11 @@ func ValidateAgentThinking(thinking string) error {
 // allowedAgentThinkingLevels mirrors pi's ALLOWED_THINKING_LEVELS.
 var allowedAgentThinkingLevels = []string{"off", "minimal", "low", "medium", "high", "xhigh"}
 
+// agentOverridesMutex serializes read-modify-write cycles on
+// agent.overrides.json: the daemon dispatches handlers concurrently, and two
+// concurrent updates must not lose each other's entries.
+var agentOverridesMutex sync.Mutex
+
 // agentOverride is one per-agent runtime override entry in
 // <agentDir>/agent.overrides.json, patching model/thinking onto an agent
 // definition at load time without modifying the definition file.
@@ -191,12 +197,15 @@ func SetPiAgentOverrides(name string, model string, thinking string) error {
 	if err := ValidateAgentThinking(thinking); err != nil {
 		return err
 	}
+	model = strings.TrimSpace(model)
+	thinking = strings.TrimSpace(thinking)
+
+	agentOverridesMutex.Lock()
+	defer agentOverridesMutex.Unlock()
 	overrides, err := loadAgentOverrides()
 	if err != nil {
 		return err
 	}
-	model = strings.TrimSpace(model)
-	thinking = strings.TrimSpace(thinking)
 	if model == "" && thinking == "" {
 		delete(overrides, trimmedName)
 	} else {
@@ -237,7 +246,20 @@ func saveAgentOverrides(overrides map[string]agentOverride) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, content, 0o644); err != nil {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".agent.overrides-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create overrides temp file: %w", err)
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName) // best-effort cleanup; the rename below supersedes it
+	if _, err := tmp.Write(content); err != nil {
+		tmp.Close()
+		return fmt.Errorf("write overrides temp file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close overrides temp file: %w", err)
+	}
+	if err := os.Rename(tmpName, path); err != nil {
 		return fmt.Errorf("write agent overrides: %w", err)
 	}
 	return nil
@@ -305,6 +327,11 @@ func RemovePiAgent(name string) error {
 	}
 	if err := os.Remove(path); err != nil {
 		return fmt.Errorf("remove pi agent %s: %w", trimmedName, err)
+	}
+	// Drop any runtime override so recreating the agent does not silently
+	// re-apply the old model/thinking.
+	if err := SetPiAgentOverrides(trimmedName, "", ""); err != nil {
+		return fmt.Errorf("clear overrides for removed agent %s: %w", trimmedName, err)
 	}
 	return nil
 }

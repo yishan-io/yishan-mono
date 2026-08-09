@@ -163,7 +163,36 @@ describe("AgentsSettingsView", () => {
     expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("model-helper", "anthropic/claude-opus-4-5", "high");
   });
 
-  it("editing patches model and thinking into the frontmatter", async () => {
+  it("editing writes the override only when the selector values change", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({
+      ...USER,
+      content: USER_CONTENT,
+      model: "anthropic/claude-sonnet-4-5",
+      thinking: "high",
+    });
+    mocked.updateAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+
+    await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
+    // Change the thinking level (high -> xhigh) so the override must be written.
+    fireEvent.click(screen.getByLabelText("Thinking level: High"));
+    fireEvent.click(screen.getByTestId("agent-detail-save"));
+
+    await waitFor(() =>
+      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
+        name: "my-helper",
+        content: USER_CONTENT,
+      }),
+    );
+    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("my-helper", "anthropic/claude-sonnet-4-5", "xhigh");
+  });
+
+  it("editing without touching model/thinking does not write an override", async () => {
     mocked.listAgentDefinitions.mockResolvedValue([USER]);
     mocked.getAgentDefinitionDetail.mockResolvedValue({
       ...USER,
@@ -181,13 +210,8 @@ describe("AgentsSettingsView", () => {
     await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
     fireEvent.click(screen.getByTestId("agent-detail-save"));
 
-    await waitFor(() =>
-      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
-        name: "my-helper",
-        content: USER_CONTENT,
-      }),
-    );
-    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("my-helper", "anthropic/claude-sonnet-4-5", "high");
+    await waitFor(() => expect(mocked.updateAgentDefinition).toHaveBeenCalled());
+    expect(mocked.setAgentModelThinking).not.toHaveBeenCalled();
   });
 
   it("editing an official agent shows the overwrite confirmation before saving", async () => {

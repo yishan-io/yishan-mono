@@ -23,7 +23,6 @@
       "nodes": "\u8282\u70b9",
       "notifications": "\u901a\u77e5",
       "serviceTokens": "\u670d\u52a1\u4ee4\u724c",
-      "skills": "\u6280\u80fd",
       "terminal": "\u7ec8\u7aef",
       "workspace": "\u5de5\u4f5c\u533a",
       "providers": "\u6a21\u578b\u63d0\u4f9b\u5546",
@@ -642,7 +641,6 @@
     "customize": {
       "title": "\u81ea\u5b9a\u4e49",
       "description": "\u7ba1\u7406\u5de5\u4f5c\u533a\u5b89\u88c5\u7684\u6269\u5c55\u3001\u6280\u80fd\u548c\u667a\u80fd\u4f53\u5b9a\u4e49\u3002",
-      "comingSoon": "\u6b64\u9762\u677f\u5373\u5c06\u63a8\u51fa\u3002",
       "panels": {
         "extensions": "\u6269\u5c55",
         "skills": "\u6280\u80fd",
@@ -654,7 +652,6 @@
         "official": "\u5b98\u65b9",
         "userInstalled": "\u7528\u6237\u5b89\u88c5",
         "installed": "\u5df2\u5b89\u88c5",
-        "notInstalled": "\u672a\u5b89\u88c5",
         "empty": "\u5c1a\u672a\u5b89\u88c5\u6269\u5c55\u3002",
         "actions": {
           "add": "\u6dfb\u52a0\u6269\u5c55",
