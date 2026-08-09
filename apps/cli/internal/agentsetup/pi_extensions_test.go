@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -334,7 +335,9 @@ func TestListPiExtensions_UserPackageNotInstalledInNodeModules(t *testing.T) {
 }
 
 func TestPiExtensionOps_InvokePiWithManagedEnv(t *testing.T) {
+	skipHermeticBinaryResolutionOnWindows(t)
 	withPiHome(t)
+	fakePiPath := stubManagedPiEnvWithFakeBinary(t, "pi")
 	originalExecCommand := execCommandContext
 	defer func() {
 		execCommandContext = originalExecCommand
@@ -376,8 +379,8 @@ func TestPiExtensionOps_InvokePiWithManagedEnv(t *testing.T) {
 	}
 	expectedAgentDir := filepath.Join(os.Getenv("HOME"), ".yishan", "pi", "agent")
 	for index, call := range calls {
-		if call.name != "pi" {
-			t.Fatalf("expected pi command, got %q", call.name)
+		if call.name != fakePiPath {
+			t.Fatalf("expected pi command resolved to %q, got %q", fakePiPath, call.name)
 		}
 		if strings.Join(call.args, "|") != strings.Join(wantArgs[index], "|") {
 			t.Fatalf("call %d: expected args %v, got %v", index, wantArgs[index], call.args)
@@ -390,6 +393,7 @@ func TestPiExtensionOps_InvokePiWithManagedEnv(t *testing.T) {
 
 func TestRemoveDefaultPiExtensions_UninstallsWithNpmPrefix(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "pi")
 	originalExecCommand := execCommandContext
 	defer func() {
 		execCommandContext = originalExecCommand
@@ -416,6 +420,69 @@ func TestRemoveDefaultPiExtensions_UninstallsWithNpmPrefix(t *testing.T) {
 		if args[1] != want {
 			t.Fatalf("call %d: expected uninstall target %q (source identity), got %q", index, want, args[1])
 		}
+	}
+}
+
+// skipHermeticBinaryResolutionOnWindows skips tests that inject a fake
+// extension binary without a PATHEXT extension (pi.exe, npx.cmd): on Windows
+// resolution falls through to the real binary on the process PATH, so the
+// hermetic path/error assertions cannot hold. (Windows GUI processes keep the
+// full user PATH, so the GUI-launch bug class this guards against is rare
+// there.)
+func skipHermeticBinaryResolutionOnWindows(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("hermetic fake-binary resolution is unix-only")
+	}
+}
+
+// stubManagedPiEnvWithFakeBinary swaps managedPiEnvBase for a controlled PATH
+// containing a fake <binary> executable, so commands resolve binaries
+// hermetically without spawning a login shell. It returns the resolved fake
+// binary path.
+func stubManagedPiEnvWithFakeBinary(t *testing.T, binary string) string {
+	t.Helper()
+	binDir := t.TempDir()
+	fakePath := filepath.Join(binDir, binary)
+	if err := os.WriteFile(fakePath, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write fake %s binary: %v", binary, err)
+	}
+	original := managedPiEnvBase
+	managedPiEnvBase = func() []string { return []string{"PATH=" + binDir} }
+	t.Cleanup(func() { managedPiEnvBase = original })
+	return fakePath
+}
+
+func TestNewPiCommand_ResolvesPiAgainstManagedEnvPath(t *testing.T) {
+	skipHermeticBinaryResolutionOnWindows(t)
+	withPiHome(t)
+	fakePiPath := stubManagedPiEnvWithFakeBinary(t, "pi")
+
+	cmd, err := newPiCommand(context.Background(), "install", "npm:foo/bar")
+	if err != nil {
+		t.Fatalf("newPiCommand: %v", err)
+	}
+	if cmd.Path != fakePiPath {
+		t.Fatalf("cmd.Path = %q, want resolved fake pi %q", cmd.Path, fakePiPath)
+	}
+	if got := strings.Join(cmd.Args[1:], " "); got != "install npm:foo/bar" {
+		t.Fatalf("args = %q, want %q", got, "install npm:foo/bar")
+	}
+	expectedAgentDir := filepath.Join(os.Getenv("HOME"), ".yishan", "pi", "agent")
+	if !strings.Contains(strings.Join(cmd.Env, "\n"), config.PiAgentDirEnvKey+"="+expectedAgentDir) {
+		t.Fatalf("expected managed pi env %s in %v", config.PiAgentDirEnvKey+"="+expectedAgentDir, cmd.Env)
+	}
+}
+
+func TestNewPiCommand_FailsWhenPiNotResolvable(t *testing.T) {
+	skipHermeticBinaryResolutionOnWindows(t)
+	withPiHome(t)
+	original := managedPiEnvBase
+	managedPiEnvBase = func() []string { return []string{"PATH="} }
+	t.Cleanup(func() { managedPiEnvBase = original })
+
+	if _, err := newPiCommand(context.Background(), "install", "npm:foo"); err == nil {
+		t.Fatal("expected error when pi is not resolvable")
 	}
 }
 

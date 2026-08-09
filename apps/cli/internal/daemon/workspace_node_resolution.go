@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"yishan/apps/cli/internal/gitexec"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -37,14 +37,21 @@ func ensureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) 
 	if err := os.MkdirAll(filepath.Dir(repoPath), 0o755); err != nil {
 		return "", fmt.Errorf("create shared repo directory: %w", err)
 	}
+	gitRunner := gitexec.DefaultRunner()
 	if _, err := os.Stat(repoPath); err == nil {
-		fetchCmd := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all", "--prune")
+		fetchCmd, ok := gitRunner.CommandContext(ctx, "-C", repoPath, "fetch", "--all", "--prune")
+		if !ok {
+			return "", fmt.Errorf("git executable not found")
+		}
 		if out, fetchErr := fetchCmd.CombinedOutput(); fetchErr != nil {
 			return "", fmt.Errorf("update shared repo clone (%s): %w", strings.TrimSpace(string(out)), fetchErr)
 		}
 		return repoPath, nil
 	}
-	cloneCmd := exec.CommandContext(ctx, "git", "clone", "--bare", repoURL, repoPath)
+	cloneCmd, ok := gitRunner.CommandContext(ctx, "clone", "--bare", repoURL, repoPath)
+	if !ok {
+		return "", fmt.Errorf("git executable not found")
+	}
 	if out, cloneErr := cloneCmd.CombinedOutput(); cloneErr != nil {
 		return "", fmt.Errorf("clone shared repo (%s): %w", strings.TrimSpace(string(out)), cloneErr)
 	}

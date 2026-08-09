@@ -10,7 +10,9 @@ import (
 )
 
 func TestSkillCliOps_InvokeNpxSkills(t *testing.T) {
+	skipHermeticBinaryResolutionOnWindows(t)
 	withPiHome(t)
+	fakeNpxPath := stubManagedPiEnvWithFakeBinary(t, "npx")
 	originalExecCommand := execCommandContext
 	defer func() {
 		execCommandContext = originalExecCommand
@@ -49,8 +51,8 @@ func TestSkillCliOps_InvokeNpxSkills(t *testing.T) {
 		t.Fatalf("expected %d npx calls, got %d", len(wantArgs), len(calls))
 	}
 	for index, call := range calls {
-		if call.name != "npx" {
-			t.Fatalf("call %d: expected npx command, got %q", index, call.name)
+		if call.name != fakeNpxPath {
+			t.Fatalf("call %d: expected npx command resolved to %q, got %q", index, fakeNpxPath, call.name)
 		}
 		if strings.Join(call.args, "|") != strings.Join(wantArgs[index], "|") {
 			t.Fatalf("call %d: expected args %v, got %v", index, wantArgs[index], call.args)
@@ -60,6 +62,7 @@ func TestSkillCliOps_InvokeNpxSkills(t *testing.T) {
 
 func TestRemoveSkill_DeletesUntrackedSkillDir(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "npx")
 	homeDir, _ := os.UserHomeDir()
 	userSkillsDir := filepath.Join(homeDir, ".agents", "skills")
 	writeSkill(t, userSkillsDir, "hand-made", "Hand-made skill")
@@ -84,6 +87,7 @@ func TestRemoveSkill_DeletesUntrackedSkillDir(t *testing.T) {
 
 func TestRemoveSkill_KeepsTrackedSkillWhenCliRemovedIt(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "npx")
 	homeDir, _ := os.UserHomeDir()
 	userSkillsDir := filepath.Join(homeDir, ".agents", "skills")
 
@@ -119,6 +123,7 @@ func TestRemoveSkill_RejectsUnsafeName(t *testing.T) {
 
 func TestAddSkill_FailureIncludesOutput(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "npx")
 	originalExecCommand := execCommandContext
 	defer func() {
 		execCommandContext = originalExecCommand
@@ -141,6 +146,7 @@ func TestAddSkill_FailureIncludesOutput(t *testing.T) {
 
 func TestPiInstall_FailureIncludesOutput(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "pi")
 	originalExecCommand := execCommandContext
 	defer func() {
 		execCommandContext = originalExecCommand
@@ -213,6 +219,7 @@ func TestListSkills_PackageSkillWithYishanLikePrefixStaysUserInstalled(t *testin
 
 func TestRemoveSkill_FindsSkillBySanitizedDirName(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "npx")
 	homeDir, _ := os.UserHomeDir()
 	userSkillsDir := filepath.Join(homeDir, ".agents", "skills")
 	// The CLI installs dirs under the sanitized name while the frontmatter
@@ -244,6 +251,7 @@ func TestRemoveSkill_FindsSkillBySanitizedDirName(t *testing.T) {
 
 func TestRemoveSkill_SanitizedFallbackSkipsDifferentSkill(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "npx")
 	homeDir, _ := os.UserHomeDir()
 	userSkillsDir := filepath.Join(homeDir, ".agents", "skills")
 	// The requested name sanitizes to the same dir as an existing DIFFERENT
@@ -276,6 +284,7 @@ func TestRemoveSkill_SanitizedFallbackSkipsDifferentSkill(t *testing.T) {
 
 func TestRemoveSkill_SanitizedFallbackCaseInsensitiveMatch(t *testing.T) {
 	withPiHome(t)
+	stubManagedPiEnvWithFakeBinary(t, "npx")
 	homeDir, _ := os.UserHomeDir()
 	userSkillsDir := filepath.Join(homeDir, ".agents", "skills")
 	// Frontmatter name and the requested name differ only in case; the

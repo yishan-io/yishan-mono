@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/buildinfo"
+	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 const (
@@ -336,13 +337,19 @@ func isHomebrewManaged(execPath string) bool {
 }
 
 func applyViaHomebrew(_ context.Context, progress func(string)) error {
-	brewPath, err := exec.LookPath("brew")
-	if err != nil {
-		return fmt.Errorf("binary is Homebrew-managed but brew not found: %w", err)
+	// Resolve brew against the login-shell-enriched PATH: the CLI can be run
+	// from a GUI-launched context (Electron spawns it with a minimal PATH)
+	// where /opt/homebrew/bin is not present, so exec.LookPath on the process
+	// PATH alone would miss it.
+	brewEnv := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+	brewPath := shellenv.ResolveExecutablePathFromEnv("brew", brewEnv)
+	if brewPath == "" {
+		return fmt.Errorf("binary is Homebrew-managed but brew not found in resolved PATH")
 	}
 
 	progress("Updating Homebrew tap...")
 	tapCmd := exec.Command(brewPath, "tap", "yishan-io/tap")
+	tapCmd.Env = brewEnv
 	tapCmd.Stdout = os.Stdout
 	tapCmd.Stderr = os.Stderr
 	// Ignore tap errors — may already be tapped.
@@ -350,11 +357,13 @@ func applyViaHomebrew(_ context.Context, progress func(string)) error {
 
 	progress("Upgrading via Homebrew...")
 	upgradeCmd := exec.Command(brewPath, "upgrade", "yishan")
+	upgradeCmd.Env = brewEnv
 	upgradeCmd.Stdout = os.Stdout
 	upgradeCmd.Stderr = os.Stderr
 	if err := upgradeCmd.Run(); err != nil {
 		// brew upgrade exits non-zero if already up to date; try reinstall.
 		reinstallCmd := exec.Command(brewPath, "reinstall", "yishan")
+		reinstallCmd.Env = brewEnv
 		reinstallCmd.Stdout = os.Stdout
 		reinstallCmd.Stderr = os.Stderr
 		if reinstallErr := reinstallCmd.Run(); reinstallErr != nil {
@@ -364,4 +373,3 @@ func applyViaHomebrew(_ context.Context, progress func(string)) error {
 
 	return nil
 }
-

@@ -160,6 +160,7 @@ func TestManagedShellEnvPreservesCustomZdotdir(t *testing.T) {
 func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	fakePiPath := stubManagedPiEnvWithFakeBinary(t, "pi")
 
 	originalExecCommand := execCommandContext
 	defer func() {
@@ -188,8 +189,8 @@ func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
 	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}, {"install", piExtensionInstallSource(piLspExtensionName)}}
 	for index, call := range calls {
-		if call.name != "pi" {
-			t.Fatalf("expected pi command, got %q", call.name)
+		if call.name != fakePiPath {
+			t.Fatalf("expected pi command resolved to %q, got %q", fakePiPath, call.name)
 		}
 		if strings.Join(call.args, "|") != strings.Join(expectedArgs[index], "|") {
 			t.Fatalf("expected args %v, got %v", expectedArgs[index], call.args)
