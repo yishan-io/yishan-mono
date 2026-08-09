@@ -20,6 +20,8 @@ vi.mock("@earendil-works/pi-coding-agent", () => ({
   createAgentSessionFromServices: createAgentSessionFromServicesMock,
 }));
 
+vi.mock("@yishan-io/pi-lsp", () => ({ createPiLspExtension: () => {} }));
+
 import { createChildAgentSession } from "./sessionFactory";
 
 function createModel(provider: string, id: string, source?: string) {
@@ -97,6 +99,7 @@ describe("createChildAgentSession", () => {
         noExtensions: true,
         noPromptTemplates: true,
         noThemes: true,
+        extensionFactories: [expect.any(Function)],
         appendSystemPrompt: ["Explore prompt"],
       },
     });

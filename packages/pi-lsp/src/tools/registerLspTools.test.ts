@@ -4,7 +4,8 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 
 import { mockContext, mockPi, restoreEnv } from "../../test/support";
-import { registerLspTools } from "./registerLspTools";
+import { registerLspTools, reportSkippedServers } from "./registerLspTools";
+import type { DiagnosticRoute } from "./selectServers";
 
 describe("registerLspTools", () => {
   test("registers the diagnostics and fix tools", () => {
@@ -47,6 +48,45 @@ describe("registerLspTools", () => {
       unlinkSync(path.join(project, ".pi", "lsp.json"));
     } finally {
       restoreEnv("PI_CODING_AGENT_DIR", previousAgentDir);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("skipped-server reporting stays quiet for unrelated or unscoped requests", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "pi-lsp-skip-report-"));
+    try {
+      mkdirSync(path.join(root, "src"));
+      writeFileSync(path.join(root, "src", "main.rs"), "fn main() {}\n");
+      writeFileSync(path.join(root, "Makefile"), "all:\n");
+      const skipped = [
+        {
+          server: { name: "rust-analyzer", extensions: [".rs"] },
+          reason: "rust-analyzer command missing",
+          files: [],
+        },
+      ] as unknown as DiagnosticRoute[];
+      // Workspace-wide scan with results: unconfigured defaults stay quiet.
+      expect(reportSkippedServers(skipped, [{}], undefined, root)).toBe(false);
+      // Nothing ran, no explicit paths: the full list explains why.
+      expect(reportSkippedServers(skipped, [], undefined, root)).toBe(true);
+      // Explicit file path matching the skipped server's extension.
+      expect(reportSkippedServers(skipped, [{}], ["src/main.rs"], root)).toBe(true);
+      // Explicit directory path: the skipped server would have scanned it.
+      expect(reportSkippedServers(skipped, [{}], ["src/"], root)).toBe(true);
+      expect(reportSkippedServers(skipped, [{}], ["src"], root)).toBe(true);
+      // Dot-named directory must not false-positive as a matching extension.
+      expect(reportSkippedServers(skipped, [{}], ["src/.hidden/"], root)).toBe(false);
+      mkdirSync(path.join(root, "src", ".hidden"));
+      expect(reportSkippedServers(skipped, [{}], ["src/.hidden/"], root)).toBe(true);
+      // File without a matching extension stays quiet.
+      expect(reportSkippedServers(skipped, [{}], ["Makefile"], root)).toBe(false);
+      expect(reportSkippedServers(skipped, [{}], ["src/app.ts"], root)).toBe(false);
+      // Missing file still matches by extension.
+      expect(reportSkippedServers(skipped, [{}], ["src/new.rs"], root)).toBe(true);
+      // Nothing ran with paths: only in-scope skipped servers are reported.
+      expect(reportSkippedServers(skipped, [], ["src/app.ts"], root)).toBe(false);
+      expect(reportSkippedServers(skipped, [], ["src/main.rs"], root)).toBe(true);
+    } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });

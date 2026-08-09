@@ -1,6 +1,6 @@
 {
   "name": "@yishan-io/pi-subagents",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "keywords": ["pi-package"],
   "files": ["agents", "extensions", "src", "!src/**/*.test.ts", "LICENSE", "README.md"],
@@ -19,7 +19,13 @@
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
+    "@yishan-io/pi-lsp": "*",
     "typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@yishan-io/pi-lsp": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@earendil-works/pi-agent-core": "^0.80.3",
@@ -27,6 +33,7 @@
     "@earendil-works/pi-coding-agent": "^0.80.3",
     "@earendil-works/pi-tui": "^0.80.3",
     "@types/node": "^24.12.4",
+    "@yishan-io/pi-lsp": "^0.1.2",
     "typebox": "1.1.38"
   },
   "pi": {

@@ -16,6 +16,8 @@ export const DEFAULT_ALLOWED_TOOL_NAMES = [
   "ls",
   "glob",
   "apply_patch",
+  "lsp_diagnostics",
+  "lsp_fix",
 ] as const;
 
 /** Raw frontmatter shape accepted before validation and normalization. */
