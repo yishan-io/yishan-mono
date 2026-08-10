@@ -33,6 +33,8 @@ type AgentSessionData = {
   state: AgentSessionState;
   /** Whether the agent has started (turn_start) but not yet ended (turn_end) the current turn. */
   isTurnActive: boolean;
+  /** Id of the assistant bound to the active Pi core turn for turn_end duration finalization. */
+  activeCoreTurnAssistantId: string | null;
   compactionReason: AgentCompactionReason;
   messages: AgentMessage[];
   streamingMessage: AgentMessage | null;
@@ -69,6 +71,8 @@ type AgentChatStoreState = {
   replaceMessages: (tabId: string, messages: AgentMessage[]) => void;
   updateStreamingMessage: (tabId: string, message: AgentMessage) => void;
   finalizeStreamingMessage: (tabId: string) => void;
+  setActiveCoreTurnAssistantId: (tabId: string, assistantId: string | null) => void;
+  finalizeActiveCoreTurnAssistant: (tabId: string, endedAtMs: number) => void;
   setAvailableModels: (tabId: string, models: AgentModel[]) => void;
   setCurrentModel: (tabId: string, model: AgentModel) => void;
   setThinkingLevel: (tabId: string, level: string) => void;
@@ -165,6 +169,7 @@ function emptySession(sessionId: string): AgentSessionData {
     sessionId,
     state: "idle",
     isTurnActive: false,
+    activeCoreTurnAssistantId: null,
     compactionReason: null,
     messages: [],
     streamingMessage: null,
@@ -320,6 +325,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (!session) return;
         session.messages = trimSessionMessages(messages);
         session.streamingMessage = null;
+        session.activeCoreTurnAssistantId = null;
         session.hasLoadedMessages = true;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
         setFinishedSubagents(session);
@@ -349,6 +355,28 @@ export const agentChatStore = create<AgentChatStoreState>()(
         session.streamingMessage = null;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
         setFinishedSubagents(session);
+      });
+    },
+
+    setActiveCoreTurnAssistantId: (tabId, assistantId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.activeCoreTurnAssistantId = assistantId;
+        }
+      });
+    },
+
+    finalizeActiveCoreTurnAssistant: (tabId, endedAtMs) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        const assistantId = session.activeCoreTurnAssistantId;
+        session.activeCoreTurnAssistantId = null;
+        if (!assistantId) return;
+        const message = session.messages.find((candidate) => candidate.id === assistantId);
+        if (!message || typeof message.startedAtMs !== "number") return;
+        message.durationMs = Math.max(0, endedAtMs - message.startedAtMs);
       });
     },
 

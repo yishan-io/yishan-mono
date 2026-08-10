@@ -240,21 +240,76 @@ export function getTurnLiveElapsedMs(turn: Turn, nowMs: number): number | null {
 }
 
 /**
- * Returns the elapsed working time for a finished turn: the accumulated
- * durationMs of its assistant messages, or a timestamp-derived fallback for
- * history-loaded turns that lack durationMs. While the turn is still working
- * the header shows the live elapsed time instead, so returns null.
+ * Returns the finished elapsed wall-clock span of an in-memory turn: from the
+ * first assistant's renderer `startedAtMs` to the final assistant's renderer
+ * end (`startedAtMs + durationMs`). Both boundaries match the live header
+ * (which starts counting at the first assistant start), so the completed
+ * header never drops below the live elapsed value. Foreground tool execution
+ * and any gap between Pi core turns are included exactly once.
+ *
+ * Returns null when either boundary is missing or not finite, so callers can
+ * fall back to accumulated durations or the history timestamp fallback.
+ */
+export function getTurnElapsedSpanMs(turn: Turn): number | null {
+  let firstStartedAtMs: number | null = null;
+  let finalAssistant: TurnItem | null = null;
+
+  for (const item of turn.items) {
+    if (item.message.role !== "assistant") {
+      continue;
+    }
+    finalAssistant = item;
+    if (
+      firstStartedAtMs === null &&
+      typeof item.message.startedAtMs === "number" &&
+      Number.isFinite(item.message.startedAtMs)
+    ) {
+      firstStartedAtMs = item.message.startedAtMs;
+    }
+  }
+
+  if (firstStartedAtMs === null || finalAssistant === null) {
+    return null;
+  }
+
+  const { startedAtMs, durationMs } = finalAssistant.message;
+  if (typeof startedAtMs !== "number" || !Number.isFinite(startedAtMs)) {
+    return null;
+  }
+  if (typeof durationMs !== "number" || !Number.isFinite(durationMs)) {
+    return null;
+  }
+
+  return Math.max(0, startedAtMs + durationMs - firstStartedAtMs);
+}
+
+/**
+ * Returns the elapsed working time for a finished turn. For an in-memory turn
+ * with renderer timing on both boundaries it prefers the elapsed span (final
+ * assistant end minus first assistant start), which includes foreground tool
+ * execution and core-turn gaps once. Falls back to the accumulated assistant
+ * durations for partial timing data, then to the user-to-last-assistant
+ * timestamp span for history-loaded turns that lack renderer timing. While
+ * the turn is still working the header shows the live elapsed time instead,
+ * so returns null.
  */
 export function getTurnWorkedDurationMs(turn: Turn): number | null {
   if (turn.isWorking) {
     return null;
   }
 
+  const elapsedSpanMs = getTurnElapsedSpanMs(turn);
+  if (elapsedSpanMs !== null) {
+    return elapsedSpanMs;
+  }
+
+  // Partial timing data (for example a reloaded untimed tail or an aborted
+  // final assistant): keep the accumulated assistant durations.
   if (turn.workedDurationMs !== null) {
     return turn.workedDurationMs;
   }
 
-  // History-loaded turns lack durationMs; derive the worked time from the
+  // History-loaded turns lack renderer timing; derive the worked time from the
   // preceding user message timestamp and the last assistant message timestamp.
   const endTimestampMs = getLastAssistantTimestampMs(turn.items);
   if (typeof turn.startTimestampMs === "number" && Number.isFinite(turn.startTimestampMs) && endTimestampMs !== null) {
