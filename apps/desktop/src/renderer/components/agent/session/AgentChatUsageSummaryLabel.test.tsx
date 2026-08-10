@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { COLOR_PRIMITIVES } from "@yishan-io/design-tokens/v1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../../../store/agentChatStore";
@@ -140,5 +140,151 @@ describe("AgentChatUsageSummaryLabel", () => {
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
     expect(screen.queryByText(/CTX:/)).toBeNull();
+  });
+
+  it("grows the live ctx estimate while an assistant message streams (sessionStats null)", () => {
+    seedSession({
+      currentModelContextWindow: 128_000,
+      messages: [
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: [{ type: "text", text: "done" }],
+          usage: {
+            input: 80,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 80,
+            cost: {
+              total: 0.25,
+            },
+          },
+          stopReason: "stop",
+        } as AgentMessage,
+      ],
+    });
+
+    const store = agentChatStore.getState();
+    act(() => {
+      store.updateStreamingMessage("tab-1", {
+        id: "assistant-streaming",
+        role: "assistant",
+        content: [{ type: "text", text: "a".repeat(800) }],
+      } as AgentMessage);
+    });
+
+    render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
+
+    expect(screen.getByLabelText("CTX: 280/128K (0.2%), $0.25")).toBeTruthy();
+
+    act(() => {
+      store.updateStreamingMessage("tab-1", {
+        id: "assistant-streaming",
+        role: "assistant",
+        content: [{ type: "text", text: "a".repeat(1600) }],
+      } as AgentMessage);
+    });
+
+    expect(screen.getByLabelText("CTX: 480/128K (0.4%), $0.25")).toBeTruthy();
+  });
+
+  it("prefers a stale sessionStats snapshot when one is present (pre-fix freeze documented)", () => {
+    // With the turn-start invalidation, sessionStats is null during turns, so this
+    // state cannot occur in production anymore. It documents the pre-fix behavior:
+    // when a snapshot is present, the label shows it even while a message streams.
+    seedSession({
+      currentModelContextWindow: 128_000,
+      messages: [
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: [{ type: "text", text: "done" }],
+          usage: {
+            input: 80,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 80,
+            cost: {
+              total: 0.25,
+            },
+          },
+          stopReason: "stop",
+        } as AgentMessage,
+      ],
+    });
+    agentChatStore.getState().setSessionStats("tab-1", {
+      tokens: { input: 100, output: 0, cacheRead: 0, cacheWrite: 0, total: 100 },
+      cost: 0.25,
+      contextUsage: { tokens: 100, contextWindow: 128_000, percent: 0.1 },
+    });
+
+    agentChatStore.getState().updateStreamingMessage("tab-1", {
+      id: "assistant-streaming",
+      role: "assistant",
+      content: [{ type: "text", text: "a".repeat(800) }],
+    } as AgentMessage);
+
+    render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
+
+    expect(screen.getByLabelText("CTX: 100/128K (0.1%), $0.25")).toBeTruthy();
+  });
+
+  it("sums cost across completed assistant messages mid-turn", () => {
+    seedSession({
+      currentModelContextWindow: 128_000,
+      messages: [
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: [{ type: "text", text: "done" }],
+          usage: {
+            input: 40,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 40,
+            cost: {
+              total: 0.1,
+            },
+          },
+          stopReason: "stop",
+        } as AgentMessage,
+        {
+          id: "assistant-2",
+          role: "assistant",
+          content: [{ type: "text", text: "done again" }],
+          usage: {
+            input: 90,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 90,
+            cost: {
+              total: 0.2,
+            },
+          },
+          stopReason: "stop",
+        } as AgentMessage,
+      ],
+    });
+
+    render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
+
+    expect(screen.getByLabelText("CTX: 90/128K (0.1%), $0.30")).toBeTruthy();
+  });
+
+  it("shows the unknown-context placeholder after compaction", () => {
+    seedSession({ currentModelContextWindow: 128_000 });
+    agentChatStore.getState().setSessionStats("tab-1", {
+      tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+      cost: 0.5,
+      contextUsage: { tokens: null, contextWindow: 200_000, percent: null },
+    });
+
+    render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
+
+    expect(screen.getByLabelText("CTX: ?/200K (?), $0.50")).toBeTruthy();
   });
 });
