@@ -20,28 +20,34 @@ func (w *worktreeWatcher) scheduleFileEmit(relPath string) {
 		w.fileTimer.Stop()
 	}
 
-	w.fileTimer = time.AfterFunc(watcherDebounce, func() {
-		w.mu.Lock()
-		paths := w.changedPaths
-		hasOverflow := w.hasChangedPathsOverflow
-		w.changedPaths = nil
-		w.hasChangedPathsOverflow = false
-		w.fileTimer = nil
-		w.mu.Unlock()
+	w.fileTimer = time.AfterFunc(watcherDebounce, w.emitFilesChanged)
+}
 
-		changedPaths := boundChangedPaths(paths)
-		if hasOverflow {
-			changedPaths = []string{}
-		}
+func (w *worktreeWatcher) emitFilesChanged() {
+	w.mu.Lock()
+	paths := w.changedPaths
+	hasOverflow := w.hasChangedPathsOverflow
+	w.changedPaths = nil
+	w.hasChangedPathsOverflow = false
+	w.fileTimer = nil
+	w.mu.Unlock()
 
-		if w.sink != nil {
-			w.sink.PublishWorkspaceFilesChanged(FilesChangedEvent{
-				WorkspaceID:          w.workspaceID,
-				WorktreePath:         w.path,
-				ChangedRelativePaths: changedPaths,
-			})
-		}
-	})
+	if !w.hasWorktreeDirectory() {
+		return
+	}
+
+	changedPaths := boundChangedPaths(paths)
+	if hasOverflow {
+		changedPaths = []string{}
+	}
+
+	if w.sink != nil {
+		w.sink.PublishWorkspaceFilesChanged(FilesChangedEvent{
+			WorkspaceID:          w.workspaceID,
+			WorktreePath:         w.path,
+			ChangedRelativePaths: changedPaths,
+		})
+	}
 }
 
 // boundChangedPaths returns an empty path list when a file burst exceeds the
@@ -89,29 +95,48 @@ func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
 		w.gitTimer.Stop()
 	}
 
-	w.gitTimer = time.AfterFunc(watcherDebounce, func() {
-		w.mu.Lock()
-		w.gitTimer = nil
-		affects := w.pendingAffectsBranch
-		w.pendingAffectsBranch = false
-		w.mu.Unlock()
+	w.gitTimer = time.AfterFunc(watcherDebounce, w.emitGitChanged)
+}
 
-		event := GitChangedEvent{
-			WorkspaceID:   w.workspaceID,
-			WorktreePath:  w.path,
-			AffectsBranch: affects,
-		}
-		if affects {
-			event.CurrentBranch = w.readCurrentBranch()
-		}
+func (w *worktreeWatcher) emitGitChanged() {
+	w.mu.Lock()
+	w.gitTimer = nil
+	affects := w.pendingAffectsBranch
+	w.pendingAffectsBranch = false
+	w.mu.Unlock()
 
-		if w.sink != nil {
-			w.sink.PublishGitChanged(event)
+	if !w.hasWorktreeDirectory() {
+		return
+	}
+
+	event := GitChangedEvent{
+		WorkspaceID:   w.workspaceID,
+		WorktreePath:  w.path,
+		AffectsBranch: affects,
+	}
+	if affects {
+		event.CurrentBranch = w.readCurrentBranch()
+	}
+
+	if !w.hasWorktreeDirectory() {
+		return
+	}
+	if w.sink != nil {
+		w.sink.PublishGitChanged(event)
+	}
+	w.notifyGitChanged()
+}
+
+func (w *worktreeWatcher) notifyGitChanged() {
+	if w.onGitChanged == nil {
+		return
+	}
+
+	go func() {
+		if w.hasWorktreeDirectory() {
+			w.onGitChanged(w.path)
 		}
-		if w.onGitChanged != nil {
-			go w.onGitChanged(w.path)
-		}
-	})
+	}()
 }
 
 func (w *worktreeWatcher) close() {
