@@ -30,3 +30,17 @@ export function getErrorMessage(error: unknown): string {
 export function isWorkspaceNotFoundError(error: unknown): boolean {
   return /workspace not found/i.test(getErrorMessage(error));
 }
+
+/** Returns true when a file read failed because the file does not exist. */
+export function isFileNotFoundError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("no such file") ||
+    message.includes("not exist") ||
+    message.includes("enoent") ||
+    message.includes("not a directory") ||
+    message.includes("notdir") ||
+    message.includes("cannot find the file") ||
+    message.includes("cannot find the path")
+  );
+}

@@ -10,6 +10,7 @@ import { TabPanel } from "../../components/TabPanel";
 import { UnsupportedFileView } from "../../components/UnsupportedFileView";
 import { VideoPreview } from "../../components/VideoPreview";
 import { copyToClipboard } from "../../helpers/clipboard";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import type { Commands } from "../../hooks/useCommands";
 import type { WorkspaceTab } from "../../store/types";
 import { AgentChatView } from "./AgentChatView";
@@ -47,12 +48,31 @@ export function useTabContentRenderer({
               <MultiFileDiffViewer
                 files={tab.data.files}
                 onOpenFile={(filePath) => {
-                  cmd.openTab({
-                    workspaceId: tab.workspaceId,
-                    kind: "file",
-                    path: filePath,
-                    temporary: true,
-                  });
+                  // Pre-load the file content so the tab never renders the
+                  // placeholder body while the async read completes.
+                  void cmd
+                    .readFile({ workspaceId: tab.workspaceId, relativePath: filePath })
+                    .then((response) => {
+                      cmd.openTab({
+                        workspaceId: tab.workspaceId,
+                        kind: "file",
+                        path: filePath,
+                        content: response.content,
+                        temporary: true,
+                      });
+                    })
+                    .catch((error) => {
+                      // Diff files may not exist on disk anymore (added/deleted
+                      // entries). Open the tab anyway — the auto-refresh marks
+                      // it deleted when the file is really missing.
+                      console.error("Failed to pre-load workspace file from diff view", getErrorMessage(error));
+                      cmd.openTab({
+                        workspaceId: tab.workspaceId,
+                        kind: "file",
+                        path: filePath,
+                        temporary: true,
+                      });
+                    });
                 }}
               />
             </TabPanel>

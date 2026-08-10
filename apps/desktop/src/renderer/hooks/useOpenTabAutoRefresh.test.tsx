@@ -412,5 +412,67 @@ describe("useOpenTabAutoRefresh", () => {
 
       expect(commands.readFile).not.toHaveBeenCalled();
     });
+
+    it("marks newly-opened tabs deleted when the file does not exist", async () => {
+      const commands = createCommands();
+      commands.readFile.mockRejectedValueOnce(new Error("open src/b.ts: no such file or directory"));
+      const initialTabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+
+      const { rerender } = renderHook(
+        ({ tabs }) =>
+          useOpenTabAutoRefresh({
+            workspaceId: "workspace-1",
+            tabs,
+            commands,
+          }),
+        { initialProps: { tabs: initialTabs } },
+      );
+
+      await flushRefreshWork();
+      expect(commands.readFile).not.toHaveBeenCalled();
+
+      // Add a new tab pointing at a non-existent file (e.g. an agent-provided path).
+      const updatedTabs: RefreshableOpenTab[] = [
+        ...initialTabs,
+        { id: "file-2", kind: "file", path: "src/b.ts", isDirty: false },
+      ];
+      rerender({ tabs: updatedTabs });
+      await flushRefreshWork();
+
+      // The tab is marked deleted instead of showing mock placeholder content.
+      expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
+      expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
+        tabId: "file-2",
+        content: "",
+        deleted: true,
+      });
+    });
+
+    it("leaves non-not-found read failures to the event-driven refresh", async () => {
+      const commands = createCommands();
+      commands.readFile.mockRejectedValueOnce(new Error("connection closed"));
+      const initialTabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+
+      const { rerender } = renderHook(
+        ({ tabs }) =>
+          useOpenTabAutoRefresh({
+            workspaceId: "workspace-1",
+            tabs,
+            commands,
+          }),
+        { initialProps: { tabs: initialTabs } },
+      );
+
+      await flushRefreshWork();
+
+      const updatedTabs: RefreshableOpenTab[] = [
+        ...initialTabs,
+        { id: "file-2", kind: "file", path: "src/b.ts", isDirty: false },
+      ];
+      rerender({ tabs: updatedTabs });
+      await flushRefreshWork();
+
+      expect(commands.refreshFileTabFromDisk).not.toHaveBeenCalled();
+    });
   });
 });

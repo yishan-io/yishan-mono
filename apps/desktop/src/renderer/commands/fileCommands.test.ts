@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createFile,
   createFolder,
@@ -12,6 +12,7 @@ import {
   readExternalClipboardSourcePaths,
   readFile,
   renameEntry,
+  resolveChatFilePath,
   writeFile,
 } from "./fileCommands";
 
@@ -26,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   readExternalClipboardSourcePaths: vi.fn(),
   readFile: vi.fn(),
   renameEntry: vi.fn(),
+  searchFiles: vi.fn(),
   writeFile: vi.fn(),
 }));
 
@@ -41,6 +43,7 @@ vi.mock("../rpc/rpcTransport", () => ({
       readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
       readFile: mocks.readFile,
       renameEntry: mocks.renameEntry,
+      searchFiles: mocks.searchFiles,
       writeFile: mocks.writeFile,
     },
   })),
@@ -52,6 +55,10 @@ vi.mock("../rpc/rpcTransport", () => ({
 }));
 
 describe("fileCommands", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("forwards file command requests to file service", async () => {
     await listFiles({ workspaceId: "workspace-1", relativePath: "src", recursive: false });
     await listFilesBatch({
@@ -111,5 +118,73 @@ describe("fileCommands", () => {
     });
     expect(mocks.listDetectedExternalAppIds).toHaveBeenCalledTimes(1);
     expect(mocks.readExternalClipboardSourcePaths).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolveChatFilePath returns the exact file when it exists", async () => {
+    mocks.readFile.mockResolvedValueOnce({ content: "real content" });
+
+    const result = await resolveChatFilePath({ workspaceId: "workspace-1", relativePath: "src/a.ts" });
+
+    expect(result).toEqual({ status: "found", path: "src/a.ts", content: "real content" });
+    expect(mocks.searchFiles).not.toHaveBeenCalled();
+  });
+
+  it("resolveChatFilePath finds a unique suffix match when the referenced path does not exist", async () => {
+    mocks.readFile.mockRejectedValueOnce(new Error("no such file"));
+    mocks.searchFiles.mockResolvedValueOnce([
+      { path: "src/db/index.ts", score: 1, highlightedPathIndexes: [] },
+      { path: "src/other/index.ts", score: 2, highlightedPathIndexes: [] },
+    ]);
+    mocks.readFile.mockResolvedValueOnce({ content: "db content" });
+
+    const result = await resolveChatFilePath({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(mocks.searchFiles).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      query: "db/index.ts",
+      includeDirectories: false,
+    });
+    expect(result).toEqual({ status: "found", path: "src/db/index.ts", content: "db content" });
+  });
+
+  it("resolveChatFilePath reports not-found for ambiguous matches", async () => {
+    mocks.readFile.mockRejectedValueOnce(new Error("no such file"));
+    mocks.searchFiles.mockResolvedValueOnce([
+      { path: "src/db/index.ts", score: 1, highlightedPathIndexes: [] },
+      { path: "lib/db/index.ts", score: 2, highlightedPathIndexes: [] },
+    ]);
+
+    const result = await resolveChatFilePath({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(result).toEqual({ status: "not-found" });
+    expect(mocks.readFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolveChatFilePath reports unavailable on non-not-found read failures without searching", async () => {
+    mocks.readFile.mockRejectedValueOnce(new Error("connection closed"));
+
+    const result = await resolveChatFilePath({ workspaceId: "workspace-1", relativePath: "src/a.ts" });
+
+    expect(result).toEqual({ status: "unavailable" });
+    expect(mocks.searchFiles).not.toHaveBeenCalled();
+  });
+
+  it("resolveChatFilePath reports unavailable when the search fails", async () => {
+    mocks.readFile.mockRejectedValueOnce(new Error("no such file"));
+    mocks.searchFiles.mockRejectedValueOnce(new Error("connection closed"));
+
+    const result = await resolveChatFilePath({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(result).toEqual({ status: "unavailable" });
+  });
+
+  it("resolveChatFilePath reports unavailable when verifying the candidate fails", async () => {
+    mocks.readFile.mockRejectedValueOnce(new Error("no such file"));
+    mocks.searchFiles.mockResolvedValueOnce([{ path: "src/db/index.ts", score: 1, highlightedPathIndexes: [] }]);
+    mocks.readFile.mockRejectedValueOnce(new Error("connection closed"));
+
+    const result = await resolveChatFilePath({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(result).toEqual({ status: "unavailable" });
   });
 });

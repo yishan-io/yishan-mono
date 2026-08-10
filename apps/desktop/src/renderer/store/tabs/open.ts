@@ -217,14 +217,22 @@ function isTemporaryTab(tab: WorkspaceTab): boolean {
 }
 
 /**
- * Returns a reusable temporary tab in the target workspace.
+ * Returns a reusable temporary tab of the same kind in the target workspace.
  * When restrictToTabIds is provided, only considers tabs in that set
  * (i.e. only reuse a temp tab that belongs to the active pane).
  */
-function findTemporaryTab(tabs: WorkspaceTab[], workspaceId: string, restrictToTabIds?: string[]): WorkspaceTab | null {
+function findTemporaryTab(
+  tabs: WorkspaceTab[],
+  workspaceId: string,
+  restrictToTabIds?: string[],
+  kind?: WorkspaceTab["kind"],
+): WorkspaceTab | null {
   const restrictSet = restrictToTabIds ? new Set(restrictToTabIds) : null;
   for (const tab of tabs) {
     if (tab.workspaceId === workspaceId && isTemporaryTab(tab)) {
+      if (kind && tab.kind !== kind) {
+        continue;
+      }
       if (!restrictSet || restrictSet.has(tab.id)) {
         return tab;
       }
@@ -433,6 +441,7 @@ export function openTabState(
                   content: nextContent,
                   savedContent: nextContent,
                   isDirty: false,
+                  isDeleted: false,
                   isTemporary: isOpeningTemporary,
                   ...(isUnsupported ? { isUnsupported: true } : {}),
                   ...(unsupportedReason ? { unsupportedReason } : {}),
@@ -535,7 +544,7 @@ export function openTabState(
       input.kind === "diff") &&
     input.temporary
   ) {
-    const existing = findTemporaryTab(state.tabs, targetWorkspaceId, options?.activePaneTabIds);
+    const existing = findTemporaryTab(state.tabs, targetWorkspaceId, options?.activePaneTabIds, input.kind);
     if (existing) {
       const replacement = createTabFromOpenInput(input, targetWorkspaceId, existing.id);
       return {

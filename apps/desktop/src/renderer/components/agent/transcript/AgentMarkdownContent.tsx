@@ -1,13 +1,18 @@
 import { Box, Typography, useTheme } from "@mui/material";
-import { isAbsoluteUrl, resolveRelativePath } from "@renderer/components/markdown/markdownHelpers";
+import {
+  isAbsoluteUrl,
+  resolveRelativePath,
+  toWorkspaceRelativePath,
+} from "@renderer/components/markdown/markdownHelpers";
 import { markdownService } from "@renderer/components/markdown/markdownService";
 import { useMarkdownStyles } from "@renderer/components/markdown/markdownStyles";
 import { useCodeTheme } from "@renderer/hooks/useCodeTheme";
 import { editorSettingsStore } from "@renderer/store/settings/editorSettingsStore";
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
-import { openTab, openTabInOppositePane } from "../../../commands/tabCommands";
+import { openChatFileTab, openTab, openTabInOppositePane } from "../../../commands/tabCommands";
 import { selectFolderInFileTree } from "../../../commands/workspaceCommands";
+import { readWorkspaceStoreState } from "../../../commands/workspaceStoreHelpers";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 
 type AgentMarkdownContentProps = {
@@ -26,14 +31,51 @@ function getFileLineRangeSuffix(href: string): string {
   return href.match(FILE_LINE_RANGE_SUFFIX_RE)?.[0] ?? "";
 }
 
+/**
+ * Resolves the workspace owning a chat transcript by matching its cwd against
+ * workspace worktree paths. The longest matching prefix wins, so sessions whose
+ * cwd is a subdirectory of the worktree still map to the workspace root.
+ * Returns undefined when no workspace owns the transcript.
+ */
+function resolveChatWorkspace(workspacePath: string): { workspaceId: string; workspaceRoot: string } | undefined {
+  const { workspaces } = readWorkspaceStoreState();
+  let best: { workspaceId: string; workspaceRoot: string } | undefined;
+  for (const workspace of workspaces) {
+    const root = workspace.worktreePath;
+    if (!root) {
+      continue;
+    }
+    if (workspacePath !== root && !workspacePath.startsWith(`${root}/`)) {
+      continue;
+    }
+    if (!best || root.length > best.workspaceRoot.length) {
+      best = { workspaceId: workspace.id, workspaceRoot: root };
+    }
+  }
+  return best;
+}
+
 function openFileTab(href: string, workspacePath: string): void {
   const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
-  openTab({ kind: "file", path: resolvedPath });
+  const workspace = resolveChatWorkspace(workspacePath);
+  if (!workspace) {
+    // No known workspace owns this transcript — keep the legacy fallback open.
+    openTab({ kind: "file", path: toWorkspaceRelativePath(resolvedPath, workspacePath) });
+    return;
+  }
+  const relativePath = toWorkspaceRelativePath(resolvedPath, workspace.workspaceRoot);
+  void openChatFileTab({ workspaceId: workspace.workspaceId, relativePath });
 }
 
 function openFileTabInOppositePane(href: string, workspacePath: string): void {
   const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
-  openTabInOppositePane({ kind: "file", path: resolvedPath });
+  const workspace = resolveChatWorkspace(workspacePath);
+  if (!workspace) {
+    openTabInOppositePane({ kind: "file", path: toWorkspaceRelativePath(resolvedPath, workspacePath) });
+    return;
+  }
+  const relativePath = toWorkspaceRelativePath(resolvedPath, workspace.workspaceRoot);
+  void openChatFileTab({ workspaceId: workspace.workspaceId, relativePath, oppositePane: true });
 }
 
 const FILE_EXT_RE =
@@ -68,11 +110,8 @@ function looksLikeFolderPath(text: string): boolean {
 
 function openFolderInFileTree(href: string, workspacePath: string): void {
   const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
-  // Strip workspacePath prefix to get workspace-relative path expected by the file tree.
-  const relativePath = resolvedPath.startsWith(`${workspacePath}/`)
-    ? resolvedPath.slice(workspacePath.length + 1)
-    : resolvedPath;
-  selectFolderInFileTree(relativePath);
+  // Strip workspacePath prefix to get the workspace-relative path expected by the file tree.
+  selectFolderInFileTree(toWorkspaceRelativePath(resolvedPath, workspacePath));
 }
 
 /** Renders assistant response text as sanitized markdown HTML. */

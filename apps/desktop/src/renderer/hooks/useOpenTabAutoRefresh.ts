@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { startBackendEventPipeline, subscribeBackendEvent } from "../events/backendEventPipeline";
-import { getErrorMessage } from "../helpers/errorHelpers";
+import { getErrorMessage, isFileNotFoundError } from "../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import type { DiffTabSource } from "../store/types";
 import type { Commands } from "./useCommands";
@@ -58,18 +58,6 @@ function didPathChange(tabPath: string, changedRelativePaths?: string[]): boolea
     const normalizedChangedPath = normalizeRelativePath(changedPath);
     return Boolean(normalizedChangedPath) && isPathWithinOrEqual(normalizedTabPath, normalizedChangedPath);
   });
-}
-
-function isFileNotFoundError(error: unknown): boolean {
-  const message = getErrorMessage(error);
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("no such file") ||
-    normalized.includes("not exist") ||
-    normalized.includes("enoent") ||
-    normalized.includes("not a directory") ||
-    normalized.includes("notdir")
-  );
 }
 
 /** Keeps open file and diff tabs synced with backend file and git change events. */
@@ -318,8 +306,18 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
                 content: response.content,
                 deleted: false,
               });
-            } catch {
-              // Eager refresh is best-effort; failures are handled by event-driven refresh.
+            } catch (error) {
+              if (isFileNotFoundError(error)) {
+                // The referenced file does not exist in the workspace (e.g. an
+                // agent-provided path that is not real). Mark the tab deleted so
+                // it never shows the mock placeholder as if it were real content.
+                commands.refreshFileTabFromDisk({
+                  tabId: tab.id,
+                  content: "",
+                  deleted: true,
+                });
+              }
+              // Other failures are best-effort; the event-driven refresh is the fallback.
             }
           }
 

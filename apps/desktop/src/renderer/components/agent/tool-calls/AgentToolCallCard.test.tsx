@@ -579,7 +579,7 @@ describe("AgentToolCallCard", () => {
 
     expect(openTabMock).toHaveBeenCalledWith({
       kind: "file",
-      path: "/tmp/project/apps/cli/internal/daemon/process.go",
+      path: "apps/cli/internal/daemon/process.go",
     });
   });
 

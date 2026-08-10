@@ -140,3 +140,20 @@ export function resolveRelativePath(baseDir: string, relativePath: string): stri
   }
   return parts.join("/");
 }
+
+/**
+ * Converts a resolved path to its workspace-relative form when it lives under
+ * the given workspace path.
+ *
+ * File tabs, the file tree, and the daemon's file RPCs all use workspace-relative
+ * paths. Chat surfaces resolve paths against the absolute worktree path, so the
+ * prefix must be stripped before opening a file tab — otherwise the tab path is
+ * absolute and the daemon's safeJoin doubles it (ENOENT), leaving placeholder
+ * content in the tab forever.
+ */
+export function toWorkspaceRelativePath(resolvedPath: string, workspacePath: string): string {
+  if (!workspacePath || !resolvedPath.startsWith(`${workspacePath}/`)) {
+    return resolvedPath;
+  }
+  return resolvedPath.slice(workspacePath.length + 1);
+}

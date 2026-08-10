@@ -1,5 +1,6 @@
 import type { ExternalAppId, WorkspaceEntryAppId } from "../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../shared/contracts/rpcRequestTypes";
+import { isFileNotFoundError } from "../helpers/errorHelpers";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 
 const WORKSPACE_FILE_PROTOCOL_URL = "yishan-file://workspace-file";
@@ -56,6 +57,60 @@ export async function readFile(params: { workspaceId: string; relativePath: stri
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
+}
+
+/**
+ * Resolves one path referenced in chat to a real workspace file.
+ *
+ * The agent sometimes emits paths that are not real relative to the workspace
+ * root (e.g. it says `db/index.ts` while the file is at `src/db/index.ts`).
+ * Resolution order:
+ * 1. exact read at the given relative path;
+ * 2. daemon file search, keeping only candidates whose path ends with the
+ *    referenced path — a unique candidate is opened (verified by reading it).
+ * Returns `not-found` when the path cannot be resolved unambiguously, and
+ * `unavailable` for transient daemon/network failures (never guess a path for
+ * those).
+ */
+export type ChatFileResolution =
+  | { status: "found"; path: string; content: string }
+  | { status: "not-found" }
+  | { status: "unavailable" };
+
+export async function resolveChatFilePath(params: {
+  workspaceId: string;
+  relativePath: string;
+}): Promise<ChatFileResolution> {
+  try {
+    const response = await readFile({ workspaceId: params.workspaceId, relativePath: params.relativePath });
+    return { status: "found", path: params.relativePath, content: response.content };
+  } catch (error) {
+    if (!isFileNotFoundError(error)) {
+      return { status: "unavailable" };
+    }
+  }
+
+  try {
+    const results = await searchFiles({
+      workspaceId: params.workspaceId,
+      query: params.relativePath,
+      includeDirectories: false,
+    });
+    const normalizedRelativePath = params.relativePath.toLowerCase();
+    const candidates = results.filter((result) => result.path.toLowerCase().endsWith(normalizedRelativePath));
+    if (candidates.length !== 1) {
+      return { status: "not-found" };
+    }
+
+    const candidate = candidates[0];
+    if (!candidate) {
+      return { status: "not-found" };
+    }
+    const response = await readFile({ workspaceId: params.workspaceId, relativePath: candidate.path });
+    return { status: "found", path: candidate.path, content: response.content };
+  } catch {
+    return { status: "unavailable" };
+  }
 }
 
 /** Writes one file into one workspace worktree path. */
