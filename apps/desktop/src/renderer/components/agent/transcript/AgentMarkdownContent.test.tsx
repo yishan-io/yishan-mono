@@ -8,8 +8,10 @@ import { AgentMarkdownContent } from "./AgentMarkdownContent";
 const mocked = vi.hoisted(() => ({
   openTab: vi.fn(),
   openTabInOppositePane: vi.fn(),
+  openChatFileTab: vi.fn(),
   selectFolderInFileTree: vi.fn(),
   parse: vi.fn<(content: string) => Promise<string>>(),
+  workspaceState: { workspaces: [] as Array<{ id: string; worktreePath?: string | null }>, selectedWorkspaceId: "" },
 }));
 
 vi.mock("@renderer/components/markdown/markdownService", () => ({
@@ -21,6 +23,11 @@ vi.mock("@renderer/components/markdown/markdownService", () => ({
 vi.mock("../../../commands/tabCommands", () => ({
   openTab: mocked.openTab,
   openTabInOppositePane: mocked.openTabInOppositePane,
+  openChatFileTab: mocked.openChatFileTab,
+}));
+
+vi.mock("../../../commands/workspaceStoreHelpers", () => ({
+  readWorkspaceStoreState: () => mocked.workspaceState,
 }));
 
 vi.mock("../../../commands/workspaceCommands", () => ({
@@ -30,6 +37,8 @@ vi.mock("../../../commands/workspaceCommands", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mocked.workspaceState.workspaces = [];
+  mocked.workspaceState.selectedWorkspaceId = "";
 });
 
 describe("AgentMarkdownContent", () => {
@@ -77,7 +86,7 @@ describe("AgentMarkdownContent", () => {
 
     fireEvent.click(fileLink);
 
-    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: "/project/.github/pull_request_template.md" });
+    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: ".github/pull_request_template.md" });
   });
 
   it("still parses finalized markdown content", async () => {
@@ -158,8 +167,94 @@ describe("AgentMarkdownContent", () => {
     const fileLink = container.querySelector(".file-link") as HTMLElement;
     fireEvent.click(fileLink);
 
-    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: "/project/apps/desktop/src/index.ts" });
+    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: "apps/desktop/src/index.ts" });
     expect(mocked.selectFolderInFileTree).not.toHaveBeenCalled();
+  });
+
+  it("resolves chat file opens through the workspace before opening the tab", async () => {
+    mocked.workspaceState.workspaces = [{ id: "workspace-1", worktreePath: "/project" }];
+    mocked.workspaceState.selectedWorkspaceId = "workspace-1";
+    mocked.parse.mockResolvedValueOnce("<p><code>apps/desktop/src/index.ts</code></p>");
+
+    const { container } = renderWithAppTheme(
+      <AgentMarkdownContent content="`apps/desktop/src/index.ts`" workspacePath="/project" />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector(".file-link")).not.toBeNull();
+    });
+
+    const fileLink = container.querySelector(".file-link") as HTMLElement;
+    fireEvent.click(fileLink);
+
+    expect(mocked.openTab).not.toHaveBeenCalled();
+    expect(mocked.openChatFileTab).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      relativePath: "apps/desktop/src/index.ts",
+    });
+  });
+
+  it("resolves cmd+click chat file opens into the opposite pane", async () => {
+    mocked.workspaceState.workspaces = [{ id: "workspace-1", worktreePath: "/project" }];
+    mocked.workspaceState.selectedWorkspaceId = "workspace-1";
+    mocked.parse.mockResolvedValueOnce("<p><code>apps/desktop/src/index.ts</code></p>");
+
+    const { container } = renderWithAppTheme(
+      <AgentMarkdownContent content="`apps/desktop/src/index.ts`" workspacePath="/project" />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector(".file-link")).not.toBeNull();
+    });
+
+    const fileLink = container.querySelector(".file-link") as HTMLElement;
+    fireEvent.click(fileLink, { metaKey: true });
+
+    expect(mocked.openChatFileTab).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      relativePath: "apps/desktop/src/index.ts",
+      oppositePane: true,
+    });
+  });
+
+  it("maps subdirectory-cwd transcripts to the workspace root and re-relativizes paths", async () => {
+    mocked.workspaceState.workspaces = [{ id: "workspace-1", worktreePath: "/project" }];
+    mocked.workspaceState.selectedWorkspaceId = "workspace-1";
+    mocked.parse.mockResolvedValueOnce("<p><code>db/index.ts</code></p>");
+
+    const { container } = renderWithAppTheme(
+      <AgentMarkdownContent content="`db/index.ts`" workspacePath="/project/src" />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector(".file-link")).not.toBeNull();
+    });
+
+    const fileLink = container.querySelector(".file-link") as HTMLElement;
+    fireEvent.click(fileLink);
+
+    // Path was resolved against the subdir cwd, then re-based on the workspace root.
+    expect(mocked.openChatFileTab).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      relativePath: "src/db/index.ts",
+    });
+  });
+
+  it("falls back to a plain open when no workspace owns the transcript cwd", async () => {
+    mocked.workspaceState.workspaces = [{ id: "workspace-1", worktreePath: "/project" }];
+    mocked.parse.mockResolvedValueOnce("<p><code>src/a.ts</code></p>");
+
+    const { container } = renderWithAppTheme(<AgentMarkdownContent content="`src/a.ts`" workspacePath="/elsewhere" />);
+
+    await waitFor(() => {
+      expect(container.querySelector(".file-link")).not.toBeNull();
+    });
+
+    const fileLink = container.querySelector(".file-link") as HTMLElement;
+    fireEvent.click(fileLink);
+
+    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: "src/a.ts" });
+    expect(mocked.openChatFileTab).not.toHaveBeenCalled();
   });
 
   it("does not treat URLs as folders", async () => {
@@ -191,7 +286,7 @@ describe("AgentMarkdownContent", () => {
     const fileLink = container.querySelector(".file-link") as HTMLElement;
     fireEvent.click(fileLink);
 
-    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: "/project/.eslintrc" });
+    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: ".eslintrc" });
     expect(mocked.selectFolderInFileTree).not.toHaveBeenCalled();
   });
 

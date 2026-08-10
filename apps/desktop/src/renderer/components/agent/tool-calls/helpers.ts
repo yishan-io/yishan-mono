@@ -1,6 +1,6 @@
 import { getSingularPatch, parseDiffFromFile } from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs";
-import { resolveRelativePath } from "@renderer/components/markdown/markdownHelpers";
+import { resolveRelativePath, toWorkspaceRelativePath } from "@renderer/components/markdown/markdownHelpers";
 import { openTab } from "../../../commands/tabCommands";
 import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
 
@@ -289,7 +289,8 @@ export function parseMemorySearchMatches(resultText: string): MemorySearchMatch[
 
 /** Opens one grep match in the workspace file tab system. */
 export function openGrepFileMatch(filePath: string, workspacePath: string): void {
-  openTab({ kind: "file", path: resolveRelativePath(workspacePath, filePath) });
+  const resolvedPath = resolveRelativePath(workspacePath, filePath);
+  openTab({ kind: "file", path: toWorkspaceRelativePath(resolvedPath, workspacePath) });
 }
 
 /** Returns the badge color used for Agent tool statuses. */

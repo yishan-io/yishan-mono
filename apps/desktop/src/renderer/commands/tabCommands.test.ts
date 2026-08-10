@@ -16,6 +16,7 @@ import {
   closeTab,
   createTab,
   markFileTabSaved,
+  openChatFileTab,
   openTab,
   renameTab,
   reorderTab,
@@ -36,10 +37,15 @@ const rpcMocks = vi.hoisted(() => ({
   requestAgentChatComposerFocus: vi.fn(),
   requestNewAgentChatComposerFocus: vi.fn(),
   clearAgentChatComposerFocus: vi.fn(),
+  resolveChatFilePath: vi.fn(),
 }));
 
 vi.mock("./agentChatCommands", () => ({
   stopPiSession: rpcMocks.stopPiSession,
+}));
+
+vi.mock("./fileCommands", () => ({
+  resolveChatFilePath: rpcMocks.resolveChatFilePath,
 }));
 
 vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
@@ -884,5 +890,74 @@ describe("tabCommands", () => {
 
     expect(tabStore.getState().selectedTabId).toBe("tab-b");
     expect(tabStore.getState().tabs.some((tab) => tab.id === "tab-c")).toBe(false);
+  });
+
+  it("openChatFileTab opens the resolved file in the resolved workspace", async () => {
+    const openTabStateSpy = vi.fn();
+    tabStore.setState({ openTab: openTabStateSpy });
+    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({
+      status: "found",
+      path: "src/db/index.ts",
+      content: "db content",
+    });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(rpcMocks.resolveChatFilePath).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      relativePath: "db/index.ts",
+    });
+    expect(openTabStateSpy).toHaveBeenCalledWith(
+      { kind: "file", workspaceId: "workspace-1", path: "src/db/index.ts", content: "db content" },
+      expect.anything(),
+    );
+    expect(rpcMocks.enqueueWorkspaceErrorNotice).not.toHaveBeenCalled();
+  });
+
+  it("openChatFileTab opens in the opposite pane when requested", async () => {
+    const openTabStateSpy = vi.fn();
+    tabStore.setState({ openTab: openTabStateSpy });
+    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({
+      status: "found",
+      path: "src/a.ts",
+      content: "a",
+    });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "a.ts", oppositePane: true });
+
+    // No split layout exists in the test store — openTabInOppositePane falls
+    // back to a normal open, which must still carry the resolved workspace.
+    expect(openTabStateSpy).toHaveBeenCalledWith(
+      { kind: "file", workspaceId: "workspace-1", path: "src/a.ts", content: "a" },
+      expect.anything(),
+    );
+  });
+
+  it("openChatFileTab notifies when the referenced file does not exist", async () => {
+    const openTabStateSpy = vi.fn();
+    tabStore.setState({ openTab: openTabStateSpy });
+    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({ status: "not-found" });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(rpcMocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
+      title: "File not found",
+      message: "db/index.ts does not exist in this workspace.",
+    });
+    expect(openTabStateSpy).not.toHaveBeenCalled();
+  });
+
+  it("openChatFileTab notifies separately when the file could not be loaded", async () => {
+    const openTabStateSpy = vi.fn();
+    tabStore.setState({ openTab: openTabStateSpy });
+    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({ status: "unavailable" });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(rpcMocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
+      title: "Unable to open file",
+      message: "Could not load db/index.ts. Please try again.",
+    });
+    expect(openTabStateSpy).not.toHaveBeenCalled();
   });
 });
