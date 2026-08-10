@@ -157,6 +157,7 @@ function AgentMessageListComponent({
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const wasActiveRef = useRef(false);
   const hasRenderedTranscriptRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     const display = buildDisplayMessages(source);
@@ -196,9 +197,22 @@ function AgentMessageListComponent({
 
     savedScrollTopByTabId.set(tabId, element.scrollTop);
     savedRenderedItemCountByTabId.set(tabId, renderedItemCount);
-    wasPinnedToBottomByTabId.set(tabId, isScrolledNearBottom(element));
 
-    if (displayMessages.length > 0) {
+    const isProgrammaticScroll = programmaticScrollRef.current;
+    programmaticScrollRef.current = false;
+    // A programmatic scroll-to-bottom can land short of the true bottom while
+    // virtual rows are still unmeasured (estimate-sized); evaluating
+    // isScrolledNearBottom against the later re-measured scrollHeight would
+    // poison the pinned flag and stop the follow-scroll. Treat it as a pin.
+    if (isProgrammaticScroll) {
+      wasPinnedToBottomByTabId.set(tabId, true);
+    } else {
+      wasPinnedToBottomByTabId.set(tabId, isScrolledNearBottom(element));
+    }
+
+    // Programmatic pins always land at the bottom, so they never drive the
+    // scroll-to-bottom button; only user scrolls do.
+    if (!isProgrammaticScroll && displayMessages.length > 0) {
       setIsScrollToBottomVisible(!isScrolledNearBottom(element));
     }
   }, [displayMessages.length, renderedItemCount, tabId]);
@@ -208,9 +222,22 @@ function AgentMessageListComponent({
       return;
     }
 
+    // Already at the exact bottom: scrolling is a no-op, so no scroll event
+    // will fire to consume the programmatic marker. Skip entirely — leaving the
+    // marker set would misattribute the next user scroll as programmatic, and
+    // clearing it here would break the same-frame case where an earlier scroll
+    // that DID move still needs its own marker for the event it will dispatch.
+    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
+    if (element.scrollTop >= maxScrollTop - 1) {
+      wasPinnedToBottomByTabId.set(tabId, true);
+      return;
+    }
+
+    programmaticScrollRef.current = true;
+    wasPinnedToBottomByTabId.set(tabId, true);
     bottomSentinelRef.current?.scrollIntoView?.({ block: "end" });
     element.scrollTop = element.scrollHeight;
-  }, [renderedItemCount]);
+  }, [renderedItemCount, tabId]);
 
   const handleScrollToBottomClick = useCallback(() => {
     scrollToLatestMessage();
@@ -251,6 +278,9 @@ function AgentMessageListComponent({
 
     const isInitialTranscriptRender = !hasRenderedTranscriptRef.current;
     hasRenderedTranscriptRef.current = true;
+    if (!isActive) {
+      return;
+    }
     if (!isInitialTranscriptRender && !(wasPinnedToBottomByTabId.get(tabId) ?? true)) {
       return;
     }
@@ -262,7 +292,7 @@ function AgentMessageListComponent({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayMessages.length, scrollToLatestMessage, tabId]);
+  }, [displayMessages.length, scrollToLatestMessage, tabId, isActive]);
 
   useEffect(() => {
     const previousRenderedItemCount = previousRenderedItemCountRef.current;

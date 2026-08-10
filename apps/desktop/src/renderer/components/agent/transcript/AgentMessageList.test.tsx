@@ -344,6 +344,7 @@ describe("AgentMessageList", () => {
       scrollHeight: { value: 160, configurable: true },
       scrollTop: { value: 0, writable: true, configurable: true },
     });
+    // The user scrolls to the top of the transcript (away from the bottom).
     fireEvent.scroll(scrollContainer);
 
     rerender(
@@ -359,6 +360,130 @@ describe("AgentMessageList", () => {
     );
 
     expect(scrollContainer.scrollTop).toBe(0);
+  });
+
+  it("keeps following the stream after switching back to a pinned tab (programmatic scroll must not poison the pin)", () => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const initialMessages: AgentMessageType[] = [
+      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
+      { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] },
+    ];
+    const thirdMessage: AgentMessageType = {
+      id: "assistant-3",
+      role: "assistant",
+      content: [{ type: "text", text: "Third" }],
+    };
+    const fourthMessage: AgentMessageType = {
+      id: "assistant-4",
+      role: "assistant",
+      content: [{ type: "text", text: "Fourth" }],
+    };
+
+    const { rerender } = render(
+      <AgentMessageList tabId="tab-switch-back" isActive={false} messages={initialMessages} emptyPrompt="empty" />,
+    );
+
+    const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
+    Object.defineProperties(scrollContainer, {
+      clientHeight: { value: 80, configurable: true },
+      scrollHeight: { value: 1000, configurable: true },
+      scrollTop: { value: 0, writable: true, configurable: true },
+    });
+
+    // Content arrives while the tab is still inactive: the hidden surface must
+    // not scroll (the activation scroll on switch-back handles it).
+    rerender(
+      <AgentMessageList
+        tabId="tab-switch-back"
+        isActive={false}
+        messages={[...initialMessages, thirdMessage]}
+        emptyPrompt="empty"
+      />,
+    );
+    expect(scrollContainer.scrollTop).toBe(0);
+
+    // Switch back: the activation scroll lands at the (estimated) bottom.
+    rerender(
+      <AgentMessageList
+        tabId="tab-switch-back"
+        isActive
+        messages={[...initialMessages, thirdMessage]}
+        emptyPrompt="empty"
+      />,
+    );
+    expect(scrollContainer.scrollTop).toBe(1000);
+
+    // The browser dispatches the scroll event for the programmatic scroll; in
+    // the meantime the virtualizer re-measures the newly visible rows and the
+    // true bottom grows beyond the estimate.
+    Object.defineProperty(scrollContainer, "scrollHeight", { value: 1300, configurable: true });
+    fireEvent.scroll(scrollContainer);
+
+    // A new message arrives while the tab is active and pinned.
+    rerender(
+      <AgentMessageList
+        tabId="tab-switch-back"
+        isActive
+        messages={[...initialMessages, thirdMessage, fourthMessage]}
+        emptyPrompt="empty"
+      />,
+    );
+
+    // The pin must survive the programmatic scroll event; the list re-scrolls
+    // to the true bottom instead of staying short and scrolled up.
+    expect(scrollContainer.scrollTop).toBe(1300);
+  });
+
+  it("does not treat the first user scroll after a no-op activation scroll as programmatic", () => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const messages: AgentMessageType[] = [
+      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
+    ];
+
+    const { rerender } = render(
+      <AgentMessageList tabId="tab-noop-activation" isActive={false} messages={messages} emptyPrompt="empty" />,
+    );
+
+    const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
+    Object.defineProperties(scrollContainer, {
+      clientHeight: { value: 80, configurable: true },
+      scrollHeight: { value: 400, configurable: true },
+      // Already at the bottom (max = 400 - 80): the activation scroll is a no-op,
+      // so a real browser would not dispatch a scroll event for it.
+      scrollTop: { value: 320, writable: true, configurable: true },
+    });
+
+    // Switch back while already at the bottom: the activation scroll must not
+    // leave a programmatic marker behind for the next user scroll.
+    rerender(<AgentMessageList tabId="tab-noop-activation" isActive messages={messages} emptyPrompt="empty" />);
+    expect(scrollContainer.scrollTop).toBe(320);
+
+    // The user scrolls up; this must be evaluated as a user scroll (pinned=false).
+    Object.defineProperty(scrollContainer, "scrollTop", { value: 200, writable: true, configurable: true });
+    fireEvent.scroll(scrollContainer);
+
+    // A message arriving while the user is away from the bottom must not yank
+    // the view back to the bottom.
+    rerender(
+      <AgentMessageList
+        tabId="tab-noop-activation"
+        isActive
+        messages={[...messages, { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] }]}
+        emptyPrompt="empty"
+      />,
+    );
+
+    expect(scrollContainer.scrollTop).toBe(200);
   });
 
   it("scrolls to keep the working indicator visible when it appears on a pinned list", () => {
@@ -506,7 +631,7 @@ describe("AgentMessageList", () => {
       expect(screen.getByTestId("scroll-to-bottom-button")).toBeTruthy();
     });
 
-    it("scrolls to bottom when clicked", () => {
+    it("scrolls to bottom when clicked and keeps following while pinned", () => {
       vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
         callback(0);
         return 1;
@@ -518,7 +643,9 @@ describe("AgentMessageList", () => {
         { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
       ];
 
-      render(<AgentMessageList tabId="tab-scroll-btn-click" isActive messages={messages} emptyPrompt="empty" />);
+      const { rerender } = render(
+        <AgentMessageList tabId="tab-scroll-btn-click" isActive messages={messages} emptyPrompt="empty" />,
+      );
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -533,6 +660,21 @@ describe("AgentMessageList", () => {
 
       expect(scrollContainer.scrollTop).toBe(400);
       expect(screen.queryByTestId("scroll-to-bottom-button")).toBeNull();
+
+      // The click re-pins: content arriving while pinned keeps the list at the bottom.
+      Object.defineProperty(scrollContainer, "scrollHeight", { value: 500, configurable: true });
+      rerender(
+        <AgentMessageList
+          tabId="tab-scroll-btn-click"
+          isActive
+          messages={[
+            ...messages,
+            { id: "assistant-3", role: "assistant", content: [{ type: "text", text: "Line 3" }] },
+          ]}
+          emptyPrompt="empty"
+        />,
+      );
+      expect(scrollContainer.scrollTop).toBe(500);
     });
 
     it("hides when scrolled back to bottom manually", () => {
