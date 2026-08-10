@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"strconv"
 	"testing"
+	"time"
+
+	"yishan/apps/cli/internal/gitexec"
 )
 
 func TestBoundChangedPaths_OverflowSignalsFullRefresh(t *testing.T) {
@@ -42,7 +45,7 @@ func TestWorktreeWatcher_FileBurstOverflowSendsFullRefreshSignal(t *testing.T) {
 	hub := newEventHub()
 	watcher := &worktreeWatcher{
 		workspaceID: "workspace-1",
-		path:        "/tmp/repo",
+		path:        t.TempDir(),
 		sink:        eventHubWatcherSink{events: hub},
 	}
 
@@ -55,6 +58,86 @@ func TestWorktreeWatcher_FileBurstOverflowSendsFullRefreshSignal(t *testing.T) {
 	changedPaths := payload["changedRelativePaths"].([]string)
 	if changedPaths == nil || len(changedPaths) != 0 {
 		t.Fatalf("changedRelativePaths = %#v, want non-nil empty full-refresh signal", changedPaths)
+	}
+}
+
+func TestWorktreeWatcher_ScheduleFileEmitSkipsMissingWorktree(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		invalidate func(*testing.T, string)
+	}{
+		{name: "missing", invalidate: removeWorktree},
+		{name: "non-directory", invalidate: replaceWorktreeWithFile},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			worktreePath := t.TempDir()
+			hub := newEventHub()
+			watcher := &worktreeWatcher{
+				workspaceID: "workspace-1",
+				path:        worktreePath,
+				sink:        eventHubWatcherSink{events: hub},
+			}
+
+			watcher.scheduleFileEmit("src/file.go")
+			testCase.invalidate(t, worktreePath)
+
+			expectNoEvent(t, hub.events, watcherDebounce+100*time.Millisecond)
+		})
+	}
+}
+
+func TestWorktreeWatcher_ScheduleGitEmitSkipsMissingWorktree(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		invalidate func(*testing.T, string)
+	}{
+		{name: "missing", invalidate: removeWorktree},
+		{name: "non-directory", invalidate: replaceWorktreeWithFile},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			worktreePath := t.TempDir()
+			callbackPaths := make(chan string, 1)
+			hub := newEventHub()
+			watcher := &worktreeWatcher{
+				workspaceID: "workspace-1",
+				path:        worktreePath,
+				sink:        eventHubWatcherSink{events: hub},
+				gitRunner:   gitexec.DefaultRunner(),
+				onGitChanged: func(path string) {
+					callbackPaths <- path
+				},
+			}
+
+			watcher.scheduleGitEmit(true)
+			testCase.invalidate(t, worktreePath)
+
+			expectNoEvent(t, hub.events, watcherDebounce+100*time.Millisecond)
+			select {
+			case path := <-callbackPaths:
+				t.Fatalf("unexpected git callback for %q", path)
+			default:
+			}
+		})
+	}
+}
+
+func TestWorktreeWatcher_NotifyGitChangedSkipsMissingWorktree(t *testing.T) {
+	worktreePath := t.TempDir()
+	callbackPaths := make(chan string, 1)
+	watcher := &worktreeWatcher{
+		path: worktreePath,
+		onGitChanged: func(path string) {
+			callbackPaths <- path
+		},
+	}
+
+	removeWorktree(t, worktreePath)
+	watcher.notifyGitChanged()
+
+	select {
+	case path := <-callbackPaths:
+		t.Fatalf("unexpected git callback for %q", path)
+	case <-time.After(100 * time.Millisecond):
 	}
 }
 

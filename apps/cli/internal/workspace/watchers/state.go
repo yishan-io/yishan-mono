@@ -21,8 +21,13 @@ func nonRecursiveWatchPaths(entry *worktreeWatcher) []string {
 	return paths
 }
 
+func (w *worktreeWatcher) hasWorktreeDirectory() bool {
+	info, err := os.Stat(w.path)
+	return err == nil && info.IsDir()
+}
+
 func (w *worktreeWatcher) handleChangedPath(changedPath string) {
-	if time.Now().Before(w.readyAt) {
+	if !w.hasWorktreeDirectory() || time.Now().Before(w.readyAt) {
 		return
 	}
 
