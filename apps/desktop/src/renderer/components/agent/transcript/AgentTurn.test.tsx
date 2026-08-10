@@ -159,6 +159,41 @@ describe("AgentTurn", () => {
     expect(screen.getByText("Worked 42s")).toBeTruthy();
   });
 
+  it("keeps the finished Worked duration equal to the live elapsed boundary for a delegated turn", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+    const delegatedLiveTurn = buildTurn([
+      {
+        message: { ...toolCallMessage("deleg-a1", ["agent-delegate-1"]), startedAtMs: 1_000_000 },
+        isStreaming: true,
+      },
+    ]);
+    const { rerender } = render(<AgentTurn turn={delegatedLiveTurn} />);
+
+    expect(screen.getByText("working 0ms")).toBeTruthy();
+
+    act(() => {
+      vi.advanceTimersByTime(6_000);
+    });
+    expect(screen.getByText("working 6s")).toBeTruthy();
+
+    // The same assistant was extended through turn_end to exactly this
+    // boundary, so the completed header must not snap down.
+    const delegatedDoneTurn = buildTurn([
+      {
+        message: {
+          ...toolCallMessage("deleg-a1", ["agent-delegate-1"]),
+          startedAtMs: 1_000_000,
+          durationMs: 6_000,
+        },
+      },
+    ]);
+    rerender(<AgentTurn turn={delegatedDoneTurn} />);
+
+    expect(screen.getByText("Worked 6s")).toBeTruthy();
+    expect(screen.queryByText(/^working/)).toBeNull();
+  });
+
   it("expands by default and collapses the working content on header click", () => {
     const turn = buildTurn([
       {
