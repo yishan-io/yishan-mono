@@ -1,4 +1,4 @@
-import type { AgentContentBlock, AgentMessage, AgentModel } from "../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage, AgentModel, AgentSessionStats } from "../../store/agentChatTypes";
 
 const CHARS_PER_TOKEN = 4;
 const tokenCountFormatter = new Intl.NumberFormat("en-US");
@@ -62,6 +62,25 @@ export function buildAgentChatUsageSummaryLabel(
   currentModel: AgentModel | null,
 ): string | null {
   return buildAgentChatUsageSummary(messages, currentModel)?.label ?? null;
+}
+
+/**
+ * Context percent used for the compact-button threshold: the authoritative
+ * snapshot when present, otherwise the estimate over committed messages.
+ * Returns 0 when neither is available (snapshot absent and no model context
+ * window), which keeps the compact button safely disabled.
+ */
+export function getCompactContextPercent(
+  messages: AgentMessage[],
+  currentModel: AgentModel | null,
+  sessionStats: AgentSessionStats | null,
+): number {
+  const snapshotPercent = sessionStats?.contextUsage?.percent;
+  if (snapshotPercent != null) {
+    return snapshotPercent;
+  }
+
+  return buildAgentChatUsageSummary(messages, currentModel)?.contextPercent ?? 0;
 }
 
 function estimateAgentChatContextTokens(messages: AgentMessage[]): number {

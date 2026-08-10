@@ -1528,6 +1528,162 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-session-stats"]?.sessionStats).toEqual(statsData);
   });
 
+  it("clears session stats when a new agent run starts", () => {
+    agentChatStore.getState().initSession("tab-agent-start-stats", "session-agent-start-stats");
+    agentChatStore.getState().setSessionStats("tab-agent-start-stats", {
+      tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+      cost: 1.5,
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-agent-start-stats"]?.sessionStats).not.toBeNull();
+
+    handleAgentPiEvent({
+      sessionId: "session-agent-start-stats",
+      tabId: "tab-agent-start-stats",
+      workspaceId: "workspace-1",
+      event: { type: "agent_start" },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-agent-start-stats"]?.sessionStats).toBeNull();
+  });
+
+  it("clears session stats when a new turn starts", () => {
+    agentChatStore.getState().initSession("tab-turn-start-stats", "session-turn-start-stats");
+    agentChatStore.getState().setSessionStats("tab-turn-start-stats", {
+      tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+      cost: 1.5,
+    });
+
+    handleAgentPiEvent({
+      sessionId: "session-turn-start-stats",
+      tabId: "tab-turn-start-stats",
+      workspaceId: "workspace-1",
+      event: { type: "turn_start" },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-turn-start-stats"]?.sessionStats).toBeNull();
+  });
+
+  it("drops a stale get_session_stats response that lands after invalidation", async () => {
+    // Mirrors the auto-compaction path: compaction_end fires a stats refresh, then
+    // the retry's agent_start invalidates before the response arrives.
+    agentChatStore.getState().initSession("tab-stats-race", "session-stats-race");
+
+    await refreshAgentSessionStats("session-stats-race");
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "session-stats-race",
+      command: { type: "get_session_stats", id: "agent-chat-stats-1" },
+    });
+
+    handleAgentPiEvent({
+      sessionId: "session-stats-race",
+      tabId: "tab-stats-race",
+      workspaceId: "workspace-1",
+      event: { type: "agent_start" },
+    });
+
+    // The response to the pre-turn request (stats-1) arrives late; it must be
+    // dropped instead of repopulating stale stats mid-turn.
+    handleAgentPiEvent({
+      sessionId: "session-stats-race",
+      tabId: "tab-stats-race",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        id: "agent-chat-stats-1",
+        command: "get_session_stats",
+        success: true,
+        data: {
+          tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+          cost: 1.5,
+        },
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-stats-race"]?.sessionStats).toBeNull();
+
+    // A fresh refresh after the turn settles is accepted as usual.
+    handleAgentPiEvent({
+      sessionId: "session-stats-race",
+      tabId: "tab-stats-race",
+      workspaceId: "workspace-1",
+      event: { type: "agent_settled" },
+    });
+    await refreshAgentSessionStats("session-stats-race");
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "session-stats-race",
+      command: { type: "get_session_stats", id: "agent-chat-stats-4" },
+    });
+    handleAgentPiEvent({
+      sessionId: "session-stats-race",
+      tabId: "tab-stats-race",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        id: "agent-chat-stats-4",
+        command: "get_session_stats",
+        success: true,
+        data: {
+          tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+          cost: 1.5,
+        },
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-stats-race"]?.sessionStats).not.toBeNull();
+  });
+
+  it("rejects session stats responses while a turn is running", async () => {
+    // Mirrors a lifecycle reattach refresh issued mid-turn: the request carries the
+    // current sequence, so only the session-state guard can drop the stale response.
+    agentChatStore.getState().initSession("tab-stats-running", "session-stats-running");
+    handleAgentPiEvent({
+      sessionId: "session-stats-running",
+      tabId: "tab-stats-running",
+      workspaceId: "workspace-1",
+      event: { type: "agent_start" },
+    });
+
+    await refreshAgentSessionStats("session-stats-running");
+    handleAgentPiEvent({
+      sessionId: "session-stats-running",
+      tabId: "tab-stats-running",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        id: "agent-chat-stats-2",
+        command: "get_session_stats",
+        success: true,
+        data: {
+          tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+          cost: 1.5,
+        },
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-stats-running"]?.sessionStats).toBeNull();
+
+    // Once the run settles, the same response shape is accepted.
+    handleAgentPiEvent({
+      sessionId: "session-stats-running",
+      tabId: "tab-stats-running",
+      workspaceId: "workspace-1",
+      event: { type: "agent_settled" },
+    });
+    handleAgentPiEvent({
+      sessionId: "session-stats-running",
+      tabId: "tab-stats-running",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        id: "agent-chat-stats-3",
+        command: "get_session_stats",
+        success: true,
+        data: {
+          tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+          cost: 1.5,
+        },
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-stats-running"]?.sessionStats).not.toBeNull();
+  });
+
   it("updates the current model from a successful set_model response", () => {
     agentChatStore.getState().initSession("tab-model-success", "session-model-success");
 

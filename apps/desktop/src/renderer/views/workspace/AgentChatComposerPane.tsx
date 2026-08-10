@@ -27,17 +27,19 @@ import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../shortcuts/keybindings";
 import { agentChatStore } from "../../store/agentChatStore";
-import { type AgentModel, isAgentSessionBusy } from "../../store/agentChatTypes";
+import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../store/agentChatTypes";
 import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
 import { tabStore } from "../../store/tabStore";
 import { ProviderCredentialDialog } from "../settings/ProviderCredentialDialog";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
+import { getCompactContextPercent } from "./agentChatUsageSummary";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 const EMPTY_MODELS: AgentModel[] = [];
+const EMPTY_MESSAGES: AgentMessage[] = [];
 const MAX_FILE_MENTION_RESULTS = 50;
 
 type AgentChatComposerPaneProps = {
@@ -84,9 +86,17 @@ function AgentChatComposerPaneComponent({
   }, [shortcutOverrides, t]);
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
-  const contextPercent = agentChatStore(
-    (state) => state.sessionsByTabId[tabId]?.sessionStats?.contextUsage?.percent ?? 0,
-  );
+  // Primitive selector: falls back to the committed-messages estimate when the stats
+  // snapshot is absent (e.g. mid-turn or after a failed refresh), so the compact
+  // button keeps a usable threshold at idle without re-rendering on stream deltas.
+  const contextPercent = agentChatStore((state) => {
+    const session = state.sessionsByTabId[tabId];
+    return getCompactContextPercent(
+      session?.messages ?? EMPTY_MESSAGES,
+      session?.currentModel ?? null,
+      session?.sessionStats ?? null,
+    );
+  });
   const isSessionBusy = isAgentSessionBusy(sessionState);
   const canManuallyCompact = contextPercent >= 50;
   const [draft, setDraft] = useState("");

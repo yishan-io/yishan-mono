@@ -8,6 +8,7 @@ import { tabStore } from "../store/tabStore";
 import type { AgentChatSessionView } from "../store/types";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
 import {
+  clearAgentChatSessionStatsSequence,
   handleAgentPiEvent,
   refreshAgentSessionStats,
   registerAgentSession,
@@ -267,6 +268,9 @@ export async function stopPiSession(tabId: string): Promise<void> {
     }
 
     agentChatStore.getState().removeSession(tabId);
+    if (fallbackSessionId) {
+      clearAgentChatSessionStatsSequence(fallbackSessionId);
+    }
     return;
   }
 
@@ -280,6 +284,7 @@ export async function stopPiSession(tabId: string): Promise<void> {
 
   if (activePiSessions.get(tabId) !== session) {
     agentChatStore.getState().removeSession(tabId);
+    clearAgentChatSessionStatsSequence(session.sessionId);
     return;
   }
 
@@ -473,6 +478,7 @@ function releasePiSessionHandle(tabId: string, session: PiSessionHandle): void {
     activePiSessions.delete(tabId);
   }
   agentChatStore.getState().removeSession(tabId);
+  clearAgentChatSessionStatsSequence(session.sessionId);
 }
 
 async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Promise<void> {
@@ -491,4 +497,5 @@ async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Pr
     activePiSessions.delete(tabId);
   }
   agentChatStore.getState().removeSession(tabId);
+  clearAgentChatSessionStatsSequence(session.sessionId);
 }

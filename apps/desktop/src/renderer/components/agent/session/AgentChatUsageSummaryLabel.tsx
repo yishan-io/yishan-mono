@@ -45,6 +45,9 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
   const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
   const streamingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
   const sessionStats = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionStats ?? null);
+  // sessionStats is nulled at turn start (invalidateAgentSessionStats), so during a turn
+  // the ?? fallbacks below surface the live estimate built from messages + streamingMessage.
+  // Once the turn settles, agent_settled refreshes the authoritative snapshot again.
   const usageSummary = useMemo(() => {
     const messagesForUsage = streamingMessage ? [...messages, streamingMessage] : messages;
     return buildAgentChatUsageSummary(messagesForUsage, currentModel);
@@ -246,7 +249,12 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
         <Box component="span" sx={{ color: "text.disabled" }}>
           {contextCompactLabel}:
         </Box>
-        <Box component="span" sx={{ color: getUsageSummaryColor(contextPercent ?? 0, theme.palette.mode) }}>
+        <Box
+          component="span"
+          sx={{
+            color: getUsageSummaryColor(contextUsage?.tokens === null ? 0 : (contextPercent ?? 0), theme.palette.mode),
+          }}
+        >
           {` ${contextSummaryLabel.slice(4)}`}
         </Box>
         <Box component="span" sx={{ color: "text.disabled" }}>

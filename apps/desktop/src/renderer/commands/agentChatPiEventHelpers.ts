@@ -207,6 +207,12 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
       const responseID = typeof event.id === "string" ? event.id : undefined;
       const expectedID = `agent-chat-stats-${requestSequence}`;
       if (responseID !== expectedID) break;
+      // A stats snapshot is only meaningful while the session is idle. Responses landing
+      // during a run (e.g. a lifecycle reattach refresh issued mid-turn) reflect pre-turn
+      // data and would re-freeze the label on stale values. The post-compaction "?" still
+      // works: manual compaction settles to idle before its refresh response arrives.
+      const sessionState = agentChatStore.getState().sessionsByTabId[tabId]?.state;
+      if (sessionState === "running" || sessionState === "compacting") break;
       const stats = normalizeSessionStats(event.data);
       if (stats) {
         agentChatStore.getState().setSessionStats(tabId, stats);
@@ -246,6 +252,24 @@ export async function refreshAgentSessionStats(sessionId: string): Promise<void>
     sessionId,
     command: { type: "get_session_stats", id: `agent-chat-stats-${requestSequence}` },
   });
+}
+
+/**
+ * Marks the cached session stats stale when a new turn starts producing tokens.
+ *
+ * Nulls sessionStats so the usage label falls back to the live streaming
+ * estimate, and bumps the request sequence so any get_session_stats response
+ * that was in flight before the turn started is dropped by the id guard in
+ * handlePiResponse instead of repopulating stale data mid-turn.
+ */
+export function invalidateAgentSessionStats(tabId: string, sessionId: string): void {
+  statsRequestSequenceBySessionId.set(sessionId, (statsRequestSequenceBySessionId.get(sessionId) ?? 0) + 1);
+  agentChatStore.getState().setSessionStats(tabId, null);
+}
+
+/** Drops the request-sequence entry for a closed session to keep the map bounded. */
+export function clearAgentChatSessionStatsSequence(sessionId: string): void {
+  statsRequestSequenceBySessionId.delete(sessionId);
 }
 
 function normalizeSessionStats(value: unknown): AgentSessionStats | null {
@@ -350,6 +374,8 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "agent_start":
       agentChatStore.getState().setCompactionReason(tabId, null);
       agentChatStore.getState().setSessionState(tabId, "running");
+      // Session stats snapshot is stale from the moment a new run starts producing tokens.
+      invalidateAgentSessionStats(tabId, sessionId);
       break;
 
     case "agent_end":
@@ -487,6 +513,8 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
     case "turn_start":
       agentChatStore.getState().setTurnActive(tabId, true);
+      // Steering/follow-up turns within one run also produce new tokens; the snapshot is stale.
+      invalidateAgentSessionStats(tabId, sessionId);
       break;
 
     case "compaction_start":

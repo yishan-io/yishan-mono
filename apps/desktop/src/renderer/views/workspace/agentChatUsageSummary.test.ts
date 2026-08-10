@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
-import { buildAgentChatUsageSummaryLabel } from "./agentChatUsageSummary";
+import type { AgentMessage, AgentModel, AgentSessionStats } from "../../store/agentChatTypes";
+import { buildAgentChatUsageSummaryLabel, getCompactContextPercent } from "./agentChatUsageSummary";
 
 function buildModel(contextWindow?: number): AgentModel {
   return {
@@ -109,5 +109,72 @@ describe("buildAgentChatUsageSummaryLabel", () => {
 
   it("returns null when the current model does not expose a context window", () => {
     expect(buildAgentChatUsageSummaryLabel([], buildModel())).toBeNull();
+  });
+
+  it("grows the ctx estimate from a streaming assistant message on top of the last usage", () => {
+    const messages: AgentMessage[] = [
+      buildAssistantMessage({ totalTokens: 80, costTotal: 0.25 }),
+      {
+        id: "user-1",
+        role: "user",
+        content: "12345678",
+      },
+    ] as AgentMessage[];
+    const streamingMessage = {
+      id: "assistant-streaming",
+      role: "assistant",
+      content: [{ type: "text", text: "a".repeat(800) }],
+    } as AgentMessage;
+
+    // 80 (last usage) + 2 (user tail) + 200 (800 chars / 4) = 282.
+    expect(buildAgentChatUsageSummaryLabel([...messages, streamingMessage], buildModel(128_000))).toBe(
+      "ctx: 282/128K (0.2%), $0.25",
+    );
+
+    const longerStreamingMessage = {
+      id: "assistant-streaming",
+      role: "assistant",
+      content: [{ type: "text", text: "a".repeat(1600) }],
+    } as AgentMessage;
+
+    // 80 + 2 + 400 = 482.
+    expect(buildAgentChatUsageSummaryLabel([...messages, longerStreamingMessage], buildModel(128_000))).toBe(
+      "ctx: 482/128K (0.4%), $0.25",
+    );
+  });
+
+  it("fully char-estimates ctx when no assistant usage exists yet", () => {
+    const streamingMessage = {
+      id: "assistant-streaming",
+      role: "assistant",
+      content: [{ type: "text", text: "a".repeat(800) }],
+    } as AgentMessage;
+
+    expect(buildAgentChatUsageSummaryLabel([streamingMessage], buildModel(128_000))).toBe(
+      "ctx: 200/128K (0.2%), $0.00",
+    );
+  });
+});
+
+describe("getCompactContextPercent", () => {
+  const statsWithPercent = (percent: number): AgentSessionStats => ({
+    tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+    cost: 0.5,
+    contextUsage: { tokens: 100, contextWindow: 128_000, percent },
+  });
+
+  it("prefers the authoritative snapshot percent when present", () => {
+    const messages: AgentMessage[] = [buildAssistantMessage({ totalTokens: 80, costTotal: 0.25 })];
+    expect(getCompactContextPercent(messages, buildModel(128_000), statsWithPercent(91))).toBe(91);
+  });
+
+  it("falls back to the committed-messages estimate when the snapshot is absent", () => {
+    const messages: AgentMessage[] = [buildAssistantMessage({ totalTokens: 64_000, costTotal: 0.25 })];
+    expect(getCompactContextPercent(messages, buildModel(128_000), null)).toBe(50);
+  });
+
+  it("returns 0 when no snapshot and no model context window are available", () => {
+    const messages: AgentMessage[] = [buildAssistantMessage({ totalTokens: 64_000, costTotal: 0.25 })];
+    expect(getCompactContextPercent(messages, buildModel(), null)).toBe(0);
   });
 });
