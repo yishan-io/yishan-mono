@@ -715,7 +715,8 @@
           },
           "edit": {
             "officialHint": "这是官方智能体。保存将覆盖官方定义，随时可以恢复。",
-            "contentLabel": "定义（frontmatter + 提示词）"
+            "contentLabel": "提示词",
+            "descriptionLabel": "描述"
           },
           "overwrite": {
             "title": "覆盖官方智能体",
@@ -735,7 +736,10 @@
           "modelThinking": {
             "thinkingUnsupported": "\"{{level}}\" 不受 {{model}} 支持 — pi 将使用 \"{{clamped}}\"",
             "supportedLevels": "{{model}} 支持的思考级别：{{levels}}"
-          }
+          },
+          "toolsLabel": "工具",
+          "toolsPlaceholder": "添加工具",
+          "toolsHelp": "该智能体可使用的工具。输入名称后按回车；支持扩展工具。"
         },
         "errors": {
           "nameRequired": "请输入智能体名称。",

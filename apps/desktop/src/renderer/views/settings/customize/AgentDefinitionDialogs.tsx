@@ -9,189 +9,26 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
-import { listAgentModels } from "../../../commands/agentCommands";
 import {
   createAgentDefinition,
   getAgentDefinitionDetail,
   updateAgentDefinition,
 } from "../../../commands/customizeCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
-import { AgentModelSelector } from "../../../components/agent/session/AgentModelSelector";
-import {
-  clampThinkingLevel,
-  formatSupportedThinkingLevels,
-  isThinkingLevelSupported,
-} from "../../../helpers/agentThinkingLevels";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../rpc/daemonTypes";
-import type { AgentModel } from "../../../store/agentChatTypes";
-import { applyFrontmatterModelThinking } from "./agentDefinitionFrontmatter";
-
-type ModelThinkingSelectorProps = {
-  model: string;
-  thinking: string;
-  onModelChange: (model: string) => void;
-  onThinkingChange: (thinking: string) => void;
-};
-
-// AGENT_MODEL_KIND is the pi runtime agent kind used to list available models.
-const AGENT_MODEL_KIND = "pi";
-
-/**
- * Finds the fetched model entry that best matches a frontmatter model value.
- * The md file may write the model with or without the provider prefix (e.g.
- * "claude-sonnet-4-5", "anthropic/claude-sonnet-4-5", or
- * "openrouter/anthropic/claude-sonnet-4-5"), so exact id matching alone
- * would leave the picker showing a raw synthetic entry. Match the exact id
- * first, then the bare model key (everything after the first slash).
- */
-function findMatchingModel(modelId: string, models: AgentModel[]): AgentModel | null {
-  const trimmed = modelId.trim();
-  if (trimmed === "") {
-    return null;
-  }
-  const exact = models.find((candidate) => candidate.id === trimmed);
-  if (exact) {
-    return exact;
-  }
-  const modelKey = trimmed.includes("/") ? trimmed.slice(trimmed.indexOf("/") + 1) : trimmed;
-  return (
-    models.find((candidate) => candidate.id === modelKey) ??
-    models.find((candidate) => candidate.id.endsWith(`/${modelKey}`)) ??
-    null
-  );
-}
-
-/**
- * Extracts the provider prefix from a model id. Returns undefined when the id
- * has no provider prefix (e.g. "gpt-5.6-terra") so the shared picker falls
- * back to its "other" group instead of treating the whole id as a provider.
- */
-function inferModelProvider(modelId: string): string | undefined {
-  const slashIndex = modelId.indexOf("/");
-  if (slashIndex <= 0) {
-    return undefined;
-  }
-  return modelId.slice(0, slashIndex).trim().toLowerCase();
-}
-
-/**
- * Reuses the agent chat composer's model list + thinking level control so
- * agent definitions pick from the same provider-grouped model menu. The
- * selected model id is stored in the definition frontmatter; thinking cycles
- * through pi's levels. An empty thinking means "inherit" (field omitted).
- */
-function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChange }: ModelThinkingSelectorProps) {
-  const { t } = useTranslation();
-  const [models, setModels] = useState<AgentModel[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    listAgentModels(AGENT_MODEL_KIND)
-      .then((result) => {
-        if (cancelled) return;
-        setModels(
-          result.models.map((entry) => {
-            const provider = inferModelProvider(entry.id);
-            return provider
-              ? {
-                  id: entry.id,
-                  name: entry.name,
-                  provider,
-                  reasoning: entry.reasoning,
-                  thinkingLevelMap: entry.thinkingLevelMap,
-                }
-              : {
-                  id: entry.id,
-                  name: entry.name,
-                  reasoning: entry.reasoning,
-                  thinkingLevelMap: entry.thinkingLevelMap,
-                };
-          }),
-        );
-      })
-      .catch(() => {
-        // Model list unavailable: the selector still renders so thinking can
-        // be cycled; the model menu stays empty.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // The md file may define the model with or without the provider prefix
-  // (e.g. "claude-sonnet-4-5", "anthropic/claude-sonnet-4-5", or
-  // "openrouter/anthropic/claude-sonnet-4-5"), so the seeded value is matched
-  // leniently against the fetched list: exact id first, then by the model key
-  // (the part after the first slash).
-  const matchedModel = useMemo(() => (model === "" ? null : findMatchingModel(model, models)), [model, models]);
-
-  // When the seeded model matches nothing in the fetched list (provider
-  // removed, or list fetch failed), surface it as a synthetic option so the
-  // configured value stays visible instead of showing a bare "Select model".
-  // Provider is left unset so the shared picker infers it (prefix -> provider,
-  // otherwise "other").
-  const effectiveModels = useMemo(() => {
-    if (model !== "" && !matchedModel) {
-      return [{ id: model, name: model }, ...models];
-    }
-    return models;
-  }, [matchedModel, model, models]);
-
-  const currentModel = useMemo(
-    () => matchedModel ?? effectiveModels.find((candidate) => candidate.id === model) ?? null,
-    [effectiveModels, matchedModel, model],
-  );
-
-  const handleThinkingSelect = useCallback(
-    (level: string) => {
-      onThinkingChange(level);
-    },
-    [onThinkingChange],
-  );
-
-  const thinkingWarning = useMemo(() => {
-    // Only warn when the model's real capability map is known; the full-list
-    // fallback for models without map data must never be presented as fact.
-    if (thinking === "" || !currentModel?.thinkingLevelMap || isThinkingLevelSupported(thinking, currentModel)) {
-      return null;
-    }
-    const clamped = clampThinkingLevel(thinking, currentModel);
-    return t("settings.customize.agents.dialogs.modelThinking.thinkingUnsupported", {
-      level: thinking,
-      model: currentModel.name,
-      clamped,
-    });
-  }, [currentModel, t, thinking]);
-
-  return (
-    <Box>
-      <AgentModelSelector
-        models={effectiveModels}
-        currentModel={currentModel}
-        thinkingLevel={thinking}
-        onModelChange={(nextModel) => onModelChange(nextModel.id)}
-        onThinkingLevelSelect={handleThinkingSelect}
-      />
-      {thinkingWarning ? (
-        <Typography variant="caption" sx={{ color: "warning.main", display: "block", mt: 0.5 }}>
-          {thinkingWarning}
-        </Typography>
-      ) : null}
-      {currentModel?.thinkingLevelMap ? (
-        <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.25 }}>
-          {t("settings.customize.agents.dialogs.modelThinking.supportedLevels", {
-            model: currentModel.name,
-            levels: formatSupportedThinkingLevels(currentModel),
-          })}
-        </Typography>
-      ) : null}
-    </Box>
-  );
-}
+import { FieldLabel } from "./AgentDefinitionFieldLabel";
+import { AgentToolsEditor, sameToolList } from "./AgentToolsEditor";
+import { ModelThinkingSelector } from "./ModelThinkingSelector";
+import {
+  type AgentFrontmatterChanges,
+  applyFrontmatterMetadata,
+  replaceAgentBody,
+  splitAgentBody,
+} from "./agentDefinitionFrontmatter";
 
 type AgentDetailDialogProps = {
   agent: AgentDefinitionInfo;
@@ -199,15 +36,28 @@ type AgentDetailDialogProps = {
   onChanged: (messageKey: string) => void;
 };
 
+/**
+ * Edit dialog for one agent definition. The frontmatter metadata (description,
+ * model, thinking, tools) is managed through structured fields and the
+ * markdown editor shows only the prompt body — never the frontmatter. On save
+ * the dialog rebuilds the definition file from the structured fields + body,
+ * rewriting only the fields the user changed so untouched frontmatter lines
+ * stay verbatim.
+ */
 export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDialogProps) {
   const { t } = useTranslation();
   const [detail, setDetail] = useState<AgentDefinitionDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [content, setContent] = useState("");
+  const [body, setBody] = useState("");
+  const [description, setDescription] = useState("");
   const [model, setModel] = useState("");
   const [thinking, setThinking] = useState("");
+  const [tools, setTools] = useState<string[]>([]);
+  const [initialBody, setInitialBody] = useState("");
+  const [initialDescription, setInitialDescription] = useState("");
   const [initialModel, setInitialModel] = useState("");
   const [initialThinking, setInitialThinking] = useState("");
+  const [initialTools, setInitialTools] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
@@ -218,11 +68,17 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
       .then((result) => {
         if (cancelled) return;
         setDetail(result);
-        setContent(result.content);
+        const nextBody = splitAgentBody(result.content);
+        setBody(nextBody);
+        setDescription(result.description);
         setModel(result.model);
         setThinking(result.thinking);
+        setTools(result.tools);
+        setInitialBody(nextBody);
+        setInitialDescription(result.description);
         setInitialModel(result.model);
         setInitialThinking(result.thinking);
+        setInitialTools(result.tools);
       })
       .catch((error) => {
         if (!cancelled) {
@@ -235,18 +91,37 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
   }, [agent.name]);
 
   const handleSave = async () => {
+    if (!detail) {
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     try {
-      // Fold the selector's model/thinking into the definition frontmatter
-      // only when the user explicitly changed the selector; otherwise the
-      // frontmatter (as edited) stays authoritative and is never rewritten
-      // with the seeded effective value.
-      const selectorChanged = model.trim() !== initialModel || thinking !== initialThinking;
-      await updateAgentDefinition({
-        name: agent.name,
-        content: selectorChanged ? applyFrontmatterModelThinking(content, model.trim(), thinking) : content,
-      });
+      // Rebuild the definition file from the structured fields + body. Only
+      // fields the user actually changed are folded into the frontmatter;
+      // otherwise the file (as edited) stays authoritative and is never
+      // rewritten with the seeded effective values.
+      const changes: AgentFrontmatterChanges = {};
+      if (description.trim() !== initialDescription) {
+        changes.description = description;
+      }
+      if (model.trim() !== initialModel) {
+        changes.model = model;
+      }
+      if (thinking !== initialThinking) {
+        changes.thinking = thinking;
+      }
+      if (!sameToolList(tools, initialTools)) {
+        changes.tools = tools;
+      }
+      let content = detail.content;
+      if (Object.keys(changes).length > 0) {
+        content = applyFrontmatterMetadata(content, changes);
+      }
+      if (body !== initialBody) {
+        content = replaceAgentBody(content, body);
+      }
+      await updateAgentDefinition({ name: agent.name, content });
       onChanged("settings.customize.agents.messages.updated");
       onClose();
     } catch (error) {
@@ -268,30 +143,61 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
         {loadError ? <Alert severity="error">{loadError}</Alert> : null}
         {detail ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {detail.description}
-            </Typography>
             {agent.official ? (
               <Alert severity="info">{t("settings.customize.agents.dialogs.edit.officialHint")}</Alert>
             ) : null}
+            <Box>
+              <FieldLabel>{t("settings.customize.agents.dialogs.edit.descriptionLabel")}</FieldLabel>
+              <TextField
+                multiline
+                minRows={2}
+                maxRows={4}
+                fullWidth
+                value={description}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                }}
+                slotProps={{
+                  htmlInput: {
+                    "aria-label": t("settings.customize.agents.dialogs.edit.descriptionLabel"),
+                  },
+                }}
+              />
+            </Box>
             <ModelThinkingSelector
               model={model}
               thinking={thinking}
               onModelChange={setModel}
               onThinkingChange={setThinking}
             />
-            <TextField
-              label={t("settings.customize.agents.dialogs.edit.contentLabel")}
-              multiline
-              minRows={14}
-              maxRows={28}
-              fullWidth
-              value={content}
-              onChange={(event) => {
-                setContent(event.target.value);
-              }}
-              sx={{ fontFamily: "monospace" }}
-            />
+            <Box>
+              <FieldLabel>{t("settings.customize.agents.dialogs.toolsLabel")}</FieldLabel>
+              <AgentToolsEditor
+                tools={tools}
+                onChange={(nextTools) => {
+                  setTools(nextTools);
+                }}
+              />
+            </Box>
+            <Box>
+              <FieldLabel>{t("settings.customize.agents.dialogs.edit.contentLabel")}</FieldLabel>
+              <TextField
+                multiline
+                minRows={8}
+                maxRows={16}
+                fullWidth
+                value={body}
+                onChange={(event) => {
+                  setBody(event.target.value);
+                }}
+                sx={{ fontFamily: "monospace" }}
+                slotProps={{
+                  htmlInput: {
+                    "aria-label": t("settings.customize.agents.dialogs.edit.contentLabel"),
+                  },
+                }}
+              />
+            </Box>
             {saveError ? <Alert severity="error">{saveError}</Alert> : null}
           </Box>
         ) : loadError ? null : (
@@ -357,6 +263,7 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
   const [description, setDescription] = useState("");
   const [model, setModel] = useState("");
   const [thinking, setThinking] = useState("medium");
+  const [tools, setTools] = useState<string[]>([]);
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -383,6 +290,7 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
         content,
         model: model.trim(),
         thinking,
+        tools,
       });
       onCreated();
       onClose();
@@ -398,41 +306,73 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
       <DialogTitle>{t("settings.customize.agents.dialogs.create.title")}</DialogTitle>
       <DialogContent dividers>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField
-            autoFocus
-            label={t("settings.customize.agents.dialogs.create.nameLabel")}
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-            }}
-            helperText={t("settings.customize.agents.dialogs.create.nameHelp")}
-          />
-          <TextField
-            label={t("settings.customize.agents.dialogs.create.descriptionLabel")}
-            value={description}
-            onChange={(event) => {
-              setDescription(event.target.value);
-            }}
-          />
+          <Box>
+            <FieldLabel>{t("settings.customize.agents.dialogs.create.nameLabel")}</FieldLabel>
+            <TextField
+              autoFocus
+              fullWidth
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+              }}
+              helperText={t("settings.customize.agents.dialogs.create.nameHelp")}
+              slotProps={{
+                htmlInput: {
+                  "aria-label": t("settings.customize.agents.dialogs.create.nameLabel"),
+                },
+              }}
+            />
+          </Box>
+          <Box>
+            <FieldLabel>{t("settings.customize.agents.dialogs.create.descriptionLabel")}</FieldLabel>
+            <TextField
+              fullWidth
+              value={description}
+              onChange={(event) => {
+                setDescription(event.target.value);
+              }}
+              slotProps={{
+                htmlInput: {
+                  "aria-label": t("settings.customize.agents.dialogs.create.descriptionLabel"),
+                },
+              }}
+            />
+          </Box>
           <ModelThinkingSelector
             model={model}
             thinking={thinking}
             onModelChange={setModel}
             onThinkingChange={setThinking}
           />
-          <TextField
-            label={t("settings.customize.agents.dialogs.create.contentLabel")}
-            multiline
-            minRows={12}
-            maxRows={24}
-            fullWidth
-            value={content}
-            onChange={(event) => {
-              setContent(event.target.value);
-            }}
-            placeholder={t("settings.customize.agents.dialogs.create.contentPlaceholder")}
-            sx={{ fontFamily: "monospace" }}
-          />
+          <Box>
+            <FieldLabel>{t("settings.customize.agents.dialogs.toolsLabel")}</FieldLabel>
+            <AgentToolsEditor
+              tools={tools}
+              onChange={(nextTools) => {
+                setTools(nextTools);
+              }}
+            />
+          </Box>
+          <Box>
+            <FieldLabel>{t("settings.customize.agents.dialogs.create.contentLabel")}</FieldLabel>
+            <TextField
+              multiline
+              minRows={8}
+              maxRows={16}
+              fullWidth
+              value={content}
+              onChange={(event) => {
+                setContent(event.target.value);
+              }}
+              placeholder={t("settings.customize.agents.dialogs.create.contentPlaceholder")}
+              sx={{ fontFamily: "monospace" }}
+              slotProps={{
+                htmlInput: {
+                  "aria-label": t("settings.customize.agents.dialogs.create.contentLabel"),
+                },
+              }}
+            />
+          </Box>
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Box>
       </DialogContent>
