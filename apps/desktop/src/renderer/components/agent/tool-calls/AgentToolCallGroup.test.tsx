@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage } from "../../../store/agentChatTypes";
 import type { TurnWorkingBlock } from "../transcript/turnModel";
-import { AgentToolCallGroup } from "./AgentToolCallGroup";
+import { AgentToolCallGroup, buildLiveHeaderGradient } from "./AgentToolCallGroup";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -208,5 +208,46 @@ describe("AgentToolCallGroup", () => {
 
     expect(screen.getByTestId("thinking-block").textContent).toBe("just thinking");
     expect(screen.queryByTestId("agent-tool-call-group-header")).toBeNull();
+  });
+
+  it("marks the header text as live while the stack has running blocks", () => {
+    render(
+      <AgentToolCallGroup
+        id="g-live-header"
+        blocks={[toolCallBlock("r1"), thinkingBlock("t1", "still thinking", true)]}
+        showRunningBlocks
+      />,
+    );
+
+    const headerText = screen.getByTestId("agent-tool-call-group-header-text");
+    expect(headerText.textContent).toBe("1 file read");
+    expect(screen.getByTestId("agent-tool-call-group-live")).toBeTruthy();
+    const liveStyles = getComputedStyle(headerText);
+    // jsdom normalizes `transparent` to rgba(0, 0, 0, 0) and does not expand
+    // the animation shorthand into animation-name, so assert the shorthand.
+    expect(liveStyles.color).toBe("rgba(0, 0, 0, 0)");
+    expect(liveStyles.backgroundClip).toBe("text");
+    expect(liveStyles.animation).toContain("tool-stack-gradient");
+  });
+
+  it("keeps the header text muted when the stack has no running blocks", () => {
+    render(
+      <AgentToolCallGroup
+        id="g-done-header"
+        blocks={[toolCallBlock("r1", "read", resultMessage("r1-res"))]}
+        showRunningBlocks
+      />,
+    );
+
+    const headerText = screen.getByTestId("agent-tool-call-group-header-text");
+    expect(headerText.textContent).toBe("1 file read");
+    const doneStyles = getComputedStyle(headerText);
+    expect(doneStyles.color).not.toBe("transparent");
+    expect(doneStyles.animation).not.toContain("tool-stack-gradient");
+  });
+
+  it("builds a theme-aware animated gradient for the live header", () => {
+    expect(buildLiveHeaderGradient("#9f5f06")).toBe("linear-gradient(90deg, #9f5f06, #f0a229, #9f5f06)");
+    expect(buildLiveHeaderGradient("#9ddb72")).toBe("linear-gradient(90deg, #9ddb72, #f0a229, #9ddb72)");
   });
 });

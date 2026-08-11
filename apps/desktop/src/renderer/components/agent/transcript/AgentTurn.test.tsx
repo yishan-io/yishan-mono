@@ -300,6 +300,29 @@ describe("AgentTurn", () => {
     expect(screen.getByTestId("markdown-content").textContent).toBe("here is the answer");
   });
 
+  it("keeps the last message thinking inside the tool group while it still has tool calls", () => {
+    const turn = buildTurn([
+      {
+        message: {
+          id: "live-a1",
+          role: "assistant",
+          content: [
+            { type: "thinking", thinking: "planning…" },
+            { type: "toolCall", id: "read-call", name: "read", arguments: { path: "src/a.ts" } },
+          ],
+        },
+        isStreaming: true,
+      },
+    ]);
+
+    render(<AgentTurn turn={turn} />);
+
+    const group = screen.getByTestId("tool-call-group");
+    expect(group.textContent).toContain("thinking:live-a1-thinking-0");
+    expect(group.textContent).toContain("read-call");
+    expect(screen.queryByTestId("summary-thinking")).toBeNull();
+  });
+
   it("does not render any user message content", () => {
     const turn = buildTurn([{ message: assistantMessage("um-a1", { durationMs: 1000 }) }]);
 
