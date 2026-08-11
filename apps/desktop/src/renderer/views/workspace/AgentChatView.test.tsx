@@ -1111,6 +1111,51 @@ describe("AgentChatView", () => {
     store.removeSession("parent-tab");
   });
 
+  it("shows the child model in a subagent footer instead of falling back to the parent model", () => {
+    const parentModel: AgentModel = {
+      id: "anthropic/claude-opus-4",
+      name: "Claude Opus 4",
+      provider: "Anthropic",
+    };
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    const store = agentChatStore.getState();
+    store.initSession("tab-1", "session-1");
+    store.initSession("parent-tab", "parent-session-1");
+    store.setCurrentModel("parent-tab", parentModel);
+    store.setCurrentModel("tab-1", {
+      id: "deepseek/deepseek-chat",
+      name: "DeepSeek Chat",
+      provider: "deepseek",
+      reasoning: false,
+      contextWindow: 64000,
+    });
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    expect(screen.getByText("Model: deepseek / DeepSeek Chat")).toBeTruthy();
+
+    store.removeSession("parent-tab");
+  });
+
   it("shows the child session thinking level in a subagent footer", () => {
     mocked.stateRef.current.tabs = [
       {

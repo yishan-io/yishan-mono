@@ -1,6 +1,6 @@
 import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../helpers/agentChatBudget";
 import { agentChatStore } from "../store/agentChatStore";
-import type { AgentMessage } from "../store/agentChatTypes";
+import type { AgentMessage, AgentModel } from "../store/agentChatTypes";
 import { tabStore } from "../store/tabStore";
 import { isRecord, normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
 
@@ -10,6 +10,7 @@ type SubagentLiveTranscript = {
   childSessionId: string;
   messages: AgentMessage[];
   thinkingLevel?: string;
+  model?: AgentModel;
 };
 
 export function parseSubagentProgressTargets(
@@ -81,10 +82,11 @@ export function parseSubagentLiveTranscripts(event: Record<string, unknown>): Su
       if (!agent || typeof agent !== "object") {
         return [];
       }
-      const { childSessionId, messages, thinkingLevel } = agent as {
+      const { childSessionId, messages, thinkingLevel, model } = agent as {
         childSessionId?: unknown;
         messages?: unknown;
         thinkingLevel?: unknown;
+        model?: unknown;
       };
       if (typeof childSessionId !== "string" || childSessionId.trim().length === 0 || !Array.isArray(messages)) {
         return [];
@@ -101,6 +103,7 @@ export function parseSubagentLiveTranscripts(event: Record<string, unknown>): Su
           childSessionId,
           messages: normalizedMessages,
           thinkingLevel: typeof thinkingLevel === "string" ? thinkingLevel : undefined,
+          model: parseLiveTranscriptModel(model),
         },
       ];
     });
@@ -134,7 +137,39 @@ export function applySubagentLiveTranscripts(parentTabId: string, transcripts: S
     if (transcript.thinkingLevel) {
       agentChatStore.getState().setThinkingLevel(detailTab.id, transcript.thinkingLevel);
     }
+    if (transcript.model) {
+      agentChatStore.getState().setCurrentModel(detailTab.id, transcript.model);
+    }
   }
+}
+
+/**
+ * Normalizes the child-session model subset from the live-transcript widget.
+ * Accepts only an object with non-empty string id/name (matching what the
+ * subagent-detail footer renders); anything else is ignored so a malformed
+ * payload cannot surface "Model: undefined" in the footer.
+ */
+function parseLiveTranscriptModel(value: unknown): AgentModel | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const id = value.id;
+  const name = value.name;
+  if (typeof id !== "string" || id.trim().length === 0) {
+    return undefined;
+  }
+  if (typeof name !== "string" || name.trim().length === 0) {
+    return undefined;
+  }
+
+  return {
+    id,
+    name,
+    provider: typeof value.provider === "string" ? value.provider : undefined,
+    contextWindow: typeof value.contextWindow === "number" ? value.contextWindow : undefined,
+    reasoning: typeof value.reasoning === "boolean" ? value.reasoning : undefined,
+  };
 }
 
 // ─── Live lifecycle-widget ingestion ─────────────────────────────────────────

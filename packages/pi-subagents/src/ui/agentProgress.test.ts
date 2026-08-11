@@ -103,7 +103,17 @@ describe("renderAgentLiveTranscripts", () => {
 
     renderAgentLiveTranscripts(ui as never, [
       createRecord({
-        session: { messages, thinkingLevel: "low" } as never,
+        session: {
+          messages,
+          thinkingLevel: "low",
+          model: {
+            id: "deepseek/deepseek-chat",
+            name: "DeepSeek Chat",
+            provider: "deepseek",
+            reasoning: false,
+            contextWindow: 64000,
+          },
+        } as never,
       }),
     ]);
 
@@ -117,6 +127,39 @@ describe("renderAgentLiveTranscripts", () => {
             status: "running",
             messages,
             thinkingLevel: "low",
+            model: {
+              id: "deepseek/deepseek-chat",
+              name: "DeepSeek Chat",
+              provider: "deepseek",
+              reasoning: false,
+              contextWindow: 64000,
+            },
+          },
+        ],
+      }),
+    ]);
+  });
+
+  it("omits the model field when the child session has no model selected yet", () => {
+    const ui = createUiHarness();
+    const messages = [{ role: "assistant", content: [{ type: "text", text: "Working" }] }];
+
+    renderAgentLiveTranscripts(ui as never, [
+      createRecord({
+        session: { messages, thinkingLevel: "medium" } as never,
+      }),
+    ]);
+
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-live-transcripts", [
+      JSON.stringify({
+        version: 1,
+        agents: [
+          {
+            agentId: "agent-1",
+            childSessionId: "child-session-1",
+            status: "running",
+            messages,
+            thinkingLevel: "medium",
           },
         ],
       }),
