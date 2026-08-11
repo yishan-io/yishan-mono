@@ -32,13 +32,16 @@ export function applyFrontmatterModelThinking(content: string, model: string, th
     const keyMatch = FRONTMATTER_KEY.exec(line);
     if (keyMatch && i < closingIndex) {
       const key = keyMatch[1] as "model" | "thinking";
-      if (!applied[key]) {
-        applied[key] = true;
-        if (values[key] !== "") {
-          result.push(`${key}: ${values[key]}`);
-        }
+      if (applied[key]) {
+        // Duplicate key line: only the patched first occurrence is kept, so a
+        // YAML last-wins parser cannot read a stale value past the rewrite.
         continue;
       }
+      applied[key] = true;
+      if (values[key] !== "") {
+        result.push(`${key}: ${values[key]}`);
+      }
+      continue;
     }
     result.push(line);
   }

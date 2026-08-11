@@ -52,6 +52,8 @@ User and project full-definition overrides use standard Pi locations:
 
 Model and thinking level are part of the agent definition frontmatter (`model:` / `thinking:`), so a user markdown definition can set them without touching built-in files. A project `.pi/agents/*.md` definition remains the highest-priority full override, including for model and thinking.
 
+> Since 0.2.0 the old `<active-agent-dir>/agent.overrides.json` patch file is no longer read. If you previously used it to set `model`/`thinking`, move those values into the `model:` / `thinking:` frontmatter of the agent definition file.
+
 Override precedence:
 1. project markdown definition
 2. user markdown definition

@@ -150,7 +150,7 @@ func CreatePiAgent(name string, description string, content string, model string
 	}
 	frontmatter := "---\nname: " + trimmedName + "\ndescription: " + yamlQuotedScalar(strings.TrimSpace(description))
 	if model = strings.TrimSpace(model); model != "" {
-		frontmatter += "\nmodel: " + model
+		frontmatter += "\nmodel: " + yamlQuotedScalar(model)
 	}
 	if thinking = strings.TrimSpace(thinking); thinking != "" {
 		frontmatter += "\nthinking: " + thinking

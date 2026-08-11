@@ -40,6 +40,13 @@ describe("applyFrontmatterModelThinking", () => {
     expect(applyFrontmatterModelThinking(content, "new/model", "high")).toBe(content);
   });
 
+  it("drops duplicate key lines so a last-wins parser cannot read a stale value", () => {
+    const content = "---\nname: my-helper\ndescription: Helper\nmodel: old/model\nmodel: newer/model\n---\n# body\n";
+    expect(applyFrontmatterModelThinking(content, "final/model", "medium")).toBe(
+      "---\nname: my-helper\ndescription: Helper\nmodel: final/model\nthinking: medium\n---\n# body\n",
+    );
+  });
+
   it("leaves other frontmatter keys and the body untouched", () => {
     const content = "---\nname: my-helper\ndescription: Helper\nread_only: false\n---\nmodel: body-not-frontmatter\n";
     expect(applyFrontmatterModelThinking(content, "new/model", "low")).toBe(

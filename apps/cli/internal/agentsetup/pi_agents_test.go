@@ -139,6 +139,24 @@ func TestCreatePiAgent_WritesModelThinkingFrontmatter(t *testing.T) {
 	}
 }
 
+func TestCreatePiAgent_QuotesModelFrontmatterValue(t *testing.T) {
+	agentsDir := withPiAgentsDir(t)
+	if err := CreatePiAgent("quoted-helper", "Helper", "# body\n", "provider/model with spaces", "high"); err != nil {
+		t.Fatalf("CreatePiAgent: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(agentsDir, "quoted-helper.md"))
+	if err != nil {
+		t.Fatalf("read created agent: %v", err)
+	}
+	if !strings.Contains(string(content), `model: "provider/model with spaces"`) {
+		t.Fatalf("expected quoted model in frontmatter, got %q", string(content))
+	}
+	meta := parseAgentFrontMatter(content)
+	if meta.Model != "provider/model with spaces" {
+		t.Fatalf("expected model round-trip, got %q", meta.Model)
+	}
+}
+
 func TestCreatePiAgent_RejectsInvalidThinking(t *testing.T) {
 	withPiAgentsDir(t)
 	for _, thinking := range []string{"ultra", "HIGH", "1", "deep"} {

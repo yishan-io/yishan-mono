@@ -80,11 +80,11 @@ const (
 	MethodCustomizeExtensionsRemove  = "customize.extensions.remove"
 	MethodCustomizeExtensionsUpdate  = "customize.extensions.update"
 
-	MethodCustomizeAgentsList   = "customize.agents.list"
-	MethodCustomizeAgentsDetail = "customize.agents.detail"
-	MethodCustomizeAgentsCreate = "customize.agents.create"
-	MethodCustomizeAgentsUpdate = "customize.agents.update"
-	MethodCustomizeAgentsRemove = "customize.agents.remove"
+	MethodCustomizeAgentsList    = "customize.agents.list"
+	MethodCustomizeAgentsDetail  = "customize.agents.detail"
+	MethodCustomizeAgentsCreate  = "customize.agents.create"
+	MethodCustomizeAgentsUpdate  = "customize.agents.update"
+	MethodCustomizeAgentsRemove  = "customize.agents.remove"
 	MethodCustomizeAgentsRestore = "customize.agents.restore"
 
 	MethodFrontendEventsStream = "events.frontendStream"
