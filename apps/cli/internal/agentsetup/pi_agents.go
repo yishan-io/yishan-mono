@@ -46,14 +46,15 @@ var (
 var agentNamePattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 // PiAgentInfo is one agent definition's metadata. Name is the file basename
-// without .md — the identity pi uses at runtime. Model and Thinking mirror
-// the agent frontmatter's optional per-agent overrides.
+// without .md — the identity pi uses at runtime. Model, Thinking, and Tools
+// mirror the agent frontmatter's optional per-agent overrides.
 type PiAgentInfo struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Model       string `json:"model"`
-	Thinking    string `json:"thinking"`
-	Official    bool   `json:"official"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Model       string   `json:"model"`
+	Thinking    string   `json:"thinking"`
+	Tools       []string `json:"tools"`
+	Official    bool     `json:"official"`
 }
 
 // PiAgentDetail adds the full file content (frontmatter + body) to the
@@ -96,6 +97,7 @@ func ListPiAgents() ([]PiAgentInfo, error) {
 			Description: meta.Description,
 			Model:       model,
 			Thinking:    thinking,
+			Tools:       meta.Tools,
 			Official:    isManagedPiAgentName(name),
 		})
 	}
@@ -123,6 +125,7 @@ func GetPiAgentDetail(name string) (*PiAgentDetail, error) {
 			Description: meta.Description,
 			Model:       model,
 			Thinking:    thinking,
+			Tools:       meta.Tools,
 			Official:    isManagedPiAgentName(name),
 		},
 		Content: string(content),
@@ -131,10 +134,11 @@ func GetPiAgentDetail(name string) (*PiAgentDetail, error) {
 
 // CreatePiAgent writes a new user agent definition: validated lowercase slug,
 // not a managed official name, no existing file. The daemon builds the
-// frontmatter (name, description, optional model/thinking, read_only: false)
-// around the caller's prompt body. Model and thinking level are frontmatter
-// fields of the agent definition, so they travel with the file.
-func CreatePiAgent(name string, description string, content string, model string, thinking string) error {
+// frontmatter (name, description, optional model/thinking/tools, read_only:
+// false) around the caller's prompt body. Model, thinking level, and tools
+// are frontmatter fields of the agent definition, so they travel with the
+// file.
+func CreatePiAgent(name string, description string, content string, model string, thinking string, tools []string) error {
 	trimmedName := strings.TrimSpace(name)
 	if !agentNamePattern.MatchString(trimmedName) {
 		return fmt.Errorf("%w: %q (use lowercase letters, digits, and dashes)", ErrInvalidAgentName, trimmedName)
@@ -154,6 +158,9 @@ func CreatePiAgent(name string, description string, content string, model string
 	}
 	if thinking = strings.TrimSpace(thinking); thinking != "" {
 		frontmatter += "\nthinking: " + thinking
+	}
+	if len(tools) > 0 {
+		frontmatter += "\ntools:\n" + formatAgentToolsBlock(tools)
 	}
 	full := frontmatter + "\nread_only: false\n---\n\n" + content
 	return writePiAgentFile(trimmedName, full)
@@ -337,6 +344,7 @@ type agentFrontMatter struct {
 	Description string
 	Model       string
 	Thinking    string
+	Tools       []string
 }
 
 // parseAgentFrontMatter extracts name and description from an agent file's
@@ -359,15 +367,11 @@ func parseAgentFrontMatter(content []byte) agentFrontMatter {
 		}
 		key = strings.TrimSpace(key)
 		value = strings.TrimSpace(value)
-		wasDoubleQuoted := strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) && len(value) >= 2
-		if value == "" || isYAMLBlockScalarIndicator(value) {
-			value, i = collectBlockScalar(lines, i)
-			wasDoubleQuoted = false
+		if key == "tools" {
+			meta.Tools, i = parseToolsValue(value, lines, i)
+			continue
 		}
-		value = trimQuotedValue(value)
-		if wasDoubleQuoted {
-			value = unescapeYAMLDoubleQuoted(value)
-		}
+		value, i = decodeScalarValue(lines, value, i)
 		switch key {
 		case "name":
 			meta.Name = value
@@ -387,6 +391,86 @@ func parseAgentFrontMatter(content []byte) agentFrontMatter {
 // yamlQuotedScalar emits, keeping descriptions round-trip safe.
 func unescapeYAMLDoubleQuoted(value string) string {
 	return strings.NewReplacer(`\\`, `\`, `\"`, `"`, `\n`, "\n", `\t`, "\t", `\r`, "").Replace(value)
+}
+
+// decodeScalarValue resolves a frontmatter scalar value whose key line sits
+// at lines[startIdx]: block scalars consume their indented continuation
+// lines, and double-quoted values are unescaped. Returns the decoded value
+// and the index of the last consumed line.
+func decodeScalarValue(lines []string, value string, startIdx int) (string, int) {
+	wasDoubleQuoted := strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) && len(value) >= 2
+	if value == "" || isYAMLBlockScalarIndicator(value) {
+		value, startIdx = collectBlockScalar(lines, startIdx)
+		wasDoubleQuoted = false
+	}
+	value = trimQuotedValue(value)
+	if wasDoubleQuoted {
+		value = unescapeYAMLDoubleQuoted(value)
+	}
+	return value, startIdx
+}
+
+// parseToolsValue resolves the tools key of a frontmatter line: flow style
+// ("[read, grep]") directly, or a block list whose "- item" lines start at
+// lines[startIdx]. Returns the tools and the index of the last consumed line.
+func parseToolsValue(value string, lines []string, startIdx int) ([]string, int) {
+	if value != "" {
+		return parseInlineToolList(value), startIdx
+	}
+	return collectAgentToolsBlock(lines, startIdx)
+}
+
+// collectAgentToolsBlock collects the "- item" lines of a YAML tools block
+// starting after lines[startIdx]. Returns the tool names and the index of
+// the last consumed line.
+func collectAgentToolsBlock(lines []string, startIdx int) ([]string, int) {
+	var tools []string
+	idx := startIdx
+	for idx+1 < len(lines) {
+		next := lines[idx+1]
+		nextTrimmed := strings.TrimSpace(next)
+		if nextTrimmed == "" || nextTrimmed == "---" || !strings.HasPrefix(nextTrimmed, "-") {
+			break
+		}
+		tools = append(tools, strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "-")))
+		idx++
+	}
+	return tools, idx
+}
+
+// parseInlineToolList splits a flow-style YAML list value ("[read, grep]") into
+// its items, trimming brackets, quotes, and whitespace.
+func parseInlineToolList(value string) []string {
+	trimmed := strings.TrimSpace(value)
+	trimmed = strings.TrimPrefix(trimmed, "[")
+	trimmed = strings.TrimSuffix(trimmed, "]")
+	if trimmed == "" {
+		return nil
+	}
+	parts := strings.Split(trimmed, ",")
+	tools := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.Trim(strings.TrimSpace(part), `"'`)
+		if item != "" {
+			tools = append(tools, item)
+		}
+	}
+	return tools
+}
+
+// formatAgentToolsBlock renders a tools list as YAML block-list lines with
+// two-space indentation ("  - read"). Empty or whitespace-only entries are
+// dropped so they cannot produce bare "-" items.
+func formatAgentToolsBlock(tools []string) string {
+	var builder strings.Builder
+	for _, tool := range tools {
+		if trimmed := strings.TrimSpace(tool); trimmed != "" {
+			builder.WriteString("  - ")
+			builder.WriteString(trimmed)
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
 }
 
 // configManagedPiAgentsDir resolves the managed pi agents dir via config.

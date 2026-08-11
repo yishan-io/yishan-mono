@@ -748,8 +748,12 @@
           },
           "edit": {
             "officialHint": "This is an official agent. Saving overwrites the shipped definition; you can restore it anytime.",
-            "contentLabel": "Definition (frontmatter + prompt)"
+            "descriptionLabel": "Description",
+            "contentLabel": "Prompt"
           },
+          "toolsLabel": "Tools",
+          "toolsPlaceholder": "Add a tool",
+          "toolsHelp": "Tools this agent can use. Type a name and press Enter; extension tools are supported.",
           "overwrite": {
             "title": "Overwrite official agent",
             "description": "Overwrite the official agent {{name}}? The shipped definition is replaced until you restore it.",

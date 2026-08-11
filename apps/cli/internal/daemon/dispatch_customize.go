@@ -82,11 +82,12 @@ func (h *JSONRPCHandler) handleCustomizeAgentsDetail(params json.RawMessage) (an
 
 func (h *JSONRPCHandler) handleCustomizeAgentsCreate(params json.RawMessage) (any, error) {
 	var req struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Content     string `json:"content"`
-		Model       string `json:"model"`
-		Thinking    string `json:"thinking"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Content     string   `json:"content"`
+		Model       string   `json:"model"`
+		Thinking    string   `json:"thinking"`
+		Tools       []string `json:"tools"`
 	}
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func (h *JSONRPCHandler) handleCustomizeAgentsCreate(params json.RawMessage) (an
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "content is required")
 	}
-	if err := setup.CreatePiAgent(req.Name, req.Description, req.Content, req.Model, req.Thinking); err != nil {
+	if err := setup.CreatePiAgent(req.Name, req.Description, req.Content, req.Model, req.Thinking, req.Tools); err != nil {
 		return nil, agentOperationError(err)
 	}
 	return map[string]any{"created": true}, nil

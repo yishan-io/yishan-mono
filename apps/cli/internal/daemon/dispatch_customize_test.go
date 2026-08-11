@@ -136,6 +136,30 @@ func TestHandleCustomizeAgentsCreate_ManagedNameRejected(t *testing.T) {
 	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
 }
 
+func TestHandleCustomizeAgentsCreate_WritesToolsFrontmatter(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	handler := newSkillTestHandler(t)
+	result, err := handler.handleCustomizeAgentsCreate(mustMarshalSkillParams(t, map[string]any{
+		"name":        "tool-helper",
+		"description": "Helper",
+		"content":     "# body\n",
+		"tools":       []string{"read", "grep"},
+	}))
+	if err != nil {
+		t.Fatalf("handleCustomizeAgentsCreate: %v", err)
+	}
+	if created, ok := result.(map[string]any)["created"]; !ok || created != true {
+		t.Fatalf("expected created response, got %#v", result)
+	}
+	detail, err := setup.GetPiAgentDetail("tool-helper")
+	if err != nil {
+		t.Fatalf("GetPiAgentDetail: %v", err)
+	}
+	if len(detail.Tools) != 2 || detail.Tools[0] != "read" || detail.Tools[1] != "grep" {
+		t.Fatalf("expected tools in created agent, got %#v", detail.Tools)
+	}
+}
+
 func TestHandleCustomizeAgentsRemove_OfficialRejected(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)

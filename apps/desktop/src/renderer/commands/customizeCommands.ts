@@ -20,6 +20,7 @@ function parseAgentDefinition(entry: Record<string, unknown>): AgentDefinitionIn
     description: typeof entry.description === "string" ? entry.description : "",
     model: typeof entry.model === "string" ? entry.model : "",
     thinking: typeof entry.thinking === "string" ? entry.thinking : "",
+    tools: Array.isArray(entry.tools) ? entry.tools.map(String) : [],
     official: Boolean(entry.official),
   };
 }
@@ -82,6 +83,7 @@ export async function createAgentDefinition(input: {
   content: string;
   model: string;
   thinking: string;
+  tools: string[];
 }): Promise<void> {
   const client = await getDaemonClient();
   await client.customize.agents.create(input);

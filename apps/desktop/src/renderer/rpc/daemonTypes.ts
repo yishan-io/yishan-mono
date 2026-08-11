@@ -630,6 +630,7 @@ export type AgentDefinitionInfo = {
   description: string;
   model: string;
   thinking: string;
+  tools: string[];
   official: boolean;
 };
 
@@ -647,6 +648,7 @@ export type AgentDefinitionCreateInput = {
   content: string;
   model: string;
   thinking: string;
+  tools: string[];
 };
 
 export type AgentDefinitionUpdateInput = {
