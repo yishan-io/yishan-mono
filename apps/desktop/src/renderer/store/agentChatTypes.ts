@@ -109,6 +109,8 @@ export type AgentModel = {
   provider?: string;
   contextWindow?: number;
   reasoning?: boolean;
+  /** Per-level provider mapping; a null value marks the level as unsupported. */
+  thinkingLevelMap?: Record<string, string | null>;
 };
 
 /** Streaming delta event from pi RPC. */

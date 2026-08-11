@@ -189,6 +189,101 @@ describe("parseSubagentLiveTranscripts", () => {
     ]);
   });
 
+  it("parses a payload carrying the child model", () => {
+    const result = parseSubagentLiveTranscripts(
+      liveTranscriptEvent({
+        version: 1,
+        agents: [
+          {
+            agentId: "agent-1",
+            childSessionId: "child-session-1",
+            status: "running",
+            messages: [],
+            model: {
+              id: "deepseek/deepseek-chat",
+              name: "DeepSeek Chat",
+              provider: "deepseek",
+              reasoning: false,
+              contextWindow: 64000,
+              thinkingLevelMap: { medium: null, high: "high" },
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(result?.[0]?.model).toEqual({
+      id: "deepseek/deepseek-chat",
+      name: "DeepSeek Chat",
+      provider: "deepseek",
+      reasoning: false,
+      contextWindow: 64000,
+      thinkingLevelMap: { medium: null, high: "high" },
+    });
+  });
+
+  it("ignores a malformed thinkingLevelMap", () => {
+    const result = parseSubagentLiveTranscripts(
+      liveTranscriptEvent({
+        version: 1,
+        agents: [
+          {
+            agentId: "agent-1",
+            childSessionId: "child-session-1",
+            status: "running",
+            messages: [],
+            model: {
+              id: "deepseek/deepseek-chat",
+              name: "DeepSeek Chat",
+              thinkingLevelMap: { medium: 42 },
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(result?.[0]?.model?.thinkingLevelMap).toBeUndefined();
+  });
+
+  it("parses a payload without a model as undefined", () => {
+    const result = parseSubagentLiveTranscripts(
+      liveTranscriptEvent({
+        version: 1,
+        agents: [
+          {
+            agentId: "agent-1",
+            childSessionId: "child-session-1",
+            status: "running",
+            messages: [],
+          },
+        ],
+      }),
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result?.[0]?.model).toBeUndefined();
+  });
+
+  it("ignores a malformed model", () => {
+    const result = parseSubagentLiveTranscripts(
+      liveTranscriptEvent({
+        version: 1,
+        agents: [
+          {
+            agentId: "agent-1",
+            childSessionId: "child-session-1",
+            status: "running",
+            messages: [],
+            model: { name: "no id" },
+          },
+        ],
+      }),
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result?.[0]?.model).toBeUndefined();
+  });
+
   it("parses a payload without thinkingLevel as undefined", () => {
     const result = parseSubagentLiveTranscripts(
       liveTranscriptEvent({
@@ -298,6 +393,50 @@ describe("applySubagentLiveTranscripts", () => {
         content: [{ type: "text", text: "Working" }],
       },
     ]);
+  });
+
+  it("applies the child model to the matching subagent-detail session", () => {
+    seedSubagentDetailTab();
+
+    applySubagentLiveTranscripts("parent-tab", [
+      {
+        childSessionId: "child-session-1",
+        messages: [],
+        model: {
+          id: "deepseek/deepseek-chat",
+          name: "DeepSeek Chat",
+          provider: "deepseek",
+          reasoning: false,
+          contextWindow: 64000,
+        },
+      },
+    ]);
+
+    expect(agentChatStore.getState().sessionsByTabId["subagent-tab"]?.currentModel).toEqual({
+      id: "deepseek/deepseek-chat",
+      name: "DeepSeek Chat",
+      provider: "deepseek",
+      reasoning: false,
+      contextWindow: 64000,
+    });
+  });
+
+  it("leaves an existing currentModel untouched when the transcript omits the model", () => {
+    seedSubagentDetailTab();
+    agentChatStore.getState().setCurrentModel("subagent-tab", {
+      id: "anthropic/claude-opus-4",
+      name: "Claude Opus 4",
+      provider: "Anthropic",
+    });
+
+    applySubagentLiveTranscripts("parent-tab", [
+      {
+        childSessionId: "child-session-1",
+        messages: [],
+      },
+    ]);
+
+    expect(agentChatStore.getState().sessionsByTabId["subagent-tab"]?.currentModel?.id).toBe("anthropic/claude-opus-4");
   });
 
   it("leaves an existing thinkingLevel untouched when the transcript omits the field", () => {

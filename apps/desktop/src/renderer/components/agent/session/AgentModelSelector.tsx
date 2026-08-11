@@ -1,6 +1,7 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
+import { getSupportedThinkingLevels } from "../../../helpers/agentThinkingLevels";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { ModelPickerMenu } from "../../ModelPickerMenu";
 import { ProviderMark } from "../../ProviderMark";
@@ -13,7 +14,8 @@ type AgentModelSelectorProps = {
   currentModel: AgentModel | null;
   thinkingLevel: string;
   onModelChange: (model: AgentModel) => void;
-  onThinkingLevelCycle: () => void;
+  /** Called with the chosen thinking level from the dropdown menu. */
+  onThinkingLevelSelect: (level: string) => void;
   /** Invoked after the popup closes; opens the provider add flow. */
   onAddProvider?: () => void;
 };
@@ -42,16 +44,17 @@ function buildAgentModelOptions(models: AgentModel[]) {
   );
 }
 
-/** Model selector dropdown with thinking level toggle. */
+/** Model selector dropdown with thinking level picker. */
 export function AgentModelSelector({
   models,
   currentModel,
   thinkingLevel,
   onModelChange,
-  onThinkingLevelCycle,
+  onThinkingLevelSelect,
   onAddProvider,
 }: AgentModelSelectorProps) {
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
+  const supportedLevels = useMemo(() => getSupportedThinkingLevels(currentModel), [currentModel]);
   const modelOptions = useMemo(() => buildAgentModelOptions(models), [models]);
   const selectedModelId = currentModel?.id ?? null;
   const selectedOption = useMemo(
@@ -193,7 +196,11 @@ export function AgentModelSelector({
         onModelSelect={handleModelSelect}
         onAddProvider={onAddProvider ? handleAddProvider : undefined}
       />
-      <ThinkingLevelControl thinkingLevel={thinkingLevel} onCycle={onThinkingLevelCycle} />
+      <ThinkingLevelControl
+        thinkingLevel={thinkingLevel}
+        onSelect={onThinkingLevelSelect}
+        supportedLevels={supportedLevels}
+      />
     </Box>
   );
 }

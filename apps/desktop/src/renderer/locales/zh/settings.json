@@ -1,253 +1,253 @@
 {
   "settings": {
-    "title": "\u8bbe\u7f6e",
-    "back": "\u8fd4\u56de",
-    "searchPlaceholder": "\u641c\u7d22\u8bbe\u7f6e...",
-    "searchNoResults": "\u6ca1\u6709\u5339\u914d\u7684\u8bbe\u7f6e\u9879\u3002",
+    "title": "设置",
+    "back": "返回",
+    "searchPlaceholder": "搜索设置...",
+    "searchNoResults": "没有匹配的设置项。",
     "sections": {
-      "profile": "\u4e2a\u4eba\u8d44\u6599",
-      "organization": "\u7ec4\u7ec7",
-      "system": "\u7cfb\u7edf"
+      "profile": "个人资料",
+      "organization": "组织",
+      "system": "系统"
     },
     "items": {
-      "account": "\u8d26\u53f7",
-      "agents": "\u667a\u80fd\u4f53",
-      "appearance": "\u5916\u89c2",
-      "computerUse": "\u8ba1\u7b97\u673a\u4f7f\u7528",
-      "daemon": "\u5b88\u62a4\u8fdb\u7a0b",
-      "integrations": "\u96c6\u6210",
-      "keybindings": "\u952e\u76d8\u5feb\u6377\u952e",
-      "links": "\u94fe\u63a5",
-      "members": "\u6210\u5458",
-      "memory": "\u8bb0\u5fc6",
-      "nodes": "\u8282\u70b9",
-      "notifications": "\u901a\u77e5",
-      "serviceTokens": "\u670d\u52a1\u4ee4\u724c",
-      "terminal": "\u7ec8\u7aef",
-      "workspace": "\u5de5\u4f5c\u533a",
-      "providers": "\u6a21\u578b\u63d0\u4f9b\u5546",
-      "customize": "\u81ea\u5b9a\u4e49"
+      "account": "账号",
+      "agents": "智能体",
+      "appearance": "外观",
+      "computerUse": "计算机使用",
+      "daemon": "守护进程",
+      "integrations": "集成",
+      "keybindings": "键盘快捷键",
+      "links": "链接",
+      "members": "成员",
+      "memory": "记忆",
+      "nodes": "节点",
+      "notifications": "通知",
+      "serviceTokens": "服务令牌",
+      "terminal": "终端",
+      "workspace": "工作区",
+      "providers": "模型提供商",
+      "customize": "自定义"
     },
     "nodes": {
-      "title": "\u8282\u70b9",
-      "description": "\u67e5\u770b\u56e2\u961f\u53ef\u7528\u7684\u7ec4\u7ec7\u8282\u70b9\u53ca\u5176\u5f53\u524d\u8fde\u63a5\u72b6\u6001\u3002",
-      "loadError": "\u52a0\u8f7d\u7ec4\u7ec7\u8282\u70b9\u5931\u8d25\u3002",
-      "empty": "\u6b64\u7ec4\u7ec7\u6682\u65e0\u53ef\u7528\u8282\u70b9\u3002",
+      "title": "节点",
+      "description": "查看团队可用的组织节点及其当前连接状态。",
+      "loadError": "加载组织节点失败。",
+      "empty": "此组织暂无可用节点。",
       "columns": {
-        "name": "\u8282\u70b9\u540d\u79f0",
-        "type": "\u8282\u70b9\u7c7b\u578b",
-        "kind": "\u6765\u6e90",
-        "version": "\u7248\u672c",
-        "owner": "\u6240\u6709\u8005",
-        "status": "\u72b6\u6001"
+        "name": "节点名称",
+        "type": "节点类型",
+        "kind": "来源",
+        "version": "版本",
+        "owner": "所有者",
+        "status": "状态"
       },
       "kinds": {
-        "managed": "\u6258\u7ba1",
-        "external": "\u5916\u90e8"
+        "managed": "托管",
+        "external": "外部"
       },
       "types": {
-        "private": "\u79c1\u6709",
-        "shared": "\u5171\u4eab"
+        "private": "私有",
+        "shared": "共享"
       },
       "status": {
-        "online": "\u5728\u7ebf",
-        "offline": "\u79bb\u7ebf"
+        "online": "在线",
+        "offline": "离线"
       },
       "values": {
-        "unknownOwner": "\u672a\u77e5",
-        "unknownVersion": "\u672a\u77e5"
+        "unknownOwner": "未知",
+        "unknownVersion": "未知"
       },
       "actions": {
-        "makeShared": "\u8bbe\u4e3a\u5171\u4eab",
-        "makePrivate": "\u8bbe\u4e3a\u79c1\u6709",
-        "unregister": "\u6ce8\u9500\u8282\u70b9"
+        "makeShared": "设为共享",
+        "makePrivate": "设为私有",
+        "unregister": "注销节点"
       },
       "scopeChangeDialog": {
-        "title": "\u66f4\u6539\u8282\u70b9\u8303\u56f4",
-        "toSharedDescription": "\u5c06\u201c{{name}}\u201d\u8bbe\u4e3a\u5171\u4eab\u540e\uff0c\u7ec4\u7ec7\u5185\u6240\u6709\u6210\u5458\u90fd\u53ef\u4ee5\u4f7f\u7528\u8be5\u8282\u70b9\u3002\u786e\u5b9a\u5417\uff1f",
-        "toPrivateDescription": "\u5c06\u201c{{name}}\u201d\u8bbe\u4e3a\u79c1\u6709\u540e\uff0c\u53ea\u6709\u8282\u70b9\u6240\u6709\u8005\u53ef\u4ee5\u4f7f\u7528\u3002\u5f53\u524d\u4f7f\u7528\u8be5\u8282\u70b9\u7684\u5de5\u4f5c\u533a\u53ef\u80fd\u4f1a\u5931\u53bb\u8bbf\u95ee\u6743\u9650\u3002\u786e\u5b9a\u5417\uff1f",
-        "confirm": "\u66f4\u6539\u8303\u56f4"
+        "title": "更改节点范围",
+        "toSharedDescription": "将“{{name}}”设为共享后，组织内所有成员都可以使用该节点。确定吗？",
+        "toPrivateDescription": "将“{{name}}”设为私有后，只有节点所有者可以使用。当前使用该节点的工作区可能会失去访问权限。确定吗？",
+        "confirm": "更改范围"
       },
       "unregisterDialog": {
-        "title": "\u6ce8\u9500\u8282\u70b9",
-        "description": "\u6ce8\u9500\u201c{{name}}\u201d\u540e\uff0c\u5b83\u5c06\u4ece\u5f53\u524d\u7ec4\u7ec7\u79fb\u9664\u3002\u6b63\u5728\u4f7f\u7528\u8be5\u8282\u70b9\u7684\u5de5\u4f5c\u533a\u53ef\u80fd\u4f1a\u5931\u53bb\u8bbf\u95ee\u6743\u9650\u3002\u786e\u5b9a\u5417\uff1f",
-        "confirm": "\u6ce8\u9500"
+        "title": "注销节点",
+        "description": "注销“{{name}}”后，它将从当前组织移除。正在使用该节点的工作区可能会失去访问权限。确定吗？",
+        "confirm": "注销"
       }
     },
     "serviceTokens": {
-      "title": "\u670d\u52a1\u4ee4\u724c",
-      "description": "\u521b\u5efa\u548c\u7ba1\u7406\u670d\u52a1\u4ee4\u724c\uff0c\u7528\u4e8e\u5728\u8fdc\u7a0b\u4e3b\u673a\u4e0a\u65e0\u9700\u6d4f\u89c8\u5668\u767b\u5f55\u5373\u53ef\u8ba4\u8bc1 CLI\u3002",
-      "create": "\u521b\u5efa\u4ee4\u724c",
-      "loadError": "\u52a0\u8f7d\u670d\u52a1\u4ee4\u724c\u5931\u8d25\u3002",
-      "empty": "\u5c1a\u672a\u521b\u5efa\u4efb\u4f55\u670d\u52a1\u4ee4\u724c\u3002",
-      "copied": "\u5df2\u590d\u5236\uff01",
-      "createdWarning": "\u8bf7\u5b89\u5168\u4fdd\u5b58\u6b64\u4ee4\u724c\u2014\u2014\u5b83\u5c06\u4e0d\u4f1a\u518d\u6b21\u663e\u793a\u3002",
+      "title": "服务令牌",
+      "description": "创建和管理服务令牌，用于在远程主机上无需浏览器登录即可认证 CLI。",
+      "create": "创建令牌",
+      "loadError": "加载服务令牌失败。",
+      "empty": "尚未创建任何服务令牌。",
+      "copied": "已复制！",
+      "createdWarning": "请安全保存此令牌——它将不会再次显示。",
       "columns": {
-        "name": "\u540d\u79f0",
-        "token": "\u4ee4\u724c",
-        "lastUsed": "\u6700\u540e\u4f7f\u7528",
-        "expires": "\u8fc7\u671f\u65f6\u95f4",
-        "status": "\u72b6\u6001"
+        "name": "名称",
+        "token": "令牌",
+        "lastUsed": "最后使用",
+        "expires": "过期时间",
+        "status": "状态"
       },
       "status": {
-        "active": "\u6709\u6548",
-        "revoked": "\u5df2\u64a4\u9500",
-        "expired": "\u5df2\u8fc7\u671f"
+        "active": "有效",
+        "revoked": "已撤销",
+        "expired": "已过期"
       },
       "actions": {
-        "revoke": "\u64a4\u9500\u4ee4\u724c",
-        "copy": "\u590d\u5236\u4ee4\u724c"
+        "revoke": "撤销令牌",
+        "copy": "复制令牌"
       },
       "createDialog": {
-        "title": "\u521b\u5efa\u670d\u52a1\u4ee4\u724c",
-        "description": "\u670d\u52a1\u4ee4\u724c\u5141\u8bb8 CLI \u5728\u8fdc\u7a0b\u4e3b\u673a\u4e0a\u65e0\u9700\u4ea4\u4e92\u5f0f\u6d4f\u89c8\u5668\u767b\u5f55\u5373\u53ef\u8ba4\u8bc1\u3002\u9002\u7528\u4e8e\u65e0\u754c\u9762\u670d\u52a1\u5668\u3001CI \u6d41\u6c34\u7ebf\u6216\u4efb\u4f55\u975e\u4ea4\u4e92\u5f0f\u73af\u5883\u3002",
-        "nameLabel": "\u4ee4\u724c\u540d\u79f0",
-        "namePlaceholder": "\u4f8b\u5982 prod-server\u3001ci-runner",
-        "expiresLabel": "\u8fc7\u671f\u5929\u6570",
-        "expiresPlaceholder": "\u4f8b\u5982 90",
-        "expiresHelp": "\u7559\u7a7a\u8868\u793a\u4ee4\u724c\u6c38\u4e0d\u8fc7\u671f\u3002",
-        "cancel": "\u53d6\u6d88",
-        "create": "\u521b\u5efa",
-        "creating": "\u521b\u5efa\u4e2d\u2026"
+        "title": "创建服务令牌",
+        "description": "服务令牌允许 CLI 在远程主机上无需交互式浏览器登录即可认证。适用于无界面服务器、CI 流水线或任何非交互式环境。",
+        "nameLabel": "令牌名称",
+        "namePlaceholder": "例如 prod-server、ci-runner",
+        "expiresLabel": "过期天数",
+        "expiresPlaceholder": "例如 90",
+        "expiresHelp": "留空表示令牌永不过期。",
+        "cancel": "取消",
+        "create": "创建",
+        "creating": "创建中…"
       },
       "revokeDialog": {
-        "title": "\u64a4\u9500\u670d\u52a1\u4ee4\u724c",
-        "description": "\u786e\u5b9a\u8981\u64a4\u9500\u300c{{name}}\u300d\u5417\uff1f\u4f7f\u7528\u6b64\u4ee4\u724c\u7684 CLI \u6216\u670d\u52a1\u5c06\u7acb\u5373\u5931\u53bb\u8bbf\u95ee\u6743\u9650\u3002",
-        "cancel": "\u53d6\u6d88",
-        "confirm": "\u64a4\u9500"
+        "title": "撤销服务令牌",
+        "description": "确定要撤销「{{name}}」吗？使用此令牌的 CLI 或服务将立即失去访问权限。",
+        "cancel": "取消",
+        "confirm": "撤销"
       }
     },
     "members": {
-      "title": "\u7ec4\u7ec7\u6210\u5458",
-      "description": "\u67e5\u770b\u5f53\u524d\u7ec4\u7ec7\u7684\u6210\u5458\u5217\u8868\u4ee5\u53ca\u6bcf\u4e2a\u4eba\u7684\u6743\u9650\u89d2\u8272\u3002",
-      "loadError": "\u52a0\u8f7d\u7ec4\u7ec7\u6210\u5458\u5931\u8d25\u3002",
-      "empty": "\u5f53\u524d\u7ec4\u7ec7\u6ca1\u6709\u6210\u5458\u3002",
-      "addMember": "\u6dfb\u52a0\u6210\u5458",
-      "memberAdded": "\u6210\u5458\u6dfb\u52a0\u6210\u529f\u3002",
-      "inviteSent": "\u9080\u8bf7\u5df2\u53d1\u9001\uff0c\u5bf9\u65b9\u6ce8\u518c\u540e\u5c06\u81ea\u52a8\u52a0\u5165\u3002",
+      "title": "组织成员",
+      "description": "查看当前组织的成员列表以及每个人的权限角色。",
+      "loadError": "加载组织成员失败。",
+      "empty": "当前组织没有成员。",
+      "addMember": "添加成员",
+      "memberAdded": "成员添加成功。",
+      "inviteSent": "邀请已发送，对方注册后将自动加入。",
       "addDialog": {
-        "title": "\u6dfb\u52a0\u7ec4\u7ec7\u6210\u5458",
-        "emailLabel": "\u90ae\u7bb1\u5730\u5740",
+        "title": "添加组织成员",
+        "emailLabel": "邮箱地址",
         "emailPlaceholder": "colleague@example.com",
-        "roleLabel": "\u89d2\u8272",
+        "roleLabel": "角色",
         "roles": {
-          "member": "\u6210\u5458",
-          "admin": "\u7ba1\u7406\u5458"
+          "member": "成员",
+          "admin": "管理员"
         },
-        "submit": "\u6dfb\u52a0\u6210\u5458",
-        "adding": "\u6dfb\u52a0\u4e2d...",
-        "errorEmailEmpty": "\u90ae\u7bb1\u5730\u5740\u4e0d\u80fd\u4e3a\u7a7a\u3002"
+        "submit": "添加成员",
+        "adding": "添加中...",
+        "errorEmailEmpty": "邮箱地址不能为空。"
       },
       "pendingInvites": {
-        "title": "\u5f85\u5904\u7406\u9080\u8bf7",
-        "description": "\u4ee5\u4e0b\u90ae\u7bb1\u5df2\u88ab\u9080\u8bf7\uff0c\u4f46\u5c1a\u672a\u6ce8\u518c\u3002",
-        "loadError": "\u52a0\u8f7d\u5f85\u5904\u7406\u9080\u8bf7\u5931\u8d25\u3002",
-        "cancelAriaLabel": "\u53d6\u6d88\u9080\u8bf7",
+        "title": "待处理邀请",
+        "description": "以下邮箱已被邀请，但尚未注册。",
+        "loadError": "加载待处理邀请失败。",
+        "cancelAriaLabel": "取消邀请",
         "cancelDialog": {
-          "title": "\u53d6\u6d88\u9080\u8bf7\uff1f",
-          "description": "\u53d1\u7ed9 {{email}} \u7684\u9080\u8bf7\u5c06\u88ab\u64a4\u9500\uff0c\u5bf9\u65b9\u5c06\u65e0\u6cd5\u518d\u901a\u8fc7\u8be5\u9080\u8bf7\u52a0\u5165\u7ec4\u7ec7\u3002",
-          "confirm": "\u53d6\u6d88\u9080\u8bf7"
+          "title": "取消邀请？",
+          "description": "发给 {{email}} 的邀请将被撤销，对方将无法再通过该邀请加入组织。",
+          "confirm": "取消邀请"
         },
         "columns": {
-          "email": "\u90ae\u7bb1",
-          "role": "\u89d2\u8272",
-          "expires": "\u8fc7\u671f\u65f6\u95f4"
+          "email": "邮箱",
+          "role": "角色",
+          "expires": "过期时间"
         }
       },
       "columns": {
-        "member": "\u6210\u5458",
-        "email": "\u90ae\u7bb1",
-        "role": "\u89d2\u8272",
-        "userId": "\u7528\u6237 ID"
+        "member": "成员",
+        "email": "邮箱",
+        "role": "角色",
+        "userId": "用户 ID"
       }
     },
     "account": {
-      "title": "\u8d26\u53f7\u8d44\u6599",
-      "description": "\u67e5\u770b\u4e0e\u5df2\u767b\u5f55\u7684 Yishan \u8d26\u53f7\u5173\u8054\u7684\u4e2a\u4eba\u8d44\u6599\u3002",
-      "loading": "\u6b63\u5728\u52a0\u8f7d\u4e2a\u4eba\u8d44\u6599\u4fe1\u606f...",
-      "empty": "\u6682\u65e0\u5df2\u767b\u5f55\u7684\u7528\u6237\u8d44\u6599\u3002",
-      "avatarAlt": "\u7528\u6237\u5934\u50cf",
+      "title": "账号资料",
+      "description": "查看与已登录的 Yishan 账号关联的个人资料。",
+      "loading": "正在加载个人资料信息...",
+      "empty": "暂无已登录的用户资料。",
+      "avatarAlt": "用户头像",
       "profile": {
-        "title": "\u7528\u6237\u8d44\u6599"
+        "title": "用户资料"
       },
       "organization": {
-        "title": "\u5f53\u524d\u7ec4\u7ec7",
-        "description": "\u67e5\u770b\u5f53\u524d\u7ec4\u7ec7\u3001\u5957\u9910\u548c\u6210\u5458\u89d2\u8272\u3002"
+        "title": "当前组织",
+        "description": "查看当前组织、套餐和成员角色。"
       },
       "fields": {
-        "name": "\u59d3\u540d",
-        "email": "\u90ae\u7bb1",
-        "userId": "\u7528\u6237 ID",
-        "organization": "\u540d\u79f0",
-        "plan": "\u5957\u9910",
-        "role": "\u89d2\u8272"
+        "name": "姓名",
+        "email": "邮箱",
+        "userId": "用户 ID",
+        "organization": "名称",
+        "plan": "套餐",
+        "role": "角色"
       },
       "usage": {
-        "title": "\u7528\u91cf",
-        "description": "\u8ddf\u8e2a\u8d26\u53f7\u529f\u80fd\u7684\u6bcf\u6708\u989d\u5ea6\u548c\u5f53\u524d\u7528\u91cf\u3002",
-        "voiceInput": "\u8bed\u97f3\u8f93\u5165",
-        "minutes": "{{count}} \u5206\u949f",
-        "summary": "\u5df2\u4f7f\u7528 {{used}} / {{total}}\uff08{{percent}}%\uff09",
-        "unavailable": "\u7528\u91cf\u6570\u636e\u4e0d\u53ef\u7528\u3002",
-        "loadError": "\u65e0\u6cd5\u52a0\u8f7d\u7528\u91cf\u6570\u636e\u3002"
+        "title": "用量",
+        "description": "跟踪账号功能的每月额度和当前用量。",
+        "voiceInput": "语音输入",
+        "minutes": "{{count}} 分钟",
+        "summary": "已使用 {{used}} / {{total}}（{{percent}}%）",
+        "unavailable": "用量数据不可用。",
+        "loadError": "无法加载用量数据。"
       },
       "values": {
-        "notAvailable": "\u4e0d\u53ef\u7528"
+        "notAvailable": "不可用"
       }
     },
     "git": {
       "workspace": {
-        "title": "\u5de5\u4f5c\u533a\u5206\u652f\u547d\u540d",
-        "description": "\u4e3a\u5de5\u4f5c\u533a\u521b\u5efa\u914d\u7f6e\u5168\u5c40\u5206\u652f\u547d\u540d\u89c4\u5219\u3002",
-        "prefixModeLabel": "\u5206\u652f\u524d\u7f00",
+        "title": "工作区分支命名",
+        "description": "为工作区创建配置全局分支命名规则。",
+        "prefixModeLabel": "分支前缀",
         "prefix": {
-          "none": "\u65e0\u524d\u7f00",
-          "user": "Git \u4f5c\u8005",
-          "custom": "\u81ea\u5b9a\u4e49"
+          "none": "无前缀",
+          "user": "Git 作者",
+          "custom": "自定义"
         },
-        "customPrefixLabel": "\u81ea\u5b9a\u4e49\u524d\u7f00",
-        "previewLabel": "\u9884\u89c8"
+        "customPrefixLabel": "自定义前缀",
+        "previewLabel": "预览"
       }
     },
     "workspace": {
-      "title": "\u5de5\u4f5c\u533a",
-      "description": "\u7ba1\u7406\u5de5\u4f5c\u533a\u548c\u9879\u76ee\u521b\u5efa\u65f6\u4f7f\u7528\u7684\u9ed8\u8ba4\u504f\u597d\u8bbe\u7f6e\u3002",
-      "loading": "\u6b63\u5728\u52a0\u8f7d\u5de5\u4f5c\u533a\u8bbe\u7f6e...",
+      "title": "工作区",
+      "description": "管理工作区和项目创建时使用的默认偏好设置。",
+      "loading": "正在加载工作区设置...",
       "defaultContext": {
-        "label": "\u542f\u7528\u9ed8\u8ba4\u4e0a\u4e0b\u6587",
-        "description": "\u542f\u7528\u540e\uff0c\u65b0\u5efa\u9879\u76ee\u548c\u5de5\u4f5c\u533a\u4f1a\u9ed8\u8ba4\u521b\u5efa\u5e76\u94fe\u63a5 .my-context \u6587\u4ef6\u5939\u3002",
+        "label": "启用默认上下文",
+        "description": "启用后，新建项目和工作区会默认创建并链接 .my-context 文件夹。",
         "status": {
-          "enabled": "\u5df2\u542f\u7528",
-          "disabled": "\u5df2\u7981\u7528"
+          "enabled": "已启用",
+          "disabled": "已禁用"
         }
       },
       "errors": {
-        "saveFailed": "\u4fdd\u5b58\u5de5\u4f5c\u533a\u8bbe\u7f6e\u5931\u8d25\uff1a{{message}}"
+        "saveFailed": "保存工作区设置失败：{{message}}"
       }
     },
     "agents": {
-      "title": "\u667a\u80fd\u4f53",
-      "description": "\u7ba1\u7406\u54ea\u4e9b\u667a\u80fd\u4f53\u663e\u793a\u5728\u65b0\u5efa\u6807\u7b7e\u83dc\u5355\uff0c\u5e76\u68c0\u67e5\u672c\u5730 CLI \u68c0\u6d4b\u72b6\u6001\u3002",
-      "loadError": "\u52a0\u8f7d\u667a\u80fd\u4f53\u68c0\u6d4b\u72b6\u6001\u5931\u8d25\u3002",
-      "inUse": "\u4f7f\u7528\u4e2d",
+      "title": "智能体",
+      "description": "管理哪些智能体显示在新建标签菜单，并检查本地 CLI 检测状态。",
+      "loadError": "加载智能体检测状态失败。",
+      "inUse": "使用中",
       "actions": {
-        "rescanAll": "\u5168\u90e8\u91cd\u65b0\u626b\u63cf"
+        "rescanAll": "全部重新扫描"
       },
       "status": {
-        "checking": "\u68c0\u6d4b\u4e2d...",
-        "detected": "\u5df2\u68c0\u6d4b",
-        "versionPrefix": "\u7248\u672c\uff1a",
-        "versionUnknown": "\u7248\u672c\uff1a\u672a\u77e5",
-        "detectedVersion": "\u68c0\u6d4b\u5230\u7248\u672c\uff1a{{version}}",
-        "detectedVersionUnknown": "\u68c0\u6d4b\u5230\u7248\u672c\uff1a\u672a\u77e5",
-        "notDetected": "\u672a\u68c0\u6d4b\u5230"
+        "checking": "检测中...",
+        "detected": "已检测",
+        "versionPrefix": "版本：",
+        "versionUnknown": "版本：未知",
+        "detectedVersion": "检测到版本：{{version}}",
+        "detectedVersionUnknown": "检测到版本：未知",
+        "notDetected": "未检测到"
       },
       "command": {
-        "label": "\u547d\u4ee4",
+        "label": "命令",
         "placeholder": "{{defaultCommand}}",
-        "resetAriaLabel": "\u91cd\u7f6e\u4e3a\u9ed8\u8ba4\u547d\u4ee4",
-        "errorEmpty": "\u547d\u4ee4\u4e0d\u80fd\u4e3a\u7a7a\u3002",
-        "errorTooLong": "\u547d\u4ee4\u8fc7\u957f\uff08\u6700\u591a 2048 \u4e2a\u5b57\u7b26\uff09\u3002"
+        "resetAriaLabel": "重置为默认命令",
+        "errorEmpty": "命令不能为空。",
+        "errorTooLong": "命令过长（最多 2048 个字符）。"
       },
       "items": {
         "opencode": "OpenCode",
@@ -260,484 +260,488 @@
       }
     },
     "cliTools": {
-      "title": "CLI \u5de5\u5177",
-      "description": "\u7ba1\u7406\u7528\u4e8e\u667a\u80fd\u4f53\u548c\u96c6\u6210\u7684\u672c\u5730 CLI \u5de5\u5177\u3002",
-      "loadError": "\u52a0\u8f7d CLI \u5de5\u5177\u72b6\u6001\u5931\u8d25\u3002",
+      "title": "CLI 工具",
+      "description": "管理用于智能体和集成的本地 CLI 工具。",
+      "loadError": "加载 CLI 工具状态失败。",
       "actions": {
-        "rescanAll": "\u5168\u90e8\u91cd\u65b0\u626b\u63cf"
+        "rescanAll": "全部重新扫描"
       }
     },
     "integrations": {
-      "title": "\u96c6\u6210",
-      "description": "\u67e5\u770b\u5916\u90e8\u670d\u52a1\u7684\u8fde\u63a5\u72b6\u6001\u3002",
-      "loadError": "\u52a0\u8f7d\u96c6\u6210\u72b6\u6001\u5931\u8d25\u3002",
+      "title": "集成",
+      "description": "查看外部服务的连接状态。",
+      "loadError": "加载集成状态失败。",
       "actions": {
-        "recheckAll": "\u5168\u90e8\u91cd\u65b0\u68c0\u67e5"
+        "recheckAll": "全部重新检查"
       },
       "status": {
-        "checking": "\u68c0\u6d4b\u4e2d...",
-        "connected": "\u5df2\u8fde\u63a5"
+        "checking": "检测中...",
+        "connected": "已连接"
       },
       "github": {
         "label": "GitHub",
-        "description": "GitHub CLI (gh) \u8fde\u63a5\u72b6\u6001",
-        "connectedAs": "\u5df2\u8fde\u63a5\u4e3a {{username}}",
-        "notInstalled": "CLI \u672a\u5b89\u88c5",
-        "notLoggedIn": "\u672a\u767b\u5f55"
+        "description": "GitHub CLI (gh) 连接状态",
+        "connectedAs": "已连接为 {{username}}",
+        "notInstalled": "CLI 未安装",
+        "notLoggedIn": "未登录"
       }
     },
     "skills": {
-      "title": "\u6280\u80fd",
-      "description": "\u5b89\u88c5\u3001\u66f4\u65b0\u548c\u79fb\u9664\u7528\u6237\u5b89\u88c5\u7684\u6280\u80fd\u3002\u5b98\u65b9\u6280\u80fd\u901a\u8fc7\u201c\u6269\u5c55\u201d\u9762\u677f\u66f4\u65b0\u3002",
-      "loadError": "\u52a0\u8f7d\u6280\u80fd\u72b6\u6001\u5931\u8d25\u3002",
-      "installed": "\u5df2\u5b89\u88c5",
-      "notInstalled": "\u672a\u5b89\u88c5",
-      "official": "\u5b98\u65b9",
-      "sourceLabel": "\u4ece\u6765\u6e90\u5b89\u88c5",
-      "instruction": "\u4f7f\u7528\u8bf4\u660e",
+      "title": "技能",
+      "description": "安装、更新和移除用户安装的技能。官方技能通过“扩展”面板更新。",
+      "loadError": "加载技能状态失败。",
+      "installed": "已安装",
+      "notInstalled": "未安装",
+      "official": "官方",
+      "sourceLabel": "从来源安装",
+      "instruction": "使用说明",
       "sourceKinds": {
-        "global": "\u5168\u5c40",
-        "project": "\u9879\u76ee",
-        "package": "\u8f6f\u4ef6\u5305",
-        "settings": "\u8bbe\u7f6e"
+        "global": "全局",
+        "project": "项目",
+        "package": "软件包",
+        "settings": "设置"
       },
       "actions": {
-        "add": "\u6dfb\u52a0\u6280\u80fd",
-        "update": "\u66f4\u65b0",
-        "remove": "\u79fb\u9664",
-        "updateAll": "\u5168\u90e8\u66f4\u65b0",
-        "view": "\u67e5\u770b"
+        "add": "添加技能",
+        "update": "更新",
+        "remove": "移除",
+        "updateAll": "全部更新",
+        "view": "查看"
       },
       "dialogs": {
         "add": {
-          "title": "\u6dfb\u52a0\u6280\u80fd",
-          "description": "\u4ece\u6280\u80fd CLI \u63a5\u53d7\u7684\u4ed3\u5e93\u6216 URL \u5168\u5c40\u5b89\u88c5\u6280\u80fd\uff08~/.agents/skills\uff09\uff0c\u4f8b\u5982 owner/repo \u6216 https://github.com/owner/repo\u3002",
+          "title": "添加技能",
+          "description": "从技能 CLI 接受的仓库或 URL 全局安装技能（~/.agents/skills），例如 owner/repo 或 https://github.com/owner/repo。",
           "placeholder": "owner/repo",
-          "install": "\u5b89\u88c5"
+          "install": "安装"
         },
         "remove": {
-          "title": "\u79fb\u9664\u6280\u80fd",
-          "description": "\u79fb\u9664 {{name}}\uff1f\u8be5\u6280\u80fd\u5c06\u4ece ~/.agents/skills \u5378\u8f7d\u3002",
-          "confirm": "\u79fb\u9664"
+          "title": "移除技能",
+          "description": "移除 {{name}}？该技能将从 ~/.agents/skills 卸载。",
+          "confirm": "移除"
         }
       },
       "errors": {
-        "sourceRequired": "\u8bf7\u5148\u8f93\u5165\u6280\u80fd\u6e90\u3002"
+        "sourceRequired": "请先输入技能源。"
       },
       "messages": {
-        "added": "\u6280\u80fd\u5df2\u5b89\u88c5\u3002",
-        "updated": "\u6280\u80fd\u5df2\u66f4\u65b0\u3002",
-        "removed": "\u6280\u80fd\u5df2\u79fb\u9664\u3002",
-        "updatedAll": "\u6240\u6709\u6280\u80fd\u5df2\u66f4\u65b0\u3002"
+        "added": "技能已安装。",
+        "updated": "技能已更新。",
+        "removed": "技能已移除。",
+        "updatedAll": "所有技能已更新。"
       },
-      "empty": "\u5c1a\u672a\u5b89\u88c5\u6280\u80fd\u3002",
+      "empty": "尚未安装技能。",
       "columns": {
-        "name": "\u540d\u79f0"
+        "name": "名称"
       }
     },
     "appearance": {
       "theme": {
-        "title": "\u4e3b\u9898",
-        "description": "\u9009\u62e9\u79fb\u5c71\u7684\u754c\u9762\u5916\u89c2\u3002",
+        "title": "主题",
+        "description": "选择移山的界面外观。",
         "options": {
-          "light": "\u6d45\u8272",
-          "dark": "\u6df1\u8272",
-          "system": "\u7cfb\u7edf\u4e3b\u9898"
+          "light": "浅色",
+          "dark": "深色",
+          "system": "系统主题"
         }
       },
       "markdown": {
         "title": "Markdown",
-        "description": "\u914d\u7f6e Markdown \u6587\u4ef6\u5728\u7f16\u8f91\u5668\u4e2d\u7684\u9ed8\u8ba4\u6253\u5f00\u65b9\u5f0f\u3002",
+        "description": "配置 Markdown 文件在编辑器中的默认打开方式。",
         "theme": {
-          "label": "\u9884\u89c8\u4e3b\u9898",
-          "description": "\u9009\u62e9 Markdown \u9884\u89c8\u662f\u7ee7\u627f\u5e94\u7528\u4e3b\u9898\uff0c\u8fd8\u662f\u72ec\u7acb\u56fa\u5b9a\u4e3a\u6d45\u8272\u6216\u6df1\u8272\u3002",
+          "label": "预览主题",
+          "description": "选择 Markdown 预览是继承应用主题，还是独立固定为浅色或深色。",
           "options": {
-            "inherit": "\u7ee7\u627f\u5e94\u7528\u4e3b\u9898",
-            "light": "\u6d45\u8272",
-            "dark": "\u6df1\u8272"
+            "inherit": "继承应用主题",
+            "light": "浅色",
+            "dark": "深色"
           }
         },
         "previewFontSize": {
-          "label": "\u9884\u89c8\u5b57\u4f53\u5927\u5c0f",
-          "description": "\u63a7\u5236 Markdown \u9884\u89c8\u4e2d\u7684\u6587\u672c\u5927\u5c0f\u3002",
+          "label": "预览字体大小",
+          "description": "控制 Markdown 预览中的文本大小。",
           "options": {
-            "small": "\u5c0f",
-            "medium": "\u4e2d",
-            "large": "\u5927"
+            "small": "小",
+            "medium": "中",
+            "large": "大"
           }
         },
         "previewWidth": {
-          "label": "\u9884\u89c8\u5bbd\u5ea6",
-          "description": "\u9009\u62e9\u9884\u89c8\u4f7f\u7528\u5168\u5bbd\uff0c\u6216\u66f4\u6613\u8bfb\u7684\u5217\u5bbd\u3002",
+          "label": "预览宽度",
+          "description": "选择预览使用全宽，或更易读的列宽。",
           "options": {
-            "readable": "\u6613\u8bfb\u5217\u5bbd",
-            "full": "\u5168\u5bbd"
+            "readable": "易读列宽",
+            "full": "全宽"
           }
         },
         "outlineVisible": {
-          "label": "\u663e\u793a Markdown \u5927\u7eb2",
-          "description": "\u5728 Markdown \u6587\u4ef6\u65c1\u663e\u793a\u6587\u6863\u5927\u7eb2\u3002"
+          "label": "显示 Markdown 大纲",
+          "description": "在 Markdown 文件旁显示文档大纲。"
         },
-        "viewOnly": "\u53ea\u8bfb\u67e5\u770b",
-        "edit": "\u7f16\u8f91",
-        "expandDiagram": "\u653e\u5927\u56fe\u8868"
+        "viewOnly": "只读查看",
+        "edit": "编辑",
+        "expandDiagram": "放大图表"
       },
       "editor": {
-        "title": "\u7f16\u8f91\u5668",
-        "description": "\u914d\u7f6e\u4ee3\u7801\u7f16\u8f91\u5668\u5916\u89c2\u3002",
+        "title": "编辑器",
+        "description": "配置代码编辑器外观。",
         "theme": {
-          "label": "\u4ee3\u7801\u4e3b\u9898",
-          "description": "\u4ee3\u7801\u4e3b\u9898\u8ddf\u968f\u5168\u5c40\u6d45\u8272/\u6df1\u8272\u4e3b\u9898\u3002"
+          "label": "代码主题",
+          "description": "代码主题跟随全局浅色/深色主题。"
         },
         "fontSize": {
-          "label": "\u5b57\u4f53\u5927\u5c0f",
-          "description": "\u63a7\u5236\u4ee3\u7801\u7f16\u8f91\u5668\u4e2d\u7684\u6587\u672c\u5927\u5c0f\u3002"
+          "label": "字体大小",
+          "description": "控制代码编辑器中的文本大小。"
         },
         "wordWrap": {
-          "label": "\u81ea\u52a8\u6362\u884c",
-          "description": "\u5728\u4ee3\u7801\u7f16\u8f91\u5668\u4e2d\u81ea\u52a8\u6362\u884c\u3002"
+          "label": "自动换行",
+          "description": "在代码编辑器中自动换行。"
         }
       }
     },
     "language": {
-      "title": "\u8bed\u8a00",
-      "description": "\u9009\u62e9\u4f60\u504f\u597d\u7684\u5e94\u7528\u8bed\u8a00\u3002",
-      "selectLabel": "\u5e94\u7528\u8bed\u8a00",
+      "title": "语言",
+      "description": "选择你偏好的应用语言。",
+      "selectLabel": "应用语言",
       "errors": {
-        "saveFailed": "\u4fdd\u5b58\u8bed\u8a00\u504f\u597d\u5931\u8d25\u3002"
+        "saveFailed": "保存语言偏好失败。"
       },
       "options": {
         "en": "English",
-        "zh": "\u4e2d\u6587"
+        "zh": "中文"
       }
     },
     "links": {
-      "title": "\u94fe\u63a5\u6253\u5f00\u65b9\u5f0f",
-      "description": "\u9009\u62e9\u5e94\u7528\u5185 HTTP \u94fe\u63a5\u7684\u6253\u5f00\u4f4d\u7f6e\u3002",
-      "targetLabel": "\u94fe\u63a5\u6253\u5f00\u65b9\u5f0f",
+      "title": "链接打开方式",
+      "description": "选择应用内 HTTP 链接的打开位置。",
+      "targetLabel": "链接打开方式",
       "options": {
-        "built-in": "\u5185\u7f6e\u6d4f\u89c8\u5668",
-        "external": "\u7cfb\u7edf\u9ed8\u8ba4\u6d4f\u89c8\u5668"
+        "built-in": "内置浏览器",
+        "external": "系统默认浏览器"
       }
     },
     "daemon": {
-      "title": "\u5b88\u62a4\u8fdb\u7a0b",
-      "description": "\u67e5\u770b\u7528\u4e8e\u5de5\u4f5c\u533a\u3001\u7ec8\u7aef\u548c\u540e\u53f0\u670d\u52a1\u7684\u672c\u5730\u5b88\u62a4\u8fdb\u7a0b\u3002",
-      "loadError": "\u52a0\u8f7d\u5b88\u62a4\u8fdb\u7a0b\u72b6\u6001\u5931\u8d25\u3002",
+      "title": "守护进程",
+      "description": "查看用于工作区、终端和后台服务的本地守护进程。",
+      "loadError": "加载守护进程状态失败。",
       "actions": {
-        "refresh": "\u5237\u65b0"
+        "refresh": "刷新"
       },
       "status": {
-        "running": "\u8fd0\u884c\u4e2d",
-        "unavailable": "\u4e0d\u53ef\u7528"
+        "running": "运行中",
+        "unavailable": "不可用"
       },
       "rows": {
-        "status": "\u72b6\u6001",
-        "version": "\u7248\u672c",
-        "id": "\u5b88\u62a4\u8fdb\u7a0b ID",
-        "websocket": "WebSocket \u7aef\u70b9"
+        "status": "状态",
+        "version": "版本",
+        "id": "守护进程 ID",
+        "websocket": "WebSocket 端点"
       },
       "values": {
-        "unknown": "\u672a\u77e5"
+        "unknown": "未知"
       },
       "controls": {
-        "title": "\u5b88\u62a4\u8fdb\u7a0b\u63a7\u5236",
-        "description": "\u7ba1\u7406\u5b88\u62a4\u8fdb\u7a0b\u7684\u751f\u547d\u5468\u671f\u548c\u5173\u95ed\u884c\u4e3a\u3002"
+        "title": "守护进程控制",
+        "description": "管理守护进程的生命周期和关闭行为。"
       },
       "restart": {
-        "label": "\u91cd\u542f\u5b88\u62a4\u8fdb\u7a0b",
-        "description": "\u505c\u6b62\u5e76\u91cd\u65b0\u542f\u52a8\u672c\u5730\u5b88\u62a4\u8fdb\u7a0b\u3002",
-        "action": "\u91cd\u542f",
-        "inProgress": "\u91cd\u542f\u4e2d\u2026",
-        "success": "\u5b88\u62a4\u8fdb\u7a0b\u5df2\u6210\u529f\u91cd\u542f\u3002",
-        "failed": "\u91cd\u542f\u5b88\u62a4\u8fdb\u7a0b\u5931\u8d25\u3002",
-        "terminalCloseFailed": "\u5173\u95ed\u7ec8\u7aef\u4f1a\u8bdd\u5931\u8d25\uff0c\u8bf7\u624b\u52a8\u5173\u95ed\u540e\u91cd\u8bd5\u3002",
-        "confirmTitle": "\u786e\u8ba4\u91cd\u542f\u5b88\u62a4\u8fdb\u7a0b\uff1f",
-        "confirmMessage": "\u6240\u6709\u7ec8\u7aef\u4f1a\u8bdd\u5c06\u88ab\u5173\u95ed\uff0c\u6b63\u5728\u8fd0\u884c\u7684\u8fdb\u7a0b\u5c06\u88ab\u7ec8\u6b62\u3002\u6b64\u64cd\u4f5c\u65e0\u6cd5\u64a4\u9500\u3002"
+        "label": "重启守护进程",
+        "description": "停止并重新启动本地守护进程。",
+        "action": "重启",
+        "inProgress": "重启中…",
+        "success": "守护进程已成功重启。",
+        "failed": "重启守护进程失败。",
+        "terminalCloseFailed": "关闭终端会话失败，请手动关闭后重试。",
+        "confirmTitle": "确认重启守护进程？",
+        "confirmMessage": "所有终端会话将被关闭，正在运行的进程将被终止。此操作无法撤销。"
       },
       "quitOnExit": {
-        "label": "\u9000\u51fa\u5e94\u7528\u524d\u5173\u95ed\u5b88\u62a4\u8fdb\u7a0b",
-        "description": "\u542f\u7528\u540e\uff0c\u684c\u9762\u5e94\u7528\u9000\u51fa\u524d\u4f1a\u505c\u6b62\u5b88\u62a4\u8fdb\u7a0b\u3002\u7981\u7528\u540e\uff0c\u5b88\u62a4\u8fdb\u7a0b\u5c06\u5728\u540e\u53f0\u7ee7\u7eed\u8fd0\u884c\u3002"
+        "label": "退出应用前关闭守护进程",
+        "description": "启用后，桌面应用退出前会停止守护进程。禁用后，守护进程将在后台继续运行。"
       },
       "log": {
-        "label": "\u5b88\u62a4\u8fdb\u7a0b\u65e5\u5fd7",
-        "description": "\u67e5\u770b\u5b88\u62a4\u8fdb\u7a0b\u539f\u59cb\u65e5\u5fd7\u6761\u76ee\u4ee5\u8fdb\u884c\u6545\u969c\u6392\u67e5\u548c\u8bca\u65ad\u3002",
-        "action": "\u67e5\u770b\u65e5\u5fd7",
-        "title": "\u5b88\u62a4\u8fdb\u7a0b\u65e5\u5fd7"
+        "label": "守护进程日志",
+        "description": "查看守护进程原始日志条目以进行故障排查和诊断。",
+        "action": "查看日志",
+        "title": "守护进程日志"
       },
       "cli": {
         "title": "Yishan CLI",
-        "description": "\u5728\u7ec8\u7aef\u5b89\u88c5 yishan \u540e\uff0c\u4f60\u53ef\u4ee5\u5728\u672c\u5730 shell\u3001\u811a\u672c\u548c\u8fdc\u7a0b SSH \u4f1a\u8bdd\u4e2d\u76f4\u63a5\u4f7f\u7528 AI agent \u5de5\u4f5c\u6d41\u3002",
+        "description": "在终端安装 yishan 后，你可以在本地 shell、脚本和远程 SSH 会话中直接使用 AI agent 工作流。",
         "rows": {
-          "status": "\u72b6\u6001",
-          "detectedPath": "\u68c0\u6d4b\u5230\u7684\u547d\u4ee4\u8def\u5f84",
-          "installPath": "\u6258\u7ba1\u5b89\u88c5\u8def\u5f84",
-          "mode": "\u5b89\u88c5\u6a21\u5f0f"
+          "status": "状态",
+          "detectedPath": "检测到的命令路径",
+          "installPath": "托管安装路径",
+          "mode": "安装模式"
         },
         "status": {
-          "installed": "\u5df2\u5b89\u88c5",
-          "notInstalled": "\u672a\u5b89\u88c5"
+          "installed": "已安装",
+          "notInstalled": "未安装"
         },
         "mode": {
-          "managed": "\u7531\u684c\u9762\u5e94\u7528\u6258\u7ba1",
-          "external": "\u5916\u90e8\u5b89\u88c5"
+          "managed": "由桌面应用托管",
+          "external": "外部安装"
         },
         "install": {
-          "action": "\u5b89\u88c5",
-          "inProgress": "\u5b89\u88c5\u4e2d..."
+          "action": "安装",
+          "inProgress": "安装中..."
         },
         "uninstall": {
-          "action": "\u5378\u8f7d",
-          "inProgress": "\u5378\u8f7d\u4e2d..."
+          "action": "卸载",
+          "inProgress": "卸载中..."
         }
       }
     },
     "computerUse": {
-      "title": "\u8ba1\u7b97\u673a\u4f7f\u7528",
-      "experimental": "\u5b9e\u9a8c\u6027",
-      "description": "\u67e5\u770b\u8ba1\u7b97\u673a\u4f7f\u7528\u4f9d\u8d56\u7684 macOS \u6743\u9650\uff0c\u4ee5\u53ca\u6bcf\u9879\u6743\u9650\u4f1a\u4e3a\u667a\u80fd\u4f53\u89e3\u9501\u54ea\u4e9b\u80fd\u529b\u3002",
-      "approvalNotice": "\u7531\u667a\u80fd\u4f53\u8c03\u7528\u7684\u53d8\u66f4\u578b\u8ba1\u7b97\u673a\u4f7f\u7528\u64cd\u4f5c\u4ecd\u7136\u9700\u8981\u5ba1\u6279\u3002",
+      "title": "计算机使用",
+      "experimental": "实验性",
+      "description": "查看计算机使用依赖的 macOS 权限，以及每项权限会为智能体解锁哪些能力。",
+      "approvalNotice": "由智能体调用的变更型计算机使用操作仍然需要审批。",
       "status": {
-        "granted": "\u5df2\u6388\u6743",
-        "denied": "\u9700\u8981\u6743\u9650",
-        "unknown": "\u672a\u77e5",
-        "notRequired": "\u4e0d\u9700\u8981",
-        "notRequested": "\u672a\u8bf7\u6c42",
-        "checkManually": "\u624b\u52a8\u68c0\u67e5",
-        "entitled": "\u5df2\u5177\u5907\u6743\u9650"
+        "granted": "已授权",
+        "denied": "需要权限",
+        "unknown": "未知",
+        "notRequired": "不需要",
+        "notRequested": "未请求",
+        "checkManually": "手动检查",
+        "entitled": "已具备权限"
       },
       "permissions": {
-        "accessibility": "\u8f85\u52a9\u529f\u80fd",
-        "screenRecording": "\u5c4f\u5e55\u5f55\u5236",
-        "inputMonitoring": "\u8f93\u5165\u76d1\u63a7",
-        "automation": "\u81ea\u52a8\u5316",
-        "camera": "\u76f8\u673a",
-        "fullDiskAccess": "\u5b8c\u5168\u78c1\u76d8\u8bbf\u95ee",
-        "localNetwork": "\u672c\u5730\u7f51\u7edc",
-        "usbDevices": "USB \u8bbe\u5907",
-        "bluetooth": "\u84dd\u7259",
-        "accessibilityDescription": "UI \u68c0\u67e5\u3001UI \u64cd\u4f5c\u3001\u9f20\u6807\u63a7\u5236\u548c\u952e\u76d8\u8f93\u5165\u90fd\u4f9d\u8d56\u6b64\u6743\u9650\u3002",
-        "screenRecordingDescription": "\u663e\u793a\u5668\u548c\u7a97\u53e3\u622a\u56fe\u6355\u83b7\u4f9d\u8d56\u6b64\u6743\u9650\u3002",
-        "inputMonitoringDescription": "\u67d0\u4e9b\u7cfb\u7edf\u4f1a\u7528\u5b83\u9650\u5236\u5168\u5c40\u8f93\u5165\u6295\u9012\u3002\u5982\u679c\u8f93\u5165\u5de5\u5177\u4e0d\u7a33\u5b9a\uff0c\u8bf7\u624b\u52a8\u68c0\u67e5\u3002",
-        "automationDescription": "\u672a\u6765\u5f53\u8fd0\u884c\u65f6\u9700\u8981 Apple Events \u63a7\u5236\u5176\u4ed6\u5e94\u7528\u65f6\u4f1a\u4f7f\u7528\u6b64\u6743\u9650\u3002",
-        "cameraDescription": "\u7f51\u7edc\u6444\u50cf\u5934\u6355\u83b7\u548c\u57fa\u4e8e\u76f8\u673a\u7684\u672c\u5730\u6d4b\u8bd5\u5e94\u7528\u3002\u5f53\u524d\u8ba1\u7b97\u673a\u4f7f\u7528\u8fd0\u884c\u65f6\u5c1a\u672a\u4f7f\u7528\u3002",
-        "fullDiskAccessDescription": "\u7528\u4e8e\u7ec8\u7aef\u4f1a\u8bdd\u8bbf\u95ee\u53d7\u4fdd\u62a4\u6587\u4ef6\u5939\uff0c\u4ee5\u53ca\u672a\u6765\u7684\u672c\u5730\u81ea\u52a8\u5316\u5de5\u4f5c\u6d41\u3002",
-        "localNetworkDescription": "\u7528\u4e8e\u8bbf\u95ee\u672c\u5730\u7f51\u7edc\u4e2d\u7684\u5f00\u53d1\u670d\u52a1\u5668\u3002\u4fdd\u7559\u7ed9\u672a\u6765\u8fd0\u884c\u65f6\u652f\u6301\u3002",
-        "usbDevicesDescription": "\u7528\u4e8e\u4e0e USB \u8bbe\u5907\u901a\u4fe1\u7684\u786c\u4ef6\u8c03\u8bd5\u548c\u8bbe\u5907\u5de5\u5177\u3002\u4fdd\u7559\u7ed9\u672a\u6765\u8fd0\u884c\u65f6\u652f\u6301\u3002",
-        "bluetoothDescription": "\u7528\u4e8e\u84dd\u7259\u8bbe\u5907\u5de5\u5177\u548c\u672c\u5730\u786c\u4ef6\u5b9e\u9a8c\u3002\u4fdd\u7559\u7ed9\u672a\u6765\u8fd0\u884c\u65f6\u652f\u6301\u3002",
-        "openAccessibilityButton": "\u6253\u5f00\u8f85\u52a9\u529f\u80fd",
-        "openScreenRecordingButton": "\u6253\u5f00\u5c4f\u5e55\u5f55\u5236",
-        "openCameraButton": "\u6253\u5f00\u76f8\u673a",
-        "openLocalNetworkButton": "\u6253\u5f00\u672c\u5730\u7f51\u7edc",
-        "openSettingsButton": "\u6253\u5f00\u8bbe\u7f6e",
-        "triggerPromptButton": "\u89e6\u53d1\u63d0\u793a"
+        "accessibility": "辅助功能",
+        "screenRecording": "屏幕录制",
+        "inputMonitoring": "输入监控",
+        "automation": "自动化",
+        "camera": "相机",
+        "fullDiskAccess": "完全磁盘访问",
+        "localNetwork": "本地网络",
+        "usbDevices": "USB 设备",
+        "bluetooth": "蓝牙",
+        "accessibilityDescription": "UI 检查、UI 操作、鼠标控制和键盘输入都依赖此权限。",
+        "screenRecordingDescription": "显示器和窗口截图捕获依赖此权限。",
+        "inputMonitoringDescription": "某些系统会用它限制全局输入投递。如果输入工具不稳定，请手动检查。",
+        "automationDescription": "未来当运行时需要 Apple Events 控制其他应用时会使用此权限。",
+        "cameraDescription": "网络摄像头捕获和基于相机的本地测试应用。当前计算机使用运行时尚未使用。",
+        "fullDiskAccessDescription": "用于终端会话访问受保护文件夹，以及未来的本地自动化工作流。",
+        "localNetworkDescription": "用于访问本地网络中的开发服务器。保留给未来运行时支持。",
+        "usbDevicesDescription": "用于与 USB 设备通信的硬件调试和设备工具。保留给未来运行时支持。",
+        "bluetoothDescription": "用于蓝牙设备工具和本地硬件实验。保留给未来运行时支持。",
+        "openAccessibilityButton": "打开辅助功能",
+        "openScreenRecordingButton": "打开屏幕录制",
+        "openCameraButton": "打开相机",
+        "openLocalNetworkButton": "打开本地网络",
+        "openSettingsButton": "打开设置",
+        "triggerPromptButton": "触发提示"
       }
     },
     "terminal": {
-      "title": "\u7ec8\u7aef\u4f1a\u8bdd",
-      "description": "\u5728\u4e00\u4e2a\u4f4d\u7f6e\u67e5\u770b\u6240\u6709\u8fd0\u884c\u4e2d\u7684\u7ec8\u7aef\u5e76\u505c\u6b62\u4f1a\u8bdd\u3002",
-      "loadError": "\u52a0\u8f7d\u7ec8\u7aef\u4f1a\u8bdd\u5931\u8d25\u3002",
-      "empty": "\u672a\u627e\u5230\u7ec8\u7aef\u4f1a\u8bdd\u3002",
-      "noRunningSessions": "\u5f53\u524d\u6ca1\u6709\u8fd0\u884c\u4e2d\u7684\u4f1a\u8bdd\u3002",
+      "title": "终端会话",
+      "description": "在一个位置查看所有运行中的终端并停止会话。",
+      "loadError": "加载终端会话失败。",
+      "empty": "未找到终端会话。",
+      "noRunningSessions": "当前没有运行中的会话。",
       "columns": {
-        "session": "\u4f1a\u8bdd",
-        "workspace": "\u5de5\u4f5c\u533a",
-        "repo": "\u9879\u76ee",
+        "session": "会话",
+        "workspace": "工作区",
+        "repo": "项目",
         "pid": "PID",
-        "status": "\u72b6\u6001",
-        "actions": "\u64cd\u4f5c"
+        "status": "状态",
+        "actions": "操作"
       },
-      "unknownWorkspace": "\u672a\u77e5\u5de5\u4f5c\u533a",
-      "unknownRepo": "\u672a\u77e5\u9879\u76ee",
+      "unknownWorkspace": "未知工作区",
+      "unknownRepo": "未知项目",
       "status": {
-        "running": "\u8fd0\u884c\u4e2d",
-        "exited": "\u5df2\u9000\u51fa"
+        "running": "运行中",
+        "exited": "已退出"
       },
       "actions": {
-        "kill": "\u7ed3\u675f",
-        "killing": "\u7ed3\u675f\u4e2d..."
+        "kill": "结束",
+        "killing": "结束中..."
       }
     },
     "memory": {
-      "title": "\u8bb0\u5fc6",
-      "description": "\u914d\u7f6e\u5de5\u4f5c\u533a\u7684\u9879\u76ee\u8bb0\u5fc6\u603b\u7ed3\u548c\u7d22\u5f15\u529f\u80fd\u3002",
+      "title": "记忆",
+      "description": "配置工作区的项目记忆总结和索引功能。",
       "summarizer": {
-        "title": "\u4f1a\u8bdd\u603b\u7ed3\u5668",
-        "description": "\u542f\u7528\u540e\uff0c\u5b88\u62a4\u8fdb\u7a0b\u4f1a\u5728\u6bcf\u4e2a\u667a\u80fd\u4f53\u4f1a\u8bdd\u7ed3\u675f\u540e\u81ea\u52a8\u4f7f\u7528\u5185\u7f6e Pi \u667a\u80fd\u4f53\u8fdb\u884c\u603b\u7ed3\uff0c\u5e76\u66f4\u65b0 .my-context/MEMORY.md \u6587\u4ef6\u3002",
+        "title": "会话总结器",
+        "description": "启用后，守护进程会在每个智能体会话结束后自动使用内置 Pi 智能体进行总结，并更新 .my-context/MEMORY.md 文件。",
         "enabled": {
-          "label": "\u542f\u7528\u4f1a\u8bdd\u603b\u7ed3",
-          "description": "\u5728\u6bcf\u6b21\u667a\u80fd\u4f53\u4f1a\u8bdd\u7ed3\u675f\u540e\uff0c\u63d0\u53d6\u6280\u672f\u51b3\u7b56\u3001\u53d1\u73b0\u548c\u9519\u8bef\uff0c\u5199\u5165\u9879\u76ee\u8bb0\u5fc6\u6587\u4ef6\u3002"
+          "label": "启用会话总结",
+          "description": "在每次智能体会话结束后，提取技术决策、发现和错误，写入项目记忆文件。"
         },
         "agentKind": {
-          "label": "\u603b\u7ed3\u5668\u667a\u80fd\u4f53",
-          "description": "\u7528\u4e8e\u6267\u884c\u603b\u7ed3\u63d0\u793a\u7684\u667a\u80fd\u4f53 CLI\u3002"
+          "label": "总结器智能体",
+          "description": "用于执行总结提示的智能体 CLI。"
         },
         "model": {
-          "label": "\u6a21\u578b",
-          "description": "\u53ef\u9009 Pi \u6a21\u578b\u8986\u76d6\u3002\u7559\u7a7a\u4f7f\u7528 Pi \u7684\u9ed8\u8ba4\u6a21\u578b\u3002",
-          "placeholder": "\u4f8b\u5982 gpt-4o-mini",
-          "defaultOption": "\u4f7f\u7528\u667a\u80fd\u4f53\u9ed8\u8ba4",
-          "refresh": "\u5237\u65b0\u6a21\u578b\u5217\u8868"
+          "label": "模型",
+          "description": "可选 Pi 模型覆盖。留空使用 Pi 的默认模型。",
+          "placeholder": "例如 gpt-4o-mini",
+          "defaultOption": "使用智能体默认",
+          "refresh": "刷新模型列表"
         }
       }
     },
-    "comingSoon": "\u8be5\u8bbe\u7f6e\u9879\u5373\u5c06\u4e0a\u7ebf\u3002",
+    "comingSoon": "该设置项即将上线。",
     "providers": {
-      "title": "\u667a\u80fd\u4f53\u6a21\u578b\u63d0\u4f9b\u5546",
-      "description": "Pi \u667a\u80fd\u4f53\u4e2d\u5df2\u6ce8\u518c\u7684\u6a21\u578b\u63d0\u4f9b\u5546\uff0c\u51ed\u636e\u5b58\u50a8\u4e8e ~/.yishan/pi/agent/auth.json\u3002",
-      "loadError": "\u52a0\u8f7d\u6a21\u578b\u63d0\u4f9b\u5546\u5931\u8d25\u3002",
-      "empty": "\u5c1a\u672a\u6ce8\u518c\u4efb\u4f55\u6a21\u578b\u63d0\u4f9b\u5546\u3002",
-      "appliesToNewSessions": "\u66f4\u6539\u5c06\u5728\u65b0\u7684 Pi \u4f1a\u8bdd\u4e2d\u751f\u6548\u3002",
+      "title": "智能体模型提供商",
+      "description": "Pi 智能体中已注册的模型提供商，凭据存储于 ~/.yishan/pi/agent/auth.json。",
+      "loadError": "加载模型提供商失败。",
+      "empty": "尚未注册任何模型提供商。",
+      "appliesToNewSessions": "更改将在新的 Pi 会话中生效。",
       "keywords": {
-        "provider": "\u63d0\u4f9b\u5546",
-        "apiKey": "API \u5bc6\u94a5",
-        "model": "\u6a21\u578b"
+        "provider": "提供商",
+        "apiKey": "API 密钥",
+        "model": "模型"
       },
       "actions": {
-        "add": "\u6dfb\u52a0\u63d0\u4f9b\u5546",
-        "pin": "\u56fa\u5b9a\u5230 auth.json",
-        "edit": "\u7f16\u8f91",
-        "remove": "\u79fb\u9664",
-        "cancel": "\u53d6\u6d88",
-        "save": "\u4fdd\u5b58"
+        "add": "添加提供商",
+        "pin": "固定到 auth.json",
+        "edit": "编辑",
+        "remove": "移除",
+        "cancel": "取消",
+        "save": "保存"
       },
       "credentialType": {
-        "apiKey": "API \u5bc6\u94a5",
+        "apiKey": "API 密钥",
         "oauth": "OAuth",
-        "ambient": "\u73af\u5883",
-        "unknown": "\u672a\u77e5"
+        "ambient": "环境",
+        "unknown": "未知"
       },
       "dialog": {
-        "addTitle": "\u6dfb\u52a0\u63d0\u4f9b\u5546",
-        "editTitle": "\u7f16\u8f91\u63d0\u4f9b\u5546",
-        "providerLabel": "\u63d0\u4f9b\u5546",
-        "keyLabel": "API \u5bc6\u94a5",
-        "keyPlaceholder": "\u7c98\u8d34\u4f60\u7684 API \u5bc6\u94a5",
-        "envSection": "\u73af\u5883\u53d8\u91cf",
-        "envStoredWarning": "\u5df2\u5b58\u50a8\u7684\u73af\u5883\u53d8\u91cf\uff08{{names}}\uff09\u5c06\u88ab\u79fb\u9664\uff0c\u9664\u975e\u5728\u4e0a\u65b9\u91cd\u65b0\u8f93\u5165\u3002",
-        "keyRequired": "\u8bf7\u8f93\u5165 API \u5bc6\u94a5\u3002",
-        "editKeyHelper": "\u8f93\u5165\u65b0\u7684 API \u5bc6\u94a5\u4ee5\u66ff\u6362\u73b0\u6709\u5bc6\u94a5\u3002",
-        "oauthOnlyHint": "\u6b64\u63d0\u4f9b\u5546\u4ec5\u652f\u6301\u8ba2\u9605\u3002\u8bf7\u4f7f\u7528\u8d26\u6237\u767b\u5f55\u3002",
-        "envVarHint": "\u7b49\u4ef7\u73af\u5883\u53d8\u91cf\uff1a{{envVar}}",
-        "saving": "\u4fdd\u5b58\u4e2d...",
-        "removing": "\u79fb\u9664\u4e2d...",
-        "subscriptionHint": "\u652f\u6301\u901a\u8fc7 Pi /login \u8ba2\u9605\u767b\u5f55\uff0c\u6216\u5728\u4e0b\u65b9\u4f7f\u7528 API \u5bc6\u94a5\u3002",
-        "signInWithSubscription": "\u4f7f\u7528\u8ba2\u9605\u767b\u5f55",
-        "openingSignIn": "\u6b63\u5728\u6253\u5f00 Pi \u767b\u5f55...",
-        "loginTabTitle": "Pi \u767b\u5f55 \u2014 {{provider}}",
-        "signInWithAccount": "\u4f7f\u7528\u8d26\u6237\u767b\u5f55",
-        "subscriptionTag": "\u8ba2\u9605"
+        "addTitle": "添加提供商",
+        "editTitle": "编辑提供商",
+        "providerLabel": "提供商",
+        "keyLabel": "API 密钥",
+        "keyPlaceholder": "粘贴你的 API 密钥",
+        "envSection": "环境变量",
+        "envStoredWarning": "已存储的环境变量（{{names}}）将被移除，除非在上方重新输入。",
+        "keyRequired": "请输入 API 密钥。",
+        "editKeyHelper": "输入新的 API 密钥以替换现有密钥。",
+        "oauthOnlyHint": "此提供商仅支持订阅。请使用账户登录。",
+        "envVarHint": "等价环境变量：{{envVar}}",
+        "saving": "保存中...",
+        "removing": "移除中...",
+        "subscriptionHint": "支持通过 Pi /login 订阅登录，或在下方使用 API 密钥。",
+        "signInWithSubscription": "使用订阅登录",
+        "openingSignIn": "正在打开 Pi 登录...",
+        "loginTabTitle": "Pi 登录 — {{provider}}",
+        "signInWithAccount": "使用账户登录",
+        "subscriptionTag": "订阅"
       },
       "removeDialog": {
-        "title": "\u79fb\u9664\u63d0\u4f9b\u5546",
-        "description": "\u786e\u5b9a\u79fb\u9664 {{provider}} \u7684\u51ed\u636e\u5417\uff1f\u8be5\u63d0\u4f9b\u5546\u5c06\u4e0d\u518d\u53ef\u7528\u4e8e Pi\u3002",
-        "confirm": "\u79fb\u9664"
+        "title": "移除提供商",
+        "description": "确定移除 {{provider}} 的凭据吗？该提供商将不再可用于 Pi。",
+        "confirm": "移除"
       },
       "errors": {
-        "noWorkspace": "\u8bf7\u5148\u6253\u5f00\u4e00\u4e2a\u5de5\u4f5c\u533a\u518d\u767b\u5f55\u3002",
-        "loginLaunchFailed": "\u6253\u5f00 Pi \u767b\u5f55\u5931\u8d25\uff1a{{message}}"
+        "noWorkspace": "请先打开一个工作区再登录。",
+        "loginLaunchFailed": "打开 Pi 登录失败：{{message}}"
       }
     },
     "customize": {
-      "title": "\u81ea\u5b9a\u4e49",
-      "description": "\u7ba1\u7406\u5de5\u4f5c\u533a\u5b89\u88c5\u7684\u6269\u5c55\u3001\u6280\u80fd\u548c\u667a\u80fd\u4f53\u5b9a\u4e49\u3002",
+      "title": "自定义",
+      "description": "管理工作区安装的扩展、技能和智能体定义。",
       "panels": {
-        "extensions": "\u6269\u5c55",
-        "skills": "\u6280\u80fd",
-        "agents": "\u667a\u80fd\u4f53"
+        "extensions": "扩展",
+        "skills": "技能",
+        "agents": "智能体"
       },
       "extensions": {
-        "title": "\u6269\u5c55",
-        "description": "\u6d4f\u89c8\u3001\u5b89\u88c5\u3001\u66f4\u65b0\u548c\u79fb\u9664 pi \u6269\u5c55\uff08\u5b98\u65b9\u4e0e\u7528\u6237\u5b89\u88c5\uff09\u3002",
-        "official": "\u5b98\u65b9",
-        "userInstalled": "\u7528\u6237\u5b89\u88c5",
-        "installed": "\u5df2\u5b89\u88c5",
-        "empty": "\u5c1a\u672a\u5b89\u88c5\u6269\u5c55\u3002",
+        "title": "扩展",
+        "description": "浏览、安装、更新和移除 pi 扩展（官方与用户安装）。",
+        "official": "官方",
+        "userInstalled": "用户安装",
+        "installed": "已安装",
+        "empty": "尚未安装扩展。",
         "actions": {
-          "add": "\u6dfb\u52a0\u6269\u5c55",
-          "update": "\u66f4\u65b0",
-          "remove": "\u79fb\u9664"
+          "add": "添加扩展",
+          "update": "更新",
+          "remove": "移除"
         },
         "dialogs": {
           "add": {
-            "title": "\u6dfb\u52a0\u6269\u5c55",
-            "description": "\u7c98\u8d34 pi \u5305\u6e90\uff1anpm:<name>\uff08\u4f8b\u5982 npm:@yishan-io/pi-notify\uff09\u3001git:<owner>/<repo>@<ref>\u3001https:// URL \u6216\u672c\u5730\u8def\u5f84\u3002",
+            "title": "添加扩展",
+            "description": "粘贴 pi 包源：npm:<name>（例如 npm:@yishan-io/pi-notify）、git:<owner>/<repo>@<ref>、https:// URL 或本地路径。",
             "placeholder": "npm:my-extension",
-            "install": "\u5b89\u88c5"
+            "install": "安装"
           },
           "remove": {
-            "title": "\u79fb\u9664\u6269\u5c55",
-            "description": "\u79fb\u9664 {{name}}\uff1f\u8be5\u6269\u5c55\u5c06\u4ece\u4f60\u7684\u667a\u80fd\u4f53\u8fd0\u884c\u65f6\u5378\u8f7d\u3002",
-            "confirm": "\u79fb\u9664"
+            "title": "移除扩展",
+            "description": "移除 {{name}}？该扩展将从你的智能体运行时卸载。",
+            "confirm": "移除"
           }
         },
         "errors": {
-          "sourceRequired": "\u8bf7\u5148\u8f93\u5165\u5305\u6e90\u3002"
+          "sourceRequired": "请先输入包源。"
         },
         "messages": {
-          "installed": "\u6269\u5c55\u5df2\u5b89\u88c5\u3002",
-          "updated": "\u6269\u5c55\u5df2\u66f4\u65b0\u3002",
-          "removed": "\u6269\u5c55\u5df2\u79fb\u9664\u3002"
+          "installed": "扩展已安装。",
+          "updated": "扩展已更新。",
+          "removed": "扩展已移除。"
         },
         "columns": {
-          "name": "\u540d\u79f0",
-          "version": "\u7248\u672c"
+          "name": "名称",
+          "version": "版本"
         }
       },
       "agents": {
-        "title": "\u667a\u80fd\u4f53\u5b9a\u4e49",
-        "description": "\u521b\u5efa\u65b0\u667a\u80fd\u4f53\u6216\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53\u3002",
-        "official": "\u5b98\u65b9",
-        "managed": "\u6258\u7ba1",
-        "empty": "\u5c1a\u65e0\u667a\u80fd\u4f53\u5b9a\u4e49\u3002",
-        "userInstalled": "\u7528\u6237\u521b\u5efa",
+        "title": "智能体定义",
+        "description": "创建新智能体或覆盖官方智能体。",
+        "official": "官方",
+        "managed": "托管",
+        "empty": "尚无智能体定义。",
+        "userInstalled": "用户创建",
         "actions": {
-          "create": "\u521b\u5efa\u667a\u80fd\u4f53",
-          "edit": "\u7f16\u8f91",
-          "remove": "\u79fb\u9664",
-          "restore": "\u6062\u590d"
+          "create": "创建智能体",
+          "edit": "编辑",
+          "remove": "移除",
+          "restore": "恢复"
         },
         "dialogs": {
           "create": {
-            "title": "\u521b\u5efa\u667a\u80fd\u4f53",
-            "nameLabel": "\u540d\u79f0",
-            "nameHelp": "\u5c0f\u5199\u5b57\u6bcd\u3001\u6570\u5b57\u548c\u77ed\u6a2a\u7ebf\u3002\u5b98\u65b9\u540d\u79f0\u4fdd\u7559\u2014\u2014\u8986\u76d6\u8bf7\u4f7f\u7528\u201c\u7f16\u8f91\u201d\u3002",
-            "descriptionLabel": "\u63cf\u8ff0",
-            "contentLabel": "\u63d0\u793a\u8bcd",
-            "contentPlaceholder": "\u63cf\u8ff0\u8be5\u667a\u80fd\u4f53\u7684\u804c\u8d23\u3001\u5173\u6ce8\u70b9\u4ee5\u53ca\u6c47\u62a5\u65b9\u5f0f\u2026\u2026"
+            "title": "创建智能体",
+            "nameLabel": "名称",
+            "nameHelp": "小写字母、数字和短横线。官方名称保留——覆盖请使用“编辑”。",
+            "descriptionLabel": "描述",
+            "contentLabel": "提示词",
+            "contentPlaceholder": "描述该智能体的职责、关注点以及汇报方式……"
           },
           "edit": {
-            "officialHint": "\u8fd9\u662f\u5b98\u65b9\u667a\u80fd\u4f53\u3002\u4fdd\u5b58\u5c06\u8986\u76d6\u5b98\u65b9\u5b9a\u4e49\uff0c\u968f\u65f6\u53ef\u4ee5\u6062\u590d\u3002",
-            "contentLabel": "\u5b9a\u4e49\uff08frontmatter + \u63d0\u793a\u8bcd\uff09"
+            "officialHint": "这是官方智能体。保存将覆盖官方定义，随时可以恢复。",
+            "contentLabel": "定义（frontmatter + 提示词）"
           },
           "overwrite": {
-            "title": "\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53",
-            "description": "\u8986\u76d6\u5b98\u65b9\u667a\u80fd\u4f53 {{name}}\uff1f\u5b98\u65b9\u5b9a\u4e49\u5c06\u88ab\u66ff\u6362\uff0c\u76f4\u5230\u4f60\u6062\u590d\u5b83\u3002",
-            "confirm": "\u8986\u76d6"
+            "title": "覆盖官方智能体",
+            "description": "覆盖官方智能体 {{name}}？官方定义将被替换，直到你恢复它。",
+            "confirm": "覆盖"
           },
           "remove": {
-            "title": "\u79fb\u9664\u667a\u80fd\u4f53",
-            "description": "\u79fb\u9664 {{name}}\uff1f\u667a\u80fd\u4f53\u5b9a\u4e49\u5c06\u88ab\u5220\u9664\u3002",
-            "confirm": "\u79fb\u9664"
+            "title": "移除智能体",
+            "description": "移除 {{name}}？智能体定义将被删除。",
+            "confirm": "移除"
           },
           "restore": {
-            "title": "\u6062\u590d\u5b98\u65b9\u667a\u80fd\u4f53",
-            "description": "\u5c06 {{name}} \u6062\u590d\u4e3a\u5b98\u65b9\u5b9a\u4e49\uff1f\u6240\u6709\u7f16\u8f91\u5c06\u88ab\u4e22\u5f03\u3002",
-            "confirm": "\u6062\u590d"
+            "title": "恢复官方智能体",
+            "description": "将 {{name}} 恢复为官方定义？所有编辑将被丢弃。",
+            "confirm": "恢复"
+          },
+          "modelThinking": {
+            "thinkingUnsupported": "\"{{level}}\" 不受 {{model}} 支持 — pi 将使用 \"{{clamped}}\"",
+            "supportedLevels": "{{model}} 支持的思考级别：{{levels}}"
           }
         },
         "errors": {
-          "nameRequired": "\u8bf7\u8f93\u5165\u667a\u80fd\u4f53\u540d\u79f0\u3002",
-          "contentRequired": "\u8bf7\u8f93\u5165\u667a\u80fd\u4f53\u63d0\u793a\u8bcd\u3002"
+          "nameRequired": "请输入智能体名称。",
+          "contentRequired": "请输入智能体提示词。"
         },
         "messages": {
-          "created": "\u667a\u80fd\u4f53\u5df2\u521b\u5efa\u3002",
-          "updated": "\u667a\u80fd\u4f53\u5df2\u66f4\u65b0\u3002",
-          "removed": "\u667a\u80fd\u4f53\u5df2\u79fb\u9664\u3002",
-          "restored": "\u667a\u80fd\u4f53\u5df2\u6062\u590d\u3002"
+          "created": "智能体已创建。",
+          "updated": "智能体已更新。",
+          "removed": "智能体已移除。",
+          "restored": "智能体已恢复。"
         },
         "columns": {
-          "name": "\u540d\u79f0"
+          "name": "名称"
         }
       }
     }

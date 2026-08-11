@@ -20,13 +20,15 @@ import {
 } from "../../../commands/customizeCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
 import { AgentModelSelector } from "../../../components/agent/session/AgentModelSelector";
+import {
+  clampThinkingLevel,
+  formatSupportedThinkingLevels,
+  isThinkingLevelSupported,
+} from "../../../helpers/agentThinkingLevels";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../rpc/daemonTypes";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { applyFrontmatterModelThinking } from "./agentDefinitionFrontmatter";
-
-// THINKING_LEVELS mirrors pi's allowed agent thinking levels.
-const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
 
 type ModelThinkingSelectorProps = {
   model: string;
@@ -83,6 +85,7 @@ function inferModelProvider(modelId: string): string | undefined {
  * through pi's levels. An empty thinking means "inherit" (field omitted).
  */
 function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChange }: ModelThinkingSelectorProps) {
+  const { t } = useTranslation();
   const [models, setModels] = useState<AgentModel[]>([]);
 
   useEffect(() => {
@@ -93,7 +96,20 @@ function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChang
         setModels(
           result.models.map((entry) => {
             const provider = inferModelProvider(entry.id);
-            return provider ? { id: entry.id, name: entry.name, provider } : { id: entry.id, name: entry.name };
+            return provider
+              ? {
+                  id: entry.id,
+                  name: entry.name,
+                  provider,
+                  reasoning: entry.reasoning,
+                  thinkingLevelMap: entry.thinkingLevelMap,
+                }
+              : {
+                  id: entry.id,
+                  name: entry.name,
+                  reasoning: entry.reasoning,
+                  thinkingLevelMap: entry.thinkingLevelMap,
+                };
           }),
         );
       })
@@ -130,20 +146,50 @@ function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChang
     [effectiveModels, matchedModel, model],
   );
 
-  const handleThinkingCycle = useCallback(() => {
-    const currentIdx = THINKING_LEVELS.indexOf(thinking as (typeof THINKING_LEVELS)[number]);
-    const nextLevel = THINKING_LEVELS[(currentIdx + 1) % THINKING_LEVELS.length] ?? THINKING_LEVELS[0] ?? "medium";
-    onThinkingChange(nextLevel);
-  }, [onThinkingChange, thinking]);
+  const handleThinkingSelect = useCallback(
+    (level: string) => {
+      onThinkingChange(level);
+    },
+    [onThinkingChange],
+  );
+
+  const thinkingWarning = useMemo(() => {
+    // Only warn when the model's real capability map is known; the full-list
+    // fallback for models without map data must never be presented as fact.
+    if (thinking === "" || !currentModel?.thinkingLevelMap || isThinkingLevelSupported(thinking, currentModel)) {
+      return null;
+    }
+    const clamped = clampThinkingLevel(thinking, currentModel);
+    return t("settings.customize.agents.dialogs.modelThinking.thinkingUnsupported", {
+      level: thinking,
+      model: currentModel.name,
+      clamped,
+    });
+  }, [currentModel, t, thinking]);
 
   return (
-    <AgentModelSelector
-      models={effectiveModels}
-      currentModel={currentModel}
-      thinkingLevel={thinking}
-      onModelChange={(nextModel) => onModelChange(nextModel.id)}
-      onThinkingLevelCycle={handleThinkingCycle}
-    />
+    <Box>
+      <AgentModelSelector
+        models={effectiveModels}
+        currentModel={currentModel}
+        thinkingLevel={thinking}
+        onModelChange={(nextModel) => onModelChange(nextModel.id)}
+        onThinkingLevelSelect={handleThinkingSelect}
+      />
+      {thinkingWarning ? (
+        <Typography variant="caption" sx={{ color: "warning.main", display: "block", mt: 0.5 }}>
+          {thinkingWarning}
+        </Typography>
+      ) : null}
+      {currentModel?.thinkingLevelMap ? (
+        <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.25 }}>
+          {t("settings.customize.agents.dialogs.modelThinking.supportedLevels", {
+            model: currentModel.name,
+            levels: formatSupportedThinkingLevels(currentModel),
+          })}
+        </Typography>
+      ) : null}
+    </Box>
   );
 }
 

@@ -138,6 +138,88 @@ amazon-bedrock  amazon.nova-lite-v1:0                               300K     8.2
 			t.Errorf("models[%d].ID = %q, want %q", i, models[i].ID, id)
 		}
 	}
+	if models[0].Reasoning {
+		t.Errorf("models[0].Reasoning = true, want false (thinking column no)")
+	}
+	if !models[2].Reasoning {
+		t.Errorf("models[2].Reasoning = false, want true (thinking column yes)")
+	}
+}
+
+func TestApplyPiModelCapabilitiesMergesModelsStore(t *testing.T) {
+	agentDir := t.TempDir()
+	store := `{
+  "deepseek": {
+    "models": [
+      {"id": "deepseek-v4-flash", "reasoning": true, "thinkingLevelMap": {"minimal": null, "low": null, "medium": null, "high": "high", "max": "max"}},
+      {"id": "deepseek-v4-pro", "thinkingLevelMap": {"high": "high"}}
+    ]
+  }
+}`
+	if err := os.WriteFile(filepath.Join(agentDir, "models-store.json"), []byte(store), 0o644); err != nil {
+		t.Fatalf("write models-store.json: %v", err)
+	}
+
+	models := []ModelInfo{
+		{ID: "deepseek/deepseek-v4-flash", Name: "deepseek-v4-flash"},              // store reasoning true overrides
+		{ID: "deepseek/deepseek-v4-pro", Name: "deepseek-v4-pro", Reasoning: true}, // store omits reasoning: column value preserved
+		{ID: "openrouter/openai/gpt-5", Name: "openai/gpt-5", Reasoning: true},     // absent from store: keeps column value
+	}
+	applyPiModelCapabilities(models, agentDir)
+
+	if !models[0].Reasoning {
+		t.Errorf("models[0].Reasoning = false, want store reasoning true")
+	}
+	if models[0].ThinkingLevelMap == nil || models[0].ThinkingLevelMap["medium"] != nil {
+		t.Errorf("models[0].ThinkingLevelMap = %v, want medium mapped to nil (unsupported)", models[0].ThinkingLevelMap)
+	}
+	if models[0].ThinkingLevelMap["high"] == nil || *models[0].ThinkingLevelMap["high"] != "high" {
+		t.Errorf("models[0].ThinkingLevelMap[high] = %v, want \"high\"", models[0].ThinkingLevelMap["high"])
+	}
+	if !models[1].Reasoning {
+		t.Errorf("models[1].Reasoning = false, want column-derived true preserved when the store entry omits reasoning")
+	}
+	if models[1].ThinkingLevelMap == nil || models[1].ThinkingLevelMap["high"] == nil || *models[1].ThinkingLevelMap["high"] != "high" {
+		t.Errorf("models[1].ThinkingLevelMap = %v, want map merged from the store entry", models[1].ThinkingLevelMap)
+	}
+	if models[2].ThinkingLevelMap != nil {
+		t.Errorf("models[2].ThinkingLevelMap = %v, want nil (no store entry)", models[2].ThinkingLevelMap)
+	}
+	if !models[2].Reasoning {
+		t.Errorf("models[2].Reasoning = false, want column-derived true preserved")
+	}
+}
+
+func TestApplyPiModelCapabilitiesMissingStoreKeepsColumn(t *testing.T) {
+	models := []ModelInfo{{ID: "deepseek/deepseek-v4-flash", Name: "deepseek-v4-flash", Reasoning: true}}
+	applyPiModelCapabilities(models, t.TempDir())
+	if !models[0].Reasoning {
+		t.Errorf("models[0].Reasoning = false, want column-derived true kept without a store")
+	}
+	if models[0].ThinkingLevelMap != nil {
+		t.Errorf("models[0].ThinkingLevelMap = %v, want nil without a store", models[0].ThinkingLevelMap)
+	}
+}
+
+func TestSplitModelID(t *testing.T) {
+	for _, tc := range []struct {
+		id       string
+		provider string
+		key      string
+		ok       bool
+	}{
+		{id: "deepseek/deepseek-v4-flash", provider: "deepseek", key: "deepseek-v4-flash", ok: true},
+		{id: "openrouter/deepseek/deepseek-v4-flash", provider: "openrouter", key: "deepseek/deepseek-v4-flash", ok: true},
+		{id: "openrouter/~anthropic/claude-fable-latest", provider: "openrouter", key: "~anthropic/claude-fable-latest", ok: true},
+		{id: "no-slash", ok: false},
+		{id: "/leading", ok: false},
+		{id: "trailing/", ok: false},
+	} {
+		provider, key, ok := splitModelID(tc.id)
+		if ok != tc.ok || provider != tc.provider || key != tc.key {
+			t.Errorf("splitModelID(%q) = (%q, %q, %v), want (%q, %q, %v)", tc.id, provider, key, ok, tc.provider, tc.key, tc.ok)
+		}
+	}
 }
 
 func TestParsePiModelsSkipsNoise(t *testing.T) {
@@ -154,6 +236,25 @@ openrouter openai/gpt-5
 	}
 	if models[0].ID != "openrouter/openai/gpt-5" {
 		t.Fatalf("parsePiModels()[0].ID = %q, want openrouter/openai/gpt-5", models[0].ID)
+	}
+}
+
+// The merged single-field branch ("provider:model" in one column) is not
+// emitted by current pi, but keep it working and pin its column offset for
+// the thinking flag.
+func TestParsePiModelsMergedProviderModelColumn(t *testing.T) {
+	raw := `provider model context max-out thinking images
+openrouter:openai/gpt-5 128K 64K yes yes
+`
+	models := parsePiModels(raw)
+	if len(models) != 1 {
+		t.Fatalf("parsePiModels() = %v, want 1 model", models)
+	}
+	if models[0].ID != "openrouter/openai/gpt-5" {
+		t.Fatalf("models[0].ID = %q, want openrouter/openai/gpt-5", models[0].ID)
+	}
+	if !models[0].Reasoning {
+		t.Errorf("models[0].Reasoning = false, want true (merged-column thinking field)")
 	}
 }
 
