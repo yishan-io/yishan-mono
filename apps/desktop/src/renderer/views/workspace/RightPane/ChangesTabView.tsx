@@ -92,6 +92,7 @@ export function ChangesTabView() {
           )}
           <ProjectGitChangesList
             sections={visibleChanges}
+            worktreePath={selectedWorkspaceWorktreePath ?? undefined}
             readOnly={isCommitChangesMode}
             onTrackSection={
               isCommitChangesMode

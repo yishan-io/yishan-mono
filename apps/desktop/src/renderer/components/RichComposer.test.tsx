@@ -302,6 +302,41 @@ describe("RichComposer", () => {
     expect(textbox.textContent).toBe("");
   });
 
+  it("attaches standard-path drags (text/uri-list fallback) even without the custom MIME", async () => {
+    const onFilesDrop = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onFilesDrop={onFilesDrop} />);
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+
+    // Mirrors a diff-list drag whose custom MIME was stripped at an OS-level
+    // drag boundary: only standard types (text/uri-list + text/plain) survive.
+    const dt = {
+      types: ["text/uri-list", "text/plain"],
+      files: [] as unknown as FileList,
+      items: [] as unknown as DataTransferItemList,
+      getData: (type: string) => {
+        if (type === "text/uri-list") return "file:///workspace/repo/src/app.ts";
+        if (type === "text/plain") return "/workspace/repo/src/app.ts";
+        return "";
+      },
+      setData: () => {},
+      clearData: () => {},
+      dropEffect: "none" as DataTransfer["dropEffect"],
+      effectAllowed: "all" as DataTransfer["effectAllowed"],
+    } as unknown as DataTransfer;
+
+    const enterEvent = createEvent.dragEnter(textbox);
+    Object.defineProperty(enterEvent, "dataTransfer", { value: dt });
+    fireEvent(textbox, enterEvent);
+
+    const dropEvent = createEvent.drop(textbox);
+    Object.defineProperty(dropEvent, "dataTransfer", { value: dt });
+    await act(async () => {
+      fireEvent(textbox, dropEvent);
+    });
+
+    expect(onFilesDrop).toHaveBeenCalledWith([{ path: "/workspace/repo/src/app.ts", isDirectory: false }]);
+  });
+
   it("calls onPasteBlock for multi-line paste and does not insert text inline", () => {
     const onPasteBlock = vi.fn();
     render(<RichComposer placeholder="Type a message…" onPasteBlock={onPasteBlock} />);

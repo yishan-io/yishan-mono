@@ -23,6 +23,8 @@ export type {
 
 type ProjectGitChangesListProps = {
   sections: ProjectGitChangesSection[];
+  /** Absolute worktree root used to build attachable drag payloads (e.g. for the chat composer). */
+  worktreePath?: string;
   readOnly?: boolean;
   onSelectFile?: (file: ProjectGitChangeItem) => void;
   onTrackSection?: (section: ProjectGitChangesSection) => void;
@@ -46,6 +48,7 @@ type ProjectGitChangesListProps = {
 /** Renders grouped git sections and supports selecting one diff row. */
 export function ProjectGitChangesList({
   sections,
+  worktreePath,
   readOnly = false,
   onSelectFile,
   onTrackSection,
@@ -70,6 +73,7 @@ export function ProjectGitChangesList({
     handleSectionDrop,
   } = useProjectGitChangesListInteractions({
     sections,
+    worktreePath,
     onSelectFile,
     onMoveFile,
     onMoveFiles,

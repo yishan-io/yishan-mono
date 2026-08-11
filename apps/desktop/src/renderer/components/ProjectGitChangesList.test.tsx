@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { FILETREE_DRAG_MIME } from "./FileTree/dataTransfer";
 import { ProjectGitChangesList } from "./ProjectGitChangesList";
 
 afterEach(() => {
@@ -379,6 +380,156 @@ describe("ProjectGitChangesList", () => {
       "unstaged",
       "staged",
     );
+  });
+
+  it("sets FILETREE_DRAG_MIME with absolute paths when worktreePath is provided", () => {
+    const setDataMock = vi.fn();
+    const dataTransfer = { effectAllowed: "", setData: setDataMock };
+
+    render(
+      <ProjectGitChangesList
+        worktreePath="/workspace/repo"
+        sections={[
+          {
+            id: "unstaged",
+            label: "Unstaged",
+            files: [{ path: "src/app.ts", kind: "modified", additions: 3, deletions: 1 }],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.dragStart(screen.getByTestId("changes-file-unstaged-src/app.ts"), {
+      dataTransfer,
+    });
+
+    // copyMove (not move) so the composer's dropEffect="copy" is compatible and the drop is accepted.
+    expect(dataTransfer.effectAllowed).toBe("copyMove");
+
+    const filetreeCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === FILETREE_DRAG_MIME);
+    expect(filetreeCall).toBeTruthy();
+    const entries = JSON.parse(filetreeCall?.[1] as string) as { path: string; isDirectory: boolean }[];
+    expect(entries).toEqual([{ path: "/workspace/repo/src/app.ts", isDirectory: false }]);
+
+    const textPlainCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === "text/plain");
+    expect(textPlainCall?.[1]).toBe("/workspace/repo/src/app.ts");
+
+    // Standard-type fallback so drops survive OS-level drag boundaries.
+    const uriListCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === "text/uri-list");
+    expect(uriListCall?.[1]).toBe("file:///workspace/repo/src/app.ts");
+  });
+
+  it("excludes deleted files from the attachable drag payload", () => {
+    const setDataMock = vi.fn();
+
+    render(
+      <ProjectGitChangesList
+        worktreePath="/workspace/repo"
+        sections={[
+          {
+            id: "unstaged",
+            label: "Unstaged",
+            files: [
+              { path: "src/app.ts", kind: "modified", additions: 3, deletions: 1 },
+              { path: "src/old.ts", kind: "deleted", additions: 0, deletions: 1 },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.dragStart(screen.getByTestId("changes-file-unstaged-src/app.ts"), {
+      dataTransfer: { effectAllowed: "", setData: setDataMock },
+    });
+
+    const filetreeCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === FILETREE_DRAG_MIME);
+    expect(filetreeCall).toBeTruthy();
+    const entries = JSON.parse(filetreeCall?.[1] as string) as { path: string; isDirectory: boolean }[];
+    expect(entries).toEqual([{ path: "/workspace/repo/src/app.ts", isDirectory: false }]);
+  });
+
+  it("does not set FILETREE_DRAG_MIME without a worktreePath", () => {
+    const setDataMock = vi.fn();
+
+    render(
+      <ProjectGitChangesList
+        sections={[
+          {
+            id: "unstaged",
+            label: "Unstaged",
+            files: [{ path: "src/app.ts", kind: "modified", additions: 3, deletions: 1 }],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.dragStart(screen.getByTestId("changes-file-unstaged-src/app.ts"), {
+      dataTransfer: { effectAllowed: "", setData: setDataMock },
+    });
+
+    expect(setDataMock.mock.calls.some((args: unknown[]) => args[0] === FILETREE_DRAG_MIME)).toBe(false);
+  });
+
+  it("multi-select drags only include non-deleted selected files in the payload", () => {
+    const setDataMock = vi.fn();
+
+    render(
+      <ProjectGitChangesList
+        worktreePath="/workspace/repo"
+        sections={[
+          {
+            id: "unstaged",
+            label: "Unstaged",
+            files: [
+              { path: "src/a.ts", kind: "modified", additions: 1, deletions: 0 },
+              { path: "src/b.ts", kind: "deleted", additions: 0, deletions: 1 },
+              { path: "src/c.ts", kind: "added", additions: 2, deletions: 0 },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("a.ts"));
+    fireEvent.click(screen.getByText("c.ts"), { shiftKey: true });
+    fireEvent.dragStart(screen.getByTestId("changes-file-unstaged-src/b.ts"), {
+      dataTransfer: { effectAllowed: "", setData: setDataMock },
+    });
+
+    const filetreeCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === FILETREE_DRAG_MIME);
+    expect(filetreeCall).toBeTruthy();
+    const entries = JSON.parse(filetreeCall?.[1] as string) as { path: string; isDirectory: boolean }[];
+    expect(entries).toEqual([
+      { path: "/workspace/repo/src/a.ts", isDirectory: false },
+      { path: "/workspace/repo/src/c.ts", isDirectory: false },
+    ]);
+
+    const uriListCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === "text/uri-list");
+    expect(uriListCall?.[1]).toBe("file:///workspace/repo/src/a.ts\r\nfile:///workspace/repo/src/c.ts");
+  });
+
+  it("percent-encodes special characters in the uri-list fallback", () => {
+    const setDataMock = vi.fn();
+
+    render(
+      <ProjectGitChangesList
+        worktreePath="/workspace/repo"
+        sections={[
+          {
+            id: "untracked",
+            label: "Untracked",
+            files: [{ path: "docs/my file#1.md", kind: "added", additions: 1, deletions: 0 }],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.dragStart(screen.getByTestId("changes-file-untracked-docs/my file#1.md"), {
+      dataTransfer: { effectAllowed: "", setData: setDataMock },
+    });
+
+    const uriListCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === "text/uri-list");
+    expect(uriListCall?.[1]).toBe("file:///workspace/repo/docs/my%20file%231.md");
   });
 
   it("allows folding and expanding folders in untracked section", () => {
