@@ -64,9 +64,13 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "session_end":
       // The owning Pi process exited. The whole tab is invalid: surface the
       // error immediately and treat every previously running sub-agent row as
-      // interrupted history (they died with the process).
+      // interrupted history (they died with the process). Preserve the partially
+      // streamed message as a finalized transcript entry and mark the turn
+      // inactive, so a dead process never leaves the turn looking working.
       agentChatStore.getState().setSessionError(tabId, "Agent session ended unexpectedly");
       agentChatStore.getState().setSubagentSessionEndedAt(tabId, Date.now());
+      agentChatStore.getState().finalizeStreamingMessage(tabId);
+      agentChatStore.getState().setTurnActive(tabId, false);
       break;
 
     case "agent_end":

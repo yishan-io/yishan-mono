@@ -42,28 +42,32 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function toolCallBlock(id: string, name = "read"): TurnWorkingBlock {
+function toolCallBlock(id: string, name = "read", result: AgentMessage | null = null): TurnWorkingBlock {
   return {
     kind: "toolCall",
     id,
     toolCall: { id, name, type: "toolCall", arguments: { path: "src/a.ts" } },
-    result: null as AgentMessage | null,
+    result,
     isStreaming: false,
   };
 }
 
-function thinkingBlock(id: string, thinking = "thinking"): TurnWorkingBlock {
+function thinkingBlock(id: string, thinking = "thinking", isStreaming = false): TurnWorkingBlock {
   return {
     kind: "thinking",
     id,
     thinking,
-    isStreaming: false,
+    isStreaming,
   };
+}
+
+function resultMessage(id: string): AgentMessage {
+  return { id, role: "toolResult", toolCallId: id, content: "done" };
 }
 
 describe("AgentToolCallGroup", () => {
   it("renders nothing for an empty block list", () => {
-    render(<AgentToolCallGroup id="g-empty" blocks={[]} showLatestBlock={false} />);
+    render(<AgentToolCallGroup id="g-empty" blocks={[]} showRunningBlocks={false} />);
 
     expect(screen.queryByTestId("agent-tool-call-group")).toBeNull();
   });
@@ -73,7 +77,7 @@ describe("AgentToolCallGroup", () => {
       <AgentToolCallGroup
         id="g-summary"
         blocks={[toolCallBlock("r1"), toolCallBlock("r2"), toolCallBlock("b1", "bash")]}
-        showLatestBlock={false}
+        showRunningBlocks={false}
       />,
     );
 
@@ -85,7 +89,7 @@ describe("AgentToolCallGroup", () => {
       <AgentToolCallGroup
         id="g-thinking"
         blocks={[thinkingBlock("t1", "check first"), toolCallBlock("r1"), toolCallBlock("b1", "bash")]}
-        showLatestBlock={false}
+        showRunningBlocks={false}
       />,
     );
 
@@ -96,35 +100,92 @@ describe("AgentToolCallGroup", () => {
     expect(screen.getAllByTestId("tool-call-card")).toHaveLength(2);
   });
 
-  it("shows the latest block while the stack is live", () => {
+  it("shows only the running blocks while the stack is live", () => {
     render(
       <AgentToolCallGroup
         id="g-live"
-        blocks={[thinkingBlock("t1"), toolCallBlock("r1"), toolCallBlock("b1", "bash")]}
-        showLatestBlock
+        blocks={[
+          thinkingBlock("t1", "old thought"),
+          toolCallBlock("r1", "read", resultMessage("r1-res")),
+          toolCallBlock("r2"),
+          toolCallBlock("b1", "bash"),
+          thinkingBlock("t2", "still thinking", true),
+        ]}
+        showRunningBlocks
       />,
     );
 
-    expect(screen.getByTestId("agent-tool-call-group-latest")).toBeTruthy();
-    expect(screen.getByText("b1")).toBeTruthy();
-    expect(screen.queryByText("r1")).toBeNull();
+    const live = screen.getByTestId("agent-tool-call-group-live");
+    expect(live.textContent).toContain("r2");
+    expect(live.textContent).toContain("b1");
+    expect(live.textContent).toContain("still thinking");
+    expect(live.textContent).not.toContain("r1");
+    expect(live.textContent).not.toContain("old thought");
     expect(screen.queryByTestId("agent-tool-call-group-body")).toBeNull();
   });
 
   it("shows only the header once the stack is no longer live", () => {
     render(
-      <AgentToolCallGroup id="g-done" blocks={[toolCallBlock("r1"), toolCallBlock("r2")]} showLatestBlock={false} />,
+      <AgentToolCallGroup id="g-done" blocks={[toolCallBlock("r1"), toolCallBlock("r2")]} showRunningBlocks={false} />,
     );
 
     expect(screen.getByText("2 files read")).toBeTruthy();
-    expect(screen.queryByTestId("agent-tool-call-group-latest")).toBeNull();
+    expect(screen.queryByTestId("agent-tool-call-group-live")).toBeNull();
     expect(screen.queryByTestId("agent-tool-call-group-body")).toBeNull();
+  });
+
+  it("shows only the summary header when a live stack has no running blocks", () => {
+    render(
+      <AgentToolCallGroup
+        id="g-live-done"
+        blocks={[toolCallBlock("r1", "read", resultMessage("r1-res")), thinkingBlock("t1", "done thought")]}
+        showRunningBlocks
+      />,
+    );
+
+    expect(screen.getByText("1 file read")).toBeTruthy();
+    expect(screen.queryByTestId("agent-tool-call-group-live")).toBeNull();
+    expect(screen.queryByTestId("agent-tool-call-group-body")).toBeNull();
+  });
+
+  it("drops a card from the live stack once its result arrives", () => {
+    const { rerender } = render(
+      <AgentToolCallGroup
+        id="g-result-arrival"
+        blocks={[toolCallBlock("r1"), toolCallBlock("b1", "bash")]}
+        showRunningBlocks
+      />,
+    );
+
+    let live = screen.getByTestId("agent-tool-call-group-live");
+    expect(live.textContent).toContain("r1");
+    expect(live.textContent).toContain("b1");
+
+    rerender(
+      <AgentToolCallGroup
+        id="g-result-arrival"
+        blocks={[toolCallBlock("r1", "read", resultMessage("r1-res")), toolCallBlock("b1", "bash")]}
+        showRunningBlocks
+      />,
+    );
+
+    live = screen.getByTestId("agent-tool-call-group-live");
+    expect(live.textContent).not.toContain("r1");
+    expect(live.textContent).toContain("b1");
   });
 
   it("expands to reveal every block and collapses again on header click", () => {
     render(
-      <AgentToolCallGroup id="g-toggle" blocks={[toolCallBlock("r1"), toolCallBlock("b1", "bash")]} showLatestBlock />,
+      <AgentToolCallGroup
+        id="g-toggle"
+        blocks={[toolCallBlock("r1"), toolCallBlock("b1", "bash")]}
+        showRunningBlocks
+      />,
     );
+
+    const live = screen.getByTestId("agent-tool-call-group-live");
+    expect(live.textContent).toContain("r1");
+    expect(live.textContent).toContain("b1");
 
     fireEvent.click(screen.getByTestId("agent-tool-call-group-header"));
 
@@ -133,12 +194,16 @@ describe("AgentToolCallGroup", () => {
 
     fireEvent.click(screen.getByTestId("agent-tool-call-group-header"));
     expect(screen.queryByTestId("agent-tool-call-group-body")).toBeNull();
-    expect(screen.getByTestId("agent-tool-call-group-latest")).toBeTruthy();
+    expect(screen.getByTestId("agent-tool-call-group-live")).toBeTruthy();
   });
 
   it("renders thinking-only turns without group chrome", () => {
     render(
-      <AgentToolCallGroup id="g-thinking-only" blocks={[thinkingBlock("t1", "just thinking")]} showLatestBlock={false} />,
+      <AgentToolCallGroup
+        id="g-thinking-only"
+        blocks={[thinkingBlock("t1", "just thinking")]}
+        showRunningBlocks={false}
+      />,
     );
 
     expect(screen.getByTestId("thinking-block").textContent).toBe("just thinking");

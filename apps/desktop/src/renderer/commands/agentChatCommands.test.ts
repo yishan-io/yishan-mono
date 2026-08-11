@@ -963,6 +963,14 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
   it("marks the tab error and interrupts sub-agent rows on session_end", () => {
     agentChatStore.getState().initSession("tab-session-end", "session-session-end");
     const tabId = "tab-session-end";
+    // An in-flight partial message must not keep the turn looking working after
+    // the owning process died; it is preserved as a finalized transcript entry.
+    agentChatStore.getState().updateStreamingMessage(tabId, {
+      id: "partial-message",
+      role: "assistant",
+      content: [{ type: "toolCall", id: "agent-call", name: "Agent", arguments: { agent: "builder", prompt: "work" } }],
+      startedAtMs: 1,
+    });
 
     handleAgentPiEvent({
       sessionId: "session-session-end",
@@ -975,6 +983,9 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
     expect(session?.state).toBe("error");
     expect(session?.error).toBe("Agent session ended unexpectedly");
     expect(session?.subagentSessionEndedAtMs).not.toBeNull();
+    expect(session?.streamingMessage).toBeNull();
+    expect(session?.isTurnActive).toBe(false);
+    expect(session?.messages.some((message) => message.id === "partial-message")).toBe(true);
   });
 
   it("ingests live lifecycle widget entries into cancellable running rows", () => {

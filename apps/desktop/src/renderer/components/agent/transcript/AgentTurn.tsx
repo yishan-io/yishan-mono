@@ -79,7 +79,6 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
     return item?.isStreaming ?? false;
   }, [summaryItemId, turn.items]);
   const hasCollapsibleContent = sections.length > 0 || turn.items.some((item) => item.message.role === "toolResult");
-  const lastToolRunSectionIndex = getLastToolRunSectionIndex(sections);
 
   return (
     <Paper
@@ -143,7 +142,7 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
                 key={getRunKey(turn.id, section)}
                 id={getRunKey(turn.id, section)}
                 blocks={section.blocks}
-                showLatestBlock={turn.isWorking && sectionIndex === lastToolRunSectionIndex}
+                showRunningBlocks={turn.isWorking}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
@@ -208,18 +207,6 @@ function getRunKey(turnId: string, section: Extract<TurnSection, { kind: "toolRu
   // Key by the first block id so streaming reflows (new text sections inserted
   // before this run) do not remount the group and reset its expansion state.
   return firstBlockId ? `${turnId}-run-${firstBlockId}` : `${turnId}-run-${section.blocks.length}`;
-}
-
-function getLastToolRunSectionIndex(sections: TurnSection[]): number {
-  // The "live" run is the last section that actually holds tool calls; a
-  // trailing thought-only section must not steal the latest-command slot.
-  for (let index = sections.length - 1; index >= 0; index -= 1) {
-    const section = sections[index];
-    if (section?.kind === "toolRun" && section.blocks.some((block) => block.kind === "toolCall")) {
-      return index;
-    }
-  }
-  return -1;
 }
 
 /** Ticks once per second while `active`, giving the live elapsed header its clock. */

@@ -37,16 +37,16 @@ vi.mock("./ToolResultMessageContent", () => ({
 vi.mock("../tool-calls/AgentToolCallGroup", () => ({
   AgentToolCallGroup: ({
     blocks,
-    showLatestBlock,
+    showRunningBlocks,
   }: {
     blocks: { kind: "thinking" | "toolCall"; id: string; toolCall?: { id: string } }[];
-    showLatestBlock: boolean;
+    showRunningBlocks: boolean;
   }) => (
     <div data-testid="tool-call-group">
       <span>
         {blocks.map((block) => (block.kind === "toolCall" ? block.toolCall?.id : `thinking:${block.id}`)).join(",")}
       </span>
-      <span>{showLatestBlock ? "live" : "done"}</span>
+      <span>{showRunningBlocks ? "live" : "done"}</span>
     </div>
   ),
 }));
@@ -344,7 +344,7 @@ describe("AgentTurn", () => {
     expect(group.textContent).toContain("live");
   });
 
-  it("marks only the last tool run as live while the turn is working", () => {
+  it("marks every tool run as live while the turn is working", () => {
     const turn = buildTurn([
       { message: toolCallMessage("lr-a1", ["read-call"]), isStreaming: true },
       { message: { id: "lr-a2", role: "assistant", content: [{ type: "text", text: "checking results" }] } },
@@ -355,12 +355,12 @@ describe("AgentTurn", () => {
 
     const groups = screen.getAllByTestId("tool-call-group");
     expect(groups).toHaveLength(2);
-    expect(groups[0]?.textContent).toContain("done");
+    expect(groups[0]?.textContent).toContain("live");
     expect(groups[1]?.textContent).toContain("live");
     expect(screen.getByTestId("markdown-content").textContent).toBe("checking results");
   });
 
-  it("hides the latest block from every tool run once the turn is done", () => {
+  it("marks no tool run as live once the turn is done", () => {
     const turn = buildTurn([
       { message: toolCallMessage("dn-a1", ["read-call"]) },
       { message: { id: "dn-a2", role: "assistant", content: [{ type: "text", text: "checking results" }] } },
@@ -398,6 +398,6 @@ describe("AgentTurn", () => {
     expect(groups[0]?.textContent).toContain("read-call");
     expect(groups[0]?.textContent).toContain("live");
     expect(groups[1]?.textContent).toContain("thinking");
-    expect(groups[1]?.textContent).toContain("done");
+    expect(groups[1]?.textContent).toContain("live");
   });
 });
