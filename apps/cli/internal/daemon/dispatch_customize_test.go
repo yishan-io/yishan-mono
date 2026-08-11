@@ -124,24 +124,6 @@ func TestHandleCustomizeAgentsCreate_MissingContent(t *testing.T) {
 	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
 }
 
-func TestHandleCustomizeAgentsSetModelThinking_InvalidThinking(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	handler := newSkillTestHandler(t)
-	_, err := handler.handleCustomizeAgentsSetModelThinking(
-		mustMarshalSkillParams(t, map[string]any{"name": "general", "model": "x/model", "thinking": "ultra"}),
-	)
-	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
-}
-
-func TestHandleCustomizeAgentsSetModelThinking_UnsafeName(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	handler := newSkillTestHandler(t)
-	_, err := handler.handleCustomizeAgentsSetModelThinking(
-		mustMarshalSkillParams(t, map[string]any{"name": "../evil", "thinking": "high"}),
-	)
-	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
-}
-
 func TestHandleCustomizeAgentsCreate_InvalidName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.handleCustomizeAgentsCreate(mustMarshalSkillParams(t, map[string]any{"name": "My Agent", "description": "d", "content": "body"}))
@@ -185,7 +167,6 @@ func TestDispatchCustomize_RoutesAgentsMethods(t *testing.T) {
 		MethodCustomizeAgentsUpdate,
 		MethodCustomizeAgentsRemove,
 		MethodCustomizeAgentsRestore,
-		MethodCustomizeAgentsSetModelThinking,
 	} {
 		_, err := handler.dispatchCustomize(context.Background(), method, mustMarshalSkillParams(t, map[string]any{}))
 		if err == nil {

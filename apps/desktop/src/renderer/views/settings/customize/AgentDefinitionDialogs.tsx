@@ -16,8 +16,6 @@ import { listAgentModels } from "../../../commands/agentCommands";
 import {
   createAgentDefinition,
   getAgentDefinitionDetail,
-  removeAgentDefinition,
-  setAgentModelThinking,
   updateAgentDefinition,
 } from "../../../commands/customizeCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
@@ -25,6 +23,7 @@ import { AgentModelSelector } from "../../../components/agent/session/AgentModel
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../rpc/daemonTypes";
 import type { AgentModel } from "../../../store/agentChatTypes";
+import { applyFrontmatterModelThinking } from "./agentDefinitionFrontmatter";
 
 // THINKING_LEVELS mirrors pi's allowed agent thinking levels.
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
@@ -38,6 +37,44 @@ type ModelThinkingSelectorProps = {
 
 // AGENT_MODEL_KIND is the pi runtime agent kind used to list available models.
 const AGENT_MODEL_KIND = "pi";
+
+/**
+ * Finds the fetched model entry that best matches a frontmatter model value.
+ * The md file may write the model with or without the provider prefix (e.g.
+ * "claude-sonnet-4-5", "anthropic/claude-sonnet-4-5", or
+ * "openrouter/anthropic/claude-sonnet-4-5"), so exact id matching alone
+ * would leave the picker showing a raw synthetic entry. Match the exact id
+ * first, then the bare model key (everything after the first slash).
+ */
+function findMatchingModel(modelId: string, models: AgentModel[]): AgentModel | null {
+  const trimmed = modelId.trim();
+  if (trimmed === "") {
+    return null;
+  }
+  const exact = models.find((candidate) => candidate.id === trimmed);
+  if (exact) {
+    return exact;
+  }
+  const modelKey = trimmed.includes("/") ? trimmed.slice(trimmed.indexOf("/") + 1) : trimmed;
+  return (
+    models.find((candidate) => candidate.id === modelKey) ??
+    models.find((candidate) => candidate.id.endsWith(`/${modelKey}`)) ??
+    null
+  );
+}
+
+/**
+ * Extracts the provider prefix from a model id. Returns undefined when the id
+ * has no provider prefix (e.g. "gpt-5.6-terra") so the shared picker falls
+ * back to its "other" group instead of treating the whole id as a provider.
+ */
+function inferModelProvider(modelId: string): string | undefined {
+  const slashIndex = modelId.indexOf("/");
+  if (slashIndex <= 0) {
+    return undefined;
+  }
+  return modelId.slice(0, slashIndex).trim().toLowerCase();
+}
 
 /**
  * Reuses the agent chat composer's model list + thinking level control so
@@ -54,11 +91,10 @@ function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChang
       .then((result) => {
         if (cancelled) return;
         setModels(
-          result.models.map((entry) => ({
-            id: entry.id,
-            name: entry.name,
-            provider: entry.id.split("/")[0] ?? "",
-          })),
+          result.models.map((entry) => {
+            const provider = inferModelProvider(entry.id);
+            return provider ? { id: entry.id, name: entry.name, provider } : { id: entry.id, name: entry.name };
+          }),
         );
       })
       .catch(() => {
@@ -70,19 +106,28 @@ function ModelThinkingSelector({ model, thinking, onModelChange, onThinkingChang
     };
   }, []);
 
-  // When the seeded model id is not in the fetched list (provider removed or
-  // list fetch failed), surface it as a synthetic option so the configured
-  // value stays visible instead of showing a bare "Select model".
+  // The md file may define the model with or without the provider prefix
+  // (e.g. "claude-sonnet-4-5", "anthropic/claude-sonnet-4-5", or
+  // "openrouter/anthropic/claude-sonnet-4-5"), so the seeded value is matched
+  // leniently against the fetched list: exact id first, then by the model key
+  // (the part after the first slash).
+  const matchedModel = useMemo(() => (model === "" ? null : findMatchingModel(model, models)), [model, models]);
+
+  // When the seeded model matches nothing in the fetched list (provider
+  // removed, or list fetch failed), surface it as a synthetic option so the
+  // configured value stays visible instead of showing a bare "Select model".
+  // Provider is left unset so the shared picker infers it (prefix -> provider,
+  // otherwise "other").
   const effectiveModels = useMemo(() => {
-    if (model !== "" && !models.some((candidate) => candidate.id === model)) {
-      return [{ id: model, name: model, provider: model.split("/")[0] ?? "" }, ...models];
+    if (model !== "" && !matchedModel) {
+      return [{ id: model, name: model }, ...models];
     }
     return models;
-  }, [model, models]);
+  }, [matchedModel, model, models]);
 
   const currentModel = useMemo(
-    () => effectiveModels.find((candidate) => candidate.id === model) ?? null,
-    [effectiveModels, model],
+    () => matchedModel ?? effectiveModels.find((candidate) => candidate.id === model) ?? null,
+    [effectiveModels, matchedModel, model],
   );
 
   const handleThinkingCycle = useCallback(() => {
@@ -147,13 +192,15 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
     setIsSaving(true);
     setSaveError(null);
     try {
-      await updateAgentDefinition({ name: agent.name, content });
-      // Only write the runtime override when the user explicitly changed the
-      // model/thinking selector; otherwise the frontmatter (as edited) stays
-      // authoritative and is never shadowed by the seeded effective value.
-      if (model.trim() !== initialModel || thinking !== initialThinking) {
-        await setAgentModelThinking(agent.name, model.trim(), thinking);
-      }
+      // Fold the selector's model/thinking into the definition frontmatter
+      // only when the user explicitly changed the selector; otherwise the
+      // frontmatter (as edited) stays authoritative and is never rewritten
+      // with the seeded effective value.
+      const selectorChanged = model.trim() !== initialModel || thinking !== initialThinking;
+      await updateAgentDefinition({
+        name: agent.name,
+        content: selectorChanged ? applyFrontmatterModelThinking(content, model.trim(), thinking) : content,
+      });
       onChanged("settings.customize.agents.messages.updated");
       onClose();
     } catch (error) {
@@ -284,14 +331,13 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
     setError(null);
     try {
       const createdName = name.trim();
-      await createAgentDefinition({ name: createdName, description: description.trim(), content });
-      try {
-        await setAgentModelThinking(createdName, model.trim(), thinking);
-      } catch (overrideError) {
-        // Roll back so a retry does not dead-end on "agent already exists".
-        await removeAgentDefinition(createdName).catch(() => undefined);
-        throw overrideError;
-      }
+      await createAgentDefinition({
+        name: createdName,
+        description: description.trim(),
+        content,
+        model: model.trim(),
+        thinking,
+      });
       onCreated();
       onClose();
     } catch (createError) {

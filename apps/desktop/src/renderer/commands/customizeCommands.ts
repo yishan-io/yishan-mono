@@ -80,6 +80,8 @@ export async function createAgentDefinition(input: {
   name: string;
   description: string;
   content: string;
+  model: string;
+  thinking: string;
 }): Promise<void> {
   const client = await getDaemonClient();
   await client.customize.agents.create(input);
@@ -101,11 +103,4 @@ export async function removeAgentDefinition(name: string): Promise<void> {
 export async function restoreAgentDefinition(name: string): Promise<void> {
   const client = await getDaemonClient();
   await client.customize.agents.restore({ name });
-}
-
-/** Sets (or clears) the runtime model/thinking override for one agent in
- * agent.overrides.json. */
-export async function setAgentModelThinking(name: string, model: string, thinking: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.agents.setModelThinking({ name, model, thinking });
 }

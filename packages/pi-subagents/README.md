@@ -50,22 +50,14 @@ User and project full-definition overrides use standard Pi locations:
 - User: `<active-agent-dir>/agents/*.md` (normally `~/.pi/agent/agents/*.md`; Yishan-managed sessions use `~/.yishan/pi/agent/agents/*.md`)
 - Project: `.pi/agents/*.md`
 
-Users can also patch just the execution model and thinking level without copying an agent definition. Create the optional JSON file `<active-agent-dir>/agent.overrides.json` (in a Yishan-managed session: `~/.yishan/pi/agent/agent.overrides.json`):
+Model and thinking level are part of the agent definition frontmatter (`model:` / `thinking:`), so a user markdown definition can set them without touching built-in files. A project `.pi/agents/*.md` definition remains the highest-priority full override, including for model and thinking.
 
-```json
-{
-  "explore": { "thinking": "low" },
-  "builder": { "model": "gpt-5.6-terra", "thinking": "high" }
-}
-```
-
-Each entry may contain only `model` and/or `thinking`. The JSON patch applies to agents resolved from the built-in and user markdown sources; unknown agent names are silently ignored. A project `.pi/agents/*.md` definition remains the highest-priority full override, including for model and thinking.
+> Since 0.2.0 the old `<active-agent-dir>/agent.overrides.json` patch file is no longer read. If you previously used it to set `model`/`thinking`, move those values into the `model:` / `thinking:` frontmatter of the agent definition file.
 
 Override precedence:
 1. project markdown definition
-2. user `agent.overrides.json` model/thinking patch
-3. user markdown definition
-4. built-in definition
+2. user markdown definition
+3. built-in definition
 
 ## Built-in agents
 

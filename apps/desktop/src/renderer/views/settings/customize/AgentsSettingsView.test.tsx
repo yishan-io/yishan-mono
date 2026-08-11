@@ -12,7 +12,6 @@ const mocked = {
   removeAgentDefinition: vi.fn(),
   restoreAgentDefinition: vi.fn(),
   listAgentModels: vi.fn(),
-  setAgentModelThinking: vi.fn(),
 };
 
 const AVAILABLE_MODELS = [
@@ -33,13 +32,16 @@ vi.mock("../../../commands/agentCommands", () => ({
 vi.mock("../../../commands/customizeCommands", () => ({
   listAgentDefinitions: () => mocked.listAgentDefinitions(),
   getAgentDefinitionDetail: (name: string) => mocked.getAgentDefinitionDetail(name),
-  createAgentDefinition: (input: { name: string; description: string; content: string }) =>
-    mocked.createAgentDefinition(input),
+  createAgentDefinition: (input: {
+    name: string;
+    description: string;
+    content: string;
+    model: string;
+    thinking: string;
+  }) => mocked.createAgentDefinition(input),
   updateAgentDefinition: (input: { name: string; content: string }) => mocked.updateAgentDefinition(input),
   removeAgentDefinition: (name: string) => mocked.removeAgentDefinition(name),
   restoreAgentDefinition: (name: string) => mocked.restoreAgentDefinition(name),
-  setAgentModelThinking: (name: string, model: string, thinking: string) =>
-    mocked.setAgentModelThinking(name, model, thinking),
 }));
 
 const OFFICIAL = {
@@ -127,6 +129,8 @@ describe("AgentsSettingsView", () => {
         name: "new-helper",
         description: "Does things",
         content: "## Steps\n1. Do\n",
+        model: "",
+        thinking: "medium",
       }),
     );
   });
@@ -158,12 +162,168 @@ describe("AgentsSettingsView", () => {
         name: "model-helper",
         description: "",
         content: "# body\n",
+        model: "anthropic/claude-opus-4-5",
+        thinking: "high",
       }),
     );
-    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("model-helper", "anthropic/claude-opus-4-5", "high");
   });
 
-  it("editing writes the override only when the selector values change", async () => {
+  it("groups provider-less models under the fallback provider in the create picker", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([OFFICIAL]);
+    mocked.listAgentModels.mockResolvedValue({
+      agentKind: "pi",
+      models: [
+        { id: "anthropic/claude-opus-4-5", name: "Claude Opus 4.5" },
+        { id: "gpt-5.6-terra", name: "gpt-5.6-terra" },
+      ],
+      source: "test",
+      fetchedAt: 0,
+      cacheExpiry: 0,
+    });
+    mocked.createAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("general");
+    fireEvent.click(screen.getByTestId("create-agent-button"));
+    fireEvent.click(screen.getByLabelText("Select model"));
+
+    // A provider-less id must not become its own provider group; it lands in
+    // the fallback "other" group so the picker displays it normally.
+    fireEvent.click(await screen.findByText("other"));
+    expect(screen.getByText("gpt-5.6-terra")).toBeTruthy();
+  });
+
+  it("groups openrouter ids with slashed model keys under OpenRouter", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([OFFICIAL]);
+    mocked.listAgentModels.mockResolvedValue({
+      agentKind: "pi",
+      models: [
+        { id: "anthropic/claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
+        { id: "openrouter/anthropic/claude-opus-4.5", name: "openrouter/anthropic/claude-opus-4.5" },
+        { id: "openrouter/deepseek/deepseek-v4-flash-latest", name: "openrouter/deepseek/deepseek-v4-flash-latest" },
+      ],
+      source: "test",
+      fetchedAt: 0,
+      cacheExpiry: 0,
+    });
+    mocked.createAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("general");
+    fireEvent.click(screen.getByTestId("create-agent-button"));
+    fireEvent.click(screen.getByLabelText("Select model"));
+
+    // Slashes inside the openrouter model key must not split the provider:
+    // the first segment stays the provider ("OpenRouter"), never "anthropic"
+    // or "deepseek".
+    fireEvent.click(await screen.findByText("OpenRouter"));
+    expect(screen.getByText("openrouter/anthropic/claude-opus-4.5")).toBeTruthy();
+    expect(screen.getByText("openrouter/deepseek/deepseek-v4-flash-latest")).toBeTruthy();
+    expect(screen.queryByText("Claude Sonnet 4.5")).toBeNull();
+  });
+
+  it("matches a provider-less frontmatter model to its real list entry", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({
+      ...USER,
+      content: "---\nname: my-helper\ndescription: My custom helper\nmodel: claude-sonnet-4-5\n---\n# body\n",
+      model: "claude-sonnet-4-5",
+      thinking: "",
+    });
+    mocked.listAgentModels.mockResolvedValue({
+      agentKind: "pi",
+      models: [
+        { id: "anthropic/claude-sonnet-4-5", name: "anthropic/claude-sonnet-4-5" },
+        { id: "openrouter/anthropic/claude-sonnet-4-5", name: "openrouter/anthropic/claude-sonnet-4-5" },
+      ],
+      source: "test",
+      fetchedAt: 0,
+      cacheExpiry: 0,
+    });
+    mocked.updateAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+
+    // The bare seeded value is displayed as the matched list entry under its
+    // provider instead of a raw "Other / claude-sonnet-4-5" synthetic option.
+    // Note: with multiple entries sharing the model key, the first in list
+    // order wins (anthropic sorts before openrouter), so this assertion pins
+    // that ordering too.
+    await screen.findByText("anthropic/claude-sonnet-4-5");
+    expect(screen.getByText("Anthropic")).toBeTruthy();
+    expect(screen.queryByText("Other")).toBeNull();
+
+    // Saving without touching the selector keeps the bare frontmatter value
+    // verbatim (the picker match is display-only).
+    fireEvent.click(screen.getByTestId("agent-detail-save"));
+    await waitFor(() =>
+      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
+        name: "my-helper",
+        content: "---\nname: my-helper\ndescription: My custom helper\nmodel: claude-sonnet-4-5\n---\n# body\n",
+      }),
+    );
+  });
+
+  it("matches a prefixed frontmatter model to the deeper-prefixed list entry", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({
+      ...USER,
+      content: "---\nname: my-helper\ndescription: My custom helper\nmodel: anthropic/claude-sonnet-4-5\n---\n# body\n",
+      model: "anthropic/claude-sonnet-4-5",
+      thinking: "",
+    });
+    mocked.listAgentModels.mockResolvedValue({
+      agentKind: "pi",
+      models: [{ id: "openrouter/anthropic/claude-sonnet-4-5", name: "openrouter/anthropic/claude-sonnet-4-5" }],
+      source: "test",
+      fetchedAt: 0,
+      cacheExpiry: 0,
+    });
+    mocked.updateAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+
+    // "anthropic/claude-sonnet-4-5" in the md file matches the openrouter
+    // entry by model key, so the picker shows the real entry under OpenRouter.
+    await screen.findByText("openrouter/anthropic/claude-sonnet-4-5");
+    expect(screen.getByText("OpenRouter")).toBeTruthy();
+  });
+
+  it("keeps an unmatched frontmatter model visible as the selected option", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({
+      ...USER,
+      content: "---\nname: my-helper\ndescription: My custom helper\nmodel: retired-model-xyz\n---\n# body\n",
+      model: "retired-model-xyz",
+      thinking: "",
+    });
+    mocked.listAgentModels.mockResolvedValue({
+      agentKind: "pi",
+      models: [{ id: "anthropic/claude-sonnet-4-5", name: "anthropic/claude-sonnet-4-5" }],
+      source: "test",
+      fetchedAt: 0,
+      cacheExpiry: 0,
+    });
+    mocked.updateAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+
+    await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
+    // A configured value that matches no fetched model stays visible as the
+    // selected option (synthetic fallback) instead of "Select model".
+    expect(screen.queryByText("Select model")).toBeNull();
+    expect(screen.getByText("retired-model-xyz")).toBeTruthy();
+  });
+
+  it("editing folds the selector values into the frontmatter only when they change", async () => {
     mocked.listAgentDefinitions.mockResolvedValue([USER]);
     mocked.getAgentDefinitionDetail.mockResolvedValue({
       ...USER,
@@ -186,13 +346,13 @@ describe("AgentsSettingsView", () => {
     await waitFor(() =>
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "my-helper",
-        content: USER_CONTENT,
+        content:
+          "---\nname: my-helper\ndescription: My custom helper\nmodel: anthropic/claude-sonnet-4-5\nthinking: xhigh\n---\n# body\n",
       }),
     );
-    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("my-helper", "anthropic/claude-sonnet-4-5", "xhigh");
   });
 
-  it("editing without touching model/thinking does not write an override", async () => {
+  it("editing without touching model/thinking keeps the frontmatter unchanged", async () => {
     mocked.listAgentDefinitions.mockResolvedValue([USER]);
     mocked.getAgentDefinitionDetail.mockResolvedValue({
       ...USER,
@@ -210,8 +370,12 @@ describe("AgentsSettingsView", () => {
     await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
     fireEvent.click(screen.getByTestId("agent-detail-save"));
 
-    await waitFor(() => expect(mocked.updateAgentDefinition).toHaveBeenCalled());
-    expect(mocked.setAgentModelThinking).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
+        name: "my-helper",
+        content: USER_CONTENT,
+      }),
+    );
   });
 
   it("editing an official agent shows the overwrite confirmation before saving", async () => {
