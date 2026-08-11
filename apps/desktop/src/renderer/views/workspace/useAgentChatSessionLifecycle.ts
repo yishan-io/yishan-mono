@@ -67,7 +67,7 @@ export function useAgentChatSessionLifecycle({
       }
 
       try {
-        const startedSessionId = await ensurePiSession({
+        const { sessionId: startedSessionId, attached } = await ensurePiSession({
           tabId,
           workspaceId,
           cwd,
@@ -76,6 +76,11 @@ export function useAgentChatSessionLifecycle({
           paneId: startupPaneIdRef.current,
         });
         if (isDisposed) return;
+
+        // A fresh process means the previous owner is gone: any sub-agent rows
+        // started before this moment are interrupted history, not live runs.
+        // An attach means the process is still alive, so rows stay live.
+        agentChatStore.getState().setSubagentSessionEndedAt(tabId, attached ? null : Date.now());
 
         await fetchAgentState({ tabId, sessionId: startedSessionId });
         if (isDisposed) return;
@@ -123,6 +128,8 @@ export function useAgentChatSessionLifecycle({
           void (async () => {
             try {
               await reattachPiSession(tabId);
+              // The process survived the connection drop; rows stay live.
+              agentChatStore.getState().setSubagentSessionEndedAt(tabId, null);
               await fetchAgentState({ tabId, sessionId: liveSessionId });
               await fetchAgentMessages({ tabId, sessionId: liveSessionId });
               await fetchAgentModels({ tabId, sessionId: liveSessionId });
@@ -133,7 +140,7 @@ export function useAgentChatSessionLifecycle({
               // so the tab heals itself instead of staying broken.
               clearPiSessionHandle(tabId);
               try {
-                await ensurePiSession({
+                const { attached } = await ensurePiSession({
                   tabId,
                   workspaceId,
                   cwd,
@@ -141,6 +148,9 @@ export function useAgentChatSessionLifecycle({
                   sessionView,
                   paneId: startupPaneIdRef.current,
                 });
+                // Fresh start resets the session; classify pre-existing rows
+                // as interrupted when the previous process is gone.
+                agentChatStore.getState().setSubagentSessionEndedAt(tabId, attached ? null : Date.now());
                 await fetchAgentState({ tabId, sessionId: liveSessionId });
                 await fetchAgentMessages({ tabId, sessionId: liveSessionId });
                 await fetchAgentModels({ tabId, sessionId: liveSessionId });

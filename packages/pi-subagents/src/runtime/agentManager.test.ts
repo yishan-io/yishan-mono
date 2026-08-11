@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentDefinition, AgentTask, AgentUsageStats } from "../agents/types";
 import { AgentManager } from "./agentManager";
@@ -56,6 +56,10 @@ function createMockRunHandle(resultPromise: Promise<unknown>, overrides: Partial
     steer: overrides.steer ?? (async () => {}),
   };
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("AgentManager", () => {
   it("tracks foreground runs and completed records", async () => {
@@ -334,5 +338,23 @@ describe("AgentManager", () => {
     expect(agentManager.get(queuedAgentId)).toMatchObject({ status: "cancelled" });
     await expect(agentManager.run(createTask())).rejects.toThrow("Agent manager is shut down");
     expect(agentManager.get(runningAgentId)).toMatchObject({ status: "cancelled" });
+  });
+
+  it("shutdown settles within a bound even when a run never completes", async () => {
+    vi.useFakeTimers();
+    const neverCompletion = new Promise<never>(() => {});
+    const createAgentRun = vi.fn(async () => createMockRunHandle(neverCompletion));
+    const agentManager = new AgentManager({ createAgentRun });
+
+    await agentManager.runInBackground(createTask({ mode: "background" }));
+    await Promise.resolve();
+
+    const shutdownPromise = agentManager.shutdown();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await shutdownPromise;
+
+    // Shutdown returned despite the never-settling run, and the manager
+    // rejects new work from here on.
+    await expect(agentManager.run(createTask())).rejects.toThrow("Agent manager is shut down");
   });
 });

@@ -35,6 +35,13 @@ export type AgentPendingUiAutoResponse = {
   value: string;
 };
 
+/** Live UI state of one sub-agent cancel request. */
+export type AgentSubagentCancelState = {
+  status: "cancelling" | "failed";
+  /** Why the cancel failed, when status is "failed". */
+  reason?: "timeout" | "missing";
+};
+
 /** One summary line exposed by Pi reasoning metadata. */
 export type AgentThinkingSignatureSummary = {
   type: string;

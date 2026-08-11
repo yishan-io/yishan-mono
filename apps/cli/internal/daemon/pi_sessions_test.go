@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/workspace"
@@ -843,4 +846,146 @@ func waitForFileContent(t *testing.T, path string) string {
 	}
 	t.Fatalf("timed out waiting for %s", path)
 	return ""
+}
+
+func newTestWSConnState(t *testing.T) (*wsConnState, *websocket.Conn) {
+	t.Helper()
+	upgrader := websocket.Upgrader{}
+	serverConns := make(chan *websocket.Conn, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Errorf("websocket upgrade failed: %v", err)
+			return
+		}
+		serverConns <- conn
+	}))
+	t.Cleanup(server.Close)
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(strings.Replace(server.URL, "http://", "ws://", 1), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	t.Cleanup(func() { _ = clientConn.Close() })
+
+	var serverConn *websocket.Conn
+	select {
+	case serverConn = <-serverConns:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for server websocket upgrade")
+	}
+	t.Cleanup(func() { _ = serverConn.Close() })
+
+	return &wsConnState{conn: serverConn}, clientConn
+}
+
+func TestHandlePiSessionExit_ForwardsSessionEndOnProcessExit(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	installBlockingFakePiBinary(t)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	connState, clientConn := newTestWSConnState(t)
+	if _, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-1",
+		"tabId":       "tab-1",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	})); err != nil {
+		t.Fatalf("pi.start: %v", err)
+	}
+
+	// Stopping the process triggers the exit hook, which must notify the
+	// desktop that the session ended.
+	if _, err := h.dispatchPi(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+		"sessionId": "session-1",
+	})); err != nil {
+		t.Fatalf("pi.stop: %v", err)
+	}
+
+	if err := clientConn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set read deadline: %v", err)
+	}
+	_, message, err := clientConn.ReadMessage()
+	if err != nil {
+		t.Fatalf("read session_end notification: %v", err)
+	}
+
+	var notification struct {
+		Method string         `json:"method"`
+		Params map[string]any `json:"params"`
+	}
+	if err := json.Unmarshal(message, &notification); err != nil {
+		t.Fatalf("unmarshal notification: %v", err)
+	}
+	if notification.Method != MethodFrontendEventsStream {
+		t.Fatalf("method = %q, want %q", notification.Method, MethodFrontendEventsStream)
+	}
+	if notification.Params["topic"] != "agent.pi.event" {
+		t.Fatalf("topic = %v, want agent.pi.event", notification.Params["topic"])
+	}
+	payload, ok := notification.Params["payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("payload type = %T, want map", notification.Params["payload"])
+	}
+	event, ok := payload["event"].(map[string]any)
+	if !ok || event["type"] != "session_end" {
+		t.Fatalf("event = %#v, want session_end", payload["event"])
+	}
+	if payload["sessionId"] != "session-1" || payload["tabId"] != "tab-1" {
+		t.Fatalf("unexpected payload: %#v", payload)
+	}
+}
+
+func TestHandlePiSessionExit_SkipsSessionSupersededByNewerProcess(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	installBlockingFakePiBinary(t)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	connState, clientConn := newTestWSConnState(t)
+	for _, sessionID := range []string{"session-1", "session-2"} {
+		if _, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+			"sessionId":   sessionID,
+			"tabId":       "tab-1",
+			"workspaceId": "workspace-1",
+			"cwd":         cwd,
+		})); err != nil {
+			t.Fatalf("pi.start %s: %v", sessionID, err)
+		}
+	}
+
+	oldSession, ok := h.agentMgr.Session("session-1")
+	if !ok {
+		t.Fatal("expected session-1 to be registered")
+	}
+	newSession, ok := h.agentMgr.Session("session-2")
+	if !ok {
+		t.Fatal("expected session-2 to be registered")
+	}
+
+	// A newer process took over session-1's registry entry before the old one
+	// exited. The old process's exit must not notify the desktop.
+	h.piSessionsMu.Lock()
+	h.piSessions["session-1"].session = newSession
+	h.piSessionsMu.Unlock()
+
+	h.handlePiSessionExit(oldSession)
+
+	if err := clientConn.SetReadDeadline(time.Now().Add(300 * time.Millisecond)); err != nil {
+		t.Fatalf("set read deadline: %v", err)
+	}
+	if _, _, err := clientConn.ReadMessage(); err == nil {
+		t.Fatal("expected no notification for a superseded session")
+	}
 }

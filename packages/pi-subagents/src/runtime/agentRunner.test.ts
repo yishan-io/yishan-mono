@@ -21,11 +21,16 @@ function createTempDir(): string {
   return tempDir;
 }
 
-function createMockSession(options: { abortRejects?: boolean; sessionPath?: string } = {}) {
+function createMockSession(options: { abortRejects?: boolean; hung?: boolean; sessionPath?: string } = {}) {
   let listener: ((event: { type: string }) => void) | undefined;
   let resolvePrompt: (() => void) | undefined;
   const sessionPath = options.sessionPath ?? "/tmp/shared-sessions/child-session-1.jsonl";
   const abortMock = vi.fn(async () => {
+    if (options.hung) {
+      // A hung turn never settles, and session.abort() (which awaits
+      // waitForIdle()) hangs along with it.
+      await new Promise<void>(() => {});
+    }
     resolvePrompt?.();
     if (options.abortRejects) {
       throw new Error("abort failed");
@@ -294,5 +299,146 @@ describe("startAgentRun", () => {
       sessionId: "child-session-1",
       sessionPath,
     });
+  });
+
+  it("force-settles a hung run when cancel cannot interrupt the turn", async () => {
+    vi.useFakeTimers();
+    const { session, abortMock, sessionPath } = createMockSession({ hung: true });
+    createChildAgentSessionMock.mockResolvedValue({
+      session,
+      services: {},
+      sessionId: "child-session-1",
+      sessionPath,
+    });
+    const parentSessionWriter = {
+      recordChildSessionStarted: vi.fn(),
+      recordChildSessionCompleted: vi.fn(),
+    };
+
+    const handle = await startAgentRun({
+      agentId: "agent-hung",
+      agentName: "Builder",
+      prompt: "Implement feature",
+      cwd: "/tmp/project",
+      mode: "foreground",
+      parentSessionWriter,
+      agentDefinition: {
+        name: "Builder",
+        description: "Implement code",
+        systemPrompt: "Builder prompt",
+        source: "builtin",
+      },
+    });
+
+    const cancelPromise = handle.cancel();
+    await vi.advanceTimersByTimeAsync(2_000);
+    await cancelPromise;
+
+    const result = await handle.completion;
+
+    expect(abortMock).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      agentId: "agent-hung",
+      agentName: "Builder",
+      status: "cancelled",
+      error: "Agent run was cancelled",
+      sessionId: "child-session-1",
+      sessionPath,
+    });
+    expect(parentSessionWriter.recordChildSessionCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "agent-hung", status: "cancelled" }),
+    );
+  });
+
+  it("force-settles a hung run when the per-run timeout fires", async () => {
+    vi.useFakeTimers();
+    const { session, abortMock, sessionPath } = createMockSession({ hung: true });
+    createChildAgentSessionMock.mockResolvedValue({
+      session,
+      services: {},
+      sessionId: "child-session-1",
+      sessionPath,
+    });
+    const parentSessionWriter = {
+      recordChildSessionStarted: vi.fn(),
+      recordChildSessionCompleted: vi.fn(),
+    };
+
+    const handle = await startAgentRun({
+      agentId: "agent-hung-timeout",
+      agentName: "Builder",
+      prompt: "Implement feature",
+      cwd: "/tmp/project",
+      mode: "foreground",
+      timeoutMs: 50,
+      parentSessionWriter,
+      agentDefinition: {
+        name: "Builder",
+        description: "Implement code",
+        systemPrompt: "Builder prompt",
+        source: "builtin",
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(50); // per-run timeout fires → interrupt requested
+    await vi.advanceTimersByTimeAsync(2_000); // grace elapses → force-settle
+
+    const result = await handle.completion;
+
+    expect(abortMock).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      agentId: "agent-hung-timeout",
+      agentName: "Builder",
+      status: "failed",
+      error: "Agent run timed out",
+      sessionId: "child-session-1",
+      sessionPath,
+    });
+    expect(parentSessionWriter.recordChildSessionCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "agent-hung-timeout", status: "failed" }),
+    );
+  });
+
+  it("still writes the parent terminal entry when child transcript persistence fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // sessionPath pointing at a directory makes persistChildSession's writeFile
+    // throw (EISDIR); the terminal entry must still be recorded.
+    const dirPath = createTempDir();
+    const { session } = createMockSession({ sessionPath: dirPath });
+    createChildAgentSessionMock.mockResolvedValue({
+      session,
+      services: {},
+      sessionId: "child-session-1",
+      sessionPath: dirPath,
+    });
+    const parentSessionWriter = {
+      recordChildSessionStarted: vi.fn(),
+      recordChildSessionCompleted: vi.fn(),
+    };
+
+    const handle = await startAgentRun({
+      agentId: "agent-persist-fail",
+      agentName: "Builder",
+      prompt: "Implement feature",
+      cwd: "/tmp/project",
+      mode: "foreground",
+      parentSessionWriter,
+      agentDefinition: {
+        name: "Builder",
+        description: "Implement code",
+        systemPrompt: "Builder prompt",
+        source: "builtin",
+      },
+    });
+
+    session.abort();
+    const result = await handle.completion;
+
+    expect(warnSpy).toHaveBeenCalled();
+    expect(result.status).toBe("completed");
+    expect(parentSessionWriter.recordChildSessionCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "agent-persist-fail", status: "completed" }),
+    );
+    warnSpy.mockRestore();
   });
 });

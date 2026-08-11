@@ -146,6 +146,7 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		CWD:         req.CWD,
 		ExtraEnv:    extraEnv,
 		OnEvent:     h.makePiEventCallback(req.SessionID),
+		OnExit:      h.handlePiSessionExit,
 	}
 
 	// Pi sessions are owned by the daemon, not the desktop WebSocket. A laptop
@@ -183,6 +184,13 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		cwd:         req.CWD,
 	}
 	h.piSessionsMu.Unlock()
+
+	// A process that exited before the registry insert (instant crash) would
+	// otherwise lose its session_end notification: its OnExit ran before the
+	// entry existed. Fire the exit handler now that the entry is in place.
+	if _, alive := h.agentMgr.Session(req.SessionID); !alive {
+		h.handlePiSessionExit(session)
+	}
 
 	return map[string]any{"sessionId": req.SessionID}, nil
 }
@@ -595,4 +603,49 @@ func (h *JSONRPCHandler) makePiEventCallback(sessionID string) func(string, stri
 			},
 		})
 	}
+}
+
+// handlePiSessionExit forwards a session_end event to the desktop when a pi
+// process exits. It only fires for the exact process still registered in
+// h.piSessions: a newer process that took over the same session id (fast reopen)
+// leaves the event unsent, and a clean pi.stop is ignored by the desktop because
+// its event router is already unsubscribed by then. The stale registry entry is
+// intentionally kept so the task-run fail-closed guard in handlePiStart can
+// still detect a session that died before attach; pi.start overwrites it and
+// pi.attach self-heals.
+func (h *JSONRPCHandler) handlePiSessionExit(exited *agentmanager.Session) {
+	h.piSessionsMu.Lock()
+	state, exists := h.piSessions[exited.ID()]
+	if !exists || state.session != exited {
+		h.piSessionsMu.Unlock()
+		return
+	}
+	connState := state.connState
+	tabID := state.tabID
+	workspaceID := state.workspaceID
+	h.piSessionsMu.Unlock()
+
+	if connState == nil || connState.conn == nil {
+		return
+	}
+
+	// Re-check ownership just before sending: a concurrent pi.attach may have
+	// rebound the session to a different connection; never notify a stale one.
+	h.piSessionsMu.Lock()
+	current, stillExists := h.piSessions[exited.ID()]
+	if !stillExists || current.session != exited || current.connState != connState {
+		h.piSessionsMu.Unlock()
+		return
+	}
+	h.piSessionsMu.Unlock()
+
+	_ = connState.Notify(MethodFrontendEventsStream, map[string]any{
+		"topic": "agent.pi.event",
+		"payload": map[string]any{
+			"sessionId":   exited.ID(),
+			"tabId":       tabID,
+			"workspaceId": workspaceID,
+			"event":       json.RawMessage(`{"type":"session_end"}`),
+		},
+	})
 }

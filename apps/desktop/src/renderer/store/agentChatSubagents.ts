@@ -21,6 +21,8 @@ export type RunningSubagentSummary = {
   childSessionId?: string;
   title: string;
   promptSummary: string;
+  /** When the underlying message began, for interrupted-vs-live classification. */
+  startedAtMs?: number;
 };
 
 /** Child-session metadata persisted on the subagent session itself. */
@@ -164,6 +166,7 @@ export function deriveRunningSubagents(
         childSessionId: lifecycle.childSessionId,
         title: lifecycle.title ?? buildFallbackTitle(lifecycle.agentName, lifecycle.summary),
         promptSummary: lifecycleSummary,
+        startedAtMs: extractMessageStartedAtMs(message),
       });
       continue;
     }
@@ -192,7 +195,10 @@ export function deriveRunningSubagents(
         continue;
       }
 
-      pendingByToolCallId.set(block.id, pendingSubagent);
+      pendingByToolCallId.set(block.id, {
+        ...pendingSubagent,
+        startedAtMs: extractMessageStartedAtMs(message),
+      });
     }
   }
 
@@ -216,6 +222,10 @@ function buildPendingSubagent(
     title: buildFallbackTitle(agentName, promptSummary),
     promptSummary,
   };
+}
+
+function extractMessageStartedAtMs(message: AgentMessage): number | undefined {
+  return message.timestamp ?? message.startedAtMs;
 }
 
 function hasMatchingLifecycleSubagent(

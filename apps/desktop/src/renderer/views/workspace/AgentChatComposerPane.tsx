@@ -67,9 +67,12 @@ function AgentChatComposerPaneComponent({
     }),
   );
   const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
-  const { runningSubagents, subagentProgressTargets, handleOpenSubagent, handleCancelSubagent } =
+  const { runningSubagents, subagentProgressTargets, subagentCancelStates, handleOpenSubagent, handleCancelSubagent } =
     useAgentChatSubagentActions({ tabId, workspaceId, cwd, paneId, sessionId });
   const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
+  const subagentSessionEndedAtMs = agentChatStore(
+    (state) => state.sessionsByTabId[tabId]?.subagentSessionEndedAtMs ?? null,
+  );
   const compactionReason = agentChatStore((state) => state.sessionsByTabId[tabId]?.compactionReason ?? null);
   const availableModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.availableModels ?? EMPTY_MODELS);
   const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
@@ -330,19 +333,22 @@ function AgentChatComposerPaneComponent({
             Running sub-agents
           </Typography>
           {runningSubagents.map((subagent) => {
-            const matchingProgressTargets = subagentProgressTargets.filter(
-              (target) => target.agentName === subagent.agentName,
-            );
-            const canCancel = Boolean(
-              subagent.agentId || subagent.childSessionId || matchingProgressTargets.length === 1,
-            );
+            // Interrupted rows (pre-death) get no cancel; live rows cancel via real ids or a unique progress target.
+            const isInterrupted =
+              subagentSessionEndedAtMs !== null && (subagent.startedAtMs ?? 0) < subagentSessionEndedAtMs;
+            const hasUniqueLiveTarget =
+              subagentProgressTargets.filter((t) => t.agentName === subagent.agentName).length === 1;
+            const canCancel =
+              !isInterrupted && Boolean(subagent.agentId || subagent.childSessionId || hasUniqueLiveTarget);
 
             return (
               <AgentChatSubagentRow
                 key={subagent.rowId}
                 subagent={subagent}
                 isRunning
+                isInterrupted={isInterrupted}
                 canCancel={canCancel}
+                cancelState={subagentCancelStates[subagent.childSessionId ?? subagent.rowId]}
                 onOpen={handleOpenSubagent}
                 onCancel={handleCancelSubagent}
               />

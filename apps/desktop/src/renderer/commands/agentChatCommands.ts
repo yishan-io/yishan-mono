@@ -1,6 +1,5 @@
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { generateId } from "../helpers/generateId";
-import type * as Rpc from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
 import { type AgentModel, isAgentSessionBusy } from "../store/agentChatTypes";
@@ -16,6 +15,7 @@ import {
   setAgentModel,
   setAgentThinkingLevel,
 } from "./agentChatPiEventHelpers";
+import { fetchAgentSessionFilePath, fetchSessionHistory, listActivePiSessions } from "./agentChatSessionHistory";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
 // Re-export moved public APIs so existing callers need no import changes.
@@ -60,6 +60,10 @@ function delay(ms: number): Promise<void> {
 /**
  * Ensures a Pi RPC session exists for a tab. Idempotent — subsequent calls
  * for the same tabId return the existing session.
+ *
+ * Returns whether the session process was already alive (attached or reused)
+ * rather than freshly started, so callers can classify pre-existing transcript
+ * history as interrupted when the previous owner process is gone.
  */
 export async function ensurePiSession(opts: {
   tabId: string;
@@ -68,7 +72,7 @@ export async function ensurePiSession(opts: {
   sessionId?: string;
   sessionView?: AgentChatSessionView;
   paneId?: string;
-}): Promise<string> {
+}): Promise<{ sessionId: string; attached: boolean }> {
   const existing = activePiSessions.get(opts.tabId);
   if (existing) {
     // If Pi startup is still in flight, wait before declaring the session ready.
@@ -82,7 +86,7 @@ export async function ensurePiSession(opts: {
         return ensurePiSession(opts);
       }
     }
-    return existing.sessionId;
+    return { sessionId: existing.sessionId, attached: true };
   }
 
   const requestedSessionId = opts.sessionId?.trim();
@@ -103,11 +107,12 @@ export async function ensurePiSession(opts: {
       startPromise: null,
     });
     await ensureAgentChatEventRouterReady();
-    return chatSession.sessionId;
+    return { sessionId: chatSession.sessionId, attached: true };
   }
 
   const sessionId = requestedSessionId || generateId();
   agentChatStore.getState().initSession(opts.tabId, sessionId);
+  let didAttach = false;
   const routerDispose = registerAgentChatEventRouter({
     tabId: opts.tabId,
     sessionId,
@@ -149,6 +154,7 @@ export async function ensurePiSession(opts: {
       if (!requestedSessionId || !isPiSessionAlreadyRunningError(error)) {
         throw error;
       }
+      didAttach = true;
       return await client.pi.attach({
         sessionId,
         tabId: opts.tabId,
@@ -188,7 +194,7 @@ export async function ensurePiSession(opts: {
     () => resolveDeferredStart?.(),
   );
   await startPromise;
-  return sessionId;
+  return { sessionId, attached: didAttach };
 }
 
 /** Returns the tabId that currently owns the given agent-chat session, if any. */
@@ -418,25 +424,8 @@ export async function fetchAgentMessages(opts: {
 }
 
 // ─── Session history ─────────────────────────────────────────────────────────
-
-/** Fetches past session summaries for the current working directory. */
-export async function fetchSessionHistory(cwd: string): Promise<Rpc.PiSessionSummary[]> {
-  const client = await getDaemonClient();
-  return (await client.pi.listSessions({ cwd })) as Rpc.PiSessionSummary[];
-}
-
-/** Resolves the transcript file path for one pi session. Empty when no transcript exists yet. */
-export async function fetchAgentSessionFilePath(sessionId: string, cwd: string): Promise<string> {
-  const client = await getDaemonClient();
-  const result = (await client.pi.getSessionFile({ sessionId, cwd })) as Rpc.PiGetSessionFileResult;
-  return result.filePath;
-}
-
-/** Fetches live Pi sessions currently held by the daemon. */
-export async function listActivePiSessions(): Promise<Rpc.PiActiveSessionSummary[]> {
-  const client = await getDaemonClient();
-  return (await client.pi.listActiveSessions({})) as Rpc.PiActiveSessionSummary[];
-}
+// Moved to agentChatSessionHistory.ts; re-exported to preserve the public API.
+export { fetchAgentSessionFilePath, fetchSessionHistory, listActivePiSessions } from "./agentChatSessionHistory";
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 

@@ -243,21 +243,23 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
   // ─── finalizeStreamingMessage now enforces MAX_MESSAGES_PER_TAB ───────────
 
   describe("finalizeStreamingMessage enforces MAX_MESSAGES_PER_TAB", () => {
-    const MAX_MESSAGES = 500;
+    const MAX_MESSAGES = 1000;
 
     it("enforces MAX_MESSAGES_PER_TAB cap when finalizing a streaming message", () => {
       const tabId = "tab-overflow";
       const sessionId = "session-overflow";
       agentChatStore.getState().initSession(tabId, sessionId);
 
-      // Fill the store to exactly 500 messages via appendMessage.
-      for (let i = 1; i <= MAX_MESSAGES; i++) {
-        agentChatStore.getState().appendMessage(tabId, {
-          id: `base-msg-${i}`,
-          role: "assistant",
-          content: `Content ${i}`,
-        });
-      }
+      // Fill the store to exactly 1000 messages in one pass (appendMessage is
+      // O(n) per call, so bulk loops would be quadratic).
+      agentChatStore.getState().replaceMessages(
+        tabId,
+        Array.from({ length: MAX_MESSAGES }, (_, i) => ({
+          id: `base-msg-${i + 1}`,
+          role: "assistant" as const,
+          content: `Content ${i + 1}`,
+        })),
+      );
 
       expect(agentChatStore.getState().sessionsByTabId[tabId]?.messages).toHaveLength(MAX_MESSAGES);
 
@@ -301,14 +303,15 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
       const sessionId = "session-mega-overflow";
       agentChatStore.getState().initSession(tabId, sessionId);
 
-      // Fill to 500 via appendMessage.
-      for (let i = 1; i <= MAX_MESSAGES; i++) {
-        agentChatStore.getState().appendMessage(tabId, {
-          id: `base-msg-${i}`,
-          role: "assistant",
-          content: `Content ${i}`,
-        });
-      }
+      // Fill to 1000 in one pass.
+      agentChatStore.getState().replaceMessages(
+        tabId,
+        Array.from({ length: MAX_MESSAGES }, (_, i) => ({
+          id: `base-msg-${i + 1}`,
+          role: "assistant" as const,
+          content: `Content ${i + 1}`,
+        })),
+      );
 
       // Finalize 50 more streaming messages.
       const EXTRA_TURNS = 50;
@@ -348,33 +351,42 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
       expect(messages[MAX_MESSAGES - 1]?.id).toBe(`overflow-turn-${EXTRA_TURNS}`);
     });
 
-    it("appendMessage does enforce the 500 cap (control test)", () => {
+    it("appendMessage does enforce the cap (control test)", () => {
       const tabId = "tab-control";
       const sessionId = "session-control";
       agentChatStore.getState().initSession(tabId, sessionId);
 
-      // Append 600 messages via appendMessage.
-      for (let i = 1; i <= 600; i++) {
+      // Seed at the cap in one pass, then overflow with a small number of
+      // appends (each append trims one oldest message).
+      agentChatStore.getState().replaceMessages(
+        tabId,
+        Array.from({ length: MAX_MESSAGES }, (_, i) => ({
+          id: `msg-${i + 1}`,
+          role: "assistant" as const,
+          content: `Content ${i + 1}`,
+        })),
+      );
+      for (let i = 1; i <= 100; i++) {
         agentChatStore.getState().appendMessage(tabId, {
-          id: `msg-${i}`,
+          id: `msg-${MAX_MESSAGES + i}`,
           role: "assistant",
-          content: `Content ${i}`,
+          content: `Content ${MAX_MESSAGES + i}`,
         });
       }
 
       const messages = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
-      // appendMessage enforces the 500 cap: oldest messages are trimmed.
+      // appendMessage enforces the cap: oldest messages are trimmed.
       expect(messages.length).toBe(MAX_MESSAGES);
       expect(messages[0]?.id).toBe("msg-101"); // first 100 trimmed
-      expect(messages[MAX_MESSAGES - 1]?.id).toBe("msg-600");
+      expect(messages[MAX_MESSAGES - 1]?.id).toBe(`msg-${MAX_MESSAGES + 100}`);
     });
 
-    it("replaceMessages enforces the 500 cap (control test)", () => {
+    it("replaceMessages enforces the cap (control test)", () => {
       const tabId = "tab-replace";
       const sessionId = "session-replace";
       agentChatStore.getState().initSession(tabId, sessionId);
 
-      const manyMessages: AgentMessage[] = Array.from({ length: 600 }, (_, i) => ({
+      const manyMessages: AgentMessage[] = Array.from({ length: 1200 }, (_, i) => ({
         id: `history-msg-${i + 1}`,
         role: "assistant" as const,
         content: `History ${i + 1}`,
@@ -383,10 +395,10 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
       agentChatStore.getState().replaceMessages(tabId, manyMessages);
 
       const messages = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
-      // replaceMessages keeps the newest 500.
+      // replaceMessages keeps the newest MAX_MESSAGES.
       expect(messages.length).toBe(MAX_MESSAGES);
-      expect(messages[0]?.id).toBe("history-msg-101");
-      expect(messages[MAX_MESSAGES - 1]?.id).toBe("history-msg-600");
+      expect(messages[0]?.id).toBe("history-msg-201");
+      expect(messages[MAX_MESSAGES - 1]?.id).toBe("history-msg-1200");
     });
   });
 

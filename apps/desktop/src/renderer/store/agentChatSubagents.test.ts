@@ -8,6 +8,7 @@ describe("deriveRunningSubagents", () => {
       {
         id: "assistant-1",
         role: "assistant",
+        timestamp: 1_700_000_000_000,
         content: [
           {
             type: "toolCall",
@@ -30,6 +31,7 @@ describe("deriveRunningSubagents", () => {
         childSessionId: undefined,
         title: "code-reviewer — Review the code quality of the services directory and return concise findings.",
         promptSummary: "Review the code quality of the services directory and return concise findings.",
+        startedAtMs: 1_700_000_000_000,
       },
     ]);
   });

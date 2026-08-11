@@ -11,7 +11,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const MAX_MESSAGES = 500;
+const MAX_MESSAGES = 1000;
 const MAX_SUBAGENT_CHILDREN = 20;
 const MAX_PER_TAB_AGGREGATE_UTF8_BYTES = 8 * 1024 * 1024; // 8 MiB
 
@@ -40,6 +40,14 @@ function fillMessages(tabId: string, count: number, prefix = "fill"): void {
   }
 }
 
+/** Seeds history in one O(n) pass; appendMessage is O(n) per call, so bulk loops are quadratic. */
+function seedMessages(tabId: string, count: number, prefix = "fill"): void {
+  agentChatStore.getState().replaceMessages(
+    tabId,
+    Array.from({ length: count }, (_, i) => makeMessage(`${prefix}-${i + 1}`)),
+  );
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("agentChatStore", () => {
@@ -50,8 +58,8 @@ describe("agentChatStore", () => {
       const tabId = "tab-finalize-no-cap";
       agentChatStore.getState().initSession(tabId, "session-finalize-no-cap");
 
-      // Fill messages to exactly MAX_MESSAGES via appendMessage.
-      fillMessages(tabId, MAX_MESSAGES);
+      // Fill messages to exactly MAX_MESSAGES in one pass.
+      seedMessages(tabId, MAX_MESSAGES);
       expect(agentChatStore.getState().sessionsByTabId[tabId]?.messages).toHaveLength(MAX_MESSAGES);
 
       // Set a streaming message and finalize it.
@@ -72,7 +80,7 @@ describe("agentChatStore", () => {
       const tabId = "tab-finalize-dedup";
       agentChatStore.getState().initSession(tabId, "session-finalize-dedup");
 
-      fillMessages(tabId, MAX_MESSAGES);
+      seedMessages(tabId, MAX_MESSAGES);
 
       // First: finalize a message with a unique ID → cap enforced, oldest trimmed.
       agentChatStore.getState().updateStreamingMessage(tabId, {
@@ -126,25 +134,30 @@ describe("agentChatStore", () => {
       const tabId = "tab-append-cap";
       agentChatStore.getState().initSession(tabId, "session-append-cap");
 
-      fillMessages(tabId, 600);
+      // Seed at the cap in one pass, then overflow with a small number of
+      // appends (each append trims one oldest message).
+      seedMessages(tabId, MAX_MESSAGES, "seed");
+      fillMessages(tabId, 100);
 
       const messages = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
       expect(messages.length).toBe(MAX_MESSAGES);
-      // Oldest 100 trimmed: fill-1 through fill-100 are gone.
-      expect(messages[0]?.id).toBe("fill-101");
-      expect(messages[MAX_MESSAGES - 1]?.id).toBe("fill-600");
+      // Oldest 100 trimmed: seed-1 through seed-100 are gone.
+      expect(messages[0]?.id).toBe("seed-101");
+      expect(messages[MAX_MESSAGES - 1]?.id).toBe("fill-100");
     });
 
     it("does not trim when exactly at MAX_MESSAGES_PER_TAB", () => {
       const tabId = "tab-append-exact";
       agentChatStore.getState().initSession(tabId, "session-append-exact");
 
-      fillMessages(tabId, MAX_MESSAGES);
+      // One append that reaches the cap exactly must not trim anything.
+      seedMessages(tabId, MAX_MESSAGES - 1, "seed");
+      fillMessages(tabId, 1);
 
       const messages = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
       expect(messages.length).toBe(MAX_MESSAGES);
-      expect(messages[0]?.id).toBe("fill-1");
-      expect(messages[MAX_MESSAGES - 1]?.id).toBe(`fill-${MAX_MESSAGES}`);
+      expect(messages[0]?.id).toBe("seed-1");
+      expect(messages[MAX_MESSAGES - 1]?.id).toBe("fill-1");
     });
 
     it("deduplicates messages with the same ID (skips append)", () => {
@@ -188,7 +201,7 @@ describe("agentChatStore", () => {
       const tabId = "tab-replace-cap";
       agentChatStore.getState().initSession(tabId, "session-replace-cap");
 
-      const historyMessages: AgentMessage[] = Array.from({ length: 800 }, (_, i) => ({
+      const historyMessages: AgentMessage[] = Array.from({ length: 1200 }, (_, i) => ({
         id: `history-msg-${i + 1}`,
         role: "assistant" as const,
         content: [{ type: "text" as const, text: `History line ${i + 1}` }],
@@ -198,9 +211,9 @@ describe("agentChatStore", () => {
 
       const messages = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
       expect(messages.length).toBe(MAX_MESSAGES);
-      // Keeps newest 500: history-msg-301 through history-msg-800
-      expect(messages[0]?.id).toBe("history-msg-301");
-      expect(messages[MAX_MESSAGES - 1]?.id).toBe("history-msg-800");
+      // Keeps newest 1000: history-msg-201 through history-msg-1200
+      expect(messages[0]?.id).toBe("history-msg-201");
+      expect(messages[MAX_MESSAGES - 1]?.id).toBe("history-msg-1200");
     });
 
     it("keeps all messages when history is under the cap", () => {
@@ -274,8 +287,8 @@ describe("agentChatStore", () => {
       agentChatStore.getState().initSession(tabId, "session-aggregate-budget");
 
       const MSG_BYTE_SIZE = 20 * 1024; // 20 KiB per message
-      // 600 messages × 20 KiB = 12 MiB total; count cap brings to 500 (10 MiB),
-      // byte budget then trims to fit within 8 MiB.
+      // 600 messages × 20 KiB = 12 MiB total; the 1000-message count cap does
+      // not trim, so the byte budget trims 12 MiB down to the 8 MiB limit.
       const TOTAL = 600;
       const messages: AgentMessage[] = Array.from({ length: TOTAL }, (_, i) => ({
         id: `budget-msg-${i + 1}`,
@@ -287,9 +300,8 @@ describe("agentChatStore", () => {
 
       const stored = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
 
-      // Count cap first: 600 → 500; byte budget further trims 500 × 20 KiB = 10 MiB → 8 MiB.
+      // The byte budget trims 12 MiB of content down to the 8 MiB limit (~409 kept).
       expect(stored.length).toBeLessThan(500);
-
       // Total bytes should fit within the aggregate budget.
       const encoder = new TextEncoder();
       let totalBytes = 0;
@@ -452,6 +464,67 @@ describe("agentChatStore", () => {
       // In production, truncateMessageContent() is called before updateStreamingMessage.
       expect(content[0].text.length).toBe(CHUNK_COUNT * CHUNK_BYTES);
       expect(content[0].text.length).toBeGreaterThanOrEqual(200 * 1024);
+    });
+  });
+
+  // ─── subagentCancelStates ──────────────────────────────────────────────────
+
+  describe("subagentCancelStates", () => {
+    it("stores and clears per-row cancel feedback", () => {
+      const tabId = "tab-cancel-state";
+      agentChatStore.getState().initSession(tabId, "session-cancel-state");
+
+      agentChatStore.getState().setSubagentCancelState(tabId, "child-session-1", { status: "cancelling" });
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentCancelStates).toEqual({
+        "child-session-1": { status: "cancelling" },
+      });
+
+      agentChatStore
+        .getState()
+        .setSubagentCancelState(tabId, "child-session-1", { status: "failed", reason: "timeout" });
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentCancelStates).toEqual({
+        "child-session-1": { status: "failed", reason: "timeout" },
+      });
+
+      agentChatStore.getState().clearSubagentCancelState(tabId, "child-session-1");
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentCancelStates).toEqual({});
+    });
+
+    it("defaults to an empty map on a fresh session", () => {
+      const tabId = "tab-cancel-default";
+      agentChatStore.getState().initSession(tabId, "session-cancel-default");
+
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentCancelStates).toEqual({});
+    });
+
+    it("is a no-op for unknown tab ids", () => {
+      expect(() => {
+        agentChatStore.getState().setSubagentCancelState("missing-tab", "row-1", { status: "cancelling" });
+        agentChatStore.getState().clearSubagentCancelState("missing-tab", "row-1");
+      }).not.toThrow();
+    });
+  });
+
+  // ─── subagentSessionEndedAtMs ──────────────────────────────────────────────
+
+  describe("subagentSessionEndedAtMs", () => {
+    it("defaults to null and updates via setSubagentSessionEndedAt", () => {
+      const tabId = "tab-session-ended";
+      agentChatStore.getState().initSession(tabId, "session-session-ended");
+
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentSessionEndedAtMs).toBeNull();
+
+      agentChatStore.getState().setSubagentSessionEndedAt(tabId, 1_700_000_000_000);
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentSessionEndedAtMs).toBe(1_700_000_000_000);
+
+      agentChatStore.getState().setSubagentSessionEndedAt(tabId, null);
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentSessionEndedAtMs).toBeNull();
+    });
+
+    it("is a no-op for unknown tab ids", () => {
+      expect(() => {
+        agentChatStore.getState().setSubagentSessionEndedAt("missing-tab", Date.now());
+      }).not.toThrow();
     });
   });
 

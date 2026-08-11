@@ -2,7 +2,7 @@ import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../helpe
 import { agentChatStore } from "../store/agentChatStore";
 import type { AgentMessage } from "../store/agentChatTypes";
 import { tabStore } from "../store/tabStore";
-import { normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
+import { isRecord, normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
 
 // ─── Subagent event parsers ───────────────────────────────────────────────────
 
@@ -135,4 +135,87 @@ export function applySubagentLiveTranscripts(parentTabId: string, transcripts: S
       agentChatStore.getState().setThinkingLevel(detailTab.id, transcript.thinkingLevel);
     }
   }
+}
+
+// ─── Live lifecycle-widget ingestion ─────────────────────────────────────────
+
+const LIFECYCLE_WIDGET_KEY = "pi-subagents-lifecycle";
+const LIFECYCLE_WIDGET_VERSION = 1;
+const SUBAGENT_CHILD_CUSTOM_TYPE = "pi-subagent-child";
+
+/**
+ * Parses the extension's live lifecycle widget into validated parent-child
+ * entries. Returns null for malformed payloads (wrong widget, bad JSON, wrong
+ * version, or any entry missing its required identity fields).
+ */
+export function parseSubagentLifecycleWidget(event: Record<string, unknown>): Record<string, unknown>[] | null {
+  if (event.method !== "setWidget" || event.widgetKey !== LIFECYCLE_WIDGET_KEY) {
+    return null;
+  }
+
+  const widgetLines = event.widgetLines;
+  if (!Array.isArray(widgetLines) || widgetLines.length !== 1 || typeof widgetLines[0] !== "string") {
+    return null;
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(widgetLines[0]);
+  } catch {
+    return null;
+  }
+
+  if (!isRecord(payload) || payload.version !== LIFECYCLE_WIDGET_VERSION || !Array.isArray(payload.entries)) {
+    return null;
+  }
+
+  const entries: Record<string, unknown>[] = [];
+  for (const rawEntry of payload.entries) {
+    const entry = parseLifecycleWidgetEntry(rawEntry);
+    if (!entry) {
+      return null;
+    }
+    entries.push(entry);
+  }
+  return entries;
+}
+
+/**
+ * Applies parsed lifecycle entries to the store as hidden custom messages so
+ * started/completed sub-agent rows appear (and clear) in real time instead of
+ * only after a get_messages round trip.
+ */
+export function applySubagentLifecycleWidget(parentTabId: string, entries: Record<string, unknown>[]): void {
+  for (const entry of entries) {
+    const childSessionId = typeof entry.childSessionId === "string" ? entry.childSessionId : "";
+    const event = entry.event === "completed" ? "completed" : "started";
+    agentChatStore.getState().appendMessage(parentTabId, {
+      id: `${childSessionId}:${event}`,
+      role: "custom",
+      customType: SUBAGENT_CHILD_CUSTOM_TYPE,
+      display: false,
+      content: "",
+      details: entry,
+      timestamp: Date.now(),
+    });
+  }
+}
+
+function parseLifecycleWidgetEntry(value: unknown): Record<string, unknown> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  if (value.event !== "started" && value.event !== "completed") {
+    return null;
+  }
+  if (typeof value.agentId !== "string" || value.agentId.trim().length === 0) {
+    return null;
+  }
+  if (typeof value.agentName !== "string" || value.agentName.trim().length === 0) {
+    return null;
+  }
+  if (typeof value.childSessionId !== "string" || value.childSessionId.trim().length === 0) {
+    return null;
+  }
+  return value;
 }
