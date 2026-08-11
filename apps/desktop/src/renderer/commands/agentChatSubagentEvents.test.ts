@@ -3,7 +3,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../store/agentChatStore";
 import { tabStore } from "../store/tabStore";
-import { applySubagentLiveTranscripts, parseSubagentLiveTranscripts } from "./agentChatSubagentEvents";
+import {
+  applySubagentLifecycleWidget,
+  applySubagentLiveTranscripts,
+  parseSubagentLifecycleWidget,
+  parseSubagentLiveTranscripts,
+} from "./agentChatSubagentEvents";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -25,6 +30,132 @@ function liveTranscriptEvent(payload: unknown): Record<string, unknown> {
     widgetLines: [JSON.stringify(payload)],
   };
 }
+
+function lifecycleWidgetEvent(payload: unknown): Record<string, unknown> {
+  return {
+    method: "setWidget",
+    widgetKey: "pi-subagents-lifecycle",
+    widgetLines: [JSON.stringify(payload)],
+  };
+}
+
+describe("parseSubagentLifecycleWidget", () => {
+  it("parses validated started/completed entries", () => {
+    const entries = [
+      {
+        event: "started",
+        agentId: "agent-1",
+        agentName: "Explore",
+        mode: "foreground",
+        childSessionId: "child-session-1",
+        title: "Explore — inspect auth",
+      },
+      {
+        event: "completed",
+        agentId: "agent-1",
+        agentName: "Explore",
+        mode: "foreground",
+        childSessionId: "child-session-1",
+        status: "cancelled",
+      },
+    ];
+
+    expect(parseSubagentLifecycleWidget(lifecycleWidgetEvent({ version: 1, entries }))).toEqual(entries);
+  });
+
+  it("returns null for malformed payloads", () => {
+    expect(parseSubagentLifecycleWidget(lifecycleWidgetEvent({ version: 2, entries: [] }))).toBeNull();
+    expect(parseSubagentLifecycleWidget(lifecycleWidgetEvent({ version: 1 }))).toBeNull();
+    expect(
+      parseSubagentLifecycleWidget({
+        method: "setWidget",
+        widgetKey: "pi-subagents-lifecycle",
+        widgetLines: ["not json"],
+      }),
+    ).toBeNull();
+    expect(
+      parseSubagentLifecycleWidget({
+        method: "setWidget",
+        widgetKey: "pi-subagents-progress",
+        widgetLines: ["{}"],
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects entries missing identity fields or with invalid events", () => {
+    expect(
+      parseSubagentLifecycleWidget(
+        lifecycleWidgetEvent({ version: 1, entries: [{ event: "started", agentName: "X", childSessionId: "c-1" }] }),
+      ),
+    ).toBeNull();
+    expect(
+      parseSubagentLifecycleWidget(
+        lifecycleWidgetEvent({
+          version: 1,
+          entries: [{ event: "sleeping", agentId: "a-1", agentName: "X", childSessionId: "c-1" }],
+        }),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("applySubagentLifecycleWidget", () => {
+  it("appends hidden custom messages so lifecycle rows appear with real ids", () => {
+    const tabId = "parent-tab-lifecycle";
+    agentChatStore.getState().initSession(tabId, "parent-session-lifecycle");
+
+    applySubagentLifecycleWidget(tabId, [
+      {
+        event: "started",
+        agentId: "agent-1",
+        agentName: "Builder",
+        childSessionId: "child-session-1",
+        title: "Builder — implement row",
+        summary: "implement row",
+      },
+    ]);
+
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+      {
+        rowId: "child-session-1",
+        agentId: "agent-1",
+        agentName: "Builder",
+        childSessionId: "child-session-1",
+        title: "Builder — implement row",
+        promptSummary: "implement row",
+        startedAtMs: expect.any(Number),
+      },
+    ]);
+  });
+
+  it("removes the running row when a completed entry arrives", () => {
+    const tabId = "parent-tab-lifecycle-done";
+    agentChatStore.getState().initSession(tabId, "parent-session-lifecycle-done");
+
+    applySubagentLifecycleWidget(tabId, [
+      {
+        event: "started",
+        agentId: "agent-1",
+        agentName: "Builder",
+        childSessionId: "child-session-1",
+      },
+    ]);
+    applySubagentLifecycleWidget(tabId, [
+      {
+        event: "completed",
+        agentId: "agent-1",
+        agentName: "Builder",
+        childSessionId: "child-session-1",
+        status: "cancelled",
+      },
+    ]);
+
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([]);
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.finishedSubagents).toEqual([
+      expect.objectContaining({ rowId: "child-session-1", childSessionId: "child-session-1" }),
+    ]);
+  });
+});
 
 describe("parseSubagentLiveTranscripts", () => {
   it("parses a payload carrying thinkingLevel", () => {

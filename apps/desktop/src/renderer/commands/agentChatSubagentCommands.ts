@@ -9,6 +9,14 @@ import { findTabWithSession } from "./agentChatCommands";
 const SUBAGENT_SPLIT_DIRECTION = "horizontal";
 const SUBAGENT_SPLIT_PLACEMENT = "second";
 const SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX = "The user cancelled sub-agent";
+/**
+ * How long to wait after sending /agent-stop for the run's terminal entry to
+ * remove the row before reporting the cancel as failed. The extension force-
+ * settles a hung run within its interrupt settle bound (~2s), so this bound
+ * covers the round trip with margin.
+ */
+const SUBAGENT_CANCEL_CONFIRM_TIMEOUT_MS = 5_000;
+const SUBAGENT_CANCEL_POLL_INTERVAL_MS = 250;
 
 /** Opens one sub-agent child session in a right split pane when possible. */
 export async function openSubagentSessionInRightSplitPane(opts: {
@@ -180,44 +188,134 @@ function revealSubagentTabInRightSplitPane(opts: { workspaceId: string; parentPa
   tabStore.getState().selectTab(opts.tabId);
 }
 
-/** Sends one `/agent-stop` prompt through the parent session without optimistic chat-stream UI updates. */
+/**
+ * Sends one `/agent-stop` prompt through the parent session without optimistic
+ * chat-stream UI updates, then confirms the run actually ended.
+ *
+ * Marks the row "cancelling" first, then resolves to "failed" (with a reason)
+ * if no terminal entry removes the row within the confirmation bound, or if
+ * there is no live run id to target. The caller renders the feedback; nothing
+ * is ever silently dropped.
+ */
 export async function cancelSubagentRun(opts: {
   tabId: string;
   sessionId: string;
+  /** Row identity for cancel feedback: childSessionId ?? rowId. */
+  rowKey: string;
   agentId?: string;
   agentName?: string;
   childSessionId?: string;
 }): Promise<void> {
   const stopTarget = opts.childSessionId?.trim() || opts.agentId?.trim();
   if (!stopTarget) {
+    agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, {
+      status: "failed",
+      reason: "missing",
+    });
     return;
   }
 
-  const client = await getDaemonClient();
-  const sessionState = agentChatStore.getState().sessionsByTabId[opts.tabId]?.state;
-  const streamingBehavior = isAgentSessionBusy(sessionState) ? "steer" : undefined;
-  await client.pi.send({
-    sessionId: opts.sessionId,
-    command: {
-      type: "prompt",
-      message: `/agent-stop ${stopTarget}`,
-      streamingBehavior,
-    },
+  agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, { status: "cancelling" });
+
+  try {
+    const client = await getDaemonClient();
+    const sessionState = agentChatStore.getState().sessionsByTabId[opts.tabId]?.state;
+    const streamingBehavior = isAgentSessionBusy(sessionState) ? "steer" : undefined;
+    await client.pi.send({
+      sessionId: opts.sessionId,
+      command: {
+        type: "prompt",
+        message: `/agent-stop ${stopTarget}`,
+        streamingBehavior,
+      },
+    });
+
+    if (streamingBehavior === "steer") {
+      const cancelledAgentLabel =
+        opts.agentName?.trim() || opts.childSessionId?.trim() || opts.agentId?.trim() || stopTarget;
+      await client.pi.send({
+        sessionId: opts.sessionId,
+        command: {
+          type: "prompt",
+          message: `${SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX} ${cancelledAgentLabel}. Do not retry that sub-agent. Continue without it and explain any missing work if needed.`,
+          streamingBehavior: "steer",
+        },
+      });
+    }
+  } catch (error) {
+    agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, {
+      status: "failed",
+      reason: "timeout",
+    });
+    console.warn("[agentChatSubagentCommands] sub-agent cancel request failed", { tabId: opts.tabId, error });
+    return;
+  }
+
+  const runEnded = await waitForSubagentRowGone(
+    opts.tabId,
+    opts.rowKey,
+    stopTarget,
+    SUBAGENT_CANCEL_CONFIRM_TIMEOUT_MS,
+  );
+  if (runEnded) {
+    agentChatStore.getState().clearSubagentCancelState(opts.tabId, opts.rowKey);
+    return;
+  }
+
+  agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, {
+    status: "failed",
+    reason: "timeout",
   });
+}
 
-  if (streamingBehavior !== "steer") {
-    return;
-  }
-
-  const cancelledAgentLabel =
-    opts.agentName?.trim() || opts.childSessionId?.trim() || opts.agentId?.trim() || stopTarget;
-  await client.pi.send({
-    sessionId: opts.sessionId,
-    command: {
-      type: "prompt",
-      message: `${SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX} ${cancelledAgentLabel}. Do not retry that sub-agent. Continue without it and explain any missing work if needed.`,
-      streamingBehavior: "steer",
-    },
+/**
+ * Resolves true once the cancelled run is gone, or false after the bound.
+ *
+ * A pending tool-call row can be replaced by its lifecycle row (same run) while
+ * the cancel is in flight, so the row identity alone is not enough: when a stop
+ * target is known, the run only counts as gone when no running row carries that
+ * agentId/childSessionId anymore.
+ */
+function waitForSubagentRowGone(
+  tabId: string,
+  rowKey: string,
+  stopTarget: string | undefined,
+  timeoutMs: number,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (gone: boolean) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      unsubscribe();
+      resolve(gone);
+    };
+    const isRowGone = () => {
+      const rows = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
+      // The original row (or a same-identity replacement, e.g. pending→lifecycle
+      // transition mid-cancel) must be gone for the run to count as ended.
+      if (rows.some((row) => row.rowId === rowKey)) {
+        return false;
+      }
+      if (stopTarget) {
+        return !rows.some((row) => row.agentId === stopTarget || row.childSessionId === stopTarget);
+      }
+      return true;
+    };
+    // The row may already be gone before the subscription observes a change.
+    if (isRowGone()) {
+      resolve(true);
+      return;
+    }
+    const unsubscribe = agentChatStore.subscribe(() => {
+      if (isRowGone()) {
+        finish(true);
+      }
+    });
+    const timer = setTimeout(() => finish(false), timeoutMs);
   });
 }
 

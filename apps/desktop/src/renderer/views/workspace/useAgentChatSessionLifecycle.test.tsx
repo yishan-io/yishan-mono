@@ -50,10 +50,86 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+function seedLiveSession(tabId: string, sessionId: string): void {
+  agentChatStore.getState().initSession(tabId, sessionId);
+  mocks.ensurePiSession.mockResolvedValue({ sessionId, attached: false });
+}
+
+describe("useAgentChatSessionLifecycle runtime-interrupt classification", () => {
+  it("marks pre-existing history interrupted after a fresh start (previous process dead)", async () => {
+    seedLiveSession("tab-fresh", "session-1");
+
+    renderHook(() =>
+      useAgentChatSessionLifecycle({
+        tabId: "tab-fresh",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        sessionId: "session-1",
+        sessionView: "full",
+      }),
+    );
+    await act(async () => {});
+
+    const endedAtMs = agentChatStore.getState().sessionsByTabId["tab-fresh"]?.subagentSessionEndedAtMs;
+    expect(endedAtMs).not.toBeNull();
+    expect(endedAtMs).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("keeps rows live after an attach to a still-alive process", async () => {
+    agentChatStore.getState().initSession("tab-attach", "session-1");
+    mocks.ensurePiSession.mockResolvedValue({ sessionId: "session-1", attached: true });
+
+    renderHook(() =>
+      useAgentChatSessionLifecycle({
+        tabId: "tab-attach",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        sessionId: "session-1",
+        sessionView: "full",
+      }),
+    );
+    await act(async () => {});
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-attach"]?.subagentSessionEndedAtMs).toBeNull();
+  });
+
+  it("keeps rows live after a successful reattach (connection drop, process alive)", async () => {
+    agentChatStore.getState().initSession("tab-reattach-live", "session-1");
+    mocks.ensurePiSession.mockResolvedValue({ sessionId: "session-1", attached: false });
+    mocks.reattachPiSession.mockResolvedValue({ ok: true });
+
+    renderHook(() =>
+      useAgentChatSessionLifecycle({
+        tabId: "tab-reattach-live",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        sessionId: "session-1",
+        sessionView: "full",
+      }),
+    );
+    await act(async () => {});
+    // Simulate a prior session_end on the same tab being healed by the reconnect.
+    agentChatStore.getState().setSubagentSessionEndedAt("tab-reattach-live", Date.now());
+
+    const listener = mocks.statusListener;
+    act(() => listener?.("connected")); // initial observed state
+    act(() => listener?.("disconnected"));
+    await act(async () => listener?.("connected")); // reconnect → reattach
+
+    await vi.waitFor(() => {
+      expect(mocks.reattachPiSession).toHaveBeenCalledTimes(1);
+    });
+    // The process survived the connection drop; rows must be live again and no
+    // error path may have fired.
+    expect(agentChatStore.getState().sessionsByTabId["tab-reattach-live"]?.subagentSessionEndedAtMs).toBeNull();
+    expect(agentChatStore.getState().sessionsByTabId["tab-reattach-live"]?.state).not.toBe("error");
+  });
+});
+
 describe("useAgentChatSessionLifecycle reconnect recovery", () => {
   it("re-starts the session when reattach fails after a daemon reconnect", async () => {
     agentChatStore.getState().initSession("tab-1", "session-1");
-    mocks.ensurePiSession.mockResolvedValue("session-1");
+    mocks.ensurePiSession.mockResolvedValue({ sessionId: "session-1", attached: false });
     mocks.reattachPiSession.mockRejectedValue(new Error("pi session not found: session-1"));
 
     renderHook(() =>

@@ -40,6 +40,10 @@ type Session struct {
 	// manager is used to unregister this session on exit.
 	manager *Manager
 
+	// onExit is invoked once after the process exits and the session has been
+	// unregistered from the manager. It runs on the stdout reader goroutine.
+	onExit func(session *Session)
+
 	// mu protects stdin writes so concurrent Send calls are safe.
 	mu sync.Mutex
 }

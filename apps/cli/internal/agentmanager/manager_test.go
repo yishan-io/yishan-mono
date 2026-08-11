@@ -400,3 +400,38 @@ func TestSplitEnvPair(t *testing.T) {
 		}
 	}
 }
+
+func TestOnExit_CalledOnceAfterProcessExit(t *testing.T) {
+	m := NewManager()
+	ctx := context.Background()
+
+	onExitCalls := make(chan string, 1)
+	opts := StartOptions{
+		SessionID: "on-exit-session",
+		Binary:    "sh",
+		Args:      []string{"-c", "exit 0"},
+		OnExit: func(session *Session) {
+			onExitCalls <- session.ID()
+		},
+	}
+
+	session, err := m.Start(ctx, opts)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	select {
+	case exitedSessionID := <-onExitCalls:
+		if exitedSessionID != "on-exit-session" {
+			t.Fatalf("OnExit reported session %q, want %q", exitedSessionID, "on-exit-session")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for OnExit after process exit")
+	}
+
+	// The session must be unregistered from the manager by the time OnExit runs.
+	if _, exists := m.Session("on-exit-session"); exists {
+		t.Fatal("expected the exited session to be unregistered before OnExit")
+	}
+}

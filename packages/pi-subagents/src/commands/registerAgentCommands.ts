@@ -5,7 +5,11 @@ import type { AgentRegistry } from "../agents/registry";
 import type { AgentTask } from "../agents/types";
 import type { AgentManager } from "../runtime/agentManager";
 import { buildAgentTask } from "../runtime/buildAgentTask";
-import { createParentSessionWriter, getParentSessionReference } from "../runtime/sessionRelationship";
+import {
+  createLifecycleWidgetEmitter,
+  createParentSessionWriter,
+  getParentSessionReference,
+} from "../runtime/sessionRelationship";
 
 const AGENT_SEND_PROMPT_HEADER = "The following sub-agents completed their tasks.";
 const AGENT_SEND_PROMPT_FOOTER = "Review the findings, resolve conflicts, and produce the final response.";
@@ -60,7 +64,9 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
         mode: parsedArguments.isBackground ? "background" : "foreground",
       });
       task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
-      task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager);
+      task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager, {
+        emitLifecycle: createLifecycleWidgetEmitter(ctx.ui, ctx.mode),
+      });
 
       if (parsedArguments.isBackground) {
         const agentId = await manager.runInBackground(task);

@@ -7,6 +7,12 @@ import { formatResultCollectorOutput } from "./resultCollector";
 const DEFAULT_MAX_CONCURRENCY = 16;
 const AGENT_ID_PREFIX = "agent";
 const MANAGER_SHUTDOWN_ERROR = "Agent manager is shut down";
+/**
+ * Upper bound for shutdown's wait on run teardown. Runs normally settle within
+ * the interrupt settle bound; this only guards against unforeseen hangs so
+ * session_shutdown can never block indefinitely.
+ */
+const SHUTDOWN_SETTLE_TIMEOUT_MS = 10_000;
 
 /** Configurable dependencies for the shared agent manager. */
 export interface AgentManagerOptions {
@@ -108,9 +114,23 @@ export class AgentManager {
     const activeAgentIds = this.list()
       .filter((record) => record.status === "queued" || record.status === "starting" || record.status === "running")
       .map((record) => record.id);
+    if (activeAgentIds.length === 0) {
+      return;
+    }
 
-    await Promise.allSettled(activeAgentIds.map((agentId) => this.stop(agentId)));
-    await Promise.allSettled(activeAgentIds.map((agentId) => this.completionPromises.get(agentId)).filter(Boolean));
+    // Bound each wait: a hung turn (or a run handle that never settles) must
+    // not keep session_shutdown hanging; the daemon force-kills the process
+    // after its own abort grace period regardless.
+    const stopBound = cancellableDelay(SHUTDOWN_SETTLE_TIMEOUT_MS);
+    await Promise.race([Promise.allSettled(activeAgentIds.map((agentId) => this.stop(agentId))), stopBound.promise]);
+    stopBound.cancel();
+
+    const completionBound = cancellableDelay(SHUTDOWN_SETTLE_TIMEOUT_MS);
+    await Promise.race([
+      Promise.allSettled(activeAgentIds.map((agentId) => this.completionPromises.get(agentId)).filter(Boolean)),
+      completionBound.promise,
+    ]);
+    completionBound.cancel();
   }
 
   /** Steers one running agent with a follow-up message. */
@@ -340,4 +360,21 @@ function getAgentRunErrorMessage(error: unknown): string {
   }
 
   return "Agent run failed";
+}
+
+/** A delay whose timer can be cleared once its race is no longer needed. */
+function cancellableDelay(ms: number): { promise: Promise<void>; cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const promise = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, ms);
+  });
+  return {
+    promise,
+    cancel: () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
+    },
+  };
 }

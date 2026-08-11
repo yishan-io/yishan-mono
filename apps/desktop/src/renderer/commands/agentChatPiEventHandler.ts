@@ -3,6 +3,7 @@ import {
   PER_MESSAGE_UTF8_BYTES,
   agentChatStore,
   applyStreamDelta,
+  applySubagentLifecycleWidget,
   applySubagentLiveTranscripts,
   cloneAgentMessage,
   cloneIncomingAgentMessage,
@@ -14,6 +15,7 @@ import {
   normalizeIncomingAgentMessage,
   parseAgentStreamEvent,
   parsePendingUiRequest,
+  parseSubagentLifecycleWidget,
   parseSubagentLiveTranscripts,
   parseSubagentProgressTargets,
   queueStreamingMessageUpdate,
@@ -57,6 +59,14 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       agentChatStore.getState().setSessionState(tabId, "running");
       // Session stats snapshot is stale from the moment a new run starts producing tokens.
       invalidateAgentSessionStats(tabId, sessionId);
+      break;
+
+    case "session_end":
+      // The owning Pi process exited. The whole tab is invalid: surface the
+      // error immediately and treat every previously running sub-agent row as
+      // interrupted history (they died with the process).
+      agentChatStore.getState().setSessionError(tabId, "Agent session ended unexpectedly");
+      agentChatStore.getState().setSubagentSessionEndedAt(tabId, Date.now());
       break;
 
     case "agent_end":
@@ -209,6 +219,13 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       const subagentLiveTranscripts = parseSubagentLiveTranscripts(event);
       if (subagentLiveTranscripts) {
         applySubagentLiveTranscripts(tabId, subagentLiveTranscripts);
+      }
+
+      // Live started/completed entries keep sub-agent rows and their real ids
+      // in sync with the session without waiting for a get_messages round trip.
+      const subagentLifecycleEntries = parseSubagentLifecycleWidget(event);
+      if (subagentLifecycleEntries) {
+        applySubagentLifecycleWidget(tabId, subagentLifecycleEntries);
       }
       break;
     }

@@ -94,7 +94,7 @@ export function useAgentChatProviderAdd({
 
         restartAttempted = true;
         await stopPiSession(tabId);
-        const restartedSessionId = await ensurePiSession({
+        const { sessionId: restartedSessionId } = await ensurePiSession({
           tabId,
           workspaceId,
           cwd,

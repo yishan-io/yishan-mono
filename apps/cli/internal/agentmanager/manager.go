@@ -69,6 +69,9 @@ type StartOptions struct {
 	// It is called from a dedicated goroutine and must be safe for concurrent
 	// use with Send (which runs in a different goroutine).
 	OnEvent func(sessionID, tabID, workspaceID string, event []byte)
+	// OnExit is called once after the agent process exits and the session has
+	// been unregistered from the manager. It runs on the stdout reader goroutine.
+	OnExit func(session *Session)
 }
 
 // Start spawns a new agent session. It always resolves the full login-shell
@@ -156,6 +159,7 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 		cancel:      cancel,
 		done:        make(chan struct{}),
 		manager:     m,
+		onExit:      opts.OnExit,
 	}
 
 	// Test hook: hold the start in its reservation window (id in `starting`,

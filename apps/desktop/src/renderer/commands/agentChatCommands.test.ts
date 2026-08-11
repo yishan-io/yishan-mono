@@ -343,8 +343,9 @@ describe("agentChatCommands.ensurePiSession", () => {
 
     const [id1, id2] = await Promise.all([firstPromise, secondPromise]);
 
-    expect(id1).toBe("generated-session-id");
-    expect(id2).toBe("generated-session-id");
+    expect(id1.sessionId).toBe("generated-session-id");
+    expect(id2.sessionId).toBe("generated-session-id");
+    expect(id1.attached).toBe(false);
     // Pi must have been started only once.
     expect(mocks.start).toHaveBeenCalledTimes(1);
   });
@@ -679,6 +680,7 @@ describe("agentChatCommands.subagent helpers", () => {
     await cancelSubagentRun({
       tabId: "parent-tab",
       sessionId: "parent-session",
+      rowKey: "agent-1",
       agentId: "agent-1",
     });
 
@@ -692,6 +694,8 @@ describe("agentChatCommands.subagent helpers", () => {
       },
     });
     expect(agentChatStore.getState().sessionsByTabId["parent-tab"]?.streamingMessage).toBeNull();
+    // No running row existed, so the cancel state is cleared immediately.
+    expect(agentChatStore.getState().sessionsByTabId["parent-tab"]?.subagentCancelStates).toEqual({});
   });
 
   it("uses steer behavior when cancelling while the parent session is running", async () => {
@@ -701,6 +705,7 @@ describe("agentChatCommands.subagent helpers", () => {
     await cancelSubagentRun({
       tabId: "parent-tab-running",
       sessionId: "parent-session-running",
+      rowKey: "agent-running",
       agentId: "agent-running",
       agentName: "Builder",
     });
@@ -730,6 +735,7 @@ describe("agentChatCommands.subagent helpers", () => {
     await cancelSubagentRun({
       tabId: "parent-tab-child",
       sessionId: "parent-session-child",
+      rowKey: "child-session-1",
       agentId: "agent-1",
       childSessionId: "child-session-1",
     });
@@ -742,6 +748,200 @@ describe("agentChatCommands.subagent helpers", () => {
         streamingBehavior: undefined,
       },
     });
+  });
+
+  it("surfaces an explicit failure instead of a silent no-op when no live run id is available", async () => {
+    agentChatStore.getState().initSession("parent-tab-missing", "parent-session-missing");
+
+    await cancelSubagentRun({
+      tabId: "parent-tab-missing",
+      sessionId: "parent-session-missing",
+      rowKey: "tool-call-1",
+    });
+
+    expect(mocks.send).not.toHaveBeenCalled();
+    expect(agentChatStore.getState().sessionsByTabId["parent-tab-missing"]?.subagentCancelStates).toEqual({
+      "tool-call-1": { status: "failed", reason: "missing" },
+    });
+  });
+
+  it("marks the cancel failed when the run does not end within the confirmation bound", async () => {
+    vi.useFakeTimers();
+    agentChatStore.getState().initSession("parent-tab-stuck", "parent-session-stuck");
+    agentChatStore.getState().replaceMessages("parent-tab-stuck", [
+      {
+        id: "started-entry",
+        role: "custom",
+        customType: "pi-subagent-child",
+        content: "",
+        details: {
+          event: "started",
+          agentId: "agent-stuck",
+          agentName: "Builder",
+          title: "Builder — stuck work",
+          summary: "stuck work",
+          childSessionId: "child-session-stuck",
+        },
+      },
+    ]);
+
+    const cancelPromise = cancelSubagentRun({
+      tabId: "parent-tab-stuck",
+      sessionId: "parent-session-stuck",
+      rowKey: "child-session-stuck",
+      agentId: "agent-stuck",
+      agentName: "Builder",
+      childSessionId: "child-session-stuck",
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+    await cancelPromise;
+
+    expect(agentChatStore.getState().sessionsByTabId["parent-tab-stuck"]?.subagentCancelStates).toEqual({
+      "child-session-stuck": { status: "failed", reason: "timeout" },
+    });
+    vi.useRealTimers();
+  });
+
+  it("clears the cancel state once the terminal entry removes the running row", async () => {
+    vi.useFakeTimers();
+    agentChatStore.getState().initSession("parent-tab-confirmed", "parent-session-confirmed");
+    agentChatStore.getState().replaceMessages("parent-tab-confirmed", [
+      {
+        id: "started-entry",
+        role: "custom",
+        customType: "pi-subagent-child",
+        content: "",
+        details: {
+          event: "started",
+          agentId: "agent-cancel",
+          agentName: "Builder",
+          title: "Builder — cancel work",
+          summary: "cancel work",
+          childSessionId: "child-session-cancel",
+        },
+      },
+    ]);
+
+    const cancelPromise = cancelSubagentRun({
+      tabId: "parent-tab-confirmed",
+      sessionId: "parent-session-confirmed",
+      rowKey: "child-session-cancel",
+      agentId: "agent-cancel",
+      agentName: "Builder",
+      childSessionId: "child-session-cancel",
+    });
+
+    // The extension force-settles the hung run and writes the terminal entry.
+    handleAgentPiEvent({
+      sessionId: "parent-session-confirmed",
+      tabId: "parent-tab-confirmed",
+      workspaceId: "workspace-1",
+      event: {
+        type: "message_end",
+        message: {
+          id: "completed-entry",
+          role: "custom",
+          customType: "pi-subagent-child",
+          content: "",
+          details: {
+            event: "completed",
+            agentId: "agent-cancel",
+            agentName: "Builder",
+            childSessionId: "child-session-cancel",
+            status: "cancelled",
+          },
+        },
+      },
+    });
+    await cancelPromise;
+
+    expect(agentChatStore.getState().sessionsByTabId["parent-tab-confirmed"]?.subagentCancelStates).toEqual({});
+    vi.useRealTimers();
+  });
+
+  it("does not confirm cancel while a pending row has been replaced by its lifecycle row", async () => {
+    vi.useFakeTimers();
+    agentChatStore.getState().initSession("tab-cancel-replace", "session-cancel-replace");
+    agentChatStore.getState().appendMessage("tab-cancel-replace", {
+      id: "assistant-agent",
+      role: "assistant",
+      content: [
+        {
+          type: "toolCall",
+          id: "tool-agent-1",
+          name: "Agent",
+          arguments: { agent: "Builder", prompt: "build the row" },
+        },
+      ],
+    });
+
+    const cancelPromise = cancelSubagentRun({
+      tabId: "tab-cancel-replace",
+      sessionId: "session-cancel-replace",
+      rowKey: "tool-agent-1",
+      agentId: "agent-1",
+      agentName: "Builder",
+    });
+    // Flush the send chain so the confirmation wait is armed before the
+    // lifecycle entry arrives.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // The lifecycle started entry replaces the pending tool-call row with a
+    // lifecycle row carrying the same agentId — the run is still alive, so the
+    // cancel must stay in-flight instead of being confirmed.
+    handleAgentPiEvent({
+      sessionId: "session-cancel-replace",
+      tabId: "tab-cancel-replace",
+      workspaceId: "workspace-1",
+      event: {
+        type: "message_end",
+        message: {
+          id: "started-entry",
+          role: "custom",
+          customType: "pi-subagent-child",
+          content: "",
+          details: {
+            event: "started",
+            agentId: "agent-1",
+            agentName: "Builder",
+            childSessionId: "child-session-1",
+            summary: "build the row",
+          },
+        },
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-cancel-replace"]?.subagentCancelStates).toEqual({
+      "tool-agent-1": { status: "cancelling" },
+    });
+
+    // The terminal entry removes the replacement row; only now is the cancel
+    // confirmed and the feedback cleared.
+    handleAgentPiEvent({
+      sessionId: "session-cancel-replace",
+      tabId: "tab-cancel-replace",
+      workspaceId: "workspace-1",
+      event: {
+        type: "message_end",
+        message: {
+          id: "completed-entry",
+          role: "custom",
+          customType: "pi-subagent-child",
+          content: "",
+          details: {
+            event: "completed",
+            agentId: "agent-1",
+            agentName: "Builder",
+            childSessionId: "child-session-1",
+            status: "cancelled",
+          },
+        },
+      },
+    });
+    await cancelPromise;
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-cancel-replace"]?.subagentCancelStates).toEqual({});
+    vi.useRealTimers();
   });
 });
 
@@ -760,6 +960,65 @@ describe("agentChatCommands.manual compaction", () => {
 });
 
 describe("agentChatCommands.handleAgentPiEvent", () => {
+  it("marks the tab error and interrupts sub-agent rows on session_end", () => {
+    agentChatStore.getState().initSession("tab-session-end", "session-session-end");
+    const tabId = "tab-session-end";
+
+    handleAgentPiEvent({
+      sessionId: "session-session-end",
+      tabId,
+      workspaceId: "workspace-1",
+      event: { type: "session_end" },
+    });
+
+    const session = agentChatStore.getState().sessionsByTabId[tabId];
+    expect(session?.state).toBe("error");
+    expect(session?.error).toBe("Agent session ended unexpectedly");
+    expect(session?.subagentSessionEndedAtMs).not.toBeNull();
+  });
+
+  it("ingests live lifecycle widget entries into cancellable running rows", () => {
+    agentChatStore.getState().initSession("tab-lifecycle-live", "session-lifecycle-live");
+    const tabId = "tab-lifecycle-live";
+
+    handleAgentPiEvent({
+      sessionId: "session-lifecycle-live",
+      tabId,
+      workspaceId: "workspace-1",
+      event: {
+        type: "extension_ui_request",
+        method: "setWidget",
+        widgetKey: "pi-subagents-lifecycle",
+        widgetLines: [
+          JSON.stringify({
+            version: 1,
+            entries: [
+              {
+                event: "started",
+                agentId: "agent-live",
+                agentName: "Builder",
+                childSessionId: "child-session-live",
+                title: "Builder — live work",
+                summary: "live work",
+              },
+            ],
+          }),
+        ],
+      },
+    });
+
+    // The row now carries the real ids, so the cancel path has a target
+    // without relying on progress-widget name matching.
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+      expect.objectContaining({
+        rowId: "child-session-live",
+        agentId: "agent-live",
+        agentName: "Builder",
+        childSessionId: "child-session-live",
+      }),
+    ]);
+  });
+
   it("ignores malformed toolcall_end deltas without corrupting the streaming message", () => {
     agentChatStore.getState().initSession("tab-malformed-toolcall-delta", "session-malformed-toolcall-delta");
     agentChatStore.getState().updateStreamingMessage("tab-malformed-toolcall-delta", {

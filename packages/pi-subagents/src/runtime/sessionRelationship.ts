@@ -1,3 +1,5 @@
+import type { ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
+
 import type { AgentResult, AgentRunMode, AgentUsageStats } from "../agents/types";
 
 const CHILD_SESSION_CUSTOM_TYPE = "pi-subagent-parent";
@@ -5,6 +7,8 @@ const PARENT_SESSION_CUSTOM_TYPE = "pi-subagent-child";
 const METADATA_VERSION = 1;
 const MAX_TITLE_LENGTH = 80;
 const MAX_SUMMARY_LENGTH = 240;
+const LIFECYCLE_WIDGET_KEY = "pi-subagents-lifecycle";
+const LIFECYCLE_WIDGET_VERSION = 1;
 
 /** Durable reference to one persisted Pi parent session. */
 export interface ParentSessionReference {
@@ -55,6 +59,12 @@ export interface ParentSessionWriter {
   recordChildSessionCompleted(entry: ParentSessionChildEntry): void;
 }
 
+/** Options for building a parent-session writer. */
+export interface ParentSessionWriterOptions {
+  /** Live-delivery callback invoked for every persisted lifecycle entry. */
+  emitLifecycle?: (entry: ParentSessionChildEntry) => void;
+}
+
 interface ReadonlySessionManagerLike {
   getSessionId(): string;
   getSessionFile(): string | undefined;
@@ -100,28 +110,50 @@ export function getParentSessionReference(
 }
 
 /**
- * Creates a best-effort writer that appends parent-session child-reference entries when mutation APIs are available.
+ * Creates a best-effort writer that appends parent-session child-reference
+ * entries when mutation APIs are available, and forwards each entry to a live
+ * consumer (e.g. a connected desktop) when one is configured.
  */
-export function createParentSessionWriter(sessionManager: ReadonlySessionManagerLike): ParentSessionWriter | undefined {
+export function createParentSessionWriter(
+  sessionManager: ReadonlySessionManagerLike,
+  options: ParentSessionWriterOptions = {},
+): ParentSessionWriter | undefined {
   if (!isMutableSessionManager(sessionManager)) {
     return undefined;
   }
 
+  const recordEntry = (event: ParentSessionChildEntry["event"], entry: ParentSessionChildEntry) => {
+    const payload = { ...entry, version: METADATA_VERSION, event } satisfies ParentSessionChildEntry;
+    sessionManager.appendCustomEntry(PARENT_SESSION_CUSTOM_TYPE, payload);
+    options.emitLifecycle?.(payload);
+  };
+
   return {
     recordChildSessionStarted(entry) {
-      sessionManager.appendCustomEntry(PARENT_SESSION_CUSTOM_TYPE, {
-        ...entry,
-        version: METADATA_VERSION,
-        event: "started",
-      } satisfies ParentSessionChildEntry);
+      recordEntry("started", entry);
     },
     recordChildSessionCompleted(entry) {
-      sessionManager.appendCustomEntry(PARENT_SESSION_CUSTOM_TYPE, {
-        ...entry,
-        version: METADATA_VERSION,
-        event: "completed",
-      } satisfies ParentSessionChildEntry);
+      recordEntry("completed", entry);
     },
+  };
+}
+
+/**
+ * Builds an RPC-only lifecycle-widget emitter for one session UI.
+ *
+ * The desktop ingests started/completed entries in real time from this widget;
+ * in TUI mode the raw JSON would render as visible widget text, so nothing is
+ * emitted there (entries still persist via the session file).
+ */
+export function createLifecycleWidgetEmitter(
+  ui: ExtensionUIContext,
+  mode: ExtensionContext["mode"],
+): (entry: ParentSessionChildEntry) => void {
+  return (entry) => {
+    if (mode !== "rpc") {
+      return;
+    }
+    ui.setWidget(LIFECYCLE_WIDGET_KEY, [JSON.stringify({ version: LIFECYCLE_WIDGET_VERSION, entries: [entry] })]);
   };
 }
 

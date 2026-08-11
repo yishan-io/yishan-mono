@@ -6,7 +6,11 @@ import type { AgentRegistry } from "../agents/registry";
 import type { AgentTask } from "../agents/types";
 import type { AgentManager } from "../runtime/agentManager";
 import { buildAgentTask } from "../runtime/buildAgentTask";
-import { createParentSessionWriter, getParentSessionReference } from "../runtime/sessionRelationship";
+import {
+  createLifecycleWidgetEmitter,
+  createParentSessionWriter,
+  getParentSessionReference,
+} from "../runtime/sessionRelationship";
 
 const agentToolSchema = Type.Object({
   agent: Type.String({ description: "Name of the agent definition to run" }),
@@ -60,7 +64,9 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
         mode: params.background ? "background" : "foreground",
       });
       task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
-      task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager);
+      task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager, {
+        emitLifecycle: createLifecycleWidgetEmitter(ctx.ui, ctx.mode),
+      });
 
       if (params.background) {
         const agentId = await manager.runInBackground(task, { signal });

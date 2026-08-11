@@ -24,7 +24,9 @@ import {
 } from "./agentChatStreamBuffer";
 import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessageHelpers";
 import {
+  applySubagentLifecycleWidget,
   applySubagentLiveTranscripts,
+  parseSubagentLifecycleWidget,
   parseSubagentLiveTranscripts,
   parseSubagentProgressTargets,
 } from "./agentChatSubagentEvents";
@@ -348,12 +350,14 @@ export {
   PER_MESSAGE_UTF8_BYTES,
   applyStreamDelta,
   applySubagentLiveTranscripts,
+  applySubagentLifecycleWidget,
   agentChatStore,
   cloneAgentMessage,
   flushAgentChatStreamBuffer,
   generateId,
   normalizeIncomingAgentMessage,
   parseSubagentLiveTranscripts,
+  parseSubagentLifecycleWidget,
   parseSubagentProgressTargets,
   truncateMessageContent,
   truncateUtf8Bytes,

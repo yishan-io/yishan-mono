@@ -22,6 +22,12 @@ func readStdout(session *Session, stdout io.ReadCloser, onEvent func(sessionID, 
 	defer func() {
 		stdout.Close()
 		session.manager.removeSession(session.id)
+		// OnExit runs before close(done) so a clean pi.stop (which deletes the
+		// registry entry right after Close returns) can never race it; a slow
+		// WebSocket write at worst delays teardown by the bounded write deadline.
+		if session.onExit != nil {
+			session.onExit(session)
+		}
 		close(session.done)
 	}()
 

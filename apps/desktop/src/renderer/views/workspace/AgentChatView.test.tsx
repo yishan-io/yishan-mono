@@ -884,7 +884,7 @@ describe("AgentChatView", () => {
     });
   });
 
-  it("enables pending subagent cancel once progress metadata provides a stop target", async () => {
+  it("enables pending subagent cancel via a unique progress target", async () => {
     seedSession({
       state: "running",
       streamingMessage: {
@@ -915,6 +915,8 @@ describe("AgentChatView", () => {
 
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-parent" isActive />);
 
+    // A live run whose lifecycle entry has not reached the store yet stays
+    // cancellable via its unique progress-widget target (the manager's id).
     const cancelButton = screen.getByLabelText("Cancel sub-agent code-reviewer");
     expect(cancelButton.hasAttribute("disabled")).toBe(false);
 
@@ -924,6 +926,7 @@ describe("AgentChatView", () => {
       expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
         tabId: "tab-1",
         sessionId: "session-1",
+        rowKey: "tool-agent-stream",
         agentId: "agent-cancel-1",
         agentName: "code-reviewer",
         childSessionId: undefined,
@@ -971,11 +974,65 @@ describe("AgentChatView", () => {
     expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
       tabId: "tab-1",
       sessionId: "session-1",
+      rowKey: "child-session-1",
       agentId: "agent-1",
       agentName: "Builder",
       childSessionId: "child-session-1",
     });
     expect(mocked.openSubagentSessionInRightSplitPane).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders sub-agent rows started before the process died as interrupted with no cancel", () => {
+    seedSession({
+      state: "idle",
+      messages: [
+        {
+          ...createSubagentLifecycleMessage({
+            id: "subagent-start-old",
+            event: "started",
+            agentId: "agent-1",
+            agentName: "Builder",
+            title: "Builder — interrupted work",
+            summary: "interrupted work",
+            childSessionId: "child-session-old",
+          }),
+          timestamp: 1_700_000_000_000,
+        },
+      ],
+    });
+    agentChatStore.getState().setSubagentSessionEndedAt("tab-1", Date.now());
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    expect(screen.getByTestId("subagent-row-interrupted-child-session-old")).toBeTruthy();
+    // Interrupted history offers no cancel affordance.
+    expect(screen.queryByLabelText("Cancel sub-agent Builder")).toBeNull();
+  });
+
+  it("keeps sub-agent rows started after the process death live and cancellable", () => {
+    seedSession({
+      state: "idle",
+      messages: [
+        {
+          ...createSubagentLifecycleMessage({
+            id: "subagent-start-new",
+            event: "started",
+            agentId: "agent-2",
+            agentName: "Builder",
+            title: "Builder — live work",
+            summary: "live work",
+            childSessionId: "child-session-new",
+          }),
+          timestamp: Date.now() + 10_000,
+        },
+      ],
+    });
+    agentChatStore.getState().setSubagentSessionEndedAt("tab-1", Date.now());
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    expect(screen.queryByTestId("subagent-row-interrupted-child-session-new")).toBeNull();
+    expect(screen.getByLabelText("Cancel sub-agent Builder")).toBeTruthy();
   });
 
   it("uses pushed parent-session data without starting a second Pi session for a running subagent", async () => {

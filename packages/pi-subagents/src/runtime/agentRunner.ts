@@ -27,6 +27,72 @@ export interface AgentRunHandle {
 }
 
 /**
+ * How long a run may keep its turn unsettled after an interrupt (cancel,
+ * timeout, max turns) before it is force-settled. Must stay below the daemon's
+ * abortGracePeriod (3s) so a session shutdown can still persist terminal
+ * metadata before the process is force-killed.
+ */
+const RUN_INTERRUPT_SETTLE_TIMEOUT_MS = 2_000;
+
+/** Which interrupt was requested for a managed run. */
+type RunInterruptKind = "cancel" | "timeout" | "maxTurns";
+
+/** Controls that let an interrupt force-settle a run whose turn never settles. */
+interface RunInterruptControls {
+  requestInterrupt(kind: RunInterruptKind): void;
+  /** Resolves graceMs after the first interrupt, or never without one. */
+  settleBound: Promise<void>;
+  dispose(): void;
+}
+
+/**
+ * Creates interrupt controls for one run.
+ *
+ * The SDK's session.abort() is cooperative (an AbortSignal) and itself awaits
+ * waitForIdle(), so a hung turn makes abort() hang too. requestInterrupt marks
+ * the run state and starts a grace timer; settleBound resolves when the grace
+ * elapses so callers can stop waiting on a turn that will never settle.
+ */
+function createRunInterruptControls(
+  state: { didCancel: boolean; didTimeout: boolean; didHitMaxTurns: boolean },
+  graceMs: number,
+): RunInterruptControls {
+  let resolveSettle: (() => void) | undefined;
+  let graceTimer: ReturnType<typeof setTimeout> | undefined;
+  const settleBound = new Promise<void>((resolve) => {
+    resolveSettle = resolve;
+  });
+
+  return {
+    requestInterrupt(kind) {
+      if (kind === "cancel") {
+        state.didCancel = true;
+      } else if (kind === "timeout") {
+        state.didTimeout = true;
+      } else {
+        state.didHitMaxTurns = true;
+      }
+
+      if (graceTimer === undefined && resolveSettle !== undefined) {
+        graceTimer = setTimeout(() => {
+          graceTimer = undefined;
+          resolveSettle?.();
+          resolveSettle = undefined;
+        }, graceMs);
+      }
+    },
+    settleBound,
+    dispose() {
+      if (graceTimer !== undefined) {
+        clearTimeout(graceTimer);
+        graceTimer = undefined;
+      }
+      resolveSettle = undefined;
+    },
+  };
+}
+
+/**
  * Starts one child-agent run and returns a live handle plus completion promise.
  */
 export async function startAgentRun(options: StartAgentRunOptions): Promise<AgentRunHandle> {
@@ -55,11 +121,12 @@ export async function startAgentRun(options: StartAgentRunOptions): Promise<Agen
     didHitMaxTurns: false,
     turnCount: 0,
   };
+  const interrupts = createRunInterruptControls(runState, RUN_INTERRUPT_SETTLE_TIMEOUT_MS);
 
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   if (options.timeoutMs !== undefined) {
     timeoutHandle = setTimeout(() => {
-      runState.didTimeout = true;
+      interrupts.requestInterrupt("timeout");
       abortSessionSafely(childSession.session);
     }, options.timeoutMs);
   }
@@ -71,16 +138,17 @@ export async function startAgentRun(options: StartAgentRunOptions): Promise<Agen
 
     runState.turnCount += 1;
     if (runState.turnCount >= options.maxTurns) {
-      runState.didHitMaxTurns = true;
+      interrupts.requestInterrupt("maxTurns");
       abortSessionSafely(childSession.session);
     }
   });
 
-  const completion = runToCompletion(options, childSession, runState).finally(() => {
+  const completion = runToCompletion(options, childSession, runState, interrupts.settleBound).finally(() => {
     unsubscribe();
     if (timeoutHandle) {
       clearTimeout(timeoutHandle);
     }
+    interrupts.dispose();
     childSession.session.dispose();
   });
 
@@ -90,8 +158,10 @@ export async function startAgentRun(options: StartAgentRunOptions): Promise<Agen
     sessionPath: childSession.sessionPath,
     completion,
     async cancel() {
-      runState.didCancel = true;
-      await childSession.session.abort();
+      interrupts.requestInterrupt("cancel");
+      // session.abort() awaits waitForIdle() and can hang on a hung turn;
+      // never wait for it beyond the interrupt settle bound.
+      await Promise.race([childSession.session.abort(), interrupts.settleBound]);
     },
     async steer(message: string) {
       await childSession.session.steer(message);
@@ -103,11 +173,16 @@ async function runToCompletion(
   options: StartAgentRunOptions,
   childSession: CreateChildAgentSessionResult,
   runState: { didCancel: boolean; didTimeout: boolean; didHitMaxTurns: boolean; turnCount: number },
+  settleBound: Promise<void>,
 ): Promise<AgentResult> {
   let thrownError: Error | undefined;
 
   try {
-    await childSession.session.prompt(options.prompt);
+    // Bound the prompt await so a turn that never settles (hung provider call,
+    // tool call, or extension hook) cannot keep the run alive forever: once an
+    // interrupt has been requested, the run force-settles after the grace
+    // window even if the underlying turn ignores the abort signal.
+    await Promise.race([childSession.session.prompt(options.prompt), settleBound]);
   } catch (error) {
     if (error instanceof Error) {
       thrownError = error;
@@ -116,7 +191,17 @@ async function runToCompletion(
     }
   }
 
-  await persistChildSession(childSession);
+  // Best-effort child transcript persistence: a failing write (disk full,
+  // permission, wedged FS) must not skip the parent terminal entry, which is
+  // what heals the parent transcript on reopen.
+  try {
+    await persistChildSession(childSession);
+  } catch (error) {
+    console.warn("[pi-subagents] failed to persist child session transcript", {
+      sessionId: childSession.sessionId,
+      error,
+    });
+  }
 
   const usage = collectAgentUsage(childSession.session.messages);
   const responseText = getLastAssistantText(childSession.session.messages);

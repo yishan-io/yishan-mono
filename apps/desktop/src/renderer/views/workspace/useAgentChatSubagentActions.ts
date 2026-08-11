@@ -91,25 +91,38 @@ export function useAgentChatSubagentActions({
   const handleCancelSubagent = useCallback(
     async (subagent: RunningSubagentSummary) => {
       if (!sessionId) return;
+      // Prefer the row's real ids; a live run whose lifecycle entry has not
+      // reached the store yet resolves its target from a unique progress-widget
+      // match (the manager's real agentId). Nothing is silently dropped: rows
+      // with no resolvable target surface an explicit failure in the command.
       let agentId = subagent.agentId;
       let childSessionId = subagent.childSessionId;
-      if (!agentId && !childSessionId) {
-        await fetchAgentMessages({ tabId, sessionId });
-        const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
-        const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
-        agentId = refreshedSubagent?.agentId;
-        childSessionId = refreshedSubagent?.childSessionId;
-      }
       if (!agentId && !childSessionId) {
         const matchingProgressTargets = subagentProgressTargets.filter(
           (target) => target.agentName === subagent.agentName,
         );
-        if (matchingProgressTargets.length === 1) agentId = matchingProgressTargets[0]?.agentId;
+        if (matchingProgressTargets.length === 1) {
+          agentId = matchingProgressTargets[0]?.agentId;
+          childSessionId = matchingProgressTargets[0]?.childSessionId;
+        }
       }
-      if (!agentId && !childSessionId) return;
-      await cancelSubagentRun({ tabId, sessionId, agentId, agentName: subagent.agentName, childSessionId });
+      await cancelSubagentRun({
+        tabId,
+        sessionId,
+        rowKey: subagent.childSessionId ?? subagent.rowId,
+        agentId,
+        agentName: subagent.agentName,
+        childSessionId,
+      });
     },
     [sessionId, subagentProgressTargets, tabId],
   );
-  return { runningSubagents, subagentProgressTargets, handleOpenSubagent, handleCancelSubagent };
+  const subagentCancelStates = agentChatStore((state) => state.sessionsByTabId[tabId]?.subagentCancelStates ?? {});
+  return {
+    runningSubagents,
+    subagentProgressTargets,
+    subagentCancelStates,
+    handleOpenSubagent,
+    handleCancelSubagent,
+  };
 }
