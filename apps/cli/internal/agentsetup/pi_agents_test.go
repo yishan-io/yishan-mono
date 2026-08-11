@@ -164,7 +164,7 @@ func TestCreatePiAgent_RejectsInvalidThinking(t *testing.T) {
 			t.Fatalf("expected ErrInvalidAgentThinking for %q, got %v", thinking, err)
 		}
 	}
-	for _, thinking := range []string{"", "off", "minimal", "low", "medium", "high", "xhigh"} {
+	for _, thinking := range []string{"", "off", "minimal", "low", "medium", "high", "xhigh", "max"} {
 		if err := CreatePiAgent("ok-helper-"+thinking, "desc", "body", "", thinking); err != nil {
 			t.Fatalf("unexpected error for thinking %q: %v", thinking, err)
 		}

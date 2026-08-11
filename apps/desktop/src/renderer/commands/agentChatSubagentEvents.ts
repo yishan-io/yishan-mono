@@ -169,7 +169,31 @@ function parseLiveTranscriptModel(value: unknown): AgentModel | undefined {
     provider: typeof value.provider === "string" ? value.provider : undefined,
     contextWindow: typeof value.contextWindow === "number" ? value.contextWindow : undefined,
     reasoning: typeof value.reasoning === "boolean" ? value.reasoning : undefined,
+    thinkingLevelMap: parseLiveTranscriptThinkingLevelMap(value.thinkingLevelMap),
   };
+}
+
+/**
+ * Normalizes the per-level provider mapping from the live-transcript widget.
+ * Only a plain object whose values are strings or null is accepted (that is
+ * the pi-ai Model shape: null marks a level as unsupported).
+ */
+function parseLiveTranscriptThinkingLevelMap(value: unknown): Record<string, string | null> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const normalized: Record<string, string | null> = {};
+  for (const [level, mapped] of Object.entries(value)) {
+    if (typeof mapped === "string") {
+      normalized[level] = mapped;
+    } else if (mapped === null) {
+      normalized[level] = null;
+    } else {
+      return undefined;
+    }
+  }
+  return normalized;
 }
 
 // ─── Live lifecycle-widget ingestion ─────────────────────────────────────────

@@ -63,6 +63,45 @@ describe("findNearestProjectAgentsDir", () => {
 });
 
 describe("loadAgentDefinitionFile", () => {
+  it("accepts the max thinking level (pi-agent-core ThinkingLevel includes it)", () => {
+    const tempDir = createTempDir();
+    const filePath = writeAgentFile(
+      tempDir,
+      "Explorer.md",
+      `---
+name: Explorer
+description: Search hard
+thinking: max
+---
+
+Search.`,
+    );
+
+    const result = loadAgentDefinitionFile({ filePath, source: "builtin" });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.agent?.thinking).toBe("max");
+  });
+
+  it("rejects an unknown thinking level", () => {
+    const tempDir = createTempDir();
+    const filePath = writeAgentFile(
+      tempDir,
+      "Explorer.md",
+      `---
+name: Explorer
+description: Search hard
+thinking: ultra
+---
+
+Search.`,
+    );
+
+    const result = loadAgentDefinitionFile({ filePath, source: "builtin" });
+
+    expect(result.diagnostics.some((diagnostic) => diagnostic.message.includes("thinking"))).toBe(true);
+  });
+
   it("loads and normalizes one valid agent definition", () => {
     const tempDir = createTempDir();
     const filePath = writeAgentFile(

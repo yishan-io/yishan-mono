@@ -761,6 +761,10 @@
             "title": "Restore official agent",
             "description": "Restore {{name}} to the shipped official definition? Any edits will be discarded.",
             "confirm": "Restore"
+          },
+          "modelThinking": {
+            "thinkingUnsupported": "\"{{level}}\" is not supported by {{model}} — pi will use \"{{clamped}}\"",
+            "supportedLevels": "Supported levels for {{model}}: {{levels}}"
           }
         },
         "errors": {

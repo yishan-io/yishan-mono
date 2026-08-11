@@ -53,7 +53,7 @@ describe("AgentModelSelector", () => {
         currentModel={currentModel}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -73,7 +73,7 @@ describe("AgentModelSelector", () => {
         currentModel={currentModel}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -97,7 +97,7 @@ describe("AgentModelSelector", () => {
         currentModel={currentModel}
         thinkingLevel="off"
         onModelChange={onModelChange}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -121,7 +121,7 @@ describe("AgentModelSelector", () => {
         currentModel={currentModel}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -147,7 +147,7 @@ describe("AgentModelSelector", () => {
         currentModel={currentModel}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -171,7 +171,7 @@ describe("AgentModelSelector", () => {
         currentModel={models[0] ?? null}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -199,7 +199,7 @@ describe("AgentModelSelector", () => {
         currentModel={currentModel}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -219,7 +219,7 @@ describe("AgentModelSelector", () => {
         currentModel={models[0] ?? null}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
       />,
     );
 
@@ -239,7 +239,7 @@ describe("AgentModelSelector", () => {
         currentModel={models[0] ?? null}
         thinkingLevel="off"
         onModelChange={vi.fn()}
-        onThinkingLevelCycle={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
         onAddProvider={onAddProvider}
       />,
     );

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import { THINKING_LEVEL_LABELS } from "../../components/agent/session/ThinkingLevelControl";
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
+import { formatSupportedThinkingLevels } from "../../helpers/agentThinkingLevels";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentMessage, AgentModel, AgentQueueState } from "../../store/agentChatTypes";
 
@@ -41,6 +42,7 @@ function AgentChatSubagentDetailFooter({ model, usage, thinkingLevel }: AgentCha
   const modelLabel = model ? `${model.provider ? `${model.provider} / ` : ""}${model.name}` : "Model unavailable";
   const thinkingLevelLabel =
     thinkingLevel !== null ? (THINKING_LEVEL_LABELS[thinkingLevel] ?? THINKING_LEVEL_LABELS.off) : undefined;
+  const supportedLevelsLabel = model ? formatSupportedThinkingLevels(model) : undefined;
 
   return (
     <Box
@@ -49,7 +51,12 @@ function AgentChatSubagentDetailFooter({ model, usage, thinkingLevel }: AgentCha
       <Typography variant="caption">Model: {modelLabel}</Typography>
       <Typography variant="caption">Context: {contextLabel}</Typography>
       {thinkingLevelLabel !== undefined ? (
-        <Typography variant="caption">Thinking: {thinkingLevelLabel}</Typography>
+        <Typography
+          variant="caption"
+          title={supportedLevelsLabel ? `Supported levels: ${supportedLevelsLabel}` : undefined}
+        >
+          Thinking: {thinkingLevelLabel}
+        </Typography>
       ) : null}
     </Box>
   );

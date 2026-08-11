@@ -37,7 +37,6 @@ import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";
 
-const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 const EMPTY_MODELS: AgentModel[] = [];
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const MAX_FILE_MENTION_RESULTS = 50;
@@ -287,16 +286,17 @@ function AgentChatComposerPaneComponent({
     sessionState,
   });
 
-  const handleThinkingCycle = useCallback(async () => {
-    if (!sessionId) return;
-    const currentIdx = THINKING_LEVELS.indexOf(thinkingLevel);
-    const nextLevel = THINKING_LEVELS[(currentIdx + 1) % THINKING_LEVELS.length] ?? THINKING_LEVELS[0] ?? "medium";
-    try {
-      await setAgentThinkingLevel({ tabId, sessionId, level: nextLevel });
-    } catch (error) {
-      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
-    }
-  }, [sessionId, tabId, thinkingLevel]);
+  const handleThinkingSelect = useCallback(
+    async (level: string) => {
+      if (!sessionId) return;
+      try {
+        await setAgentThinkingLevel({ tabId, sessionId, level });
+      } catch (error) {
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+      }
+    },
+    [sessionId, tabId],
+  );
 
   return (
     <Box
@@ -388,7 +388,7 @@ function AgentChatComposerPaneComponent({
             currentModel={currentModel}
             thinkingLevel={thinkingLevel}
             onModelChange={handleModelChange}
-            onThinkingLevelCycle={handleThinkingCycle}
+            onThinkingLevelSelect={handleThinkingSelect}
             onAddProvider={openAddProviderDialog}
           />
         )}

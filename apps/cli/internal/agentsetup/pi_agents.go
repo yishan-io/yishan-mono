@@ -160,8 +160,8 @@ func CreatePiAgent(name string, description string, content string, model string
 }
 
 // ValidateAgentThinking reports whether a thinking level is one of the
-// pi-supported values (off|minimal|low|medium|high|xhigh). Empty is valid
-// (no override).
+// pi-supported values (off|minimal|low|medium|high|xhigh|max). Empty is
+// valid (no override).
 func ValidateAgentThinking(thinking string) error {
 	trimmed := strings.TrimSpace(thinking)
 	if trimmed == "" {
@@ -172,11 +172,11 @@ func ValidateAgentThinking(thinking string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("%w: %q (use off|minimal|low|medium|high|xhigh)", ErrInvalidAgentThinking, trimmed)
+	return fmt.Errorf("%w: %q (use off|minimal|low|medium|high|xhigh|max)", ErrInvalidAgentThinking, trimmed)
 }
 
 // allowedAgentThinkingLevels mirrors pi's ALLOWED_THINKING_LEVELS.
-var allowedAgentThinkingLevels = []string{"off", "minimal", "low", "medium", "high", "xhigh"}
+var allowedAgentThinkingLevels = []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"}
 
 // UpdatePiAgent overwrites an agent definition (official or user) with the
 // given full file content — frontmatter plus body, exactly as returned by

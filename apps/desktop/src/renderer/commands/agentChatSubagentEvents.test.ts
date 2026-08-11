@@ -205,6 +205,7 @@ describe("parseSubagentLiveTranscripts", () => {
               provider: "deepseek",
               reasoning: false,
               contextWindow: 64000,
+              thinkingLevelMap: { medium: null, high: "high" },
             },
           },
         ],
@@ -217,7 +218,31 @@ describe("parseSubagentLiveTranscripts", () => {
       provider: "deepseek",
       reasoning: false,
       contextWindow: 64000,
+      thinkingLevelMap: { medium: null, high: "high" },
     });
+  });
+
+  it("ignores a malformed thinkingLevelMap", () => {
+    const result = parseSubagentLiveTranscripts(
+      liveTranscriptEvent({
+        version: 1,
+        agents: [
+          {
+            agentId: "agent-1",
+            childSessionId: "child-session-1",
+            status: "running",
+            messages: [],
+            model: {
+              id: "deepseek/deepseek-chat",
+              name: "DeepSeek Chat",
+              thinkingLevelMap: { medium: 42 },
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(result?.[0]?.model?.thinkingLevelMap).toBeUndefined();
   });
 
   it("parses a payload without a model as undefined", () => {

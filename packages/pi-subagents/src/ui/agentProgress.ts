@@ -149,7 +149,7 @@ export function renderAgentLiveTranscripts(ui: ExtensionUIContext, records: Agen
       status: record.status,
       messages: record.session?.messages ?? [],
       thinkingLevel: record.session?.thinkingLevel,
-      // Emit only the fields the GUI footer reads (id/name/provider/reasoning/contextWindow);
+      // Emit only the fields the GUI reads (id/name/provider/reasoning/contextWindow/thinkingLevelMap);
       // the full pi-ai Model carries api function refs, cost, and baseUrl bloat.
       model: record.session?.model
         ? {
@@ -158,6 +158,7 @@ export function renderAgentLiveTranscripts(ui: ExtensionUIContext, records: Agen
             provider: record.session.model.provider,
             reasoning: record.session.model.reasoning,
             contextWindow: record.session.model.contextWindow,
+            thinkingLevelMap: record.session.model.thinkingLevelMap,
           }
         : undefined,
     }));

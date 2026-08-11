@@ -3,7 +3,7 @@ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { AgentDefinition, AgentDefinitionDiagnostic, AgentDefinitionSource } from "./types";
 import { WRITE_CAPABLE_TOOL_NAMES } from "./workspaceAccess";
 
-const ALLOWED_THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
+const ALLOWED_THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
 
 /** Built-in tool names recognized by the initial MVP loader validation. */
 export const DEFAULT_ALLOWED_TOOL_NAMES = [
@@ -156,7 +156,7 @@ function readOptionalThinkingLevel(
   }
 
   if (typeof value !== "string" || !ALLOWED_THINKING_LEVELS.includes(value as ThinkingLevel)) {
-    diagnostics.push({ message: "Agent field `thinking` must be one of off|minimal|low|medium|high|xhigh", path });
+    diagnostics.push({ message: "Agent field `thinking` must be one of off|minimal|low|medium|high|xhigh|max", path });
     return undefined;
   }
 

@@ -1,8 +1,11 @@
 package modellist
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -38,7 +41,9 @@ func (f piFetcher) Fetch() ([]ModelInfo, error) {
 	if strings.TrimSpace(text) == "" {
 		text = stderr.String()
 	}
-	return parsePiModels(text), nil
+	models := parsePiModels(text)
+	applyPiModelCapabilities(models, piAgentDir)
+	return models, nil
 }
 
 func parsePiModels(raw string) []ModelInfo {
@@ -61,11 +66,21 @@ func parsePiModels(raw string) []ModelInfo {
 		if strings.EqualFold(first, "provider") {
 			continue
 		}
+		// pi --list-models prints "provider  model  context  max-out  thinking  images".
+		// The thinking column (yes/no) sits at index 4 for two-column lines and at
+		// index 3 when the provider and model are merged into one field.
 		var id string
+		var thinkingColumn string
 		if strings.ContainsAny(first, ":/") {
 			id = strings.Replace(first, ":", "/", 1)
+			if len(fields) >= 4 {
+				thinkingColumn = fields[3]
+			}
 		} else if len(fields) >= 2 {
 			id = first + "/" + fields[1]
+			if len(fields) >= 5 {
+				thinkingColumn = fields[4]
+			}
 		} else {
 			continue
 		}
@@ -76,7 +91,7 @@ func parsePiModels(raw string) []ModelInfo {
 			continue
 		}
 		seen[id] = struct{}{}
-		models = append(models, ModelInfo{ID: id, Name: id})
+		models = append(models, ModelInfo{ID: id, Name: id, Reasoning: thinkingColumn == "yes"})
 	}
 	sort.Slice(models, func(i, j int) bool { return models[i].ID < models[j].ID })
 	return models
@@ -90,6 +105,77 @@ func isPiNoise(line string) bool {
 	return strings.HasPrefix(lower, "warning:") ||
 		strings.HasPrefix(lower, "error:") ||
 		strings.HasPrefix(lower, "info:")
+}
+
+// piModelsStoreEntry is one model entry in the managed agent dir's
+// models-store.json, the catalog pi itself uses at runtime.
+type piModelsStoreEntry struct {
+	ID string `json:"id"`
+	// Reasoning is a pointer so a store entry that omits the key does not
+	// downgrade the CLI-column-derived value to false.
+	Reasoning        *bool              `json:"reasoning"`
+	ThinkingLevelMap map[string]*string `json:"thinkingLevelMap"`
+}
+
+// applyPiModelCapabilities enriches parsed models with capability info. The
+// --list-models "thinking" column already set Reasoning; when the managed
+// agent dir has models-store.json, the catalog's authoritative reasoning and
+// thinkingLevelMap override the column for matching models (they are what pi
+// actually clamps against at session creation). Models absent from the store
+// keep the column-derived reasoning.
+func applyPiModelCapabilities(models []ModelInfo, agentDir string) {
+	store := loadPiModelsStore(agentDir)
+	for i := range models {
+		provider, key, ok := splitModelID(models[i].ID)
+		if !ok {
+			continue
+		}
+		entry, found := store[provider][key]
+		if !found {
+			continue
+		}
+		if entry.Reasoning != nil {
+			models[i].Reasoning = *entry.Reasoning
+		}
+		models[i].ThinkingLevelMap = entry.ThinkingLevelMap
+	}
+}
+
+// loadPiModelsStore reads models-store.json from the managed agent dir. A
+// missing or malformed file yields an empty store so callers fall back to the
+// CLI-derived capabilities. Top-level keys are provider ids; each provider
+// group has a models array whose entries carry bare ids.
+func loadPiModelsStore(agentDir string) map[string]map[string]piModelsStoreEntry {
+	store := map[string]map[string]piModelsStoreEntry{}
+	data, err := os.ReadFile(filepath.Join(agentDir, "models-store.json"))
+	if err != nil {
+		return store
+	}
+	var providers map[string]struct {
+		Models []piModelsStoreEntry `json:"models"`
+	}
+	if err := json.Unmarshal(data, &providers); err != nil {
+		return store
+	}
+	for provider, group := range providers {
+		byID := make(map[string]piModelsStoreEntry, len(group.Models))
+		for _, entry := range group.Models {
+			byID[entry.ID] = entry
+		}
+		store[provider] = byID
+	}
+	return store
+}
+
+// splitModelID splits a parsed "provider/model-key" id into its provider
+// prefix and the model key (the part after the first slash, which is also the
+// bare id used in models-store.json entries).
+func splitModelID(id string) (provider string, key string, ok bool) {
+	slash := strings.Index(id, "/")
+	if slash <= 0 || slash == len(id)-1 {
+		return "", "", false
+	}
+	return id[:slash], id[slash+1:], true
 }
 
 type cursorFetcher struct{}

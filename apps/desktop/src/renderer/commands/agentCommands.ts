@@ -10,6 +10,9 @@ export type AgentDetectionStatus = {
 export type AgentModelInfo = {
   id: string;
   name: string;
+  reasoning?: boolean;
+  /** Per-level provider mapping; a null value marks the level as unsupported. */
+  thinkingLevelMap?: Record<string, string | null>;
 };
 
 export type AgentModelsResult = {

@@ -26,6 +26,7 @@ const mocked = vi.hoisted(() => {
       latestAgentModelSelectorProps: {
         onModelChange: ((model: AgentModel) => void | Promise<void>) | null;
         onAddProvider: (() => void) | null;
+        onThinkingLevelSelect: ((level: string) => void) | null;
       };
       latestProviderCredentialDialogProps: {
         open: boolean;
@@ -49,6 +50,7 @@ const mocked = vi.hoisted(() => {
       latestAgentModelSelectorProps: {
         onModelChange: null,
         onAddProvider: null,
+        onThinkingLevelSelect: null,
       },
       latestProviderCredentialDialogProps: null,
     },
@@ -142,13 +144,16 @@ vi.mock("../../components/agent/session/AgentModelSelector", () => ({
   AgentModelSelector: ({
     onModelChange,
     onAddProvider,
+    onThinkingLevelSelect,
   }: {
     onModelChange: (model: AgentModel) => void | Promise<void>;
     onAddProvider?: () => void;
+    onThinkingLevelSelect?: (level: string) => void;
   }) => {
     mocked.stateRef.current.agentModelSelectorRenderCount += 1;
     mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = onModelChange;
     mocked.stateRef.current.latestAgentModelSelectorProps.onAddProvider = onAddProvider ?? null;
+    mocked.stateRef.current.latestAgentModelSelectorProps.onThinkingLevelSelect = onThinkingLevelSelect ?? null;
     return (
       <div data-testid="agent-model-selector">
         <button type="button" data-testid="add-provider-button" onClick={() => onAddProvider?.()}>
@@ -537,6 +542,30 @@ describe("AgentChatView", () => {
 
     expect(screen.getByRole("button", { name: "Click to record voice input" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Submit" })).toBeTruthy();
+  });
+
+  it("sends the chosen thinking level for the current model", async () => {
+    const flashModel: AgentModel = {
+      id: "deepseek/deepseek-v4-flash",
+      name: "DeepSeek V4 Flash",
+      provider: "deepseek",
+      reasoning: true,
+      thinkingLevelMap: { minimal: null, low: null, medium: null, high: "high", max: "max" },
+    };
+    seedSession({ currentModel: flashModel, availableModels: [flashModel], thinkingLevel: "off" });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    act(() => {
+      mocked.stateRef.current.latestAgentModelSelectorProps.onThinkingLevelSelect?.("high");
+    });
+    await waitFor(() => {
+      expect(mocked.setAgentThinkingLevel).toHaveBeenCalledWith({
+        tabId: "tab-1",
+        sessionId: "session-1",
+        level: "high",
+      });
+    });
   });
 
   it("keeps the message-list working indicator visible while the session is running even with a trailing message", () => {

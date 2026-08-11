@@ -152,8 +152,9 @@ describe("AgentsSettingsView", () => {
     // Model picker: open the menu and select a model.
     fireEvent.click(screen.getByLabelText("Select model"));
     fireEvent.click(await screen.findByText("Claude Opus 4.5"));
-    // Thinking control: cycle once (medium -> high).
+    // Thinking control: open the menu and pick High directly.
     fireEvent.click(screen.getByLabelText(/Thinking level:/));
+    fireEvent.click(await screen.findByText("High"));
 
     fireEvent.click(screen.getByTestId("create-agent-submit"));
 
@@ -323,6 +324,49 @@ describe("AgentsSettingsView", () => {
     expect(screen.getByText("retired-model-xyz")).toBeTruthy();
   });
 
+  it("warns and constrains cycling when the model does not support the chosen thinking level", async () => {
+    const FLASH_MODEL = {
+      id: "deepseek/deepseek-v4-flash",
+      name: "DeepSeek V4 Flash",
+      reasoning: true,
+      thinkingLevelMap: { minimal: null, low: null, medium: null, high: "high", max: "max" },
+    };
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({
+      ...USER,
+      content:
+        "---\nname: my-helper\ndescription: My custom helper\nmodel: deepseek/deepseek-v4-flash\nthinking: medium\n---\n# body\n",
+      model: "deepseek/deepseek-v4-flash",
+      thinking: "medium",
+    });
+    mocked.listAgentModels.mockResolvedValue({
+      agentKind: "pi",
+      models: [FLASH_MODEL],
+      source: "test",
+      fetchedAt: 0,
+      cacheExpiry: 0,
+    });
+    mocked.updateAgentDefinition.mockResolvedValue(undefined);
+
+    render(<AgentsSettingsView />);
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+
+    await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
+    // The mismatch is surfaced and the supported set is listed.
+    expect(screen.getByText("settings.customize.agents.dialogs.modelThinking.thinkingUnsupported")).toBeTruthy();
+    expect(screen.getByText("settings.customize.agents.dialogs.modelThinking.supportedLevels")).toBeTruthy();
+
+    // The dropdown hides unsupported levels; selecting a supported one
+    // applies it directly.
+    fireEvent.click(screen.getByLabelText(/Thinking level:/));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).queryByText("Medium")).toBeNull();
+    expect(within(menu).getByText("High")).toBeTruthy();
+    fireEvent.click(within(menu).getByText("Off"));
+    expect(screen.getByLabelText("Thinking level: Off")).toBeTruthy();
+  });
+
   it("editing folds the selector values into the frontmatter only when they change", async () => {
     mocked.listAgentDefinitions.mockResolvedValue([USER]);
     mocked.getAgentDefinitionDetail.mockResolvedValue({
@@ -341,6 +385,7 @@ describe("AgentsSettingsView", () => {
     await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
     // Change the thinking level (high -> xhigh) so the override must be written.
     fireEvent.click(screen.getByLabelText("Thinking level: High"));
+    fireEvent.click(await screen.findByText("Extra high"));
     fireEvent.click(screen.getByTestId("agent-detail-save"));
 
     await waitFor(() =>
