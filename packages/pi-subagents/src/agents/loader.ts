@@ -4,12 +4,16 @@ import { fileURLToPath } from "node:url";
 
 import { CONFIG_DIR_NAME, getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 
-import { applyAgentRuntimeOverrides, loadAgentRuntimeOverrides, normalizeAgentName } from "./overrides";
 import type { AgentDefinition, AgentDefinitionDiagnostic, AgentRegistrySnapshot } from "./types";
 import type { AgentFrontmatter } from "./validation";
 import { validateAgentDefinition } from "./validation";
 
-export { normalizeAgentName } from "./overrides";
+/**
+ * Normalizes an agent name for case-insensitive matching.
+ */
+export function normalizeAgentName(name: string): string {
+  return name.trim().toLowerCase();
+}
 
 const MARKDOWN_EXTENSION = ".md";
 const BUILTIN_AGENTS_DIR = fileURLToPath(new URL("../../agents", import.meta.url));
@@ -19,7 +23,6 @@ export interface LoadAgentDefinitionsOptions {
   cwd: string;
   builtinAgentsDir?: string;
   userAgentsDir?: string;
-  userAgentOverridesPath?: string;
   projectAgentsDir?: string | null;
   allowedToolNames?: readonly string[];
 }
@@ -44,12 +47,6 @@ export function loadAgentDefinitions(options: LoadAgentDefinitionsOptions): Agen
   diagnostics.push(...userAgents.diagnostics);
 
   const userResolvedAgents = resolveAgentDefinitionOverrides(builtinAgents.agents, userAgents.agents, []);
-  const userRuntimeOverrides = loadAgentRuntimeOverrides({
-    filePath: options.userAgentOverridesPath ?? join(getAgentDir(), "agent.overrides.json"),
-    knownAgentNames: userResolvedAgents.map((agentDefinition) => agentDefinition.name),
-  });
-  diagnostics.push(...userRuntimeOverrides.diagnostics);
-  const userPatchedAgents = applyAgentRuntimeOverrides(userResolvedAgents, userRuntimeOverrides.overrides);
 
   const resolvedProjectAgentsDir =
     options.projectAgentsDir === undefined ? findNearestProjectAgentsDir(options.cwd) : options.projectAgentsDir;
@@ -63,7 +60,7 @@ export function loadAgentDefinitions(options: LoadAgentDefinitionsOptions): Agen
         });
   diagnostics.push(...projectAgents.diagnostics);
 
-  const agents = resolveAgentDefinitionOverrides(userPatchedAgents, [], projectAgents.agents);
+  const agents = resolveAgentDefinitionOverrides(userResolvedAgents, [], projectAgents.agents);
   return { agents, diagnostics };
 }
 

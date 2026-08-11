@@ -645,10 +645,6 @@ export type AgentDefinitionCreateInput = {
   name: string;
   description: string;
   content: string;
-};
-
-export type AgentDefinitionSetModelThinkingInput = {
-  name: string;
   model: string;
   thinking: string;
 };

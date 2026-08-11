@@ -12,7 +12,6 @@ const mocked = {
   removeAgentDefinition: vi.fn(),
   restoreAgentDefinition: vi.fn(),
   listAgentModels: vi.fn(),
-  setAgentModelThinking: vi.fn(),
 };
 
 const AVAILABLE_MODELS = [
@@ -33,13 +32,16 @@ vi.mock("../../../commands/agentCommands", () => ({
 vi.mock("../../../commands/customizeCommands", () => ({
   listAgentDefinitions: () => mocked.listAgentDefinitions(),
   getAgentDefinitionDetail: (name: string) => mocked.getAgentDefinitionDetail(name),
-  createAgentDefinition: (input: { name: string; description: string; content: string }) =>
-    mocked.createAgentDefinition(input),
+  createAgentDefinition: (input: {
+    name: string;
+    description: string;
+    content: string;
+    model: string;
+    thinking: string;
+  }) => mocked.createAgentDefinition(input),
   updateAgentDefinition: (input: { name: string; content: string }) => mocked.updateAgentDefinition(input),
   removeAgentDefinition: (name: string) => mocked.removeAgentDefinition(name),
   restoreAgentDefinition: (name: string) => mocked.restoreAgentDefinition(name),
-  setAgentModelThinking: (name: string, model: string, thinking: string) =>
-    mocked.setAgentModelThinking(name, model, thinking),
 }));
 
 const OFFICIAL = {
@@ -127,6 +129,8 @@ describe("AgentsSettingsView", () => {
         name: "new-helper",
         description: "Does things",
         content: "## Steps\n1. Do\n",
+        model: "",
+        thinking: "medium",
       }),
     );
   });
@@ -158,12 +162,13 @@ describe("AgentsSettingsView", () => {
         name: "model-helper",
         description: "",
         content: "# body\n",
+        model: "anthropic/claude-opus-4-5",
+        thinking: "high",
       }),
     );
-    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("model-helper", "anthropic/claude-opus-4-5", "high");
   });
 
-  it("editing writes the override only when the selector values change", async () => {
+  it("editing folds the selector values into the frontmatter only when they change", async () => {
     mocked.listAgentDefinitions.mockResolvedValue([USER]);
     mocked.getAgentDefinitionDetail.mockResolvedValue({
       ...USER,
@@ -186,13 +191,13 @@ describe("AgentsSettingsView", () => {
     await waitFor(() =>
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "my-helper",
-        content: USER_CONTENT,
+        content:
+          "---\nname: my-helper\ndescription: My custom helper\nmodel: anthropic/claude-sonnet-4-5\nthinking: xhigh\n---\n# body\n",
       }),
     );
-    expect(mocked.setAgentModelThinking).toHaveBeenCalledWith("my-helper", "anthropic/claude-sonnet-4-5", "xhigh");
   });
 
-  it("editing without touching model/thinking does not write an override", async () => {
+  it("editing without touching model/thinking keeps the frontmatter unchanged", async () => {
     mocked.listAgentDefinitions.mockResolvedValue([USER]);
     mocked.getAgentDefinitionDetail.mockResolvedValue({
       ...USER,
@@ -210,8 +215,12 @@ describe("AgentsSettingsView", () => {
     await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
     fireEvent.click(screen.getByTestId("agent-detail-save"));
 
-    await waitFor(() => expect(mocked.updateAgentDefinition).toHaveBeenCalled());
-    expect(mocked.setAgentModelThinking).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
+        name: "my-helper",
+        content: USER_CONTENT,
+      }),
+    );
   });
 
   it("editing an official agent shows the overwrite confirmation before saving", async () => {

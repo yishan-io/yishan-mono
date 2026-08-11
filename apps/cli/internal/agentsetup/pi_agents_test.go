@@ -90,7 +90,7 @@ func TestCreatePiAgent_WritesFrontMatterAndBody(t *testing.T) {
 	agentsDir := withPiAgentsDir(t)
 	body := "## Steps\n\n1. Do the thing\n"
 
-	if err := CreatePiAgent("my-helper", "Multi-line\ndescription \"quoted\"", body); err != nil {
+	if err := CreatePiAgent("my-helper", "Multi-line\ndescription \"quoted\"", body, "", ""); err != nil {
 		t.Fatalf("CreatePiAgent: %v", err)
 	}
 	content, err := os.ReadFile(filepath.Join(agentsDir, "my-helper.md"))
@@ -108,109 +108,46 @@ func TestCreatePiAgent_WritesFrontMatterAndBody(t *testing.T) {
 		t.Fatalf("frontmatter description = %q", meta.Description)
 	}
 	if strings.Contains(string(content), "model:") || strings.Contains(string(content), "thinking:") {
-		t.Fatalf("model/thinking must live in agent.overrides.json, not frontmatter: %q", string(content))
+		t.Fatalf("model/thinking must be omitted when not provided: %q", string(content))
 	}
 	if !strings.Contains(string(content), "read_only: false") {
 		t.Fatalf("expected read_only: false in frontmatter, got %q", string(content))
 	}
 }
 
-func TestSetPiAgentOverrides_UpsertsAndRemovesEntry(t *testing.T) {
-	withPiHome(t)
-	homeDir, _ := os.UserHomeDir()
-	overridesPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "agent.overrides.json")
-
-	if err := SetPiAgentOverrides("general", "anthropic/claude-sonnet-4-5", "high"); err != nil {
-		t.Fatalf("SetPiAgentOverrides: %v", err)
+func TestCreatePiAgent_WritesModelThinkingFrontmatter(t *testing.T) {
+	agentsDir := withPiAgentsDir(t)
+	if err := CreatePiAgent("model-helper", "Helper", "# body\n", "anthropic/claude-opus-4-5", "high"); err != nil {
+		t.Fatalf("CreatePiAgent: %v", err)
 	}
-	overrides, err := loadAgentOverrides()
+	content, err := os.ReadFile(filepath.Join(agentsDir, "model-helper.md"))
 	if err != nil {
-		t.Fatalf("loadAgentOverrides: %v", err)
+		t.Fatalf("read created agent: %v", err)
 	}
-	if overrides["general"].Model != "anthropic/claude-sonnet-4-5" || overrides["general"].Thinking != "high" {
-		t.Fatalf("expected override written, got %#v", overrides["general"])
+	meta := parseAgentFrontMatter(content)
+	if meta.Model != "anthropic/claude-opus-4-5" || meta.Thinking != "high" {
+		t.Fatalf("expected model/thinking in frontmatter, got model=%q thinking=%q", meta.Model, meta.Thinking)
 	}
-	content, err := os.ReadFile(overridesPath)
+	// Detail surfaces the frontmatter values (the definition file is the
+	// single source of truth for model/thinking).
+	detail, err := GetPiAgentDetail("model-helper")
 	if err != nil {
-		t.Fatalf("read overrides file: %v", err)
+		t.Fatalf("GetPiAgentDetail: %v", err)
 	}
-	if !strings.Contains(string(content), "general") {
-		t.Fatalf("expected overrides file to contain agent, got %q", string(content))
-	}
-
-	// Clearing both values removes the entry.
-	if err := SetPiAgentOverrides("general", "", ""); err != nil {
-		t.Fatalf("SetPiAgentOverrides clear: %v", err)
-	}
-	overrides, err = loadAgentOverrides()
-	if err != nil {
-		t.Fatalf("loadAgentOverrides: %v", err)
-	}
-	if _, exists := overrides["general"]; exists {
-		t.Fatalf("expected override entry removed, got %#v", overrides)
+	if detail.Model != "anthropic/claude-opus-4-5" || detail.Thinking != "high" {
+		t.Fatalf("expected detail to surface frontmatter model/thinking, got model=%q thinking=%q", detail.Model, detail.Thinking)
 	}
 }
 
-func TestEffectiveAgentConfig_OverridesWinOverFrontmatter(t *testing.T) {
-	withPiAgentsDir(t)
-	agentsDir := filepath.Join(os.Getenv("HOME"), ".yishan", "pi", "agent", "agents")
-	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
-		t.Fatalf("mkdir agents dir: %v", err)
-	}
-	// Frontmatter carries a model/thinking default...
-	content := "---\nname: general\ndescription: General\nmodel: default/model\nthinking: low\n---\n# body\n"
-	if err := os.WriteFile(filepath.Join(agentsDir, "general.md"), []byte(content), 0o644); err != nil {
-		t.Fatalf("write agent: %v", err)
-	}
-	// ...and the runtime overrides file overrides it.
-	if err := SetPiAgentOverrides("general", "anthropic/claude-opus-4-5", "xhigh"); err != nil {
-		t.Fatalf("SetPiAgentOverrides: %v", err)
-	}
-
-	agents, err := ListPiAgents()
-	if err != nil {
-		t.Fatalf("ListPiAgents: %v", err)
-	}
-	var general *PiAgentInfo
-	for i := range agents {
-		if agents[i].Name == "general" {
-			general = &agents[i]
-		}
-	}
-	if general == nil {
-		t.Fatalf("expected general agent, got %#v", agents)
-	}
-	if general.Model != "anthropic/claude-opus-4-5" || general.Thinking != "xhigh" {
-		t.Fatalf("expected overrides to win, got model=%q thinking=%q", general.Model, general.Thinking)
-	}
-
-	// Removing the override falls back to the frontmatter values.
-	if err := SetPiAgentOverrides("general", "", ""); err != nil {
-		t.Fatalf("clear override: %v", err)
-	}
-	agents, err = ListPiAgents()
-	if err != nil {
-		t.Fatalf("ListPiAgents: %v", err)
-	}
-	for i := range agents {
-		if agents[i].Name == "general" {
-			general = &agents[i]
-		}
-	}
-	if general.Model != "default/model" || general.Thinking != "low" {
-		t.Fatalf("expected frontmatter fallback after clear, got model=%q thinking=%q", general.Model, general.Thinking)
-	}
-}
-
-func TestSetPiAgentOverrides_RejectsInvalidThinking(t *testing.T) {
+func TestCreatePiAgent_RejectsInvalidThinking(t *testing.T) {
 	withPiAgentsDir(t)
 	for _, thinking := range []string{"ultra", "HIGH", "1", "deep"} {
-		if err := SetPiAgentOverrides("x", "", thinking); !errors.Is(err, ErrInvalidAgentThinking) {
+		if err := CreatePiAgent("x", "desc", "body", "", thinking); !errors.Is(err, ErrInvalidAgentThinking) {
 			t.Fatalf("expected ErrInvalidAgentThinking for %q, got %v", thinking, err)
 		}
 	}
 	for _, thinking := range []string{"", "off", "minimal", "low", "medium", "high", "xhigh"} {
-		if err := SetPiAgentOverrides("ok-helper", "", thinking); err != nil {
+		if err := CreatePiAgent("ok-helper-"+thinking, "desc", "body", "", thinking); err != nil {
 			t.Fatalf("unexpected error for thinking %q: %v", thinking, err)
 		}
 	}
@@ -219,7 +156,7 @@ func TestSetPiAgentOverrides_RejectsInvalidThinking(t *testing.T) {
 func TestCreatePiAgent_RejectsInvalidSlug(t *testing.T) {
 	withPiAgentsDir(t)
 	for _, name := range []string{"", "My-Agent", "has space", "has.dot", "../evil"} {
-		if err := CreatePiAgent(name, "desc", "body"); !errors.Is(err, ErrInvalidAgentName) {
+		if err := CreatePiAgent(name, "desc", "body", "", ""); !errors.Is(err, ErrInvalidAgentName) {
 			t.Fatalf("expected ErrInvalidAgentName for %q, got %v", name, err)
 		}
 	}
@@ -227,7 +164,7 @@ func TestCreatePiAgent_RejectsInvalidSlug(t *testing.T) {
 
 func TestCreatePiAgent_RejectsManagedName(t *testing.T) {
 	withPiAgentsDir(t)
-	if err := CreatePiAgent("general", "desc", "body"); !errors.Is(err, ErrManagedAgentName) {
+	if err := CreatePiAgent("general", "desc", "body", "", ""); !errors.Is(err, ErrManagedAgentName) {
 		t.Fatalf("expected ErrManagedAgentName, got %v", err)
 	}
 }
@@ -235,7 +172,7 @@ func TestCreatePiAgent_RejectsManagedName(t *testing.T) {
 func TestCreatePiAgent_RejectsDuplicate(t *testing.T) {
 	agentsDir := withPiAgentsDir(t)
 	writeAgentFile(t, agentsDir, "existing.md", "existing", "Existing", "# body\n")
-	if err := CreatePiAgent("existing", "desc", "body"); !errors.Is(err, ErrAgentAlreadyExists) {
+	if err := CreatePiAgent("existing", "desc", "body", "", ""); !errors.Is(err, ErrAgentAlreadyExists) {
 		t.Fatalf("expected ErrAgentAlreadyExists, got %v", err)
 	}
 }
@@ -551,7 +488,7 @@ func TestSyncManagedPiAgentFile_PreservesUpdatePiAgentOverwrite(t *testing.T) {
 func TestCreatePiAgent_DescriptionWithTabRoundTrips(t *testing.T) {
 	agentsDir := withPiAgentsDir(t)
 	description := "tab\tseparated description"
-	if err := CreatePiAgent("tab-helper", description, "# body\n"); err != nil {
+	if err := CreatePiAgent("tab-helper", description, "# body\n", "", ""); err != nil {
 		t.Fatalf("CreatePiAgent: %v", err)
 	}
 	content, err := os.ReadFile(filepath.Join(agentsDir, "tab-helper.md"))

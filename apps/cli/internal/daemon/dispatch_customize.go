@@ -49,8 +49,6 @@ func (h *JSONRPCHandler) dispatchCustomizeAgents(method string, params json.RawM
 		return h.handleCustomizeAgentsDetail(params)
 	case MethodCustomizeAgentsCreate:
 		return h.handleCustomizeAgentsCreate(params)
-	case MethodCustomizeAgentsSetModelThinking:
-		return h.handleCustomizeAgentsSetModelThinking(params)
 	case MethodCustomizeAgentsUpdate:
 		return h.handleCustomizeAgentsUpdate(params)
 	case MethodCustomizeAgentsRemove:
@@ -87,6 +85,8 @@ func (h *JSONRPCHandler) handleCustomizeAgentsCreate(params json.RawMessage) (an
 		Name        string `json:"name"`
 		Description string `json:"description"`
 		Content     string `json:"content"`
+		Model       string `json:"model"`
+		Thinking    string `json:"thinking"`
 	}
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -94,25 +94,10 @@ func (h *JSONRPCHandler) handleCustomizeAgentsCreate(params json.RawMessage) (an
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "content is required")
 	}
-	if err := setup.CreatePiAgent(req.Name, req.Description, req.Content); err != nil {
+	if err := setup.CreatePiAgent(req.Name, req.Description, req.Content, req.Model, req.Thinking); err != nil {
 		return nil, agentOperationError(err)
 	}
 	return map[string]any{"created": true}, nil
-}
-
-func (h *JSONRPCHandler) handleCustomizeAgentsSetModelThinking(params json.RawMessage) (any, error) {
-	var req struct {
-		Name     string `json:"name"`
-		Model    string `json:"model"`
-		Thinking string `json:"thinking"`
-	}
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
-	if err := setup.SetPiAgentOverrides(req.Name, req.Model, req.Thinking); err != nil {
-		return nil, agentOperationError(err)
-	}
-	return map[string]any{"updated": true}, nil
 }
 
 func (h *JSONRPCHandler) handleCustomizeAgentsUpdate(params json.RawMessage) (any, error) {

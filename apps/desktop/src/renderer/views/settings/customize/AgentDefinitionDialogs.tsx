@@ -16,8 +16,6 @@ import { listAgentModels } from "../../../commands/agentCommands";
 import {
   createAgentDefinition,
   getAgentDefinitionDetail,
-  removeAgentDefinition,
-  setAgentModelThinking,
   updateAgentDefinition,
 } from "../../../commands/customizeCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
@@ -25,6 +23,7 @@ import { AgentModelSelector } from "../../../components/agent/session/AgentModel
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../rpc/daemonTypes";
 import type { AgentModel } from "../../../store/agentChatTypes";
+import { applyFrontmatterModelThinking } from "./agentDefinitionFrontmatter";
 
 // THINKING_LEVELS mirrors pi's allowed agent thinking levels.
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
@@ -147,13 +146,15 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
     setIsSaving(true);
     setSaveError(null);
     try {
-      await updateAgentDefinition({ name: agent.name, content });
-      // Only write the runtime override when the user explicitly changed the
-      // model/thinking selector; otherwise the frontmatter (as edited) stays
-      // authoritative and is never shadowed by the seeded effective value.
-      if (model.trim() !== initialModel || thinking !== initialThinking) {
-        await setAgentModelThinking(agent.name, model.trim(), thinking);
-      }
+      // Fold the selector's model/thinking into the definition frontmatter
+      // only when the user explicitly changed the selector; otherwise the
+      // frontmatter (as edited) stays authoritative and is never rewritten
+      // with the seeded effective value.
+      const selectorChanged = model.trim() !== initialModel || thinking !== initialThinking;
+      await updateAgentDefinition({
+        name: agent.name,
+        content: selectorChanged ? applyFrontmatterModelThinking(content, model.trim(), thinking) : content,
+      });
       onChanged("settings.customize.agents.messages.updated");
       onClose();
     } catch (error) {
@@ -284,14 +285,13 @@ export function CreateAgentDialog({ onClose, onCreated }: CreateAgentDialogProps
     setError(null);
     try {
       const createdName = name.trim();
-      await createAgentDefinition({ name: createdName, description: description.trim(), content });
-      try {
-        await setAgentModelThinking(createdName, model.trim(), thinking);
-      } catch (overrideError) {
-        // Roll back so a retry does not dead-end on "agent already exists".
-        await removeAgentDefinition(createdName).catch(() => undefined);
-        throw overrideError;
-      }
+      await createAgentDefinition({
+        name: createdName,
+        description: description.trim(),
+        content,
+        model: model.trim(),
+        thinking,
+      });
       onCreated();
       onClose();
     } catch (createError) {
