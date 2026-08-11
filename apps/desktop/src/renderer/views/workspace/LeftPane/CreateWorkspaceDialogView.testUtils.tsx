@@ -23,8 +23,6 @@ const defaultAgentSettingsState = {
     copilot: true,
     cursor: true,
   },
-  defaultAgentKind: undefined,
-  customCommandByAgentKind: {},
 };
 
 const initialWorkspaceStoreState = workspaceStore.getState();

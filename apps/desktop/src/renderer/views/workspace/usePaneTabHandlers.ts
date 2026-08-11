@@ -5,9 +5,8 @@ import type { SplitDropRegion } from "../../components/SplitDropZone";
 import { resolveDropResult } from "../../components/SplitDropZone";
 import type { TabBarCreateOption } from "../../components/TabBar";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
-import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, resolveAgentLaunchCommand } from "../../helpers/agentSettings";
+import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, DEFAULT_AGENT_COMMANDS } from "../../helpers/agentSettings";
 import type { Commands } from "../../hooks/useCommands";
-import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { splitPaneStore } from "../../store/splitPaneStore";
 import { tabStore } from "../../store/tabStore";
 import type { WorkspaceTab } from "../../store/types";
@@ -36,7 +35,6 @@ export function usePaneTabHandlers({
   setIsDraggingSplit,
 }: UsePaneTabHandlersOptions) {
   const { t } = useTranslation();
-  const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
   const workspaceWorktreePath = workspace?.worktreePath;
   const terminalTabIds = useMemo(
     () => workspaceTabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
@@ -110,7 +108,7 @@ export function usePaneTabHandlers({
       }
       if (!enabledAgentKindSet.has(option)) return;
       const title = t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[option]);
-      const launchCommand = resolveAgentLaunchCommand(option, customCommandByAgentKind);
+      const launchCommand = DEFAULT_AGENT_COMMANDS[option];
       cmd.openTab({
         workspaceId,
         kind: "terminal",
@@ -120,7 +118,7 @@ export function usePaneTabHandlers({
         reuseExisting: false,
       });
     },
-    [cmd, workspaceId, enabledAgentKindSet, customCommandByAgentKind, t, workspaceWorktreePath],
+    [cmd, workspaceId, enabledAgentKindSet, t, workspaceWorktreePath],
   );
 
   const handleRenameTab = useCallback(

@@ -535,13 +535,14 @@ export class DaemonClient {
     namespace: Rpc.ApiNamespace;
     method: string;
     input?: unknown;
+    timeoutMs?: number;
   }): Promise<unknown> {
     const handler = this.resolveNamespaceHandler(options.namespace, options.method);
     if (handler) {
       return await handler(options.input);
     }
 
-    return await this.invoke(`${options.namespace}.${options.method}`, options.input);
+    return await this.invoke(`${options.namespace}.${options.method}`, options.input, options.timeoutMs);
   }
 
   async startSubscription(options: Rpc.ProcedureSubscriptionOptions): Promise<string> {

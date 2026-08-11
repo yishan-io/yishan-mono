@@ -11,11 +11,10 @@
     },
     "items": {
       "account": "Account",
-      "agents": "Agents",
       "appearance": "Appearance",
+      "cli": "CLI",
       "computerUse": "Computer Use",
       "daemon": "Daemon",
-      "integrations": "Integrations",
       "keybindings": "Keyboard Shortcuts",
       "links": "Links",
       "members": "Members",
@@ -244,17 +243,10 @@
       }
     },
     "agents": {
-      "title": "Agents",
       "description": "Manage which agents are available in tab creation and verify local CLI detection.",
       "loadError": "Failed to load agent detection statuses.",
       "inUse": "In use",
-      "default": {
-        "label": "Default agent",
-        "ariaLabel": "Set default agent"
-      },
-      "actions": {
-        "rescanAll": "Rescan All"
-      },
+      "noneDetected": "No other agents detected.",
       "status": {
         "checking": "Checking...",
         "detected": "Detected",
@@ -263,13 +255,6 @@
         "detectedVersion": "Detected version: {{version}}",
         "detectedVersionUnknown": "Detected version: unknown",
         "notDetected": "Not detected"
-      },
-      "command": {
-        "label": "Command",
-        "placeholder": "{{defaultCommand}}",
-        "resetAriaLabel": "Reset to default command",
-        "errorEmpty": "Command cannot be empty.",
-        "errorTooLong": "Command is too long (max 2048 characters)."
       },
       "items": {
         "opencode": "OpenCode",
@@ -289,10 +274,10 @@
         "rescanAll": "Rescan All"
       }
     },
-    "integrations": {
-      "title": "Integrations",
-      "description": "View the connection status of external services.",
-      "loadError": "Failed to load integration statuses.",
+    "cli": {
+      "title": "CLI",
+      "description": "Install and manage the CLI tools used by agents, terminals, and integrations.",
+      "loadError": "Failed to load CLI tool statuses.",
       "actions": {
         "recheckAll": "Recheck All"
       },
@@ -301,12 +286,30 @@
         "connected": "Connected"
       },
       "github": {
-        "label": "GitHub",
+        "label": "GitHub CLI",
         "description": "GitHub CLI (gh) connection status",
         "connectedAs": "Connected as {{username}}",
         "notInstalled": "CLI not installed",
         "notLoggedIn": "Not logged in"
-      }
+      },
+      "pi": {
+        "title": "Pi CLI",
+        "description": "The pi coding agent CLI used in terminal sessions and agent features.",
+        "status": {
+          "notInstalled": "Not installed",
+          "versionUnknown": "Version: unknown",
+          "upToDate": "Up to date"
+        },
+        "install": {
+          "action": "Install",
+          "inProgress": "Installing..."
+        },
+        "update": {
+          "action": "Update",
+          "inProgress": "Updating..."
+        }
+      },
+      "agentsTitle": "Other agents"
     },
     "skills": {
       "title": "Skills",

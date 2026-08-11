@@ -28,8 +28,8 @@ vi.mock("./settings/notifications/NotificationSettingsView", () => ({
   ),
 }));
 
-vi.mock("./settings/AgentSettingsView", () => ({
-  AgentSettingsView: () => <div data-testid="agent-settings-panel" />,
+vi.mock("./settings/CLISettingsView", () => ({
+  CLISettingsView: () => <div data-testid="agent-settings-panel" />,
 }));
 
 vi.mock("./settings/TerminalSettingsView", () => ({
@@ -330,10 +330,10 @@ describe("SettingsView", () => {
     expect(screen.getByTestId("git-workspace-settings-panel")).toBeTruthy();
   });
 
-  it("renders agent panel when agents tab is selected", () => {
+  it("renders the agents section when the cli tab is selected", () => {
     render(
       <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=agents"]}>
+        <MemoryRouter initialEntries={["/settings?tab=cli"]}>
           <Routes>
             <Route path="/settings" element={<SettingsView />} />
           </Routes>
@@ -459,7 +459,7 @@ describe("SettingsView", () => {
     expect(screen.getByText("settings.account.empty")).toBeTruthy();
   });
 
-  it("matches agent settings in search and opens agents tab", () => {
+  it("matches agent settings in search and opens the cli tab", () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>

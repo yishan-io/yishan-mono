@@ -10,6 +10,9 @@ type Status struct {
 	Account        string `json:"account,omitempty"`
 	StatusDetail   string `json:"statusDetail"`
 	SupportsToggle bool   `json:"supportsToggle,omitempty"`
+	ResolvedPath   string `json:"resolvedPath,omitempty"`
+	ManagedInstall bool   `json:"managedInstall,omitempty"`
+	LatestVersion  string `json:"latestVersion,omitempty"`
 }
 
 type Detector interface {

@@ -5,19 +5,23 @@ import {
   type BiCog,
   BiCommand,
   BiDesktop,
+  BiDownload,
   BiGitBranch,
   BiGroup,
   BiKey,
   BiLinkExternal,
   BiPalette,
-  BiPlug,
   BiSolidKeyboard,
   BiTerminal,
   BiUser,
   BiWorld,
 } from "react-icons/bi";
 import { LuHammer, LuPuzzle } from "react-icons/lu";
-import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
+import {
+  AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+} from "../../helpers/agentSettings";
 import {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
   type NotificationSettingsFocusItemId,
@@ -25,12 +29,11 @@ import {
 
 export type SettingsTab =
   | "account"
-  | "agents"
   | "appearance"
+  | "cli"
   | "computerUse"
   | "customize"
   | "daemon"
-  | "integrations"
   | "keybindings"
   | "links"
   | "members"
@@ -89,15 +92,14 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
   {
     titleKey: "settings.sections.system",
     items: [
-      { tab: "integrations", labelKey: "settings.items.integrations", icon: BiPlug },
+      { tab: "providers", labelKey: "settings.items.providers", icon: BiWorld },
       { tab: "customize", labelKey: "settings.items.customize", icon: LuPuzzle },
-      { tab: "computerUse", labelKey: "settings.items.computerUse", icon: BiCommand },
+      { tab: "cli", labelKey: "settings.items.cli", icon: BiDownload },
       { tab: "workspace", labelKey: "settings.items.workspace", icon: BiGitBranch },
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
-      { tab: "agents", labelKey: "settings.items.agents", icon: BiBot },
-      { tab: "providers", labelKey: "settings.items.providers", icon: BiWorld },
       { tab: "memory", labelKey: "settings.items.memory", icon: BiChip },
+      { tab: "computerUse", labelKey: "settings.items.computerUse", icon: BiCommand },
     ],
   },
 ];
@@ -366,52 +368,46 @@ const KEYBINDINGS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     keywordKeys: ["keybindings.subtitle", "keybindings.scope.global", "keybindings.scope.workspace"],
   },
 ];
-const INTEGRATION_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+const CLI_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
-    id: "integration-github",
-    tab: "integrations",
-    icon: BiPlug,
-    labelKey: "settings.integrations.title",
-    sectionLabelKey: "settings.items.integrations",
+    id: "cli-supported",
+    tab: "cli",
+    icon: BiDownload,
+    labelKey: "settings.cli.title",
+    sectionLabelKey: "settings.items.cli",
     keywordKeys: [
-      "settings.integrations.description",
-      "settings.integrations.github.label",
-      "settings.integrations.github.description",
-      "settings.integrations.status.connected",
-      "settings.integrations.github.notInstalled",
-      "settings.integrations.github.notLoggedIn",
+      "settings.cli.description",
+      "settings.cli.github.label",
+      "settings.cli.github.description",
+      "settings.cli.github.notInstalled",
+      "settings.cli.github.notLoggedIn",
+      "settings.cli.pi.title",
+      "settings.cli.pi.description",
+      "settings.daemon.cli.title",
     ],
   },
-];
-const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
-    id: "agent-settings",
-    tab: "agents",
+    id: "cli-agents",
+    tab: "cli",
     icon: BiBot,
-    labelKey: "settings.agents.title",
-    sectionLabelKey: "settings.items.agents",
+    labelKey: "settings.cli.agentsTitle",
+    sectionLabelKey: "settings.items.cli",
     keywordKeys: [
       "settings.agents.description",
       "settings.agents.status.detected",
       "settings.agents.status.notDetected",
-      "settings.agents.status.checking",
-      "settings.agents.default.label",
       "settings.agents.inUse",
-      "settings.agents.actions.rescanAll",
     ],
   },
-  ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => ({
-    id: `agent-item-${agentKind}`,
-    tab: "agents" as const,
+  ...SUPPORTED_DESKTOP_AGENT_KINDS.filter(
+    (agentKind) => !AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION.has(agentKind),
+  ).map((agentKind) => ({
+    id: `cli-agent-${agentKind}`,
+    tab: "cli" as const,
     icon: BiBot,
     labelKey: AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind],
-    sectionLabelKey: "settings.items.agents",
-    keywordKeys: [
-      "settings.agents.default.label",
-      "settings.agents.inUse",
-      "settings.agents.status.detected",
-      "settings.agents.status.notDetected",
-    ],
+    sectionLabelKey: "settings.items.cli",
+    keywordKeys: ["settings.agents.inUse", "settings.agents.status.detected", "settings.agents.status.notDetected"],
   })),
 ];
 const PROVIDERS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
@@ -505,10 +501,9 @@ const MEMORY_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
 export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...SETTINGS_TAB_SEARCH_ITEMS,
   ...ACCOUNT_SEARCH_ITEMS,
-  ...AGENT_SEARCH_ITEMS,
   ...PROVIDERS_SEARCH_ITEMS,
   ...APPEARANCE_SEARCH_ITEMS,
-  ...INTEGRATION_SEARCH_ITEMS,
+  ...CLI_SEARCH_ITEMS,
   ...LANGUAGE_SEARCH_ITEMS,
   ...LINKS_SEARCH_ITEMS,
   ...SKILLS_SEARCH_ITEMS,

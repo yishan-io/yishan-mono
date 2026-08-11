@@ -11,11 +11,10 @@
     },
     "items": {
       "account": "账号",
-      "agents": "智能体",
       "appearance": "外观",
+      "cli": "命令行",
       "computerUse": "计算机使用",
       "daemon": "守护进程",
-      "integrations": "集成",
       "keybindings": "键盘快捷键",
       "links": "链接",
       "members": "成员",
@@ -226,13 +225,10 @@
       }
     },
     "agents": {
-      "title": "智能体",
       "description": "管理哪些智能体显示在新建标签菜单，并检查本地 CLI 检测状态。",
       "loadError": "加载智能体检测状态失败。",
       "inUse": "使用中",
-      "actions": {
-        "rescanAll": "全部重新扫描"
-      },
+      "noneDetected": "未检测到其他智能体。",
       "status": {
         "checking": "检测中...",
         "detected": "已检测",
@@ -241,13 +237,6 @@
         "detectedVersion": "检测到版本：{{version}}",
         "detectedVersionUnknown": "检测到版本：未知",
         "notDetected": "未检测到"
-      },
-      "command": {
-        "label": "命令",
-        "placeholder": "{{defaultCommand}}",
-        "resetAriaLabel": "重置为默认命令",
-        "errorEmpty": "命令不能为空。",
-        "errorTooLong": "命令过长（最多 2048 个字符）。"
       },
       "items": {
         "opencode": "OpenCode",
@@ -267,10 +256,10 @@
         "rescanAll": "全部重新扫描"
       }
     },
-    "integrations": {
-      "title": "集成",
-      "description": "查看外部服务的连接状态。",
-      "loadError": "加载集成状态失败。",
+    "cli": {
+      "title": "命令行",
+      "description": "安装并管理智能体、终端和集成使用的 CLI 工具。",
+      "loadError": "加载 CLI 工具状态失败。",
       "actions": {
         "recheckAll": "全部重新检查"
       },
@@ -279,12 +268,30 @@
         "connected": "已连接"
       },
       "github": {
-        "label": "GitHub",
+        "label": "GitHub CLI",
         "description": "GitHub CLI (gh) 连接状态",
         "connectedAs": "已连接为 {{username}}",
         "notInstalled": "CLI 未安装",
         "notLoggedIn": "未登录"
-      }
+      },
+      "pi": {
+        "title": "Pi CLI",
+        "description": "用于终端会话和智能体功能的 pi 编码智能体 CLI。",
+        "status": {
+          "notInstalled": "未安装",
+          "versionUnknown": "版本：未知",
+          "upToDate": "已是最新版本"
+        },
+        "install": {
+          "action": "安装",
+          "inProgress": "安装中..."
+        },
+        "update": {
+          "action": "更新",
+          "inProgress": "更新中..."
+        }
+      },
+      "agentsTitle": "其他智能体"
     },
     "skills": {
       "title": "技能",

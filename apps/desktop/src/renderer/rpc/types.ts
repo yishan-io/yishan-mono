@@ -145,8 +145,45 @@ export type DaemonRpcClient = {
         account?: string;
         statusDetail: string;
         supportsToggle?: boolean;
+        resolvedPath?: string;
+        managedInstall?: boolean;
+        latestVersion?: string;
       }>
     >;
+    install: (input: { toolId: string }) => Promise<{
+      ok: true;
+      status?: {
+        toolId: string;
+        category: string;
+        label: string;
+        installed: boolean;
+        version?: string;
+        authenticated?: boolean;
+        account?: string;
+        statusDetail: string;
+        supportsToggle?: boolean;
+        resolvedPath?: string;
+        managedInstall?: boolean;
+        latestVersion?: string;
+      };
+    }>;
+    uninstall: (input: { toolId: string }) => Promise<{
+      ok: true;
+      status?: {
+        toolId: string;
+        category: string;
+        label: string;
+        installed: boolean;
+        version?: string;
+        authenticated?: boolean;
+        account?: string;
+        statusDetail: string;
+        supportsToggle?: boolean;
+        resolvedPath?: string;
+        managedInstall?: boolean;
+        latestVersion?: string;
+      };
+    }>;
   };
   integration: {
     githubStatus: (input?: { refresh?: boolean }) => Promise<{

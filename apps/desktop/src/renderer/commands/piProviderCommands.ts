@@ -1,4 +1,4 @@
-import { resolveAgentLaunchCommand } from "../helpers/agentSettings";
+import { DEFAULT_AGENT_COMMANDS } from "../helpers/agentSettings";
 import { delay } from "../helpers/delay";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { type TabStoreState, tabStore } from "../store/tabStore";
@@ -93,7 +93,7 @@ export async function openPiProviderLogin(params: { providerId: string; tabTitle
     workspaceId,
     kind: "terminal",
     title: params.tabTitle,
-    launchCommand: resolveAgentLaunchCommand("pi", {}),
+    launchCommand: DEFAULT_AGENT_COMMANDS.pi,
     agentKind: "pi",
     reuseExisting: false,
   });

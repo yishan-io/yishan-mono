@@ -44,12 +44,6 @@ vi.mock("./browser/browserHistory", () => ({
   flushBrowserHistoryPruneCheck: vi.fn(),
 }));
 
-vi.mock("./cli/cliInstaller", () => ({
-  getDesktopCliInstallStatus: vi.fn(),
-  installDesktopCli: vi.fn(),
-  uninstallDesktopCli: vi.fn(),
-}));
-
 vi.mock("./daemon/daemonHealthCheck", () => ({
   resolveDaemonLogFilePath: vi.fn(),
 }));

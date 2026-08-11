@@ -66,6 +66,8 @@ const (
 	MethodPiRemoveProvider           = "pi.removeProvider"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"
+	MethodCLIToolInstall             = "cliTools.install"
+	MethodCLIToolUninstall           = "cliTools.uninstall"
 
 	MethodSkillList      = "skill.list"
 	MethodSkillInfo      = "skill.info"

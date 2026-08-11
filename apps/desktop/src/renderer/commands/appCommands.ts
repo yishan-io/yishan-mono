@@ -4,8 +4,6 @@ import type {
   BrowserHistoryGroup,
   DaemonInfoResult,
   DaemonRestartResult,
-  DesktopCliInstallResult,
-  DesktopCliInstallStatusResult,
 } from "../../main/ipc";
 import { resetAuthExpiredState } from "../api/restClient";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
@@ -159,21 +157,6 @@ export async function getDaemonQuitOnExit(): Promise<boolean> {
 /** Persists the quit-daemon-before-app-exit setting. */
 export async function setDaemonQuitOnExit(value: boolean): Promise<void> {
   await getDesktopHostBridge().setDaemonQuitOnExit(value);
-}
-
-/** Reads desktop-managed CLI install status from main-process IPC. */
-export async function getDesktopCliInstallStatus(): Promise<DesktopCliInstallStatusResult> {
-  return await getDesktopHostBridge().getDesktopCliInstallStatus();
-}
-
-/** Installs desktop-managed CLI symlink for terminal usage. */
-export async function installDesktopCli(): Promise<DesktopCliInstallResult> {
-  return await getDesktopHostBridge().installDesktopCli();
-}
-
-/** Uninstalls desktop-managed CLI symlink from terminal PATH location. */
-export async function uninstallDesktopCli(): Promise<DesktopCliInstallResult> {
-  return await getDesktopHostBridge().uninstallDesktopCli();
 }
 
 /** Runs one desktop login flow through main-process IPC. */

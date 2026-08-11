@@ -55,7 +55,6 @@ import {
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
 } from "../commands/gitCommands";
-import { checkGitHubConnectionStatus as checkGitHubConnectionStatusCommand } from "../commands/integrationCommands";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
@@ -170,7 +169,6 @@ export type Commands = {
   setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
   setOverviewProjectId: typeof setOverviewProjectIdCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
-  checkGitHubConnectionStatus: typeof checkGitHubConnectionStatusCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
   setLeftPaneWidth: typeof setLeftPaneWidthCommand;
@@ -316,7 +314,6 @@ export function useCommands(): Commands {
       setOverviewTimeRange: setOverviewTimeRangeCommand,
       setOverviewProjectId: setOverviewProjectIdCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
-      checkGitHubConnectionStatus: checkGitHubConnectionStatusCommand,
       setDisplayRepoIds: setDisplayRepoIdsCommand,
       setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
       setLeftPaneWidth: setLeftPaneWidthCommand,
