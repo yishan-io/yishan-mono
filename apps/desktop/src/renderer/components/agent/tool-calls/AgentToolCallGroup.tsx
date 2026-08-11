@@ -15,22 +15,27 @@ type AgentToolCallGroupProps = {
   id: string;
   /** All working blocks of the turn (thinking + tool calls) in original order. */
   blocks: TurnWorkingBlock[];
-  /** Whether the collapsed group should show its latest block (live last run of a working turn). */
-  showLatestBlock: boolean;
+  /**
+   * Whether the owning turn is still working; while true, the collapsed group
+   * shows the blocks that are still running (tool calls awaiting results,
+   * streaming thoughts) under the summary header.
+   */
+  showRunningBlocks: boolean;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
 /**
  * Collapsed-by-default group for one tool run, Codex-style: thinking blocks and
- * tool calls stay in order inside the group. While the run's turn is still
- * working, the live (last) run shows its latest working block under the summary
- * header; finished runs show only the summary header.
+ * tool calls stay in order inside the group. While the owning turn is still
+ * working, the collapsed group shows the still-running blocks under the summary
+ * header so parallel in-flight commands and sub-agents all stay visible;
+ * finished runs show only the summary header.
  */
 export function AgentToolCallGroup({
   id,
   blocks,
-  showLatestBlock,
+  showRunningBlocks,
   workspacePath,
   onOpenCompletedSubagent,
 }: AgentToolCallGroupProps) {
@@ -79,7 +84,7 @@ export function AgentToolCallGroup({
     summarizeToolCalls(toolCalls.map((block) => ({ toolCall: block.toolCall, result: block.result }))),
     t,
   );
-  const latestBlock = blocks[blocks.length - 1];
+  const runningBlocks = blocks.filter(isRunningBlock);
 
   return (
     <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5 }}>
@@ -144,35 +149,56 @@ export function AgentToolCallGroup({
             ),
           )}
         </Box>
-      ) : showLatestBlock && latestBlock ? (
+      ) : showRunningBlocks && runningBlocks.length > 0 ? (
         <Box
-          data-testid="agent-tool-call-group-latest"
+          data-testid="agent-tool-call-group-live"
           sx={{
             mt: 0.5,
             ml: 1,
             pl: 1.5,
+            display: "flex",
+            flexDirection: "column",
             borderLeft: "1px dotted",
             borderLeftColor: "divider",
           }}
         >
-          {latestBlock.kind === "thinking" ? (
-            <ThinkingBlock
-              thinking={latestBlock.thinking}
-              thinkingSignature={latestBlock.thinkingSignature}
-              isStreaming={latestBlock.isStreaming}
-            />
-          ) : (
-            <AgentToolCallCard
-              toolCall={latestBlock.toolCall}
-              result={latestBlock.result}
-              workspacePath={workspacePath}
-              onOpenCompletedSubagent={onOpenCompletedSubagent}
-            />
+          {runningBlocks.map((block) =>
+            block.kind === "thinking" ? (
+              <ThinkingBlock
+                key={block.id}
+                thinking={block.thinking}
+                thinkingSignature={block.thinkingSignature}
+                isStreaming={block.isStreaming}
+              />
+            ) : (
+              <AgentToolCallCard
+                key={block.id}
+                toolCall={block.toolCall}
+                result={block.result}
+                workspacePath={workspacePath}
+                onOpenCompletedSubagent={onOpenCompletedSubagent}
+              />
+            ),
           )}
         </Box>
       ) : null}
     </Box>
   );
+}
+
+function isRunningBlock(block: TurnWorkingBlock): boolean {
+  // A tool call is still running until its merged result arrives (a background
+  // sub-agent or slow command keeps its card live even after its message was
+  // finalized); a thought is live only while its message is still streaming.
+  // The panel only renders while the owning turn is working (session running
+  // with an active turn), so cleanly stopped sessions never show phantom cards.
+  // Residual edge case: a tool call interrupted without ever producing a result
+  // message stays classified as running for the remainder of the working turn
+  // (e.g. a cancelled delegation followed by an automatic follow-up).
+  if (block.kind === "toolCall") {
+    return block.result === null;
+  }
+  return block.isStreaming;
 }
 
 function formatToolCallSummary(
