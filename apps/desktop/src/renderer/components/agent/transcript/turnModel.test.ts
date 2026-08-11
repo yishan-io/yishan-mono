@@ -357,10 +357,121 @@ describe("buildTurnSections", () => {
     }
   });
 
-  it("keeps a text-carrying message's thinking out of the previous tool run", () => {
+  it("keeps a thought trailing a tool call before the text that follows it", () => {
+    // [toolCall, thinking, text] — the trailing thought chronologically precedes
+    // the text, so it must render before it (never displaced below it).
+    const a1: AgentMessage = {
+      id: "a1",
+      role: "assistant",
+      content: [
+        { type: "toolCall", id: "read-call", name: "read", arguments: {} },
+        { type: "thinking", thinking: "command is done, now think about next" },
+        { type: "text", text: "mid narration" },
+      ],
+    };
+    const a2: AgentMessage = {
+      id: "a2",
+      role: "assistant",
+      content: [{ type: "text", text: "the answer" }],
+    };
+    const row = firstTurn([item(userMessage("u1")), item(a1), item(a2)]);
+
+    const sections = buildTurnSections(row.turn.items, "a2", "the answer");
+
+    expect(sections.map((section) => (section.kind === "toolRun" ? "run" : section.kind))).toEqual([
+      "run",
+      "run",
+      "text",
+    ]);
+    const firstRun = sections[0];
+    const thoughtRun = sections[1];
+    if (firstRun?.kind === "toolRun") {
+      expect(firstRun.blocks.map((block) => (block.kind === "toolCall" ? block.toolCall.id : ""))).toEqual([
+        "read-call",
+      ]);
+    }
+    if (thoughtRun?.kind === "toolRun") {
+      expect(thoughtRun.blocks.map((block) => (block.kind === "thinking" ? block.thinking : ""))).toEqual([
+        "command is done, now think about next",
+      ]);
+    }
+  });
+
+  it("lets a following tool call join a trailing thought as its preamble", () => {
+    // [toolCall, thinking] then a tool-only message: the trailing thought is not
+    // part of the first run, but the next message's call joins it — the same
+    // grouping as a leading thought in the next message.
+    const a1: AgentMessage = {
+      id: "a1",
+      role: "assistant",
+      content: [
+        { type: "toolCall", id: "read-call", name: "read", arguments: {} },
+        { type: "thinking", thinking: "command is done, now think about next" },
+      ],
+    };
+    const a2: AgentMessage = {
+      id: "a2",
+      role: "assistant",
+      content: [{ type: "toolCall", id: "bash-call", name: "bash", arguments: {} }],
+    };
+    const a3: AgentMessage = {
+      id: "a3",
+      role: "assistant",
+      content: [{ type: "text", text: "the answer" }],
+    };
+    const row = firstTurn([item(userMessage("u1")), item(a1), item(a2), item(a3)]);
+
+    const sections = buildTurnSections(row.turn.items, "a3", "the answer");
+
+    expect(sections.map((section) => (section.kind === "toolRun" ? "run" : section.kind))).toEqual(["run", "run"]);
+    const firstRun = sections[0];
+    const secondRun = sections[1];
+    if (firstRun?.kind === "toolRun") {
+      expect(firstRun.blocks.map((block) => (block.kind === "toolCall" ? block.toolCall.id : ""))).toEqual([
+        "read-call",
+      ]);
+    }
+    if (secondRun?.kind === "toolRun") {
+      expect(secondRun.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "thinking",
+        "bash-call",
+      ]);
+    }
+  });
+
+  it("keeps a mixed summary message's thinking in the stack with its call", () => {
+    // [thinking, toolCall, text] as the last message: the thought belongs with
+    // the card inside the stack; only the trailing text is the summary.
+    const a1: AgentMessage = {
+      id: "a1",
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "compose the answer" },
+        { type: "toolCall", id: "read-call", name: "read", arguments: {} },
+        { type: "text", text: "the answer" },
+      ],
+    };
+    const row = firstTurn([item(userMessage("u1")), item(a1)]);
+
+    const sections = buildTurnSections(row.turn.items, "a1", "the answer");
+    const summaryThinking = extractTurnSummaryThinking(row.turn.items, "a1");
+
+    expect(sections).toHaveLength(1);
+    const run = sections[0];
+    if (run?.kind === "toolRun") {
+      expect(run.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "thinking",
+        "read-call",
+      ]);
+    }
+    expect(summaryThinking).toEqual([]);
+  });
+
+  it("keeps a text-carrying message's thinking inside its own tool run", () => {
     // Mirrors a real session: [thinking, web_fetch] then
     // [thinking, text, web_fetch] — the second thought belongs to its own
-    // message's text, not after the first web_fetch inside the previous run.
+    // message's tool run (with fetch-2), never to the previous run with fetch-1,
+    // and the narration text between them renders as its own section.
     const a1: AgentMessage = {
       id: "a1",
       role: "assistant",
@@ -389,24 +500,22 @@ describe("buildTurnSections", () => {
 
     expect(sections.map((section) => (section.kind === "toolRun" ? "run" : section.kind))).toEqual([
       "run",
-      "run",
       "text",
       "run",
     ]);
     const firstRun = sections[0];
-    const thoughtRun = sections[1];
-    const lastRun = sections[3];
+    const lastRun = sections[2];
     if (firstRun?.kind === "toolRun") {
       expect(firstRun.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
         "thinking",
         "fetch-1",
       ]);
     }
-    if (thoughtRun?.kind === "toolRun") {
-      expect(thoughtRun.blocks.map((block) => (block.kind === "thinking" ? "thinking" : ""))).toEqual(["thinking"]);
-    }
     if (lastRun?.kind === "toolRun") {
-      expect(lastRun.blocks.map((block) => (block.kind === "toolCall" ? block.toolCall.id : ""))).toEqual(["fetch-2"]);
+      expect(lastRun.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "thinking",
+        "fetch-2",
+      ]);
     }
   });
 
@@ -500,6 +609,78 @@ describe("buildTurnSections", () => {
     }
     if (thoughtRun?.kind === "toolRun") {
       expect(thoughtRun.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "thinking",
+        "bash-1",
+      ]);
+    }
+  });
+
+  it("keeps a working thought inside the run across the message's narration text", () => {
+    // The narration pattern: [thinking, text, toolCall] — the thought leads into
+    // the tool call, so it belongs in the stack with the card; the text renders
+    // as its own section between the previous run and this message's run.
+    const a1: AgentMessage = {
+      id: "a1",
+      role: "assistant",
+      content: [{ type: "toolCall", id: "read-1", name: "read", arguments: {} }],
+    };
+    const a2: AgentMessage = {
+      id: "a2",
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "Let me understand the task" },
+        { type: "text", text: "I'll investigate this bug" },
+        { type: "toolCall", id: "bash-1", name: "bash", arguments: {} },
+      ],
+    };
+    const row = firstTurn([item(userMessage("u1")), item(a1), item(a2)]);
+
+    const sections = buildTurnSections(row.turn.items, "a2", null);
+
+    expect(sections.map((section) => (section.kind === "toolRun" ? "run" : section.kind))).toEqual([
+      "run",
+      "text",
+      "run",
+    ]);
+    const firstRun = sections[0];
+    const lastRun = sections[2];
+    if (firstRun?.kind === "toolRun") {
+      expect(firstRun.blocks.map((block) => (block.kind === "toolCall" ? block.toolCall.id : ""))).toEqual(["read-1"]);
+    }
+    if (lastRun?.kind === "toolRun") {
+      expect(lastRun.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "thinking",
+        "bash-1",
+      ]);
+    }
+  });
+
+  it("keeps the last message thinking inside the run while it still has tool calls", () => {
+    // While the turn is working, the last message is still a working message
+    // (thinking + tool call); its thought belongs in the tool stack, not the
+    // summary area outside it.
+    const a1: AgentMessage = {
+      id: "a1",
+      role: "assistant",
+      content: [{ type: "toolCall", id: "read-1", name: "read", arguments: {} }],
+    };
+    const a2: AgentMessage = {
+      id: "a2",
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "checking the result" },
+        { type: "toolCall", id: "bash-1", name: "bash", arguments: {} },
+      ],
+    };
+    const row = firstTurn([item(userMessage("u1")), item(a1), item(a2)]);
+
+    const sections = buildTurnSections(row.turn.items, "a2", null);
+
+    expect(sections.map((section) => (section.kind === "toolRun" ? "run" : section.kind))).toEqual(["run"]);
+    const run = sections[0];
+    if (run?.kind === "toolRun") {
+      expect(run.blocks.map((block) => (block.kind === "thinking" ? "thinking" : block.toolCall.id))).toEqual([
+        "read-1",
         "thinking",
         "bash-1",
       ]);
@@ -636,6 +817,24 @@ describe("extractTurnSummaryThinking", () => {
             content: [
               { type: "thinking", thinking: "   " },
               { type: "text", text: "done" },
+            ],
+          }),
+        ),
+      ],
+      "a1",
+    );
+
+    expect(thinking).toEqual([]);
+  });
+
+  it("returns empty when the summary message still has tool calls (a working message)", () => {
+    const thinking = extractTurnSummaryThinking(
+      [
+        item(
+          assistantMessage("a1", {
+            content: [
+              { type: "thinking", thinking: "working thought" },
+              { type: "toolCall", id: "bash-1", name: "bash", arguments: {} },
             ],
           }),
         ),

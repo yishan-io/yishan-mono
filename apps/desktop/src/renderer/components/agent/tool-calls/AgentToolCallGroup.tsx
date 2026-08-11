@@ -85,6 +85,9 @@ export function AgentToolCallGroup({
     t,
   );
   const runningBlocks = blocks.filter(isRunningBlock);
+  // The header shimmers with an animated gradient while the stack is live (the
+  // same condition that shows the running-blocks panel), mirroring Codex.
+  const isLive = showRunningBlocks && runningBlocks.length > 0;
 
   return (
     <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5 }}>
@@ -102,7 +105,34 @@ export function AgentToolCallGroup({
         <Box component="span" aria-hidden sx={{ display: "inline-flex", alignItems: "center", opacity: 0.8 }}>
           <LuLayers size={14} />
         </Box>
-        <Typography variant="body2" noWrap sx={{ color: "text.disabled", minWidth: 0, flexShrink: 1 }}>
+        <Typography
+          variant="body2"
+          noWrap
+          data-testid="agent-tool-call-group-header-text"
+          sx={{
+            minWidth: 0,
+            flexShrink: 1,
+            color: isLive ? "transparent" : "text.disabled",
+            ...(isLive
+              ? {
+                  "@keyframes tool-stack-gradient": {
+                    "0%": { backgroundPosition: "0% 50%" },
+                    "50%": { backgroundPosition: "100% 50%" },
+                    "100%": { backgroundPosition: "0% 50%" },
+                  },
+                  backgroundImage: (theme) => buildLiveHeaderGradient(theme.palette.primary.main),
+                  backgroundSize: "200% auto",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  fontWeight: 600,
+                  animation: "tool-stack-gradient 1.6s linear infinite",
+                  "@media (prefers-reduced-motion: reduce)": {
+                    animation: "none",
+                  },
+                }
+              : {}),
+          }}
+        >
           {summary}
         </Typography>
         <IconButton
@@ -214,4 +244,13 @@ function formatToolCallSummary(
       return t(`agentChat.toolGroup.${item.key}`, options);
     })
     .join(" · ");
+}
+
+/**
+ * Animated-gradient stops for the live tool-stack header text: the theme's
+ * primary color at both ends with the brand amber as the bright sweep between
+ * them, so the shimmer adapts to light/dark mode.
+ */
+export function buildLiveHeaderGradient(primaryMain: string): string {
+  return `linear-gradient(90deg, ${primaryMain}, #f0a229, ${primaryMain})`;
 }

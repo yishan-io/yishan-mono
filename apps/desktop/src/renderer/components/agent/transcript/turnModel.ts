@@ -135,7 +135,10 @@ export type TurnSection =
 /**
  * Builds the turn's collapsible body sections in original order. Thinking and
  * tool calls accumulate into a tool-run section until a normal text block
- * appears, which starts a text section and splits the run. The summary text of
+ * appears, which starts a text section and splits the run. Thoughts of a
+ * working message (one with tool calls) stay inside the tool run even across
+ * the message's narration text; thoughts of text-only messages and thoughts
+ * trailing a message's final tool call render standalone. The summary text of
  * the last assistant message is excluded (rendered separately).
  */
 export function buildTurnSections(
@@ -163,26 +166,50 @@ export function buildTurnSections(
     }
     const isSummaryItem = item.message.id === summaryItemId && summaryText !== null;
     const isSummaryMessage = item.message.id === summaryItemId;
-    // Thoughts of a message that also carries text belong to that text, not the tool stack.
-    const messageHasText = blocks.some((block) => block.type === "text" && block.text.trim().length > 0);
+    const messageHasToolCalls = lastToolCallIndex >= 0;
+    // A last message that still carries tool calls is a working message: its
+    // thinking belongs in the tool stack with the cards. Only the thinking of
+    // the final text answer (no tool calls) stays with the message outside the
+    // stack.
+    const summaryMessageHasToolCalls = isSummaryMessage && messageHasToolCalls;
+
+    // Thoughts of a working message (one with tool calls) belong in the tool run
+    // with its cards, even when narration text sits between the thought and the
+    // calls: hold them until the run resumes with the message's tool calls so the
+    // text block in between never strands them standalone.
+    const messagePendingThinking: Extract<TurnWorkingBlock, { kind: "thinking" }>[] = [];
 
     blocks.forEach((block, blockIndex) => {
       if (block.type === "thinking") {
         if (block.thinking.trim().length === 0) {
           return;
         }
-        // The last (summary) message's thinking stays with the message, outside the tool stack.
-        if (isSummaryMessage) {
+        // The last (summary) message's thinking stays with the message, outside the tool
+        // stack — but only when that message is a pure text answer. A still-working
+        // last message (one that still has tool calls) keeps its thinking inside the
+        // stack alongside its cards.
+        if (isSummaryMessage && !summaryMessageHasToolCalls) {
           return;
         }
-        // A thought of a message that also contains text belongs with that text,
-        // and a thought after the message's final command is not part of the stack
-        // either: flush the run and let the thinking render standalone. Thoughts of
-        // pure working messages (tool calls only) keep travelling with the run, so
-        // consecutive tool rounds stay one stack.
-        if (messageHasText || blockIndex > lastToolCallIndex) {
-          flushRun();
+        if (messageHasToolCalls && blockIndex <= lastToolCallIndex) {
+          // Working thought leading into this message's tool calls: it travels with
+          // the tool run, so a text block in between must not strand it standalone
+          // — attach it when the run resumes with the tool calls.
+          messagePendingThinking.push({
+            kind: "thinking",
+            id: `${item.message.id}-thinking-${blockIndex}`,
+            thinking: block.thinking,
+            thinkingSignature: block.thinkingSignature,
+            isStreaming: item.isStreaming,
+          });
+          return;
         }
+        // A thought of a message without tool calls belongs with its text, and a
+        // thought trailing the message's final tool call is not part of that run
+        // either: flush the run and let the thought start a fresh run (which a
+        // following tool call joins as its preamble — the same grouping as a
+        // leading thought in the next message).
+        flushRun();
         if (!currentRun) {
           currentRun = [];
         }
@@ -196,6 +223,12 @@ export function buildTurnSections(
       } else if (block.type === "toolCall") {
         if (!currentRun) {
           currentRun = [];
+        }
+        // Attach this message's held working thoughts (they precede the calls in
+        // the message, possibly after its narration text) before the tool call.
+        if (messagePendingThinking.length > 0) {
+          currentRun.push(...messagePendingThinking);
+          messagePendingThinking.length = 0;
         }
         currentRun.push({
           kind: "toolCall",
@@ -345,8 +378,12 @@ export function formatTurnDuration(durationMs: number): string {
 }
 
 /**
- * Returns the thinking blocks of the last assistant (summary) message, which
- * stay with the message outside the tool stack.
+ * Returns the thinking blocks of the last assistant (summary) message when it
+ * is a pure text answer (no tool calls), which stay with the message outside
+ * the tool stack. Returns empty for a still-working last message (one that
+ * still carries tool calls): its thinking belongs in the tool stack instead
+ * (leading thoughts inside the run, a trailing thought standalone in the
+ * body).
  */
 export function extractTurnSummaryThinking(
   items: TurnItem[],
@@ -358,6 +395,11 @@ export function extractTurnSummaryThinking(
   }
 
   const blocks = Array.isArray(summaryItem.message.content) ? summaryItem.message.content : [];
+  if (blocks.some((block) => block.type === "toolCall")) {
+    // The last message is still a working message (it carries tool calls): its
+    // thinking belongs in the tool stack with the cards, not outside it.
+    return [];
+  }
   const thinking: Extract<TurnWorkingBlock, { kind: "thinking" }>[] = [];
   blocks.forEach((block, blockIndex) => {
     if (block.type === "thinking" && block.thinking.trim().length > 0) {
