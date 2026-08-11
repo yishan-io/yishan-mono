@@ -138,8 +138,8 @@ export function getAgentIconPresentation(
 }
 
 /**
- * The system-default CLI command name for each agent kind.
- * These are the fallback values used when no user-defined custom command is set.
+ * The system-default launch command for each agent kind.
+ * Custom launch commands are no longer supported; these are always used.
  */
 export const DEFAULT_AGENT_COMMANDS: Record<DesktopAgentKind, string> = {
   opencode: "opencode",
@@ -151,13 +151,16 @@ export const DEFAULT_AGENT_COMMANDS: Record<DesktopAgentKind, string> = {
   cursor: "cursor",
 };
 
-/** Maximum character length enforced on a user-supplied agent command string. */
-export const AGENT_COMMAND_MAX_LENGTH = 2048;
-
 /** Returns true when one string is a supported desktop-agent kind. */
 export function isDesktopAgentKind(value: string): value is DesktopAgentKind {
   return SUPPORTED_DESKTOP_AGENT_KINDS.some((agentKind) => agentKind === value);
 }
+
+/**
+ * Agent kinds that have a dedicated section on the CLI settings page and are
+ * therefore hidden from the generic agents list there.
+ */
+export const AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION = new Set<DesktopAgentKind>(["pi"]);
 
 /** Builds one default in-use map for all supported desktop agents. */
 export function createDefaultAgentInUseByKind(defaultValue: boolean): Record<DesktopAgentKind, boolean> {
@@ -168,38 +171,4 @@ export function createDefaultAgentInUseByKind(defaultValue: boolean): Record<Des
     },
     {} as Record<DesktopAgentKind, boolean>,
   );
-}
-
-/**
- * Builds a partial map initialised with no custom commands (all `undefined`).
- * Persisted as a `Partial` record — absent keys mean "use the system default".
- */
-export function createDefaultCustomCommandByKind(): Partial<Record<DesktopAgentKind, string>> {
-  return {};
-}
-
-/**
- * Resolves the effective launch command for one agent kind.
- * Returns the user-supplied override when present, otherwise falls back to the system default.
- */
-export function resolveAgentLaunchCommand(
-  agentKind: DesktopAgentKind,
-  customCommands: Partial<Record<DesktopAgentKind, string>>,
-): string {
-  return customCommands[agentKind] ?? DEFAULT_AGENT_COMMANDS[agentKind];
-}
-
-/**
- * Validates a user-supplied custom command string.
- * Returns an i18n error key when invalid, or `null` when the value is acceptable.
- */
-export function validateAgentCommand(value: string): string | null {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return "settings.agents.command.errorEmpty";
-  }
-  if (trimmed.length > AGENT_COMMAND_MAX_LENGTH) {
-    return "settings.agents.command.errorTooLong";
-  }
-  return null;
 }

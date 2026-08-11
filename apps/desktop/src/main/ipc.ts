@@ -91,25 +91,6 @@ export type AuthLoginResult = {
   error?: string;
 };
 
-export type DesktopCliInstallStatusResult = {
-  isAvailableInPath: boolean;
-  resolvedPath?: string;
-  isManagedInstall: boolean;
-  installPath: string;
-  bundledCliPath: string;
-};
-
-export type DesktopCliInstallResult =
-  | {
-      success: true;
-      status: DesktopCliInstallStatusResult;
-    }
-  | {
-      success: false;
-      error: string;
-      status?: DesktopCliInstallStatusResult;
-    };
-
 export type CopyFilesInput = {
   /** Absolute source paths to copy from (external OS paths). */
   sourcePaths: string[];
@@ -180,9 +161,6 @@ export type DesktopHostBridge = {
   readDaemonLog: () => Promise<DaemonLogResult>;
   getDaemonQuitOnExit: () => Promise<boolean>;
   setDaemonQuitOnExit: (value: boolean) => Promise<{ ok: true }>;
-  getDesktopCliInstallStatus: () => Promise<DesktopCliInstallStatusResult>;
-  installDesktopCli: () => Promise<DesktopCliInstallResult>;
-  uninstallDesktopCli: () => Promise<DesktopCliInstallResult>;
   writeClipboardText: (text: string) => Promise<{ ok: true }>;
 };
 
@@ -228,8 +206,5 @@ export const HOST_IPC_CHANNELS = {
   readDaemonLog: "desktop:host/read-daemon-log",
   getDaemonQuitOnExit: "desktop:host/get-daemon-quit-on-exit",
   setDaemonQuitOnExit: "desktop:host/set-daemon-quit-on-exit",
-  getDesktopCliInstallStatus: "desktop:host/get-desktop-cli-install-status",
-  installDesktopCli: "desktop:host/install-desktop-cli",
-  uninstallDesktopCli: "desktop:host/uninstall-desktop-cli",
   writeClipboardText: "desktop:host/write-clipboard-text",
 } as const;

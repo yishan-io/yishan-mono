@@ -7,7 +7,6 @@ import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, login } from "./auth/cliAuth";
 import { flushBrowserHistoryPruneCheck } from "./browser/browserHistory";
-import { getDesktopCliInstallStatus, installDesktopCli, uninstallDesktopCli } from "./cli/cliInstaller";
 import { resolveDaemonLogFilePath } from "./daemon/daemonHealthCheck";
 import { DaemonManager } from "./daemon/daemonManager";
 import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSettings";
@@ -345,38 +344,6 @@ export class DesktopApplication {
       await setDaemonQuitOnExit(value);
       this.cachedDaemonQuitOnExit = value;
       return { ok: true as const };
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.getDesktopCliInstallStatus, async () => {
-      return await getDesktopCliInstallStatus();
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.installDesktopCli, async () => {
-      try {
-        const status = await installDesktopCli();
-        return { success: true as const, status };
-      } catch (error) {
-        const status = await getDesktopCliInstallStatus().catch(() => undefined);
-        return {
-          success: false as const,
-          error: error instanceof Error ? error.message : "Failed to install desktop CLI.",
-          status,
-        };
-      }
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.uninstallDesktopCli, async () => {
-      try {
-        const status = await uninstallDesktopCli();
-        return { success: true as const, status };
-      } catch (error) {
-        const status = await getDesktopCliInstallStatus().catch(() => undefined);
-        return {
-          success: false as const,
-          error: error instanceof Error ? error.message : "Failed to uninstall desktop CLI.",
-          status,
-        };
-      }
     });
   }
 

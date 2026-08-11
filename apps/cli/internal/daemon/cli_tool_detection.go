@@ -1,17 +1,26 @@
 package daemon
 
 import (
+	"context"
+	"fmt"
+
+	"yishan/apps/cli/internal/agentkind"
 	clidetector "yishan/apps/cli/internal/clidetector"
+	"yishan/apps/cli/internal/clitoolinstall"
+	"yishan/apps/cli/internal/workspace"
 )
 
 const (
 	CLIToolCategoryAgent       = "agent"
 	CLIToolCategoryIntegration = "integration"
+	CLIToolCategoryManaged     = "managed"
 )
 
 type CLIToolDetectionStatus = clidetector.Status
 
-var cliToolRegistry = clidetector.NewRegistry(agentCLIToolDetector{}, gitHubCLIToolDetector{})
+var cliToolRegistry = clidetector.NewRegistry(agentCLIToolDetector{}, gitHubCLIToolDetector{}, yishanCLIToolDetector{})
+
+var cliToolInstallerRegistry = clitoolinstall.NewRegistry(clitoolinstall.PiInstaller{}, clitoolinstall.YishanInstaller{})
 
 func ListCLIToolDetectionStatusesWithRefresh(forceRefresh bool) []CLIToolDetectionStatus {
 	return cliToolRegistry.List(forceRefresh)
@@ -65,7 +74,7 @@ func (agentCLIToolDetector) Detect(forceRefresh bool) []clidetector.Status {
 			}
 		}
 
-		results = append(results, clidetector.Status{
+		entry := clidetector.Status{
 			ToolID:         status.AgentKind,
 			Category:       CLIToolCategoryAgent,
 			Label:          status.AgentKind,
@@ -73,7 +82,11 @@ func (agentCLIToolDetector) Detect(forceRefresh bool) []clidetector.Status {
 			Version:        status.Version,
 			StatusDetail:   detail,
 			SupportsToggle: true,
-		})
+		}
+		if status.AgentKind == agentkind.Pi {
+			entry.LatestVersion = clitoolinstall.PiLatestVersion(context.Background())
+		}
+		results = append(results, entry)
 	}
 	return results
 }
@@ -88,9 +101,67 @@ func (gitHubCLIToolDetector) Detect(forceRefresh bool) []clidetector.Status {
 		Category:       CLIToolCategoryIntegration,
 		Label:          "GitHub",
 		Installed:      githubStatus.Installed,
+		Version:        githubStatus.Version,
 		Authenticated:  &authenticated,
 		Account:        githubStatus.Username,
 		StatusDetail:   githubStatus.StatusDetail,
 		SupportsToggle: false,
 	}}
+}
+
+// yishanCLIToolDetector reports the managed yishan CLI availability on this node.
+type yishanCLIToolDetector struct{}
+
+func (yishanCLIToolDetector) Detect(forceRefresh bool) []clidetector.Status {
+	status := clitoolinstall.CurrentYishanInstallStatus()
+	statusDetail := "Not detected"
+	if status.IsAvailableInPath {
+		statusDetail = "Detected"
+	}
+	return []clidetector.Status{{
+		ToolID:         clitoolinstall.YishanToolID,
+		Category:       CLIToolCategoryManaged,
+		Label:          "Yishan",
+		Installed:      status.IsAvailableInPath,
+		StatusDetail:   statusDetail,
+		ResolvedPath:   status.ResolvedPath,
+		ManagedInstall: status.IsManagedInstall,
+	}}
+}
+
+// installCLITool installs one registered CLI tool and returns its fresh status.
+func installCLITool(ctx context.Context, toolID string) (clidetector.Status, error) {
+	installer, ok := cliToolInstallerRegistry.Get(toolID)
+	if !ok {
+		return clidetector.Status{}, workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown CLI tool: %s", toolID))
+	}
+	if err := installer.Install(ctx); err != nil {
+		return clidetector.Status{}, err
+	}
+	return findCLIToolStatus(toolID)
+}
+
+// uninstallCLITool uninstalls one registered CLI tool and returns its fresh status.
+func uninstallCLITool(ctx context.Context, toolID string) (clidetector.Status, error) {
+	installer, ok := cliToolInstallerRegistry.Get(toolID)
+	if !ok {
+		return clidetector.Status{}, workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown CLI tool: %s", toolID))
+	}
+	if !installer.SupportsUninstall() {
+		return clidetector.Status{}, workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("uninstall is not supported for %s", toolID))
+	}
+	if err := installer.Uninstall(ctx); err != nil {
+		return clidetector.Status{}, err
+	}
+	return findCLIToolStatus(toolID)
+}
+
+// findCLIToolStatus returns one tool's status with a force-refreshed detection.
+func findCLIToolStatus(toolID string) (clidetector.Status, error) {
+	for _, status := range ListCLIToolDetectionStatusesWithRefresh(true) {
+		if status.ToolID == toolID {
+			return status, nil
+		}
+	}
+	return clidetector.Status{}, workspace.NewRPCError(rpcCodeNotFound, fmt.Sprintf("CLI tool %s not found", toolID))
 }

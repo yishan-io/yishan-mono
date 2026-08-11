@@ -22,6 +22,8 @@ type GitHubConnectionStatus struct {
 	LoggedIn bool `json:"loggedIn"`
 	// Username is the GitHub username from `gh auth status`, if available.
 	Username string `json:"username,omitempty"`
+	// Version is the installed gh version, if detected.
+	Version string `json:"version,omitempty"`
 	// StatusDetail is a human-readable summary of the detection result.
 	StatusDetail string `json:"statusDetail"`
 }
@@ -131,12 +133,16 @@ func detectGitHubConnectionStatus() GitHubConnectionStatus {
 		}
 	}
 
-	// Step 2: Check auth status with `gh auth status`.
+	// Step 2: Detect the installed gh version (best effort).
+	version := detectGhCLIVersion(ghPath)
+
+	// Step 3: Check auth status with `gh auth status`.
 	username, loggedIn := checkGhAuthStatus(ghPath)
 	if !loggedIn {
 		return GitHubConnectionStatus{
 			Installed:    true,
 			LoggedIn:     false,
+			Version:      version,
 			StatusDetail: "GitHub CLI is installed but not logged in",
 		}
 	}
@@ -150,8 +156,25 @@ func detectGitHubConnectionStatus() GitHubConnectionStatus {
 		Installed:    true,
 		LoggedIn:     true,
 		Username:     username,
+		Version:      version,
 		StatusDetail: detail,
 	}
+}
+
+// detectGhCLIVersion runs `gh --version` and extracts the first semver string.
+func detectGhCLIVersion(ghPath string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), ghAuthStatusTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, ghPath, "--version")
+	output, err := cmd.CombinedOutput()
+	if err != nil && len(output) == 0 {
+		return ""
+	}
+	if matched := versionPattern.FindString(strings.TrimSpace(string(output))); matched != "" {
+		return matched
+	}
+	return ""
 }
 
 // findGhCLIInPath locates the `gh` binary using the same PATH resolution

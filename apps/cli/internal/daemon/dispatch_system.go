@@ -34,6 +34,26 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 			return nil, err
 		}
 		return ListCLIToolDetectionStatusesWithRefresh(refresh), nil
+	case MethodCLIToolInstall:
+		toolID, err := parseToolIDParam(params)
+		if err != nil {
+			return nil, err
+		}
+		status, err := installCLITool(ctx, toolID)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"ok": true, "status": status}, nil
+	case MethodCLIToolUninstall:
+		toolID, err := parseToolIDParam(params)
+		if err != nil {
+			return nil, err
+		}
+		status, err := uninstallCLITool(ctx, toolID)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"ok": true, "status": status}, nil
 	case MethodIntegrationGitHubStatus:
 		refresh, err := parseBoolRefreshParam(params)
 		if err != nil {
@@ -165,4 +185,19 @@ func parseBoolRefreshParam(params json.RawMessage) (bool, error) {
 		return false, err
 	}
 	return req.Refresh, nil
+}
+
+// parseToolIDParam extracts the required `toolId` string from a params object.
+func parseToolIDParam(params json.RawMessage) (string, error) {
+	var req struct {
+		ToolID string `json:"toolId"`
+	}
+	if err := decodeParams(params, &req); err != nil {
+		return "", err
+	}
+	toolID := strings.TrimSpace(req.ToolID)
+	if toolID == "" {
+		return "", workspace.NewRPCError(rpcCodeInvalidParams, "toolId is required")
+	}
+	return toolID, nil
 }

@@ -234,7 +234,7 @@ export function getDesktopHostBridge(): DesktopHostBridge {
 }
 
 /** Invokes one daemon procedure directly over websocket. */
-async function invokeDaemonProcedure(path: string, input?: unknown): Promise<unknown> {
+export async function invokeDaemonProcedure(path: string, input?: unknown, timeoutMs?: number): Promise<unknown> {
   const parsed = parseProcedurePath(path);
   if (!parsed) {
     throw new Error(`Unsupported API procedure path: ${path}`);
@@ -245,6 +245,7 @@ async function invokeDaemonProcedure(path: string, input?: unknown): Promise<unk
     namespace: parsed.namespace,
     method: parsed.method,
     input,
+    timeoutMs,
   });
 }
 

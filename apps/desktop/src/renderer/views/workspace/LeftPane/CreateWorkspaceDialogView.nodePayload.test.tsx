@@ -109,7 +109,6 @@ describe("CreateWorkspaceDialogView node payload", () => {
           copilot: true,
           cursor: true,
         },
-        defaultAgentKind: undefined,
       },
       true,
     );

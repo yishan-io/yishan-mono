@@ -17,13 +17,12 @@ import { AgentIcon } from "../../components/AgentIcon";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  DEFAULT_AGENT_COMMANDS,
   type DesktopAgentKind,
-  resolveAgentLaunchCommand,
 } from "../../helpers/agentSettings";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import {
   type WorkspaceCreateProgressStep,
   workspaceCreateProgressStore,
@@ -75,7 +74,6 @@ export type LaunchViewProps = {
 /** Renders quick actions when no tab is open in the selected workspace. */
 export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) {
   const { t } = useTranslation();
-  const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
   const workspace = workspaceStore((state) => state.workspaces.find((item) => item.id === workspaceId));
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab, openWorkspaceFileSearch } = useCommands();
@@ -332,7 +330,7 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
               >
                 {enabledAgentKinds.map((agentKind) => {
                   const label = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
-                  const launchCommand = resolveAgentLaunchCommand(agentKind, customCommandByAgentKind);
+                  const launchCommand = DEFAULT_AGENT_COMMANDS[agentKind];
                   return (
                     <Box
                       key={agentKind}

@@ -23,10 +23,9 @@ import { getRendererPlatform } from "../helpers/platform";
 import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
 import { AgentProviderSettingsView } from "./settings/AgentProviderSettingsView";
-import { CLIToolsSettingsView } from "./settings/CLIToolsSettingsView";
+import { CLISettingsView } from "./settings/CLISettingsView";
 import { ComputerUseSettingsView } from "./settings/ComputerUseSettingsView";
 import { EditorSettingsView } from "./settings/EditorSettingsView";
-import { IntegrationSettingsView } from "./settings/IntegrationSettingsView";
 import { KeybindingsSettingsView } from "./settings/KeybindingsSettingsView";
 import { LanguageSettingsView } from "./settings/LanguageSettingsView";
 import { LinkSettingsView } from "./settings/LinkSettingsView";
@@ -124,12 +123,11 @@ export function SettingsView() {
   const selectedTab = useMemo<SettingsTab>(() => {
     if (
       selectedTabParam === "account" ||
-      selectedTabParam === "agents" ||
       selectedTabParam === "appearance" ||
+      selectedTabParam === "cli" ||
       selectedTabParam === "computerUse" ||
       selectedTabParam === "customize" ||
       selectedTabParam === "daemon" ||
-      selectedTabParam === "integrations" ||
       selectedTabParam === "keybindings" ||
       selectedTabParam === "language" ||
       selectedTabParam === "links" ||
@@ -182,9 +180,9 @@ export function SettingsView() {
     () => ({
       notifications: <NotificationSettingsView focusItemId={focusedNotificationItemId} />,
       account: <AccountSettingsView />,
-      agents: (
-        <SettingsErrorBoundary sectionLabel={t("settings.agents.title")}>
-          <CLIToolsSettingsView />
+      cli: (
+        <SettingsErrorBoundary sectionLabel={t("settings.cli.title")}>
+          <CLISettingsView />
         </SettingsErrorBoundary>
       ),
       computerUse: <ComputerUseSettingsView />,
@@ -205,11 +203,6 @@ export function SettingsView() {
         </Stack>
       ),
       daemon: <DaemonSettingsView />,
-      integrations: (
-        <SettingsErrorBoundary sectionLabel={t("settings.integrations.title")}>
-          <IntegrationSettingsView />
-        </SettingsErrorBoundary>
-      ),
       links: <LinkSettingsView />,
       members: <MemberSettingsView />,
       nodes: <NodesSettingsView />,
