@@ -3,18 +3,16 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
-import yishanLogo from "../../../../assets/images/yishan-transparent.png";
 import type { AgentMessage as AgentMessageType, AgentQueueState } from "../../../store/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
+import { AgentChatEmptyState } from "./AgentChatEmptyState";
 import { AgentTurn } from "./AgentTurn";
 import { QueuedMessageList } from "./QueuedMessageList";
 import { UserMessageRow } from "./UserMessageRow";
 import type { AgentToolResultMap } from "./helpers";
 import { buildTranscriptRows } from "./turnModel";
 
-const EMPTY_MIN_HEIGHT = 320;
-const BOTTOM_SCROLL_THRESHOLD_PX = 48;
-const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
+const BOTTOM_SCROLL_THRESHOLD_PX = 48;const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
 const MESSAGE_VIRTUALIZER_OVERSCAN = 5;
 
 const savedScrollTopByTabId = new Map<string, number>();
@@ -193,7 +191,6 @@ function AgentMessageListComponent({
   const virtualMessageTotalSize = virtualizer.getTotalSize();
   const { t } = useTranslation();
   const [isScrollToBottomVisible, setIsScrollToBottomVisible] = useState(false);
-  const [emptyHelpLine, setEmptyHelpLine] = useState<string | null>(null);
 
   const updateSavedScrollState = useCallback(() => {
     const element = scrollRef.current;
@@ -337,65 +334,8 @@ function AgentMessageListComponent({
 
   const isInEmptyState = displayMessages.length === 0 && queuedCount === 0;
 
-  useEffect(() => {
-    const lines = emptyHelpLines ?? [];
-    if (isInEmptyState && lines.length > 0) {
-      const nextLine = lines[Math.floor(Math.random() * lines.length)] ?? null;
-      setEmptyHelpLine(nextLine);
-    }
-  }, [emptyHelpLines, isInEmptyState]);
-
   if (isInEmptyState) {
-    return (
-      <Box
-        data-testid="agent-chat-empty-state"
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          px: 2,
-          py: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: EMPTY_MIN_HEIGHT,
-        }}
-      >
-        <Box
-          component="img"
-          src={yishanLogo}
-          alt=""
-          aria-hidden
-          sx={{
-            width: 192,
-            height: 149,
-            opacity: 0.1,
-            filter: "grayscale(1)",
-          }}
-        />
-        {emptyHelpLine ? (
-          <Typography
-            data-testid="agent-chat-empty-help"
-            variant="caption"
-            sx={{
-              mt: 3,
-              color: "text.secondary",
-              textAlign: "center",
-            }}
-          >
-            {emptyHelpPrefix ? (
-              <>
-                <Box component="span" sx={{ fontWeight: 600 }}>
-                  {emptyHelpPrefix}
-                </Box>{" "}
-              </>
-            ) : null}
-            {emptyHelpLine}
-          </Typography>
-        ) : null}
-      </Box>
-    );
+    return <AgentChatEmptyState helpLines={emptyHelpLines} helpPrefix={emptyHelpPrefix} />;
   }
 
   return (

@@ -44,7 +44,6 @@ export function LoginView() {
             variant="h4"
             sx={{
               fontWeight: 700,
-              mb: 0,
             }}
           >
             {t("auth.login.title")}

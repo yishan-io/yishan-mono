@@ -261,7 +261,7 @@ describe("AgentMessageList", () => {
     expect(helpLines).toContain(helpText.replace(/^Did you know /, ""));
   });
 
-  it("re-picks a help line when the chat returns to the empty state", () => {
+  it("shows a help line again when the chat returns to the empty state", () => {
     const helpLines = ["@mention files to add context", "Type / to run skills"];
     const message: AgentMessageType = {
       id: "assistant-1",
