@@ -5,15 +5,14 @@ import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
 import type { AgentMessage as AgentMessageType, AgentQueueState } from "../../../store/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
+import { AgentChatEmptyState } from "./AgentChatEmptyState";
 import { AgentTurn } from "./AgentTurn";
 import { QueuedMessageList } from "./QueuedMessageList";
 import { UserMessageRow } from "./UserMessageRow";
 import type { AgentToolResultMap } from "./helpers";
 import { buildTranscriptRows } from "./turnModel";
 
-const EMPTY_MIN_HEIGHT = 320;
-const BOTTOM_SCROLL_THRESHOLD_PX = 48;
-const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
+const BOTTOM_SCROLL_THRESHOLD_PX = 48;const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
 const MESSAGE_VIRTUALIZER_OVERSCAN = 5;
 
 const savedScrollTopByTabId = new Map<string, number>();
@@ -25,7 +24,6 @@ type AgentMessageListProps = {
   isActive: boolean;
   messages: AgentMessageType[];
   trailingMessage?: AgentMessageType | null;
-  emptyPrompt: string;
   workspacePath?: string;
   isWorking?: boolean;
   workingLabel?: string;
@@ -33,6 +31,10 @@ type AgentMessageListProps = {
   isTurnRunning?: boolean;
   queuedMessages?: AgentQueueState;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
+  /** Short hints shown below the empty-state logo to help users learn the system. */
+  emptyHelpLines?: string[];
+  /** Prefix label rendered before the empty-state hint (e.g. "Tip:"). */
+  emptyHelpPrefix?: string;
 };
 
 type DisplayMessage = {
@@ -145,13 +147,14 @@ function AgentMessageListComponent({
   isActive,
   messages,
   trailingMessage = null,
-  emptyPrompt,
   workspacePath,
   isWorking = false,
   workingLabel,
   isTurnRunning = false,
   queuedMessages,
   onOpenCompletedSubagent,
+  emptyHelpLines,
+  emptyHelpPrefix,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
@@ -329,30 +332,10 @@ function AgentMessageListComponent({
     };
   }, [isActive, scrollToLatestMessage, tabId, virtualMessageTotalSize]);
 
-  if (displayMessages.length === 0 && queuedCount === 0) {
-    return (
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          px: 2,
-          py: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: EMPTY_MIN_HEIGHT,
-        }}
-      >
-        <Typography
-          sx={{
-            color: "text.secondary",
-          }}
-        >
-          {emptyPrompt}
-        </Typography>
-      </Box>
-    );
+  const isInEmptyState = displayMessages.length === 0 && queuedCount === 0;
+
+  if (isInEmptyState) {
+    return <AgentChatEmptyState helpLines={emptyHelpLines} helpPrefix={emptyHelpPrefix} />;
   }
 
   return (

@@ -40,25 +40,23 @@ export function LoginView() {
     <AppBackgroundContainer>
       <CenteredContentLayout className="electron-webkit-app-region-drag" maxWidth={460}>
         <Stack spacing={2.5} sx={{ textAlign: "center" }}>
-          <Box component="img" src={logo} alt="" sx={{ width: 256, height: 256, alignSelf: "center" }} />
-          <Stack spacing={1}>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-              }}
-            >
-              {t("auth.login.title")}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-              }}
-            >
-              {t("auth.login.description")}
-            </Typography>
-          </Stack>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
+            {t("auth.login.title")}
+          </Typography>
+          <Box component="img" src={logo} alt="" sx={{ width: 160, height: 124, alignSelf: "center" }} />
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
+            {t("auth.login.description")}
+          </Typography>
 
           {errorMessage ? (
             <Alert severity="error" role="alert" className="electron-webkit-app-region-no-drag">

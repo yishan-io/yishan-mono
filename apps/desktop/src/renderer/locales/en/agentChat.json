@@ -1,6 +1,27 @@
 {
   "agentChat": {
     "title": "Agent Chat",
+    "tips": {
+      "prefix": "Did you know",
+      "planFirst": "you can ask /brainstorm to shape requirements before writing code?",
+      "mentionFiles": "you can @mention files so the agent reads the exact code you mean?",
+      "slashSkills": "you can type / to run skills like /builder, /code-reviewer, and /plan-reviewer?",
+      "dragScope": "you can drag files or diffs into the composer to scope a change?",
+      "subagents": "you can delegate independent tasks to sub-agents running in parallel?",
+      "explore": "you can use /explore to research unfamiliar parts of the codebase?",
+      "codeReview": "you can run /code-reviewer on your changes before merging?",
+      "planReview": "you can run /plan-reviewer on your plan before implementing?",
+      "thinkingLevel": "you can raise the thinking level for hard problems and lower it for quick tasks?",
+      "compact": "you can compact the context when a long session starts to drag?",
+      "voice": "you can use voice input to prompt hands-free?",
+      "history": "you can resume past work from session history?",
+      "usage": "you can keep token spend in view via the usage summary?",
+      "modelSwitch": "you can switch models in the bottom bar to balance speed and quality?",
+      "splitPane": "you can open sub-agent results in a split pane to compare?",
+      "pasteBlock": "you can paste multi-line code — it becomes an attachment with full context?",
+      "followUp": "you can follow up in the same thread — the agent remembers the whole conversation?",
+      "failingTest": "you can point at a failing test and ask for the root cause before the fix?"
+    },
     "composer": {
       "focusShortcut": "{{shortcut}} to focus",
       "stop": "Stop",

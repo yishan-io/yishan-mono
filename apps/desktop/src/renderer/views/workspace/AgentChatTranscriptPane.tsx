@@ -19,6 +19,8 @@ type AgentChatTranscriptPaneProps = {
   isActive: boolean;
   isReadOnlySubagentDetail: boolean;
   parentSessionId?: string;
+  emptyHelpLines?: string[];
+  emptyHelpPrefix?: string;
 };
 
 type AgentChatSubagentDetailFooterProps = {
@@ -70,6 +72,8 @@ function AgentChatTranscriptPane({
   isActive,
   isReadOnlySubagentDetail,
   parentSessionId,
+  emptyHelpLines,
+  emptyHelpPrefix,
 }: AgentChatTranscriptPaneProps) {
   const { t } = useTranslation();
   const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
@@ -124,12 +128,13 @@ function AgentChatTranscriptPane({
         isActive={isActive}
         messages={messages}
         trailingMessage={trailingMessage}
-        emptyPrompt="Send a message to start the conversation."
         workspacePath={cwd}
         isWorking={isWorking}
         isTurnRunning={isTurnRunning}
         workingLabel={workingLabel}
         queuedMessages={isReadOnlySubagentDetail ? undefined : queue}
+        emptyHelpLines={emptyHelpLines}
+        emptyHelpPrefix={emptyHelpPrefix}
         onOpenCompletedSubagent={handleOpenCompletedSubagent}
       />
       {isReadOnlySubagentDetail ? (

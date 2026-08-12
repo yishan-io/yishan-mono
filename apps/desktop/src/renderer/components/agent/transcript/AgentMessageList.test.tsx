@@ -68,7 +68,7 @@ describe("AgentMessageList", () => {
       { id: `assistant-${index}`, role: "assistant", content: [{ type: "text", text: `Message ${index}` }] },
     ]).flat();
 
-    render(<AgentMessageList tabId="tab-virtual" isActive messages={messages} emptyPrompt="empty" />);
+    render(<AgentMessageList tabId="tab-virtual" isActive messages={messages} />);
 
     expect(screen.getAllByTestId("user-row")).toHaveLength(1);
     expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
@@ -125,7 +125,7 @@ describe("AgentMessageList", () => {
       },
     ];
 
-    render(<AgentMessageList tabId="tab-1" isActive messages={messages} emptyPrompt="empty" />);
+    render(<AgentMessageList tabId="tab-1" isActive messages={messages} />);
 
     expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
     expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");
@@ -181,7 +181,7 @@ describe("AgentMessageList", () => {
       },
     ];
 
-    render(<AgentMessageList tabId="tab-delayed" isActive messages={messages} emptyPrompt="empty" />);
+    render(<AgentMessageList tabId="tab-delayed" isActive messages={messages} />);
 
     expect(screen.getByTestId("merged-count-assistant-tools").textContent).toBe("3");
     expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
@@ -206,12 +206,11 @@ describe("AgentMessageList", () => {
             errorMessage: "Codex error: The usage limit has been reached",
           },
         ]}
-        emptyPrompt="empty"
       />,
     );
 
     expect(screen.queryByText("assistant-error")).toBeNull();
-    expect(screen.getByText("empty")).toBeTruthy();
+    expect(screen.getByTestId("agent-chat-empty-state")).toBeTruthy();
   });
 
   it("hides hidden custom messages, including pi-memory-context", () => {
@@ -235,13 +234,53 @@ describe("AgentMessageList", () => {
             content: "memory",
           },
         ]}
-        emptyPrompt="empty"
       />,
     );
 
     expect(screen.queryByText("custom-hidden-1")).toBeNull();
     expect(screen.queryByText("custom-hidden-memory")).toBeNull();
-    expect(screen.getByText("empty")).toBeTruthy();
+    expect(screen.getByTestId("agent-chat-empty-state")).toBeTruthy();
+  });
+
+  it("renders exactly one randomly chosen help line with a prefix in the empty state", () => {
+    const helpLines = ["you can @mention files to add context?", "you can use voice input to prompt hands-free?"];
+    render(
+      <AgentMessageList
+        tabId="tab-empty-help"
+        isActive
+        messages={[]}
+        emptyHelpLines={helpLines}
+        emptyHelpPrefix="Did you know"
+      />,
+    );
+
+    const helpElements = screen.getAllByTestId("agent-chat-empty-help");
+    expect(helpElements).toHaveLength(1);
+    const helpText = helpElements[0]?.textContent ?? "";
+    expect(helpText).toMatch(/^Did you know /);
+    expect(helpLines).toContain(helpText.replace(/^Did you know /, ""));
+  });
+
+  it("shows a help line again when the chat returns to the empty state", () => {
+    const helpLines = ["@mention files to add context", "Type / to run skills"];
+    const message: AgentMessageType = {
+      id: "assistant-1",
+      role: "assistant",
+      content: [{ type: "text", text: "Hello" }],
+    };
+    const { rerender } = render(
+      <AgentMessageList tabId="tab-empty-repick" isActive messages={[]} emptyHelpLines={helpLines} />,
+    );
+
+    expect(screen.getAllByTestId("agent-chat-empty-help")).toHaveLength(1);
+
+    rerender(<AgentMessageList tabId="tab-empty-repick" isActive messages={[message]} emptyHelpLines={helpLines} />);
+    expect(screen.queryAllByTestId("agent-chat-empty-help")).toHaveLength(0);
+
+    rerender(<AgentMessageList tabId="tab-empty-repick" isActive messages={[]} emptyHelpLines={helpLines} />);
+    const helpElements = screen.getAllByTestId("agent-chat-empty-help");
+    expect(helpElements).toHaveLength(1);
+    expect(helpLines).toContain(helpElements[0]?.textContent);
   });
 
   it("shows a working indicator while the turn is still running without a trailing streaming message", () => {
@@ -256,7 +295,6 @@ describe("AgentMessageList", () => {
             content: [{ type: "text", text: "Done writing files." }],
           },
         ]}
-        emptyPrompt="empty"
         isWorking
       />,
     );
@@ -281,7 +319,6 @@ describe("AgentMessageList", () => {
           role: "assistant",
           content: [{ type: "text", text: "Streaming…" }],
         }}
-        emptyPrompt="empty"
         isWorking
       />,
     );
@@ -301,7 +338,6 @@ describe("AgentMessageList", () => {
             content: [{ type: "text", text: "Done writing files." }],
           },
         ]}
-        emptyPrompt="empty"
         isWorking
         isTurnRunning
       />,
@@ -316,7 +352,6 @@ describe("AgentMessageList", () => {
         tabId="tab-pre-chunk"
         isActive
         messages={[{ id: "user-1", role: "user", content: "Prompt" }]}
-        emptyPrompt="empty"
         isWorking
         isTurnRunning
       />,
@@ -336,7 +371,7 @@ describe("AgentMessageList", () => {
       { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
     ];
     const { container, rerender } = render(
-      <AgentMessageList tabId="tab-manual-scroll" isActive messages={initialMessages} emptyPrompt="empty" />,
+      <AgentMessageList tabId="tab-manual-scroll" isActive messages={initialMessages} />,
     );
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
@@ -355,7 +390,6 @@ describe("AgentMessageList", () => {
           ...initialMessages,
           { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] },
         ]}
-        emptyPrompt="empty"
       />,
     );
 
@@ -385,7 +419,7 @@ describe("AgentMessageList", () => {
     };
 
     const { rerender } = render(
-      <AgentMessageList tabId="tab-switch-back" isActive={false} messages={initialMessages} emptyPrompt="empty" />,
+      <AgentMessageList tabId="tab-switch-back" isActive={false} messages={initialMessages} />,
     );
 
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
@@ -398,24 +432,12 @@ describe("AgentMessageList", () => {
     // Content arrives while the tab is still inactive: the hidden surface must
     // not scroll (the activation scroll on switch-back handles it).
     rerender(
-      <AgentMessageList
-        tabId="tab-switch-back"
-        isActive={false}
-        messages={[...initialMessages, thirdMessage]}
-        emptyPrompt="empty"
-      />,
+      <AgentMessageList tabId="tab-switch-back" isActive={false} messages={[...initialMessages, thirdMessage]} />,
     );
     expect(scrollContainer.scrollTop).toBe(0);
 
     // Switch back: the activation scroll lands at the (estimated) bottom.
-    rerender(
-      <AgentMessageList
-        tabId="tab-switch-back"
-        isActive
-        messages={[...initialMessages, thirdMessage]}
-        emptyPrompt="empty"
-      />,
-    );
+    rerender(<AgentMessageList tabId="tab-switch-back" isActive messages={[...initialMessages, thirdMessage]} />);
     expect(scrollContainer.scrollTop).toBe(1000);
 
     // The browser dispatches the scroll event for the programmatic scroll; in
@@ -430,7 +452,6 @@ describe("AgentMessageList", () => {
         tabId="tab-switch-back"
         isActive
         messages={[...initialMessages, thirdMessage, fourthMessage]}
-        emptyPrompt="empty"
       />,
     );
 
@@ -450,9 +471,7 @@ describe("AgentMessageList", () => {
       { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
     ];
 
-    const { rerender } = render(
-      <AgentMessageList tabId="tab-noop-activation" isActive={false} messages={messages} emptyPrompt="empty" />,
-    );
+    const { rerender } = render(<AgentMessageList tabId="tab-noop-activation" isActive={false} messages={messages} />);
 
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
@@ -465,7 +484,7 @@ describe("AgentMessageList", () => {
 
     // Switch back while already at the bottom: the activation scroll must not
     // leave a programmatic marker behind for the next user scroll.
-    rerender(<AgentMessageList tabId="tab-noop-activation" isActive messages={messages} emptyPrompt="empty" />);
+    rerender(<AgentMessageList tabId="tab-noop-activation" isActive messages={messages} />);
     expect(scrollContainer.scrollTop).toBe(320);
 
     // The user scrolls up; this must be evaluated as a user scroll (pinned=false).
@@ -479,7 +498,6 @@ describe("AgentMessageList", () => {
         tabId="tab-noop-activation"
         isActive
         messages={[...messages, { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] }]}
-        emptyPrompt="empty"
       />,
     );
 
@@ -501,9 +519,7 @@ describe("AgentMessageList", () => {
       },
     ];
 
-    const { container, rerender } = render(
-      <AgentMessageList tabId="tab-scroll" isActive messages={messages} emptyPrompt="empty" />,
-    );
+    const { container, rerender } = render(<AgentMessageList tabId="tab-scroll" isActive messages={messages} />);
 
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
@@ -514,7 +530,7 @@ describe("AgentMessageList", () => {
 
     Object.defineProperty(scrollContainer, "scrollHeight", { value: 160, configurable: true });
 
-    rerender(<AgentMessageList tabId="tab-scroll" isActive messages={messages} emptyPrompt="empty" isWorking />);
+    rerender(<AgentMessageList tabId="tab-scroll" isActive messages={messages} isWorking />);
 
     expect(scrollContainer.scrollTop).toBe(160);
   });
@@ -529,7 +545,6 @@ describe("AgentMessageList", () => {
         tabId="tab-q"
         isActive
         messages={messages}
-        emptyPrompt="empty"
         queuedMessages={{ steering: ["steer me"], followUp: ["follow up"] }}
       />,
     );
@@ -547,7 +562,6 @@ describe("AgentMessageList", () => {
         tabId="tab-q-empty"
         isActive
         messages={messages}
-        emptyPrompt="empty"
         queuedMessages={{ steering: [], followUp: [] }}
       />,
     );
@@ -560,7 +574,7 @@ describe("AgentMessageList", () => {
       { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
     ];
 
-    render(<AgentMessageList tabId="tab-q-undef" isActive messages={messages} emptyPrompt="empty" />);
+    render(<AgentMessageList tabId="tab-q-undef" isActive messages={messages} />);
 
     expect(screen.queryByTestId("queued-message-list")).toBeNull();
   });
@@ -571,13 +585,12 @@ describe("AgentMessageList", () => {
         tabId="tab-q-only"
         isActive
         messages={[]}
-        emptyPrompt="empty prompt text"
         queuedMessages={{ steering: ["pending message"], followUp: [] }}
       />,
     );
 
     expect(screen.getByTestId("queued-message-list")).toBeTruthy();
-    expect(screen.queryByText("empty prompt text")).toBeNull();
+    expect(screen.queryByTestId("agent-chat-empty-state")).toBeNull();
   });
 
   describe("scroll-to-bottom button", () => {
@@ -592,7 +605,7 @@ describe("AgentMessageList", () => {
         { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
       ];
 
-      render(<AgentMessageList tabId="tab-scroll-btn-hidden" isActive messages={messages} emptyPrompt="empty" />);
+      render(<AgentMessageList tabId="tab-scroll-btn-hidden" isActive messages={messages} />);
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -618,7 +631,7 @@ describe("AgentMessageList", () => {
         { id: "assistant-3", role: "assistant", content: [{ type: "text", text: "Line 3" }] },
       ];
 
-      render(<AgentMessageList tabId="tab-scroll-btn-visible" isActive messages={messages} emptyPrompt="empty" />);
+      render(<AgentMessageList tabId="tab-scroll-btn-visible" isActive messages={messages} />);
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -643,9 +656,7 @@ describe("AgentMessageList", () => {
         { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
       ];
 
-      const { rerender } = render(
-        <AgentMessageList tabId="tab-scroll-btn-click" isActive messages={messages} emptyPrompt="empty" />,
-      );
+      const { rerender } = render(<AgentMessageList tabId="tab-scroll-btn-click" isActive messages={messages} />);
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -671,7 +682,6 @@ describe("AgentMessageList", () => {
             ...messages,
             { id: "assistant-3", role: "assistant", content: [{ type: "text", text: "Line 3" }] },
           ]}
-          emptyPrompt="empty"
         />,
       );
       expect(scrollContainer.scrollTop).toBe(500);
@@ -689,7 +699,7 @@ describe("AgentMessageList", () => {
         { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
       ];
 
-      render(<AgentMessageList tabId="tab-scroll-manual-back" isActive messages={messages} emptyPrompt="empty" />);
+      render(<AgentMessageList tabId="tab-scroll-manual-back" isActive messages={messages} />);
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -706,7 +716,7 @@ describe("AgentMessageList", () => {
     });
 
     it("is not rendered when there are no messages", () => {
-      render(<AgentMessageList tabId="tab-scroll-btn-empty" isActive messages={[]} emptyPrompt="empty" />);
+      render(<AgentMessageList tabId="tab-scroll-btn-empty" isActive messages={[]} />);
 
       expect(screen.queryByTestId("scroll-to-bottom-button")).toBeNull();
     });
