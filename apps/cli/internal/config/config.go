@@ -13,8 +13,19 @@ import (
 // Config file keys for API credential storage.
 // All credential reads/writes use these constants to prevent key-string drift.
 const (
-	DirName                     = ".yishan"
-	PiAgentDirEnvKey            = "PI_CODING_AGENT_DIR"
+	DirName          = ".yishan"
+	PiAgentDirEnvKey = "PI_CODING_AGENT_DIR"
+
+	// AccountDirName is the per-account layer under a profile (env sandbox).
+	// profiles/<env>/accounts/<userId>/ holds the account-scoped data files.
+	AccountDirName = "accounts"
+
+	// KeyUserID records the active account in credential.yaml. It is the
+	// account pointer used to resolve the per-account data directory; it is
+	// informational here (not reloaded by ReloadAuthConfig) because path
+	// resolution reads the credential file directly.
+	KeyUserID = "user_id"
+
 	KeyAPIBaseURL               = "api_base_url"
 	KeyAPIToken                 = "api_token"
 	KeyAPIRefreshToken          = "api_refresh_token"
@@ -125,10 +136,14 @@ type Config struct {
 	ConfigPath   string
 	SettingsPath string
 	DefaultOrgID string
-	API          APIConfig
-	Daemon       DaemonConfig
-	Memory       MemoryConfig
-	ComputerUse  ComputerUseConfig
+	// UserID mirrors the active account recorded in credential.yaml. It is
+	// informational: account data dir resolution reads the file directly, so
+	// ReloadAuthConfig intentionally does not refresh it.
+	UserID      string
+	API         APIConfig
+	Daemon      DaemonConfig
+	Memory      MemoryConfig
+	ComputerUse ComputerUseConfig
 }
 
 func ResolveConfigPath(v *viper.Viper, explicitConfigPath string) (string, error) {
@@ -141,8 +156,14 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 		return Config{}, err
 	}
 
-	profileDir := filepath.Dir(configPath)
-	settingsPath := SettingsFilePath(profileDir)
+	// Settings move with the account: once credential.yaml records a user_id,
+	// user preferences are read from profiles/<env>/accounts/<userId>/ instead
+	// of the env root. profileDir stays the env root for env-scoped paths.
+	accountDataDir, err := ResolveAccountDataDir(configPath)
+	if err != nil {
+		return Config{}, err
+	}
+	settingsPath := SettingsFilePath(accountDataDir)
 
 	// Load user preferences from settings.yaml (handles migration from legacy
 	// credential.yaml and context.yaml automatically).
@@ -160,6 +181,7 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 		ConfigPath:   configPath,
 		SettingsPath: settingsPath,
 		DefaultOrgID: settingsCfg.DefaultOrgID,
+		UserID:       v.GetString(KeyUserID),
 		API: APIConfig{
 			BaseURL:               v.GetString(KeyAPIBaseURL),
 			Token:                 v.GetString(KeyAPIToken),
@@ -221,4 +243,33 @@ func defaultConfigPath(profile string) (string, error) {
 	}
 
 	return filepath.Join(yishanHome, "profiles", profile, "credential.yaml"), nil
+}
+
+// ResolveAccountDataDir returns the per-account data directory for the given
+// credential file path: profiles/<env>/accounts/<userId>/. When user_id is
+// unknown (first login, env-var credentials) or the credential file is missing
+// or unreadable, it falls back to the profile (env root) directory — the
+// legacy shared layout. It never returns an error; callers treat the returned
+// dir as authoritative.
+func ResolveAccountDataDir(configPath string) (string, error) {
+	userID := ReadUserIDFromConfig(configPath)
+	if userID == "" {
+		return filepath.Dir(configPath), nil
+	}
+	return filepath.Join(filepath.Dir(configPath), AccountDirName, userID), nil
+}
+
+// ReadUserIDFromConfig returns the user_id recorded in the credential file at
+// configPath, or "" when it is absent or the file cannot be read.
+func ReadUserIDFromConfig(configPath string) string {
+	if strings.TrimSpace(configPath) == "" {
+		return ""
+	}
+	v := viper.New()
+	v.SetConfigFile(configPath)
+	v.SetConfigType("yaml")
+	if err := v.ReadInConfig(); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(v.GetString(KeyUserID))
 }

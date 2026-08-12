@@ -69,6 +69,7 @@ export function ApplicationRouterView() {
   const { t } = useTranslation();
   const isAuthenticated = sessionStore((state) => state.isAuthenticated);
   const authStatusResolved = sessionStore((state) => state.authStatusResolved);
+  const currentUserId = sessionStore((state) => state.currentUserId);
   const setAuthState = sessionStore((state) => state.setAuthState);
   const organizations = sessionStore((state) => state.organizations);
   const [appBootstrapReady, setAppBootstrapReady] = useState(false);
@@ -155,6 +156,18 @@ export function ApplicationRouterView() {
       try {
         const sessionState = sessionStore.getState();
         const sessionAlreadyLoaded = sessionState.loaded;
+        const persistedUserId = sessionState.currentUserId;
+        const loadedUserId = sessionState.currentUser?.id ?? null;
+
+        // An account switch while the renderer is running is detectable when
+        // the persisted user id (the last-known account anchor) no longer
+        // matches the currently loaded session's user. The anchor only changes
+        // through store updates (e.g. cross-window localStorage propagation of
+        // a login in another window); this effect re-runs on currentUserId so
+        // the mismatch is acted on. A CLI-only login in another terminal while
+        // this window stays untouched is not signaled to the store — it is
+        // covered on the next session re-bootstrap (app restart / re-login).
+        const accountSwitched = persistedUserId !== null && sessionAlreadyLoaded && persistedUserId !== loadedUserId;
 
         // Only reset bootstrap readiness when loading session data for the first
         // time. When session data is already loaded (e.g. after org creation in
@@ -165,7 +178,12 @@ export function ApplicationRouterView() {
         }
         setAppBootstrapError(null);
 
-        if (!sessionAlreadyLoaded) {
+        if (!sessionAlreadyLoaded || accountSwitched) {
+          if (accountSwitched) {
+            // Drop cached queries BEFORE re-fetching so the session-bootstrap
+            // query cannot serve the previous user's cached data.
+            rendererQueryClient.clear();
+          }
           const sessionData = await rendererQueryClient.fetchQuery({
             queryKey: ["session-bootstrap"],
             queryFn: getSessionBootstrapData,
@@ -176,11 +194,20 @@ export function ApplicationRouterView() {
             return;
           }
 
-          const previousSelectedOrganizationId = sessionStore.getState().selectedOrganizationId;
+          // The best-known previous user is the loaded session's user, falling
+          // back to the persisted anchor (e.g. after a reload the session is not
+          // loaded but the anchor survived). A mismatch with the freshly fetched
+          // user means the account changed: clear cached queries and drop the
+          // previous user's persisted org selection.
+          const previousUserId = loadedUserId ?? persistedUserId;
+          const sessionUserChanged = previousUserId !== null && previousUserId !== sessionData.currentUser.id;
+          if (sessionUserChanged) {
+            rendererQueryClient.clear();
+          }
           sessionStore.getState().setSessionData({
             currentUser: sessionData.currentUser,
             organizations: sessionData.organizations,
-            selectedOrganizationId: previousSelectedOrganizationId,
+            selectedOrganizationId: sessionUserChanged ? undefined : sessionStore.getState().selectedOrganizationId,
           });
           if (sessionData.currentUser.languagePreference) {
             await setAppLanguage(sessionData.currentUser.languagePreference);
@@ -227,7 +254,7 @@ export function ApplicationRouterView() {
     return () => {
       disposed = true;
     };
-  }, [authStatusResolved, bootstrapAttempt, isAuthenticated]);
+  }, [authStatusResolved, bootstrapAttempt, isAuthenticated, currentUserId]);
 
   if (!authStatusResolved) {
     return <AppBootstrapLoadingView hasError={false} onRetry={() => {}} />;

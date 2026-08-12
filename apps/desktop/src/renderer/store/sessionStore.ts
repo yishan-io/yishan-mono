@@ -27,6 +27,8 @@ export type SessionOrganization = {
 
 type SessionStoreState = {
   currentUser: SessionUser | null;
+  /** Persisted anchor of the last-known account; used to detect account switches across restarts. */
+  currentUserId: string | null;
   organizations: SessionOrganization[];
   selectedOrganizationId?: string;
   daemonId?: string;
@@ -59,6 +61,7 @@ export const sessionStore = create<SessionStoreState>()(
   persist(
     immer((set) => ({
       currentUser: null,
+      currentUserId: null,
       organizations: [],
       selectedOrganizationId: undefined,
       daemonId: undefined,
@@ -75,6 +78,7 @@ export const sessionStore = create<SessionStoreState>()(
 
         set({
           currentUser,
+          currentUserId: currentUser?.id ?? null,
           organizations,
           selectedOrganizationId: normalizedSelectedOrganizationId,
           loaded: true,
@@ -111,6 +115,7 @@ export const sessionStore = create<SessionStoreState>()(
       clearSessionData: () => {
         set({
           currentUser: null,
+          currentUserId: null,
           organizations: [],
           selectedOrganizationId: undefined,
           loaded: false,
@@ -126,6 +131,9 @@ export const sessionStore = create<SessionStoreState>()(
       partialize: (state) => ({
         selectedOrganizationId: state.selectedOrganizationId,
         isAuthenticated: state.isAuthenticated,
+        // currentUserId is persisted so account switches are detectable after a
+        // reload; currentUser itself is intentionally never persisted.
+        currentUserId: state.currentUserId,
       }),
     },
   ),

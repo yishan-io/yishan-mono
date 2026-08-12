@@ -17,6 +17,10 @@ type TokenUpdate struct {
 	RefreshToken          string `json:"refreshToken"`
 	AccessTokenExpiresAt  string `json:"accessTokenExpiresAt"`
 	RefreshTokenExpiresAt string `json:"refreshTokenExpiresAt"`
+	// UserID is the account identity (JWT sub / WhoAmI user id) that the
+	// updated tokens belong to. Optional: refresh responses omit it, and a
+	// persisted user_id is left untouched when it is empty.
+	UserID string `json:"userId,omitempty"`
 }
 
 type APIError struct {

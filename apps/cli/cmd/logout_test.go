@@ -109,6 +109,91 @@ func TestExecuteLogoutEnvOnlyDoesNotCreateConfigFile(t *testing.T) {
 	}
 }
 
+func TestExecuteLogoutClearsUserID(t *testing.T) {
+	t.Setenv("YISHAN_API_TOKEN", "")
+	t.Setenv("YISHAN_API_REFRESH_TOKEN", "")
+
+	configPath := filepath.Join(t.TempDir(), "credential.yaml")
+	seedCredentials(t, configPath)
+	if err := config.UpdateFile(configPath, func(cfg *viper.Viper) {
+		cfg.Set(config.KeyUserID, "user_123")
+	}); err != nil {
+		t.Fatalf("seed user id: %v", err)
+	}
+
+	appConfig.ConfigPath = configPath
+	appConfig.API.Token = "access-token"
+	appConfig.API.RefreshToken = "refresh-token"
+	appConfig.API.AccessTokenExpiresAt = "2026-01-01T00:00:00Z"
+	appConfig.API.RefreshTokenExpiresAt = "2026-01-02T00:00:00Z"
+	appConfig.UserID = "user_123"
+
+	if err := executeLogout(func(refreshToken string) error {
+		return nil
+	}, bytes.NewBuffer(nil)); err != nil {
+		t.Fatalf("executeLogout returned error: %v", err)
+	}
+
+	assertCredentialsCleared(t, configPath)
+
+	v := viper.New()
+	v.SetConfigFile(configPath)
+	if err := v.ReadInConfig(); err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if got := v.GetString(config.KeyUserID); got != "" {
+		t.Fatalf("expected user_id cleared in config file, got %q", got)
+	}
+	if appConfig.UserID != "" {
+		t.Fatalf("expected in-memory UserID cleared, got %q", appConfig.UserID)
+	}
+}
+
+func TestExecuteLogoutAlreadyLoggedOutClearsStaleUserID(t *testing.T) {
+	t.Setenv("YISHAN_API_TOKEN", "")
+	t.Setenv("YISHAN_API_REFRESH_TOKEN", "")
+
+	configPath := filepath.Join(t.TempDir(), "credential.yaml")
+	// Only a user_id remains — no tokens — so hasStoredLocalCredentials is
+	// false but the stale pointer must still be cleared.
+	if err := config.UpdateFile(configPath, func(cfg *viper.Viper) {
+		cfg.Set(config.KeyUserID, "user_stale")
+	}); err != nil {
+		t.Fatalf("seed user id: %v", err)
+	}
+
+	appConfig.ConfigPath = configPath
+	appConfig.API.Token = ""
+	appConfig.API.RefreshToken = ""
+	appConfig.API.AccessTokenExpiresAt = ""
+	appConfig.API.RefreshTokenExpiresAt = ""
+	appConfig.UserID = "user_stale"
+
+	called := false
+	if err := executeLogout(func(string) error {
+		called = true
+		return nil
+	}, bytes.NewBuffer(nil)); err != nil {
+		t.Fatalf("expected no error when already logged out, got %v", err)
+	}
+
+	if called {
+		t.Fatalf("expected revoke not to be called when already logged out")
+	}
+
+	v := viper.New()
+	v.SetConfigFile(configPath)
+	if err := v.ReadInConfig(); err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if got := v.GetString(config.KeyUserID); got != "" {
+		t.Fatalf("expected stale user_id cleared, got %q", got)
+	}
+	if appConfig.UserID != "" {
+		t.Fatalf("expected in-memory UserID cleared, got %q", appConfig.UserID)
+	}
+}
+
 type assertErr string
 
 func (e assertErr) Error() string { return string(e) }

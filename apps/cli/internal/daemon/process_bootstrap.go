@@ -39,6 +39,12 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtim
 		return nil, err
 	}
 
+	// Resolve (and backfill) the active account before the account data dir is
+	// derived, so db/memory/settings open under accounts/<userId>/. A running
+	// daemon only re-resolves on restart; token syncs update credential.yaml
+	// but open handles stay on the boot-time account.
+	ensureUserIDForAccountResolution(runtime, filepath.Join(filepath.Dir(statePath), "credential.yaml"))
+
 	handler, relayStatus, database, err := buildHandler(cfg, statePath, runtime, daemonID)
 	if err != nil {
 		_ = listener.Close() // listener is not owned by a daemon runtime yet
@@ -100,31 +106,31 @@ func resolveDaemonID(statePath string) (string, error) {
 }
 
 func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*JSONRPCHandler, *RelayStatus, *sql.DB, error) {
-	database, err := initLocalDatabase(statePath)
+	envDir := filepath.Dir(statePath)
+	credentialPath := filepath.Join(envDir, "credential.yaml")
+	dataDir, err := config.ResolveAccountDataDir(credentialPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	database, err := initLocalDatabase(envDir, dataDir)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	if err := migrateRemoteToLocal(database, runtime); err != nil {
 		log.Warn().Err(err).Msg("remote-to-local API migration skipped — will retry on next restart")
 	}
-	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
-	legacyCleanupPath := filepath.Join(filepath.Dir(statePath), workspaceCleanupFileName)
-	cleanupStore, err := newWorkspaceCleanupStore(database, legacyCleanupPath)
+	workspaceManager, handler, err := buildAccountScopedHandler(database, envDir, dataDir, cfg, runtime, daemonID)
 	if err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
-		return nil, nil, nil, fmt.Errorf("create workspace cleanup store: %w", err)
+		return nil, nil, nil, err
 	}
-	settingsFilePath := config.SettingsFilePath(filepath.Dir(statePath))
-	contextStore := NewAppContextStore(settingsFilePath)
-	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, statePath, contextStore)
-	handler.SetLocalDatabase(database)
-	handler.SetComputerService(newDefaultComputerService())
 	if err := initComputerConfig(handler); err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
 		return nil, nil, nil, err
 	}
 
-	if err := initMemoryService(handler, statePath, cfg, runtime); err != nil {
+	if err := initMemoryService(handler, dataDir, cfg, runtime); err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
 		return nil, nil, nil, err
 	}
@@ -140,6 +146,25 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	return handler, relayStatus, database, nil
 }
 
+// buildAccountScopedHandler wires the account-scoped storage (workspace
+// manager, cleanup store, settings/context store) into a fresh JSON-RPC
+// handler. dataDir is the per-account data dir; envDir stays env-root scoped
+// (e.g. the token-usage pricing cache).
+func buildAccountScopedHandler(database *sql.DB, envDir string, dataDir string, cfg RunConfig, runtime *cliruntime.Runtime, daemonID string) (*workspace.Manager, *JSONRPCHandler, error) {
+	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
+	legacyCleanupPath := filepath.Join(dataDir, workspaceCleanupFileName)
+	cleanupStore, err := newWorkspaceCleanupStore(database, legacyCleanupPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create workspace cleanup store: %w", err)
+	}
+	settingsFilePath := config.SettingsFilePath(dataDir)
+	contextStore := NewAppContextStore(settingsFilePath)
+	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, settingsFilePath, contextStore)
+	handler.SetLocalDatabase(database, envDir)
+	handler.SetComputerService(newDefaultComputerService())
+	return workspaceManager, handler, nil
+}
+
 // hydrateAndWatchWorkspaces restores persisted workspaces into the manager and
 // registers a filesystem watcher for every active one. Hydration itself never
 // registers watchers, and the desktop's openProject warmup skips
@@ -153,8 +178,13 @@ func hydrateAndWatchWorkspaces(handler *JSONRPCHandler, workspaceManager *worksp
 	return nil
 }
 
-func initLocalDatabase(statePath string) (*sql.DB, error) {
-	database, err := localdb.Open(filepath.Dir(statePath))
+func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
+	// Migrate legacy env-root data into the account dir before opening, so the
+	// database handle reflects the account-scoped layout from the start.
+	if err := migrateAccountLayout(envDir, dataDir); err != nil {
+		return nil, fmt.Errorf("migrate account data layout: %w", err)
+	}
+	database, err := localdb.Open(dataDir)
 	if err != nil {
 		return nil, fmt.Errorf("open local database: %w", err)
 	}
@@ -162,7 +192,7 @@ func initLocalDatabase(statePath string) (*sql.DB, error) {
 		_ = database.Close() // cleanup after failed migration
 		return nil, fmt.Errorf("migrate local database: %w", err)
 	}
-	if err := localdb.CleanupLegacyProfileFiles(filepath.Dir(statePath)); err != nil {
+	if err := localdb.CleanupLegacyProfileFiles(dataDir); err != nil {
 		_ = database.Close() // cleanup after failed legacy-file cleanup
 		return nil, fmt.Errorf("clean up legacy profile files: %w", err)
 	}
@@ -219,10 +249,9 @@ func initComputerConfig(handler *JSONRPCHandler) error {
 	return nil
 }
 
-func initMemoryService(handler *JSONRPCHandler, statePath string, cfg RunConfig, runtime *cliruntime.Runtime) error {
-	dir := filepath.Dir(statePath)
-	oldPath := filepath.Join(dir, "memory.db")
-	newPath := filepath.Join(dir, "memory", "memory.db")
+func initMemoryService(handler *JSONRPCHandler, dataDir string, cfg RunConfig, runtime *cliruntime.Runtime) error {
+	oldPath := filepath.Join(dataDir, "memory.db")
+	newPath := filepath.Join(dataDir, "memory", "memory.db")
 
 	if _, err := os.Stat(oldPath); err == nil {
 		if _, err := os.Stat(newPath); os.IsNotExist(err) {

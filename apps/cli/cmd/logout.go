@@ -11,7 +11,6 @@ import (
 	"yishan/apps/cli/internal/output"
 )
 
-
 var logoutCmd = &cobra.Command{
 	Use:   "logout",
 	Short: "Logout and clear local auth credentials",
@@ -50,6 +49,12 @@ func executeLogout(revokeToken func(refreshToken string) error, stderrWriter int
 	printEnvCredentialNotice(stderrWriter)
 
 	if !storedCredentials {
+		// A stale user_id with no tokens would pin a future env-credential
+		// login to the wrong account dir, so clear it even though there is
+		// nothing else stored.
+		if err := clearStaleUserID(); err != nil {
+			return err
+		}
 		return output.PrintAny(map[string]string{"status": "ok", "message": "already logged out"})
 	}
 
@@ -85,6 +90,9 @@ func clearLocalCredentials() error {
 		cfg.Set(config.KeyAPIRefreshToken, "")
 		cfg.Set(config.KeyAPIAccessTokenExpiresAt, "")
 		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, "")
+		// Clear the account pointer: a stale user_id would pin a future
+		// env-credential login to the wrong account dir.
+		cfg.Set(config.KeyUserID, "")
 	}); err != nil {
 		return err
 	}
@@ -93,7 +101,25 @@ func clearLocalCredentials() error {
 	appConfig.API.RefreshToken = ""
 	appConfig.API.AccessTokenExpiresAt = ""
 	appConfig.API.RefreshTokenExpiresAt = ""
+	appConfig.UserID = ""
 
+	return nil
+}
+
+// clearStaleUserID removes a leftover user_id from the credential file without
+// creating the file when it is missing. A user_id with no tokens would pin a
+// future env-credential login to the wrong account directory.
+func clearStaleUserID() error {
+	if _, err := os.Stat(appConfig.ConfigPath); os.IsNotExist(err) {
+		appConfig.UserID = ""
+		return nil
+	}
+	if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
+		cfg.Set(config.KeyUserID, "")
+	}); err != nil {
+		return err
+	}
+	appConfig.UserID = ""
 	return nil
 }
 

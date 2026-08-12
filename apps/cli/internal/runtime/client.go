@@ -155,6 +155,9 @@ func (r *Runtime) persistAuthTokensLocked(update api.TokenUpdate, invalidateClie
 		cfg.Set(config.KeyAPIRefreshToken, update.RefreshToken)
 		cfg.Set(config.KeyAPIAccessTokenExpiresAt, update.AccessTokenExpiresAt)
 		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, update.RefreshTokenExpiresAt)
+		if update.UserID != "" {
+			cfg.Set(config.KeyUserID, update.UserID)
+		}
 	}); err != nil {
 		return fmt.Errorf("persist auth tokens: %w", err)
 	}
@@ -163,6 +166,9 @@ func (r *Runtime) persistAuthTokensLocked(update api.TokenUpdate, invalidateClie
 	r.appCfg.API.RefreshToken = update.RefreshToken
 	r.appCfg.API.AccessTokenExpiresAt = update.AccessTokenExpiresAt
 	r.appCfg.API.RefreshTokenExpiresAt = update.RefreshTokenExpiresAt
+	if update.UserID != "" {
+		r.appCfg.UserID = update.UserID
+	}
 	if invalidateClients {
 		r.authGeneration++
 	}
@@ -295,6 +301,9 @@ func (r *Runtime) clearAuthStateLocked() error {
 			cfg.Set(config.KeyAPIRefreshToken, "")
 			cfg.Set(config.KeyAPIAccessTokenExpiresAt, "")
 			cfg.Set(config.KeyAPIRefreshTokenExpiresAt, "")
+			// Clear the account pointer too: a stale user_id with no tokens
+			// would pin a future env-credential login to the wrong account dir.
+			cfg.Set(config.KeyUserID, "")
 		}); err != nil {
 			return fmt.Errorf("clear persisted auth state: %w", err)
 		}
@@ -304,6 +313,7 @@ func (r *Runtime) clearAuthStateLocked() error {
 	r.appCfg.API.RefreshToken = ""
 	r.appCfg.API.AccessTokenExpiresAt = ""
 	r.appCfg.API.RefreshTokenExpiresAt = ""
+	r.appCfg.UserID = ""
 	r.authGeneration++
 	return nil
 }
@@ -327,6 +337,8 @@ func (r *Runtime) ReloadAuthConfig() error {
 	r.appCfg.API.AccessTokenExpiresAt = v.GetString(config.KeyAPIAccessTokenExpiresAt)
 	r.appCfg.API.RefreshTokenExpiresAt = v.GetString(config.KeyAPIRefreshTokenExpiresAt)
 	r.appCfg.API.BaseURL = v.GetString(config.KeyAPIBaseURL)
+	// UserID is intentionally not reloaded: it is informational, and account
+	// data dir resolution reads the credential file directly.
 	r.authGeneration++
 
 	return nil

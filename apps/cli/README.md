@@ -159,6 +159,32 @@ Terminal subscriptions stream server notifications:
 The CLI reads env vars with the `YISHAN_` prefix.
 
 - `YISHAN_PROFILE` (default: `default`; config path: `~/.yishan/profiles/<profile>/credential.yaml`)
+
+### Local data layout
+
+Each profile is an environment sandbox. Credential and runtime state live at the
+profile root; account-scoped data lives under `accounts/<userId>/`:
+
+```
+~/.yishan/profiles/<profile>/
+  credential.yaml            # tokens + user_id (active account pointer)
+  daemon.state.json, daemon.id, daemon.lock
+  logs/
+  accounts/<userId>/         # per logged-in account
+    yishan.db
+    memory/memory.db
+    settings.yaml
+```
+
+`user_id` comes from the JWT `sub` claim on browser login, from `WhoAmI` for
+service-token/env-credential logins, and is backfilled on the first daemon
+boot when tokens exist. When no account is known yet, data resolves to the
+profile root (legacy layout) and is migrated into `accounts/<userId>/` on the
+first boot that knows the account. The persona file stays global at
+`~/.yishan/memory/PERSONA.md`. A running daemon only re-resolves the account
+data dir on restart, so stop the daemon before switching accounts in a CLI
+walkthrough.
+
 - `YISHAN_LOG_LEVEL` (default: `info`)
 - `YISHAN_LOG_FORMAT` (default: `pretty`; options: `pretty`, `json`)
 - `YISHAN_DAEMON_HOST` (default: `127.0.0.1`)

@@ -454,4 +454,79 @@ describe("ApplicationRouterView", () => {
     expect(screen.queryByTestId("bootstrap-loading-view")).toBeNull();
     expect(screen.queryByTestId("workspace-input")).toBeNull();
   });
+
+  it("clears query cache and resets org selection when persisted user differs from fetched session user", async () => {
+    sessionStore.setState({
+      isAuthenticated: true,
+      authStatusResolved: true,
+      currentUserId: "user-legacy",
+      selectedOrganizationId: "org-legacy",
+    });
+    // Cache from the previous account must be dropped on switch.
+    rendererQueryClient.setQueryData(["org-nodes", "org-legacy"], [{ id: "node-legacy" }]);
+    rendererQueryClient.setQueryData(["some-query"], { data: "stale" });
+
+    renderApplicationRouter("/");
+
+    expect(await screen.findByTestId("workspace-input")).toBeTruthy();
+
+    expect(rendererQueryClient.getQueryData(["org-nodes", "org-legacy"])).toBeUndefined();
+    expect(rendererQueryClient.getQueryData(["some-query"])).toBeUndefined();
+    expect(api.node.listByOrg).not.toHaveBeenCalledWith("org-legacy");
+    expect(sessionStore.getState().currentUserId).toBe("user-1");
+    expect(sessionStore.getState().currentUser?.id).toBe("user-1");
+    // The previous user's org selection is dropped; the new session selects
+    // from its own org list.
+    expect(sessionStore.getState().selectedOrganizationId).toBe("org-1");
+  });
+
+  it("re-fetches and resets when persisted user id changes while a session is loaded", async () => {
+    // A session is already loaded (renderer running as user-1).
+    sessionStore.getState().setSessionData({
+      currentUser: { id: "user-1", email: "a@example.com", name: "A", avatarUrl: null },
+      organizations: [{ id: "org-1", name: "Org A" }],
+      selectedOrganizationId: "org-1",
+    });
+    // The persisted account anchor changed while the session stayed loaded —
+    // e.g. zustand persist propagating a login made in another window via the
+    // localStorage storage event (the renderer's own logout clears the whole
+    // store, so this path is about an anchor update that bypasses it).
+    sessionStore.setState({ currentUserId: "user-2", isAuthenticated: true, authStatusResolved: true });
+    vi.mocked(getSessionBootstrapData).mockResolvedValueOnce({
+      currentUser: {
+        id: "user-2",
+        email: "b@example.com",
+        name: "B",
+        avatarUrl: null,
+        notificationPreferences: {
+          schemaVersion: 1,
+          enabled: true,
+          osEnabled: true,
+          soundEnabled: true,
+          volume: 1,
+          focusOnClick: true,
+          enabledEventTypes: ["run-finished", "run-failed"],
+          eventSounds: {
+            "run-finished": "chime",
+            "run-failed": "alert",
+            "pending-question": "ping",
+          },
+        },
+      },
+      organizations: [{ id: "org-2", name: "Org B" }],
+    });
+
+    renderApplicationRouter("/");
+
+    expect(await screen.findByTestId("workspace-input")).toBeTruthy();
+
+    // The loaded session was replaced with the new account's data — without
+    // the account-switch detection the stale user-1 session would have been
+    // kept because the session was already loaded.
+    expect(getSessionBootstrapData).toHaveBeenCalled();
+    expect(sessionStore.getState().currentUserId).toBe("user-2");
+    expect(sessionStore.getState().currentUser?.id).toBe("user-2");
+    expect(sessionStore.getState().selectedOrganizationId).toBe("org-2");
+    expect(rendererQueryClient.getQueryData(["session-bootstrap"])).toBeUndefined();
+  });
 });

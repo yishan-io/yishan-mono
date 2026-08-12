@@ -8,7 +8,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
@@ -135,9 +134,13 @@ func openMemoryForSearch() (*memory.DB, error) {
 }
 
 // readProfileWorkspaceRefs reads local workspaces for the current profile from SQLite.
+// The workspace DB lives in the account data dir, not the env root.
 func readProfileWorkspaceRefs() ([]memory.WorkspaceRef, error) {
-	profileDir := filepath.Dir(appConfig.ConfigPath)
-	database, err := localdb.OpenReadOnly(profileDir)
+	dataDir, err := config.ResolveAccountDataDir(appConfig.ConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	database, err := localdb.OpenReadOnly(dataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -160,15 +163,11 @@ func readProfileWorkspaceRefs() ([]memory.WorkspaceRef, error) {
 }
 
 func resolveMemoryDBPath() (string, error) {
-	yishanHome, err := config.HomeDir()
+	dataDir, err := config.ResolveAccountDataDir(appConfig.ConfigPath)
 	if err != nil {
 		return "", err
 	}
-	profile := viper.GetString("profile")
-	if profile == "" {
-		profile = "default"
-	}
-	return filepath.Join(yishanHome, "profiles", profile, "memory", "memory.db"), nil
+	return filepath.Join(dataDir, "memory", "memory.db"), nil
 }
 
 func init() {

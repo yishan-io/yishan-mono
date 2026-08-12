@@ -13,7 +13,7 @@ import (
 
 func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {
 	profileDir := t.TempDir()
-	database, err := initLocalDatabase(filepath.Join(profileDir, "daemon.state.json"))
+	database, err := initLocalDatabase(profileDir, profileDir)
 	if err != nil {
 		t.Fatalf("initialize local database: %v", err)
 	}
@@ -31,10 +31,8 @@ func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {
 	}
 }
 
-
 func TestInitMemoryService_MigratesOldDB(t *testing.T) {
 	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
 	oldPath := filepath.Join(root, "memory.db")
 	newPath := filepath.Join(root, "memory", "memory.db")
 
@@ -49,7 +47,7 @@ func TestInitMemoryService_MigratesOldDB(t *testing.T) {
 	defer handler.Shutdown()
 
 	cfg := RunConfig{}
-	if err := initMemoryService(handler, statePath, cfg, nil); err != nil {
+	if err := initMemoryService(handler, root, cfg, nil); err != nil {
 		t.Fatalf("initMemoryService: %v", err)
 	}
 
@@ -63,7 +61,6 @@ func TestInitMemoryService_MigratesOldDB(t *testing.T) {
 
 func TestInitMemoryService_NewPathOnly(t *testing.T) {
 	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
 	oldPath := filepath.Join(root, "memory.db")
 	newPath := filepath.Join(root, "memory", "memory.db")
 
@@ -72,7 +69,7 @@ func TestInitMemoryService_NewPathOnly(t *testing.T) {
 	defer handler.Shutdown()
 
 	cfg := RunConfig{}
-	if err := initMemoryService(handler, statePath, cfg, nil); err != nil {
+	if err := initMemoryService(handler, root, cfg, nil); err != nil {
 		t.Fatalf("initMemoryService: %v", err)
 	}
 
@@ -86,7 +83,6 @@ func TestInitMemoryService_NewPathOnly(t *testing.T) {
 
 func TestInitMemoryService_BothExistKeepsOld(t *testing.T) {
 	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
 	oldPath := filepath.Join(root, "memory.db")
 	newPath := filepath.Join(root, "memory", "memory.db")
 
@@ -105,7 +101,7 @@ func TestInitMemoryService_BothExistKeepsOld(t *testing.T) {
 	defer handler.Shutdown()
 
 	cfg := RunConfig{}
-	if err := initMemoryService(handler, statePath, cfg, nil); err != nil {
+	if err := initMemoryService(handler, root, cfg, nil); err != nil {
 		t.Fatalf("initMemoryService: %v", err)
 	}
 

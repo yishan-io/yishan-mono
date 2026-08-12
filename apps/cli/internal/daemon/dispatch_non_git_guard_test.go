@@ -38,7 +38,7 @@ func newNonGitGuardTestHandler(t *testing.T) (*JSONRPCHandler, string) {
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	handler.SetLocalDatabase(database)
+	handler.SetLocalDatabase(database, root)
 
 	projectStore := localdb.NewProjectStore(database)
 	unknownRepoKey := "owner/plain-folder"

@@ -57,6 +57,9 @@ func applyAuthTokenUpdate(update api.TokenUpdate) {
 	appConfig.API.RefreshToken = update.RefreshToken
 	appConfig.API.AccessTokenExpiresAt = update.AccessTokenExpiresAt
 	appConfig.API.RefreshTokenExpiresAt = update.RefreshTokenExpiresAt
+	if update.UserID != "" {
+		appConfig.UserID = update.UserID
+	}
 }
 
 func syncDaemonAuthTokens(ctx context.Context, update api.TokenUpdate) (bool, error) {

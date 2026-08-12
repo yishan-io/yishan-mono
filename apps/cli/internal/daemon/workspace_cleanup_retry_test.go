@@ -42,7 +42,7 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 		filepath.Join(t.TempDir(), "config.yml"),
 		NewAppContextStore(""),
 	)
-	handler.SetLocalDatabase(database)
+	handler.SetLocalDatabase(database, t.TempDir())
 
 	handler.retryPendingWorkspaceCleanups(context.Background())
 
