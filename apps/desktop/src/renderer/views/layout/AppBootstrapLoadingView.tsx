@@ -61,7 +61,7 @@ export function AppBootstrapLoadingView(props: AppBootstrapLoadingViewProps) {
                 src={yishanLogo}
                 alt=""
                 sx={{
-                  width: 210,
+                  width: 148,
                   height: "auto",
                   opacity: 0.2,
                   transformOrigin: "center",

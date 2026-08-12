@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
+import yishanLogo from "../../../../assets/images/yishan-transparent.png";
 import type { AgentMessage as AgentMessageType, AgentQueueState } from "../../../store/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import { AgentTurn } from "./AgentTurn";
@@ -25,7 +26,6 @@ type AgentMessageListProps = {
   isActive: boolean;
   messages: AgentMessageType[];
   trailingMessage?: AgentMessageType | null;
-  emptyPrompt: string;
   workspacePath?: string;
   isWorking?: boolean;
   workingLabel?: string;
@@ -33,6 +33,10 @@ type AgentMessageListProps = {
   isTurnRunning?: boolean;
   queuedMessages?: AgentQueueState;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
+  /** Short hints shown below the empty-state logo to help users learn the system. */
+  emptyHelpLines?: string[];
+  /** Prefix label rendered before the empty-state hint (e.g. "Tip:"). */
+  emptyHelpPrefix?: string;
 };
 
 type DisplayMessage = {
@@ -145,13 +149,14 @@ function AgentMessageListComponent({
   isActive,
   messages,
   trailingMessage = null,
-  emptyPrompt,
   workspacePath,
   isWorking = false,
   workingLabel,
   isTurnRunning = false,
   queuedMessages,
   onOpenCompletedSubagent,
+  emptyHelpLines,
+  emptyHelpPrefix,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
@@ -188,6 +193,7 @@ function AgentMessageListComponent({
   const virtualMessageTotalSize = virtualizer.getTotalSize();
   const { t } = useTranslation();
   const [isScrollToBottomVisible, setIsScrollToBottomVisible] = useState(false);
+  const [emptyHelpLine, setEmptyHelpLine] = useState<string | null>(null);
 
   const updateSavedScrollState = useCallback(() => {
     const element = scrollRef.current;
@@ -329,9 +335,20 @@ function AgentMessageListComponent({
     };
   }, [isActive, scrollToLatestMessage, tabId, virtualMessageTotalSize]);
 
-  if (displayMessages.length === 0 && queuedCount === 0) {
+  const isInEmptyState = displayMessages.length === 0 && queuedCount === 0;
+
+  useEffect(() => {
+    const lines = emptyHelpLines ?? [];
+    if (isInEmptyState && lines.length > 0) {
+      const nextLine = lines[Math.floor(Math.random() * lines.length)] ?? null;
+      setEmptyHelpLine(nextLine);
+    }
+  }, [emptyHelpLines, isInEmptyState]);
+
+  if (isInEmptyState) {
     return (
       <Box
+        data-testid="agent-chat-empty-state"
         sx={{
           flex: 1,
           overflowY: "auto",
@@ -339,18 +356,44 @@ function AgentMessageListComponent({
           px: 2,
           py: 1,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           minHeight: EMPTY_MIN_HEIGHT,
         }}
       >
-        <Typography
+        <Box
+          component="img"
+          src={yishanLogo}
+          alt=""
+          aria-hidden
           sx={{
-            color: "text.secondary",
+            width: 192,
+            height: 149,
+            opacity: 0.1,
+            filter: "grayscale(1)",
           }}
-        >
-          {emptyPrompt}
-        </Typography>
+        />
+        {emptyHelpLine ? (
+          <Typography
+            data-testid="agent-chat-empty-help"
+            variant="caption"
+            sx={{
+              mt: 3,
+              color: "text.secondary",
+              textAlign: "center",
+            }}
+          >
+            {emptyHelpPrefix ? (
+              <>
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  {emptyHelpPrefix}
+                </Box>{" "}
+              </>
+            ) : null}
+            {emptyHelpLine}
+          </Typography>
+        ) : null}
       </Box>
     );
   }

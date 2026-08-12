@@ -1,5 +1,6 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
-import { memo, useCallback, useEffect } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest, setAgentChatStreamTabVisible } from "../../commands/agentChatCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { agentChatStore } from "../../store/agentChatStore";
@@ -8,6 +9,7 @@ import type { AgentChatSessionView } from "../../store/types";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
+import { AGENT_CHAT_TIP_KEYS, AGENT_CHAT_TIP_PREFIX_KEY } from "./agentChatTipCatalog";
 import { useAgentChatSessionLifecycle } from "./useAgentChatSessionLifecycle";
 
 type AgentChatViewProps = {
@@ -29,6 +31,7 @@ function AgentChatViewComponent({
   paneId,
   isActive = true,
 }: AgentChatViewProps) {
+  const { t } = useTranslation();
   const isReadOnlySubagentDetail = sessionView === "subagent-detail";
   const agentChatTab = tabStore((state) =>
     state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
@@ -53,6 +56,9 @@ function AgentChatViewComponent({
   const isInitialHistoryLoadPending =
     Boolean(sessionId) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
   const isReadyForAutoFocus = hasLoadedMessages && hasLoadedModels && hasLoadedState;
+
+  const emptyHelpLines = useMemo(() => AGENT_CHAT_TIP_KEYS.map((key) => t(key)), [t]);
+  const emptyHelpPrefix = t(AGENT_CHAT_TIP_PREFIX_KEY);
 
   useAgentChatSessionLifecycle({
     tabId,
@@ -219,6 +225,8 @@ function AgentChatViewComponent({
         isActive={isActive}
         isReadOnlySubagentDetail={isReadOnlySubagentDetail}
         parentSessionId={subagentParentSessionId}
+        emptyHelpLines={isReadOnlySubagentDetail ? undefined : emptyHelpLines}
+        emptyHelpPrefix={isReadOnlySubagentDetail ? undefined : emptyHelpPrefix}
       />
       {!isReadOnlySubagentDetail && pendingUiRequest ? (
         <AgentPendingUiPrompt

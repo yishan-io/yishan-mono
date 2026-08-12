@@ -87,7 +87,7 @@ export function MigrationView({ onComplete }: MigrationViewProps) {
                 src={yishanLogo}
                 alt=""
                 sx={{
-                  width: 210,
+                  width: 148,
                   height: "auto",
                   opacity: 0.2,
                 }}
