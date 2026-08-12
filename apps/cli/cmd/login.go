@@ -59,11 +59,24 @@ service token created via "yishan auth create-service-token".`,
 			return err
 		}
 
+		// The access token is a JWT signed by api-service; decode the sub
+		// claim locally so the account data dir resolves to accounts/<userId>/
+		// without an extra network call. On the rare parse failure, fall back
+		// to WhoAmI so the persisted user_id always matches the new account
+		// (a stale user_id would otherwise pin the wrong account dir).
+		userID, ok := api.ParseUserIDFromJWT(result.AccessToken)
+		if !ok {
+			if me, whoAmIErr := api.NewClient(appConfig.API.BaseURL, result.AccessToken, "", "", "", nil).WhoAmI(); whoAmIErr == nil {
+				userID = me.User.ID
+			}
+		}
+
 		persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), api.TokenUpdate{
 			AccessToken:           result.AccessToken,
 			RefreshToken:          result.RefreshToken,
 			AccessTokenExpiresAt:  result.AccessTokenExpiresAt,
 			RefreshTokenExpiresAt: result.RefreshTokenExpiresAt,
+			UserID:                userID,
 		})
 		if err != nil {
 			return err
@@ -91,20 +104,24 @@ func init() {
 }
 
 func loginWithServiceToken(cmd *cobra.Command, token string) error {
-	persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), api.TokenUpdate{AccessToken: token})
+	// Verify the token before persisting: WhoAmI provides the user_id needed
+	// for account data dir resolution, so it must run first.
+	client := api.NewClient(appConfig.API.BaseURL, token, "", "", "", nil)
+	me, err := client.WhoAmI()
+	if err != nil {
+		return fmt.Errorf("service token verification failed: %w", err)
+	}
+
+	persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), api.TokenUpdate{
+		AccessToken: token,
+		UserID:      me.User.ID,
+	})
 	if err != nil {
 		return err
 	}
 	if persistenceResult.Warning != nil {
 		log.Warn().Err(persistenceResult.Warning).Msg("failed to sync auth tokens to running daemon after service token login")
 		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: running daemon auth session was not refreshed; restart the daemon or login again if daemon requests re-authentication: %v\n", persistenceResult.Warning)
-	}
-
-	// Verify the token works
-	client := api.NewClient(appConfig.API.BaseURL, token, "", "", "", nil)
-	me, err := client.WhoAmI()
-	if err != nil {
-		return fmt.Errorf("service token verification failed: %w", err)
 	}
 
 	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Authenticated as %s (%s)\n", me.User.Email, me.User.Name)

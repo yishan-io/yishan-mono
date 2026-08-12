@@ -45,6 +45,9 @@ func clearRuntimeAuthState(appCfg *config.Config) error {
 			cfg.Set(config.KeyAPIRefreshToken, "")
 			cfg.Set(config.KeyAPIAccessTokenExpiresAt, "")
 			cfg.Set(config.KeyAPIRefreshTokenExpiresAt, "")
+			// Clear the account pointer too: a stale user_id with no tokens
+			// would pin a future env-credential login to the wrong account dir.
+			cfg.Set(config.KeyUserID, "")
 		}); err != nil {
 			return fmt.Errorf("clear persisted auth state: %w", err)
 		}
@@ -54,5 +57,6 @@ func clearRuntimeAuthState(appCfg *config.Config) error {
 	appCfg.API.RefreshToken = ""
 	appCfg.API.AccessTokenExpiresAt = ""
 	appCfg.API.RefreshTokenExpiresAt = ""
+	appCfg.UserID = ""
 	return nil
 }

@@ -34,7 +34,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	if err := projectStore.Create(context.Background(), &project); err != nil {
 		t.Fatalf("create project: %v", err)
 	}
-	handler.SetLocalDatabase(database)
+	handler.SetLocalDatabase(database, t.TempDir())
 
 	prepared := preparedWorkspaceCreate{registration: &WorkspaceCreation{
 		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: project.ID,
@@ -678,7 +678,7 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 	if err := projectStore.Create(context.Background(), &project); err != nil {
 		t.Fatalf("create project: %v", err)
 	}
-	h.SetLocalDatabase(database)
+	h.SetLocalDatabase(database, t.TempDir())
 
 	workspacePath := t.TempDir()
 	branch := "feature/health"

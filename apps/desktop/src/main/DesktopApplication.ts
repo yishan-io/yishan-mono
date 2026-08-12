@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
+import { getErrorMessage } from "../shared/helpers/errorHelpers";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, login } from "./auth/cliAuth";
 import { flushBrowserHistoryPruneCheck } from "./browser/browserHistory";
@@ -274,6 +275,23 @@ export class DesktopApplication {
     this.focusMainWindow();
   }
 
+  /**
+   * Stops and restarts the local daemon so it re-resolves the account data
+   * dir. A running daemon keeps its boot-time account handles, so an account
+   * switch (login/logout token sync) requires a restart to take effect. Stop
+   * failures are logged and tolerated; start failures are surfaced to the
+   * caller (auth itself already succeeded and is not rolled back).
+   */
+  private async restartDaemonForAccountSwitch(): Promise<void> {
+    try {
+      await this.daemonManager.stop();
+    } catch (error: unknown) {
+      console.warn("Daemon stop during account switch:", getErrorMessage(error));
+    }
+
+    await this.daemonManager.ensureStarted();
+  }
+
   /** Registers desktop auth IPC endpoints backed by the bundled CLI login/status commands. */
   private registerAuthIpcHandlers() {
     ipcMain.handle(HOST_IPC_CHANNELS.getDesktopAppVersion, async () => {
@@ -285,7 +303,19 @@ export class DesktopApplication {
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.login, async () => {
-      return await login();
+      const result = await login();
+      // A successful, non-skipped login switched the active account. Restart
+      // the daemon so it re-resolves the account data dir — a running daemon
+      // keeps its boot-time account handles until restart. Restart failures
+      // are logged but never fail the login response (auth already succeeded).
+      if (result.authenticated && !result.skipped) {
+        try {
+          await this.restartDaemonForAccountSwitch();
+        } catch (error: unknown) {
+          console.warn("Daemon restart after login failed:", getErrorMessage(error));
+        }
+      }
+      return result;
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.getDaemonInfo, async () => {
@@ -294,18 +324,11 @@ export class DesktopApplication {
 
     ipcMain.handle(HOST_IPC_CHANNELS.restartDaemon, async () => {
       try {
-        await this.daemonManager.stop();
-      } catch (error: unknown) {
-        const reason = error instanceof Error ? error.message : "Failed to stop daemon";
-        console.warn("Daemon stop during restart:", reason);
-      }
-
-      try {
-        await this.daemonManager.ensureStarted();
+        await this.restartDaemonForAccountSwitch();
         const info = await this.daemonManager.getInfo();
         return { success: true as const, daemonInfo: info };
       } catch (error: unknown) {
-        const reason = error instanceof Error ? error.message : "Failed to start daemon";
+        const reason = getErrorMessage(error);
         return { success: false as const, error: reason };
       }
     });

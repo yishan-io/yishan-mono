@@ -31,7 +31,7 @@ func newProjectListPreferencesTestHandler(t *testing.T) (*JSONRPCHandler, *local
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	handler.SetLocalDatabase(database)
+	handler.SetLocalDatabase(database, root)
 	return handler, localdb.NewProjectStore(database)
 }
 

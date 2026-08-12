@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon"
 )
 
@@ -217,6 +219,46 @@ func TestPersistAuthTokensForLoginUsesDaemonSyncWithoutLocalPersistence(t *testi
 	}
 	if appConfig.API.Token != update.AccessToken || appConfig.API.RefreshToken != update.RefreshToken {
 		t.Fatalf("appConfig API = %#v, want access/refresh tokens updated", appConfig.API)
+	}
+}
+
+func TestPersistAuthTokensForLoginWritesUserIDLocally(t *testing.T) {
+	originalAppConfig := appConfig
+	originalResolveStatePath := resolveDaemonStatePathForAuthSync
+	originalLoadState := loadDaemonStateForAuthSync
+	originalLocalPersist := persistAuthTokensLocallyForAuthSync
+	defer func() {
+		appConfig = originalAppConfig
+		resolveDaemonStatePathForAuthSync = originalResolveStatePath
+		loadDaemonStateForAuthSync = originalLoadState
+		persistAuthTokensLocallyForAuthSync = originalLocalPersist
+	}()
+
+	configPath := filepath.Join(t.TempDir(), "credential.yaml")
+	appConfig.ConfigPath = configPath
+	resolveDaemonStatePathForAuthSync = func(configPath string) (string, error) {
+		return filepath.Join(filepath.Dir(configPath), daemon.StateFileName), nil
+	}
+	loadDaemonStateForAuthSync = func(path string) (daemon.RuntimeState, error) {
+		return daemon.RuntimeState{}, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
+	}
+
+	update := api.TokenUpdate{AccessToken: "access", RefreshToken: "refresh", UserID: "user_123"}
+	if _, err := persistAuthTokensForLogin(context.Background(), update); err != nil {
+		t.Fatalf("persistAuthTokensForLogin: %v", err)
+	}
+
+	v := viper.New()
+	v.SetConfigFile(configPath)
+	v.SetConfigType("yaml")
+	if err := v.ReadInConfig(); err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if got := v.GetString(config.KeyUserID); got != "user_123" {
+		t.Fatalf("persisted user_id = %q, want %q", got, "user_123")
+	}
+	if appConfig.UserID != "user_123" {
+		t.Fatalf("in-memory UserID = %q, want %q", appConfig.UserID, "user_123")
 	}
 }
 

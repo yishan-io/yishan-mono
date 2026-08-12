@@ -84,7 +84,11 @@ type JSONRPCHandler struct {
 	relayConn   *wsConnState
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string, appContext *AppContextStore) *JSONRPCHandler {
+// NewJSONRPCHandler wires a fresh handler. settingsDirAnchor is any path inside
+// the settings directory (the account data dir) — it is used only to derive
+// the settings file path; callers pass the resolved settings file or a test
+// fixture path in that directory.
+func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, settingsDirAnchor string, appContext *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
 		publishWorkspacePullRequestUpdatedEvent(events, event)
@@ -137,7 +141,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		piAuth:               mustNewManagedPiAuthStore(),
 		agentLifecycleCtx:    agentLifecycleCtx,
 		cancelAgentLifecycle: cancelAgentLifecycle,
-		settingsPath:         config.SettingsFilePath(filepath.Dir(configPath)),
+		settingsPath:         config.SettingsFilePath(filepath.Dir(settingsDirAnchor)),
 		agentUsage:           make(map[string]map[string]struct{}),
 		piSessions:           make(map[string]*piSessionState),
 		desktopConns:         make(map[*wsConnState]struct{}),
@@ -150,13 +154,15 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 }
 
 // SetLocalDatabase makes daemon-owned SQLite storage available to RPC handlers.
-func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB) {
+// envDir is the profile (env root) directory: the token-usage pricing cache
+// stays machine/runtime-level and does not move with the account.
+func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB, envDir string) {
 	h.localDatabase = database
 	h.tokenUsage = tokenusage.NewCollectorWithRepository(
 		h.manager,
 		h.runtime,
 		localdb.NewHourlyUsageStore(database),
-		filepath.Dir(h.settingsPath),
+		envDir,
 	)
 }
 
