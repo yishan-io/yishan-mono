@@ -197,6 +197,11 @@ func runAgent(agentKind, prompt, model, projectPath string) (output string, err 
 		return "", err
 	}
 
+	env, err := buildAgentSubprocessEnv(cmd.Env)
+	if err != nil {
+		return "", err
+	}
+
 	// exec.CommandContext kills the process when the context deadline fires,
 	// eliminating the time.After goroutine leak that occurred on every job
 	// that completed before the timeout.
@@ -211,7 +216,7 @@ func runAgent(agentKind, prompt, model, projectPath string) (output string, err 
 	// notify bridge only forwards events when these YISHAN_* hook context vars
 	// are present, so we explicitly clear them for scheduler-spawned agent runs.
 	execCmd.Env = append(
-		cmd.Env,
+		env,
 		"YISHAN_WORKSPACE_ID=",
 		"YISHAN_TAB_ID=",
 		"YISHAN_PANE_ID=",

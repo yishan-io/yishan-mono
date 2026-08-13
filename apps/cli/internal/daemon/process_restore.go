@@ -8,12 +8,12 @@ import (
 	"os/exec"
 	"strings"
 
+	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/memory"
 )
 
 const maxAgentFailureDetailChars = 500
-
 
 func buildRunAgentFunc() memory.RunAgentFunc {
 	return BuildRunAgentFunc()
@@ -32,9 +32,36 @@ func BuildRunAgentFunc() memory.RunAgentFunc {
 	}
 }
 
+// buildAgentSubprocessEnv augments baseEnv — the login-shell merged + PATH
+// enriched environment produced by agentcmd.ResolveCommand — with
+// PI_CODING_AGENT_DIR pointing at the managed pi agent dir. This mirrors
+// agentmanager.Manager.Start so spawned pi subprocesses read the managed
+// config/auth instead of the stale ~/.pi/agent default.
+func buildAgentSubprocessEnv(baseEnv []string) ([]string, error) {
+	piAgentDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
+	}
+	// Drop any inherited PI_CODING_AGENT_DIR so the managed value wins
+	// regardless of how the platform resolves duplicate env keys.
+	filtered := baseEnv[:0:0]
+	for _, entry := range baseEnv {
+		if strings.HasPrefix(entry, config.PiAgentDirEnvKey+"=") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return append(filtered, config.PiAgentDirEnvKey+"="+piAgentDir), nil
+}
+
 func runResolvedAgentCommand(ctx context.Context, cmd agentcmd.ResolvedCommand, workDir string) (string, error) {
+	env, err := buildAgentSubprocessEnv(cmd.Env)
+	if err != nil {
+		return "", err
+	}
+
 	execCmd := exec.CommandContext(ctx, cmd.ResolvedBinary, cmd.Args...)
-	execCmd.Env = append(cmd.Env, cmd.ExtraEnv...)
+	execCmd.Env = append(env, cmd.ExtraEnv...)
 	if workDir != "" {
 		execCmd.Dir = workDir
 	}

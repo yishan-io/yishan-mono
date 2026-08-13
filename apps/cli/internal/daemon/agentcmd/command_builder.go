@@ -49,7 +49,7 @@ type runCommandBuilder interface {
 }
 
 var commandBuilders = map[string]runCommandBuilder{
-	"":               opencodeBuilder{},
+	"":                 opencodeBuilder{},
 	agentkind.OpenCode: opencodeBuilder{},
 	agentkind.Claude:   claudeBuilder{},
 	agentkind.Codex:    codexBuilder{},
@@ -81,11 +81,19 @@ func BuildRunCommand(agentKind, prompt, model string, interactive bool) (Command
 // using the user's full login-shell PATH. The returned ResolvedCommand.Env must
 // be set on exec.Cmd.Env so the subprocess inherits the augmented environment.
 //
+// The environment is built by merging the login shell's full environment with
+// the daemon's own env (daemon wins on conflicts) and then enriching PATH,
+// mirroring agentmanager.Manager.Start. This ensures provider credentials
+// exported in shell profiles (e.g. AWS_* for Amazon Bedrock) are available to
+// background/spawned agent subprocesses even when the daemon was launched from
+// a GUI context with a minimal environment.
+//
 // This is the single gated entry point for all agent CLI execution. If the binary
 // cannot be located an error is returned — callers should treat this as a
 // configuration issue (agent not installed) and skip gracefully.
 func ResolveCommand(agentKind, prompt, model string, interactive bool) (ResolvedCommand, error) {
-	resolvedEnv := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+	base := shellenv.MergeLoginShellEnv(os.Environ())
+	resolvedEnv := shellenv.ResolveEnvWithUserPath(base, os.Getenv("SHELL"))
 	return ResolveCommandWithEnv(agentKind, prompt, model, interactive, resolvedEnv)
 }
 
