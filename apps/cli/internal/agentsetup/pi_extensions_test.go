@@ -210,6 +210,84 @@ func TestCheckPiExtensionUpdates_FillsLatestVersion(t *testing.T) {
 	}
 }
 
+func TestCheckPiExtensionUpdates_OnlyFlagsStrictlyNewerLatest(t *testing.T) {
+	resetExtensionUpdateCache()
+	withPiHome(t)
+	writeAgentSettings(t, []string{"npm:pi-web-fetch"}, nil)
+	writeNPMPackage(t, "pi-web-fetch", nil, nil) // installed 1.2.3
+
+	originalFetcher := latestVersionFetcher
+	defer func() { latestVersionFetcher = originalFetcher }()
+
+	cases := []struct {
+		name       string
+		latest     string
+		wantUpdate bool
+	}{
+		{"higher", "2.0.0", true},
+		{"equal", "1.2.3", false},
+		{"lower", "1.2.2", false},
+		{"unparseable", "not-a-version", false},
+		{"empty", "", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetExtensionUpdateCache()
+			latestVersionFetcher = func(_ context.Context, name string) (string, error) {
+				return tc.latest, nil
+			}
+
+			extensions, err := ListPiExtensions()
+			if err != nil {
+				t.Fatalf("ListPiExtensions: %v", err)
+			}
+			CheckPiExtensionUpdates(context.Background(), extensions)
+
+			fetch := extensionsByName(extensions)["pi-web-fetch"]
+			if fetch.HasUpdate != tc.wantUpdate {
+				t.Fatalf("latest %q: HasUpdate = %v, want %v", tc.latest, fetch.HasUpdate, tc.wantUpdate)
+			}
+			if tc.wantUpdate {
+				if fetch.LatestVersion != tc.latest {
+					t.Fatalf("latest %q: LatestVersion = %q, want %q", tc.latest, fetch.LatestVersion, tc.latest)
+				}
+			} else if fetch.LatestVersion != "" {
+				t.Fatalf("latest %q: LatestVersion = %q, want empty", tc.latest, fetch.LatestVersion)
+			}
+		})
+	}
+}
+
+func TestIsNewerVersion(t *testing.T) {
+	cases := []struct {
+		latest    string
+		installed string
+		want      bool
+	}{
+		{"2.0.0", "1.2.3", true},
+		{"1.3.0", "1.2.3", true},
+		{"1.2.4", "1.2.3", true},
+		{"1.2.3", "1.2.3", false},
+		{"1.2.2", "1.2.3", false},
+		{"1.0.0", "1.2.3", false},
+		{"2.0.0", "2.0.0-beta.1", true},  // release > prerelease
+		{"2.0.0-beta.1", "2.0.0", false}, // prerelease < release
+		{"2.0.0-beta.2", "2.0.0-beta.1", true},
+		{"2.0.0", "2.1.0-beta.1", false}, // installed prerelease ahead of registry stable
+		{"1.9.9", "2.0.0-beta.1", false},
+		{"not-a-version", "1.2.3", false},
+		{"2.0.0", "not-a-version", false},
+		{"", "1.2.3", false},
+		{"2.0.0", "", false},
+	}
+	for _, tc := range cases {
+		if got := isNewerVersion(tc.latest, tc.installed); got != tc.want {
+			t.Fatalf("isNewerVersion(%q, %q) = %v, want %v", tc.latest, tc.installed, got, tc.want)
+		}
+	}
+}
+
 func TestCheckPiExtensionUpdates_SkipsUninstalledAndLocalFile(t *testing.T) {
 	resetExtensionUpdateCache()
 	withPiHome(t)
