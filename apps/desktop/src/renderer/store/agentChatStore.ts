@@ -245,7 +245,10 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session.messages.some((m) => m.id === message.id)) return;
         session.messages.push(message);
         session.messages = trimSessionMessages(session.messages);
-        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
+        setRunningSubagentsIfChanged(
+          session,
+          deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
+        );
         setFinishedSubagents(session);
       });
     },
@@ -258,7 +261,10 @@ export const agentChatStore = create<AgentChatStoreState>()(
         session.streamingMessage = null;
         session.activeCoreTurnAssistantId = null;
         session.hasLoadedMessages = true;
-        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
+        setRunningSubagentsIfChanged(
+          session,
+          deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
+        );
         setFinishedSubagents(session);
       });
     },
@@ -268,7 +274,10 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.streamingMessage = message;
-        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
+        setRunningSubagentsIfChanged(
+          session,
+          deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
+        );
         setFinishedSubagents(session);
       });
     },
@@ -284,7 +293,10 @@ export const agentChatStore = create<AgentChatStoreState>()(
         }
         session.messages = trimSessionMessages(session.messages);
         session.streamingMessage = null;
-        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
+        setRunningSubagentsIfChanged(
+          session,
+          deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
+        );
         setFinishedSubagents(session);
       });
     },
@@ -410,6 +422,10 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.subagentSessionEndedAtMs = endedAtMs;
+        setRunningSubagentsIfChanged(
+          session,
+          deriveRunningSubagents(session.messages, session.streamingMessage, endedAtMs),
+        );
       });
     },
 
