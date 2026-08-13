@@ -1,3 +1,6 @@
+import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+import type { Api, Model } from "@earendil-works/pi-ai";
+
 import type { AgentDefinition, AgentTask } from "../agents/types";
 import { resolveWorkspaceAccessFromTools } from "../agents/workspaceAccess";
 import { buildChildSessionDescriptor } from "./sessionRelationship";
@@ -13,6 +16,8 @@ export function buildAgentTask(input: {
   prompt: string;
   cwd: string;
   mode: AgentTask["mode"];
+  parentModel?: Model<Api>;
+  parentThinking?: ThinkingLevel;
 }): AgentTask {
   const tools = resolveAgentTools(input.agentDefinition);
   const workspaceAccess = resolveWorkspaceAccess(input.agentDefinition, tools);
@@ -26,6 +31,8 @@ export function buildAgentTask(input: {
     childSessionDescriptor: buildChildSessionDescriptor(input.agentName, input.prompt),
     tools,
     model: input.agentDefinition.model,
+    parentModel: input.parentModel,
+    parentThinking: input.parentThinking,
     thinking: input.agentDefinition.thinking,
     maxTurns: input.agentDefinition.maxTurns,
     timeoutMs: input.agentDefinition.timeoutMs,

@@ -62,6 +62,8 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
         prompt: parsedArguments.prompt,
         cwd: ctx.cwd,
         mode: parsedArguments.isBackground ? "background" : "foreground",
+        parentModel: ctx.model,
+        parentThinking: pi.getThinkingLevel(),
       });
       task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
       task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager, {

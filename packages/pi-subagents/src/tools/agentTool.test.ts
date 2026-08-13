@@ -45,6 +45,7 @@ function createToolHarness() {
     }) {
       registeredTool = tool;
     },
+    getThinkingLevel: vi.fn(() => "medium"),
   };
 
   return {
