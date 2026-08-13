@@ -129,6 +129,78 @@ describe("deriveRunningSubagents", () => {
       },
     ]);
   });
+
+  it("excludes running rows started before the owning session ended", () => {
+    const startedLifecycle: AgentMessage = {
+      id: "subagent-start-interrupted",
+      role: "custom",
+      customType: "pi-subagent-child",
+      display: false,
+      content: "",
+      timestamp: 1_700_000_000_000,
+      details: {
+        event: "started",
+        agentId: "agent-1",
+        agentName: "code-reviewer",
+        title: "code-reviewer — interrupted work",
+        summary: "interrupted work",
+        childSessionId: "child-session-interrupted",
+      },
+    };
+
+    expect(deriveRunningSubagents([startedLifecycle], null, 1_700_000_000_500)).toEqual([]);
+  });
+
+  it("keeps running rows when sessionEndedAtMs is null", () => {
+    const startedLifecycle: AgentMessage = {
+      id: "subagent-start-live",
+      role: "custom",
+      customType: "pi-subagent-child",
+      display: false,
+      content: "",
+      timestamp: 1_700_000_000_000,
+      details: {
+        event: "started",
+        agentId: "agent-1",
+        agentName: "code-reviewer",
+        title: "code-reviewer — live work",
+        summary: "live work",
+        childSessionId: "child-session-live",
+      },
+    };
+
+    expect(deriveRunningSubagents([startedLifecycle], null, null)).toEqual([
+      {
+        rowId: "child-session-live",
+        agentId: "agent-1",
+        agentName: "code-reviewer",
+        childSessionId: "child-session-live",
+        title: "code-reviewer — live work",
+        promptSummary: "live work",
+        startedAtMs: 1_700_000_000_000,
+      },
+    ]);
+  });
+
+  it("treats missing startedAtMs as 0 so unstarted rows drop once the session ends", () => {
+    const trailingMessage: AgentMessage = {
+      id: "assistant-stream",
+      role: "assistant",
+      content: [
+        {
+          type: "toolCall",
+          id: "tool-agent-stream",
+          name: "Agent",
+          arguments: {
+            agent: "builder",
+            prompt: "Implement the chat row UI.",
+          },
+        },
+      ],
+    };
+
+    expect(deriveRunningSubagents([], trailingMessage, 1_700_000_000_000)).toEqual([]);
+  });
 });
 
 describe("findMatchingRunningSubagent", () => {

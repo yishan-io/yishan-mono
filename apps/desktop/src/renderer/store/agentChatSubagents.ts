@@ -143,6 +143,7 @@ export function deriveFinishedSubagents(messages: AgentMessage[]): RunningSubage
 export function deriveRunningSubagents(
   messages: AgentMessage[],
   trailingMessage?: AgentMessage | null,
+  sessionEndedAtMs?: number | null,
 ): RunningSubagentSummary[] {
   const runningByChildSessionId = new Map<string, RunningSubagentSummary>();
   const pendingByToolCallId = new Map<string, RunningSubagentSummary>();
@@ -202,7 +203,14 @@ export function deriveRunningSubagents(
     }
   }
 
-  return [...runningByChildSessionId.values(), ...pendingByToolCallId.values()];
+  const runningSubagents = [...runningByChildSessionId.values(), ...pendingByToolCallId.values()];
+  if (sessionEndedAtMs == null) {
+    return runningSubagents;
+  }
+
+  // A `pi-subagent-child` "started" entry with no matching "completed" whose
+  // owning Pi session has since ended is interrupted history, not a live run.
+  return runningSubagents.filter((subagent) => (subagent.startedAtMs ?? 0) >= sessionEndedAtMs);
 }
 
 function buildPendingSubagent(

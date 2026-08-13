@@ -1011,7 +1011,7 @@ describe("AgentChatView", () => {
     expect(mocked.openSubagentSessionInRightSplitPane).toHaveBeenCalledTimes(1);
   });
 
-  it("renders sub-agent rows started before the process died as interrupted with no cancel", () => {
+  it("drops sub-agent rows started before the process died instead of rendering them", () => {
     seedSession({
       state: "idle",
       messages: [
@@ -1033,9 +1033,10 @@ describe("AgentChatView", () => {
 
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
 
-    expect(screen.getByTestId("subagent-row-interrupted-child-session-old")).toBeTruthy();
-    // Interrupted history offers no cancel affordance.
-    expect(screen.queryByLabelText("Cancel sub-agent Builder")).toBeNull();
+    // Interrupted history is no longer a live "Running sub-agents" row.
+    expect(screen.queryByTestId("subagent-row-interrupted-child-session-old")).toBeNull();
+    expect(screen.queryByTestId("subagent-row-button-child-session-old")).toBeNull();
+    expect(screen.queryByText("Running sub-agents")).toBeNull();
   });
 
   it("keeps sub-agent rows started after the process death live and cancellable", () => {

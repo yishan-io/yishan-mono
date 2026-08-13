@@ -521,6 +521,41 @@ describe("agentChatStore", () => {
       expect(agentChatStore.getState().sessionsByTabId[tabId]?.subagentSessionEndedAtMs).toBeNull();
     });
 
+    it("re-derives runningSubagents when the session end time changes", () => {
+      const tabId = "tab-session-ended-rows";
+      agentChatStore.getState().initSession(tabId, "session-session-ended-rows");
+
+      const startedMessage: AgentMessage = {
+        id: "subagent-start-1",
+        role: "custom",
+        customType: "pi-subagent-child",
+        display: false,
+        content: "",
+        timestamp: 1_700_000_000_000,
+        details: {
+          event: "started",
+          agentId: "agent-1",
+          agentName: "builder",
+          title: "builder — interrupted work",
+          summary: "interrupted work",
+          childSessionId: "child-session-1",
+        },
+      };
+      agentChatStore.getState().appendMessage(tabId, startedMessage);
+
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+        expect.objectContaining({ childSessionId: "child-session-1" }),
+      ]);
+
+      agentChatStore.getState().setSubagentSessionEndedAt(tabId, 1_700_000_000_500);
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([]);
+
+      agentChatStore.getState().setSubagentSessionEndedAt(tabId, null);
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+        expect.objectContaining({ childSessionId: "child-session-1" }),
+      ]);
+    });
+
     it("is a no-op for unknown tab ids", () => {
       expect(() => {
         agentChatStore.getState().setSubagentSessionEndedAt("missing-tab", Date.now());
