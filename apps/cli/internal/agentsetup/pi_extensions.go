@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/mod/semver"
+
 	"yishan/apps/cli/internal/config"
 )
 
@@ -185,7 +187,7 @@ func CheckPiExtensionUpdates(ctx context.Context, extensions []PiExtensionInfo) 
 			checkCtx, cancel := context.WithTimeout(ctx, npmVersionTimeout)
 			defer cancel()
 			latest := cachedOrFetchLatestVersion(checkCtx, ext.Name)
-			if latest == "" || latest == ext.Version {
+			if !isNewerVersion(latest, ext.Version) {
 				return
 			}
 			ext.LatestVersion = latest
@@ -193,6 +195,31 @@ func CheckPiExtensionUpdates(ctx context.Context, extensions []PiExtensionInfo) 
 		}()
 	}
 	wg.Wait()
+}
+
+// isNewerVersion reports whether latest is a strictly newer semantic version
+// than installed. Either side being empty or non-semver (a malformed registry
+// response or an unparseable pin) degrades to false, so a lower or unparseable
+// latest never flags a spurious update. Strict semver precedence still applies:
+// an installed prerelease (e.g. "2.0.0-local") is considered older than its
+// release ("2.0.0"), so it keeps flagging an update.
+func isNewerVersion(latest, installed string) bool {
+	latest, installed = normalizeSemver(latest), normalizeSemver(installed)
+	if !semver.IsValid(latest) || !semver.IsValid(installed) {
+		return false
+	}
+	return semver.Compare(latest, installed) > 0
+}
+
+// normalizeSemver adapts an npm-style version ("1.2.3", with optional
+// prerelease/build suffix) to golang.org/x/mod/semver, which requires the
+// leading "v". npm package.json versions are always full x.y.z, so partial
+// versions (which x/mod/semver zero-pads) never reach this code.
+func normalizeSemver(v string) string {
+	if v == "" || strings.HasPrefix(v, "v") {
+		return v
+	}
+	return "v" + v
 }
 
 // cachedOrFetchLatestVersion returns the cached latest version when fresh,
