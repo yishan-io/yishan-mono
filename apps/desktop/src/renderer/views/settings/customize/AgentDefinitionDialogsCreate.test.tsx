@@ -234,8 +234,8 @@ describe("AgentDefinitionDialogsCreate", () => {
     // the first segment stays the provider ("OpenRouter"), never "anthropic"
     // or "deepseek".
     fireEvent.click(await screen.findByText("OpenRouter"));
-    expect(screen.getByText("openrouter/anthropic/claude-opus-4.5")).toBeTruthy();
-    expect(screen.getByText("openrouter/deepseek/deepseek-v4-flash-latest")).toBeTruthy();
+    expect(screen.getByText("anthropic/claude-opus-4.5")).toBeTruthy();
+    expect(screen.getByText("deepseek/deepseek-v4-flash-latest")).toBeTruthy();
     expect(screen.queryByText("Claude Sonnet 4.5")).toBeNull();
   });
 });

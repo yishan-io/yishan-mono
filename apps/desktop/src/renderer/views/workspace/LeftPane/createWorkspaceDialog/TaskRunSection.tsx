@@ -2,9 +2,13 @@ import { Box, Button, Stack, TextField, Typography } from "@mui/material";
 import type { AgentModelInfo } from "@renderer/commands/agentCommands";
 import { ModelPickerMenu } from "@renderer/components/ModelPickerMenu";
 import { ProviderMark } from "@renderer/components/ProviderMark";
-import { buildModelPickerOption, groupModelPickerOptionsByProvider } from "@renderer/components/modelPicker";
+import {
+  buildModelPickerOption,
+  groupModelPickerOptionsByProvider,
+  stripProviderPrefix,
+} from "@renderer/components/modelPicker";
 import type { DesktopAgentKind } from "@renderer/helpers/agentSettings";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown, LuSparkles } from "react-icons/lu";
 import { useAgentModels } from "./useAgentModels";
 
@@ -16,20 +20,6 @@ type TaskRunSectionProps = {
   isCreatingWorkspace: boolean;
   listAgentModels: (agentKind: DesktopAgentKind) => Promise<{ models?: AgentModelInfo[] }>;
 };
-
-function stripProviderPrefix(modelName: string, providerId: string, providerName: string): string {
-  const trimmedModelName = modelName.trim();
-  const lowerModelName = trimmedModelName.toLowerCase();
-  const normalizedPrefixes = [providerId.trim().toLowerCase(), providerName.trim().toLowerCase()].filter(Boolean);
-
-  for (const prefix of normalizedPrefixes) {
-    if (lowerModelName.startsWith(`${prefix}/`)) {
-      return trimmedModelName.slice(prefix.length + 1).trim() || trimmedModelName;
-    }
-  }
-
-  return trimmedModelName;
-}
 
 function buildTaskRunModelOptions(
   models: AgentModelInfo[],
@@ -85,10 +75,13 @@ export function TaskRunSection({
   const modelOptions = useMemo(() => buildTaskRunModelOptions(agentModels, taskModel), [agentModels, taskModel]);
   const providerGroups = useMemo(() => groupModelPickerOptionsByProvider(modelOptions), [modelOptions]);
   const selectedOption = useMemo(
-    () => (taskModel ? modelOptions.find((option) => option.id === taskModel) ?? null : null),
+    () => (taskModel ? (modelOptions.find((option) => option.id === taskModel) ?? null) : null),
     [modelOptions, taskModel],
   );
-  const initialSelectedProvider = useMemo(() => getInitialSelectedProvider(taskModel, modelOptions), [modelOptions, taskModel]);
+  const initialSelectedProvider = useMemo(
+    () => getInitialSelectedProvider(taskModel, modelOptions),
+    [modelOptions, taskModel],
+  );
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedProvider, setSelectedProvider] = useState(initialSelectedProvider);
   const ignoreNextClickAwayRef = useRef(false);
@@ -203,7 +196,10 @@ export function TaskRunSection({
               lineHeight: 1.5,
             }}
           >
-            <Box component="span" sx={{ display: "inline-flex", alignItems: "center", overflow: "hidden", whiteSpace: "nowrap" }}>
+            <Box
+              component="span"
+              sx={{ display: "inline-flex", alignItems: "center", overflow: "hidden", whiteSpace: "nowrap" }}
+            >
               {selectedOption ? (
                 <>
                   <ProviderMark providerId={selectedOption.providerId} size={14} />

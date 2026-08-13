@@ -4,7 +4,11 @@ import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
 import { ModelPickerMenu } from "../../components/ModelPickerMenu";
 import { ProviderMark } from "../../components/ProviderMark";
-import { buildModelPickerOption, groupModelPickerOptionsByProvider } from "../../components/modelPicker";
+import {
+  buildModelPickerOption,
+  groupModelPickerOptionsByProvider,
+  stripProviderPrefix,
+} from "../../components/modelPicker";
 import {
   SettingsCard,
   SettingsControlRow,
@@ -20,27 +24,14 @@ const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
 
 function normalizeMemoryConfig(config: MemoryConfig): MemoryConfig {
   const normalizedAgentKind = config.agentKind.trim();
-  const model = normalizedAgentKind.length > 0 && normalizedAgentKind !== MEMORY_SUMMARIZER_AGENT_KIND ? "" : config.model;
+  const model =
+    normalizedAgentKind.length > 0 && normalizedAgentKind !== MEMORY_SUMMARIZER_AGENT_KIND ? "" : config.model;
 
   return {
     ...config,
     agentKind: MEMORY_SUMMARIZER_AGENT_KIND,
     model,
   };
-}
-
-function stripProviderPrefix(modelName: string, providerId: string, providerName: string): string {
-  const trimmedModelName = modelName.trim();
-  const lowerModelName = trimmedModelName.toLowerCase();
-  const normalizedPrefixes = [providerId.trim().toLowerCase(), providerName.trim().toLowerCase()].filter(Boolean);
-
-  for (const prefix of normalizedPrefixes) {
-    if (lowerModelName.startsWith(`${prefix}/`)) {
-      return trimmedModelName.slice(prefix.length + 1).trim() || trimmedModelName;
-    }
-  }
-
-  return trimmedModelName;
 }
 
 function buildMemoryModelOptions(
@@ -169,7 +160,7 @@ export function MemorySettingsView() {
   const modelOptions = useMemo(() => buildMemoryModelOptions(models, modelValue), [modelValue, models]);
   const providerGroups = useMemo(() => groupModelPickerOptionsByProvider(modelOptions), [modelOptions]);
   const selectedOption = useMemo(
-    () => (modelValue ? modelOptions.find((option) => option.id === modelValue) ?? null : null),
+    () => (modelValue ? (modelOptions.find((option) => option.id === modelValue) ?? null) : null),
     [modelOptions, modelValue],
   );
   const initialSelectedProvider = useMemo(
@@ -303,7 +294,10 @@ export function MemorySettingsView() {
                             <Box component="span" aria-hidden="true" sx={{ mx: 0.75, color: "text.disabled" }}>
                               /
                             </Box>
-                            <Box component="span" sx={{ color: "text.primary", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <Box
+                              component="span"
+                              sx={{ color: "text.primary", overflow: "hidden", textOverflow: "ellipsis" }}
+                            >
                               {selectedOption.name}
                             </Box>
                           </>

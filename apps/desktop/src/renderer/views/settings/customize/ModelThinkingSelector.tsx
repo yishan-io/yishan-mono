@@ -3,11 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listAgentModels } from "../../../commands/agentCommands";
 import { AgentModelSelector } from "../../../components/agent/session/AgentModelSelector";
+import { splitModelId, stripProviderPrefix } from "../../../components/modelPicker";
 import {
   clampThinkingLevel,
   formatSupportedThinkingLevels,
   isThinkingLevelSupported,
 } from "../../../helpers/agentThinkingLevels";
+import { getPiProviderDisplayName } from "../../../helpers/piProviders";
 import type { AgentModel } from "../../../store/agentChatTypes";
 
 type ModelThinkingSelectorProps = {
@@ -37,7 +39,7 @@ function findMatchingModel(modelId: string, models: AgentModel[]): AgentModel | 
   if (exact) {
     return exact;
   }
-  const modelKey = trimmed.includes("/") ? trimmed.slice(trimmed.indexOf("/") + 1) : trimmed;
+  const modelKey = splitModelId(trimmed).modelKey;
   return (
     models.find((candidate) => candidate.id === modelKey) ??
     models.find((candidate) => candidate.id.endsWith(`/${modelKey}`)) ??
@@ -46,16 +48,16 @@ function findMatchingModel(modelId: string, models: AgentModel[]): AgentModel | 
 }
 
 /**
- * Extracts the provider prefix from a model id. Returns undefined when the id
- * has no provider prefix (e.g. "gpt-5.6-terra") so the shared picker falls
- * back to its "other" group instead of treating the whole id as a provider.
+ * Returns the display name for a model id. The daemon reports `name` equal to
+ * the full id ("anthropic/claude-sonnet-4-5"), so the provider prefix is
+ * stripped to avoid showing it twice (provider column + model name).
  */
-function inferModelProvider(modelId: string): string | undefined {
-  const slashIndex = modelId.indexOf("/");
-  if (slashIndex <= 0) {
-    return undefined;
+function modelDisplayName(id: string, rawName: string): string {
+  const provider = splitModelId(id).provider;
+  if (!provider) {
+    return rawName;
   }
-  return modelId.slice(0, slashIndex).trim().toLowerCase();
+  return stripProviderPrefix(rawName, provider, getPiProviderDisplayName(provider));
 }
 
 /**
@@ -80,18 +82,19 @@ export function ModelThinkingSelector({
         if (cancelled) return;
         setModels(
           result.models.map((entry) => {
-            const provider = inferModelProvider(entry.id);
+            const provider = splitModelId(entry.id).provider || undefined;
+            const name = modelDisplayName(entry.id, entry.name);
             return provider
               ? {
                   id: entry.id,
-                  name: entry.name,
+                  name,
                   provider,
                   reasoning: entry.reasoning,
                   thinkingLevelMap: entry.thinkingLevelMap,
                 }
               : {
                   id: entry.id,
-                  name: entry.name,
+                  name,
                   reasoning: entry.reasoning,
                   thinkingLevelMap: entry.thinkingLevelMap,
                 };
@@ -121,7 +124,7 @@ export function ModelThinkingSelector({
   // otherwise "other").
   const effectiveModels = useMemo(() => {
     if (model !== "" && !matchedModel) {
-      return [{ id: model, name: model }, ...models];
+      return [{ id: model, name: modelDisplayName(model, model) }, ...models];
     }
     return models;
   }, [matchedModel, model, models]);

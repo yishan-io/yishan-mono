@@ -107,10 +107,12 @@ describe("AgentDefinitionDialogsEdit", () => {
 
     // The bare seeded value is displayed as the matched list entry under its
     // provider instead of a raw "Other / claude-sonnet-4-5" synthetic option.
+    // The provider prefix is stripped from the display name, so the picker
+    // shows "claude-sonnet-4-5" under "Anthropic" rather than the full id.
     // Note: with multiple entries sharing the model key, the first in list
     // order wins (anthropic sorts before openrouter), so this assertion pins
     // that ordering too.
-    await screen.findByText("anthropic/claude-sonnet-4-5");
+    await screen.findByText("claude-sonnet-4-5");
     expect(screen.getByText("Anthropic")).toBeTruthy();
     expect(screen.queryByText("Other")).toBeNull();
 
@@ -148,7 +150,10 @@ describe("AgentDefinitionDialogsEdit", () => {
 
     // "anthropic/claude-sonnet-4-5" in the md file matches the openrouter
     // entry by model key, so the picker shows the real entry under OpenRouter.
-    await screen.findByText("openrouter/anthropic/claude-sonnet-4-5");
+    // The provider prefix is stripped from the display name, so the model
+    // shows "anthropic/claude-sonnet-4-5" rather than the full
+    // "openrouter/anthropic/claude-sonnet-4-5".
+    await screen.findByText("anthropic/claude-sonnet-4-5");
     expect(screen.getByText("OpenRouter")).toBeTruthy();
   });
 
