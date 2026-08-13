@@ -1,4 +1,5 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+import type { Api, Model } from "@earendil-works/pi-ai";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 
 import type {
@@ -58,6 +59,10 @@ export interface AgentTask {
   agentDefinition?: AgentDefinition;
   tools?: string[];
   model?: string;
+  /** Parent session's already-resolved model, used as an auth-checked fallback. */
+  parentModel?: Model<Api>;
+  /** Parent session's current thinking level, used as a fallback when model resolution falls back. */
+  parentThinking?: ThinkingLevel;
   thinking?: ThinkingLevel;
   maxTurns?: number;
   timeoutMs?: number;

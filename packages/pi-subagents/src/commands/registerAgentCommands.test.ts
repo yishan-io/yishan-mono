@@ -20,6 +20,7 @@ function createCommandHarness() {
       commands.set(name, options);
     },
     sendUserMessage,
+    getThinkingLevel: vi.fn(() => "medium"),
   };
 
   return { commands, sendUserMessage, pi };

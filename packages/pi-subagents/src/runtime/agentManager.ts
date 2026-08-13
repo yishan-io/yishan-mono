@@ -266,6 +266,8 @@ export class AgentManager {
             childSessionDescriptor: task.childSessionDescriptor,
             tools: task.tools,
             model: task.model,
+            parentModel: task.parentModel,
+            parentThinking: task.parentThinking,
             thinking: task.thinking,
             maxTurns: task.maxTurns,
             timeoutMs: task.timeoutMs,
