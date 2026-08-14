@@ -1,5 +1,11 @@
 import { listOrganizationNodes, unregisterOrganizationNode, updateOrganizationNodeScope } from "./nodeApi";
 import {
+  getOverviewAgentKindBreakdown,
+  getOverviewModelBreakdown,
+  getOverviewTokenUsage,
+  getOverviewWorkspaceInsights,
+} from "./overviewApi";
+import {
   addOrganizationMember,
   cancelOrganizationInvite,
   createOrganization,
@@ -68,6 +74,12 @@ export const api = {
     list: listServiceTokens,
     create: createServiceToken,
     revoke: revokeServiceToken,
+  },
+  overview: {
+    getTokenUsage: getOverviewTokenUsage,
+    getModelBreakdown: getOverviewModelBreakdown,
+    getAgentKindBreakdown: getOverviewAgentKindBreakdown,
+    getWorkspaceInsights: getOverviewWorkspaceInsights,
   },
 };
 

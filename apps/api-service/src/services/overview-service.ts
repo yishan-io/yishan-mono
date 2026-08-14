@@ -38,6 +38,7 @@ export type TokenUsageSeriesItem = {
   cachedWriteTokens: number;
   turnCount: number;
   toolCallCount: number;
+  totalCostUsd: number;
 };
 
 export type ModelBreakdownItem = {
@@ -47,6 +48,7 @@ export type ModelBreakdownItem = {
   inputTokens: number;
   outputTokens: number;
   percentage: number;
+  totalCostUsd: number;
 };
 
 export type AgentKindBreakdownItem = {
@@ -66,6 +68,7 @@ export type ClosedWorkspaceItem = {
   closedAt: string;
   lifetimeHours: number;
   totalTokens: number;
+  totalCostUsd: number;
 };
 
 export type PrimaryWorkspaceItem = {
@@ -75,6 +78,7 @@ export type PrimaryWorkspaceItem = {
   branch: string | null;
   createdAt: string;
   totalTokens: number;
+  totalCostUsd: number;
 };
 
 type PrimaryWorkspaceRow = {
@@ -98,6 +102,12 @@ function rangeHours(range: OverviewTimeRange): number {
   return RANGE_DAYS[range] * 24;
 }
 
+// Converts micros-of-USD to USD, matching the collector's local convention
+// (float64(totalMicros) / 1_000_000).
+function microsToUSD(micros: number): number {
+  return (micros ?? 0) / 1_000_000;
+}
+
 function hoursToMillis(range: OverviewTimeRange): number {
   return rangeHours(range) * 60 * 60 * 1000;
 }
@@ -116,6 +126,7 @@ export class OverviewService {
     grandTotal: number;
     turnTotal: number;
     toolCallTotal: number;
+    totalCostUsd: number;
   }> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId, input.actorRole);
 
@@ -136,7 +147,8 @@ export class OverviewService {
         COALESCE(SUM(cached_input_tokens), 0)::bigint AS cached_input_tokens,
         COALESCE(SUM(cached_write_tokens), 0)::bigint AS cached_write_tokens,
         COALESCE(SUM(turn_count), 0)::bigint AS turn_count,
-        COALESCE(SUM(tool_call_count), 0)::bigint AS tool_call_count
+        COALESCE(SUM(tool_call_count), 0)::bigint AS tool_call_count,
+        COALESCE(SUM(total_cost_micros_usd), 0)::bigint AS total_cost_micros_usd
       FROM token_usage_hourly
       WHERE organization_id = ${input.organizationId}
         AND bucket_start_hour_utc >= ${fromDate.toISOString()}
@@ -155,6 +167,7 @@ export class OverviewService {
       cachedWriteTokens: Number(row.cached_write_tokens ?? 0),
       turnCount: Number(row.turn_count ?? 0),
       toolCallCount: Number(row.tool_call_count ?? 0),
+      totalCostUsd: microsToUSD(Number(row.total_cost_micros_usd ?? 0)),
     }));
     const cachedTotal = series.reduce((acc, item) => acc + item.cachedInputTokens, 0);
     const cachedWriteTotal = series.reduce((acc, item) => acc + item.cachedWriteTokens, 0);
@@ -162,8 +175,9 @@ export class OverviewService {
     const uncachedTotal = Math.max(0, grandTotal - cachedTotal - cachedWriteTotal);
     const turnTotal = series.reduce((acc, item) => acc + item.turnCount, 0);
     const toolCallTotal = series.reduce((acc, item) => acc + item.toolCallCount, 0);
+    const totalCostUsd = series.reduce((acc, item) => acc + item.totalCostUsd, 0);
 
-    return { series, cachedTotal, cachedWriteTotal, uncachedTotal, grandTotal, turnTotal, toolCallTotal };
+    return { series, cachedTotal, cachedWriteTotal, uncachedTotal, grandTotal, turnTotal, toolCallTotal, totalCostUsd };
   }
 
   async getModelBreakdown(input: OverviewModelBreakdownInput): Promise<{
@@ -189,6 +203,7 @@ export class OverviewService {
         totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
         inputTokens: sum(tokenUsageHourly.inputTokens).mapWith(Number),
         outputTokens: sum(tokenUsageHourly.outputTokens).mapWith(Number),
+        totalCostMicrosUsd: sum(tokenUsageHourly.totalCostMicrosUsd).mapWith(Number),
       })
       .from(tokenUsageHourly)
       .where(and(...conditions))
@@ -204,6 +219,7 @@ export class OverviewService {
       inputTokens: row.inputTokens ?? 0,
       outputTokens: row.outputTokens ?? 0,
       percentage: grandTotal > 0 ? ((row.totalTokens ?? 0) / grandTotal) * 100 : 0,
+      totalCostUsd: microsToUSD(row.totalCostMicrosUsd ?? 0),
     }));
 
     return { models };
@@ -317,6 +333,7 @@ export class OverviewService {
       const tokenRow = await this.db
         .select({
           totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
+          totalCostMicrosUsd: sum(tokenUsageHourly.totalCostMicrosUsd).mapWith(Number),
         })
         .from(tokenUsageHourly)
         .where(eq(tokenUsageHourly.workspaceId, ws.id));
@@ -334,6 +351,7 @@ export class OverviewService {
         closedAt: ws.closedAt.toISOString(),
         lifetimeHours: Math.round(lifetimeHours * 10) / 10,
         totalTokens,
+        totalCostUsd: microsToUSD(tokenRow[0]?.totalCostMicrosUsd ?? 0),
       });
     }
 
@@ -360,10 +378,11 @@ export class OverviewService {
 
     const primaryWorkspaceCount = primaryRows.length;
     const primaryWorkspaceTokensById = new Map<string, number>();
+    const primaryWorkspaceCostMicrosById = new Map<string, number>();
     let primaryWorkspaceTokens = 0;
 
     for (const primaryRow of primaryRows) {
-      const totalTokens = await this.sumPrimaryWorkspacePathTokens({
+      const { totalTokens, totalCostMicrosUsd } = await this.sumPrimaryWorkspacePathTokens({
         organizationId: input.organizationId,
         projectId: primaryRow.projectId,
         workspacePath: primaryRow.localPath,
@@ -371,6 +390,7 @@ export class OverviewService {
         now,
       });
       primaryWorkspaceTokensById.set(primaryRow.id, totalTokens);
+      primaryWorkspaceCostMicrosById.set(primaryRow.id, totalCostMicrosUsd);
       primaryWorkspaceTokens += totalTokens;
     }
 
@@ -385,6 +405,7 @@ export class OverviewService {
         branch: primaryRow.branch,
         createdAt: primaryRow.createdAt.toISOString(),
         totalTokens: primaryWorkspaceTokensById.get(primaryRow.id) ?? 0,
+        totalCostUsd: microsToUSD(primaryWorkspaceCostMicrosById.get(primaryRow.id) ?? 0),
       });
     }
 
@@ -413,10 +434,11 @@ export class OverviewService {
     workspacePath: string;
     fromDate: Date;
     now: Date;
-  }): Promise<number> {
+  }): Promise<{ totalTokens: number; totalCostMicrosUsd: number }> {
     const tokenRow = await this.db
       .select({
         totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
+        totalCostMicrosUsd: sum(tokenUsageHourly.totalCostMicrosUsd).mapWith(Number),
       })
       .from(tokenUsageHourly)
       .where(
@@ -429,6 +451,9 @@ export class OverviewService {
         ),
       );
 
-    return tokenRow[0]?.totalTokens ?? 0;
+    return {
+      totalTokens: tokenRow[0]?.totalTokens ?? 0,
+      totalCostMicrosUsd: tokenRow[0]?.totalCostMicrosUsd ?? 0,
+    };
   }
 }

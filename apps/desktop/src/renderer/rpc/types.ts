@@ -245,11 +245,5 @@ export type DaemonRpcClient = {
     getListPreferences: (orgId: string) => Promise<Rpc.ProjectListPreference>;
     setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) => Promise<{ ok: boolean }>;
   };
-  overview: {
-    getTokenUsage: (input: { range: string; projectId?: string; granularity: string }) => Promise<unknown>;
-    getModelBreakdown: (input: { range: string; projectId?: string }) => Promise<unknown>;
-    getAgentKindBreakdown: (input: { range: string; projectId?: string }) => Promise<unknown>;
-    getWorkspaceInsights: (input: { range: string; projectId?: string }) => Promise<unknown>;
-  };
   tokenUsage: {};
 };

@@ -1,7 +1,6 @@
 import { generateId } from "../helpers/generateId";
 import { DaemonFileClient } from "./daemonFileClient";
 import { DaemonGitClient } from "./daemonGitClient";
-import { DaemonOverviewClient } from "./daemonOverviewClient";
 import { DaemonProjectClient } from "./daemonProjectClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
@@ -62,7 +61,6 @@ export class DaemonClient {
   private readonly _gitClient: DaemonGitClient;
   private readonly _terminalClient: DaemonTerminalClient;
   private readonly _projectClient: DaemonProjectClient;
-  private readonly _overviewClient: DaemonOverviewClient;
 
   constructor(options: {
     openSocket: () => Promise<WebSocket>;
@@ -85,7 +83,6 @@ export class DaemonClient {
       subscriptionsById: this.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
     });
     this._projectClient = new DaemonProjectClient(invoke);
-    this._overviewClient = new DaemonOverviewClient(invoke);
   }
 
   readonly project = {
@@ -93,16 +90,6 @@ export class DaemonClient {
     getListPreferences: (orgId: string) => this._projectClient.getListPreferences(orgId),
     setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) =>
       this._projectClient.setListPreferences(orgId, preferences),
-  };
-
-  readonly overview = {
-    getTokenUsage: (input: { range: string; projectId?: string; granularity: string }) =>
-      this._overviewClient.getTokenUsage(input),
-    getModelBreakdown: (input: { range: string; projectId?: string }) => this._overviewClient.getModelBreakdown(input),
-    getAgentKindBreakdown: (input: { range: string; projectId?: string }) =>
-      this._overviewClient.getAgentKindBreakdown(input),
-    getWorkspaceInsights: (input: { range: string; projectId?: string }) =>
-      this._overviewClient.getWorkspaceInsights(input),
   };
 
   readonly tokenUsage = {};
