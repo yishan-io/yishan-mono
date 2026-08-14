@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // ProjectListPreferencesVersion is the current persisted shape version.
@@ -108,40 +107,17 @@ func (store *ProjectListPreferenceStore) Set(ctx context.Context, organizationID
 	return nil
 }
 
-// prune drops order hints that reference rows no longer live in this org.
-// Best effort: if the live-id queries fail, the stored state is returned
-// unchanged (stale ids are harmless to consumers).
+// prune drops workspace-order hints that reference rows no longer live in this
+// org. Project ids are not pruned here: projects are remote-authoritative and
+// the desktop prunes them against the remote list; stale ids are tolerated by
+// consumers. Best effort: if the live-id query fails, the stored state is
+// returned unchanged.
 func (store *ProjectListPreferenceStore) prune(ctx context.Context, organizationID string, preference *ProjectListPreference) {
-	projectIDs, err := store.liveIDs(ctx, `SELECT id FROM projects WHERE organization_id = ?`, organizationID)
-	if err != nil {
-		return
-	}
 	workspaceIDs, err := store.liveIDs(ctx, `SELECT id FROM workspaces WHERE organization_id = ?`, organizationID)
 	if err != nil {
 		return
 	}
 
-	pruneMode := func(mode *ProjectListModePreference) {
-		mode.ProjectOrderIds = filterLiveIDs(mode.ProjectOrderIds, projectIDs)
-		mode.FoldedProjectIds = filterLiveIDs(mode.FoldedProjectIds, projectIDs)
-		for key, ids := range mode.NodeOrderByParentId {
-			switch {
-			case strings.HasPrefix(key, "node:"):
-				// Values are project ids.
-				mode.NodeOrderByParentId[key] = filterLiveIDs(ids, projectIDs)
-				if len(mode.NodeOrderByParentId[key]) == 0 {
-					delete(mode.NodeOrderByParentId, key)
-				}
-			case strings.HasPrefix(key, "project:"):
-				// Key references a project; values are remote node ids.
-				if _, ok := projectIDs[strings.TrimPrefix(key, "project:")]; !ok {
-					delete(mode.NodeOrderByParentId, key)
-				}
-			}
-		}
-	}
-	pruneMode(&preference.ByProject)
-	pruneMode(&preference.ByNode)
 	for key, ids := range preference.WorkspaceOrderByParentId {
 		preference.WorkspaceOrderByParentId[key] = filterLiveIDs(ids, workspaceIDs)
 		if len(preference.WorkspaceOrderByParentId[key]) == 0 {

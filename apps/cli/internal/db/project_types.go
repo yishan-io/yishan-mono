@@ -25,14 +25,3 @@ type Project struct {
 	CreatedAt       string           `json:"createdAt"`
 	UpdatedAt       string           `json:"updatedAt"`
 }
-
-// ProjectUpdate contains the mutable fields of a local project.
-type ProjectUpdate struct {
-	Name           *string
-	Icon           *string
-	Color          *string
-	SetupScript    *string
-	PostScript     *string
-	Commands       *[]ProjectCommand
-	ContextEnabled *bool
-}

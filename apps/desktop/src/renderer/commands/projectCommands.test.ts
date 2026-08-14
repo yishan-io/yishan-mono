@@ -10,6 +10,9 @@ import { createProject, deleteProject, loadWorkspaceSnapshot, updateProjectConfi
 
 const apiMocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),
+  createProject: vi.fn(),
+  deleteProject: vi.fn(),
+  updateProject: vi.fn(),
 }));
 
 vi.mock("../api", () => ({
@@ -17,14 +20,16 @@ vi.mock("../api", () => ({
     org: {
       list: apiMocks.listOrganizations,
     },
+    project: {
+      create: apiMocks.createProject,
+      delete: apiMocks.deleteProject,
+      update: apiMocks.updateProject,
+    },
   },
 }));
 
 const rpcMocks = vi.hoisted(() => ({
   listProjects: vi.fn(),
-  createProject: vi.fn(),
-  deleteProject: vi.fn(),
-  updateProject: vi.fn(),
   gitInspect: vi.fn(
     async () =>
       ({
@@ -48,9 +53,6 @@ vi.mock("../rpc/rpcTransport", () => ({
     },
     project: {
       listByOrg: rpcMocks.listProjects,
-      create: rpcMocks.createProject,
-      delete: rpcMocks.deleteProject,
-      update: rpcMocks.updateProject,
     },
   })),
 }));
@@ -395,7 +397,7 @@ describe("projectCommands", () => {
       remoteUrl: "https://github.com/test/repo-1.git",
       currentBranch: "main",
     });
-    rpcMocks.createProject.mockResolvedValueOnce({
+    apiMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       sourceType: "git",
@@ -404,7 +406,7 @@ describe("projectCommands", () => {
       repoKey: "repo-1",
       workspaces: [],
     });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       icon: "folder",
@@ -420,7 +422,7 @@ describe("projectCommands", () => {
       path: "/tmp/repo-1",
     });
 
-    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", {
+    expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Repo 1",
       sourceTypeHint: "git",
       repoUrl: "https://github.com/test/repo-1.git",
@@ -479,7 +481,7 @@ describe("projectCommands", () => {
     rpcMocks.gitInspect.mockResolvedValueOnce({
       isGitRepository: false,
     });
-    rpcMocks.createProject.mockResolvedValueOnce({
+    apiMocks.createProject.mockResolvedValueOnce({
       id: "project-plain",
       name: "Plain Folder",
       sourceType: "unknown",
@@ -505,7 +507,7 @@ describe("projectCommands", () => {
         },
       ],
     });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-plain",
       name: "Plain Folder",
       icon: "folder",
@@ -521,7 +523,7 @@ describe("projectCommands", () => {
       path: "/tmp/plain-folder",
     });
 
-    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", {
+    expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Plain Folder",
       sourceTypeHint: "unknown",
       repoUrl: undefined,
@@ -565,7 +567,7 @@ describe("projectCommands", () => {
     workspaceStore.setState({ createProject: appendRepo });
     rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: false });
     // The daemon project.create now returns the primary workspace row.
-    rpcMocks.createProject.mockResolvedValueOnce({
+    apiMocks.createProject.mockResolvedValueOnce({
       id: "project-plain",
       name: "Plain Folder",
       sourceType: "unknown",
@@ -591,7 +593,7 @@ describe("projectCommands", () => {
         },
       ],
     });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-plain",
       name: "Plain Folder",
       icon: "folder",
@@ -642,7 +644,7 @@ describe("projectCommands", () => {
       remoteUrl: "https://github.com/test/repo-1.git",
       currentBranch: "main",
     });
-    rpcMocks.createProject.mockResolvedValueOnce({
+    apiMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       sourceType: "git",
@@ -668,7 +670,7 @@ describe("projectCommands", () => {
         },
       ],
     });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       icon: "folder",
@@ -684,7 +686,7 @@ describe("projectCommands", () => {
       path: "/tmp/repo-1",
     });
 
-    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", {
+    expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Repo 1",
       sourceTypeHint: "git",
       repoUrl: "https://github.com/test/repo-1.git",
@@ -697,7 +699,7 @@ describe("projectCommands", () => {
   it("uses workspace default context setting during project creation", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceSettingsStore.setState({ isDefaultContextEnabled: false });
-    rpcMocks.createProject.mockResolvedValueOnce({
+    apiMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Remote Repo",
       sourceType: "git",
@@ -707,7 +709,7 @@ describe("projectCommands", () => {
       contextEnabled: false,
       workspaces: [],
     });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Remote Repo",
       icon: "folder",
@@ -724,7 +726,7 @@ describe("projectCommands", () => {
       gitUrl: "https://github.com/test/remote-repo.git",
     });
 
-    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", expect.objectContaining({ contextEnabled: false }));
+    expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", expect.objectContaining({ contextEnabled: false }));
   });
 
   it("adds created backend workspace entries for remote projects", async () => {
@@ -732,7 +734,7 @@ describe("projectCommands", () => {
     const addWorkspace = vi.fn();
     workspaceStore.setState({ createProject: appendRepo, addWorkspace });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    rpcMocks.createProject.mockResolvedValueOnce({
+    apiMocks.createProject.mockResolvedValueOnce({
       id: "project-remote-1",
       name: "Remote Repo",
       sourceType: "git",
@@ -755,7 +757,7 @@ describe("projectCommands", () => {
         },
       ],
     });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-remote-1",
       name: "Remote Repo",
       icon: "folder",
@@ -796,11 +798,11 @@ describe("projectCommands", () => {
     chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
     workspaceStore.setState({ deleteProject: removeRepo });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    rpcMocks.deleteProject.mockResolvedValueOnce(undefined);
+    apiMocks.deleteProject.mockResolvedValueOnce(undefined);
 
     await deleteProject("repo-1");
 
-    expect(rpcMocks.deleteProject).toHaveBeenCalledWith("org-1", "repo-1");
+    expect(apiMocks.deleteProject).toHaveBeenCalledWith("org-1", "repo-1");
     expect(removeRepo).toHaveBeenCalledWith("repo-1");
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
@@ -828,7 +830,7 @@ describe("projectCommands", () => {
       incrementFileTreeRefreshVersion: bumpRefreshVersion,
     });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
       name: "Repo 1",
       sourceType: "git-local",
@@ -855,7 +857,7 @@ describe("projectCommands", () => {
       postScript: "rm -rf node_modules",
     });
 
-    expect(rpcMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
+    expect(apiMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
       name: "Repo 1",
       icon: "folder",
       color: "#1E66F5",
@@ -925,7 +927,7 @@ describe("projectCommands", () => {
       incrementFileTreeRefreshVersion: bumpRefreshVersion,
     });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
       name: "Repo 1",
       sourceType: "git-local",
@@ -985,7 +987,7 @@ describe("projectCommands", () => {
       incrementFileTreeRefreshVersion: bumpRefreshVersion,
     });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    rpcMocks.updateProject.mockResolvedValueOnce({
+    apiMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
       name: "Repo 1 Renamed",
       sourceType: "git-local",
@@ -1008,7 +1010,7 @@ describe("projectCommands", () => {
       contextEnabled: true,
     });
 
-    expect(rpcMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
+    expect(apiMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
       name: "Repo 1 Renamed",
       contextEnabled: true,
     });

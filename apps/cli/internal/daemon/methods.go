@@ -42,10 +42,6 @@ const (
 	MethodComputerUpdateConfig           = "computer.updateConfig"
 
 	MethodProjectList               = "project.list"
-	MethodProjectGet                = "project.get"
-	MethodProjectCreate             = "project.create"
-	MethodProjectUpdate             = "project.update"
-	MethodProjectDelete             = "project.delete"
 	MethodProjectListWithWkspaces   = "project.listWithWorkspaces"
 	MethodProjectGetListPreferences = "project.getListPreferences"
 	MethodProjectSetListPreferences = "project.setListPreferences"
@@ -96,12 +92,6 @@ const (
 	MethodAppLogout            = "app.logout"
 	MethodAppReloadAuthConfig  = "app.reloadAuthConfig"
 	MethodTokenUsageDebugState = "tokenUsage.debugState"
-
-	MethodOverviewTokenUsage         = "overview.tokenUsage"
-	MethodOverviewModelBreakdown     = "overview.modelBreakdown"
-	MethodOverviewAgentKindBreakdown = "overview.agentKindBreakdown"
-	MethodOverviewWorkspaceInsights  = "overview.workspaceInsights"
-	MethodTokenUsageMigrationStatus  = "tokenUsage.migrationStatus"
 
 	MethodFileRead   = "file.read"
 	MethodFileList   = "file.list"

@@ -1,7 +1,6 @@
 import { generateId } from "../helpers/generateId";
 import { DaemonFileClient } from "./daemonFileClient";
 import { DaemonGitClient } from "./daemonGitClient";
-import { DaemonOverviewClient } from "./daemonOverviewClient";
 import { DaemonProjectClient } from "./daemonProjectClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
@@ -62,7 +61,6 @@ export class DaemonClient {
   private readonly _gitClient: DaemonGitClient;
   private readonly _terminalClient: DaemonTerminalClient;
   private readonly _projectClient: DaemonProjectClient;
-  private readonly _overviewClient: DaemonOverviewClient;
 
   constructor(options: {
     openSocket: () => Promise<WebSocket>;
@@ -85,54 +83,16 @@ export class DaemonClient {
       subscriptionsById: this.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
     });
     this._projectClient = new DaemonProjectClient(invoke);
-    this._overviewClient = new DaemonOverviewClient(invoke);
   }
 
   readonly project = {
     listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) => this._projectClient.listByOrg(orgId, opts),
-    create: (
-      orgId: string,
-      input: {
-        name: string;
-        sourceTypeHint?: string;
-        repoUrl?: string;
-        nodeId?: string;
-        localPath?: string;
-        contextEnabled?: boolean;
-      },
-    ) => this._projectClient.create(orgId, input),
-    update: (
-      orgId: string,
-      projectId: string,
-      config: {
-        name?: string;
-        icon?: string;
-        color?: string;
-        setupScript?: string;
-        postScript?: string;
-        commands?: Array<{ name: string; command: string }>;
-        contextEnabled?: boolean;
-      },
-    ) => this._projectClient.update(orgId, projectId, config),
-    delete: (orgId: string, projectId: string) => this._projectClient.delete(orgId, projectId),
     getListPreferences: (orgId: string) => this._projectClient.getListPreferences(orgId),
     setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) =>
       this._projectClient.setListPreferences(orgId, preferences),
   };
 
-  readonly overview = {
-    getTokenUsage: (input: { range: string; projectId?: string; granularity: string }) =>
-      this._overviewClient.getTokenUsage(input),
-    getModelBreakdown: (input: { range: string; projectId?: string }) => this._overviewClient.getModelBreakdown(input),
-    getAgentKindBreakdown: (input: { range: string; projectId?: string }) =>
-      this._overviewClient.getAgentKindBreakdown(input),
-    getWorkspaceInsights: (input: { range: string; projectId?: string }) =>
-      this._overviewClient.getWorkspaceInsights(input),
-  };
-
-  readonly tokenUsage = {
-    migrationStatus: () => this.invoke("tokenUsage.migrationStatus"),
-  };
+  readonly tokenUsage = {};
 
   readonly workspace = {
     list: () => this._workspaceClient.list(),

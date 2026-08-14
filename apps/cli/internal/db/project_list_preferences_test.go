@@ -35,16 +35,7 @@ func TestProjectListPreferenceStore_GetMissingOrgReturnsDefaults(t *testing.T) {
 
 func TestProjectListPreferenceStore_RoundTrip(t *testing.T) {
 	store := openTestProjectListPreferenceDB(t)
-	projectStore := NewProjectStore(store.database)
 	workspaceStore := NewWorkspaceStore(store.database)
-	for _, project := range []*Project{
-		{ID: "project-1", Name: "one", OrganizationID: "org-1"},
-		{ID: "project-2", Name: "two", OrganizationID: "org-1"},
-	} {
-		if err := projectStore.Create(context.Background(), project); err != nil {
-			t.Fatalf("create project %s: %v", project.ID, err)
-		}
-	}
 	for _, workspace := range []*Workspace{
 		{ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-a", Kind: "primary", Status: "active", LocalPath: "/tmp/ws-1", State: "active"},
 		{ID: "ws-2", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-a", Kind: "worktree", Status: "active", LocalPath: "/tmp/ws-2", State: "active"},
@@ -146,19 +137,13 @@ func TestProjectListPreferenceStore_UnknownVersionReturnsDefaults(t *testing.T) 
 	}
 }
 
-func TestProjectListPreferenceStore_PruneRemovesDeletedProjectAndWorkspaceIDs(t *testing.T) {
+func TestProjectListPreferenceStore_PruneRemovesDeletedWorkspaceIDs(t *testing.T) {
 	store := openTestProjectListPreferenceDB(t)
-	projectStore := NewProjectStore(store.database)
 	workspaceStore := NewWorkspaceStore(store.database)
 
-	// Live rows: project-1 (org-1) with workspace ws-1 (node-a).
-	if err := projectStore.Create(context.Background(), &Project{
-		ID:             "project-1",
-		Name:           "live",
-		OrganizationID: "org-1",
-	}); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
+	// Live row: workspace ws-1 (org-1, node-a). Project ids are no longer
+	// pruned locally (projects are remote-authoritative); the desktop prunes
+	// them against the remote list.
 	if err := workspaceStore.Create(context.Background(), &Workspace{
 		ID:             "ws-1",
 		OrganizationID: "org-1",
@@ -175,13 +160,6 @@ func TestProjectListPreferenceStore_PruneRemovesDeletedProjectAndWorkspaceIDs(t 
 	stored := ProjectListPreference{
 		ByProject: ProjectListModePreference{
 			ProjectOrderIds: []string{"project-1", "project-gone"},
-			NodeOrderByParentId: map[string][]string{
-				"project:project-1":    {"node-a", "node-remote"},
-				"node:node-a":          {"project-1", "project-gone"},
-				"node:node-gone":       {"project-gone"},
-				"project:project-gone": {"node-a"},
-			},
-			FoldedProjectIds: []string{"project-1", "project-gone"},
 		},
 		WorkspaceOrderByParentId: map[string][]string{
 			"project-1:node-a":    {"ws-1", "ws-gone"},
@@ -197,27 +175,10 @@ func TestProjectListPreferenceStore_PruneRemovesDeletedProjectAndWorkspaceIDs(t 
 		t.Fatalf("get preferences: %v", err)
 	}
 
+	// Project ids are untouched (not pruned locally).
 	byProject := got.ByProject
-	if len(byProject.ProjectOrderIds) != 1 || byProject.ProjectOrderIds[0] != "project-1" {
-		t.Fatalf("pruned project order = %v, want [project-1]", byProject.ProjectOrderIds)
-	}
-	if len(byProject.FoldedProjectIds) != 1 || byProject.FoldedProjectIds[0] != "project-1" {
-		t.Fatalf("pruned folded projects = %v, want [project-1]", byProject.FoldedProjectIds)
-	}
-	nodeAProjects, ok := byProject.NodeOrderByParentId["node:node-a"]
-	if !ok || len(nodeAProjects) != 1 || nodeAProjects[0] != "project-1" {
-		t.Fatalf("pruned node: list = %v (ok=%v), want [project-1]", nodeAProjects, ok)
-	}
-	if _, gone := byProject.NodeOrderByParentId["project:project-gone"]; gone {
-		t.Fatalf("stale project: key must be dropped, got %v", byProject.NodeOrderByParentId)
-	}
-	// Remote node ids are kept even though no local row references them.
-	if nodes := byProject.NodeOrderByParentId["project:project-1"]; len(nodes) != 2 {
-		t.Fatalf("node ids must be kept, got %v", nodes)
-	}
-	// A node: key whose project list filters to empty is dropped entirely.
-	if _, ok := byProject.NodeOrderByParentId["node:node-gone"]; ok {
-		t.Fatalf("empty node: key must be dropped, got %v", byProject.NodeOrderByParentId)
+	if len(byProject.ProjectOrderIds) != 2 || byProject.ProjectOrderIds[0] != "project-1" {
+		t.Fatalf("project order must be preserved (not pruned), got %v", byProject.ProjectOrderIds)
 	}
 	wsOrder, ok := got.WorkspaceOrderByParentId["project-1:node-a"]
 	if !ok || len(wsOrder) != 1 || wsOrder[0] != "ws-1" {
@@ -230,13 +191,7 @@ func TestProjectListPreferenceStore_PruneRemovesDeletedProjectAndWorkspaceIDs(t 
 
 func TestProjectListPreferenceStore_MigratesLegacyPerModeWorkspaceOrder(t *testing.T) {
 	store := openTestProjectListPreferenceDB(t)
-	projectStore := NewProjectStore(store.database)
 	workspaceStore := NewWorkspaceStore(store.database)
-	if err := projectStore.Create(context.Background(), &Project{
-		ID: "p1", Name: "live", OrganizationID: "org-1",
-	}); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
 	for _, workspace := range []*Workspace{
 		{ID: "ws-a", OrganizationID: "org-1", ProjectID: "p1", NodeID: "n1", Kind: "primary", Status: "active", LocalPath: "/tmp/ws-a", State: "active"},
 		{ID: "ws-b", OrganizationID: "org-1", ProjectID: "p1", NodeID: "n1", Kind: "worktree", Status: "active", LocalPath: "/tmp/ws-b", State: "active"},

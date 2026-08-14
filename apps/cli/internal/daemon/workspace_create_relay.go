@@ -13,7 +13,7 @@ import (
 
 func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams) error {
 	payload := createflow.BuildRelayRequestEnvelope(req, h.nodeID, buildWorkspaceCreateStartedEvent(req, req.NodeID, req.Branch))
-	return h.sendWorkspaceSnapshotRelayNotification(payload)
+	return h.sendRelayDispatchRequest(payload, strings.TrimSpace(req.NodeID))
 }
 
 func (h *JSONRPCHandler) relayWorkspaceCreateProgress(prepared preparedWorkspaceCreate, event workspace.CreateProgressEvent) {
@@ -65,6 +65,14 @@ func (h *JSONRPCHandler) handleRelayedWorkspaceCreate(payload relayWorkspaceCrea
 		return
 	}
 	prepared, err := h.prepareWorkspaceCreate(h.serverContextOrBackground(), *payload.Request)
+	if err != nil {
+		failed := workspaceCreateFailedEvent{WorkspaceID: payload.WorkspaceID, Message: err.Error()}
+		h.relayWorkspaceCreateFailed(preparedWorkspaceCreate{workspaceID: payload.WorkspaceID, organizationID: payload.OrganizationID, projectID: payload.ProjectID, relayReplyNodeID: strings.TrimSpace(payload.SourceNodeID)}, failed)
+		return
+	}
+	// The executor node owns the local runtime record for the workspace it is
+	// about to build (the origin node skips local persistence when relaying).
+	prepared, err = h.registerPreparedWorkspace(h.serverContextOrBackground(), prepared)
 	if err != nil {
 		failed := workspaceCreateFailedEvent{WorkspaceID: payload.WorkspaceID, Message: err.Error()}
 		h.relayWorkspaceCreateFailed(preparedWorkspaceCreate{workspaceID: payload.WorkspaceID, organizationID: payload.OrganizationID, projectID: payload.ProjectID, relayReplyNodeID: strings.TrimSpace(payload.SourceNodeID)}, failed)

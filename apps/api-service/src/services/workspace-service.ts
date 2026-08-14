@@ -164,7 +164,10 @@ export class WorkspaceService {
         const insertedRows = await tx
           .insert(workspaces)
           .values({
-            id: newId(),
+            // Honor a client-supplied ID (the daemon generates it for local/remote
+            // creates so local and remote records stay aligned); otherwise generate
+            // one here.
+            id: input.id?.trim() || newId(),
             organizationId: input.organizationId,
             projectId: input.projectId,
             userId: input.actorUserId,

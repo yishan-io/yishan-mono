@@ -32,8 +32,6 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 			return h.dispatchMemory(method, params)
 		case "project":
 			return h.dispatchProject(ctx, method, params)
-		case "overview":
-			return h.dispatchOverview(ctx, method, params)
 		case "pi":
 			return h.dispatchPi(ctx, connState, method, params)
 		}

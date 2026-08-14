@@ -5,10 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 	createflow "yishan/apps/cli/internal/workspace/createflow"
 
@@ -20,9 +18,6 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
-	if err := h.guardWorkspaceCreateProject(ctx, req); err != nil {
-		return nil, err
-	}
 	prepared, err := h.prepareWorkspaceCreate(ctx, req)
 	if err != nil {
 		return nil, err
@@ -30,6 +25,11 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	prepared, err = h.registerPreparedWorkspace(ctx, prepared)
 	if err != nil {
 		return nil, err
+	}
+	// Write the cloud record (provisioning) before provisioning or dispatching,
+	// so the same create→provision→activate→close lifecycle is node-agnostic.
+	if prepared.registration != nil {
+		h.createRemoteWorkspaceRecord(ctx, *prepared.registration)
 	}
 	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.workspaceID, "created")
 	h.events.Publish(frontendEvent{Topic: "workspaceCreateStarted", Payload: prepared.startedEvent})
@@ -83,6 +83,9 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 				h.rollbackWorkspaceCreateFailure(ctx, prepared, created)
 				return err
 			}
+			if prepared.registration != nil {
+				h.updateRemoteWorkspaceRecord(ctx, *prepared.registration, created.Path)
+			}
 			h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, created.ID, "updated")
 			return nil
 		},
@@ -92,63 +95,6 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 			h.publishWorkspaceCreateCompleted(prepared, created, warnings)
 		},
 	}, reportProgress)
-}
-
-// guardWorkspaceCreateProject rejects workspace.create for non-git projects
-// (sourceType "unknown"). The target project resolves from `projectId`, then
-// `repoKey`, then the workspace whose local path matches `sourcePath` (the
-// agent MCP workspace_create tool sends only repoKey + sourcePath, and
-// desktop-created projects carry a NULL repoKey in the local db). A request
-// that cannot be positively identified as non-git falls through to the
-// existing create flow, which keeps working for git projects whose local
-// record is missing or lacks a repoKey.
-func (h *JSONRPCHandler) guardWorkspaceCreateProject(ctx context.Context, req workspaceCreateParams) error {
-	if h.localDatabase == nil {
-		return nil
-	}
-	projectID := strings.TrimSpace(req.ProjectID)
-	if projectID == "" {
-		projectID = h.resolveWorkspaceCreateProjectID(ctx, req)
-	}
-	if projectID == "" {
-		return nil
-	}
-	project, err := h.projectStore().Get(ctx, projectID)
-	if err != nil {
-		return nil
-	}
-	if project.SourceType == "unknown" {
-		return workspace.NewRPCError(rpcCodeInvalidParams, "cannot create a workspace for a non-git project")
-	}
-	return nil
-}
-
-// resolveWorkspaceCreateProjectID finds the target project from `repoKey`
-// (local project records carry it only for API-imported projects), then from
-// the workspace whose local path matches the requested sourcePath — the
-// reliable signal for the direct-create and agent paths, where the folder is
-// already a known workspace.
-func (h *JSONRPCHandler) resolveWorkspaceCreateProjectID(ctx context.Context, req workspaceCreateParams) string {
-	repoKey := strings.TrimSpace(req.RepoKey)
-	if repoKey != "" {
-		if project, err := h.projectStore().GetByRepoKey(ctx, repoKey); err == nil {
-			return project.ID
-		}
-	}
-	sourcePath := strings.TrimSpace(req.SourcePath)
-	if sourcePath == "" {
-		return ""
-	}
-	workspaces, err := localdb.NewWorkspaceStore(h.localDatabase).List(ctx)
-	if err != nil {
-		return ""
-	}
-	for _, workspace := range workspaces {
-		if strings.TrimSpace(workspace.LocalPath) == sourcePath && strings.TrimSpace(workspace.ProjectID) != "" {
-			return workspace.ProjectID
-		}
-	}
-	return ""
 }
 
 func generateWorkspaceID() string {

@@ -1,5 +1,11 @@
 import { listOrganizationNodes, unregisterOrganizationNode, updateOrganizationNodeScope } from "./nodeApi";
 import {
+  getOverviewAgentKindBreakdown,
+  getOverviewModelBreakdown,
+  getOverviewTokenUsage,
+  getOverviewWorkspaceInsights,
+} from "./overviewApi";
+import {
   addOrganizationMember,
   cancelOrganizationInvite,
   createOrganization,
@@ -22,7 +28,6 @@ import {
 } from "./scheduledJobApi";
 import { createServiceToken, listServiceTokens, revokeServiceToken } from "./serviceTokenApi";
 import { getVoiceTranscriptionUsage, transcribeVoice } from "./voiceTranscriptionApi";
-import { createProjectWorkspace, listProjectWorkspaces } from "./workspaceApi";
 import { listWorkspacePullRequests, upsertWorkspacePullRequest } from "./workspacePullRequestApi";
 
 export const api = {
@@ -47,10 +52,6 @@ export const api = {
     delete: deleteProject,
     update: updateProject,
   },
-  workspace: {
-    listByProject: listProjectWorkspaces,
-    createForProject: createProjectWorkspace,
-  },
   workspacePullRequest: {
     list: listWorkspacePullRequests,
     upsert: upsertWorkspacePullRequest,
@@ -73,6 +74,12 @@ export const api = {
     list: listServiceTokens,
     create: createServiceToken,
     revoke: revokeServiceToken,
+  },
+  overview: {
+    getTokenUsage: getOverviewTokenUsage,
+    getModelBreakdown: getOverviewModelBreakdown,
+    getAgentKindBreakdown: getOverviewAgentKindBreakdown,
+    getWorkspaceInsights: getOverviewWorkspaceInsights,
   },
 };
 

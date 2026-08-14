@@ -15,15 +15,10 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new cleanup store: %v", err)
 	}
-	projectStore := localdb.NewProjectStore(database)
-	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
-	if err := projectStore.Create(context.Background(), &project); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
 	workspacePath := t.TempDir()
 	workspaceStore := localdb.NewWorkspaceStore(database)
 	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
-		ID: "workspace-1", OrganizationID: "org-1", ProjectID: project.ID, NodeID: "node-1",
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: workspacePath, State: "active",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)

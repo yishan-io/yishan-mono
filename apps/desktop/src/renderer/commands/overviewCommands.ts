@@ -1,38 +1,27 @@
 import type { OverviewTimeRange } from "../api/overviewApi.types";
+import { api } from "../api";
 import { getErrorMessage } from "../helpers/errorHelpers";
-import { getDaemonClient } from "../rpc/rpcTransport";
+import { sessionStore } from "../store/sessionStore";
 import { overviewStore } from "../store/overviewStore";
+
+function selectedOrganizationId(): string {
+  const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
+  if (!organizationId) {
+    throw new Error("No organization selected");
+  }
+  return organizationId;
+}
 
 export async function refreshOverviewTokenUsage(): Promise<void> {
   const { timeRange, selectedProjectId, granularity } = overviewStore.getState();
   overviewStore.getState().setTokenUsageLoadState("loading");
 
   try {
-    const client = await getDaemonClient();
-    const result = (await client.overview.getTokenUsage({
+    const result = await api.overview.getTokenUsage(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
       granularity,
-    })) as {
-      series: Array<{
-        bucketStartUtc: string;
-        totalTokens: number;
-        inputTokens: number;
-        outputTokens: number;
-        cachedInputTokens: number;
-        cachedWriteTokens: number;
-        turnCount: number;
-        toolCallCount: number;
-        totalCostUsd: number;
-      }>;
-      cachedTotal: number;
-      cachedWriteTotal: number;
-      uncachedTotal: number;
-      grandTotal: number;
-      turnTotal: number;
-      toolCallTotal: number;
-      totalCostUsd: number;
-    };
+    });
     overviewStore
       .getState()
       .setTokenUsageData(
@@ -56,21 +45,10 @@ export async function refreshOverviewModelBreakdown(): Promise<void> {
   overviewStore.getState().setModelBreakdownLoadState("loading");
 
   try {
-    const client = await getDaemonClient();
-    const result = (await client.overview.getModelBreakdown({
+    const result = await api.overview.getModelBreakdown(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
-    })) as {
-      models: Array<{
-        modelNormalized: string;
-        agentKind: string;
-        totalTokens: number;
-        inputTokens: number;
-        outputTokens: number;
-        totalCostUsd: number;
-        percentage: number;
-      }>;
-    };
+    });
     overviewStore.getState().setModelBreakdown(result.models);
     overviewStore.getState().setModelBreakdownLoadState("loaded");
   } catch (error) {
@@ -83,19 +61,10 @@ export async function refreshOverviewAgentKindBreakdown(): Promise<void> {
   overviewStore.getState().setAgentKindBreakdownLoadState("loading");
 
   try {
-    const client = await getDaemonClient();
-    const result = (await client.overview.getAgentKindBreakdown({
+    const result = await api.overview.getAgentKindBreakdown(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
-    })) as {
-      agentKinds: Array<{
-        agentKind: string;
-        totalTokens: number;
-        inputTokens: number;
-        outputTokens: number;
-        percentage: number;
-      }>;
-    };
+    });
     overviewStore.getState().setAgentKindBreakdown(result.agentKinds);
     overviewStore.getState().setAgentKindBreakdownLoadState("loaded");
   } catch (error) {
@@ -108,36 +77,10 @@ export async function refreshOverviewWorkspaceInsights(): Promise<void> {
   overviewStore.getState().setWorkspaceInsightsLoadState("loading");
 
   try {
-    const client = await getDaemonClient();
-    const result = (await client.overview.getWorkspaceInsights({
+    const result = await api.overview.getWorkspaceInsights(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
-    })) as {
-      closedWorkspaceCount: number;
-      averageLifetimeHours: number | null;
-      lastClosedWorkspaces: Array<{
-        id: string;
-        projectId: string;
-        projectName: string;
-        branch: string | null;
-        createdAt: string;
-        closedAt: string;
-        lifetimeHours: number;
-        totalTokens: number;
-        totalCostUsd: number;
-      }>;
-      primaryWorkspaceCount: number;
-      primaryWorkspaceTokens: number;
-      topPrimaryWorkspaces: Array<{
-        id: string;
-        projectId: string;
-        projectName: string;
-        branch: string | null;
-        createdAt: string;
-        totalTokens: number;
-        totalCostUsd: number;
-      }>;
-    };
+    });
     overviewStore.getState().setWorkspaceInsights(result);
     overviewStore.getState().setWorkspaceInsightsLoadState("loaded");
   } catch (error) {

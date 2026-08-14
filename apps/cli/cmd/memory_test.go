@@ -146,13 +146,6 @@ func openTestWorkspaceDB(dir string) (*sql.DB, error) {
 		database.Close()
 		return nil, err
 	}
-	projectStore := localdb.NewProjectStore(database)
-	if err := projectStore.Create(context.Background(), &localdb.Project{
-		ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true,
-	}); err != nil {
-		database.Close()
-		return nil, err
-	}
 	workspaceStore := localdb.NewWorkspaceStore(database)
 	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",

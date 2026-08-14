@@ -12,7 +12,6 @@ import { sessionStore } from "../../store/sessionStore";
 import { LoginView } from "../LoginView";
 import { WorkspaceView } from "../WorkspaceView";
 import { AppBootstrapLoadingView } from "./AppBootstrapLoadingView";
-import { MigrationView } from "./MigrationView";
 import { OnboardOrgView } from "./OnboardOrgView";
 
 const WORKSPACE_ROUTE = "/";
@@ -73,7 +72,6 @@ export function ApplicationRouterView() {
   const setAuthState = sessionStore((state) => state.setAuthState);
   const organizations = sessionStore((state) => state.organizations);
   const [appBootstrapReady, setAppBootstrapReady] = useState(false);
-  const [migrationComplete, setMigrationComplete] = useState(false);
   const [appBootstrapError, setAppBootstrapError] = useState<string | null>(null);
   const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
 
@@ -277,10 +275,6 @@ export function ApplicationRouterView() {
 
   if (organizations.length === 0) {
     return <OnboardOrgView />;
-  }
-
-  if (!migrationComplete) {
-    return <MigrationView onComplete={() => setMigrationComplete(true)} />;
   }
 
   return (

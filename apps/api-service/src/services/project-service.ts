@@ -41,6 +41,7 @@ export type ProjectWithWorkspacesView = ProjectView & {
     kind: "primary" | "worktree";
     status: WorkspaceStatus;
     branch: string | null;
+    sourceBranch: string | null;
     localPath: string;
     latestPullRequest: WorkspacePullRequestSummary | null;
     createdAt: Date;

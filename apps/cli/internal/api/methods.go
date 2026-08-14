@@ -150,6 +150,14 @@ func (c *Client) ListProjects(orgID string) (ListProjectsResponse, error) {
 	return response, err
 }
 
+// ListProjectsWithWorkspaces lists an org's projects together with the actor's
+// live (non-closed) workspaces, in one backend call.
+func (c *Client) ListProjectsWithWorkspaces(orgID string) (ListProjectsWithWorkspacesResponse, error) {
+	var response ListProjectsWithWorkspacesResponse
+	err := c.DoDecode("GET", "/orgs/"+orgID+"/projects?withWorkspaces=true", nil, &response)
+	return response, err
+}
+
 func (c *Client) CreateProject(orgID string, input CreateProjectInput) (CreateProjectResponse, error) {
 	payload := map[string]string{
 		"name": input.Name,

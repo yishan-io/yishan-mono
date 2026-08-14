@@ -82,6 +82,12 @@ type JSONRPCHandler struct {
 	// requests to the relay on behalf of the desktop.
 	relayConnMu sync.RWMutex
 	relayConn   *wsConnState
+
+	// relayPending holds pending relay dispatch answers (workspace create/close
+	// routing verdicts) keyed by request id. The relay answers synchronously when
+	// a targeted envelope is sent as a JSON-RPC request; entries expire on timeout.
+	relayPendingMu sync.Mutex
+	relayPending   map[string]chan relayDispatchVerdict
 }
 
 // NewJSONRPCHandler wires a fresh handler. settingsDirAnchor is any path inside
@@ -147,6 +153,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		desktopConns:         make(map[*wsConnState]struct{}),
 		stoppingPiSessions:   make(map[string]struct{}),
 		remoteStreamSubs:     make(map[string]map[*wsConnState]struct{}),
+		relayPending:         make(map[string]chan relayDispatchVerdict),
 		fileCacheSubID:       fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)

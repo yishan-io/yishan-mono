@@ -48,9 +48,16 @@ func (h *JSONRPCHandler) finalizePersistedWorkspace(ctx context.Context, prepare
 	}
 	status := "active"
 	state := created.State
-	return localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, created.ID, localdb.WorkspaceUpdate{
+	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, created.ID, localdb.WorkspaceUpdate{
 		Status: &status, State: &state, LocalPath: &created.Path,
 	})
+	// A relayed create runs on the executor node, which may not have a local row
+	// for the workspace (the origin node wrote it). Tolerate a missing row: the
+	// remote record is authoritative and the cache is reconciled on the next sync.
+	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+		return err
+	}
+	return nil
 }
 
 func (h *JSONRPCHandler) updatePersistedWorkspaceState(ctx context.Context, workspaceID string, state string, health string) error {
@@ -70,10 +77,15 @@ func (h *JSONRPCHandler) closePersistedWorkspace(ctx context.Context, workspaceI
 	if h.localDatabase == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
+	workspaceStore := localdb.NewWorkspaceStore(h.localDatabase)
 	status := "closed"
-	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, workspaceID, localdb.WorkspaceUpdate{Status: &status})
-	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	if err := workspaceStore.Update(ctx, workspaceID, localdb.WorkspaceUpdate{Status: &status}); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
+	}
+	// Mirror the closed status on the remote record (best-effort). The local row
+	// still carries the org/project ids after the status update.
+	if record, err := workspaceStore.Get(ctx, workspaceID); err == nil {
+		h.closeRemoteWorkspaceRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID)
 	}
 	return nil
 }

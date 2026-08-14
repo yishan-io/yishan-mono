@@ -168,6 +168,177 @@ func TestHandlePublishOrgEvent_ForwardsSourceNodeID(t *testing.T) {
 	}
 }
 
+func TestHandleMessage_WorkspaceSnapshotChanged_BroadcastsToOrgExcludingSource(t *testing.T) {
+	srv := newTestServer(t)
+	targetSrv, targetCli, cleanupTarget := pipeWebSocket(t)
+	defer cleanupTarget()
+	sourceSrv, sourceCli, cleanupSource := pipeWebSocket(t)
+	defer cleanupSource()
+
+	srv.sessions.Register(targetSrv, auth.NodeIdentity{NodeID: "node-2", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+	srv.sessions.Register(sourceSrv, auth.NodeIdentity{NodeID: "node-1", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+
+	params, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"projectId":      "project-1",
+		"workspaceId":    "ws-1",
+		"sourceNodeId":   "node-1",
+		"targetNodeId":   "node-2",
+		"change":         "workspace.create.request",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+	payload, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"method":  MethodWorkspaceSnapshotChanged,
+		"params":  json.RawMessage(params),
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	if handled := srv.handleMessage("node-1", payload); !handled {
+		t.Fatal("expected workspace.snapshot.changed to be handled by the relay")
+	}
+
+	// Target node receives the broadcast.
+	if err := targetCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set target deadline: %v", err)
+	}
+	var targetMessage map[string]any
+	if err := targetCli.ReadJSON(&targetMessage); err != nil {
+		t.Fatalf("target node should receive the notification: %v", err)
+	}
+	if targetMessage["method"] != MethodWorkspaceSnapshotChanged {
+		t.Fatalf("expected method %s, got %v", MethodWorkspaceSnapshotChanged, targetMessage["method"])
+	}
+
+	// Source node must not receive its own message back.
+	if err := sourceCli.SetReadDeadline(time.Now().Add(300 * time.Millisecond)); err != nil {
+		t.Fatalf("set source deadline: %v", err)
+	}
+	var sourceMessage map[string]any
+	if err := sourceCli.ReadJSON(&sourceMessage); err == nil {
+		t.Fatalf("source node should not receive its own broadcast, got %v", sourceMessage)
+	}
+}
+
+func TestHandleMessage_WorkspaceSnapshotChanged_TargetOffline_Rejects(t *testing.T) {
+	srv := newTestServer(t)
+	sourceSrv, sourceCli, cleanupSource := pipeWebSocket(t)
+	defer cleanupSource()
+	srv.sessions.Register(sourceSrv, auth.NodeIdentity{NodeID: "node-1", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+
+	params, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"projectId":      "project-1",
+		"workspaceId":    "ws-1",
+		"sourceNodeId":   "node-1",
+		"targetNodeId":   "node-2", // never registered → offline
+		"change":         "workspace.close.request",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+	payload, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      "dispatch-node-2-1",
+		"method":  MethodWorkspaceSnapshotChanged,
+		"params":  json.RawMessage(params),
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	if handled := srv.handleMessage("node-1", payload); !handled {
+		t.Fatal("expected workspace.snapshot.changed to be handled by the relay")
+	}
+
+	// Source receives a rejection response: the target is offline, so the
+	// dispatch is NOT accepted and nothing is broadcast.
+	if err := sourceCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set source deadline: %v", err)
+	}
+	var resp map[string]any
+	if err := sourceCli.ReadJSON(&resp); err != nil {
+		t.Fatalf("source should receive a rejection response: %v", err)
+	}
+	if resp["id"] != "dispatch-node-2-1" {
+		t.Fatalf("expected response id dispatch-node-2-1, got %v", resp["id"])
+	}
+	result, ok := resp["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected result object, got %#v", resp["result"])
+	}
+	if result["accepted"] != false {
+		t.Fatalf("expected accepted=false for offline target, got %#v", result)
+	}
+}
+
+func TestHandleMessage_WorkspaceSnapshotChanged_TargetOnline_AcceptsAndBroadcasts(t *testing.T) {
+	srv := newTestServer(t)
+	targetSrv, targetCli, cleanupTarget := pipeWebSocket(t)
+	defer cleanupTarget()
+	sourceSrv, sourceCli, cleanupSource := pipeWebSocket(t)
+	defer cleanupSource()
+	srv.sessions.Register(targetSrv, auth.NodeIdentity{NodeID: "node-2", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+	srv.sessions.Register(sourceSrv, auth.NodeIdentity{NodeID: "node-1", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+
+	params, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"projectId":      "project-1",
+		"workspaceId":    "ws-1",
+		"sourceNodeId":   "node-1",
+		"targetNodeId":   "node-2",
+		"change":         "workspace.close.request",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+	payload, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      "dispatch-node-2-2",
+		"method":  MethodWorkspaceSnapshotChanged,
+		"params":  json.RawMessage(params),
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	if handled := srv.handleMessage("node-1", payload); !handled {
+		t.Fatal("expected workspace.snapshot.changed to be handled by the relay")
+	}
+
+	// Source receives accepted=true.
+	if err := sourceCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set source deadline: %v", err)
+	}
+	var resp map[string]any
+	if err := sourceCli.ReadJSON(&resp); err != nil {
+		t.Fatalf("source should receive an accept response: %v", err)
+	}
+	result, ok := resp["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected result object, got %#v", resp["result"])
+	}
+	if result["accepted"] != true {
+		t.Fatalf("expected accepted=true for online target, got %#v", result)
+	}
+
+	// Target receives the broadcast.
+	if err := targetCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set target deadline: %v", err)
+	}
+	var targetMessage map[string]any
+	if err := targetCli.ReadJSON(&targetMessage); err != nil {
+		t.Fatalf("target node should receive the notification: %v", err)
+	}
+	if targetMessage["method"] != MethodWorkspaceSnapshotChanged {
+		t.Fatalf("expected method %s, got %v", MethodWorkspaceSnapshotChanged, targetMessage["method"])
+	}
+}
+
 func TestHandleMetrics_CachedResponse(t *testing.T) {
 	srv := newTestServer(t)
 

@@ -117,9 +117,6 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := migrateRemoteToLocal(database, runtime); err != nil {
-		log.Warn().Err(err).Msg("remote-to-local API migration skipped — will retry on next restart")
-	}
 	workspaceManager, handler, err := buildAccountScopedHandler(database, envDir, dataDir, cfg, runtime, daemonID)
 	if err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
@@ -197,33 +194,6 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 		return nil, fmt.Errorf("clean up legacy profile files: %w", err)
 	}
 	return database, nil
-}
-
-func migrateRemoteToLocal(database *sql.DB, runtime *cliruntime.Runtime) error {
-	if runtime == nil || !runtime.APIConfigured() {
-		return nil
-	}
-	orgs, err := listOrganizationIDs(runtime)
-	if err != nil {
-		return fmt.Errorf("list organizations for remote-to-local migration: %w", err)
-	}
-	client := &daemonAPIClient{runtime: runtime}
-	if err := localdb.MigrateRemoteToLocal(context.Background(), database, orgs, client); err != nil {
-		return fmt.Errorf("migrate remote to local: %w", err)
-	}
-	return nil
-}
-
-func listOrganizationIDs(runtime *cliruntime.Runtime) ([]string, error) {
-	resp, err := runtime.APIClient().ListOrganizations()
-	if err != nil {
-		return nil, err
-	}
-	orgs := make([]string, 0, len(resp.Organizations))
-	for _, org := range resp.Organizations {
-		orgs = append(orgs, org.ID)
-	}
-	return orgs, nil
 }
 
 func initComputerConfig(handler *JSONRPCHandler) error {

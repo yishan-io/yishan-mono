@@ -134,6 +134,17 @@ func applyMigration(database *sql.DB, migrationName string) error {
 	if err != nil {
 		return fmt.Errorf("read migration %q: %w", migrationName, err)
 	}
+	// SQLite cannot change foreign_keys inside a transaction, and table-rebuild
+	// migrations (dropping a FK / table) need FK checks off so DROP TABLE does
+	// not cascade-delete child rows. The pool is single-connection
+	// (configure sets MaxOpenConns(1)), so this pragma is reliable for the
+	// transaction below.
+	if _, err := database.Exec(`PRAGMA foreign_keys=OFF`); err != nil {
+		return fmt.Errorf("disable foreign keys for migration %q: %w", migrationName, err)
+	}
+	defer func() {
+		_, _ = database.Exec(`PRAGMA foreign_keys=ON`)
+	}()
 	transaction, err := database.Begin()
 	if err != nil {
 		return fmt.Errorf("begin migration %q: %w", migrationName, err)

@@ -18,15 +18,10 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	projectStore := localdb.NewProjectStore(database)
-	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
-	if err := projectStore.Create(context.Background(), &project); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
 	workspacePath := t.TempDir()
 	workspaceStore := localdb.NewWorkspaceStore(database)
 	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
-		ID: "workspace-1", OrganizationID: "org-1", ProjectID: project.ID, NodeID: "node-1",
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: workspacePath, State: "active",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
@@ -51,7 +46,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("canonicalize workspace path: %v", err)
 	}
-	if workspace.Path != canonicalWorkspacePath || workspace.ProjectID != project.ID {
+	if workspace.Path != canonicalWorkspacePath || workspace.ProjectID != "project-1" {
 		t.Fatalf("unexpected hydrated workspace: %#v", workspace)
 	}
 	if workspace.PullRequest == nil || workspace.PullRequest.Number != 42 {
@@ -167,7 +162,7 @@ func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
 	}
 }
 
-func openTestManagerStore(t *testing.T, projectID string) (*Manager, *localdb.WorkspaceStore) {
+func openTestManagerStore(t *testing.T) (*Manager, *localdb.WorkspaceStore) {
 	t.Helper()
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -177,17 +172,12 @@ func openTestManagerStore(t *testing.T, projectID string) (*Manager, *localdb.Wo
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	projectStore := localdb.NewProjectStore(database)
-	project := localdb.Project{ID: projectID, Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
-	if err := projectStore.Create(context.Background(), &project); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
 	store := localdb.NewWorkspaceStore(database)
 	return NewManagerWithStore(store), store
 }
 
 func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
-	manager, store := openTestManagerStore(t, "project-1")
+	manager, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branchMissing := "feature/missing"
 	if err := store.Create(context.Background(), &localdb.Workspace{
@@ -238,7 +228,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 }
 
 func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
-	manager, store := openTestManagerStore(t, "project-1")
+	manager, store := openTestManagerStore(t)
 	filePath := filepath.Join(t.TempDir(), "not-a-directory")
 	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
 		t.Fatalf("write file: %v", err)
@@ -271,7 +261,7 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 }
 
 func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
-	manager, store := openTestManagerStore(t, "project-1")
+	manager, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branch := "feature/closed"
 	if err := store.Create(context.Background(), &localdb.Workspace{
@@ -290,7 +280,7 @@ func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
 }
 
 func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testing.T) {
-	manager, store := openTestManagerStore(t, "project-1")
+	manager, store := openTestManagerStore(t)
 	workspacePath := t.TempDir()
 	branch := "feature/restored"
 	health := WorkspaceHealthPathMissing
@@ -322,7 +312,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 }
 
 func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
-	manager, store := openTestManagerStore(t, "project-1")
+	manager, store := openTestManagerStore(t)
 	// Plain directory without .git: Open succeeds, but the persisted
 	// not-worktree error must survive rehydration.
 	workspacePath := t.TempDir()

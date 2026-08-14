@@ -383,7 +383,6 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         memory: proxyClient.memory,
         pi: proxyClient.pi,
         project: transportClient.project,
-        overview: transportClient.overview,
         tokenUsage: transportClient.tokenUsage,
         context: {
           getState: () => transportClient.context.getState(),
