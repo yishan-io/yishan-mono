@@ -2,14 +2,16 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 )
 
-func newProjectListPreferencesTestHandler(t *testing.T) (*JSONRPCHandler, *localdb.ProjectStore) {
+func newProjectListPreferencesTestHandler(t *testing.T) *JSONRPCHandler {
 	t.Helper()
 	root := t.TempDir()
 	handler := NewJSONRPCHandler(
@@ -32,11 +34,11 @@ func newProjectListPreferencesTestHandler(t *testing.T) (*JSONRPCHandler, *local
 		t.Fatalf("migrate database: %v", err)
 	}
 	handler.SetLocalDatabase(database, root)
-	return handler, localdb.NewProjectStore(database)
+	return handler
 }
 
 func TestHandleProjectGetListPreferences_ReturnsDefaultsForMissingOrg(t *testing.T) {
-	handler, _ := newProjectListPreferencesTestHandler(t)
+	handler := newProjectListPreferencesTestHandler(t)
 
 	result, err := handler.handleProjectGetListPreferences(
 		context.Background(),
@@ -55,15 +57,7 @@ func TestHandleProjectGetListPreferences_ReturnsDefaultsForMissingOrg(t *testing
 }
 
 func TestHandleProjectSetGetListPreferences_RoundTrip(t *testing.T) {
-	handler, projectStore := newProjectListPreferencesTestHandler(t)
-
-	if err := projectStore.Create(context.Background(), &localdb.Project{
-		ID:             "project-1",
-		Name:           "one",
-		OrganizationID: "org-1",
-	}); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
+	handler := newProjectListPreferencesTestHandler(t)
 
 	preferences := localdb.ProjectListPreference{
 		ByProject: localdb.ProjectListModePreference{
@@ -95,7 +89,7 @@ func TestHandleProjectSetGetListPreferences_RoundTrip(t *testing.T) {
 }
 
 func TestHandleProjectGetListPreferences_RequiresOrganizationID(t *testing.T) {
-	handler, _ := newProjectListPreferencesTestHandler(t)
+	handler := newProjectListPreferencesTestHandler(t)
 
 	_, err := handler.handleProjectGetListPreferences(context.Background(), marshalParams(t, map[string]any{}))
 	requireRPCError(t, err, "organizationId is required")
@@ -104,12 +98,15 @@ func TestHandleProjectGetListPreferences_RequiresOrganizationID(t *testing.T) {
 	requireRPCError(t, err, "organizationId is required")
 }
 
-func TestHandleProjectGetListPreferences_PrunesDeletedProject(t *testing.T) {
-	handler, projectStore := newProjectListPreferencesTestHandler(t)
+func TestHandleProjectGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
+	handler := newProjectListPreferencesTestHandler(t)
+	database := localdb.NewWorkspaceStore(handler.localDatabase)
 
-	created := &localdb.Project{ID: "project-1", Name: "one", OrganizationID: "org-1"}
-	if err := projectStore.Create(context.Background(), created); err != nil {
-		t.Fatalf("create project: %v", err)
+	if err := database.Create(context.Background(), &localdb.Workspace{
+		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
+		Kind: workspace.KindWorktree, Status: "active", LocalPath: "/tmp/ws", State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
 	}
 
 	if _, err := handler.handleProjectSetListPreferences(
@@ -117,17 +114,15 @@ func TestHandleProjectGetListPreferences_PrunesDeletedProject(t *testing.T) {
 		marshalParams(t, map[string]any{
 			"organizationId": "org-1",
 			"preferences": localdb.ProjectListPreference{
-				ByProject: localdb.ProjectListModePreference{
-					ProjectOrderIds: []string{"project-1", "project-gone"},
-				},
+				WorkspaceOrderByParentId: map[string][]string{"project-1:node-1": {"ws-1", "ws-gone"}},
 			},
 		}),
 	); err != nil {
 		t.Fatalf("set list preferences: %v", err)
 	}
 
-	if err := projectStore.Delete(context.Background(), "project-1"); err != nil {
-		t.Fatalf("delete project: %v", err)
+	if err := database.Delete(context.Background(), "ws-1"); err != nil {
+		t.Fatalf("delete workspace: %v", err)
 	}
 
 	result, err := handler.handleProjectGetListPreferences(
@@ -138,7 +133,26 @@ func TestHandleProjectGetListPreferences_PrunesDeletedProject(t *testing.T) {
 		t.Fatalf("get list preferences: %v", err)
 	}
 	got := result.(localdb.ProjectListPreference)
-	if len(got.ByProject.ProjectOrderIds) != 0 {
-		t.Fatalf("deleted project id must be pruned, got %v", got.ByProject.ProjectOrderIds)
+	if len(got.WorkspaceOrderByParentId["project-1:node-1"]) != 0 {
+		t.Fatalf("deleted workspace id must be pruned, got %v", got.WorkspaceOrderByParentId)
+	}
+}
+
+func marshalParams(t *testing.T, value any) json.RawMessage {
+	t.Helper()
+	raw, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+	return raw
+}
+
+func requireRPCError(t *testing.T, err error, messageContains string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected error containing %q, got nil", messageContains)
+	}
+	if !strings.Contains(err.Error(), messageContains) {
+		t.Fatalf("expected error containing %q, got %q", messageContains, err.Error())
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
@@ -87,7 +88,28 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	if strings.TrimSpace(req.ProjectID) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "projectId is required")
 	}
+	// A workspace whose worktree lives on another node is closed by relaying the
+	// close request to that node; the executor tears down the worktree and marks
+	// the record closed (same local-first pattern as a local close).
+	nodeID := ""
+	if h.localDatabase != nil {
+		if record, err := localdb.NewWorkspaceStore(h.localDatabase).Get(ctx, req.WorkspaceID); err == nil {
+			nodeID = record.NodeID
+		}
+	}
+	// The origin deliberately skips the local row for remote-target creates, so a
+	// missing local row is not proof of a local workspace: resolve the executor
+	// node from the remote record before falling back to a local close.
+	if strings.TrimSpace(nodeID) == "" {
+		nodeID = h.resolveRemoteWorkspaceNode(ctx, req.OrganizationID, req.ProjectID, req.WorkspaceID)
+	}
+	if strings.TrimSpace(nodeID) != "" && strings.TrimSpace(nodeID) != strings.TrimSpace(h.nodeID) {
+		return h.relayWorkspaceClose(req, nodeID)
+	}
+	return h.closeWorkspaceLocally(ctx, req)
+}
 
+func (h *JSONRPCHandler) closeWorkspaceLocally(ctx context.Context, req workspaceCloseParams) (any, error) {
 	h.manager.SetWorkspaceState(req.WorkspaceID, workspace.WorkspaceStateClosing, "")
 
 	if h.tokenUsage != nil {

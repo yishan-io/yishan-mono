@@ -386,21 +386,12 @@ func (s *OverviewStore) GetWorkspaceInsights(
 }
 
 func (s *OverviewStore) projectNames(ctx context.Context, ids []string) map[string]string {
-	if len(ids) == 0 {
-		return nil
-	}
+	// The local projects table is gone (projects are remote-authoritative), so
+	// resolve names to the id as a fallback. The remote overview (zaa40)
+	// replaces this path.
 	names := make(map[string]string, len(ids))
-	query, args := buildInQuery(`SELECT id, name FROM projects WHERE id IN`, ids)
-	rows, err := s.database.QueryContext(ctx, query, args...)
-	if err != nil {
-		return names
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id, name string
-		if err := rows.Scan(&id, &name); err == nil {
-			names[id] = name
-		}
+	for _, id := range ids {
+		names[id] = id
 	}
 	return names
 }

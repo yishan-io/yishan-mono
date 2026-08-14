@@ -21,7 +21,6 @@ func TestOpenAndMigrate_CreatesSchemaAndConfiguresDatabase(t *testing.T) {
 
 	assertJournalMode(t, database)
 	assertForeignKeysEnabled(t, database)
-	assertTableExists(t, database, "projects")
 	assertTableExists(t, database, "workspaces")
 	assertTableExists(t, database, "workspace_pull_requests")
 	assertTableExists(t, database, "_metadata")
@@ -47,8 +46,8 @@ func TestMigrate_IsIdempotent(t *testing.T) {
 	if err := database.QueryRow(`SELECT COUNT(*) FROM _migrations`).Scan(&migrationCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationCount != 6 {
-		t.Fatalf("expected six applied migrations, got %d", migrationCount)
+	if migrationCount != 7 {
+		t.Fatalf("expected seven applied migrations, got %d", migrationCount)
 	}
 }
 
@@ -67,9 +66,6 @@ func TestMigrate_CleansUpLegacyMetadataKeys(t *testing.T) {
 		if err := setMetadataKey(context.Background(), database, key, "true"); err != nil {
 			t.Fatalf("seed legacy marker %q: %v", key, err)
 		}
-	}
-	if err := setMetadataKey(context.Background(), database, RemoteToLocalMigrationCompletedKey, RemoteToLocalMigrationVersion); err != nil {
-		t.Fatalf("seed migration marker: %v", err)
 	}
 	if err := setMetadataKey(context.Background(), database, "token_usage_cost_backfill_started_at", "1780000000000"); err != nil {
 		t.Fatalf("seed backfill started-at: %v", err)
@@ -90,13 +86,6 @@ func TestMigrate_CleansUpLegacyMetadataKeys(t *testing.T) {
 		if exists {
 			t.Fatalf("expected legacy marker %q to be cleaned up", key)
 		}
-	}
-	complete, err := RemoteToLocalMigrationComplete(context.Background(), database)
-	if err != nil {
-		t.Fatalf("read migration status: %v", err)
-	}
-	if !complete {
-		t.Fatal("expected remote-to-local migration marker to be preserved")
 	}
 	for _, activeKey := range []string{"token_usage_cost_backfill_started_at", "token_usage_cost_backfill_completed"} {
 		exists, err := MetadataKeyExists(context.Background(), database, activeKey)

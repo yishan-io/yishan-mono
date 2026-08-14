@@ -91,6 +91,13 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 		if !isLiveWorkspaceStatus(storedWorkspace.Status) {
 			continue
 		}
+		// A provisioning row has no worktree yet (create is in flight, or the
+		// daemon stopped mid-create): a missing path is expected then, not an
+		// error. Skip it so it is never opened and marked error/path-missing;
+		// the create goroutine (or a later recovery pass) owns it.
+		if storedWorkspace.Status == "provisioning" {
+			continue
+		}
 		if err := m.hydrateWorkspace(storedWorkspace); err != nil {
 			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping workspace restore")
 			// Any open failure (missing path, path replaced by a file,

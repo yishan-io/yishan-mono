@@ -58,6 +58,13 @@ func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMes
 		return
 	}
 
+	if payload, ok := decodeRelayWorkspaceCloseEnvelope(params); ok {
+		if payload.Change == relayChangeWorkspaceCloseRequest && strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(handler.nodeID) {
+			handler.handleRelayedWorkspaceClose(payload)
+		}
+		return
+	}
+
 	var payload map[string]any
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &payload); err != nil {

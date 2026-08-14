@@ -8,12 +8,10 @@ import (
 
 func TestWorkspaceStore_CreateListUpdateAndDelete(t *testing.T) {
 	ctx := context.Background()
-	projectStore := openProjectStore(t)
-	project := createTestProject(t, projectStore)
-	workspaceStore := NewWorkspaceStore(projectStore.database)
+	workspaceStore := openTestWorkspaceStore(t)
 	workspace := Workspace{
-		OrganizationID: project.OrganizationID,
-		ProjectID:      project.ID,
+		OrganizationID: "org-1",
+		ProjectID:      "project-1",
 		NodeID:         "node-1",
 		Kind:           "worktree",
 		Status:         "active",
@@ -29,7 +27,7 @@ func TestWorkspaceStore_CreateListUpdateAndDelete(t *testing.T) {
 		t.Fatal("expected create to assign an id")
 	}
 
-	workspaces, err := workspaceStore.ListByProject(ctx, project.ID)
+	workspaces, err := workspaceStore.ListByProject(ctx, "project-1")
 	if err != nil {
 		t.Fatalf("list project workspaces: %v", err)
 	}
@@ -60,12 +58,10 @@ func TestWorkspaceStore_CreateListUpdateAndDelete(t *testing.T) {
 
 func TestWorkspaceStore_Create_RejectsDuplicateActiveWorkspace(t *testing.T) {
 	ctx := context.Background()
-	projectStore := openProjectStore(t)
-	project := createTestProject(t, projectStore)
-	workspaceStore := NewWorkspaceStore(projectStore.database)
+	workspaceStore := openTestWorkspaceStore(t)
 	branch := stringPointer("feature/local-db")
 	firstWorkspace := Workspace{
-		OrganizationID: project.OrganizationID, ProjectID: project.ID, NodeID: "node-1",
+		OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: branch, LocalPath: "/tmp/one", State: "active",
 	}
 	secondWorkspace := firstWorkspace
@@ -81,18 +77,16 @@ func TestWorkspaceStore_Create_RejectsDuplicateActiveWorkspace(t *testing.T) {
 
 func TestWorkspaceStore_UpsertAndResolvePullRequest(t *testing.T) {
 	ctx := context.Background()
-	projectStore := openProjectStore(t)
-	project := createTestProject(t, projectStore)
-	workspaceStore := NewWorkspaceStore(projectStore.database)
+	workspaceStore := openTestWorkspaceStore(t)
 	workspace := Workspace{
-		OrganizationID: project.OrganizationID, ProjectID: project.ID, NodeID: "node-1",
+		OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: "/tmp/yishan-pr", State: "active",
 	}
 	if err := workspaceStore.Create(ctx, &workspace); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
 	pullRequest := WorkspacePullRequest{
-		WorkspaceID: workspace.ID, OrganizationID: project.OrganizationID, PRID: "42",
+		WorkspaceID: workspace.ID, OrganizationID: "org-1", PRID: "42",
 		Title: stringPointer("Add local DB"), State: "open", DetectedAt: "2026-07-28T00:00:00Z",
 	}
 
@@ -114,12 +108,19 @@ func TestWorkspaceStore_UpsertAndResolvePullRequest(t *testing.T) {
 	}
 }
 
-func createTestProject(t *testing.T, projectStore *ProjectStore) Project {
+func openTestWorkspaceStore(t *testing.T) *WorkspaceStore {
 	t.Helper()
-
-	project := Project{Name: "Test Project", OrganizationID: "org-1", ContextEnabled: true}
-	if err := projectStore.Create(context.Background(), &project); err != nil {
-		t.Fatalf("create test project: %v", err)
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
 	}
-	return project
+	t.Cleanup(func() { _ = database.Close() })
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	return NewWorkspaceStore(database)
+}
+
+func stringPointer(value string) *string {
+	return &value
 }

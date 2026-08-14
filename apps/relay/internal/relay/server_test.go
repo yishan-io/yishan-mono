@@ -168,6 +168,62 @@ func TestHandlePublishOrgEvent_ForwardsSourceNodeID(t *testing.T) {
 	}
 }
 
+func TestHandleMessage_WorkspaceSnapshotChanged_BroadcastsToOrgExcludingSource(t *testing.T) {
+	srv := newTestServer(t)
+	targetSrv, targetCli, cleanupTarget := pipeWebSocket(t)
+	defer cleanupTarget()
+	sourceSrv, sourceCli, cleanupSource := pipeWebSocket(t)
+	defer cleanupSource()
+
+	srv.sessions.Register(targetSrv, auth.NodeIdentity{NodeID: "node-2", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+	srv.sessions.Register(sourceSrv, auth.NodeIdentity{NodeID: "node-1", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+
+	params, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"projectId":      "project-1",
+		"workspaceId":    "ws-1",
+		"sourceNodeId":   "node-1",
+		"targetNodeId":   "node-2",
+		"change":         "workspace.create.request",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+	payload, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"method":  MethodWorkspaceSnapshotChanged,
+		"params":  json.RawMessage(params),
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	if handled := srv.handleMessage("node-1", payload); !handled {
+		t.Fatal("expected workspace.snapshot.changed to be handled by the relay")
+	}
+
+	// Target node receives the broadcast.
+	if err := targetCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set target deadline: %v", err)
+	}
+	var targetMessage map[string]any
+	if err := targetCli.ReadJSON(&targetMessage); err != nil {
+		t.Fatalf("target node should receive the notification: %v", err)
+	}
+	if targetMessage["method"] != MethodWorkspaceSnapshotChanged {
+		t.Fatalf("expected method %s, got %v", MethodWorkspaceSnapshotChanged, targetMessage["method"])
+	}
+
+	// Source node must not receive its own message back.
+	if err := sourceCli.SetReadDeadline(time.Now().Add(300 * time.Millisecond)); err != nil {
+		t.Fatalf("set source deadline: %v", err)
+	}
+	var sourceMessage map[string]any
+	if err := sourceCli.ReadJSON(&sourceMessage); err == nil {
+		t.Fatalf("source node should not receive its own broadcast, got %v", sourceMessage)
+	}
+}
+
 func TestHandleMetrics_CachedResponse(t *testing.T) {
 	srv := newTestServer(t)
 

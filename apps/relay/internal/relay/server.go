@@ -127,21 +127,24 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 	if workspaceID := strings.TrimSpace(body.WorkspaceID); workspaceID != "" {
 		params["workspaceId"] = workspaceID
 	}
-	if sourceNodeID := strings.TrimSpace(body.SourceNodeID); sourceNodeID != "" {
+	sourceNodeID := strings.TrimSpace(body.SourceNodeID)
+	if sourceNodeID != "" {
 		params["sourceNodeId"] = sourceNodeID
 	}
 	if len(body.Metadata) > 0 {
 		params["metadata"] = body.Metadata
 	}
 
-	notified := s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params, "")
+	// Exclude the originating node from the broadcast: it already applied the
+	// change locally, so echoing it back would cause duplicate processing.
+	notified := s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params, sourceNodeID)
 	log.Info().
 		Str("organizationId", organizationID).
 		Str("resource", resource).
 		Str("change", change).
 		Str("projectId", strings.TrimSpace(body.ProjectID)).
 		Str("workspaceId", strings.TrimSpace(body.WorkspaceID)).
-		Str("sourceNodeId", strings.TrimSpace(body.SourceNodeID)).
+		Str("sourceNodeId", sourceNodeID).
 		Int("notified", notified).
 		Msg("org event broadcast")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "notified": notified})
@@ -363,6 +366,26 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 			return true
 		}
 		s.removeStreamSub(params.SessionID, params.FromNode)
+		return true
+
+	case MethodWorkspaceSnapshotChanged:
+		// Node-originated snapshot change (workspace create/close relay).
+		// Broadcast to every other node in the org; the source node is excluded
+		// so it never receives its own message back. Each node self-selects on
+		// the envelope's targetNodeId.
+		var params struct {
+			OrganizationID string `json:"organizationId"`
+			SourceNodeID   string `json:"sourceNodeId"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid workspace.snapshot.changed params")
+			return true
+		}
+		organizationID := strings.TrimSpace(params.OrganizationID)
+		if organizationID == "" {
+			return true
+		}
+		go s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
 		return true
 
 	default:

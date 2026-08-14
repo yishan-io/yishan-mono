@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/rs/zerolog/log"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -109,17 +108,4 @@ func (h *JSONRPCHandler) handleOverviewWorkspaceInsights(ctx context.Context, pa
 		return nil, err
 	}
 	return h.overviewStore().GetWorkspaceInsights(ctx, rangeDays, req.ProjectID)
-}
-
-// handleTokenUsageMigrationStatus reports remote-to-local migration completion
-// from the single versioned marker. Desktop and daemon ship matched builds, so
-// no legacy compatibility fields are exposed.
-func (h *JSONRPCHandler) handleTokenUsageMigrationStatus(ctx context.Context, _ json.RawMessage) (any, error) {
-	migrated, err := localdb.RemoteToLocalMigrationComplete(ctx, h.localDatabase)
-	if err != nil {
-		log.Warn().Err(err).Msg("read remote-to-local migration status")
-	}
-	return map[string]any{
-		"migrated": migrated,
-	}, nil
 }

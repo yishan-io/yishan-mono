@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,18 +30,13 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	projectStore := localdb.NewProjectStore(database)
-	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
-	if err := projectStore.Create(context.Background(), &project); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
 	handler.SetLocalDatabase(database, t.TempDir())
 
 	prepared := preparedWorkspaceCreate{registration: &WorkspaceCreation{
-		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: project.ID,
+		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
 		Kind: workspace.KindWorktree, Branch: "feature/local-db", SourceBranch: "main",
 	}}
-	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: project.ID, Path: t.TempDir(), State: workspace.WorkspaceStateActive}
+	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: "project-1", Path: t.TempDir(), State: workspace.WorkspaceStateActive}
 
 	if err := handler.persistPreparedWorkspace(context.Background(), prepared); err != nil {
 		t.Fatalf("persist prepared workspace: %v", err)
@@ -458,6 +454,58 @@ func TestHandleWorkspaceCloseProject(t *testing.T) {
 	}
 }
 
+func newCloseRoutingTestHandler(t *testing.T, workspaceNodeID string) *JSONRPCHandler {
+	t.Helper()
+	h := newTestHandler(t)
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
+		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: workspaceNodeID,
+		Kind: workspace.KindWorktree, Status: "active", LocalPath: "/tmp/ws", State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+	h.SetLocalDatabase(database, t.TempDir())
+	// Keep the close-routing test fast: the token-usage scan on close is
+	// incidental to the routing decision under test.
+	h.tokenUsage = nil
+	return h
+}
+
+func TestHandleWorkspaceClose_RemoteNode_RelaysInsteadOfLocalClose(t *testing.T) {
+	h := newCloseRoutingTestHandler(t, "node-remote")
+	params, err := json.Marshal(workspaceCloseParams{
+		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	_, err = h.handleWorkspaceClose(context.Background(), params)
+	if err == nil || !strings.Contains(err.Error(), "relay not connected") {
+		t.Fatalf("expected relay path (relay not connected), got err=%v", err)
+	}
+}
+
+func TestHandleWorkspaceClose_LocalNode_TakesLocalClosePath(t *testing.T) {
+	h := newCloseRoutingTestHandler(t, "node-1")
+	params, err := json.Marshal(workspaceCloseParams{
+		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	_, err = h.handleWorkspaceClose(context.Background(), params)
+	if err == nil || strings.Contains(err.Error(), "relay not connected") {
+		t.Fatalf("expected local close path (not relay), got err=%v", err)
+	}
+}
+
 func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegisteredWorkspace(t *testing.T) {
 	var closedWorkspaceID string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -521,8 +569,11 @@ func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegistered
 	if err == nil {
 		t.Fatal("expected local provisioning failure")
 	}
-	if closedWorkspaceID != "" {
-		t.Fatalf("expected no remote close request, got %q", closedWorkspaceID)
+	// The design writes the remote record before provisioning, so a local
+	// provisioning failure must best-effort close the remote provisioning record
+	// to avoid leaking it (the daemon's workspace ID, not the mock's id).
+	if closedWorkspaceID != "ws-local-1" {
+		t.Fatalf("expected remote close for %q, got %q", "ws-local-1", closedWorkspaceID)
 	}
 }
 
@@ -672,11 +723,6 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 	t.Cleanup(func() { _ = database.Close() })
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
-	}
-	projectStore := localdb.NewProjectStore(database)
-	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
-	if err := projectStore.Create(context.Background(), &project); err != nil {
-		t.Fatalf("create project: %v", err)
 	}
 	h.SetLocalDatabase(database, t.TempDir())
 

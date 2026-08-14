@@ -131,10 +131,6 @@ func TestOverviewStoreGetWorkspaceInsights_IncludesPrimaryWorkspaceCost(t *testi
 	}
 
 	ctx := context.Background()
-	projectStore := NewProjectStore(database)
-	if err := projectStore.Create(ctx, &Project{ID: "project-1", Name: "Core", OrganizationID: "org-1", ContextEnabled: true}); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
 	workspaceStore := NewWorkspaceStore(database)
 	branch := "main"
 	if err := workspaceStore.Create(ctx, &Workspace{
@@ -213,10 +209,6 @@ func TestOverviewStoreGetWorkspaceInsights_IncludesClosedWorkspaceCost(t *testin
 	}
 
 	ctx := context.Background()
-	projectStore := NewProjectStore(database)
-	if err := projectStore.Create(ctx, &Project{ID: "project-1", Name: "Core", OrganizationID: "org-1", ContextEnabled: true}); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
 	workspaceStore := NewWorkspaceStore(database)
 	branch := "feature/cost"
 	if err := workspaceStore.Create(ctx, &Workspace{

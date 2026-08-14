@@ -19,12 +19,17 @@ func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = database.Close() })
 
-	var projectsTableName string
-	if err := database.QueryRow(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'projects'`).Scan(&projectsTableName); err != nil {
-		t.Fatalf("find projects table: %v", err)
+	var workspaceTableName string
+	if err := database.QueryRow(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'workspaces'`).Scan(&workspaceTableName); err != nil {
+		t.Fatalf("find workspaces table: %v", err)
 	}
-	if projectsTableName != "projects" {
-		t.Fatalf("expected projects table, got %q", projectsTableName)
+	if workspaceTableName != "workspaces" {
+		t.Fatalf("expected workspaces table, got %q", workspaceTableName)
+	}
+	// The local projects table was dropped (projects are remote-authoritative).
+	var projectsTableName string
+	if err := database.QueryRow(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'projects'`).Scan(&projectsTableName); err == nil {
+		t.Fatalf("expected projects table to be dropped, got %q", projectsTableName)
 	}
 	if _, err := os.Stat(filepath.Join(profileDir, "yishan.db")); err != nil {
 		t.Fatalf("expected profile database: %v", err)

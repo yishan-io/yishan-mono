@@ -2,6 +2,7 @@ import { api } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
 import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
+import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
@@ -188,18 +189,17 @@ export async function createProject(input: {
   const randomColor = pickRandomProjectColor();
 
   try {
-    const daemonClient = await getDaemonClient();
-    project = (await daemonClient.project.create(selectedOrganizationId, {
+    project = await api.project.create(selectedOrganizationId, {
       name: normalizedName,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
       nodeId: inferredNodeId,
       localPath: isLocalSource ? normalizedPath : undefined,
       contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
-    })) as ProjectWithWorkspacesRecord;
+    });
   } catch (error) {
     console.error("Failed to create backend project", error);
-    throw error instanceof Error ? error : new Error("Failed to create backend project");
+    throw new Error(getErrorMessage(error));
   }
 
   if (!project) {
@@ -299,11 +299,10 @@ export async function deleteProject(projectId: string): Promise<void> {
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
-      const daemonClient = await getDaemonClient();
-      await daemonClient.project.delete(selectedOrganizationId, projectId);
+      await api.project.delete(selectedOrganizationId, projectId);
     } catch (error) {
-      console.error("Failed to delete local project and workspaces", error);
-      throw error instanceof Error ? error : new Error("Failed to delete local project and workspaces");
+      console.error("Failed to delete backend project", error);
+      throw new Error(getErrorMessage(error));
     }
   }
 
@@ -335,8 +334,7 @@ export async function updateProjectConfig(
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
-      const daemonClient = await getDaemonClient();
-      const updatedProject = (await daemonClient.project.update(selectedOrganizationId, projectId, {
+      const updatedProject = await api.project.update(selectedOrganizationId, projectId, {
         name: config.name,
         icon: config.icon,
         color: config.color,
@@ -344,7 +342,7 @@ export async function updateProjectConfig(
         postScript: config.postScript,
         commands: config.commands,
         contextEnabled: config.contextEnabled,
-      })) as ProjectRecord;
+      });
 
       const persistedConfig = {
         ...config,
@@ -371,7 +369,7 @@ export async function updateProjectConfig(
       return;
     } catch (error) {
       console.error("Failed to update backend project", error);
-      throw error instanceof Error ? error : new Error("Failed to update backend project");
+      throw new Error(getErrorMessage(error));
     }
   }
 
