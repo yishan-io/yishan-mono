@@ -12,6 +12,7 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "migrate:local-to-remote": "bun run scripts/migrate-local-to-remote.ts",
     "db:push": "drizzle-kit push",
     "deploy:worker": "wrangler deploy"
   },

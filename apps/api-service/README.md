@@ -44,6 +44,7 @@ Copy `.env.example` to `.env` (Bun) and `.dev.vars` (Wrangler local dev):
 - `bun run check` - typecheck
 - `bun run db:generate` - generate Drizzle migrations
 - `bun run db:migrate` - apply committed SQL migrations to target database
+- `bun run migrate:local-to-remote` - backfill workspaces + token usage from a machine's local daemon SQLite DB into the target Postgres (dry-run by default; see `scripts/migrate-local-to-remote.ts` header)
 - `bun run deploy:worker` - deploy to Cloudflare Workers
 
 ## Routes
