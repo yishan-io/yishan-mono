@@ -3,6 +3,7 @@ package daemon
 import (
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -45,26 +46,29 @@ func (h *JSONRPCHandler) discardRelayRequest(id string) {
 	h.relayPendingMu.Unlock()
 }
 
+// relayDispatchSeq is a monotonic counter for dispatch request ids; combined
+// with the target node id it makes ids unique even for rapid same-target sends.
+var relayDispatchSeq uint64
+
 // sendRelayDispatchRequest sends a workspace create/close envelope to the relay
 // as a JSON-RPC request and waits for the relay's routing verdict. Returns an
 // error when the relay reports the target node offline (the close/create is NOT
 // allowed); on timeout it falls back to the legacy fire-and-forget behavior so
 // older relays never regress the working path.
 func (h *JSONRPCHandler) sendRelayDispatchRequest(payload any, targetNodeID string) error {
-	id := fmt.Sprintf("dispatch-%s-%d", targetNodeID, time.Now().UnixNano())
+	id := fmt.Sprintf("dispatch-%s-%d", targetNodeID, atomic.AddUint64(&relayDispatchSeq, 1))
 	verdictCh := h.registerRelayRequest(id)
+	defer h.discardRelayRequest(id) // no-op once resolveRelayRequest deleted the key
 
 	h.relayConnMu.RLock()
 	conn := h.relayConn
 	h.relayConnMu.RUnlock()
 	if conn == nil {
-		h.discardRelayRequest(id)
 		return fmt.Errorf("relay not connected")
 	}
 
 	rawParams, err := json.Marshal(payload)
 	if err != nil {
-		h.discardRelayRequest(id)
 		return fmt.Errorf("relay marshal failed: %w", err)
 	}
 
@@ -75,7 +79,6 @@ func (h *JSONRPCHandler) sendRelayDispatchRequest(payload any, targetNodeID stri
 		Params:  rawParams,
 	}
 	if err := conn.WriteJSON(msg); err != nil {
-		h.discardRelayRequest(id)
 		return fmt.Errorf("relay write failed: %w", err)
 	}
 
@@ -87,7 +90,16 @@ func (h *JSONRPCHandler) sendRelayDispatchRequest(payload any, targetNodeID stri
 		}
 		return nil
 	case <-time.After(relayDispatchTimeout):
-		// Legacy relay (no response) — keep the pre-guard fire-and-forget behavior.
+		// Legacy relay (no verdict support) or a lost/delayed response. We
+		// cannot distinguish the two: a legacy relay broadcast unconditionally
+		// (offline target silently dropped — the pre-guard behavior), while a
+		// new relay that lost the response may have delivered the dispatch.
+		// Falling back to fire-and-forget keeps legacy relays working; the
+		// warning makes timeouts on new relays detectable.
+		log.Warn().
+			Str("targetNodeId", targetNodeID).
+			Dur("timeout", relayDispatchTimeout).
+			Msg("relay dispatch verdict timed out; falling back to fire-and-forget (legacy relay or lost response)")
 		return nil
 	}
 }

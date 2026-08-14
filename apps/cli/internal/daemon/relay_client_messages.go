@@ -9,10 +9,12 @@ import (
 )
 
 // handleRelayDispatchResponse resolves a pending relay dispatch request with the
-// relay's routing verdict. Returns true when the response was consumed.
+// relay's routing verdict. Only ids with the "dispatch-" prefix are consumed;
+// anything else (future relay responses such as job-dispatch acks) falls through
+// to the daemon handler instead of being swallowed.
 func handleRelayDispatchResponse(handler *JSONRPCHandler, id json.RawMessage, result json.RawMessage) bool {
 	var idStr string
-	if err := json.Unmarshal(id, &idStr); err != nil {
+	if err := json.Unmarshal(id, &idStr); err != nil || !strings.HasPrefix(idStr, "dispatch-") {
 		return false
 	}
 	var res struct {

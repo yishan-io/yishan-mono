@@ -393,6 +393,11 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		// online → broadcast + accepted; offline → skip broadcast + rejected. The
 		// relay stays stateless — this is a routing verdict, not retry/persistence.
 		if len(req.ID) > 0 && targetNodeID != "" {
+			// "accepted" means the target was online at verdict time, not that it
+			// received the broadcast: the broadcast runs in a goroutine and the
+			// session manager re-checks connectivity under lock when collecting
+			// sessions, so a target dropping between check and delivery is skipped
+			// (a safe false-positive; the reverse is a safe false-negative).
 			if s.sessions.IsOnline(targetNodeID) {
 				go s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
 				_ = s.sessions.SendResponse(nodeID, response{
