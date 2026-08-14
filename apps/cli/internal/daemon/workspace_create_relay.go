@@ -13,7 +13,7 @@ import (
 
 func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams) error {
 	payload := createflow.BuildRelayRequestEnvelope(req, h.nodeID, buildWorkspaceCreateStartedEvent(req, req.NodeID, req.Branch))
-	return h.sendWorkspaceSnapshotRelayNotification(payload)
+	return h.sendRelayDispatchRequest(payload, strings.TrimSpace(req.NodeID))
 }
 
 func (h *JSONRPCHandler) relayWorkspaceCreateProgress(prepared preparedWorkspaceCreate, event workspace.CreateProgressEvent) {

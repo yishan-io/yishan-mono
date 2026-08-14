@@ -406,6 +406,25 @@ func (m *SessionManager) SendNotificationWithError(nodeID, method string, params
 	return nil
 }
 
+// SendResponse sends a JSON-RPC response to a specific node. Returns an error
+// when the node is offline or the write fails.
+func (m *SessionManager) SendResponse(nodeID string, resp response) error {
+	m.mu.RLock()
+	session := m.sessions[nodeID]
+	m.mu.RUnlock()
+
+	if session == nil || !session.isConnected() {
+		log.Debug().Str("nodeId", nodeID).Msg("send response skipped: session offline")
+		return ErrNodeOffline
+	}
+
+	if err := session.SendJSON(resp); err != nil {
+		log.Error().Err(err).Str("nodeId", nodeID).Msg("send response failed")
+		return fmt.Errorf("send response failed: %w", err)
+	}
+	return nil
+}
+
 // SendOrgNotification sends a JSON-RPC notification to every connected node in one organization.
 // excludeNodeID, when non-empty, skips the sending node so it does not receive
 // its own broadcast back (prevents duplicate event processing on the origin).

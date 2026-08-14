@@ -376,15 +376,40 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		var params struct {
 			OrganizationID string `json:"organizationId"`
 			SourceNodeID   string `json:"sourceNodeId"`
+			TargetNodeID   string `json:"targetNodeId"`
 		}
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid workspace.snapshot.changed params")
 			return true
 		}
 		organizationID := strings.TrimSpace(params.OrganizationID)
+		targetNodeID := strings.TrimSpace(params.TargetNodeID)
 		if organizationID == "" {
 			return true
 		}
+
+		// When the origin expects a dispatch answer (request with an id) and the
+		// envelope names a target node, the relay answers whether it could route:
+		// online → broadcast + accepted; offline → skip broadcast + rejected. The
+		// relay stays stateless — this is a routing verdict, not retry/persistence.
+		if len(req.ID) > 0 && targetNodeID != "" {
+			if s.sessions.IsOnline(targetNodeID) {
+				go s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
+				_ = s.sessions.SendResponse(nodeID, response{
+					JSONRPC: "2.0",
+					ID:      req.ID,
+					Result:  map[string]any{"accepted": true, "targetOnline": true},
+				})
+			} else {
+				_ = s.sessions.SendResponse(nodeID, response{
+					JSONRPC: "2.0",
+					ID:      req.ID,
+					Result:  map[string]any{"accepted": false, "reason": "target node offline"},
+				})
+			}
+			return true
+		}
+
 		go s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
 		return true
 

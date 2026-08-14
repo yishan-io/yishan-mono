@@ -8,15 +8,45 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
+// handleRelayDispatchResponse resolves a pending relay dispatch request with the
+// relay's routing verdict. Returns true when the response was consumed.
+func handleRelayDispatchResponse(handler *JSONRPCHandler, id json.RawMessage, result json.RawMessage) bool {
+	var idStr string
+	if err := json.Unmarshal(id, &idStr); err != nil {
+		return false
+	}
+	var res struct {
+		Accepted *bool  `json:"accepted"`
+		Reason   string `json:"reason"`
+	}
+	if err := json.Unmarshal(result, &res); err != nil {
+		res = struct {
+			Accepted *bool  `json:"accepted"`
+			Reason   string `json:"reason"`
+		}{}
+	}
+	accepted := res.Accepted != nil && *res.Accepted
+	handler.resolveRelayRequest(idStr, relayDispatchVerdict{accepted: accepted, reason: res.Reason})
+	return true
+}
+
 // handleRelayMessage handles relay-protocol messages (heartbeat, job dispatch).
 // Returns true if the message was consumed and should not be passed to the daemon handler.
 func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, connState *wsConnState, nodeID string, payload []byte) bool {
 	var msg struct {
 		Method string          `json:"method"`
 		Params json.RawMessage `json:"params,omitempty"`
+		ID     json.RawMessage `json:"id,omitempty"`
+		Result json.RawMessage `json:"result,omitempty"`
 	}
 	if err := json.Unmarshal(payload, &msg); err != nil {
 		return false
+	}
+
+	// A JSON-RPC response (id present, no method) answers a pending relay
+	// dispatch request (workspace create/close routing verdict).
+	if len(msg.ID) > 0 && msg.Method == "" {
+		return handleRelayDispatchResponse(handler, msg.ID, msg.Result)
 	}
 
 	switch msg.Method {

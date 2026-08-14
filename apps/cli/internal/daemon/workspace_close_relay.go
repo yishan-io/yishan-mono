@@ -3,7 +3,6 @@ package daemon
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -62,7 +61,8 @@ func (h *JSONRPCHandler) resolveRemoteWorkspaceNode(ctx context.Context, orgID s
 
 // relayWorkspaceClose forwards a close request to the node that owns the
 // workspace's worktree. The executor runs the same local-first close path and
-// marks the remote record closed.
+// marks the remote record closed. When the target node is offline the relay
+// rejects the dispatch and the close is NOT allowed (no fake "closing").
 func (h *JSONRPCHandler) relayWorkspaceClose(req workspaceCloseParams, targetNodeID string) (any, error) {
 	payload := relayWorkspaceCloseEnvelope{
 		OrganizationID: req.OrganizationID,
@@ -77,15 +77,8 @@ func (h *JSONRPCHandler) relayWorkspaceClose(req workspaceCloseParams, targetNod
 		ForceBranch:    req.ForceBranch,
 		PostHook:       req.PostHook,
 	}
-	h.relayConnMu.RLock()
-	conn := h.relayConn
-	h.relayConnMu.RUnlock()
-	if conn == nil {
-		return nil, fmt.Errorf("relay not connected")
-	}
-	msg := notification{JSONRPC: "2.0", Method: relayMethodWorkspaceSnapshotChanged, Params: payload}
-	if err := conn.WriteJSON(msg); err != nil {
-		return nil, fmt.Errorf("relay write failed: %w", err)
+	if err := h.sendRelayDispatchRequest(payload, targetNodeID); err != nil {
+		return nil, err
 	}
 	return map[string]any{"workspaceId": req.WorkspaceID, "status": "closing"}, nil
 }
