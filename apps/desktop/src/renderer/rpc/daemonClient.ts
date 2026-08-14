@@ -90,31 +90,6 @@ export class DaemonClient {
 
   readonly project = {
     listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) => this._projectClient.listByOrg(orgId, opts),
-    create: (
-      orgId: string,
-      input: {
-        name: string;
-        sourceTypeHint?: string;
-        repoUrl?: string;
-        nodeId?: string;
-        localPath?: string;
-        contextEnabled?: boolean;
-      },
-    ) => this._projectClient.create(orgId, input),
-    update: (
-      orgId: string,
-      projectId: string,
-      config: {
-        name?: string;
-        icon?: string;
-        color?: string;
-        setupScript?: string;
-        postScript?: string;
-        commands?: Array<{ name: string; command: string }>;
-        contextEnabled?: boolean;
-      },
-    ) => this._projectClient.update(orgId, projectId, config),
-    delete: (orgId: string, projectId: string) => this._projectClient.delete(orgId, projectId),
     getListPreferences: (orgId: string) => this._projectClient.getListPreferences(orgId),
     setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) =>
       this._projectClient.setListPreferences(orgId, preferences),

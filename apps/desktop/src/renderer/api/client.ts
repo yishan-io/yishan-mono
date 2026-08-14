@@ -22,7 +22,6 @@ import {
 } from "./scheduledJobApi";
 import { createServiceToken, listServiceTokens, revokeServiceToken } from "./serviceTokenApi";
 import { getVoiceTranscriptionUsage, transcribeVoice } from "./voiceTranscriptionApi";
-import { createProjectWorkspace, listProjectWorkspaces } from "./workspaceApi";
 import { listWorkspacePullRequests, upsertWorkspacePullRequest } from "./workspacePullRequestApi";
 
 export const api = {
@@ -46,10 +45,6 @@ export const api = {
     create: createProject,
     delete: deleteProject,
     update: updateProject,
-  },
-  workspace: {
-    listByProject: listProjectWorkspaces,
-    createForProject: createProjectWorkspace,
   },
   workspacePullRequest: {
     list: listWorkspacePullRequests,

@@ -90,59 +90,6 @@ export class DaemonProjectClient {
     return (result as unknown[]).map((item) => this.parseProjectWithWorkspaces(item));
   }
 
-  async create(
-    orgId: string,
-    input: {
-      name: string;
-      sourceTypeHint?: string;
-      repoUrl?: string;
-      nodeId?: string;
-      localPath?: string;
-      contextEnabled?: boolean;
-    },
-  ): Promise<ProjectWithWorkspacesRecord> {
-    const result = await this.invoke("project.create", {
-      name: input.name?.trim() ?? "",
-      organizationId: orgId,
-      sourceType: input.sourceTypeHint,
-      repoUrl: input.repoUrl?.trim() || undefined,
-      nodeId: input.nodeId?.trim() || undefined,
-      localPath: input.localPath?.trim() || undefined,
-      contextEnabled: input.contextEnabled,
-    });
-    return this.parseProjectWithWorkspaces(result);
-  }
-
-  async update(
-    _orgId: string,
-    projectId: string,
-    config: {
-      name?: string;
-      icon?: string;
-      color?: string;
-      setupScript?: string;
-      postScript?: string;
-      commands?: Array<{ name: string; command: string }>;
-      contextEnabled?: boolean;
-    },
-  ): Promise<ProjectRecord> {
-    const result = await this.invoke("project.update", {
-      id: projectId,
-      name: config.name,
-      icon: config.icon,
-      color: config.color,
-      setupScript: config.setupScript,
-      postScript: config.postScript,
-      commands: config.commands,
-      contextEnabled: config.contextEnabled,
-    });
-    return this.parseProject(result);
-  }
-
-  async delete(_orgId: string, projectId: string): Promise<void> {
-    await this.invoke("project.delete", { id: projectId });
-  }
-
   async getListPreferences(orgId: string): Promise<ProjectListPreference> {
     const result = await this.invoke("project.getListPreferences", { organizationId: orgId });
     return parseProjectListPreference(result);
