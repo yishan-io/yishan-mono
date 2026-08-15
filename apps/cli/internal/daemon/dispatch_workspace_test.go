@@ -292,7 +292,7 @@ func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 	}
 
 	// Workspace must be in manager now.
-	if _, err := h.manager.GetWorkspace("ws-1"); err != nil {
+	if _, err := h.getWorkspace("ws-1"); err != nil {
 		t.Errorf("workspace ws-1 should be in manager after openProject: %v", err)
 	}
 
@@ -379,7 +379,7 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 		t.Fatalf("expected no skipped entries, got %v", result.Skipped)
 	}
 
-	repairedWorkspace, err := h.manager.GetWorkspace("ws-3")
+	repairedWorkspace, err := h.getWorkspace("ws-3")
 	if err != nil {
 		t.Fatalf("GetWorkspace: %v", err)
 	}
@@ -547,7 +547,7 @@ func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 
 	h.checkWorkspaceHealth(context.Background())
 
-	ws, err := h.manager.GetWorkspace("ws-1")
+	ws, err := h.getWorkspace("ws-1")
 	if err != nil {
 		t.Fatalf("get workspace: %v", err)
 	}
@@ -577,7 +577,7 @@ func TestCheckWorkspaceHealth_KeepsHealthyWorkspaceActive(t *testing.T) {
 
 	h.checkWorkspaceHealth(context.Background())
 
-	ws, err := h.manager.GetWorkspace("ws-1")
+	ws, err := h.getWorkspace("ws-1")
 	if err != nil {
 		t.Fatalf("get workspace: %v", err)
 	}

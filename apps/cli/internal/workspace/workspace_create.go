@@ -124,9 +124,7 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 		return Workspace{}, err
 	}
 
-	m.mu.Lock()
-	m.workspaces[ws.ID] = ws
-	m.mu.Unlock()
+	m.instances.Open(ws)
 
 	return ws, nil
 }

@@ -179,7 +179,7 @@ func (c *Collector) runScan(agentKind string, source string) {
 
 func (c *Collector) filterKnownTokenUsageRows(rows []HourlyUsageRow) []HourlyUsageRow {
 	workspaceByID := make(map[string]workspace.Workspace)
-	for _, ws := range c.manager.List() {
+	for _, ws := range c.manager.Instances().List() {
 		workspaceByID[ws.ID] = ws
 	}
 
@@ -213,7 +213,7 @@ func (c *Collector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) (
 		RunID:               "daemon-" + agentKind,
 		IngestedAt:          time.Now().UnixMilli(),
 		ScanSinceUnixMilli:  scanSinceUnixMilli,
-		Worktrees:           buildTokenUsageWorktreeRefs(c.manager.List()),
+		Worktrees:           buildTokenUsageWorktreeRefs(c.manager.Instances().List()),
 		ModelPricingCatalog: c.pricingCatalog,
 	}
 	switch agentKind {
@@ -473,7 +473,7 @@ func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]HourlyUsageRow, error
 }
 
 func (c *Collector) resolveOrgIDForWorkspace(workspaceID string) string {
-	for _, ws := range c.manager.List() {
+	for _, ws := range c.manager.Instances().List() {
 		if ws.ID == workspaceID {
 			return ws.OrgID
 		}

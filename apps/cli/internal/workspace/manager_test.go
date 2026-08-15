@@ -38,9 +38,9 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	workspace, err := manager.GetWorkspace("workspace-1")
-	if err != nil {
-		t.Fatalf("get hydrated workspace: %v", err)
+	workspace, ok := manager.Instances().Get("workspace-1")
+	if !ok {
+		t.Fatalf("get hydrated workspace: not found")
 	}
 	canonicalWorkspacePath, err := filepath.EvalSymlinks(workspacePath)
 	if err != nil {
@@ -74,12 +74,14 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 		t.Fatalf("expected canonical workspace path %q, got %q", realWorkspacePath, openedWorkspace.Path)
 	}
 
-	handle, err := manager.WorkspaceHandleByPath(symlinkPath)
-	if err != nil {
-		t.Fatalf("workspace handle by symlink path: %v", err)
+	// The instance registry resolves the canonical path: a symlink path must
+	// resolve to the same instance as the real path.
+	resolvedHandle, ok := manager.Instances().GetByPath(symlinkPath)
+	if !ok {
+		t.Fatalf("workspace handle by symlink path not found")
 	}
-	if handle.Workspace().Path != realWorkspacePath {
-		t.Fatalf("expected handle to resolve canonical path %q, got %q", realWorkspacePath, handle.Workspace().Path)
+	if resolvedHandle.Path != realWorkspacePath {
+		t.Fatalf("expected handle to resolve canonical path %q, got %q", realWorkspacePath, resolvedHandle.Path)
 	}
 }
 
@@ -110,11 +112,11 @@ func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 		t.Fatalf("expected project id to be updated, got %q", openedWorkspace.ProjectID)
 	}
 
-	if _, err := manager.GetWorkspace("stale-id"); err == nil {
+	if _, ok := manager.Instances().Get("stale-id"); ok {
 		t.Fatal("expected stale workspace id to be removed after path re-open")
 	}
 
-	workspaces := manager.List()
+	workspaces := manager.Instances().List()
 	if len(workspaces) != 1 {
 		t.Fatalf("expected exactly one workspace after re-open, got %d", len(workspaces))
 	}
@@ -139,7 +141,7 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 	if _, err := manager.CloseWorkspace(context.Background(), CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with replaced path: %v", err)
 	}
-	if _, err := manager.GetWorkspace("ws-1"); err == nil {
+	if _, ok := manager.Instances().Get("ws-1"); ok {
 		t.Fatal("expected workspace removed from memory after close")
 	}
 }
@@ -154,7 +156,7 @@ func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
 	if _, err := manager.CloseWorkspace(context.Background(), CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with non-git path: %v", err)
 	}
-	if _, err := manager.GetWorkspace("ws-1"); err == nil {
+	if _, ok := manager.Instances().Get("ws-1"); ok {
 		t.Fatal("expected workspace removed from memory after close")
 	}
 	if _, err := os.Stat(workspacePath); err != nil {
@@ -199,17 +201,17 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 
-	healthy, err := manager.GetWorkspace("workspace-2")
-	if err != nil {
-		t.Fatalf("expected healthy workspace restored: %v", err)
+	healthy, ok := manager.Instances().Get("workspace-2")
+	if !ok {
+		t.Fatalf("expected healthy workspace restored: not found")
 	}
 	if healthy.State != WorkspaceStateActive {
 		t.Fatalf("expected healthy workspace active, got %q", healthy.State)
 	}
 
-	broken, err := manager.GetWorkspace("workspace-1")
-	if err != nil {
-		t.Fatalf("expected missing-path workspace registered as error: %v", err)
+	broken, ok := manager.Instances().Get("workspace-1")
+	if !ok {
+		t.Fatalf("expected missing-path workspace registered as error: not found")
 	}
 	if broken.State != WorkspaceStateError || broken.Health != WorkspaceHealthPathMissing {
 		t.Fatalf("expected error/path-missing, got state=%q health=%q", broken.State, broken.Health)
@@ -244,9 +246,9 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	ws, err := manager.GetWorkspace("workspace-1")
-	if err != nil {
-		t.Fatalf("expected workspace registered as error: %v", err)
+	ws, ok := manager.Instances().Get("workspace-1")
+	if !ok {
+		t.Fatalf("expected workspace registered as error: not found")
 	}
 	if ws.State != WorkspaceStateError || ws.Health != WorkspaceHealthPathMissing {
 		t.Fatalf("expected error/path-missing, got state=%q health=%q", ws.State, ws.Health)
@@ -274,7 +276,7 @@ func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	if _, err := manager.GetWorkspace("workspace-1"); err == nil {
+	if _, ok := manager.Instances().Get("workspace-1"); ok {
 		t.Fatal("expected closed workspace to be skipped, not registered")
 	}
 }
@@ -293,7 +295,7 @@ func TestManagerHydrateFromDB_SkipsFolderWorkspaces(t *testing.T) {
 	}
 	// Folder workspaces must never be auto-opened at boot; the desktop opens
 	// them on demand, so the manager must have no workspace for the folder.
-	if folders := manager.List(); len(folders) != 0 {
+	if folders := manager.Instances().List(); len(folders) != 0 {
 		t.Fatalf("expected no hydrated folder workspace, got %#v", folders)
 	}
 }
@@ -314,9 +316,9 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	workspace, err := manager.GetWorkspace("workspace-1")
-	if err != nil {
-		t.Fatalf("get hydrated workspace: %v", err)
+	workspace, ok := manager.Instances().Get("workspace-1")
+	if !ok {
+		t.Fatalf("get hydrated workspace: not found")
 	}
 	if workspace.State != WorkspaceStateActive || workspace.Health != "" {
 		t.Fatalf("expected restored workspace active with cleared health, got state=%q health=%q", workspace.State, workspace.Health)
@@ -348,9 +350,9 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	workspace, err := manager.GetWorkspace("workspace-1")
-	if err != nil {
-		t.Fatalf("get hydrated workspace: %v", err)
+	workspace, ok := manager.Instances().Get("workspace-1")
+	if !ok {
+		t.Fatalf("get hydrated workspace: not found")
 	}
 	if workspace.State != WorkspaceStateError || workspace.Health != WorkspaceHealthNotWorktree {
 		t.Fatalf("expected preserved error/not-worktree, got state=%q health=%q", workspace.State, workspace.Health)

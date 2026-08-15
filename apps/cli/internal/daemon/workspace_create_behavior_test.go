@@ -119,9 +119,9 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 	}
 
 	// In-memory runtime record.
-	ws, err := manager.GetWorkspace("ws-seq-1")
-	if err != nil || ws.State != workspace.WorkspaceStateActive {
-		t.Fatalf("manager workspace = %#v, err %v; want active", ws, err)
+	ws, ok := manager.Instances().Get("ws-seq-1")
+	if !ok || ws.State != workspace.WorkspaceStateActive {
+		t.Fatalf("manager workspace = %#v, ok %v; want active", ws, ok)
 	}
 }
 
@@ -187,8 +187,8 @@ func TestCreateRemoteNode_EventSequence(t *testing.T) {
 	if _, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-remote-1"); err == nil {
 		t.Fatal("expected no local SQLite row for remote-target create")
 	}
-	if len(manager.List()) != 0 {
-		t.Fatalf("expected no manager runtime records, got %v", manager.List())
+	if len(manager.Instances().List()) != 0 {
+		t.Fatalf("expected no manager runtime records, got %v", manager.Instances().List())
 	}
 }
 
@@ -249,8 +249,8 @@ func TestCreateLocalNode_WorktreeStepFailureRollsBack(t *testing.T) {
 	if row.Status != "closed" {
 		t.Fatalf("persisted status = %q, want closed", row.Status)
 	}
-	if len(manager.List()) != 0 {
-		t.Fatalf("expected no manager runtime records after failed create, got %v", manager.List())
+	if len(manager.Instances().List()) != 0 {
+		t.Fatalf("expected no manager runtime records after failed create, got %v", manager.Instances().List())
 	}
 }
 
@@ -476,7 +476,7 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	if err != nil || row.Status != "active" {
 		t.Fatalf("persisted workspace = %#v, err %v; want status active", row, err)
 	}
-	if _, err := manager.GetWorkspace("ws-unreachable"); err != nil {
-		t.Fatalf("manager workspace missing: %v", err)
+	if _, ok := manager.Instances().Get("ws-unreachable"); !ok {
+		t.Fatal("manager workspace missing")
 	}
 }

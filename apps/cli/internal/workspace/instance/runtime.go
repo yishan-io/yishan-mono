@@ -1,11 +1,10 @@
-// Package instance owns the runtime representation of an open workspace on
-// this node: its local path, runtime state, and health. A workspace instance
-// exists only while the workspace is open; closing a workspace removes the
-// instance from the registry (there is deliberately no "closed" runtime
-// state — closed workspaces are records, not instances).
+// Package instance owns the runtime state of open workspaces on this node:
+// the instance registry (map + state/health mutation + path lookup) and the
+// workspace-scoped handle. A workspace instance exists only while the
+// workspace is open; closing a workspace removes the instance from the
+// registry (there is deliberately no "closed" runtime state — closed
+// workspaces are records, not instances).
 package instance
-
-import "yishan/apps/cli/internal/workspace"
 
 // State is the runtime state of an open workspace instance.
 type State string
@@ -32,11 +31,3 @@ const (
 	// HealthNotWorktree means the path exists but is not a git worktree.
 	HealthNotWorktree Health = "not-worktree"
 )
-
-// Runtime is the runtime record for one open workspace instance.
-type Runtime struct {
-	WorkspaceID workspace.ID
-	LocalPath   string
-	State       State
-	Health      Health
-}

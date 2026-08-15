@@ -189,15 +189,15 @@ func (a *appDeps) CloseWorkspacePath(ctx context.Context, req workspace.ClosePat
 }
 
 func (a *appDeps) SetState(workspaceID string, state instance.State, health instance.Health) error {
-	return a.h.manager.SetWorkspaceState(workspaceID, string(state), string(health))
+	return a.h.manager.Instances().SetState(workspaceID, string(state), string(health))
 }
 
 func (a *appDeps) Get(workspaceID string) (workspace.Workspace, error) {
-	return a.h.manager.GetWorkspace(workspaceID)
+	return a.h.getWorkspace(workspaceID)
 }
 
 func (a *appDeps) RemoveFromMemory(workspaceID string) {
-	a.h.manager.RemoveWorkspaceFromMemory(workspaceID)
+	a.h.manager.Instances().Remove(workspaceID)
 }
 
 func (a *appDeps) WatchAndTrack(workspaceID string, path string) {
@@ -261,4 +261,38 @@ func (a *appDeps) CreateFailed(plan application.CreatePlan, failed application.F
 
 func (a *appDeps) CreateCompleted(plan application.CreatePlan, created workspace.Workspace, warnings []any) {
 	a.h.publishWorkspaceCreateCompleted(plan, created, warnings)
+}
+
+// workspaceHandle builds a workspace-scoped handle from the instance registry
+// and the manager's shared services (file cache, git, terminals).
+func (h *JSONRPCHandler) workspaceHandle(workspaceID string) (instance.Handle, error) {
+	ws, ok := h.manager.Instances().Get(workspaceID)
+	if !ok {
+		return instance.Handle{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+	}
+	return h.handleForInstance(ws), nil
+}
+
+// workspaceHandleByPath resolves the canonical path and builds the handle for
+// the instance at that path.
+func (h *JSONRPCHandler) workspaceHandleByPath(path string) (instance.Handle, error) {
+	ws, ok := h.manager.Instances().GetByPath(path)
+	if !ok {
+		return instance.Handle{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+	}
+	return h.handleForInstance(ws), nil
+}
+
+func (h *JSONRPCHandler) handleForInstance(ws workspace.Workspace) instance.Handle {
+	return instance.NewHandle(ws, h.manager.Instances().Files(), h.manager.Gits(), h.manager.Terminals())
+}
+
+// getWorkspace returns the open instance for a workspace id, mapping a missing
+// instance to the RPC not-found error (instance reads go through the registry).
+func (h *JSONRPCHandler) getWorkspace(workspaceID string) (workspace.Workspace, error) {
+	ws, ok := h.manager.Instances().Get(workspaceID)
+	if !ok {
+		return workspace.Workspace{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+	}
+	return ws, nil
 }

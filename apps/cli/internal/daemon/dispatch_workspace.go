@@ -12,7 +12,7 @@ import (
 func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodList:
-		return h.manager.List(), nil
+		return h.manager.Instances().List(), nil
 	case MethodWorkspaceCreate:
 		return h.handleWorkspaceCreate(ctx, params)
 	case MethodWorkspaceRefreshPullRequest:
@@ -62,9 +62,9 @@ func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, pa
 
 	ws, err := func() (workspace.Workspace, error) {
 		if workspaceID != "" {
-			return h.manager.GetWorkspace(workspaceID)
+			return h.getWorkspace(workspaceID)
 		}
-		resolvedWorkspace, ok := h.manager.FindWorkspaceByPath(workspacePath)
+		resolvedWorkspace, ok := h.manager.Instances().GetByPath(workspacePath)
 		if !ok {
 			return workspace.Workspace{}, workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
@@ -77,7 +77,7 @@ func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, pa
 	h.prTracker.EnsureTracked(ws.Path, false)
 	h.prTracker.RefreshWorkspaceByPath(ws.Path)
 
-	refreshedWorkspace, err := h.manager.GetWorkspace(ws.ID)
+	refreshedWorkspace, err := h.getWorkspace(ws.ID)
 	if err != nil {
 		return nil, err
 	}

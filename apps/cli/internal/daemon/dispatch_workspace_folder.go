@@ -134,11 +134,11 @@ func (h *JSONRPCHandler) handleWorkspaceDeleteLocalFolder(ctx context.Context, p
 	// manager so no live handle survives deletion. Mirror the workspace-close
 	// teardown so no filesystem watcher or pull-request tracker entry leaks and
 	// keeps polling a deleted folder.
-	if ws, err := h.manager.GetWorkspace(req.ID); err == nil {
+	if ws, err := h.getWorkspace(req.ID); err == nil {
 		h.manager.Terminals().StopAllForWorkspace(req.ID)
 		h.watchers.Unwatch(ws.Path)
 		h.prTracker.StopTracking(req.ID)
-		h.manager.RemoveWorkspaceFromMemory(req.ID)
+		h.manager.Instances().Remove(req.ID)
 	}
 	// Mirror the workspace-close teardown: summarize and clear any agent usage
 	// recorded against the folder before its row is deleted, so no in-flight

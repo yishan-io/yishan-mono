@@ -40,7 +40,7 @@ func (h *JSONRPCHandler) openProjectWorkspace(entry workspaceOpenProjectEntry) (
 	if workspaceID == "" || workspacePath == "" {
 		return "", false, fmt.Errorf("missing workspaceId or worktreePath")
 	}
-	if existingWorkspace, err := h.manager.GetWorkspace(workspaceID); err == nil {
+	if existingWorkspace, err := h.getWorkspace(workspaceID); err == nil {
 		if shouldSkipWorkspaceOpenProject(existingWorkspace, entry) {
 			// The workspace is already open (for example restored from the local
 			// DB at daemon boot). Watch registration is idempotent per worktree

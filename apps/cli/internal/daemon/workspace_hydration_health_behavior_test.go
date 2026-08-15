@@ -10,6 +10,7 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 )
 
 // ============================= startup hydration =============================
@@ -32,8 +33,8 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 	}
 	// A closing row is a tombstone-for-listing: it must not be restored, and
 	// it must not be promoted to error (which would resurrect it as closable).
-	if len(manager.List()) != 0 {
-		t.Fatalf("expected closing row skipped, got %v", manager.List())
+	if len(manager.Instances().List()) != 0 {
+		t.Fatalf("expected closing row skipped, got %v", manager.Instances().List())
 	}
 }
 
@@ -55,9 +56,9 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 
-	ws, err := manager.GetWorkspace("ws-recovered")
-	if err != nil {
-		t.Fatalf("get hydrated workspace: %v", err)
+	ws, ok := manager.Instances().Get("ws-recovered")
+	if !ok {
+		t.Fatalf("get hydrated workspace: not found")
 	}
 	if ws.State != workspace.WorkspaceStateActive || ws.Health != "" {
 		t.Fatalf("hydrated workspace = %#v, want state active health empty", ws)
@@ -167,8 +168,8 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 	manager := workspace.NewManager()
 	h := newBehaviorHandler(t, manager, nil, "node-1", nil)
 	openLocalWorkspace(t, manager, "ws-recover", gitRepo)
-	if err := manager.SetWorkspaceState("ws-recover", workspace.WorkspaceStateError, workspace.WorkspaceHealthPathMissing); err != nil {
-		t.Fatalf("SetWorkspaceState: %v", err)
+	if err := manager.Instances().SetState("ws-recover", string(instance.StateError), string(instance.HealthPathMissing)); err != nil {
+		t.Fatalf("SetState: %v", err)
 	}
 	if h.watchers.IsWatching(gitRepo) {
 		t.Fatal("watcher must not be registered before health recovery")
@@ -184,9 +185,9 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 	// The watcher is registered under the canonicalized path (EvalSymlinks
 	// resolves /var → /private/var on macOS), so assert against the manager's
 	// resolved path, not the raw test path.
-	ws, err := manager.GetWorkspace("ws-recover")
-	if err != nil {
-		t.Fatalf("get workspace: %v", err)
+	ws, ok := manager.Instances().Get("ws-recover")
+	if !ok {
+		t.Fatal("get workspace: not found")
 	}
 	if !h.watchers.IsWatching(ws.Path) {
 		t.Fatal("watcher must be re-registered after recovery from error")

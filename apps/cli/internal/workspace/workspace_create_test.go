@@ -175,9 +175,9 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 	}
 
 	// Also confirm the in-memory manager entry carries the correct state.
-	stored, err := manager.GetWorkspace("ws-state-test")
-	if err != nil {
-		t.Fatalf("GetWorkspace: %v", err)
+	stored, ok := manager.Instances().Get("ws-state-test")
+	if !ok {
+		t.Fatal("GetWorkspace: not found")
 	}
 	if stored.State != WorkspaceStateActive {
 		t.Errorf("stored Workspace.State = %q, want %q", stored.State, WorkspaceStateActive)

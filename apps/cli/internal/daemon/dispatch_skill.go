@@ -117,7 +117,7 @@ func (h *JSONRPCHandler) activeWorkspaceRoot() string {
 	if workspaceID == "" {
 		return ""
 	}
-	ws, err := h.manager.GetWorkspace(workspaceID)
+	ws, err := h.getWorkspace(workspaceID)
 	if err != nil {
 		return ""
 	}

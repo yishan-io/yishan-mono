@@ -65,7 +65,7 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 	if row.Status != "closed" {
 		t.Fatalf("persisted status = %q, want closed", row.Status)
 	}
-	if _, err := manager.GetWorkspace("ws-close-1"); err == nil {
+	if _, ok := manager.Instances().Get("ws-close-1"); ok {
 		t.Fatal("expected workspace removed from manager after close")
 	}
 
@@ -131,7 +131,7 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 	if row.Status != "active" {
 		t.Fatalf("persisted status = %q, want active (origin does not close remote rows)", row.Status)
 	}
-	if len(manager.List()) != 0 {
-		t.Fatalf("expected no manager runtime records, got %v", manager.List())
+	if len(manager.Instances().List()) != 0 {
+		t.Fatalf("expected no manager runtime records, got %v", manager.Instances().List())
 	}
 }

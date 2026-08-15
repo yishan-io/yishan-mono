@@ -10,6 +10,16 @@ const (
 	rpcCodeSessionInactive = rpcerror.CodeSessionInactive
 )
 
+// Exported RPC error codes for packages that build workspace errors at a
+// boundary (e.g. the instance registry).
+const (
+	RPCErrorCodeInvalidParams   = rpcCodeInvalidParams
+	RPCErrorCodeNotFound        = rpcCodeNotFound
+	RPCErrorCodePathRestricted  = rpcCodePathRestricted
+	RPCErrorCodeToolUnavailable = rpcCodeToolUnavailable
+	RPCErrorCodeSessionInactive = rpcCodeSessionInactive
+)
+
 type RPCError = rpcerror.Error
 
 func NewRPCError(code int, message string) error {
