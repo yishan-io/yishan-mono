@@ -1,4 +1,4 @@
-package node
+package hook
 
 import (
 	"crypto/rand"

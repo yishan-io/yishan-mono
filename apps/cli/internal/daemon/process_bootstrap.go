@@ -15,7 +15,7 @@ import (
 	release "yishan/apps/cli/internal/release"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/node"
+	hook "yishan/apps/cli/internal/node/hook"
 	nodeid "yishan/apps/cli/internal/node/id"
 	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -158,7 +158,7 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 func buildHTTPServer(app *app.App, daemonID string, relayStatus *relay.Status) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/ws", app.RPCServer())
-	mux.HandleFunc(node.AgentHookIngestPath, app.ServeAgentHook)
+	mux.HandleFunc(hook.AgentHookIngestPath, app.ServeAgentHook)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

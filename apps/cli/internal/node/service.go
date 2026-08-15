@@ -18,6 +18,7 @@ import (
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/node/hook"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
@@ -103,15 +104,18 @@ type Service struct {
 	// internal/agent/session); the service only coordinates through it.
 	piSessions *session.Registry
 
+	// hookIngress handles the agent hook HTTP ingress (pi notify bridge).
+	hookIngress *hook.Ingress
+	// agentUsage tracks which agents ran per workspace (close-time
+	// summarization); owned by the hook package.
+	agentUsage *hook.UsageTracker
+
 	// desktopConns tracks live WebSocket connections tagged as the Yishan
 	// desktop app (client=desktop). Used to decide how task runs attached to
 	// workspace creation execute: agent chat tab when a desktop UI is
 	// connected, pi CLI terminal otherwise (headless/remote daemons).
 	desktopConnsMu sync.Mutex
 	desktopConns   map[*rpc.Connection]struct{}
-
-	agentUsageMu sync.Mutex
-	agentUsage   map[string]map[string]struct{}
 
 	// remoteStreamSubs tracks desktop connections subscribed to remote
 	// terminal PTY streams (terminal.remote.subscribe).
@@ -120,8 +124,8 @@ type Service struct {
 }
 
 // NewService builds the local Node application boundary from explicit
-// dependencies: it wires the workspace application service and the
-// handler-level state.
+// dependencies: it wires the workspace application service, the agent hook
+// ingress, and the handler-level state.
 func NewService(deps Dependencies) *Service {
 	if deps.AgentLifecycleCtx == nil {
 		deps.AgentLifecycleCtx, deps.AgentLifecycleCancel = context.WithCancel(context.Background())
@@ -134,9 +138,16 @@ func NewService(deps Dependencies) *Service {
 		piSessions:       session.NewRegistry(),
 		desktopConns:     make(map[*rpc.Connection]struct{}),
 		remoteStreamSubs: make(map[string]map[*rpc.Connection]struct{}),
-		agentUsage:       make(map[string]map[string]struct{}),
 	}
 	service.app = service.newWorkspaceApplicationService()
+	service.agentUsage = hook.NewUsageTracker()
+	service.hookIngress = hook.NewIngress(hook.IngressDeps{
+		Events:     deps.Events,
+		TokenUsage: deps.TokenUsage,
+		Memory:     deps.Memory,
+		Registry:   deps.Registry,
+		Usage:      service.agentUsage,
+	})
 	service.wireTerminalListeners()
 	return service
 }
@@ -263,4 +274,21 @@ func (s *Service) Shutdown() {
 	if s.deps.AgentMgr != nil {
 		s.deps.AgentMgr.StopAll()
 	}
+}
+
+// ServeAgentHook handles the agent hook HTTP ingress (pi notify bridge),
+// delegating to the hook ingress adapter.
+func (s *Service) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
+	s.hookIngress.ServeHTTP(w, r)
+}
+
+// clearAgentUsage drops the recorded agents for a workspace (close-time
+// cleanup).
+func (s *Service) clearAgentUsage(workspaceID string) {
+	s.agentUsage.Clear(workspaceID)
+}
+
+// getAgentUsage returns the agents recorded for a workspace.
+func (s *Service) getAgentUsage(workspaceID string) []string {
+	return s.agentUsage.List(workspaceID)
 }

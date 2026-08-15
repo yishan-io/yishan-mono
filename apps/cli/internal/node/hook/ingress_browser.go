@@ -1,4 +1,4 @@
-package node
+package hook
 
 import (
 	"net/http"
@@ -18,7 +18,7 @@ func isBrowserURLEvent(payload hookIngressEvent) bool {
 	return strings.TrimSpace(urlVal) != ""
 }
 
-func (s *Service) handleBrowserURLEvent(w http.ResponseWriter, payload hookIngressEvent) {
+func (i *Ingress) handleBrowserURLEvent(w http.ResponseWriter, payload hookIngressEvent) {
 	workspaceID := strings.TrimSpace(payload.WorkspaceID)
 	tabID := strings.TrimSpace(payload.TabID)
 	paneID := strings.TrimSpace(payload.PaneID)
@@ -34,7 +34,7 @@ func (s *Service) handleBrowserURLEvent(w http.ResponseWriter, payload hookIngre
 		return
 	}
 
-	s.deps.Events.Publish(internalevents.Event{
+	i.events.Publish(internalevents.Event{
 		Topic: "openBrowserUrl",
 		Payload: map[string]any{
 			"url":         urlVal,

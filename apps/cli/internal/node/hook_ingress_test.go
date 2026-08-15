@@ -10,6 +10,7 @@ import (
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/node/hook"
 )
 
 func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
@@ -200,7 +201,7 @@ func postHookPayload(t *testing.T, handler *Service, payload map[string]any) *ht
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	request := httptest.NewRequest(http.MethodPost, AgentHookIngestPath, bytes.NewReader(body))
+	request := httptest.NewRequest(http.MethodPost, hook.AgentHookIngestPath, bytes.NewReader(body))
 	request.Header.Set("content-type", "application/json")
 	response := httptest.NewRecorder()
 	handler.ServeAgentHook(response, request)

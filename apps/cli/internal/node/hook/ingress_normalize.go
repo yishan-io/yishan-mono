@@ -1,9 +1,11 @@
-package node
+package hook
 
 import (
+	"slices"
 	"strings"
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
+
 )
 
 func mergeHookIngressPayload(envelope hookIngressEvent, rawPayload hookIngressEvent) hookIngressEvent {
@@ -118,4 +120,9 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// isKnownAgentKind reports whether the agent kind is one pi knows.
+func isKnownAgentKind(kind string) bool {
+	return slices.Contains(agentkind.All, kind)
 }

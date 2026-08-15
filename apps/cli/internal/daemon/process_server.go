@@ -12,6 +12,7 @@ import (
 	agentsetup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/app"
 	"yishan/apps/cli/internal/node"
+	hook "yishan/apps/cli/internal/node/hook"
 	cliruntime "yishan/apps/cli/internal/runtime"
 
 	"github.com/rs/zerolog/log"
@@ -26,7 +27,7 @@ func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
 	}); err != nil {
 		return fmt.Errorf("save daemon state: %w", err)
 	}
-	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+dr.actualAddr+node.AgentHookIngestPath)
+	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+dr.actualAddr+hook.AgentHookIngestPath)
 	if usesRemoteHostPolicy(dr.app.Runtime) {
 		_ = os.Setenv(agentsetup.RemoteHostPolicyEnvKey, "1")
 	} else {
