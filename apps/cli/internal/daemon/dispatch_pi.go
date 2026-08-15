@@ -16,59 +16,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// piActiveSessionSummary describes one live pi session the desktop can recover.
-// Session identity rule: the daemon live session id is also the Pi resume/session id.
-type piActiveSessionSummary struct {
-	SessionID   string `json:"sessionId"`
-	TabID       string `json:"tabId"`
-	WorkspaceID string `json:"workspaceId"`
-	CWD         string `json:"cwd"`
-}
+// PiService implementation. Each method performs one pi session or provider
+// operation; session state coordination lives in internal/agent/session (the
+// registry owns the maps and mutexes).
 
-func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *rpc.Connection, method string, params json.RawMessage) (any, error) {
-	switch method {
-	case MethodPiStart:
-		return h.handlePiStart(ctx, connState, params)
-	case MethodPiAttach:
-		return h.handlePiAttach(ctx, connState, params)
-	case MethodPiStop:
-		return h.handlePiStop(params)
-	case MethodPiSend:
-		return h.handlePiSend(params)
-	case MethodPiListSessions:
-		return h.handlePiListSessions(ctx, params)
-	case MethodPiListActiveSessions:
-		return h.handlePiListActiveSessions()
-	case MethodPiGetSessionFile:
-		return h.handlePiGetSessionFile(ctx, params)
-	case MethodPiRename:
-		return h.handlePiRename(params)
-	case MethodPiListProviders:
-		return h.handlePiListProviders()
-	case MethodPiSaveProvider:
-		return h.handlePiSaveProvider(params)
-	case MethodPiRemoveProvider:
-		return h.handlePiRemoveProvider(params)
-	default:
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown pi method: "+method)
-	}
-}
-
-type piStartParams struct {
-	// Session identity rule: sessionId is used both for daemon attach and Pi resume.
-	SessionID   string `json:"sessionId"`
-	TabID       string `json:"tabId"`
-	PaneID      string `json:"paneId,omitempty"`
-	WorkspaceID string `json:"workspaceId"`
-	CWD         string `json:"cwd"`
-	Resume      bool   `json:"resume,omitempty"`
-}
-
-func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *rpc.Connection, params json.RawMessage) (any, error) {
-	var req piStartParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiStart(ctx context.Context, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
@@ -159,18 +111,7 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *rpc.Conne
 	return map[string]any{"sessionId": req.SessionID}, nil
 }
 
-type piAttachParams struct {
-	SessionID   string `json:"sessionId"`
-	TabID       string `json:"tabId,omitempty"`
-	WorkspaceID string `json:"workspaceId,omitempty"`
-	CWD         string `json:"cwd,omitempty"`
-}
-
-func (h *JSONRPCHandler) handlePiAttach(ctx context.Context, connState *rpc.Connection, params json.RawMessage) (any, error) {
-	var req piAttachParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiAttach(ctx context.Context, connState *rpc.Connection, req rpc.PiAttachParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
@@ -207,11 +148,7 @@ func (h *JSONRPCHandler) handlePiAttach(ctx context.Context, connState *rpc.Conn
 	return map[string]bool{"ok": true}, nil
 }
 
-type piStopParams struct {
-	SessionID string `json:"sessionId"`
-}
-
-func buildPiStartExtraEnv(req piStartParams) ([]string, error) {
+func buildPiStartExtraEnv(req rpc.PiStartParams) ([]string, error) {
 	piAgentDir, err := config.ManagedPiAgentDir()
 	if err != nil {
 		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
@@ -237,11 +174,7 @@ func resolvePiStartPaneID(tabID string, paneID string) string {
 	return "pane-" + tabID
 }
 
-func (h *JSONRPCHandler) handlePiStop(params json.RawMessage) (any, error) {
-	var req piStopParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
@@ -262,16 +195,7 @@ func (h *JSONRPCHandler) handlePiStop(params json.RawMessage) (any, error) {
 	return map[string]bool{"ok": true}, nil
 }
 
-type piSendParams struct {
-	SessionID string          `json:"sessionId"`
-	Command   json.RawMessage `json:"command"`
-}
-
-func (h *JSONRPCHandler) handlePiSend(params json.RawMessage) (any, error) {
-	var req piSendParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
@@ -297,15 +221,7 @@ func (h *JSONRPCHandler) handlePiSend(params json.RawMessage) (any, error) {
 	return map[string]bool{"ok": true}, nil
 }
 
-type piListSessionsParams struct {
-	CWD string `json:"cwd"`
-}
-
-func (h *JSONRPCHandler) handlePiListSessions(ctx context.Context, params json.RawMessage) (any, error) {
-	var req piListSessionsParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiListSessions(ctx context.Context, req rpc.PiListSessionsParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
@@ -318,16 +234,7 @@ func (h *JSONRPCHandler) handlePiListSessions(ctx context.Context, params json.R
 	return summaries, nil
 }
 
-type piGetSessionFileParams struct {
-	CWD       string `json:"cwd"`
-	SessionID string `json:"sessionId"`
-}
-
-func (h *JSONRPCHandler) handlePiGetSessionFile(ctx context.Context, params json.RawMessage) (any, error) {
-	var req piGetSessionFileParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFileParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
@@ -343,16 +250,7 @@ func (h *JSONRPCHandler) handlePiGetSessionFile(ctx context.Context, params json
 	return map[string]string{"filePath": filePath}, nil
 }
 
-type piRenameParams struct {
-	SessionID string `json:"sessionId"`
-	Title     string `json:"title"`
-}
-
-func (h *JSONRPCHandler) handlePiRename(params json.RawMessage) (any, error) {
-	var req piRenameParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
@@ -386,22 +284,22 @@ func (h *JSONRPCHandler) handlePiRename(params json.RawMessage) (any, error) {
 	return map[string]bool{"ok": true}, nil
 }
 
-func (h *JSONRPCHandler) handlePiListActiveSessions() (any, error) {
+func (h *JSONRPCHandler) PiListActiveSessions(ctx context.Context) (any, error) {
 	activeSessions := h.agentMgr.Sessions()
 	if len(activeSessions) == 0 {
-		return []piActiveSessionSummary{}, nil
+		return []rpc.PiActiveSessionSummary{}, nil
 	}
 
 	metadataBySessionID := h.piSessions.Snapshot()
 
-	summaries := make([]piActiveSessionSummary, 0, len(activeSessions))
+	summaries := make([]rpc.PiActiveSessionSummary, 0, len(activeSessions))
 	for _, proc := range activeSessions {
 		metadata, exists := metadataBySessionID[proc.ID()]
 		if !exists {
 			continue
 		}
 
-		summaries = append(summaries, piActiveSessionSummary{
+		summaries = append(summaries, rpc.PiActiveSessionSummary{
 			SessionID:   proc.ID(),
 			TabID:       metadata.TabID,
 			WorkspaceID: metadata.WorkspaceID,
@@ -448,8 +346,8 @@ func (h *JSONRPCHandler) makePiEventCallback(sessionID string) func(string, stri
 // process that took over the same session id (fast reopen) leaves the event
 // unsent, and a clean pi.stop is ignored by the desktop because its event
 // router is already unsubscribed by then. The stale registry entry is
-// intentionally kept so the task-run fail-closed guard in handlePiStart can
-// still detect a session that died before attach; pi.start overwrites it and
+// intentionally kept so the task-run fail-closed guard in PiStart can still
+// detect a session that died before attach; pi.start overwrites it and
 // pi.attach self-heals.
 func (h *JSONRPCHandler) handlePiSessionExit(exited *process.Session) {
 	state, exists := h.piSessions.Lookup(exited)

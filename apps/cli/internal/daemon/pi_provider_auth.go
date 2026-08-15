@@ -1,18 +1,20 @@
 package daemon
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"os"
 
 	piauth "yishan/apps/cli/internal/agent/auth"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
-// JSON-RPC handlers adapting the piauth store to the desktop. The store itself
-// (auth.json format, locking, ambient detection) lives in internal/piauth.
+// Pi provider credential handlers: adapters for the piauth store. The store
+// itself (auth.json format, locking, ambient detection) lives in
+// internal/agent/auth.
 
-func (h *JSONRPCHandler) handlePiListProviders() (any, error) {
+func (h *JSONRPCHandler) PiListProviders(ctx context.Context) (any, error) {
 	if h.piAuth == nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "pi agent auth store is unavailable")
 	}
@@ -23,17 +25,7 @@ func (h *JSONRPCHandler) handlePiListProviders() (any, error) {
 	return map[string]any{"providers": entries}, nil
 }
 
-type piSaveProviderParams struct {
-	Provider string            `json:"provider"`
-	Key      string            `json:"key"`
-	Env      map[string]string `json:"env,omitempty"`
-}
-
-func (h *JSONRPCHandler) handlePiSaveProvider(params json.RawMessage) (any, error) {
-	var req piSaveProviderParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiSaveProvider(ctx context.Context, req rpc.PiSaveProviderParams) (any, error) {
 	if h.piAuth == nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "pi agent auth store is unavailable")
 	}
@@ -43,15 +35,7 @@ func (h *JSONRPCHandler) handlePiSaveProvider(params json.RawMessage) (any, erro
 	return map[string]bool{"ok": true}, nil
 }
 
-type piRemoveProviderParams struct {
-	Provider string `json:"provider"`
-}
-
-func (h *JSONRPCHandler) handlePiRemoveProvider(params json.RawMessage) (any, error) {
-	var req piRemoveProviderParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) PiRemoveProvider(ctx context.Context, req rpc.PiRemoveProviderParams) (any, error) {
 	if h.piAuth == nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "pi agent auth store is unavailable")
 	}

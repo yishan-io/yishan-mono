@@ -7,6 +7,7 @@ import (
 
 	agentcmd "yishan/apps/cli/internal/agent/command"
 	agentmanager "yishan/apps/cli/internal/agent/process"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 
@@ -61,7 +62,7 @@ func (h *JSONRPCHandler) startTaskRunChatSession(created workspace.Workspace, ta
 	if strings.TrimSpace(taskRun.Model) != "" {
 		args = append(args, "--model", strings.TrimSpace(taskRun.Model))
 	}
-	extraEnv, err := buildPiStartExtraEnv(piStartParams{
+	extraEnv, err := buildPiStartExtraEnv(rpc.PiStartParams{
 		TabID:       tabID,
 		PaneID:      paneID,
 		WorkspaceID: created.ID,

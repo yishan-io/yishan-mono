@@ -2,65 +2,103 @@ package daemon
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	setup "yishan/apps/cli/internal/agent/setup"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
-// customize sub-namespace constants, split from the method string inside
-// dispatchCustomize so new panels (agents, themes, …) can be added as sibling
-// cases.
-const (
-	customizeExtensionsNamespace = "extensions"
-	customizeAgentsNamespace     = "agents"
-)
+// CustomizeService implementation. Each method performs one extension or agent
+// operation via the setup package; RPC decoding happens in the agent handler.
 
 // managedCommandTimeout bounds pi/npx installs and removals so a stalled
 // network fetch cannot occupy an RPC handler slot indefinitely.
 const managedCommandTimeout = 10 * time.Minute
 
-// dispatchCustomize routes customize.* methods by their second path segment.
-// Each sub-namespace owns a dedicated dispatch method.
-func (h *JSONRPCHandler) dispatchCustomize(ctx context.Context, method string, params json.RawMessage) (any, error) {
-	sub, _, found := strings.Cut(strings.TrimPrefix(method, "customize."), ".")
-	if !found {
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
+func (h *JSONRPCHandler) CustomizeExtensionsList(ctx context.Context) (any, error) {
+	extensions, err := setup.ListPiExtensions()
+	if err != nil {
+		return nil, fmt.Errorf("list pi extensions: %w", err)
 	}
-	switch sub {
-	case customizeExtensionsNamespace:
-		return h.dispatchCustomizeExtensions(ctx, method, params)
-	case customizeAgentsNamespace:
-		return h.dispatchCustomizeAgents(method, params)
-	default:
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
-	}
+	setup.CheckPiExtensionUpdates(ctx, extensions)
+	return map[string]any{"extensions": extensions}, nil
 }
 
-func (h *JSONRPCHandler) dispatchCustomizeAgents(method string, params json.RawMessage) (any, error) {
-	switch method {
-	case MethodCustomizeAgentsList:
-		return h.handleCustomizeAgentsList()
-	case MethodCustomizeAgentsDetail:
-		return h.handleCustomizeAgentsDetail(params)
-	case MethodCustomizeAgentsCreate:
-		return h.handleCustomizeAgentsCreate(params)
-	case MethodCustomizeAgentsUpdate:
-		return h.handleCustomizeAgentsUpdate(params)
-	case MethodCustomizeAgentsRemove:
-		return h.handleCustomizeAgentsRemove(params)
-	case MethodCustomizeAgentsRestore:
-		return h.handleCustomizeAgentsRestore(params)
-	default:
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
+func (h *JSONRPCHandler) CustomizeExtensionsInstall(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
+	source, err := requireExtensionSource(req.Source)
+	if err != nil {
+		return nil, err
 	}
+	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
+	defer cancel()
+	if err := setup.InstallPiExtension(commandCtx, source); err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, "install pi extension: "+err.Error())
+	}
+	return map[string]any{"installed": true}, nil
 }
 
-func (h *JSONRPCHandler) handleCustomizeAgentsList() (any, error) {
+// CustomizeExtensionsRemove implements customize.extensions.remove with the
+// official-extension gating: official extensions are part of the managed base
+// install that `yishan setup` restores, so they are updated through the panel
+// but not removable.
+func (h *JSONRPCHandler) CustomizeExtensionsRemove(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
+	source, err := requireExtensionSource(req.Source)
+	if err != nil {
+		return nil, err
+	}
+	if rejectErr := extensionRemoveTargetError(source); rejectErr != nil {
+		return nil, rejectErr
+	}
+	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
+	defer cancel()
+	if err := setup.RemovePiExtension(commandCtx, source); err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, "remove pi extension: "+err.Error())
+	}
+	return map[string]any{"removed": true}, nil
+}
+
+func (h *JSONRPCHandler) CustomizeExtensionsUpdate(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
+	source, err := requireExtensionSource(req.Source)
+	if err != nil {
+		return nil, err
+	}
+	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
+	defer cancel()
+	if err := setup.UpdatePiExtension(commandCtx, source); err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, "update pi extension: "+err.Error())
+	}
+	return map[string]any{"updated": true}, nil
+}
+
+func requireExtensionSource(source string) (string, error) {
+	value := strings.TrimSpace(source)
+	if value == "" {
+		return "", workspace.NewRPCError(rpcCodeInvalidParams, "source is required")
+	}
+	return value, nil
+}
+
+// extensionRemoveTargetError rejects removing official extensions: they are
+// part of the managed base install that `yishan setup` restores, so they are
+// updated through the panel but not removable.
+func extensionRemoveTargetError(source string) error {
+	extensions, err := setup.ListPiExtensions()
+	if err != nil {
+		return nil // the remove attempt itself surfaces the real error
+	}
+	for _, ext := range extensions {
+		if ext.Source == source && ext.Official {
+			return workspace.NewRPCError(rpcCodeInvalidParams, "official extensions are managed by yishan setup and cannot be removed")
+		}
+	}
+	return nil
+}
+
+func (h *JSONRPCHandler) CustomizeAgentsList(ctx context.Context) (any, error) {
 	agents, err := setup.ListPiAgents()
 	if err != nil {
 		return nil, fmt.Errorf("list pi agents: %w", err)
@@ -68,8 +106,8 @@ func (h *JSONRPCHandler) handleCustomizeAgentsList() (any, error) {
 	return map[string]any{"agents": agents}, nil
 }
 
-func (h *JSONRPCHandler) handleCustomizeAgentsDetail(params json.RawMessage) (any, error) {
-	name, err := parseAgentNameParam(params)
+func (h *JSONRPCHandler) CustomizeAgentsDetail(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
+	name, err := requireAgentName(req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -80,18 +118,7 @@ func (h *JSONRPCHandler) handleCustomizeAgentsDetail(params json.RawMessage) (an
 	return detail, nil
 }
 
-func (h *JSONRPCHandler) handleCustomizeAgentsCreate(params json.RawMessage) (any, error) {
-	var req struct {
-		Name        string   `json:"name"`
-		Description string   `json:"description"`
-		Content     string   `json:"content"`
-		Model       string   `json:"model"`
-		Thinking    string   `json:"thinking"`
-		Tools       []string `json:"tools"`
-	}
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) CustomizeAgentsCreate(ctx context.Context, req rpc.CustomizeAgentCreateParams) (any, error) {
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "content is required")
 	}
@@ -101,14 +128,7 @@ func (h *JSONRPCHandler) handleCustomizeAgentsCreate(params json.RawMessage) (an
 	return map[string]any{"created": true}, nil
 }
 
-func (h *JSONRPCHandler) handleCustomizeAgentsUpdate(params json.RawMessage) (any, error) {
-	var req struct {
-		Name    string `json:"name"`
-		Content string `json:"content"`
-	}
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) CustomizeAgentsUpdate(ctx context.Context, req rpc.CustomizeAgentUpdateParams) (any, error) {
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "content is required")
 	}
@@ -118,8 +138,8 @@ func (h *JSONRPCHandler) handleCustomizeAgentsUpdate(params json.RawMessage) (an
 	return map[string]any{"updated": true}, nil
 }
 
-func (h *JSONRPCHandler) handleCustomizeAgentsRemove(params json.RawMessage) (any, error) {
-	name, err := parseAgentNameParam(params)
+func (h *JSONRPCHandler) CustomizeAgentsRemove(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
+	name, err := requireAgentName(req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +149,8 @@ func (h *JSONRPCHandler) handleCustomizeAgentsRemove(params json.RawMessage) (an
 	return map[string]any{"removed": true}, nil
 }
 
-func (h *JSONRPCHandler) handleCustomizeAgentsRestore(params json.RawMessage) (any, error) {
-	name, err := parseAgentNameParam(params)
+func (h *JSONRPCHandler) CustomizeAgentsRestore(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
+	name, err := requireAgentName(req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -140,14 +160,8 @@ func (h *JSONRPCHandler) handleCustomizeAgentsRestore(params json.RawMessage) (a
 	return map[string]any{"restored": true}, nil
 }
 
-func parseAgentNameParam(params json.RawMessage) (string, error) {
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := decodeParams(params, &req); err != nil {
-		return "", err
-	}
-	name := strings.TrimSpace(req.Name)
+func requireAgentName(name string) (string, error) {
+	name = strings.TrimSpace(name)
 	if name == "" {
 		return "", workspace.NewRPCError(rpcCodeInvalidParams, "name is required")
 	}
@@ -167,104 +181,4 @@ func agentOperationError(err error) error {
 		return workspace.NewRPCError(rpcCodeInvalidParams, err.Error())
 	}
 	return workspace.NewRPCError(rpcCodeServerError, err.Error())
-}
-
-func (h *JSONRPCHandler) dispatchCustomizeExtensions(ctx context.Context, method string, params json.RawMessage) (any, error) {
-	switch method {
-	case MethodCustomizeExtensionsList:
-		return h.handleCustomizeExtensionsList(ctx)
-	case MethodCustomizeExtensionsInstall:
-		return h.handleCustomizeExtensionsInstall(ctx, params)
-	case MethodCustomizeExtensionsRemove:
-		return h.handleCustomizeExtensionsRemove(ctx, params)
-	case MethodCustomizeExtensionsUpdate:
-		return h.handleCustomizeExtensionsUpdate(ctx, params)
-	default:
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
-	}
-}
-
-func (h *JSONRPCHandler) handleCustomizeExtensionsList(ctx context.Context) (any, error) {
-	extensions, err := setup.ListPiExtensions()
-	if err != nil {
-		return nil, fmt.Errorf("list pi extensions: %w", err)
-	}
-	setup.CheckPiExtensionUpdates(ctx, extensions)
-	return map[string]any{"extensions": extensions}, nil
-}
-
-func (h *JSONRPCHandler) handleCustomizeExtensionsInstall(ctx context.Context, params json.RawMessage) (any, error) {
-	source, err := parseExtensionMutationParam(params)
-	if err != nil {
-		return nil, err
-	}
-	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
-	defer cancel()
-	if err := setup.InstallPiExtension(commandCtx, source); err != nil {
-		return nil, workspace.NewRPCError(rpcCodeServerError, "install pi extension: "+err.Error())
-	}
-	return map[string]any{"installed": true}, nil
-}
-
-func (h *JSONRPCHandler) handleCustomizeExtensionsRemove(ctx context.Context, params json.RawMessage) (any, error) {
-	source, err := parseExtensionMutationParam(params)
-	if err != nil {
-		return nil, err
-	}
-	if rejectErr := extensionRemoveTargetError(source); rejectErr != nil {
-		return nil, rejectErr
-	}
-	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
-	defer cancel()
-	if err := setup.RemovePiExtension(commandCtx, source); err != nil {
-		return nil, workspace.NewRPCError(rpcCodeServerError, "remove pi extension: "+err.Error())
-	}
-	return map[string]any{"removed": true}, nil
-}
-
-// extensionRemoveTargetError rejects removing official extensions: they are
-// part of the managed base install that `yishan setup` restores, so they are
-// updated through the panel but not removable.
-func extensionRemoveTargetError(source string) error {
-	extensions, err := setup.ListPiExtensions()
-	if err != nil {
-		return nil // the remove attempt itself surfaces the real error
-	}
-	for _, ext := range extensions {
-		if ext.Source == source && ext.Official {
-			return workspace.NewRPCError(rpcCodeInvalidParams, "official extensions are managed by yishan setup and cannot be removed")
-		}
-	}
-	return nil
-}
-
-func (h *JSONRPCHandler) handleCustomizeExtensionsUpdate(ctx context.Context, params json.RawMessage) (any, error) {
-	source, err := parseExtensionMutationParam(params)
-	if err != nil {
-		return nil, err
-	}
-	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
-	defer cancel()
-	if err := setup.UpdatePiExtension(commandCtx, source); err != nil {
-		return nil, workspace.NewRPCError(rpcCodeServerError, "update pi extension: "+err.Error())
-	}
-	return map[string]any{"updated": true}, nil
-}
-
-// parseExtensionMutationParam extracts the source spec of an install/update
-// call. pi matches installs/removals/updates by source identity, so the full
-// spec (npm:, git:, https:, local path) is required — a bare package name is
-// never a valid target.
-func parseExtensionMutationParam(params json.RawMessage) (string, error) {
-	var req struct {
-		Source string `json:"source"`
-	}
-	if err := decodeParams(params, &req); err != nil {
-		return "", err
-	}
-	value := strings.TrimSpace(req.Source)
-	if value == "" {
-		return "", workspace.NewRPCError(rpcCodeInvalidParams, "source is required")
-	}
-	return value, nil
 }

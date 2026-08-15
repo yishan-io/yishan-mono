@@ -174,12 +174,12 @@ func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) 
 	// the process manager) while agentMgr has no live session.
 	h.piSessions.Register("task-ws-1", nil, nil, "task-ws-1", "ws-1", t.TempDir(), true)
 
-	_, err := h.handlePiStart(context.Background(), nil, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "task-ws-1",
-		"tabId":       "task-ws-1",
-		"workspaceId": "ws-1",
-		"cwd":         t.TempDir(),
-	}))
+	_, err := h.PiStart(context.Background(), nil, rpc.PiStartParams{
+		SessionID:   "task-ws-1",
+		TabID:       "task-ws-1",
+		WorkspaceID: "ws-1",
+		CWD:         t.TempDir(),
+	})
 	if err == nil {
 		t.Fatal("expected pi.start to fail for a task run session that ended before attach")
 	}

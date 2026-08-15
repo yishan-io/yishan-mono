@@ -57,7 +57,7 @@ func writeAuthFile(t *testing.T, dir string, content string) {
 func TestPiProviderDispatch_RoundTrip(t *testing.T) {
 	h := newPiAuthTestHandler(t)
 
-	saveResult, err := h.dispatchPi(context.Background(), nil, MethodPiSaveProvider,
+	saveResult, err := h.callAgentRPCForTest(context.Background(), nil, MethodPiSaveProvider,
 		mustJSON(t, map[string]any{"provider": "deepseek", "key": "sk-roundtrip"}))
 	if err != nil {
 		t.Fatalf("saveProvider: %v", err)
@@ -66,7 +66,7 @@ func TestPiProviderDispatch_RoundTrip(t *testing.T) {
 		t.Fatalf("saveProvider result = %v, want ok", saveResult)
 	}
 
-	listResult, err := h.dispatchPi(context.Background(), nil, MethodPiListProviders, nil)
+	listResult, err := h.callAgentRPCForTest(context.Background(), nil, MethodPiListProviders, nil)
 	if err != nil {
 		t.Fatalf("listProviders: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestPiProviderDispatch_RoundTrip(t *testing.T) {
 		t.Fatalf("listProviders = %+v, want one deepseek/api_key entry", providers)
 	}
 
-	removeResult, err := h.dispatchPi(context.Background(), nil, MethodPiRemoveProvider,
+	removeResult, err := h.callAgentRPCForTest(context.Background(), nil, MethodPiRemoveProvider,
 		mustJSON(t, map[string]any{"provider": "deepseek"}))
 	if err != nil {
 		t.Fatalf("removeProvider: %v", err)
@@ -85,7 +85,7 @@ func TestPiProviderDispatch_RoundTrip(t *testing.T) {
 		t.Fatalf("removeProvider result = %v, want ok", removeResult)
 	}
 
-	listResult, err = h.dispatchPi(context.Background(), nil, MethodPiListProviders, nil)
+	listResult, err = h.callAgentRPCForTest(context.Background(), nil, MethodPiListProviders, nil)
 	if err != nil {
 		t.Fatalf("listProviders after remove: %v", err)
 	}
@@ -108,18 +108,18 @@ func TestPiProviderDispatch_InvalidParams(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := h.dispatchPi(context.Background(), nil, MethodPiSaveProvider, mustJSON(t, tc.body))
+			_, err := h.callAgentRPCForTest(context.Background(), nil, MethodPiSaveProvider, mustJSON(t, tc.body))
 			assertRPCErrorCode(t, err, rpcCodeInvalidParams)
 		})
 	}
 
-	_, err := h.dispatchPi(context.Background(), nil, MethodPiRemoveProvider, mustJSON(t, map[string]any{"provider": "  "}))
+	_, err := h.callAgentRPCForTest(context.Background(), nil, MethodPiRemoveProvider, mustJSON(t, map[string]any{"provider": "  "}))
 	assertRPCErrorCode(t, err, rpcCodeInvalidParams)
 }
 
 func TestPiProviderDispatch_UnknownMethodStaysNotFound(t *testing.T) {
 	h := newPiAuthTestHandler(t)
-	_, err := h.dispatchPi(context.Background(), nil, "pi.unknownMethod", nil)
+	_, err := h.callAgentRPCForTest(context.Background(), nil, "pi.unknownMethod", nil)
 	assertRPCErrorCode(t, err, rpcCodeMethodNotFound)
 }
 
@@ -131,13 +131,13 @@ func TestPiProviderDispatch_CorruptAuthFileIsServerError(t *testing.T) {
 		piauth.LockPolicy{MaxAttempts: 3, MinDelay: 5 * time.Millisecond, MaxDelay: 10 * time.Millisecond},
 	))
 
-	_, err := h.dispatchPi(context.Background(), nil, MethodPiListProviders, nil)
+	_, err := h.callAgentRPCForTest(context.Background(), nil, MethodPiListProviders, nil)
 	assertRPCErrorCode(t, err, rpcCodeServerError)
 }
 
 func TestPiProviderDispatch_NilStoreIsServerError(t *testing.T) {
 	h := newTestHandler(t)
 	h.piAuth = nil
-	_, err := h.dispatchPi(context.Background(), nil, MethodPiListProviders, nil)
+	_, err := h.callAgentRPCForTest(context.Background(), nil, MethodPiListProviders, nil)
 	assertRPCErrorCode(t, err, rpcCodeServerError)
 }

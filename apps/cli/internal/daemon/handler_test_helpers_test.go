@@ -103,6 +103,13 @@ func (h *JSONRPCHandler) callRPCForTest(ctx context.Context, method string, para
 	return h.router.Call(ctx, &rpc.Connection{}, method, params)
 }
 
+// callAgentRPCForTest routes an agent-namespace method (pi./skill./customize.)
+// through the namespace router with an explicit connection, the same path
+// rpc.Server uses for live connections.
+func (h *JSONRPCHandler) callAgentRPCForTest(ctx context.Context, conn *rpc.Connection, method string, params json.RawMessage) (any, error) {
+	return h.router.Call(ctx, conn, method, params)
+}
+
 // TestNewJSONRPCHandler_CopiesAppServices guards the handler↔app wiring:
 // every service the RPC layer needs must be copied from the composed node app
 // at construction (a missed copy silently breaks the daemon in production
