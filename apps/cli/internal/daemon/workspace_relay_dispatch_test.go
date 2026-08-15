@@ -1,14 +1,15 @@
 package daemon
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
-	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/relay"
 )
 
 // relayVerdictTestServer upgrades to a WebSocket, reads one request, and replies
@@ -32,39 +33,44 @@ func relayVerdictTestServer(t *testing.T, result map[string]any) *httptest.Serve
 	return server
 }
 
-// wireRelayReader connects the handler's relayConn to a verdict test server and
-// runs a reader goroutine that resolves dispatch responses the same way the
-// real relay client read loop does.
+// wireRelayReader runs a real relay client against a verdict test server so
+// dispatch responses are resolved through the production read loop.
 func wireRelayReader(t *testing.T, h *JSONRPCHandler, result map[string]any) {
 	t.Helper()
 	server := relayVerdictTestServer(t, result)
-	dialer := websocket.Dialer{}
-	conn, _, err := dialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
-	}
-	t.Cleanup(func() { _ = conn.Close() })
-	h.relayConn = rpc.NewConnection(conn)
+	client := relay.NewClient(relay.ClientConfig{
+		Runtime:     nil,
+		NodeID:      "node-1",
+		URL:         server.URL,
+		StaticToken: "test-token",
+		Server:      h.rpcServer,
+		Handler:     h,
+		Events:      h.events,
+	})
+	h.relayClient = client
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go client.Run(ctx)
+	waitForRelayConnected(t, client)
+}
 
-	go func() {
-		for {
-			var msg struct {
-				ID     json.RawMessage `json:"id"`
-				Result json.RawMessage `json:"result"`
-			}
-			if err := conn.ReadJSON(&msg); err != nil {
-				return
-			}
-			handleRelayDispatchResponse(h, msg.ID, msg.Result)
+func waitForRelayConnected(t *testing.T, client *relay.Client) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if client.Status().Snapshot().Connected {
+			return
 		}
-	}()
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("relay client did not connect to test server")
 }
 
 func TestSendRelayDispatchRequest_RejectedWhenTargetOffline(t *testing.T) {
 	h := newTestHandler(t)
 	wireRelayReader(t, h, map[string]any{"accepted": false, "reason": "target node offline"})
 
-	err := h.sendRelayDispatchRequest(
+	err := h.relayClient.SendDispatchRequest(
 		map[string]any{"change": "workspace.close.request", "targetNodeId": "node-2"}, "node-2")
 	if err == nil || !strings.Contains(err.Error(), "offline") {
 		t.Fatalf("expected offline rejection error, got %v", err)
@@ -75,7 +81,7 @@ func TestSendRelayDispatchRequest_AcceptedWhenTargetOnline(t *testing.T) {
 	h := newTestHandler(t)
 	wireRelayReader(t, h, map[string]any{"accepted": true})
 
-	if err := h.sendRelayDispatchRequest(
+	if err := h.relayClient.SendDispatchRequest(
 		map[string]any{"change": "workspace.close.request", "targetNodeId": "node-2"}, "node-2"); err != nil {
 		t.Fatalf("expected accepted dispatch, got %v", err)
 	}

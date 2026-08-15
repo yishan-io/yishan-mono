@@ -24,6 +24,7 @@ package daemon
 //	  workspaceCreateFailed   {workspaceId, message}
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -39,7 +40,6 @@ import (
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/relay"
-	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -225,9 +225,9 @@ func assertTopicSequence(t *testing.T, events []frontendEvent, want []string) {
 	}
 }
 
-// wireRelayCapture connects the handler to a fake relay that echoes a verdict
-// and forwards every received JSON-RPC message (the relay envelope) to the
-// returned channel.
+// wireRelayCapture runs a real relay client against a fake relay that echoes a
+// verdict and forwards every received JSON-RPC message (the relay envelope) to
+// the returned channel.
 func wireRelayCapture(t *testing.T, h *JSONRPCHandler, result map[string]any) <-chan map[string]any {
 	t.Helper()
 	received := make(chan map[string]any, 16)
@@ -247,26 +247,20 @@ func wireRelayCapture(t *testing.T, h *JSONRPCHandler, result map[string]any) <-
 	}))
 	t.Cleanup(server.Close)
 
-	dialer := websocket.Dialer{}
-	conn, _, err := dialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
-	if err != nil {
-		t.Fatalf("dial relay: %v", err)
-	}
-	t.Cleanup(func() { _ = conn.Close() })
-	h.relayConn = rpc.NewConnection(conn)
-
-	go func() {
-		for {
-			var msg struct {
-				ID     json.RawMessage `json:"id"`
-				Result json.RawMessage `json:"result"`
-			}
-			if err := conn.ReadJSON(&msg); err != nil {
-				return
-			}
-			handleRelayDispatchResponse(h, msg.ID, msg.Result)
-		}
-	}()
+	client := relay.NewClient(relay.ClientConfig{
+		Runtime:     nil,
+		NodeID:      h.nodeID,
+		URL:         server.URL,
+		StaticToken: "test-token",
+		Server:      h.rpcServer,
+		Handler:     h,
+		Events:      h.events,
+	})
+	h.relayClient = client
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go client.Run(ctx)
+	waitForRelayConnected(t, client)
 	return received
 }
 

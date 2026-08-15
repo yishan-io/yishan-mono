@@ -1,29 +1,32 @@
-package daemon
+package relay
 
 import (
 	"context"
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
-func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeID string, conn *websocket.Conn) {
+// runSession runs one relay connection session: it publishes terminal session
+// changes to the relay, reads relay frames, routes relay-level messages to the
+// handler, and dispatches everything else to the rpc server.
+func (c *Client) runSession(ctx context.Context, conn *websocket.Conn) {
 	connState := rpc.NewConnection(conn)
 	defer connState.Close()
 
-	handler.relayConnMu.Lock()
-	handler.relayConn = connState
-	handler.relayConnMu.Unlock()
+	c.connMu.Lock()
+	c.conn = connState
+	c.connMu.Unlock()
 	defer func() {
-		handler.relayConnMu.Lock()
-		handler.relayConn = nil
-		handler.relayConnMu.Unlock()
+		c.connMu.Lock()
+		c.conn = nil
+		c.connMu.Unlock()
 	}()
 
-	subID, subEvents := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subID)
+	subID, subEvents := c.events.Subscribe()
+	defer c.events.Unsubscribe(subID)
 
 	go forwardTerminalEventsToRelay(connState, subEvents)
 
@@ -39,16 +42,16 @@ func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeI
 		}
 
 		if msgType == websocket.BinaryMessage {
-			handler.rpcServer.HandleBinaryFrame(connState, payload)
+			c.server.HandleBinaryFrame(connState, payload)
 			continue
 		}
 
-		// Handle relay-level messages before dispatching to the daemon handler.
-		if handleRelayMessage(handler, runtime, connState, nodeID, payload) {
+		// Handle relay-level messages before dispatching to the rpc server.
+		if c.handleRelayMessage(connState, payload) {
 			continue
 		}
 
-		resp := handler.rpcServer.HandleMessage(context.Background(), connState, payload)
+		resp := c.server.HandleMessage(context.Background(), connState, payload)
 		if resp == nil {
 			continue
 		}
@@ -59,7 +62,9 @@ func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeI
 	}
 }
 
-func forwardTerminalEventsToRelay(connState *rpc.Connection, events <-chan frontendEvent) {
+// forwardTerminalEventsToRelay publishes local terminal session lifecycle
+// changes to the relay so remote nodes can track sessions.
+func forwardTerminalEventsToRelay(connState *rpc.Connection, events <-chan internalevents.Event) {
 	for event := range events {
 		if event.Topic != "terminalSessionChanged" {
 			continue
@@ -68,9 +73,9 @@ func forwardTerminalEventsToRelay(connState *rpc.Connection, events <-chan front
 		if !ok {
 			continue
 		}
-		notification := notification{
+		notification := rpc.Notification{
 			JSONRPC: "2.0",
-			Method:  relayMethodTerminalSessionChanged,
+			Method:  MethodTerminalSessionChanged,
 			Params:  payload,
 		}
 		if err := connState.WriteJSON(notification); err != nil {

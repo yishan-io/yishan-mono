@@ -14,6 +14,7 @@ import (
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/node"
+	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
@@ -28,6 +29,15 @@ func newTestJSONRPCHandler(t *testing.T, manager *workspace.Manager, runtime *cl
 	t.Helper()
 	app := newTestApp(t, manager, runtime, nodeID)
 	handler := NewJSONRPCHandler(app)
+	handler.relayClient = relay.NewClient(relay.ClientConfig{
+		Runtime: runtime,
+		NodeID:  nodeID,
+		// No URL/static token: the client stays disconnected unless a test
+		// wires it to a fake relay (wireRelayReader/wireRelayCapture).
+		Server:  handler.rpcServer,
+		Handler: handler,
+		Events:  app.Events,
+	})
 	t.Cleanup(func() { _ = app.Close() })
 	return handler
 }

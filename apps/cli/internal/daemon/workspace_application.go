@@ -232,7 +232,7 @@ func (a *appDeps) DispatchClose(ctx context.Context, command application.CloseCo
 		ForceBranch:    command.ForceBranch,
 		PostHook:       command.PostHook,
 	}
-	return a.h.sendRelayDispatchRequest(payload, targetNodeID)
+	return a.h.relayClient.SendDispatchRequest(payload, targetNodeID)
 }
 
 // ---- Events ----

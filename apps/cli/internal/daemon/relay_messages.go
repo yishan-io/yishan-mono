@@ -5,80 +5,11 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
-// handleRelayDispatchResponse resolves a pending relay dispatch request with the
-// relay's routing verdict. Only ids with the "dispatch-" prefix are consumed;
-// anything else (future relay responses such as job-dispatch acks) falls through
-// to the daemon handler instead of being swallowed.
-func handleRelayDispatchResponse(handler *JSONRPCHandler, id json.RawMessage, result json.RawMessage) bool {
-	var idStr string
-	if err := json.Unmarshal(id, &idStr); err != nil || !strings.HasPrefix(idStr, "dispatch-") {
-		return false
-	}
-	var res struct {
-		Accepted *bool  `json:"accepted"`
-		Reason   string `json:"reason"`
-	}
-	if err := json.Unmarshal(result, &res); err != nil {
-		res = struct {
-			Accepted *bool  `json:"accepted"`
-			Reason   string `json:"reason"`
-		}{}
-	}
-	accepted := res.Accepted != nil && *res.Accepted
-	handler.resolveRelayRequest(idStr, relayDispatchVerdict{accepted: accepted, reason: res.Reason})
-	return true
-}
-
-// handleRelayMessage handles relay-protocol messages (heartbeat, job dispatch).
-// Returns true if the message was consumed and should not be passed to the daemon handler.
-func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, payload []byte) bool {
-	var msg struct {
-		Method string          `json:"method"`
-		Params json.RawMessage `json:"params,omitempty"`
-		ID     json.RawMessage `json:"id,omitempty"`
-		Result json.RawMessage `json:"result,omitempty"`
-	}
-	if err := json.Unmarshal(payload, &msg); err != nil {
-		return false
-	}
-
-	// A JSON-RPC response (id present, no method) answers a pending relay
-	// dispatch request (workspace create/close routing verdict).
-	if len(msg.ID) > 0 && msg.Method == "" {
-		return handleRelayDispatchResponse(handler, msg.ID, msg.Result)
-	}
-
-	switch msg.Method {
-	case relayMethodPing:
-		_ = connState.WriteJSON(notification{JSONRPC: "2.0", Method: relayMethodPong})
-		return true
-	case relayMethodJobRun:
-		handleJobRun(runtime, connState, nodeID, msg.Params)
-		return true
-	case relayMethodWorkspaceSnapshotChanged:
-		publishWorkspaceSnapshotChanged(handler, msg.Params)
-		return true
-	case relayMethodTerminalSessionChanged:
-		publishTerminalSessionChanged(handler, msg.Params)
-		return true
-	case relayMethodTerminalStreamRequest:
-		handleTerminalStreamRequest(handler, connState, msg.Params)
-		return true
-	case relayMethodTerminalStreamAccept:
-		publishTerminalStreamAccept(handler, msg.Params)
-		return true
-	case relayMethodTerminalStreamCancel:
-		publishTerminalStreamCancel(handler, msg.Params)
-		return true
-	default:
-		return false
-	}
-}
-
+// publishWorkspaceSnapshotChanged republishes relay workspace snapshot changes
+// as frontend events and runs the relayed create/close workflows on this node
+// when this node is the target.
 func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMessage) {
 	if payload, ok := decodeRelayWorkspaceCreateEnvelope(params); ok {
 		switch payload.Change {
@@ -131,6 +62,8 @@ func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMes
 	handler.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: payload})
 }
 
+// publishTerminalSessionChanged republishes relay terminal session changes as
+// frontend events.
 func publishTerminalSessionChanged(handler *JSONRPCHandler, params json.RawMessage) {
 	var payload map[string]any
 	if len(params) > 0 {

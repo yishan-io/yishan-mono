@@ -16,6 +16,7 @@ import (
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/nodeid"
+	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -99,7 +100,7 @@ func resolveDaemonID(statePath string) (string, error) {
 // buildHandler composes the account-scoped service graph (node.Bootstrap) and
 // wires the JSON-RPC transport around it. envDir stays env-root scoped (e.g.
 // the token-usage pricing cache); dataDir is the per-account data dir.
-func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*JSONRPCHandler, *RelayStatus, error) {
+func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*JSONRPCHandler, *relay.Status, error) {
 	envDir := filepath.Dir(statePath)
 	credentialPath := filepath.Join(envDir, "credential.yaml")
 	dataDir, err := config.ResolveAccountDataDir(credentialPath)
@@ -128,8 +129,18 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	}
 	handler := NewJSONRPCHandler(app)
 
-	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
-	return handler, relayStatus, nil
+	relayClient := relay.NewClient(relay.ClientConfig{
+		Runtime:     runtime,
+		NodeID:      daemonID,
+		URL:         cfg.RelayURL,
+		StaticToken: cfg.RelayToken,
+		Server:      handler.rpcServer,
+		Handler:     handler,
+		Events:      app.Events,
+	})
+	handler.relayClient = relayClient
+
+	return handler, relayClient.Status(), nil
 }
 
 func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
@@ -153,7 +164,7 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 	return database, nil
 }
 
-func buildHTTPServer(handler *JSONRPCHandler, daemonID string, relayStatus *RelayStatus) *http.Server {
+func buildHTTPServer(handler *JSONRPCHandler, daemonID string, relayStatus *relay.Status) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/ws", handler.rpcServer)
 	mux.HandleFunc(agentHookIngestPath, handler.ServeAgentHook)

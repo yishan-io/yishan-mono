@@ -82,8 +82,8 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "relay",
-		targets:      []string{"daemon", "rpc", "node", "agent"},
-		reason:       "relay envelopes are infrastructure",
+		targets:      []string{"daemon", "node", "agent"},
+		reason:       "relay envelopes and the relay client are infrastructure; the client may use the rpc transport types",
 	},
 	{
 		sourcePrefix: "node",

@@ -1,12 +1,18 @@
 package daemon
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
+
+// The remote terminal stream subscription map is app-side state: it tracks
+// which desktop connections on THIS node subscribe to a remote PTY session.
+// The relay connection itself is owned by the relay client (internal/relay).
 
 func (h *JSONRPCHandler) addRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
 	h.remoteStreamMu.Lock()
@@ -79,24 +85,13 @@ func (h *JSONRPCHandler) remoteSubscribe(connState *rpc.Connection, req rpc.Term
 	if !firstSub {
 		return map[string]bool{"ok": true}, nil
 	}
-	h.relayConnMu.RLock()
-	conn := h.relayConn
-	h.relayConnMu.RUnlock()
-	if conn == nil {
+	if err := h.relayClient.SendNotification(relay.MethodTerminalStreamRequest, map[string]string{
+		"sessionId": req.SessionID,
+		"ownerNode": req.OwnerNode,
+		"fromNode":  h.nodeID,
+	}); err != nil {
 		h.removeRemoteStreamSub(req.SessionID, connState)
-		return nil, workspace.NewRPCError(rpcCodeServerError, "relay not connected")
-	}
-	msg := notification{
-		JSONRPC: "2.0",
-		Method:  relayMethodTerminalStreamRequest,
-		Params: map[string]string{
-			"sessionId": req.SessionID,
-			"ownerNode": req.OwnerNode,
-			"fromNode":  h.nodeID,
-		},
-	}
-	if err := conn.WriteJSON(msg); err != nil {
-		return nil, workspace.NewRPCError(rpcCodeServerError, "relay write failed")
+		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
 	}
 	return map[string]bool{"ok": true}, nil
 }
@@ -106,21 +101,11 @@ func (h *JSONRPCHandler) remoteUnsubscribe(connState *rpc.Connection, req rpc.Te
 	if !h.removeRemoteStreamSub(req.SessionID, connState) {
 		return map[string]bool{"ok": true}, nil
 	}
-	h.relayConnMu.RLock()
-	conn := h.relayConn
-	h.relayConnMu.RUnlock()
-	if conn == nil {
-		return map[string]bool{"ok": true}, nil // relay gone, nothing to cancel
-	}
-	msg := notification{
-		JSONRPC: "2.0",
-		Method:  relayMethodTerminalStreamCancel,
-		Params: map[string]string{
-			"sessionId": req.SessionID,
-			"fromNode":  h.nodeID,
-		},
-	}
-	_ = conn.WriteJSON(msg) // best-effort
+	// Best-effort: the relay may be gone, in which case there is nothing to cancel.
+	_ = h.relayClient.SendNotification(relay.MethodTerminalStreamCancel, map[string]string{
+		"sessionId": req.SessionID,
+		"fromNode":  h.nodeID,
+	})
 	return map[string]bool{"ok": true}, nil
 }
 
@@ -141,17 +126,39 @@ func (h *JSONRPCHandler) forwardRemoteTerminalInput(sessionID string, payload []
 	if len(h.remoteStreamTargets(sessionID)) == 0 {
 		return false
 	}
-	h.relayConnMu.RLock()
-	conn := h.relayConn
-	h.relayConnMu.RUnlock()
-	if conn == nil {
-		return false
-	}
-	if err := conn.WriteBinary(payload); err != nil {
+	if err := h.relayClient.SendBinary(payload); err != nil {
 		log.Warn().Err(err).Str("sessionId", sessionID).Msg("remote terminal input forward failed")
 		return false
 	}
 	return true
+}
+
+// HandleRelayMessage implements relay.MessageHandler for the relay-level
+// messages the relay client does not own: job dispatch, workspace snapshot
+// changes, and terminal session/stream notifications.
+func (h *JSONRPCHandler) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
+	switch method {
+	case relay.MethodJobRun:
+		handleJobRun(h.runtime, connState, nodeID, params)
+		return true
+	case relay.MethodWorkspaceSnapshotChanged:
+		publishWorkspaceSnapshotChanged(h, params)
+		return true
+	case relay.MethodTerminalSessionChanged:
+		publishTerminalSessionChanged(h, params)
+		return true
+	case relay.MethodTerminalStreamRequest:
+		handleTerminalStreamRequest(h, connState, params)
+		return true
+	case relay.MethodTerminalStreamAccept:
+		publishTerminalStreamAccept(h, params)
+		return true
+	case relay.MethodTerminalStreamCancel:
+		publishTerminalStreamCancel(h, params)
+		return true
+	default:
+		return false
+	}
 }
 
 // handleTerminalStreamRequest is called on the owning daemon (daemon A) when
@@ -177,9 +184,9 @@ func handleTerminalStreamRequest(handler *JSONRPCHandler, connState *rpc.Connect
 	})
 
 	// Acknowledge the stream to the relay (relay forwards to subscriber).
-	acceptNotif := notification{
+	acceptNotif := rpc.Notification{
 		JSONRPC: "2.0",
-		Method:  relayMethodTerminalStreamAccept,
+		Method:  relay.MethodTerminalStreamAccept,
 		Params:  map[string]string{"sessionId": p.SessionID},
 	}
 	if err := connState.WriteJSON(acceptNotif); err != nil {

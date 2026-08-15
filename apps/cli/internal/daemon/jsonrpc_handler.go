@@ -14,6 +14,7 @@ import (
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/node"
+	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
@@ -75,17 +76,9 @@ type JSONRPCHandler struct {
 	remoteStreamMu   sync.Mutex
 	remoteStreamSubs map[string]map[*rpc.Connection]struct{}
 
-	// relayConn is the active relay WebSocket connection, set while a relay
-	// session is running. Used by terminal.remote.subscribe to send stream
-	// requests to the relay on behalf of the desktop.
-	relayConnMu sync.RWMutex
-	relayConn   *rpc.Connection
-
-	// relayPending holds pending relay dispatch answers (workspace create/close
-	// routing verdicts) keyed by request id. The relay answers synchronously when
-	// a targeted envelope is sent as a JSON-RPC request; entries expire on timeout.
-	relayPendingMu sync.Mutex
-	relayPending   map[string]chan relayDispatchVerdict
+	// relayClient is the active relay WebSocket client (connection state,
+	// pending dispatch verdicts, and status live in internal/relay).
+	relayClient *relay.Client
 }
 
 // NewJSONRPCHandler wires the RPC layer around a composed node app: it builds
@@ -117,7 +110,6 @@ func NewJSONRPCHandler(app *node.App) *JSONRPCHandler {
 		piSessions:        session.NewRegistry(),
 		desktopConns:      make(map[*rpc.Connection]struct{}),
 		remoteStreamSubs:  make(map[string]map[*rpc.Connection]struct{}),
-		relayPending:      make(map[string]chan relayDispatchVerdict),
 	}
 	if handler.agentLifecycleCtx == nil {
 		handler.agentLifecycleCtx = context.Background()

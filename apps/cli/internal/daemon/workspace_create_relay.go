@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"yishan/apps/cli/internal/relay"
@@ -13,7 +12,7 @@ import (
 
 func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams, started workspaceCreateStartedEvent) error {
 	payload := relay.BuildCreateRequest(req, h.nodeID, started)
-	return h.sendRelayDispatchRequest(payload, strings.TrimSpace(req.NodeID))
+	return h.relayClient.SendDispatchRequest(payload, strings.TrimSpace(req.NodeID))
 }
 
 func (h *JSONRPCHandler) relayWorkspaceCreateProgress(prepared preparedWorkspaceCreate, event workspace.CreateProgressEvent) {
@@ -47,17 +46,7 @@ func (h *JSONRPCHandler) relayWorkspaceCreateFailed(prepared preparedWorkspaceCr
 }
 
 func (h *JSONRPCHandler) sendWorkspaceSnapshotRelayNotification(payload relayWorkspaceCreateEnvelope) error {
-	h.relayConnMu.RLock()
-	conn := h.relayConn
-	h.relayConnMu.RUnlock()
-	if conn == nil {
-		return fmt.Errorf("relay not connected")
-	}
-	msg := notification{JSONRPC: "2.0", Method: relayMethodWorkspaceSnapshotChanged, Params: payload}
-	if err := conn.WriteJSON(msg); err != nil {
-		return fmt.Errorf("relay write failed: %w", err)
-	}
-	return nil
+	return h.relayClient.SendNotification(relay.MethodWorkspaceSnapshotChanged, payload)
 }
 
 // handleRelayedWorkspaceCreate runs a create relayed from the origin node on

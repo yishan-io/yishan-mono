@@ -1,12 +1,13 @@
-package daemon
+package relay
 
 import (
 	"sync"
 	"time"
 )
 
-// RelayStatus holds the current state of the relay connection, safe for concurrent reads.
-type RelayStatus struct {
+// Status holds the current state of the relay connection, safe for concurrent
+// reads. Owned by the Client; the daemon exposes its Snapshot to health checks.
+type Status struct {
 	mu          sync.RWMutex
 	enabled     bool
 	url         string
@@ -16,12 +17,12 @@ type RelayStatus struct {
 	lastErrorAt *time.Time
 }
 
-// NewRelayStatus creates a RelayStatus with the given configuration.
-func NewRelayStatus(enabled bool, relayURL string) *RelayStatus {
-	return &RelayStatus{enabled: enabled, url: relayURL}
+// NewStatus creates a Status with the given configuration.
+func NewStatus(enabled bool, relayURL string) *Status {
+	return &Status{enabled: enabled, url: relayURL}
 }
 
-func (s *RelayStatus) setConnected(at time.Time) {
+func (s *Status) setConnected(at time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.connected = true
@@ -30,7 +31,7 @@ func (s *RelayStatus) setConnected(at time.Time) {
 	s.lastErrorAt = nil
 }
 
-func (s *RelayStatus) setDisconnected(errMsg string) {
+func (s *Status) setDisconnected(errMsg string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.connected = false
@@ -41,8 +42,8 @@ func (s *RelayStatus) setDisconnected(errMsg string) {
 	}
 }
 
-// Snapshot returns a read-only copy of the relay status for serialisation.
-type RelayStatusSnapshot struct {
+// StatusSnapshot is a read-only copy of the relay status for serialisation.
+type StatusSnapshot struct {
 	Enabled     bool    `json:"enabled"`
 	URL         string  `json:"url"`
 	Connected   bool    `json:"connected"`
@@ -51,11 +52,12 @@ type RelayStatusSnapshot struct {
 	LastErrorAt *string `json:"lastErrorAt,omitempty"`
 }
 
-func (s *RelayStatus) Snapshot() RelayStatusSnapshot {
+// Snapshot returns a read-only copy of the relay status.
+func (s *Status) Snapshot() StatusSnapshot {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	snap := RelayStatusSnapshot{
+	snap := StatusSnapshot{
 		Enabled:   s.enabled,
 		URL:       s.url,
 		Connected: s.connected,
