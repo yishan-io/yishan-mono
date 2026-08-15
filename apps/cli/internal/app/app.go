@@ -88,7 +88,7 @@ type App struct {
 	events       *internalevents.Hub
 	watchers     *workspacewatchers.Watchers
 	prTracker    *workspaceprtracker.Tracker
-	cleanupStore *node.CleanupStore
+	cleanupStore *localdb.WorkspaceCleanupStore
 	contextStore *contextstore.Store
 	database     *sql.DB
 	Runtime      *cliruntime.Runtime
@@ -130,8 +130,8 @@ func Bootstrap(cfg Config) (*App, error) {
 	gitService := git.NewGitService()
 	terminals := terminal.NewManager()
 
-	legacyCleanupPath := filepath.Join(cfg.DataDir, node.CleanupFileName)
-	cleanupStore, err := node.NewCleanupStore(cfg.Database, legacyCleanupPath)
+	legacyCleanupPath := filepath.Join(cfg.DataDir, localdb.PendingCleanupFileName)
+	cleanupStore, err := localdb.NewWorkspaceCleanupStore(cfg.Database, legacyCleanupPath)
 	if err != nil {
 		return nil, fmt.Errorf("create workspace cleanup store: %w", err)
 	}

@@ -13,6 +13,7 @@ import (
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/computer"
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/contextstore"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
@@ -56,7 +57,7 @@ type Dependencies struct {
 	Events       *internalevents.Hub
 	Watchers     *workspacewatchers.Watchers
 	PRTracker    *workspaceprtracker.Tracker
-	CleanupStore *CleanupStore
+	CleanupStore *localdb.WorkspaceCleanupStore
 	ContextStore *contextstore.Store
 	Database     *sql.DB
 	Runtime      *cliruntime.Runtime

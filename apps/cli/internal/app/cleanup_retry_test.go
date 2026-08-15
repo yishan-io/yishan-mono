@@ -26,7 +26,7 @@ func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 
 func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	cleanupStore, err := node.NewCleanupStore(database, filepath.Join(t.TempDir(), node.CleanupFileName))
+	cleanupStore, err := localdb.NewWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), localdb.PendingCleanupFileName))
 	if err != nil {
 		t.Fatalf("new cleanup store: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	if err := cleanupStore.Add(node.PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
+	if err := cleanupStore.Add(localdb.PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
 		t.Fatalf("add pending cleanup: %v", err)
 	}
 

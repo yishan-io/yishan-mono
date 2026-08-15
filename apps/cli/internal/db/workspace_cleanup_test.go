@@ -1,4 +1,4 @@
-package node
+package db
 
 import (
 	"database/sql"
@@ -7,17 +7,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	localdb "yishan/apps/cli/internal/db"
 )
 
 func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	database, err := localdb.Open(t.TempDir())
+	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	return database
@@ -25,7 +24,7 @@ func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 
 func TestWorkspaceCleanupStore_AddListRemove(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
+	store, err := NewWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), PendingCleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -74,7 +73,7 @@ func TestWorkspaceCleanupStore_AddListRemove(t *testing.T) {
 
 func TestWorkspaceCleanupStore_AddPreservesRetryHistory(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
+	store, err := NewWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), PendingCleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -107,7 +106,7 @@ func TestWorkspaceCleanupStore_AddPreservesRetryHistory(t *testing.T) {
 
 func TestWorkspaceCleanupStore_MarkFailureIncrementsAttempts(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
+	store, err := NewWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), PendingCleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -132,7 +131,7 @@ func TestWorkspaceCleanupStore_MarkFailureIncrementsAttempts(t *testing.T) {
 
 func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	legacyPath := filepath.Join(t.TempDir(), CleanupFileName)
+	legacyPath := filepath.Join(t.TempDir(), PendingCleanupFileName)
 	legacyContent := `{
   "items": [
     {"workspaceId": "ws-legacy-1", "path": "/tmp/legacy-1", "attempts": 3, "lastError": "retried", "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z"}
@@ -142,7 +141,7 @@ func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 		t.Fatalf("write legacy file: %v", err)
 	}
 
-	store, err := NewCleanupStore(database, legacyPath)
+	store, err := NewWorkspaceCleanupStore(database, legacyPath)
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -167,7 +166,7 @@ func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 
 func TestWorkspaceCleanupStore_MissingLegacyFileIsFine(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
+	store, err := NewWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), PendingCleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}

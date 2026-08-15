@@ -1,4 +1,4 @@
-package node
+package db
 
 import (
 	"database/sql"
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const CleanupFileName = "pending-workspace-cleanups.json"
+const PendingCleanupFileName = "pending-workspace-cleanups.json"
 
 // PendingWorkspaceCleanup is one entry in the pending workspace cleanup retry
 // queue: a workspace whose close/removal was interrupted and will be retried
@@ -33,25 +33,25 @@ type pendingWorkspaceCleanupFile struct {
 	Items []PendingWorkspaceCleanup `json:"items"`
 }
 
-// CleanupStore persists the pending workspace cleanup retry queue. Data lives
+// WorkspaceCleanupStore persists the pending workspace cleanup retry queue. Data lives
 // in the pending_workspace_cleanups SQLite table; the legacy JSON file is
 // imported once on construction and then removed.
-type CleanupStore struct {
+type WorkspaceCleanupStore struct {
 	mu sync.Mutex
 	db *sql.DB
 }
 
-// NewCleanupStore creates the cleanup store and imports the legacy JSON queue
+// NewWorkspaceCleanupStore creates the workspace cleanup store and imports the legacy JSON queue
 // file if one exists.
-func NewCleanupStore(database *sql.DB, legacyFilePath string) (*CleanupStore, error) {
-	store := &CleanupStore{db: database}
+func NewWorkspaceCleanupStore(database *sql.DB, legacyFilePath string) (*WorkspaceCleanupStore, error) {
+	store := &WorkspaceCleanupStore{db: database}
 	if err := store.importLegacyFile(legacyFilePath); err != nil {
 		return nil, err
 	}
 	return store, nil
 }
 
-func (s *CleanupStore) importLegacyFile(path string) error {
+func (s *WorkspaceCleanupStore) importLegacyFile(path string) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -79,7 +79,7 @@ func (s *CleanupStore) importLegacyFile(path string) error {
 
 // Add upserts a pending cleanup, preserving the retry history of an existing
 // entry.
-func (s *CleanupStore) Add(item PendingWorkspaceCleanup) error {
+func (s *WorkspaceCleanupStore) Add(item PendingWorkspaceCleanup) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -129,7 +129,7 @@ func (s *CleanupStore) Add(item PendingWorkspaceCleanup) error {
 }
 
 // Remove drops a pending cleanup entry.
-func (s *CleanupStore) Remove(workspaceID string) error {
+func (s *WorkspaceCleanupStore) Remove(workspaceID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -138,7 +138,7 @@ func (s *CleanupStore) Remove(workspaceID string) error {
 }
 
 // List returns all pending cleanups.
-func (s *CleanupStore) List() ([]PendingWorkspaceCleanup, error) {
+func (s *WorkspaceCleanupStore) List() ([]PendingWorkspaceCleanup, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -181,7 +181,7 @@ func (s *CleanupStore) List() ([]PendingWorkspaceCleanup, error) {
 }
 
 // MarkFailure records one failed retry attempt.
-func (s *CleanupStore) MarkFailure(workspaceID string, cleanupErr error) error {
+func (s *WorkspaceCleanupStore) MarkFailure(workspaceID string, cleanupErr error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

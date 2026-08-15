@@ -49,7 +49,7 @@ func (s *Service) newWorkspaceApplicationService() *application.Service {
 			if s.deps.CleanupStore == nil {
 				return nil
 			}
-			return s.deps.CleanupStore.Add(PendingWorkspaceCleanup{
+			return s.deps.CleanupStore.Add(localdb.PendingWorkspaceCleanup{
 				WorkspaceID: req.WorkspaceID, Path: req.Path, Branch: req.Branch,
 				RemoveBranch: req.RemoveBranch, ForceWorktree: req.ForceWorktree,
 				ForceBranch: req.ForceBranch, PostHook: req.PostHook,
