@@ -32,7 +32,7 @@ func (h *JSONRPCHandler) createRemoteWorkspaceRecord(ctx context.Context, regist
 	_, err := h.runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, api.CreateWorkspaceInput{
 		ID:           registration.ID,
 		NodeID:       registration.NodeID,
-		Kind:         registration.Kind,
+		Kind:         string(registration.Kind),
 		Branch:       registration.Branch,
 		SourceBranch: registration.SourceBranch,
 		SourceNodeID: h.nodeID,

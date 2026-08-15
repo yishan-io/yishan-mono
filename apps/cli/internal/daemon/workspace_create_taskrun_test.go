@@ -30,7 +30,7 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t 
 
 	handler.publishWorkspaceCreateCompleted(
 		preparedWorkspaceCreate{
-			localCreate: &workspace.CreateRequest{
+			LocalCreate: &workspace.CreateRequest{
 				TaskRun: &workspace.TaskRunConfig{
 					AgentKind: "opencode",
 					Prompt:    "investigate bug",
@@ -233,7 +233,7 @@ done
 	root := t.TempDir()
 	h.publishWorkspaceCreateCompleted(
 		preparedWorkspaceCreate{
-			localCreate: &workspace.CreateRequest{
+			LocalCreate: &workspace.CreateRequest{
 				TaskRun: &workspace.TaskRunConfig{
 					AgentKind: "pi",
 					Prompt:    "investigate bug",

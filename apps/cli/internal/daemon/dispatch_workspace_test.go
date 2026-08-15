@@ -3,7 +3,6 @@ package daemon
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -32,9 +31,9 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	}
 	handler.SetLocalDatabase(database, t.TempDir())
 
-	prepared := preparedWorkspaceCreate{registration: &WorkspaceCreation{
+	prepared := preparedWorkspaceCreate{Registration: &WorkspaceCreation{
 		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
-		Kind: string(workspace.KindWorktree), Branch: "feature/local-db", SourceBranch: "main",
+		Kind: workspace.KindWorktree, Branch: "feature/local-db", SourceBranch: "main",
 	}}
 	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: "project-1", Path: t.TempDir(), State: workspace.WorkspaceStateActive}
 
@@ -503,133 +502,6 @@ func TestHandleWorkspaceClose_LocalNode_TakesLocalClosePath(t *testing.T) {
 	_, err = h.handleWorkspaceClose(context.Background(), params)
 	if err == nil || strings.Contains(err.Error(), "relay not connected") {
 		t.Fatalf("expected local close path (not relay), got err=%v", err)
-	}
-}
-
-func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegisteredWorkspace(t *testing.T) {
-	var closedWorkspaceID string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/orgs/org-1/projects/project-1/workspaces":
-			_, _ = w.Write([]byte(`{"workspace":{"id":"ws-api-rollback","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"provisioning","branch":"feature-fail","sourceBranch":"main","localPath":"","createdAt":"2026-06-30T00:00:00.000Z","updatedAt":"2026-06-30T00:00:00.000Z"}}`))
-		case "/orgs/org-1/projects/project-1/workspaces/close":
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				t.Fatalf("read close body: %v", err)
-			}
-			var payload map[string]string
-			if err := json.Unmarshal(body, &payload); err != nil {
-				t.Fatalf("decode close body: %v", err)
-			}
-			closedWorkspaceID = payload["workspaceId"]
-			_, _ = w.Write([]byte(`{"workspace":{"id":"ws-api-rollback","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"closed","branch":"feature-fail","sourceBranch":"main","localPath":"","createdAt":"2026-06-30T00:00:00.000Z","updatedAt":"2026-06-30T00:00:00.000Z"}}`))
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer server.Close()
-
-	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	h := NewJSONRPCHandler(workspace.NewManager(), runtime, "node-1", filepath.Join(t.TempDir(), "daemon.log"), nil, filepath.Join(t.TempDir(), "config.yml"), NewAppContextStore(""))
-	defer h.Shutdown()
-
-	sourcePath := t.TempDir()
-	prepared, err := h.registerPreparedWorkspace(context.Background(), preparedWorkspaceCreate{
-		workspaceID:    "ws-local-1",
-		organizationID: "org-1",
-		projectID:      "project-1",
-		localCreate: &workspace.CreateRequest{
-			ID:             "ws-local-1",
-			OrganizationID: "org-1",
-			ProjectID:      "project-1",
-			RepoKey:        "owner/repo",
-			WorkspaceName:  "feature-fail",
-			SourcePath:     sourcePath,
-			TargetBranch:   "feature-fail",
-			SourceBranch:   "main",
-		},
-		registration: &WorkspaceCreation{
-			ID:             "ws-local-1",
-			NodeID:         "node-1",
-			OrganizationID: "org-1",
-			ProjectID:      "project-1",
-			Kind:           string(workspace.KindWorktree),
-			Branch:         "feature-fail",
-			SourceBranch:   "main",
-		},
-	})
-	if err != nil {
-		t.Fatalf("registerPreparedWorkspace: %v", err)
-	}
-	if prepared.workspaceID != "ws-local-1" {
-		t.Fatalf("prepared.workspaceID = %q, want %q", prepared.workspaceID, "ws-local-1")
-	}
-
-	err = h.executeWorktreeWorkspaceCreate(context.Background(), prepared, nil)
-	if err == nil {
-		t.Fatal("expected local provisioning failure")
-	}
-	// The design writes the remote record before provisioning, so a local
-	// provisioning failure must best-effort close the remote provisioning record
-	// to avoid leaking it (the daemon's workspace ID, not the mock's id).
-	if closedWorkspaceID != "ws-local-1" {
-		t.Fatalf("expected remote close for %q, got %q", "ws-local-1", closedWorkspaceID)
-	}
-}
-
-func TestExecuteWorktreeWorkspaceCreate_RemoteSyncFailureRollsBackLocalWorkspace(t *testing.T) {
-	rt := cliruntime.New(&config.Config{
-		API: config.APIConfig{
-			BaseURL: "http://127.0.0.1:1",
-			Token:   "test-token",
-		},
-	})
-
-	root := t.TempDir()
-	h := NewJSONRPCHandler(workspace.NewManager(), rt, "node-1", filepath.Join(root, "daemon.log"), nil, "", NewAppContextStore(""))
-	t.Cleanup(func() { h.Shutdown() })
-
-	srcDir := filepath.Join(root, "src-repo")
-	initDispatchWorkspaceTestGitRepoWithCommit(t, srcDir)
-	worktreePath, err := workspace.DefaultWorktreePath("test/repo", "feature-sync-fail")
-	if err != nil {
-		t.Fatalf("DefaultWorktreePath: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = os.RemoveAll(worktreePath)
-	})
-
-	prepared := preparedWorkspaceCreate{
-		workspaceID:    "ws-sync-fail",
-		organizationID: "org-1",
-		projectID:      "proj-1",
-		registration: &WorkspaceCreation{
-			ID:             "ws-sync-fail",
-			OrganizationID: "org-1",
-			ProjectID:      "proj-1",
-		},
-		localCreate: &workspace.CreateRequest{
-			ID:             "ws-sync-fail",
-			OrganizationID: "org-1",
-			ProjectID:      "proj-1",
-			RepoKey:        "test/repo",
-			WorkspaceName:  "feature-sync-fail",
-			SourcePath:     srcDir,
-			TargetBranch:   "feature-sync-fail",
-			SourceBranch:   "main",
-		},
-		isRelayed: true,
-	}
-
-	err = h.executeWorktreeWorkspaceCreate(context.Background(), prepared, nil)
-	if err != nil {
-		t.Fatalf("expected local creation without remote sync, got %v", err)
-	}
-	if _, getErr := h.manager.GetWorkspace("ws-sync-fail"); getErr != nil {
-		t.Fatalf("expected workspace to remain in manager: %v", getErr)
-	}
-	if _, statErr := os.Stat(worktreePath); statErr != nil {
-		t.Fatalf("expected worktree path after local creation: %v", statErr)
 	}
 }
 

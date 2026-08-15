@@ -21,6 +21,7 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/application"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
@@ -42,6 +43,7 @@ type JSONRPCHandler struct {
 	cleanupStore         *workspaceCleanupStore
 	context              *AppContextStore
 	events               *eventHub
+	app                  *application.Service
 	watchers             *workspacewatchers.Watchers
 	prTracker            *workspaceprtracker.Tracker
 	tokenUsage           tokenusage.Service
@@ -156,6 +158,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		relayPending:         make(map[string]chan relayDispatchVerdict),
 		fileCacheSubID:       fileCacheSubID,
 	}
+	handler.app = newWorkspaceApplicationService(handler)
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
 }

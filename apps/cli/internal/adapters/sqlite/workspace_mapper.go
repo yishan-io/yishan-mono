@@ -20,6 +20,7 @@ func WorkspaceToDomain(row localdb.Workspace) workspace.Record {
 		Kind:      workspace.Kind(row.Kind),
 		Status:    workspace.Status(row.Status),
 		Branch:    optionalStringValue(row.Branch),
+		LocalPath: row.LocalPath,
 	}
 }
 
@@ -34,6 +35,7 @@ func WorkspaceFromDomain(record workspace.Record) localdb.Workspace {
 		Kind:      string(record.Kind),
 		Status:    string(record.Status),
 		Branch:    optionalString(record.Branch),
+		LocalPath: record.LocalPath,
 	}
 }
 

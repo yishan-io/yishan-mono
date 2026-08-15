@@ -24,16 +24,16 @@ func (h *JSONRPCHandler) publishWorkspaceSnapshotChanged(organizationID string, 
 }
 
 func (h *JSONRPCHandler) persistPreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate) error {
-	if h.localDatabase == nil || prepared.registration == nil {
+	if h.localDatabase == nil || prepared.Registration == nil {
 		return nil
 	}
-	registration := prepared.registration
+	registration := prepared.Registration
 	return localdb.NewWorkspaceStore(h.localDatabase).Create(ctx, &localdb.Workspace{
 		ID:             registration.ID,
 		OrganizationID: registration.OrganizationID,
 		ProjectID:      registration.ProjectID,
 		NodeID:         registration.NodeID,
-		Kind:           registration.Kind,
+		Kind:           string(registration.Kind),
 		Status:         string(workspace.StatusProvisioning),
 		Branch:         optionalWorkspaceString(registration.Branch),
 		SourceBranch:   optionalWorkspaceString(registration.SourceBranch),
@@ -43,7 +43,7 @@ func (h *JSONRPCHandler) persistPreparedWorkspace(ctx context.Context, prepared 
 }
 
 func (h *JSONRPCHandler) finalizePersistedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace) error {
-	if h.localDatabase == nil || prepared.registration == nil {
+	if h.localDatabase == nil || prepared.Registration == nil {
 		return nil
 	}
 	status := string(workspace.StatusActive)

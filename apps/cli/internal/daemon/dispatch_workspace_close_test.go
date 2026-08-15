@@ -62,7 +62,7 @@ func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t 
 	}
 	handler.SetLocalDatabase(database, t.TempDir())
 
-	_, err = handler.closeWorkspaceLocally(context.Background(), workspaceCloseParams{
+	_, err = handler.app.CloseLocal(context.Background(), workspaceCloseParams{
 		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",
 	})
 	if err == nil {

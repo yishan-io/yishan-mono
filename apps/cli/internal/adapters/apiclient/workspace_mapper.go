@@ -11,8 +11,8 @@ import (
 
 // WorkspaceToDomain converts a cloud API workspace DTO to the domain record.
 // The domain record carries lifecycle fields only; fields with no domain
-// counterpart (UserID, LocalPath, timestamps) are dropped. Runtime state and
-// health are not part of the record — they live in instance.Runtime.
+// counterpart (UserID, timestamps) are dropped. Runtime state and health are
+// not part of the record — they live in instance.Runtime.
 func WorkspaceToDomain(record api.Workspace) workspace.Record {
 	return workspace.Record{
 		ID:        workspace.ID(record.ID),
@@ -21,5 +21,6 @@ func WorkspaceToDomain(record api.Workspace) workspace.Record {
 		Kind:      workspace.Kind(record.Kind),
 		Status:    workspace.Status(record.Status),
 		Branch:    record.Branch,
+		LocalPath: record.LocalPath,
 	}
 }

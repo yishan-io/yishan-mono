@@ -47,4 +47,7 @@ type Record struct {
 	Kind      Kind
 	Status    Status
 	Branch    string
+	// LocalPath is the worktree path on the owning node (from the cloud
+	// record; empty when the workspace has not been provisioned yet).
+	LocalPath string
 }

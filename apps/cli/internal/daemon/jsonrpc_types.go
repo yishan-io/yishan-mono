@@ -76,18 +76,6 @@ type gitStatusParams struct {
 	WorkspaceID string `json:"workspaceId"`
 }
 
-type workspaceCloseParams struct {
-	WorkspaceID    string `json:"workspaceId"`
-	OrganizationID string `json:"organizationId,omitempty"`
-	ProjectID      string `json:"projectId,omitempty"`
-	Branch         string `json:"branch,omitempty"`
-	WorktreePath   string `json:"worktreePath,omitempty"`
-	RemoveBranch   bool   `json:"removeBranch,omitempty"`
-	ForceWorktree  bool   `json:"forceWorktree,omitempty"`
-	ForceBranch    bool   `json:"forceBranch,omitempty"`
-	PostHook       string `json:"postHook,omitempty"`
-}
-
 type workspaceHealthParams struct {
 	WorkspaceID string `json:"workspaceId"`
 }

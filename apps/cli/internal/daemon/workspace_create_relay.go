@@ -11,38 +11,38 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams) error {
-	payload := createflow.BuildRelayRequestEnvelope(req, h.nodeID, buildWorkspaceCreateStartedEvent(req, req.NodeID, req.Branch))
+func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams, started workspaceCreateStartedEvent) error {
+	payload := createflow.BuildRelayRequestEnvelope(req, h.nodeID, started)
 	return h.sendRelayDispatchRequest(payload, strings.TrimSpace(req.NodeID))
 }
 
 func (h *JSONRPCHandler) relayWorkspaceCreateProgress(prepared preparedWorkspaceCreate, event workspace.CreateProgressEvent) {
-	if strings.TrimSpace(prepared.relayReplyNodeID) == "" {
+	if strings.TrimSpace(prepared.RelayReplyNodeID) == "" {
 		return
 	}
-	payload := createflow.BuildRelayProgressEnvelope(prepared.workspaceID, prepared.organizationID, prepared.projectID, h.nodeID, prepared.relayReplyNodeID, event)
+	payload := createflow.BuildRelayProgressEnvelope(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, event)
 	if err := h.sendWorkspaceSnapshotRelayNotification(payload); err != nil {
-		log.Warn().Err(err).Str("workspaceId", prepared.workspaceID).Msg("relay workspace create progress failed")
+		log.Warn().Err(err).Str("workspaceId", prepared.WorkspaceID).Msg("relay workspace create progress failed")
 	}
 }
 
 func (h *JSONRPCHandler) relayWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, completed map[string]any) {
-	if strings.TrimSpace(prepared.relayReplyNodeID) == "" {
+	if strings.TrimSpace(prepared.RelayReplyNodeID) == "" {
 		return
 	}
-	payload := createflow.BuildRelayCompletedEnvelope(prepared.workspaceID, prepared.organizationID, prepared.projectID, h.nodeID, prepared.relayReplyNodeID, completed)
+	payload := createflow.BuildRelayCompletedEnvelope(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, completed)
 	if err := h.sendWorkspaceSnapshotRelayNotification(payload); err != nil {
-		log.Warn().Err(err).Str("workspaceId", prepared.workspaceID).Msg("relay workspace create completed failed")
+		log.Warn().Err(err).Str("workspaceId", prepared.WorkspaceID).Msg("relay workspace create completed failed")
 	}
 }
 
 func (h *JSONRPCHandler) relayWorkspaceCreateFailed(prepared preparedWorkspaceCreate, failed workspaceCreateFailedEvent) {
-	if strings.TrimSpace(prepared.relayReplyNodeID) == "" {
+	if strings.TrimSpace(prepared.RelayReplyNodeID) == "" {
 		return
 	}
-	payload := createflow.BuildRelayFailedEnvelope(prepared.workspaceID, prepared.organizationID, prepared.projectID, h.nodeID, prepared.relayReplyNodeID, failed)
+	payload := createflow.BuildRelayFailedEnvelope(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, failed)
 	if err := h.sendWorkspaceSnapshotRelayNotification(payload); err != nil {
-		log.Warn().Err(err).Str("workspaceId", prepared.workspaceID).Msg("relay workspace create failed relay failed")
+		log.Warn().Err(err).Str("workspaceId", prepared.WorkspaceID).Msg("relay workspace create failed relay failed")
 	}
 }
 
@@ -60,25 +60,17 @@ func (h *JSONRPCHandler) sendWorkspaceSnapshotRelayNotification(payload relayWor
 	return nil
 }
 
+// handleRelayedWorkspaceCreate runs a create relayed from the origin node on
+// the executor: prepare → register (local row) → async execution, without the
+// origin-side created events.
 func (h *JSONRPCHandler) handleRelayedWorkspaceCreate(payload relayWorkspaceCreateEnvelope) {
 	if payload.Request == nil || strings.TrimSpace(payload.TargetNodeID) != h.nodeID {
 		return
 	}
-	prepared, err := h.prepareWorkspaceCreate(h.serverContextOrBackground(), *payload.Request)
-	if err != nil {
+	if err := h.app.ExecuteRelayed(h.serverContextOrBackground(), workspaceCreateParams(*payload.Request)); err != nil {
 		failed := workspaceCreateFailedEvent{WorkspaceID: payload.WorkspaceID, Message: err.Error()}
-		h.relayWorkspaceCreateFailed(preparedWorkspaceCreate{workspaceID: payload.WorkspaceID, organizationID: payload.OrganizationID, projectID: payload.ProjectID, relayReplyNodeID: strings.TrimSpace(payload.SourceNodeID)}, failed)
-		return
+		h.relayWorkspaceCreateFailed(preparedWorkspaceCreate{WorkspaceID: payload.WorkspaceID, OrganizationID: payload.OrganizationID, ProjectID: payload.ProjectID, RelayReplyNodeID: strings.TrimSpace(payload.SourceNodeID)}, failed)
 	}
-	// The executor node owns the local runtime record for the workspace it is
-	// about to build (the origin node skips local persistence when relaying).
-	prepared, err = h.registerPreparedWorkspace(h.serverContextOrBackground(), prepared)
-	if err != nil {
-		failed := workspaceCreateFailedEvent{WorkspaceID: payload.WorkspaceID, Message: err.Error()}
-		h.relayWorkspaceCreateFailed(preparedWorkspaceCreate{workspaceID: payload.WorkspaceID, organizationID: payload.OrganizationID, projectID: payload.ProjectID, relayReplyNodeID: strings.TrimSpace(payload.SourceNodeID)}, failed)
-		return
-	}
-	go h.executeWorkspaceCreate(h.serverContextOrBackground(), prepared)
 }
 
 func (h *JSONRPCHandler) republishRelayedWorkspaceCreate(payload relayWorkspaceCreateEnvelope) {

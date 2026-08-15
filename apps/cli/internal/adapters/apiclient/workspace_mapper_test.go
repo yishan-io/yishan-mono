@@ -30,6 +30,7 @@ func TestWorkspaceToDomain_MapsLifecycleFields(t *testing.T) {
 		Kind:      workspace.KindWorktree,
 		Status:    workspace.StatusProvisioning,
 		Branch:    "feature/x",
+		LocalPath: "/tmp/ws-1",
 	}
 	if record != want {
 		t.Fatalf("record = %#v, want %#v", record, want)

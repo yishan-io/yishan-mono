@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
+	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 	createflow "yishan/apps/cli/internal/workspace/createflow"
 )
@@ -427,5 +429,54 @@ func TestCreateRemoteNode_DispatchRejectedRollsBackRegistration(t *testing.T) {
 	}
 	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
 		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
+	}
+}
+
+// TestCreateLocalNode_CompletesWhenCloudUnavailable records that cloud record
+// writes are best-effort: an unreachable API must not fail a local create —
+// the local SQLite row stays authoritative and the create completes.
+func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
+	root := t.TempDir()
+	sourceRepo := filepath.Join(root, "src-repo")
+	initDispatchWorkspaceTestGitRepoWithCommit(t, sourceRepo)
+
+	manager := workspace.NewManager()
+	database := openMigratedTestDB(t)
+	unreachableRuntime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: "http://127.0.0.1:1", Token: "test-token"}})
+	h := newBehaviorHandler(t, manager, unreachableRuntime, "node-1", database)
+	subscriptionID, eventCh := h.events.Subscribe()
+	defer h.events.Unsubscribe(subscriptionID)
+
+	worktreePath, err := workspace.DefaultWorktreePath("owner/unreachable", "feature-unreachable")
+	if err != nil {
+		t.Fatalf("DefaultWorktreePath: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(worktreePath) })
+
+	raw, err := json.Marshal(map[string]any{
+		"id": "ws-unreachable", "organizationId": "org-1", "projectId": "project-1", "nodeId": "node-1",
+		"repoKey": "owner/unreachable", "workspaceName": "feature-unreachable", "sourcePath": sourceRepo,
+		"targetBranch": "feature-unreachable", "sourceBranch": "main",
+	})
+	if err != nil {
+		t.Fatalf("marshal create params: %v", err)
+	}
+	if _, err := h.handleWorkspaceCreate(context.Background(), raw); err != nil {
+		t.Fatalf("handleWorkspaceCreate: %v", err)
+	}
+
+	events := collectUntil(t, eventCh, "workspaceCreateCompleted", 30*time.Second)
+	if lifecycle := lifecycleTopicNames(events); containsString(lifecycle, "workspaceCreateFailed") {
+		t.Fatalf("cloud write failures must not fail the create: %v", lifecycle)
+	}
+	if _, statErr := os.Stat(worktreePath); statErr != nil {
+		t.Fatalf("worktree missing after create: %v", statErr)
+	}
+	row, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-unreachable")
+	if err != nil || row.Status != "active" {
+		t.Fatalf("persisted workspace = %#v, err %v; want status active", row, err)
+	}
+	if _, err := manager.GetWorkspace("ws-unreachable"); err != nil {
+		t.Fatalf("manager workspace missing: %v", err)
 	}
 }

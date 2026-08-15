@@ -22,6 +22,7 @@ func TestWorkspaceToDomain_MapsLifecycleFields(t *testing.T) {
 		Kind:      workspace.KindWorktree,
 		Status:    workspace.StatusActive,
 		Branch:    "feature/x",
+		LocalPath: "/tmp/ws-1",
 	}
 	if record != want {
 		t.Fatalf("record = %#v, want %#v", record, want)
@@ -41,12 +42,12 @@ func TestWorkspaceToDomain_NilBranchAndEmptyFields(t *testing.T) {
 func TestWorkspaceFromDomain_RoundTripsLifecycleFields(t *testing.T) {
 	domain := workspace.Record{
 		ID: "ws-3", ProjectID: "project-3", NodeID: "node-3",
-		Kind: workspace.KindWorktree, Status: workspace.StatusClosing, Branch: "feature/y",
+		Kind: workspace.KindWorktree, Status: workspace.StatusClosing, Branch: "feature/y", LocalPath: "/tmp/ws-3",
 	}
 	row := WorkspaceFromDomain(domain)
 
 	if row.ID != "ws-3" || row.ProjectID != "project-3" || row.NodeID != "node-3" ||
-		row.Kind != "worktree" || row.Status != "closing" {
+		row.Kind != "worktree" || row.Status != "closing" || row.LocalPath != "/tmp/ws-3" {
 		t.Fatalf("row = %#v, want lifecycle fields mapped", row)
 	}
 	if row.Branch == nil || *row.Branch != "feature/y" {

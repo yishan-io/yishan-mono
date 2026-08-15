@@ -35,18 +35,6 @@ func formatReauthRequiredMessage(operation string) string {
 	return fmt.Sprintf("%s requires an authenticated API session; your refresh token may be expired. Run `yishan login` and retry", operation)
 }
 
-type WorkspaceCreation struct {
-	ID             string
-	NodeID         string
-	SourceNodeID   string
-	OrganizationID string
-	ProjectID      string
-	Kind           string
-	Branch         string
-	SourceBranch   string
-	LocalPath      string
-}
-
 func registerRemoteNode(runtime *cliruntime.Runtime, registration NodeRegistration) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
