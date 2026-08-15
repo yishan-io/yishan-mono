@@ -1,4 +1,4 @@
-package tokenusage
+package scanner
 
 import (
 	"os"

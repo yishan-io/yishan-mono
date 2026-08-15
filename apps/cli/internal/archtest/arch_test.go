@@ -96,6 +96,36 @@ var forbiddenEdges = []struct {
 		reason:       "token usage collection is application infrastructure and must not depend on transport or the composition root",
 	},
 	{
+		sourcePrefix: "tokenusage/record",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/attribution", "tokenusage/pricing", "tokenusage/repository"},
+		reason:       "the normalized usage record is the leaf vocabulary; nothing may depend on it in reverse",
+	},
+	{
+		sourcePrefix: "tokenusage/pricing",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/attribution", "tokenusage/repository"},
+		reason:       "pricing is a leaf owner; it must not reach into scanners or the collector",
+	},
+	{
+		sourcePrefix: "tokenusage/attribution",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/pricing", "tokenusage/repository"},
+		reason:       "attribution is a leaf owner; it must not reach into scanners or the collector",
+	},
+	{
+		sourcePrefix: "tokenusage/scanner",
+		targets:      []string{"tokenusage/collection", "tokenusage/ingestion", "tokenusage/repository"},
+		reason:       "provider scanners must not depend on collection, ingestion, or persistence",
+	},
+	{
+		sourcePrefix: "tokenusage/ingestion",
+		targets:      []string{"tokenusage/collection", "tokenusage/repository", "tokenusage/attribution"},
+		reason:       "source discovery depends on the scanner contract, not on the collector or persistence",
+	},
+	{
+		sourcePrefix: "tokenusage/repository",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/attribution", "tokenusage/pricing"},
+		reason:       "the repository is persistence-only; it converts records, it does not scan or orchestrate",
+	},
+	{
 		sourcePrefix: "computer",
 		targets:      []string{"daemon", "rpc", "node", "agent"},
 		reason:       "computer-use is standalone infrastructure",

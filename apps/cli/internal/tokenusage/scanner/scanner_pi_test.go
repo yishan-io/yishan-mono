@@ -1,6 +1,7 @@
-package tokenusage
+package scanner
 
 import (
+	"yishan/apps/cli/internal/tokenusage/record"
 	"context"
 	"encoding/json"
 	"os"
@@ -32,7 +33,7 @@ func TestParsePiMessageActivityCountsAssistantUsageAndToolCalls(t *testing.T) {
 	t.Parallel()
 
 	rawLine := []byte(`{"type":"message","id":"assistant-1","timestamp":"2026-06-29T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"running"},{"type":"toolCall","id":"call-1","name":"bash","arguments":{"command":"pi --version"}}],"model":"gpt-5.5","usage":{"input":654,"output":16,"cacheRead":1536,"cacheWrite":0,"totalTokens":2206}}}`)
-	activity, ok := parsePiMessageActivity(mapFromJSON(t, rawLine), "session-1", "/tmp/pi-project", "gpt-5.5", "session-1", testModelPricingCatalog())
+	activity, ok := parsePiMessageActivity(mapFromJSON(t, rawLine), "session-1", "/tmp/pi-project", "gpt-5.5", "session-1", testPricingCatalog())
 	if !ok {
 		t.Fatal("expected assistant activity to parse")
 	}
@@ -51,7 +52,7 @@ func TestParsePiMessageActivityUsesDirectCostWhenPresent(t *testing.T) {
 	t.Parallel()
 
 	rawLine := []byte(`{"type":"message","id":"assistant-1","timestamp":"2026-06-29T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"model":"gpt-5.6-terra","usage":{"input":100,"output":20,"cacheRead":0,"cacheWrite":0,"reasoning":5,"totalTokens":125,"cost":{"total":0.25}}}}`)
-	activity, ok := parsePiMessageActivity(mapFromJSON(t, rawLine), "session-1", "/tmp/pi-project", "gpt-5.6-terra", "session-1", testModelPricingCatalog())
+	activity, ok := parsePiMessageActivity(mapFromJSON(t, rawLine), "session-1", "/tmp/pi-project", "gpt-5.6-terra", "session-1", testPricingCatalog())
 	if !ok {
 		t.Fatal("expected assistant activity to parse")
 	}
@@ -80,8 +81,8 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 		RunID:               "test-run",
 		IngestedAt:          time.Date(2026, 6, 29, 13, 0, 0, 0, time.UTC).UnixMilli(),
 		SessionRoot:         tmpDir,
-		ModelPricingCatalog: testModelPricingCatalog(),
-		Worktrees: []WorktreeRef{{
+		Catalog: testPricingCatalog(),
+		Worktrees: []record.WorktreeRef{{
 			ProjectID:     "proj-1",
 			WorkspaceID:   "ws-1",
 			WorkspacePath: "/tmp/pi-project",
@@ -108,7 +109,7 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 		if row.Model != "gpt-5.5" {
 			t.Fatalf("expected model gpt-5.5, got %q", row.Model)
 		}
-		if row.ScannerSourceKind != SourceKindJSONL {
+		if row.ScannerSourceKind != record.SourceKindJSONL {
 			t.Fatalf("expected source kind jsonl, got %q", row.ScannerSourceKind)
 		}
 		if !strings.Contains(row.ScannerSourceID, "session-1.jsonl") {
@@ -155,7 +156,7 @@ func TestScanPiUsesDirectMessageSummationNotDeltas(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, Catalog: testPricingCatalog()}
 	rows, err := ScanPiHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)
@@ -179,7 +180,7 @@ func TestScanPiFallsBackToLatestModelChange(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, Catalog: testPricingCatalog()}
 	rows, err := ScanPiHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)
@@ -204,7 +205,7 @@ func TestScanPiPrefersDirectCostOverFallbackPricing(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, Catalog: testPricingCatalog()}
 	rows, err := ScanPiHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)
@@ -230,7 +231,7 @@ func TestScanPiPreservesExplicitZeroDirectCost(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, Catalog: testPricingCatalog()}
 	rows, err := ScanPiHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)

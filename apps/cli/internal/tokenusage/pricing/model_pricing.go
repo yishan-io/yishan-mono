@@ -1,4 +1,4 @@
-package tokenusage
+package pricing
 
 import (
 	"math"
@@ -7,6 +7,33 @@ import (
 )
 
 const usdMicrosPerUSD = 1_000_000
+
+// Price is the per-token cost of a model in USD.
+type Price = modelPrice
+
+// NewStaticCatalog builds a catalog seeded with the given prices (tests and
+// deterministic callers).
+func NewStaticCatalog(prices map[string]Price) Catalog {
+	return newStaticModelPricingCatalog(prices)
+}
+
+// MicrosPerUSD is the micros-USD unit multiplier used to convert dollar
+// amounts to the micros-USD cost representation.
+const MicrosPerUSD = 1_000_000
+
+// Catalog estimates the micros-USD cost of a token usage for a model and owns
+// the remote price refresh. Scanners and the collector depend on this
+// interface, never on the concrete catalog internals.
+type Catalog interface {
+	// EstimateCost returns the estimated cost in micros-USD for the given
+	// token counts, or 0 when the model is not priced.
+	EstimateCost(model string, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, reasoningTokens int64) int64
+	// HasPrices reports whether the catalog currently holds any prices.
+	HasPrices() bool
+	// RefreshIfStaleAsync refreshes the remote prices when stale, invoking
+	// onSuccess after a successful refresh.
+	RefreshIfStaleAsync(onSuccess func())
+}
 
 type modelPrice struct {
 	InputCostPerToken      float64 `json:"inputCostPerToken"`

@@ -1,7 +1,8 @@
-package tokenusage
+package scanner
 
 import (
-	"path/filepath"
+	"yishan/apps/cli/internal/tokenusage/record"
+	"yishan/apps/cli/internal/tokenusage/attribution"
 	"sort"
 	"strings"
 	"time"
@@ -14,8 +15,8 @@ type hourlyKey struct {
 	agentKind   string
 	model       string
 	bucket      int64
-	confidence  AttributionConfidence
-	sourceKind  ScannerSourceKind
+	confidence  record.AttributionConfidence
+	sourceKind  record.ScannerSourceKind
 	sourceID    string
 }
 
@@ -27,7 +28,7 @@ type hourlyAccumulator struct {
 	ReasoningTokens    int64
 	TotalTokens        int64
 	TotalCostMicrosUSD int64
-	CostSource         CostSource
+	CostSource         record.CostSource
 	EventCount         int64
 	TurnCount          int64
 	ToolCallCount      int64
@@ -37,7 +38,7 @@ type hourlyAccumulator struct {
 func applyCodexEvent(
 	event codexEvent,
 	sessionFile string,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	states map[string]*codexSessionState,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) {
@@ -47,7 +48,7 @@ func applyCodexEvent(
 	if delta.TotalTokens <= 0 {
 		return
 	}
-	workspace, confidence := resolveWorktree(event.CWD, worktrees)
+	workspace, confidence := attribution.ResolveWorktree(event.CWD, worktrees)
 	key := makeHourlyKey(event, workspace, confidence, sessionFile)
 	acc := getAccumulator(buckets, key)
 	accumulateDelta(acc, delta, event.SessionID)
@@ -56,7 +57,7 @@ func applyCodexEvent(
 func applyCodexEngagementEvent(
 	event codexEvent,
 	sessionFile string,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 	turnCount int64,
 	toolCallCount int64,
@@ -64,7 +65,7 @@ func applyCodexEngagementEvent(
 	if event.SessionID == "" || event.Timestamp.IsZero() {
 		return
 	}
-	workspace, confidence := resolveWorktree(event.CWD, worktrees)
+	workspace, confidence := attribution.ResolveWorktree(event.CWD, worktrees)
 	key := makeHourlyKey(event, workspace, confidence, sessionFile)
 	acc := getAccumulator(buckets, key)
 	accumulateEngagementCounts(acc, event.SessionID, turnCount, toolCallCount)
@@ -92,63 +93,14 @@ func computeDeltaUsage(current codexUsage, previous *codexUsage) codexUsage {
 		ReasoningTokens:    maxInt64(current.ReasoningTokens-previous.ReasoningTokens, 0),
 		TotalTokens:        maxInt64(current.TotalTokens-previous.TotalTokens, 0),
 		TotalCostMicrosUSD: maxInt64(current.TotalCostMicrosUSD-previous.TotalCostMicrosUSD, 0),
-		CostSource:         current.CostSource,
+                   CostSource:         current.CostSource,
 	}
-}
-
-func resolveWorktree(cwd string, worktrees []WorktreeRef) (WorktreeRef, AttributionConfidence) {
-	if cwd == "" {
-		return unknownWorktree(), AttributionFallbackUnknown
-	}
-	normalizedCWD := normalizeComparablePath(cwd)
-	longest := -1
-	selected := unknownWorktree()
-	selectedConfidence := AttributionFallbackUnknown
-	for _, worktree := range worktrees {
-		if match, exact := matchWorktree(normalizedCWD, worktree.WorkspacePath); match {
-			if len(worktree.WorkspacePath) > longest {
-				longest = len(worktree.WorkspacePath)
-				selected = worktree
-				selectedConfidence = AttributionPrefixMatch
-				if exact {
-					selectedConfidence = AttributionExact
-				}
-			}
-		}
-	}
-	return selected, selectedConfidence
-}
-
-func unknownWorktree() WorktreeRef {
-	return WorktreeRef{ProjectID: "unknown", WorkspaceID: "unknown", WorkspacePath: ""}
-}
-
-func matchWorktree(normalizedCWD string, workspacePath string) (bool, bool) {
-	normalizedWorkspace := normalizeComparablePath(workspacePath)
-	if normalizedWorkspace == "" {
-		return false, false
-	}
-	if normalizedCWD == normalizedWorkspace {
-		return true, true
-	}
-	if strings.HasPrefix(normalizedCWD, normalizedWorkspace+"/") {
-		return true, false
-	}
-	return false, false
-}
-
-func normalizeComparablePath(pathValue string) string {
-	normalized := filepath.ToSlash(filepath.Clean(pathValue))
-	if normalized == "." {
-		return ""
-	}
-	return strings.ToLower(normalized)
 }
 
 func makeHourlyKey(
 	event codexEvent,
-	workspace WorktreeRef,
-	confidence AttributionConfidence,
+	workspace record.WorktreeRef,
+	confidence record.AttributionConfidence,
 	sessionFile string,
 ) hourlyKey {
 	bucketTime := event.Timestamp.UTC().Truncate(time.Hour)
@@ -160,7 +112,7 @@ func makeHourlyKey(
 		model:       normalizeModel(event.Model),
 		bucket:      bucketTime.UnixMilli(),
 		confidence:  confidence,
-		sourceKind:  SourceKindJSONL,
+		sourceKind:  record.SourceKindJSONL,
 		sourceID:    sessionFile,
 	}
 }
@@ -191,7 +143,7 @@ func accumulateDelta(acc *hourlyAccumulator, delta codexUsage, sessionID string)
 	acc.ReasoningTokens += delta.ReasoningTokens
 	acc.TotalTokens += delta.TotalTokens
 	acc.TotalCostMicrosUSD += delta.TotalCostMicrosUSD
-	if usageCostSourcePriority(delta.CostSource) > usageCostSourcePriority(acc.CostSource) {
+	if record.CostSourcePriority(delta.CostSource) > record.CostSourcePriority(acc.CostSource) {
 		acc.CostSource = delta.CostSource
 	}
 	acc.EventCount++
@@ -211,10 +163,10 @@ func accumulateEngagementCounts(
 	}
 }
 
-func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanInput) []HourlyUsageRow {
-	rows := make([]HourlyUsageRow, 0, len(buckets))
+func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanInput) []record.UsageRecord {
+	rows := make([]record.UsageRecord, 0, len(buckets))
 	for key, acc := range buckets {
-		rows = append(rows, HourlyUsageRow{
+		rows = append(rows, record.UsageRecord{
 			ProjectID:             key.projectID,
 			WorkspaceID:           key.workspaceID,
 			WorkspacePath:         key.workspace,
@@ -229,13 +181,13 @@ func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanI
 			ReasoningTokens:       acc.ReasoningTokens,
 			TotalTokens:           acc.TotalTokens,
 			TotalCostMicrosUSD:    acc.TotalCostMicrosUSD,
-			CostSource:            normalizedUsageCostSource(acc.CostSource),
+                    CostSource:            record.NormalizedCostSource(acc.CostSource),
 			EventCount:            acc.EventCount,
 			SessionCount:          int64(len(acc.Sessions)),
 			TurnCount:             acc.TurnCount,
 			ToolCallCount:         acc.ToolCallCount,
-			AttributionConfidence: key.confidence,
-			ScannerSourceKind:     key.sourceKind,
+                               AttributionConfidence: key.confidence,
+                           ScannerSourceKind:     key.sourceKind,
 			ScannerSourceID:       key.sourceID,
 			IngestedAt:            input.IngestedAt,
 			RunID:                 input.RunID,

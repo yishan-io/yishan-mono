@@ -709,3 +709,21 @@ go build ./...
 go test ./...
 go vet ./...
 ```
+
+### Token-usage domain (cli)
+- `internal/tokenusage` is split into one-owner sub-packages (Phase 14):
+  `collection` (periodic orchestration, scheduling timers, sync-to-API, cost
+  backfill), `scanner` (provider parsing — codex/claude/opencode/pi/gemini),
+  `ingestion` (source discovery + scan-input assembly), `attribution`
+  (workspace/session ownership: CWD → workspace resolution + registry
+  enrichment), `pricing` (model pricing catalog + cost estimation),
+  `repository` (hourly-row persistence interface + record↔SQLite conversion),
+  and `record` (the normalized `UsageRecord` leaf type).
+- The collector coordinates but contains no provider parser; each provider
+  scanner returns `[]record.UsageRecord` (never the db row type). Provider
+  scanners do not access the database; attribution and pricing each have one
+  owner. The `tokenusage` root package is a facade: `Service`,
+  `NewCollectorWithRepository`, `CollectorDebugState`.
+- archtest enforces the sub-package boundaries (record/pricing/attribution are
+  leaves; scanner must not import collection/ingestion/repository; the
+  collector never imports provider parse code).

@@ -1,4 +1,4 @@
-package tokenusage
+package collection
 
 import "time"
 

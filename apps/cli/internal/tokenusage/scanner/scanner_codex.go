@@ -1,4 +1,4 @@
-package tokenusage
+package scanner
 
 import (
 	"bufio"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agentkind"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 const codexAgentKind = agentkind.Codex
@@ -24,7 +25,7 @@ type codexUsage struct {
 	ReasoningTokens    int64
 	TotalTokens        int64
 	TotalCostMicrosUSD int64
-	CostSource         CostSource
+	CostSource         record.CostSource
 }
 
 type codexEvent struct {
@@ -39,7 +40,7 @@ type codexSessionState struct {
 	LastTotals *codexUsage
 }
 
-func ScanCodexHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
+func ScanCodexHourlyUsage(ctx context.Context, input ScanInput) ([]record.UsageRecord, error) {
 	files, err := listCodexSessionFiles(input.SessionRoot, input)
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func scanCodexSessionFile(
 	ctx context.Context,
 	sessionFile string,
 	input ScanInput,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	states map[string]*codexSessionState,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) error {
@@ -145,7 +146,7 @@ func handleCodexScannedLine(
 	currentModel string,
 	sessionFile string,
 	input ScanInput,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	states map[string]*codexSessionState,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) (string, string, string) {
@@ -199,7 +200,7 @@ func handleCodexTurnContext(
 	currentCWD string,
 	currentModel string,
 	sessionFile string,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) (string, string) {
 	if line.cwd != "" {
@@ -226,7 +227,7 @@ func handleCodexTokenCount(
 	currentModel string,
 	sessionFile string,
 	input ScanInput,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	states map[string]*codexSessionState,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) {
@@ -239,19 +240,20 @@ func handleCodexTokenCount(
 	if uncachedInputTokens < 0 {
 		uncachedInputTokens = 0
 	}
-	usage.TotalCostMicrosUSD = estimateModelCostMicros(
-		input.ModelPricingCatalog,
-		model,
-		uncachedInputTokens,
-		usage.OutputTokens,
-		usage.CachedInputTokens,
-		usage.CachedWriteTokens,
-		usage.ReasoningTokens,
-	)
+	if input.Catalog != nil {
+		usage.TotalCostMicrosUSD = input.Catalog.EstimateCost(
+			model,
+			uncachedInputTokens,
+			usage.OutputTokens,
+			usage.CachedInputTokens,
+			usage.CachedWriteTokens,
+			usage.ReasoningTokens,
+		)
+	}
 	if usage.TotalCostMicrosUSD > 0 {
-		usage.CostSource = CostSourceEstimated
+		usage.CostSource = record.CostSourceEstimated
 	} else {
-		usage.CostSource = CostSourceUnknown
+		usage.CostSource = record.CostSourceUnknown
 	}
 	event := codexEvent{
 		SessionID: currentSessionID,

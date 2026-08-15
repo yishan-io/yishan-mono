@@ -1,6 +1,7 @@
-package tokenusage
+package scanner
 
 import (
+	"yishan/apps/cli/internal/tokenusage/record"
 	"context"
 	"fmt"
 	"os"
@@ -118,7 +119,7 @@ INSERT INTO message VALUES('msg-3','ses-1',%d,%d,'%s');
 	)
 	dbPath := createOpenCodeTestDB(t, ddl)
 
-	worktrees := []WorktreeRef{
+	worktrees := []record.WorktreeRef{
 		{ProjectID: "proj-1", WorkspaceID: "ws-1", WorkspacePath: "/work/myproject"},
 	}
 	input := ScanInput{
@@ -203,7 +204,7 @@ INSERT INTO message VALUES('msg-old','ses-old',%d,%d,'%s');
 		RunID:              "test",
 		IngestedAt:         now.UnixMilli(),
 		ScanSinceUnixMilli: scanSince,
-		Worktrees:          []WorktreeRef{},
+		Worktrees:          []record.WorktreeRef{},
 		SessionRoot:        filepath.Dir(dbPath),
 	}
 
@@ -237,7 +238,7 @@ INSERT INTO message VALUES('msg-full','ses-full',%d,%d,'%s');
 		RunID:              "test",
 		IngestedAt:         now.UnixMilli(),
 		ScanSinceUnixMilli: 0, // no window
-		Worktrees:          []WorktreeRef{},
+		Worktrees:          []record.WorktreeRef{},
 		SessionRoot:        filepath.Dir(dbPath),
 	}
 
@@ -308,7 +309,7 @@ INSERT INTO part VALUES('part-tool-2','msg-assistant','ses-1',%d,%d,'%s');
 		RunID:              "test",
 		IngestedAt:         now.UnixMilli(),
 		ScanSinceUnixMilli: now.Add(-2 * time.Hour).UnixMilli(),
-		Worktrees: []WorktreeRef{
+		Worktrees: []record.WorktreeRef{
 			{ProjectID: "proj-1", WorkspaceID: "ws-1", WorkspacePath: "/work/myproject"},
 		},
 		SessionRoot: filepath.Dir(dbPath),
@@ -357,7 +358,7 @@ INSERT INTO message VALUES('msg-cost','ses-cost',%d,%d,'%s');
 		RunID:              "test",
 		IngestedAt:         now.UnixMilli(),
 		ScanSinceUnixMilli: now.Add(-2 * time.Hour).UnixMilli(),
-		Worktrees:          []WorktreeRef{{ProjectID: "proj-1", WorkspaceID: "ws-1", WorkspacePath: "/work/cost"}},
+		Worktrees:          []record.WorktreeRef{{ProjectID: "proj-1", WorkspaceID: "ws-1", WorkspacePath: "/work/cost"}},
 		SessionRoot:        filepath.Dir(dbPath),
 	}
 
@@ -392,7 +393,7 @@ INSERT INTO message VALUES('msg-cost-zero','ses-cost-zero',%d,%d,'%s');
 		RunID:              "test",
 		IngestedAt:         now.UnixMilli(),
 		ScanSinceUnixMilli: now.Add(-2 * time.Hour).UnixMilli(),
-		Worktrees: []WorktreeRef{{
+		Worktrees: []record.WorktreeRef{{
 			ProjectID:     "proj-1",
 			WorkspaceID:   "ws-1",
 			WorkspacePath: "/work/cost-zero",

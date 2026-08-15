@@ -1,6 +1,8 @@
-package tokenusage
+package scanner
 
 import (
+	"yishan/apps/cli/internal/tokenusage/record"
+	"yishan/apps/cli/internal/tokenusage/pricing"
 	"context"
 	"os"
 	"path/filepath"
@@ -8,6 +10,42 @@ import (
 	"testing"
 	"time"
 )
+
+// testPricingCatalog returns a static pricing catalog for scan tests.
+func testPricingCatalog() pricing.Catalog {
+	return pricing.NewStaticCatalog(map[string]pricing.Price{
+		"deepseek-v4-pro": {
+			InputCostPerToken:      4.35e-07,
+			OutputCostPerToken:     8.7e-07,
+			CacheReadCostPerToken:  3.625e-09,
+			CacheWriteCostPerToken: 4.35e-07,
+		},
+		"gpt-5.4-mini": {
+			InputCostPerToken:      7.5e-07,
+			OutputCostPerToken:     4.5e-06,
+			CacheReadCostPerToken:  7.5e-08,
+			CacheWriteCostPerToken: 7.5e-07,
+		},
+		"gpt-5.5": {
+			InputCostPerToken:      5e-06,
+			OutputCostPerToken:     3e-05,
+			CacheReadCostPerToken:  5e-07,
+			CacheWriteCostPerToken: 5e-06,
+		},
+		"claude-sonnet-4-5": {
+			InputCostPerToken:      3e-06,
+			OutputCostPerToken:     1.5e-05,
+			CacheReadCostPerToken:  3e-07,
+			CacheWriteCostPerToken: 3.75e-06,
+		},
+		"claude-opus-4-6": {
+			InputCostPerToken:      5e-06,
+			OutputCostPerToken:     2.5e-05,
+			CacheReadCostPerToken:  5e-07,
+			CacheWriteCostPerToken: 6.25e-06,
+		},
+	})
+}
 
 const codexSessionFixture = `{"timestamp":"2026-06-08T05:08:10.774Z","type":"session_meta","payload":{"id":"019ea5a1-94ae-7013-a40d-636ab48c8618","cwd":"/Users/zhex/.yishan/worktrees/yishan-io/yishan-mono/test-codex","model_provider":"openai"}}
 {"timestamp":"2026-06-08T05:08:12.147Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/Users/zhex/.yishan/worktrees/yishan-io/yishan-mono/test-codex","model":"gpt-5.4-mini"}}
@@ -129,7 +167,7 @@ func TestScanCodexSessionFile(t *testing.T) {
 		RunID:               "test-run",
 		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
 		Worktrees:           nil,
-		ModelPricingCatalog: testModelPricingCatalog(),
+		Catalog: testPricingCatalog(),
 	}
 
 	states := make(map[string]*codexSessionState)
@@ -171,7 +209,7 @@ func TestScanCodexHourlyUsageIntegration(t *testing.T) {
 		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
 		SessionRoot:         tmpDir,
 		Worktrees:           nil,
-		ModelPricingCatalog: testModelPricingCatalog(),
+		Catalog: testPricingCatalog(),
 	}
 
 	rows, err := ScanCodexHourlyUsage(context.Background(), input)
@@ -187,7 +225,7 @@ func TestScanCodexHourlyUsageIntegration(t *testing.T) {
 		if row.AgentKind != "codex" {
 			t.Fatalf("expected agent kind codex, got %q", row.AgentKind)
 		}
-		if row.ScannerSourceKind != SourceKindJSONL {
+		if row.ScannerSourceKind != record.SourceKindJSONL {
 			t.Fatalf("expected source kind jsonl, got %q", row.ScannerSourceKind)
 		}
 		if !strings.Contains(row.ScannerSourceID, "session.jsonl") {
@@ -218,7 +256,7 @@ func TestScanCodexSessionFileModelFallback(t *testing.T) {
 		RunID:               "test-run",
 		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
 		Worktrees:           nil,
-		ModelPricingCatalog: testModelPricingCatalog(),
+		Catalog: testPricingCatalog(),
 	}
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
@@ -243,7 +281,7 @@ func TestScanCodexCountsTurnsToolsAndSkills(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, Catalog: testPricingCatalog()}
 	rows, err := ScanCodexHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)

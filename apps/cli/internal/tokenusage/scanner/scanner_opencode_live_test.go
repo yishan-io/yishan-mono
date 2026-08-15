@@ -1,6 +1,8 @@
-package tokenusage
+package scanner
 
 import (
+	"yishan/apps/cli/internal/tokenusage/record"
+	"yishan/apps/cli/internal/tokenusage/attribution"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -45,7 +47,7 @@ func TestLiveDBScanSkillManager(t *testing.T) {
 		RunID:              "live-verify",
 		IngestedAt:         time.Now().UnixMilli(),
 		ScanSinceUnixMilli: 0, // full scan
-		Worktrees: []WorktreeRef{
+		Worktrees: []record.WorktreeRef{
 			{
 				ProjectID:     "proj-skill-manager",
 				WorkspaceID:   "ws-skill-manager",
@@ -59,7 +61,7 @@ func TestLiveDBScanSkillManager(t *testing.T) {
 		t.Fatalf("ScanOpenCodeHourlyUsage: %v", err)
 	}
 
-	var skillRows []HourlyUsageRow
+	var skillRows []record.UsageRecord
 	for _, r := range rows {
 		if strings.Contains(r.WorkspacePath, "skill-manager") {
 			skillRows = append(skillRows, r)
@@ -138,7 +140,7 @@ func TestLiveDBScanCurrentWorkspaceActivityCounts(t *testing.T) {
 		RunID:              "live-activity-counts",
 		IngestedAt:         time.Now().UnixMilli(),
 		ScanSinceUnixMilli: scanSince,
-		Worktrees: []WorktreeRef{{
+		Worktrees: []record.WorktreeRef{{
 			ProjectID:     "proj-live",
 			WorkspaceID:   "ws-live",
 			WorkspacePath: repoRoot,
@@ -153,7 +155,7 @@ func TestLiveDBScanCurrentWorkspaceActivityCounts(t *testing.T) {
 	var turnCount int64
 	var toolCallCount int64
 	for _, row := range rows {
-		if normalizeComparablePath(row.WorkspacePath) != normalizeComparablePath(repoRoot) {
+		if attribution.NormalizeComparablePath(row.WorkspacePath) != attribution.NormalizeComparablePath(repoRoot) {
 			continue
 		}
 		turnCount += row.TurnCount

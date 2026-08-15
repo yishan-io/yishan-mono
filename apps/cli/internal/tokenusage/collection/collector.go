@@ -1,8 +1,7 @@
-package tokenusage
+package collection
 
 import (
 	"context"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -15,7 +14,12 @@ import (
 	"yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
 	cliruntime "yishan/apps/cli/internal/runtime"
-	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/tokenusage/attribution"
+	"yishan/apps/cli/internal/tokenusage/ingestion"
+	"yishan/apps/cli/internal/tokenusage/pricing"
+	"yishan/apps/cli/internal/tokenusage/record"
+	"yishan/apps/cli/internal/tokenusage/repository"
+	"yishan/apps/cli/internal/tokenusage/scanner"
 	"yishan/apps/cli/internal/workspace/instance"
 )
 
@@ -34,19 +38,19 @@ type Collector struct {
 	mu                   sync.Mutex
 	registry             *instance.Registry
 	runtime              *cliruntime.Runtime
-	repo                 HourlyUsageRepository
-	pricingCatalog       *modelPricingCatalog
+	repo                 repository.HourlyUsageRepository
+	pricingCatalog       pricing.Catalog
 	timers               map[string]*time.Timer
 	inFlight             map[string]bool
 	needsRerun           map[string]bool
 	recoverySinceByAgent map[string]int64
-	pending              map[string][]HourlyUsageRow
+	pending              map[string][]localdb.HourlyUsageRow
 	syncTimer            *time.Timer
 	hourTimer            *time.Timer
 	closed               bool
 }
 
-type CollectorDebugState struct {
+type DebugState struct {
 	Closed           bool              `json:"closed"`
 	ScheduledAgents  []string          `json:"scheduledAgents"`
 	InFlightAgents   []string          `json:"inFlightAgents"`
@@ -55,33 +59,31 @@ type CollectorDebugState struct {
 	PendingAgents    []string          `json:"pendingAgents"`
 }
 
-func NewCollectorWithRepository(
+// NewCollector builds the collector with an explicit pricing catalog (the
+// tokenusage facade wires the disk-cached default catalog).
+func NewCollector(
 	registry *instance.Registry,
 	runtime *cliruntime.Runtime,
-	repo HourlyUsageRepository,
-	profileDir string,
+	repo repository.HourlyUsageRepository,
+	pricingCatalog pricing.Catalog,
 ) *Collector {
-	cachePath := ""
-	if strings.TrimSpace(profileDir) != "" {
-		cachePath = filepath.Join(profileDir, modelPricingCacheFileName)
-	}
 	return &Collector{
 		registry:              registry,
 		runtime:              runtime,
 		repo:                 repo,
-		pricingCatalog:       newModelPricingCatalog(cachePath, fetchPublicModelPrices),
+		pricingCatalog:       pricingCatalog,
 		timers:               make(map[string]*time.Timer),
 		inFlight:             make(map[string]bool),
 		needsRerun:           make(map[string]bool),
 		recoverySinceByAgent: make(map[string]int64),
-		pending:              make(map[string][]HourlyUsageRow),
+		pending:              make(map[string][]localdb.HourlyUsageRow),
 	}
 }
 
 func (c *Collector) StartStartupScan() {
 	c.ensureHistoricalCostBackfillStarted()
 	if c.pricingCatalog != nil {
-		c.pricingCatalog.refreshIfStaleAsync(func() {
+		c.pricingCatalog.RefreshIfStaleAsync(func() {
 			c.maybeBackfillHistoricalCost("pricing-refresh", true)
 		})
 	}
@@ -158,17 +160,17 @@ func (c *Collector) runScan(agentKind string, source string) {
 	}
 
 	startedAt := time.Now()
-	rows, err := c.scanAgentSince(agentKind, scanSinceUnixMilli)
+	records, err := c.scanAgentSince(agentKind, scanSinceUnixMilli)
 	if err == nil {
-		rows = c.filterKnownTokenUsageRows(rows)
+		records = attribution.EnrichFromRegistry(records, c.registry)
 	}
 	if err == nil {
-		err = c.repo.ReplaceAgentHourlyRows(context.Background(), agentKind, rows)
+		err = c.repo.ReplaceAgentHourlyRows(context.Background(), agentKind, repository.ToHourlyRows(records))
 	}
 	if err != nil {
 		log.Warn().Err(err).Str("agentKind", agentKind).Str("source", source).Msg("token usage scan failed")
 	} else {
-		log.Debug().Str("agentKind", agentKind).Str("source", source).Int("rows", len(rows)).Dur("duration", time.Since(startedAt)).Msg("token usage scan completed")
+		log.Debug().Str("agentKind", agentKind).Str("source", source).Int("rows", len(records)).Dur("duration", time.Since(startedAt)).Msg("token usage scan completed")
 		c.syncPending("scan")
 	}
 
@@ -178,58 +180,26 @@ func (c *Collector) runScan(agentKind string, source string) {
 	}
 }
 
-func (c *Collector) filterKnownTokenUsageRows(rows []HourlyUsageRow) []HourlyUsageRow {
-	workspaceByID := make(map[string]workspace.Workspace)
-	for _, ws := range c.registry.List() {
-		workspaceByID[ws.ID] = ws
-	}
 
-	filtered := make([]HourlyUsageRow, 0, len(rows))
-	for _, row := range rows {
-		if strings.EqualFold(strings.TrimSpace(row.WorkspaceID), "unknown") {
-			continue
-		}
-		if ws, ok := workspaceByID[row.WorkspaceID]; ok {
-			if strings.TrimSpace(row.ProjectID) == "" || strings.EqualFold(strings.TrimSpace(row.ProjectID), "unknown") {
-				if strings.TrimSpace(ws.ProjectID) != "" {
-					row.ProjectID = ws.ProjectID
-				}
-			}
-			if strings.TrimSpace(row.WorkspacePath) == "" {
-				row.WorkspacePath = ws.Path
-			}
-			row.OrganizationID = ws.OrgID
-		}
-		filtered = append(filtered, row)
-	}
-	return filtered
-}
-
-func (c *Collector) scanAgent(agentKind string) ([]HourlyUsageRow, error) {
+func (c *Collector) scanAgent(agentKind string) ([]record.UsageRecord, error) {
 	return c.scanAgentSince(agentKind, c.recentScanStartUnixMilli())
 }
 
-func (c *Collector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) ([]HourlyUsageRow, error) {
-	scanInput := ScanInput{
-		RunID:               "daemon-" + agentKind,
-		IngestedAt:          time.Now().UnixMilli(),
-		ScanSinceUnixMilli:  scanSinceUnixMilli,
-		Worktrees:           buildTokenUsageWorktreeRefs(c.registry.List()),
-		ModelPricingCatalog: c.pricingCatalog,
-	}
+func (c *Collector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) ([]record.UsageRecord, error) {
+	scanInput := ingestion.BuildScanInput(c.registry, "daemon-"+agentKind, scanSinceUnixMilli, time.Now().UnixMilli(), "", c.pricingCatalog)
 	switch agentKind {
 	case agentkind.Codex:
-		return ScanCodexHourlyUsage(context.Background(), scanInput)
+		return scanner.ScanCodexHourlyUsage(context.Background(), scanInput)
 	case agentkind.Claude:
-		return ScanClaudeHourlyUsage(context.Background(), scanInput)
+		return scanner.ScanClaudeHourlyUsage(context.Background(), scanInput)
 	case agentkind.OpenCode:
-		return ScanOpenCodeHourlyUsage(context.Background(), scanInput)
+		return scanner.ScanOpenCodeHourlyUsage(context.Background(), scanInput)
 	case agentkind.Gemini:
-		return ScanGeminiHourlyUsage(context.Background(), scanInput)
+		return scanner.ScanGeminiHourlyUsage(context.Background(), scanInput)
 	case agentkind.Pi:
-		return ScanPiHourlyUsage(context.Background(), scanInput)
+		return scanner.ScanPiHourlyUsage(context.Background(), scanInput)
 	default:
-		return []HourlyUsageRow{}, nil
+		return []record.UsageRecord{}, nil
 	}
 }
 
@@ -278,7 +248,7 @@ func (c *Collector) Close() {
 	}
 }
 
-func (c *Collector) DebugState() CollectorDebugState {
+func (c *Collector) DebugState() DebugState {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -326,7 +296,7 @@ func (c *Collector) DebugState() CollectorDebugState {
 	}
 	sort.Strings(pendingAgents)
 
-	return CollectorDebugState{
+	return DebugState{
 		Closed:           c.closed,
 		ScheduledAgents:  scheduledAgents,
 		InFlightAgents:   inFlightAgents,
@@ -347,7 +317,7 @@ func (c *Collector) startSyncLoop() {
 
 func (c *Collector) onPeriodicSync() {
 	if c.pricingCatalog != nil {
-		c.pricingCatalog.refreshIfStaleAsync(func() {
+		c.pricingCatalog.RefreshIfStaleAsync(func() {
 			c.maybeBackfillHistoricalCost("pricing-refresh", true)
 		})
 	}
@@ -449,20 +419,20 @@ func (c *Collector) syncPending(source string) {
 	}
 }
 
-func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]HourlyUsageRow, error) {
+func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]localdb.HourlyUsageRow, error) {
 	rows, err := c.repo.ListDirtyHourlyRows(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	rowsByOrg := make(map[string][]HourlyUsageRow)
+	rowsByOrg := make(map[string][]localdb.HourlyUsageRow)
 	for _, row := range rows {
 		if strings.TrimSpace(row.WorkspaceID) == "" {
 			continue
 		}
 		orgID := row.OrganizationID
 		if orgID == "" {
-			orgID = c.resolveOrgIDForWorkspace(row.WorkspaceID)
+			orgID = attribution.OrgIDForWorkspace(c.registry, row.WorkspaceID)
 		}
 		if orgID == "" {
 			log.Warn().Str("workspaceId", row.WorkspaceID).Msg("token usage row has no organization attribution; leaving it dirty")
@@ -473,16 +443,8 @@ func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]HourlyUsageRow, error
 	return rowsByOrg, nil
 }
 
-func (c *Collector) resolveOrgIDForWorkspace(workspaceID string) string {
-	for _, ws := range c.registry.List() {
-		if ws.ID == workspaceID {
-			return ws.OrgID
-		}
-	}
-	return ""
-}
 
-func (c *Collector) syncRowsForOrg(orgID string, rows []HourlyUsageRow) error {
+func (c *Collector) syncRowsForOrg(orgID string, rows []localdb.HourlyUsageRow) error {
 	rowInputs := make([]api.TokenUsageHourlyRowInput, 0, len(rows))
 	for _, row := range rows {
 		rowInputs = append(rowInputs, api.TokenUsageHourlyRowInput{
@@ -500,7 +462,7 @@ func (c *Collector) syncRowsForOrg(orgID string, rows []HourlyUsageRow) error {
 			ReasoningTokens:       row.ReasoningTokens,
 			TotalTokens:           row.TotalTokens,
 			TotalCostMicrosUSD:    row.TotalCostMicrosUSD,
-			CostSource:            string(normalizedUsageCostSource(row.CostSource)),
+			CostSource:            string(record.NormalizedCostSource(record.CostSource(row.CostSource))),
 			EventCount:            row.EventCount,
 			SessionCount:          row.SessionCount,
 			TurnCount:             row.TurnCount,
@@ -538,7 +500,7 @@ func (c *Collector) ensureHistoricalCostBackfillStarted() {
 
 func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
 	store, ok := c.repo.(*localdb.HourlyUsageStore)
-	if !ok || c.pricingCatalog == nil || !c.pricingCatalog.hasPrices() {
+	if !ok || c.pricingCatalog == nil || !c.pricingCatalog.HasPrices() {
 		return
 	}
 	completed, err := store.CostBackfillCompleted(context.Background())
@@ -556,8 +518,7 @@ func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
 	}
 	updatedCount, err := store.BackfillEstimatedCost(context.Background(), startedAt, func(row localdb.HourlyUsageRow) int64 {
 		uncachedInputTokens := reconstructedUncachedInputTokens(row)
-		return estimateModelCostMicros(
-			c.pricingCatalog,
+		return c.pricingCatalog.EstimateCost(
 			row.Model,
 			uncachedInputTokens,
 			row.OutputTokens,

@@ -1,9 +1,10 @@
-package tokenusage
+package scanner
 
 import (
 	"context"
 
 	"yishan/apps/cli/internal/agentkind"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 const geminiAgentKind = agentkind.Gemini
@@ -12,6 +13,6 @@ const geminiAgentKind = agentkind.Gemini
 //
 // Current behavior: no stable local token source is integrated yet, so this
 // scanner returns an empty result set.
-func ScanGeminiHourlyUsage(_ context.Context, _ ScanInput) ([]HourlyUsageRow, error) {
-	return []HourlyUsageRow{}, nil
+func ScanGeminiHourlyUsage(_ context.Context, _ ScanInput) ([]record.UsageRecord, error) {
+	return []record.UsageRecord{}, nil
 }

@@ -1,6 +1,7 @@
-package tokenusage
+package scanner
 
 import (
+	"yishan/apps/cli/internal/tokenusage/record"
 	"context"
 	"os"
 	"path/filepath"
@@ -97,7 +98,7 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 		RunID:               "test-run",
 		IngestedAt:          time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
 		Worktrees:           nil,
-		ModelPricingCatalog: testModelPricingCatalog(),
+		Catalog: testPricingCatalog(),
 	}
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
@@ -154,7 +155,7 @@ func TestScanClaudeHourlyUsageIntegration(t *testing.T) {
 		IngestedAt:          time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
 		SessionRoot:         tmpDir,
 		Worktrees:           nil,
-		ModelPricingCatalog: testModelPricingCatalog(),
+		Catalog: testPricingCatalog(),
 	}
 
 	rows, err := ScanClaudeHourlyUsage(context.Background(), input)
@@ -170,7 +171,7 @@ func TestScanClaudeHourlyUsageIntegration(t *testing.T) {
 		if row.AgentKind != "claude" {
 			t.Fatalf("expected agent kind claude, got %q", row.AgentKind)
 		}
-		if row.ScannerSourceKind != SourceKindJSONL {
+		if row.ScannerSourceKind != record.SourceKindJSONL {
 			t.Fatalf("expected source kind jsonl, got %q", row.ScannerSourceKind)
 		}
 		if !strings.Contains(row.ScannerSourceID, "transcript.jsonl") {
@@ -196,7 +197,7 @@ func TestScanClaudeCountsTurnsToolsAndSkills(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, Catalog: testPricingCatalog()}
 	rows, err := ScanClaudeHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly: %v", err)

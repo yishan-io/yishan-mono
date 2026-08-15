@@ -1,4 +1,4 @@
-package tokenusage
+package scanner
 
 import (
 	"bufio"
@@ -14,6 +14,9 @@ import (
 
 	"yishan/apps/cli/internal/agentkind"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/tokenusage/record"
+	"yishan/apps/cli/internal/tokenusage/pricing"
+	"yishan/apps/cli/internal/tokenusage/attribution"
 )
 
 const piAgentKind = agentkind.Pi
@@ -40,13 +43,13 @@ type piParsedActivity struct {
 	ReasoningTokens    int64
 	TotalTokens        int64
 	TotalCostMicrosUSD int64
-	CostSource         CostSource
+	CostSource         record.CostSource
 	TurnCount          int64
 	ToolCallCount      int64
 }
 
 // ScanPiHourlyUsage scans PI session JSONL files and materializes hourly usage rows.
-func ScanPiHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
+func ScanPiHourlyUsage(ctx context.Context, input ScanInput) ([]record.UsageRecord, error) {
 	files, err := listPiSessionFiles(input.SessionRoot, input)
 	if err != nil {
 		return nil, err
@@ -122,7 +125,7 @@ func scanPiSessionFile(
 	ctx context.Context,
 	sessionFile string,
 	input ScanInput,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) error {
 	fileHandle, err := os.Open(sessionFile)
@@ -148,7 +151,7 @@ func scanPiSessionFile(
 			currentCWD,
 			currentModel,
 			fallbackSessionID,
-			input.ModelPricingCatalog,
+			input.Catalog,
 		)
 		if nextSessionID != "" {
 			currentSessionID = nextSessionID
@@ -185,7 +188,7 @@ func parsePiLine(
 	currentCWD string,
 	currentModel string,
 	fallbackSessionID string,
-	pricingCatalog *modelPricingCatalog,
+	catalog pricing.Catalog,
 ) (piParsedActivity, string, string, string) {
 	var top map[string]any
 	if err := json.Unmarshal(rawLine, &top); err != nil {
@@ -199,7 +202,7 @@ func parsePiLine(
 	case "model_change":
 		return piParsedActivity{}, "", "", strings.TrimSpace(getString(top, "modelId", "model"))
 	case "message":
-		activity, ok := parsePiMessageActivity(top, currentSessionID, currentCWD, currentModel, fallbackSessionID, pricingCatalog)
+		activity, ok := parsePiMessageActivity(top, currentSessionID, currentCWD, currentModel, fallbackSessionID, catalog)
 		if !ok {
 			return piParsedActivity{}, "", "", ""
 		}
@@ -215,7 +218,7 @@ func parsePiMessageActivity(
 	currentCWD string,
 	currentModel string,
 	fallbackSessionID string,
-	pricingCatalog *modelPricingCatalog,
+	catalog pricing.Catalog,
 ) (piParsedActivity, bool) {
 	message, ok := top["message"].(map[string]any)
 	if !ok {
@@ -237,7 +240,7 @@ func parsePiMessageActivity(
 
 	switch getString(message, "role") {
 	case "assistant":
-		usage, hasUsage := parsePiUsage(message["usage"], model, pricingCatalog)
+		usage, hasUsage := parsePiUsage(message["usage"], model, catalog)
 		toolCalls := countPiAssistantToolCalls(message["content"])
 		if hasUsage {
 			return piParsedActivity{
@@ -253,7 +256,7 @@ func parsePiMessageActivity(
 				ReasoningTokens:    usage.ReasoningTokens,
 				TotalTokens:        usage.TotalTokens,
 				TotalCostMicrosUSD: usage.TotalCostMicrosUSD,
-				CostSource:         usage.CostSource,
+                     CostSource:         usage.CostSource,
 				ToolCallCount:      toolCalls,
 			}, true
 		}
@@ -295,29 +298,28 @@ func firstNonEmptyPiValue(values ...string) string {
 	return ""
 }
 
-func parsePiUsage(value any, model string, pricingCatalog *modelPricingCatalog) (codexUsage, bool) {
-	record, ok := value.(map[string]any)
+func parsePiUsage(value any, model string, catalog pricing.Catalog) (codexUsage, bool) {
+	usageRecord, ok := value.(map[string]any)
 	if !ok {
 		return codexUsage{}, false
 	}
-	inputTokens := getInt64(record, "input")
-	outputTokens := getInt64(record, "output")
-	cacheReadTokens := getInt64(record, "cacheRead")
-	cacheWriteTokens := getInt64(record, "cacheWrite")
-	reasoningTokens := getInt64(record, "reasoning")
+	inputTokens := getInt64(usageRecord, "input")
+	outputTokens := getInt64(usageRecord, "output")
+	cacheReadTokens := getInt64(usageRecord, "cacheRead")
+	cacheWriteTokens := getInt64(usageRecord, "cacheWrite")
+	reasoningTokens := getInt64(usageRecord, "reasoning")
 	normalizedInputTokens := inputTokens + cacheReadTokens + cacheWriteTokens
-	totalTokens := getInt64(record, "totalTokens")
+	totalTokens := getInt64(usageRecord, "totalTokens")
 	if totalTokens <= 0 {
 		totalTokens = normalizedInputTokens + outputTokens + reasoningTokens
 	}
 	if totalTokens <= 0 {
 		return codexUsage{}, false
 	}
-	totalCostMicrosUSD, hasDirectCost := parsePiUsageCostMicros(record)
-	costSource := CostSourceDirect
+	totalCostMicrosUSD, hasDirectCost := parsePiUsageCostMicros(usageRecord)
+	costSource := record.CostSourceDirect
 	if !hasDirectCost {
-		totalCostMicrosUSD = estimateModelCostMicros(
-			pricingCatalog,
+		totalCostMicrosUSD = catalog.EstimateCost(
 			model,
 			inputTokens,
 			outputTokens,
@@ -326,9 +328,9 @@ func parsePiUsage(value any, model string, pricingCatalog *modelPricingCatalog) 
 			reasoningTokens,
 		)
 		if totalCostMicrosUSD > 0 {
-			costSource = CostSourceEstimated
+			costSource = record.CostSourceEstimated
 		} else {
-			costSource = CostSourceUnknown
+			costSource = record.CostSourceUnknown
 		}
 	}
 	return codexUsage{
@@ -339,7 +341,7 @@ func parsePiUsage(value any, model string, pricingCatalog *modelPricingCatalog) 
 		ReasoningTokens:    reasoningTokens,
 		TotalTokens:        totalTokens,
 		TotalCostMicrosUSD: totalCostMicrosUSD,
-		CostSource:         costSource,
+                   CostSource:         costSource,
 	}, true
 }
 
@@ -352,7 +354,7 @@ func parsePiUsageCostMicros(record map[string]any) (int64, bool) {
 	if !ok {
 		return 0, false
 	}
-	return int64(math.Round(totalCost * usdMicrosPerUSD)), true
+	return int64(math.Round(totalCost * pricing.MicrosPerUSD)), true
 }
 
 func countPiAssistantToolCalls(content any) int64 {
@@ -397,10 +399,10 @@ func extractPiUserText(content any) (string, bool) {
 func applyPiActivity(
 	activity piParsedActivity,
 	sessionFile string,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) {
-	workspace, confidence := resolveWorktree(activity.CWD, worktrees)
+	workspace, confidence := attribution.ResolveWorktree(activity.CWD, worktrees)
 	key := makePiHourlyKey(activity.Timestamp, activity.Model, workspace, confidence, sessionFile)
 	acc := getAccumulator(buckets, key)
 	if activity.Kind == piActivityAssistantUsage {
@@ -412,7 +414,7 @@ func applyPiActivity(
 			ReasoningTokens:    activity.ReasoningTokens,
 			TotalTokens:        activity.TotalTokens,
 			TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
-			CostSource:         activity.CostSource,
+                    CostSource:         activity.CostSource,
 		}, activity.SessionID)
 		if activity.ToolCallCount > 0 {
 			accumulateEngagementCounts(acc, activity.SessionID, 0, activity.ToolCallCount)
@@ -425,8 +427,8 @@ func applyPiActivity(
 func makePiHourlyKey(
 	timestamp time.Time,
 	model string,
-	workspace WorktreeRef,
-	confidence AttributionConfidence,
+	workspace record.WorktreeRef,
+	confidence record.AttributionConfidence,
 	sessionFile string,
 ) hourlyKey {
 	bucketTime := timestamp.UTC().Truncate(time.Hour)
@@ -438,7 +440,7 @@ func makePiHourlyKey(
 		model:       normalizeModel(model),
 		bucket:      bucketTime.UnixMilli(),
 		confidence:  confidence,
-		sourceKind:  SourceKindJSONL,
+		sourceKind:  record.SourceKindJSONL,
 		sourceID:    sessionFile,
 	}
 }

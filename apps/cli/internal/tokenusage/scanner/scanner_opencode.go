@@ -1,4 +1,4 @@
-package tokenusage
+package scanner
 
 import (
 	"context"
@@ -14,6 +14,9 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agentkind"
+	"yishan/apps/cli/internal/tokenusage/record"
+	"yishan/apps/cli/internal/tokenusage/pricing"
+	"yishan/apps/cli/internal/tokenusage/attribution"
 )
 
 const opencodeAgentKind = agentkind.OpenCode
@@ -51,7 +54,7 @@ type openCodeTurnRow struct {
 	TurnCount    int64
 }
 
-func ScanOpenCodeHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
+func ScanOpenCodeHourlyUsage(ctx context.Context, input ScanInput) ([]record.UsageRecord, error) {
 	databasePaths, err := listOpenCodeDatabasePaths(input.SessionRoot)
 	if err != nil {
 		return nil, err
@@ -212,7 +215,7 @@ func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinc
 			TokensCacheRead:  row.TokensCacheRead,
 			TokensCacheWrite: row.TokensCacheWrite,
 			HasCost:          row.HasCost != 0,
-			CostMicrosUSD:    int64(math.Round(row.CostUSD * usdMicrosPerUSD)),
+			CostMicrosUSD:    int64(math.Round(row.CostUSD * pricing.MicrosPerUSD)),
 			ToolCallCount:    row.ToolCallCount,
 		})
 	}
@@ -298,7 +301,7 @@ func applyOpenCodeMessageRow(
 	msgRow openCodeMessageRow,
 	databasePath string,
 	input ScanInput,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) {
 	if msgRow.MsgTimestamp == "" {
@@ -314,7 +317,7 @@ func applyOpenCodeMessageRow(
 		return
 	}
 	cwd := firstNonEmptyPath(msgRow.Directory, msgRow.WorkspaceDir, msgRow.Worktree)
-	workspace, confidence := resolveWorktree(cwd, worktrees)
+	workspace, confidence := attribution.ResolveWorktree(cwd, worktrees)
 	// Bucket and event timestamp are the message's own time, not the session
 	// creation time. This ensures tokens are attributed to the hour the API
 	// call actually happened.
@@ -333,10 +336,9 @@ func applyOpenCodeMessageRow(
 	}
 	if msgRow.HasCost {
 		delta.TotalCostMicrosUSD = msgRow.CostMicrosUSD
-		delta.CostSource = CostSourceDirect
-	} else {
-		delta.TotalCostMicrosUSD = estimateModelCostMicros(
-			input.ModelPricingCatalog,
+		delta.CostSource = record.CostSourceDirect
+	} else if input.Catalog != nil {
+		delta.TotalCostMicrosUSD = input.Catalog.EstimateCost(
 			event.Model,
 			msgRow.TokensInput,
 			msgRow.TokensOutput,
@@ -345,9 +347,9 @@ func applyOpenCodeMessageRow(
 			msgRow.TokensReasoning,
 		)
 		if delta.TotalCostMicrosUSD > 0 {
-			delta.CostSource = CostSourceEstimated
+			delta.CostSource = record.CostSourceEstimated
 		} else {
-			delta.CostSource = CostSourceUnknown
+			delta.CostSource = record.CostSourceUnknown
 		}
 	}
 	if delta.TotalTokens <= 0 {
@@ -363,7 +365,7 @@ func applyOpenCodeTurnRow(
 	turnRow openCodeTurnRow,
 	databasePath string,
 	input ScanInput,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) {
 	if turnRow.MsgTimestamp == "" {
@@ -377,7 +379,7 @@ func applyOpenCodeTurnRow(
 		return
 	}
 	cwd := firstNonEmptyPath(turnRow.Directory, turnRow.WorkspaceDir, turnRow.Worktree)
-	workspace, confidence := resolveWorktree(cwd, worktrees)
+	workspace, confidence := attribution.ResolveWorktree(cwd, worktrees)
 	event := codexEvent{
 		SessionID: turnRow.SessionID,
 		Model:     normalizeOpenCodeModel(turnRow.SessionModel),
@@ -434,8 +436,8 @@ func firstNonEmptyPath(values ...string) string {
 
 func makeOpenCodeHourlyKey(
 	event codexEvent,
-	workspace WorktreeRef,
-	confidence AttributionConfidence,
+	workspace record.WorktreeRef,
+	confidence record.AttributionConfidence,
 	databasePath string,
 ) hourlyKey {
 	bucketTime := event.Timestamp.UTC().Truncate(time.Hour)
@@ -447,7 +449,7 @@ func makeOpenCodeHourlyKey(
 		model:       normalizeModel(event.Model),
 		bucket:      bucketTime.UnixMilli(),
 		confidence:  confidence,
-		sourceKind:  SourceKindSQLite,
+		sourceKind:  record.SourceKindSQLite,
 		sourceID:    databasePath,
 	}
 }

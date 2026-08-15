@@ -1,4 +1,4 @@
-package tokenusage
+package pricing
 
 import (
 	"context"
@@ -43,7 +43,9 @@ type modelPricingCacheFile struct {
 	Prices    map[string]modelPrice `json:"prices"`
 }
 
-func newModelPricingCatalog(cachePath string, fetch func(context.Context) (map[string]modelPrice, error)) *modelPricingCatalog {
+// NewCatalog builds a catalog with the given disk cache path and fetch
+// function. A nil cachePath disables the local cache.
+func NewCatalog(cachePath string, fetch func(context.Context) (map[string]modelPrice, error)) Catalog {
 	catalog := &modelPricingCatalog{
 		prices:    make(map[string]modelPrice),
 		aliases:   make(map[string]string),
@@ -134,7 +136,7 @@ func shouldPreferCanonicalModelKey(candidate string, existing string) bool {
 	return candidate < existing
 }
 
-func (catalog *modelPricingCatalog) refreshIfStaleAsync(onSuccess func()) {
+func (catalog *modelPricingCatalog) RefreshIfStaleAsync(onSuccess func()) {
 	catalog.mu.Lock()
 	if catalog.refreshing || !catalog.shouldRefreshLocked(time.Now().UTC()) {
 		catalog.mu.Unlock()
@@ -250,7 +252,7 @@ func saveModelPricingCacheFile(path string, cacheFile modelPricingCacheFile) err
 	return nil
 }
 
-func fetchPublicModelPrices(ctx context.Context) (map[string]modelPrice, error) {
+func FetchPublicModelPrices(ctx context.Context) (map[string]modelPrice, error) {
 	return fetchModelPricesFromURL(ctx, http.DefaultClient, modelPricingCatalogURL)
 }
 
@@ -281,4 +283,14 @@ func fetchModelPricesFromURL(ctx context.Context, client *http.Client, url strin
 		}
 	}
 	return prices, nil
+}
+
+// EstimateCost implements Catalog.
+func (catalog *modelPricingCatalog) EstimateCost(model string, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, reasoningTokens int64) int64 {
+	return estimateModelCostMicros(catalog, model, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, reasoningTokens)
+}
+
+// HasPrices implements Catalog.
+func (catalog *modelPricingCatalog) HasPrices() bool {
+	return catalog.hasPrices()
 }

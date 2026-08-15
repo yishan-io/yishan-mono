@@ -1,4 +1,4 @@
-package tokenusage
+package pricing
 
 import (
 	"context"
@@ -137,10 +137,10 @@ func TestModelPricingCatalog_LookupDoesNotFetch(t *testing.T) {
 	t.Parallel()
 
 	var fetchCalls atomic.Int32
-	catalog := newModelPricingCatalog("", func(context.Context) (map[string]modelPrice, error) {
+	catalog := NewCatalog("", func(context.Context) (map[string]modelPrice, error) {
 		fetchCalls.Add(1)
 		return map[string]modelPrice{"gemini-2.5-pro": {InputCostPerToken: 1e-06, OutputCostPerToken: 2e-06}}, nil
-	})
+	}).(*modelPricingCatalog)
 
 	if _, ok := catalog.lookup("deepseek/deepseek-v4-pro"); ok {
 		t.Fatal("expected uncached lookup miss without fetch")
@@ -168,7 +168,7 @@ func TestModelPricingCatalog_LoadsCachedRemotePricing(t *testing.T) {
 		t.Fatalf("save cache file: %v", err)
 	}
 
-	catalog := newModelPricingCatalog(cachePath, nil)
+	catalog := NewCatalog(cachePath, nil).(*modelPricingCatalog)
 	pricing, ok := catalog.lookup("google/gemini-2.5-pro")
 	if !ok {
 		t.Fatal("expected cached remote model pricing lookup to succeed")
@@ -182,7 +182,7 @@ func TestModelPricingCatalog_RefreshPersistsRemotePricing(t *testing.T) {
 	t.Parallel()
 
 	cachePath := filepath.Join(t.TempDir(), modelPricingCacheFileName)
-	catalog := newModelPricingCatalog(cachePath, func(context.Context) (map[string]modelPrice, error) {
+	catalog := NewCatalog(cachePath, func(context.Context) (map[string]modelPrice, error) {
 		return map[string]modelPrice{
 			"gemini-2.5-pro": {
 				InputCostPerToken:      1e-06,
@@ -191,7 +191,7 @@ func TestModelPricingCatalog_RefreshPersistsRemotePricing(t *testing.T) {
 				CacheWriteCostPerToken: 1e-06,
 			},
 		}, nil
-	})
+	}).(*modelPricingCatalog)
 
 	if err := catalog.refresh(context.Background()); err != nil {
 		t.Fatalf("refresh catalog: %v", err)

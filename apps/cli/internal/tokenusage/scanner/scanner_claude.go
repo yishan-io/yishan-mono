@@ -1,4 +1,4 @@
-package tokenusage
+package scanner
 
 import (
 	"bufio"
@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agentkind"
+	"yishan/apps/cli/internal/tokenusage/record"
+	"yishan/apps/cli/internal/tokenusage/pricing"
+	"yishan/apps/cli/internal/tokenusage/attribution"
 )
 
 const claudeAgentKind = agentkind.Claude
@@ -53,12 +56,12 @@ type parsedClaudeActivity struct {
 	CacheReadTokens    int64
 	CacheWriteTokens   int64
 	TotalCostMicrosUSD int64
-	CostSource         CostSource
+	CostSource         record.CostSource
 	TurnCount          int64
 	ToolCallCount      int64
 }
 
-func ScanClaudeHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
+func ScanClaudeHourlyUsage(ctx context.Context, input ScanInput) ([]record.UsageRecord, error) {
 	files, err := listClaudeTranscriptFiles(input.SessionRoot, input)
 	if err != nil {
 		return nil, err
@@ -126,7 +129,7 @@ func scanClaudeTranscriptFile(
 	ctx context.Context,
 	transcriptFile string,
 	input ScanInput,
-	worktrees []WorktreeRef,
+	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) error {
 	fileHandle, err := os.Open(transcriptFile)
@@ -142,14 +145,14 @@ func scanClaudeTranscriptFile(
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		activity, ok := parseClaudeActivity(scanner.Bytes(), fallbackSessionID, input.ModelPricingCatalog)
+		activity, ok := parseClaudeActivity(scanner.Bytes(), fallbackSessionID, input.Catalog)
 		if !ok {
 			continue
 		}
 		if isBeforeScanWindow(activity.Timestamp, input) {
 			continue
 		}
-		workspace, confidence := resolveWorktree(activity.CWD, worktrees)
+		workspace, confidence := attribution.ResolveWorktree(activity.CWD, worktrees)
 		key := makeClaudeHourlyKey(activity.Timestamp, activity.Model, workspace, confidence, transcriptFile)
 		acc := getAccumulator(buckets, key)
 		if activity.Kind == claudeActivityAssistantUsage {
@@ -162,7 +165,7 @@ func scanClaudeTranscriptFile(
 				ReasoningTokens:    0,
 				TotalTokens:        normalizedInputTokens + activity.OutputTokens,
 				TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
-				CostSource:         activity.CostSource,
+                     CostSource:         activity.CostSource,
 			}
 			if delta.TotalTokens <= 0 {
 				continue
@@ -230,7 +233,7 @@ func parseClaudeUsageRecord(rawLine []byte, fallbackSessionID string) (parsedCla
 	}, true
 }
 
-func parseClaudeActivity(rawLine []byte, fallbackSessionID string, pricingCatalog *modelPricingCatalog) (parsedClaudeActivity, bool) {
+func parseClaudeActivity(rawLine []byte, fallbackSessionID string, catalog pricing.Catalog) (parsedClaudeActivity, bool) {
 	var top map[string]any
 	if err := json.Unmarshal(rawLine, &top); err != nil {
 		return parsedClaudeActivity{}, false
@@ -252,34 +255,36 @@ func parseClaudeActivity(rawLine []byte, fallbackSessionID string, pricingCatalo
 
 	switch lineType {
 	case "assistant":
-		record, ok := parseClaudeUsageRecord(rawLine, fallbackSessionID)
+		usageRecord, ok := parseClaudeUsageRecord(rawLine, fallbackSessionID)
 		if ok {
 			_, toolCalls := parseClaudeAssistantToolUse(top)
-			estimatedCost := estimateModelCostMicros(
-				pricingCatalog,
-				record.Model,
-				record.InputTokens,
-				record.OutputTokens,
-				record.CacheReadTokens,
-				record.CacheWriteTokens,
-				0,
-			)
-			costSource := CostSourceUnknown
+			var estimatedCost int64
+			if catalog != nil {
+				estimatedCost = catalog.EstimateCost(
+					usageRecord.Model,
+					usageRecord.InputTokens,
+					usageRecord.OutputTokens,
+					usageRecord.CacheReadTokens,
+					usageRecord.CacheWriteTokens,
+					0,
+				)
+			}
+			costSource := record.CostSourceUnknown
 			if estimatedCost > 0 {
-				costSource = CostSourceEstimated
+				costSource = record.CostSourceEstimated
 			}
 			return parsedClaudeActivity{
 				Kind:               claudeActivityAssistantUsage,
-				SessionID:          record.SessionID,
-				Timestamp:          record.Timestamp,
-				Model:              record.Model,
-				CWD:                record.CWD,
-				InputTokens:        record.InputTokens,
-				OutputTokens:       record.OutputTokens,
-				CacheReadTokens:    record.CacheReadTokens,
-				CacheWriteTokens:   record.CacheWriteTokens,
+				SessionID:          usageRecord.SessionID,
+				Timestamp:          usageRecord.Timestamp,
+				Model:              usageRecord.Model,
+				CWD:                usageRecord.CWD,
+				InputTokens:        usageRecord.InputTokens,
+				OutputTokens:       usageRecord.OutputTokens,
+				CacheReadTokens:    usageRecord.CacheReadTokens,
+				CacheWriteTokens:   usageRecord.CacheWriteTokens,
 				TotalCostMicrosUSD: estimatedCost,
-				CostSource:         costSource,
+                     CostSource:         costSource,
 				ToolCallCount:      toolCalls,
 			}, true
 		}
@@ -388,8 +393,8 @@ func firstNonEmptyModel(value string) string {
 func makeClaudeHourlyKey(
 	timestamp time.Time,
 	model string,
-	workspace WorktreeRef,
-	confidence AttributionConfidence,
+	workspace record.WorktreeRef,
+	confidence record.AttributionConfidence,
 	transcriptFile string,
 ) hourlyKey {
 	bucketTime := timestamp.UTC().Truncate(time.Hour)
@@ -401,7 +406,7 @@ func makeClaudeHourlyKey(
 		model:       normalizeModel(model),
 		bucket:      bucketTime.UnixMilli(),
 		confidence:  confidence,
-		sourceKind:  SourceKindJSONL,
+		sourceKind:  record.SourceKindJSONL,
 		sourceID:    transcriptFile,
 	}
 }
