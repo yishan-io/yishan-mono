@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/agentmanager"
+	modellist "yishan/apps/cli/internal/agent/catalog"
+	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
 	internalevents "yishan/apps/cli/internal/events"
-	"yishan/apps/cli/internal/modellist"
 	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"

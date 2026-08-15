@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"yishan/apps/cli/internal/agentmanager"
+	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -280,23 +280,21 @@ func TestHandlePiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
 		t.Fatalf("dispatchPi attach: %v", err)
 	}
 
-	h.piSessionsMu.Lock()
-	defer h.piSessionsMu.Unlock()
-	state := h.piSessions["session-attach"]
+	state, _ := h.piSessions.Get("session-attach")
 	if state == nil {
 		t.Fatal("expected pi session state to exist after attach")
 	}
-	if state.connState != reboundConnState {
+	if state.Conn != reboundConnState {
 		t.Fatalf("expected attach to rebind connState")
 	}
-	if state.tabID != "tab-reopened" {
-		t.Fatalf("expected attach to rebind tabID, got %q", state.tabID)
+	if state.TabID != "tab-reopened" {
+		t.Fatalf("expected attach to rebind tabID, got %q", state.TabID)
 	}
-	if state.workspaceID != "workspace-2" {
-		t.Fatalf("expected attach to rebind workspaceID, got %q", state.workspaceID)
+	if state.WorkspaceID != "workspace-2" {
+		t.Fatalf("expected attach to rebind workspaceID, got %q", state.WorkspaceID)
 	}
-	if state.cwd != filepath.Join(homeDir, "worktrees", "pi-project-reopened") {
-		t.Fatalf("expected attach to rebind cwd, got %q", state.cwd)
+	if state.CWD != filepath.Join(homeDir, "worktrees", "pi-project-reopened") {
+		t.Fatalf("expected attach to rebind cwd, got %q", state.CWD)
 	}
 }
 
@@ -541,10 +539,7 @@ func waitForStoppingMarker(t *testing.T, h *JSONRPCHandler, sessionID string) {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
 	for {
-		h.piSessionsMu.Lock()
-		_, stopping := h.stoppingPiSessions[sessionID]
-		h.piSessionsMu.Unlock()
-		if stopping {
+		if h.piSessions.IsStopping(sessionID) {
 			return
 		}
 		if time.Now().After(deadline) {
@@ -627,13 +622,11 @@ func TestHandlePiAttach_WaitsForConcurrentStart(t *testing.T) {
 	}
 
 	// The winner's registry entry must be intact and owned by the attached tab.
-	h.piSessionsMu.Lock()
-	state, exists := h.piSessions["session-concurrent"]
-	h.piSessionsMu.Unlock()
+	state, exists := h.piSessions.Get("session-concurrent")
 	if !exists {
 		t.Fatal("expected the concurrent start's session to remain registered")
 	}
-	if state.connState != attachConnState {
+	if state.Conn != attachConnState {
 		t.Fatal("expected the attaching tab to own the session after the wait")
 	}
 }
@@ -691,10 +684,8 @@ func TestHandlePiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
 	if _, exists := h.agentMgr.Session("session-race"); !exists {
 		t.Fatal("expected a fresh session after the reopen")
 	}
-	h.piSessionsMu.Lock()
-	state, exists := h.piSessions["session-race"]
-	h.piSessionsMu.Unlock()
-	if !exists || state.tabID != "tab-reopened" {
+	state, exists := h.piSessions.Get("session-race")
+	if !exists || state.TabID != "tab-reopened" {
 		t.Fatalf("expected reopened tab to own the fresh session, got %#v", state)
 	}
 }
@@ -746,10 +737,8 @@ func TestHandlePiStart_RetriesWhenStopMarkerArrivesLate(t *testing.T) {
 	if _, exists := h.agentMgr.Session("session-race-late"); !exists {
 		t.Fatal("expected a fresh session after the retried reopen")
 	}
-	h.piSessionsMu.Lock()
-	state, exists := h.piSessions["session-race-late"]
-	h.piSessionsMu.Unlock()
-	if !exists || state.tabID != "tab-reopened" {
+	state, exists := h.piSessions.Get("session-race-late")
+	if !exists || state.TabID != "tab-reopened" {
 		t.Fatalf("expected reopened tab to own the fresh session, got %#v", state)
 	}
 }
@@ -807,15 +796,13 @@ func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 	// The rejected attach must not have rebound the connection or routing
 	// metadata: while the entry still exists (the in-flight stop may have
 	// already deleted it), the original tab must still own the session.
-	h.piSessionsMu.Lock()
-	state, exists := h.piSessions["session-attach-stop"]
-	h.piSessionsMu.Unlock()
+	state, exists := h.piSessions.Get("session-attach-stop")
 	if exists {
-		if state.connState != connState {
+		if state.Conn != connState {
 			t.Fatal("expected the rejected attach to leave connState unchanged")
 		}
-		if state.tabID != "tab-1" {
-			t.Fatalf("expected the rejected attach to leave tabID unchanged, got %q", state.tabID)
+		if state.TabID != "tab-1" {
+			t.Fatalf("expected the rejected attach to leave tabID unchanged, got %q", state.TabID)
 		}
 	}
 
@@ -975,9 +962,7 @@ func TestHandlePiSessionExit_SkipsSessionSupersededByNewerProcess(t *testing.T) 
 
 	// A newer process took over session-1's registry entry before the old one
 	// exited. The old process's exit must not notify the desktop.
-	h.piSessionsMu.Lock()
-	h.piSessions["session-1"].session = newSession
-	h.piSessionsMu.Unlock()
+	h.piSessions.SetProcess("session-1", newSession)
 
 	h.handlePiSessionExit(oldSession)
 

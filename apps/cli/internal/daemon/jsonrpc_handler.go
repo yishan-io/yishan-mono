@@ -7,12 +7,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
-	"yishan/apps/cli/internal/agentmanager"
+	piauth "yishan/apps/cli/internal/agent/auth"
+	modellist "yishan/apps/cli/internal/agent/catalog"
+	agentmanager "yishan/apps/cli/internal/agent/process"
+	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/modellist"
 	"yishan/apps/cli/internal/node"
-	"yishan/apps/cli/internal/piauth"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
@@ -60,8 +61,9 @@ type JSONRPCHandler struct {
 	agentUsageMu sync.Mutex
 	agentUsage   map[string]map[string]struct{}
 
-	piSessionsMu sync.Mutex
-	piSessions   map[string]*piSessionState
+	// piSessions owns the pi agent session registry (maps + mutexes live in
+	// internal/agent/session); the handler only coordinates through it.
+	piSessions *session.Registry
 
 	// desktopConns tracks live WebSocket connections tagged as the Yishan
 	// desktop app (client=desktop). Used to decide how task runs attached to
@@ -69,10 +71,6 @@ type JSONRPCHandler struct {
 	// connected, pi CLI terminal otherwise (headless/remote daemons).
 	desktopConnsMu sync.Mutex
 	desktopConns   map[*rpc.Connection]struct{}
-
-	// stoppingPiSessions tracks pi session ids whose teardown (pi.stop) is in
-	// flight, so concurrent pi.start/pi.attach cannot bind to a dying process.
-	stoppingPiSessions map[string]struct{}
 
 	remoteStreamMu   sync.Mutex
 	remoteStreamSubs map[string]map[*rpc.Connection]struct{}
@@ -95,31 +93,30 @@ type JSONRPCHandler struct {
 // service from the app. The handler itself constructs no services.
 func NewJSONRPCHandler(app *node.App) *JSONRPCHandler {
 	handler := &JSONRPCHandler{
-		nodeApp:            app,
-		manager:            app.Manager,
-		runtime:            app.Runtime,
-		nodeID:             app.NodeID,
-		logFilePath:        app.LogFilePath,
-		cleanupStore:       app.CleanupStore,
-		context:            app.ContextStore,
-		events:             app.Events,
-		watchers:           app.Watchers,
-		prTracker:          app.PRTracker,
-		tokenUsage:         app.TokenUsage,
-		computer:           app.Computer,
-		modelList:          app.ModelList,
-		memory:             app.Memory,
-		agentMgr:           app.AgentMgr,
-		piAuth:             app.PIAuth,
-		agentLifecycleCtx:  app.AgentLifecycleCtx,
-		serverCtx:          app.ServerCtx,
-		settingsPath:       app.SettingsPath,
-		agentUsage:         make(map[string]map[string]struct{}),
-		piSessions:         make(map[string]*piSessionState),
-		desktopConns:       make(map[*rpc.Connection]struct{}),
-		stoppingPiSessions: make(map[string]struct{}),
-		remoteStreamSubs:   make(map[string]map[*rpc.Connection]struct{}),
-		relayPending:       make(map[string]chan relayDispatchVerdict),
+		nodeApp:           app,
+		manager:           app.Manager,
+		runtime:           app.Runtime,
+		nodeID:            app.NodeID,
+		logFilePath:       app.LogFilePath,
+		cleanupStore:      app.CleanupStore,
+		context:           app.ContextStore,
+		events:            app.Events,
+		watchers:          app.Watchers,
+		prTracker:         app.PRTracker,
+		tokenUsage:        app.TokenUsage,
+		computer:          app.Computer,
+		modelList:         app.ModelList,
+		memory:            app.Memory,
+		agentMgr:          app.AgentMgr,
+		piAuth:            app.PIAuth,
+		agentLifecycleCtx: app.AgentLifecycleCtx,
+		serverCtx:         app.ServerCtx,
+		settingsPath:      app.SettingsPath,
+		agentUsage:        make(map[string]map[string]struct{}),
+		piSessions:        session.NewRegistry(),
+		desktopConns:      make(map[*rpc.Connection]struct{}),
+		remoteStreamSubs:  make(map[string]map[*rpc.Connection]struct{}),
+		relayPending:      make(map[string]chan relayDispatchVerdict),
 	}
 	if handler.agentLifecycleCtx == nil {
 		handler.agentLifecycleCtx = context.Background()

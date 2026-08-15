@@ -1,6 +1,6 @@
 package node
 
-import "yishan/apps/cli/internal/piauth"
+import piauth "yishan/apps/cli/internal/agent/auth"
 
 // NewManagedPiAuthStore builds the managed pi agent auth store, nil-safe:
 // a nil store means the store is unavailable and RPC handlers report a server

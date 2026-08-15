@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	setup "yishan/apps/cli/internal/agentsetup"
+	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/output"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )

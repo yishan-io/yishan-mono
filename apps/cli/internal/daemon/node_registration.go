@@ -1,6 +1,6 @@
 package daemon
 
-import clidetector "yishan/apps/cli/internal/clidetector"
+import clidetector "yishan/apps/cli/internal/agent/catalog/detect"
 
 type NodeRegistration struct {
 	ID                   string

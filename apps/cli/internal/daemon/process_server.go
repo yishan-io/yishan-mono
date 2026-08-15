@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	agentsetup "yishan/apps/cli/internal/agentsetup"
+	agentsetup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/node"
 	cliruntime "yishan/apps/cli/internal/runtime"
 

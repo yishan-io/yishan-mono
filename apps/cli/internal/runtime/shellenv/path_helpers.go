@@ -54,4 +54,3 @@ func normalizePathValue(pathValue string, homeDir string) string {
 	}
 	return strings.Join(parts, string(os.PathListSeparator))
 }
-

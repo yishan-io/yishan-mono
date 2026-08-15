@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/piauth"
+	piauth "yishan/apps/cli/internal/agent/auth"
 	"yishan/apps/cli/internal/workspace"
 )
 

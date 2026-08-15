@@ -172,9 +172,7 @@ func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) 
 	// Simulate a task-run session whose pi process exited before any client
 	// attached: the registry still holds the entry (readStdout only unregisters
 	// the process manager) while agentMgr has no live session.
-	h.piSessionsMu.Lock()
-	h.piSessions["task-ws-1"] = &piSessionState{taskRun: true, tabID: "task-ws-1", workspaceID: "ws-1", cwd: t.TempDir()}
-	h.piSessionsMu.Unlock()
+	h.piSessions.Register("task-ws-1", nil, nil, "task-ws-1", "ws-1", t.TempDir(), true)
 
 	_, err := h.handlePiStart(context.Background(), nil, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "task-ws-1",
@@ -190,10 +188,7 @@ func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) 
 		t.Fatalf("error = %v, want rpcCodeNotFound", err)
 	}
 
-	h.piSessionsMu.Lock()
-	_, exists := h.piSessions["task-ws-1"]
-	h.piSessionsMu.Unlock()
-	if exists {
+	if _, exists := h.piSessions.Get("task-ws-1"); exists {
 		t.Fatal("stale task run registry entry was not removed")
 	}
 }

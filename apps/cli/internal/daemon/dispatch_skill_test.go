@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	setup "yishan/apps/cli/internal/agentsetup"
+	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/workspace"
 )
 

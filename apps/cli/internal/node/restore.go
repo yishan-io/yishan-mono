@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
+	agentcmd "yishan/apps/cli/internal/agent/command"
 	"yishan/apps/cli/internal/config"
-	"yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/memory"
 )
 
