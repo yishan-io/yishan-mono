@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace/terminal"
+	"yishan/apps/cli/internal/worktree"
 )
 
 const (
@@ -369,32 +370,17 @@ func (m *Manager) CloseWorkspacePath(ctx context.Context, req ClosePathRequest) 
 		result.PostHookResult = &hookResult
 	}
 
-	mainWorktreePath, err := m.gits.MainWorktreePath(ctx, req.Path)
-	if err != nil {
-		if isNotGitRepositoryError(err) {
-			// Directory exists but git registration is gone: nothing left to
-			// tear down via git, and the error can never resolve on retry.
-			// The leftover directory is deliberately not removed.
-			return result, nil
-		}
+	// Tear down the worktree and (optionally) its branch via the worktree
+	// package: a directory that lost its git registration is treated as
+	// already gone (the leftover directory is deliberately not removed).
+	if err := worktree.Remove(ctx, worktree.RemoveRequest{
+		Path:          req.Path,
+		Branch:        req.Branch,
+		RemoveBranch:  req.RemoveBranch,
+		ForceWorktree: req.ForceWorktree,
+		ForceBranch:   req.ForceBranch,
+	}); err != nil {
 		return result, err
-	}
-
-	branch := req.Branch
-	if req.RemoveBranch && branch == "" {
-		branch, err = m.gits.CurrentBranch(ctx, req.Path)
-		if err != nil {
-			return result, err
-		}
-	}
-
-	if err := m.gits.RemoveWorktree(ctx, mainWorktreePath, req.Path, req.ForceWorktree); err != nil {
-		return result, err
-	}
-	if req.RemoveBranch {
-		if err := m.gits.RemoveBranch(ctx, mainWorktreePath, branch, req.ForceBranch); err != nil {
-			return result, err
-		}
 	}
 
 	return result, nil

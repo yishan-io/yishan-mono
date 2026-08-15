@@ -5,6 +5,7 @@ import (
 
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/terminal"
+	"yishan/apps/cli/internal/worktree"
 )
 
 // Handle provides workspace-scoped capabilities (file, git, terminal
@@ -158,7 +159,7 @@ func (h Handle) GitRenameBranch(ctx context.Context, nextBranch string) error {
 }
 
 func (h Handle) GitRemoveBranch(ctx context.Context, branch string, force bool) error {
-	return h.gits.RemoveBranch(ctx, h.instance.Path, branch, force)
+	return worktree.RemoveBranch(ctx, h.instance.Path, branch, force)
 }
 
 func (h Handle) GitPrMerge(ctx context.Context, prNumber int, method string, deleteBranch bool) (string, error) {
@@ -170,11 +171,11 @@ func (h Handle) GitPrClose(ctx context.Context, prNumber int) (string, error) {
 }
 
 func (h Handle) GitCreateWorktree(ctx context.Context, branch string, worktreePath string, createBranch bool, fromRef string) error {
-	return h.gits.CreateWorktree(ctx, h.instance.Path, branch, worktreePath, createBranch, fromRef)
+	return worktree.CreateWorktree(ctx, h.instance.Path, branch, worktreePath, createBranch, fromRef)
 }
 
 func (h Handle) GitRemoveWorktree(ctx context.Context, worktreePath string, force bool) error {
-	return h.gits.RemoveWorktree(ctx, h.instance.Path, worktreePath, force)
+	return worktree.RemoveWorktree(ctx, h.instance.Path, worktreePath, force)
 }
 
 func (h Handle) GitAuthorName(ctx context.Context) (string, error) {

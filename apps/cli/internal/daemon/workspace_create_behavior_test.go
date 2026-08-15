@@ -15,6 +15,7 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 	createflow "yishan/apps/cli/internal/workspace/createflow"
+	"yishan/apps/cli/internal/worktree"
 )
 
 // ============================= create, local node =============================
@@ -31,7 +32,7 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 	subscriptionID, eventCh := h.events.Subscribe()
 	defer h.events.Unsubscribe(subscriptionID)
 
-	worktreePath, err := workspace.DefaultWorktreePath("owner/repo", "feature-seq")
+	worktreePath, err := worktree.DefaultWorktreePath("owner/repo", "feature-seq")
 	if err != nil {
 		t.Fatalf("DefaultWorktreePath: %v", err)
 	}
@@ -285,7 +286,7 @@ func TestCreateLocalNode_ContextStepFailureRollsBackWorktree(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Remove(blockedContextPath) })
 
-	worktreePath, err := workspace.DefaultWorktreePath("owner/ctxfail", "feature-ctxfail")
+	worktreePath, err := worktree.DefaultWorktreePath("owner/ctxfail", "feature-ctxfail")
 	if err != nil {
 		t.Fatalf("DefaultWorktreePath: %v", err)
 	}
@@ -348,7 +349,7 @@ func TestCreateLocalNode_SetupHookWarningCompletes(t *testing.T) {
 	subscriptionID, eventCh := h.events.Subscribe()
 	defer h.events.Unsubscribe(subscriptionID)
 
-	worktreePath, err := workspace.DefaultWorktreePath("owner/warnrepo", "feature-warn")
+	worktreePath, err := worktree.DefaultWorktreePath("owner/warnrepo", "feature-warn")
 	if err != nil {
 		t.Fatalf("DefaultWorktreePath: %v", err)
 	}
@@ -447,7 +448,7 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	subscriptionID, eventCh := h.events.Subscribe()
 	defer h.events.Unsubscribe(subscriptionID)
 
-	worktreePath, err := workspace.DefaultWorktreePath("owner/unreachable", "feature-unreachable")
+	worktreePath, err := worktree.DefaultWorktreePath("owner/unreachable", "feature-unreachable")
 	if err != nil {
 		t.Fatalf("DefaultWorktreePath: %v", err)
 	}

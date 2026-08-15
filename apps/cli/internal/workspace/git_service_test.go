@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"yishan/apps/cli/internal/worktree"
 )
 
 func TestGitServiceStatusTrackUnstageRevert(t *testing.T) {
@@ -159,7 +161,7 @@ func TestGitServiceCommitAndQueries(t *testing.T) {
 
 	runGit(t, root, "checkout", "-b", "feature/remove")
 	runGit(t, root, "checkout", branches.CurrentBranch)
-	if err := svc.RemoveBranch(context.Background(), root, "feature/remove", false); err != nil {
+	if err := worktree.RemoveBranch(context.Background(), root, "feature/remove", false); err != nil {
 		t.Fatalf("remove branch: %v", err)
 	}
 }
@@ -459,7 +461,7 @@ func TestGitServiceCreateAndRemoveWorktree(t *testing.T) {
 	runGit(t, root, "commit", "-m", "seed")
 
 	worktreePath := filepath.Join(t.TempDir(), "wt-feature")
-	if err := svc.CreateWorktree(context.Background(), root, "feature/worktree", worktreePath, true, "HEAD"); err != nil {
+	if err := worktree.CreateWorktree(context.Background(), root, "feature/worktree", worktreePath, true, "HEAD"); err != nil {
 		t.Fatalf("create worktree: %v", err)
 	}
 
@@ -474,7 +476,7 @@ func TestGitServiceCreateAndRemoveWorktree(t *testing.T) {
 	if currentBranch != "feature/worktree" {
 		t.Fatalf("expected current branch feature/worktree, got %q", currentBranch)
 	}
-	mainWorktreePath, err := svc.MainWorktreePath(context.Background(), worktreePath)
+	mainWorktreePath, err := worktree.MainWorktreePath(context.Background(), worktreePath)
 	if err != nil {
 		t.Fatalf("main worktree path: %v", err)
 	}
@@ -490,13 +492,13 @@ func TestGitServiceCreateAndRemoveWorktree(t *testing.T) {
 		t.Fatalf("expected main worktree path %q, got %q", root, mainWorktreePath)
 	}
 
-	if err := svc.RemoveWorktree(context.Background(), root, worktreePath, true); err != nil {
+	if err := worktree.RemoveWorktree(context.Background(), root, worktreePath, true); err != nil {
 		t.Fatalf("remove worktree: %v", err)
 	}
 	if _, err := os.Stat(worktreePath); !os.IsNotExist(err) {
 		t.Fatalf("expected removed worktree path to not exist, err=%v", err)
 	}
-	if err := svc.RemoveBranch(context.Background(), root, "feature/worktree", true); err != nil {
+	if err := worktree.RemoveBranch(context.Background(), root, "feature/worktree", true); err != nil {
 		t.Fatalf("remove worktree branch: %v", err)
 	}
 	if branches := strings.TrimSpace(runGit(t, root, "branch", "--list", "feature/worktree")); branches != "" {
@@ -563,15 +565,15 @@ func TestGitServiceBranchDiffSummaryDivergedBranch(t *testing.T) {
 	runGit(t, repo, "commit", "-m", "shared v1")
 	runGit(t, repo, "push", "origin", "HEAD:main")
 
-	worktree := filepath.Join(t.TempDir(), "wt-feature")
+	worktreePath := filepath.Join(t.TempDir(), "wt-feature")
 	svc := NewGitService()
-	if err := svc.CreateWorktree(context.Background(), repo, "feature", worktree, true, "HEAD"); err != nil {
+	if err := worktree.CreateWorktree(context.Background(), repo, "feature", worktreePath, true, "HEAD"); err != nil {
 		t.Fatalf("create worktree: %v", err)
 	}
 
-	os.WriteFile(filepath.Join(worktree, "feature.txt"), []byte("feature work\n"), 0o644)
-	runGit(t, worktree, "add", "feature.txt")
-	runGit(t, worktree, "commit", "-m", "add feature file")
+	os.WriteFile(filepath.Join(worktreePath, "feature.txt"), []byte("feature work\n"), 0o644)
+	runGit(t, worktreePath, "add", "feature.txt")
+	runGit(t, worktreePath, "commit", "-m", "add feature file")
 
 	runGit(t, repo, "checkout", "main")
 	os.WriteFile(filepath.Join(repo, "main-only.txt"), []byte("main work\n"), 0o644)
@@ -579,9 +581,9 @@ func TestGitServiceBranchDiffSummaryDivergedBranch(t *testing.T) {
 	runGit(t, repo, "commit", "-m", "add main-only file")
 	runGit(t, repo, "push", "origin", "HEAD:main")
 
-	runGit(t, worktree, "fetch", "origin")
+	runGit(t, worktreePath, "fetch", "origin")
 
-	summary, err := svc.BranchDiffSummary(context.Background(), worktree, "origin/main")
+	summary, err := svc.BranchDiffSummary(context.Background(), worktreePath, "origin/main")
 	if err != nil {
 		t.Fatalf("BranchDiffSummary: %v", err)
 	}
@@ -589,7 +591,7 @@ func TestGitServiceBranchDiffSummaryDivergedBranch(t *testing.T) {
 		t.Fatalf("expected 1 file in branch diff summary (feature.txt only), got %d", summary.FileCount)
 	}
 
-	comparison, err := svc.ListCommitsToTarget(context.Background(), worktree, "origin/main")
+	comparison, err := svc.ListCommitsToTarget(context.Background(), worktreePath, "origin/main")
 	if err != nil {
 		t.Fatalf("ListCommitsToTarget: %v", err)
 	}
@@ -630,17 +632,17 @@ func TestGitServiceListCommitsToTargetFallsBackWhenOriginRefMissing(t *testing.T
 
 	runGit(t, repo, "remote", "rename", "origin", "upstream")
 
-	worktree := filepath.Join(t.TempDir(), "wt-feature")
+	worktreePath := filepath.Join(t.TempDir(), "wt-feature")
 	svc := NewGitService()
-	if err := svc.CreateWorktree(context.Background(), repo, "feature", worktree, true, "HEAD"); err != nil {
+	if err := worktree.CreateWorktree(context.Background(), repo, "feature", worktreePath, true, "HEAD"); err != nil {
 		t.Fatalf("create worktree: %v", err)
 	}
 
-	os.WriteFile(filepath.Join(worktree, "feature.txt"), []byte("feature\n"), 0o644)
-	runGit(t, worktree, "add", "feature.txt")
-	runGit(t, worktree, "commit", "-m", "feature commit")
+	os.WriteFile(filepath.Join(worktreePath, "feature.txt"), []byte("feature\n"), 0o644)
+	runGit(t, worktreePath, "add", "feature.txt")
+	runGit(t, worktreePath, "commit", "-m", "feature commit")
 
-	comparison, err := svc.ListCommitsToTarget(context.Background(), worktree, "origin/main")
+	comparison, err := svc.ListCommitsToTarget(context.Background(), worktreePath, "origin/main")
 	if err != nil {
 		t.Fatalf("ListCommitsToTarget: %v", err)
 	}
@@ -679,79 +681,6 @@ func TestGitServiceListCommitsToTargetReturnsEmptyWhenTargetMissing(t *testing.T
 // (e.g. refs/remotes/origin/main) for a short remote tracking ref, preventing
 // "ambiguous object name" errors when a loose ref and a stale packed-ref entry
 // exist for the same short name.
-func TestResolveRef(t *testing.T) {
-	remote := filepath.Join(t.TempDir(), "remote.git")
-	runGit(t, t.TempDir(), "init", "--bare", remote)
-
-	repo := filepath.Join(t.TempDir(), "repo")
-	runGit(t, t.TempDir(), "clone", remote, repo)
-	runGit(t, repo, "config", "user.name", "Test User")
-	runGit(t, repo, "config", "user.email", "test@example.com")
-
-	os.WriteFile(filepath.Join(repo, "seed.txt"), []byte("seed\n"), 0o644)
-	runGit(t, repo, "add", "seed.txt")
-	runGit(t, repo, "commit", "-m", "seed")
-	runGit(t, repo, "push", "origin", "HEAD:main")
-
-	ctx := context.Background()
-
-	// Short ref "origin/main" should resolve to "refs/remotes/origin/main".
-	full := resolveRef(ctx, repo, "origin/main")
-	if full != "refs/remotes/origin/main" {
-		t.Fatalf("expected refs/remotes/origin/main, got %q", full)
-	}
-
-	// Empty ref and HEAD should be returned unchanged.
-	if got := resolveRef(ctx, repo, ""); got != "" {
-		t.Fatalf("expected empty string unchanged, got %q", got)
-	}
-	if got := resolveRef(ctx, repo, "HEAD"); got != "HEAD" {
-		t.Fatalf("expected HEAD unchanged, got %q", got)
-	}
-
-	// Non-existent ref should be returned unchanged (graceful fallback).
-	if got := resolveRef(ctx, repo, "origin/does-not-exist"); got != "origin/does-not-exist" {
-		t.Fatalf("expected original ref unchanged for missing ref, got %q", got)
-	}
-}
-
-// TestResolveRefWithLocalBranchCollision verifies that when both a local branch
-// named "origin/main" and a remote tracking ref "refs/remotes/origin/main"
-// exist, resolveRef resolves to the remote tracking ref rather than falling
-// back to the ambiguous short name.
-// In this state git rev-parse --verify --symbolic-full-name origin/main exits
-// 0 but produces empty stdout — the old code returned "origin/main" unchanged.
-func TestResolveRefWithLocalBranchCollision(t *testing.T) {
-	remote := filepath.Join(t.TempDir(), "remote.git")
-	runGit(t, t.TempDir(), "init", "--bare", remote)
-
-	repo := filepath.Join(t.TempDir(), "repo")
-	runGit(t, t.TempDir(), "clone", remote, repo)
-	runGit(t, repo, "config", "user.name", "Test User")
-	runGit(t, repo, "config", "user.email", "test@example.com")
-
-	os.WriteFile(filepath.Join(repo, "seed.txt"), []byte("seed\n"), 0o644)
-	runGit(t, repo, "add", "seed.txt")
-	runGit(t, repo, "commit", "-m", "seed")
-	runGit(t, repo, "push", "origin", "HEAD:main")
-	// refs/remotes/origin/main is now available via the clone's fetch.
-
-	// Introduce the collision: a local branch named "origin/main".
-	// After this, git treats "origin/main" as ambiguous.
-	runGit(t, repo, "branch", "origin/main", "HEAD")
-
-	ctx := context.Background()
-	got := resolveRef(ctx, repo, "origin/main")
-	if got != "refs/remotes/origin/main" {
-		t.Fatalf("expected refs/remotes/origin/main, got %q", got)
-	}
-}
-
-// TestCreateWorktreeWithLocalBranchCollision verifies that worktree creation
-// succeeds when a local branch named "origin/main" coexists with the remote
-// tracking ref refs/remotes/origin/main, causing git to treat the short name
-// as ambiguous. resolveRef must return the unambiguous full path so
-// git worktree add does not fail with "fatal: ambiguous object name".
 func TestCreateWorktreeWithLocalBranchCollision(t *testing.T) {
 	remote := filepath.Join(t.TempDir(), "remote.git")
 	runGit(t, t.TempDir(), "init", "--bare", remote)
@@ -770,11 +699,13 @@ func TestCreateWorktreeWithLocalBranchCollision(t *testing.T) {
 	runGit(t, repo, "branch", "origin/main", "HEAD")
 
 	ctx := context.Background()
-	svc := NewGitService()
 	worktreePath := filepath.Join(t.TempDir(), "wt-collision")
-	resolved := resolveRef(ctx, repo, "origin/main")
-	if err := svc.CreateWorktree(ctx, repo, "feature/from-collision", worktreePath, true, resolved); err != nil {
-		t.Fatalf("CreateWorktree with local-branch collision: %v", err)
+	// worktree.Create resolves the ambiguous short ref internally.
+	if _, err := worktree.Create(ctx, worktree.CreateRequest{
+		RepoKey: "test/repo", WorkspaceName: "feature/from-collision",
+		SourcePath: repo, TargetBranch: "feature/from-collision", SourceBranch: "origin/main",
+	}, worktree.CreatePaths{SourcePath: repo, WorktreePath: worktreePath, RepoKey: "test/repo"}); err != nil {
+		t.Fatalf("Create with local-branch collision: %v", err)
 	}
 
 	branch := strings.TrimSpace(runGit(t, worktreePath, "rev-parse", "--abbrev-ref", "HEAD"))
@@ -822,11 +753,13 @@ func TestCreateWorktreeWithAmbiguousRef(t *testing.T) {
 		t.Fatal("expected loose ref to diverge from packed-ref after second push")
 	}
 
-	svc := NewGitService()
 	worktreePath := filepath.Join(t.TempDir(), "wt-from-ambiguous")
-	if err := svc.CreateWorktree(context.Background(), repo, "feature/from-ambiguous", worktreePath, true,
-		resolveRef(context.Background(), repo, "origin/main")); err != nil {
-		t.Fatalf("CreateWorktree with ambiguous ref: %v", err)
+	// worktree.Create resolves the ambiguous ref internally (fast path).
+	if _, err := worktree.Create(context.Background(), worktree.CreateRequest{
+		RepoKey: "test/repo", WorkspaceName: "feature/from-ambiguous",
+		SourcePath: repo, TargetBranch: "feature/from-ambiguous", SourceBranch: "origin/main",
+	}, worktree.CreatePaths{SourcePath: repo, WorktreePath: worktreePath, RepoKey: "test/repo"}); err != nil {
+		t.Fatalf("Create with ambiguous ref: %v", err)
 	}
 
 	branch := strings.TrimSpace(runGit(t, worktreePath, "rev-parse", "--abbrev-ref", "HEAD"))
