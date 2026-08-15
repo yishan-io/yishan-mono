@@ -15,7 +15,7 @@ func TestDispatchComputerPermissions(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHandler(t)
-	h.SetComputerService(newComputerService(computermock.Runtime{}))
+	h.SetComputerService(computer.NewService(computermock.Runtime{}))
 
 	result, err := h.dispatchComputer(context.Background(), MethodComputerPermissions, nil)
 	if err != nil {
@@ -35,7 +35,7 @@ func TestDispatchComputerListDisplays(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHandler(t)
-	h.SetComputerService(newComputerService(computermock.Runtime{
+	h.SetComputerService(computer.NewService(computermock.Runtime{
 		ListDisplaysFunc: func(_ context.Context) ([]computer.Display, error) {
 			return []computer.Display{{ID: "display_1", NativeID: 1}}, nil
 		},
@@ -59,7 +59,7 @@ func TestDispatchComputerListWindowsUsesFilter(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHandler(t)
-	h.SetComputerService(newComputerService(computermock.Runtime{
+	h.SetComputerService(computer.NewService(computermock.Runtime{
 		ListWindowsFunc: func(_ context.Context, filter computer.WindowFilter) ([]computer.Window, error) {
 			if !filter.VisibleOnly || filter.PID != 42 {
 				t.Fatalf("unexpected filter: %#v", filter)
@@ -93,7 +93,7 @@ func TestDispatchComputerCaptureDisplay(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHandler(t)
-	h.SetComputerService(newComputerService(computermock.Runtime{
+	h.SetComputerService(computer.NewService(computermock.Runtime{
 		CaptureDisplayFunc: func(_ context.Context, displayID string, options computer.CaptureOptions) (computer.Image, error) {
 			if displayID != "display_1" {
 				t.Fatalf("unexpected displayID: %q", displayID)
@@ -131,7 +131,7 @@ func TestDispatchComputerCaptureWindowRequiresWindowID(t *testing.T) {
 	t.Parallel()
 
 	h := newTestHandler(t)
-	h.SetComputerService(newComputerService(computermock.Runtime{}))
+	h.SetComputerService(computer.NewService(computermock.Runtime{}))
 
 	params, err := json.Marshal(map[string]any{"windowId": ""})
 	if err != nil {
@@ -152,7 +152,7 @@ func TestDispatchComputerOpenPermissionSettingsRequiresPermission(t *testing.T) 
 	t.Parallel()
 
 	h := newTestHandler(t)
-	h.SetComputerService(newComputerService(computermock.Runtime{}))
+	h.SetComputerService(computer.NewService(computermock.Runtime{}))
 
 	params, err := json.Marshal(map[string]any{"permission": ""})
 	if err != nil {

@@ -19,6 +19,14 @@ type projectWithWorkspaces struct {
 	Workspaces []localdb.Workspace `json:"workspaces"`
 }
 
+func optionalWorkspaceString(value string) *string {
+	trimmedValue := strings.TrimSpace(value)
+	if trimmedValue == "" {
+		return nil
+	}
+	return &trimmedValue
+}
+
 func (h *JSONRPCHandler) dispatchProject(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodProjectList:

@@ -152,7 +152,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	state, health, healthErr, err := h.refreshWorkspaceHealth(context.Background(), "ws-folder")
+	state, health, healthErr, err := h.nodeApp.RefreshWorkspaceHealth(context.Background(), "ws-folder")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 		t.Fatal("watcher must not be registered before health recovery")
 	}
 
-	state, health, _, err := h.refreshWorkspaceHealth(context.Background(), "ws-recover")
+	state, health, _, err := h.nodeApp.RefreshWorkspaceHealth(context.Background(), "ws-recover")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}

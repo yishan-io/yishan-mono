@@ -6,17 +6,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"path/filepath"
 	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
+	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/piauth"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
@@ -33,31 +31,33 @@ const (
 	maxInFlightJSONRPCPerConn      = 16
 )
 
+// JSONRPCHandler is the RPC transport: it decodes JSON-RPC requests, routes
+// them through dispatch, and owns WebSocket connection state. It does not
+// construct business services — every service comes from the node.App built
+// by the composition root.
 type JSONRPCHandler struct {
-	upgrader             websocket.Upgrader
-	manager              *workspace.Manager
-	runtime              *cliruntime.Runtime
-	localDatabase        *sql.DB
-	nodeID               string
-	logFilePath          string
-	cleanupStore         *workspaceCleanupStore
-	context              *AppContextStore
-	events               *eventHub
-	app                  *application.Service
-	watchers             *workspacewatchers.Watchers
-	prTracker            *workspaceprtracker.Tracker
-	tokenUsage           tokenusage.Service
-	computer             *computerService
-	modelList            *modellist.Service
-	memory               *memory.Service
-	agentMgr             *agentmanager.Manager
-	piAuth               *piauth.Store
-	agentLifecycleCtx    context.Context
-	cancelAgentLifecycle context.CancelFunc
-	agentLifecycleMu     sync.Mutex
-	settingsPath         string
-	serverCtx            context.Context
-	fileCacheSubID       uint64
+	upgrader          websocket.Upgrader
+	nodeApp           *node.App
+	manager           *workspace.Manager
+	runtime           *cliruntime.Runtime
+	localDatabase     *sql.DB
+	nodeID            string
+	logFilePath       string
+	cleanupStore      *node.CleanupStore
+	context           *node.ContextStore
+	events            *eventHub
+	app               *application.Service
+	watchers          *workspacewatchers.Watchers
+	prTracker         *workspaceprtracker.Tracker
+	tokenUsage        tokenusage.Service
+	computer          *computer.Service
+	modelList         *modellist.Service
+	memory            *memory.Service
+	agentMgr          *agentmanager.Manager
+	piAuth            *piauth.Store
+	agentLifecycleCtx context.Context
+	serverCtx         context.Context
+	settingsPath      string
 
 	agentUsageMu sync.Mutex
 	agentUsage   map[string]map[string]struct{}
@@ -92,26 +92,58 @@ type JSONRPCHandler struct {
 	relayPending   map[string]chan relayDispatchVerdict
 }
 
-// NewJSONRPCHandler wires a fresh handler. settingsDirAnchor is any path inside
-// the settings directory (the account data dir) — it is used only to derive
-// the settings file path; callers pass the resolved settings file or a test
-// fixture path in that directory.
-func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, settingsDirAnchor string, appContext *AppContextStore) *JSONRPCHandler {
-	events := newEventHub()
-	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
-		publishWorkspacePullRequestUpdatedEvent(events, event)
-	})
-	fileCacheSubID, fileCacheEvents := events.Subscribe()
-	manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
-		events.Publish(frontendEvent{
+// NewJSONRPCHandler wires the RPC transport around a composed node app. All
+// business services (workspace manager, memory, computer, agents, events,
+// watchers, PR tracker, cleanup/context stores, token usage) are owned by the
+// app; the handler only binds them to WebSocket/JSON-RPC transport.
+func NewJSONRPCHandler(app *node.App) *JSONRPCHandler {
+	handler := &JSONRPCHandler{
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(_ *http.Request) bool { return true },
+		},
+		nodeApp:            app,
+		manager:            app.Manager,
+		runtime:            app.Runtime,
+		nodeID:             app.NodeID,
+		logFilePath:        app.LogFilePath,
+		cleanupStore:       app.CleanupStore,
+		context:            app.ContextStore,
+		events:             app.Events,
+		watchers:           app.Watchers,
+		prTracker:          app.PRTracker,
+		tokenUsage:         app.TokenUsage,
+		computer:           app.Computer,
+		modelList:          app.ModelList,
+		memory:             app.Memory,
+		agentMgr:           app.AgentMgr,
+		piAuth:             app.PIAuth,
+		agentLifecycleCtx:  app.AgentLifecycleCtx,
+		serverCtx:          app.ServerCtx,
+		settingsPath:       app.SettingsPath,
+		agentUsage:         make(map[string]map[string]struct{}),
+		piSessions:         make(map[string]*piSessionState),
+		desktopConns:       make(map[*wsConnState]struct{}),
+		stoppingPiSessions: make(map[string]struct{}),
+		remoteStreamSubs:   make(map[string]map[*wsConnState]struct{}),
+		relayPending:       make(map[string]chan relayDispatchVerdict),
+	}
+	if handler.agentLifecycleCtx == nil {
+		handler.agentLifecycleCtx = context.Background()
+	}
+	if handler.serverCtx == nil {
+		handler.serverCtx = context.Background()
+	}
+	// Terminal lifecycle events flow into the frontend event hub.
+	app.Manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
+		app.Events.Publish(frontendEvent{
 			Topic: "terminalDetectedPortsChanged",
 			Payload: map[string]any{
 				"ports": ports,
 			},
 		})
 	})
-	manager.Terminals().SetSessionsChangedListener(func(event workspace.TerminalSessionLifecycleEvent) {
-		events.Publish(frontendEvent{
+	app.Manager.Terminals().SetSessionsChangedListener(func(event workspace.TerminalSessionLifecycleEvent) {
+		app.Events.Publish(frontendEvent{
 			Topic: "terminalSessionChanged",
 			Payload: map[string]any{
 				"action":      event.Action,
@@ -127,148 +159,16 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 			},
 		})
 	})
-	agentLifecycleCtx, cancelAgentLifecycle := context.WithCancel(context.Background())
-	handler := &JSONRPCHandler{
-		upgrader: websocket.Upgrader{
-			CheckOrigin: func(_ *http.Request) bool { return true },
-		},
-		manager:      manager,
-		runtime:      runtime,
-		nodeID:       nodeID,
-		logFilePath:  logFilePath,
-		cleanupStore: cleanupStore,
-
-		context:              appContext,
-		events:               events,
-		watchers:             newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:            prTracker,
-		tokenUsage:           nil,
-		computer:             newComputerService(computer.NewUnavailableRuntime("unknown")),
-		modelList:            modellist.NewService(),
-		agentMgr:             agentmanager.NewManager(),
-		piAuth:               mustNewManagedPiAuthStore(),
-		agentLifecycleCtx:    agentLifecycleCtx,
-		cancelAgentLifecycle: cancelAgentLifecycle,
-		settingsPath:         config.SettingsFilePath(filepath.Dir(settingsDirAnchor)),
-		agentUsage:           make(map[string]map[string]struct{}),
-		piSessions:           make(map[string]*piSessionState),
-		desktopConns:         make(map[*wsConnState]struct{}),
-		stoppingPiSessions:   make(map[string]struct{}),
-		remoteStreamSubs:     make(map[string]map[*wsConnState]struct{}),
-		relayPending:         make(map[string]chan relayDispatchVerdict),
-		fileCacheSubID:       fileCacheSubID,
-	}
 	handler.app = newWorkspaceApplicationService(handler)
-	// Watcher and PR-tracker cleanup follows instance removal (close, rollback,
-	// or same-path replacement in the registry).
-	manager.Instances().SetOnRemoved(func(workspaceID string, path string) {
-		handler.watchers.Unwatch(path)
-		handler.prTracker.StopTracking(workspaceID)
-	})
-	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
 }
 
-// SetLocalDatabase makes daemon-owned SQLite storage available to RPC handlers.
-// envDir is the profile (env root) directory: the token-usage pricing cache
-// stays machine/runtime-level and does not move with the account.
-func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB, envDir string) {
-	h.localDatabase = database
-	h.tokenUsage = tokenusage.NewCollectorWithRepository(
-		h.manager,
-		h.runtime,
-		localdb.NewHourlyUsageStore(database),
-		envDir,
-	)
-}
-
-func (h *JSONRPCHandler) SetComputerService(svc *computerService) {
+// SetComputerService replaces the computer-use service (test injection).
+func (h *JSONRPCHandler) SetComputerService(svc *computer.Service) {
 	if svc == nil {
 		return
 	}
 	h.computer = svc
-}
-
-// SetMemoryService wires the memory service into the handler.
-func (h *JSONRPCHandler) SetMemoryService(svc *memory.Service, ctx context.Context) {
-	h.memory = svc
-	h.serverCtx = ctx
-}
-
-// Shutdown stops background goroutines owned by the handler (PR tracker poll loop, token usage, memory).
-// It must be called when the daemon server shuts down.
-func (h *JSONRPCHandler) Shutdown() {
-	h.events.Unsubscribe(h.fileCacheSubID)
-	h.prTracker.Stop()
-	if h.tokenUsage != nil {
-		h.tokenUsage.Close()
-	}
-	if h.memory != nil {
-		h.memory.Close()
-	}
-	h.agentLifecycleMu.Lock()
-	h.cancelAgentLifecycle()
-	if h.agentMgr != nil {
-		h.agentMgr.StopAll()
-	}
-	h.agentLifecycleMu.Unlock()
-	modellist.ShutdownShell()
-}
-
-func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan frontendEvent) {
-	for event := range events {
-		if event.Topic != "workspaceFilesChanged" {
-			continue
-		}
-		payload, ok := event.Payload.(map[string]any)
-		if !ok {
-			continue
-		}
-		worktreePath, _ := payload["workspaceWorktreePath"].(string)
-		changedPaths, _ := payload["changedRelativePaths"].([]string)
-		if worktreePath == "" {
-			continue
-		}
-		if len(changedPaths) == 0 {
-			h.manager.Instances().InvalidateFileCache(worktreePath, []string{""})
-			continue
-		}
-		h.manager.Instances().InvalidateFileCache(worktreePath, changedPaths)
-		if h.memory != nil {
-			h.forwardMemoryFileChanges(worktreePath, changedPaths)
-		}
-	}
-}
-
-func (h *JSONRPCHandler) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
-	// Resolve projectID from the registered workspace (best-effort; empty is fine).
-	projectID := ""
-	if ws, err := h.workspaceHandleByPath(worktreePath); err == nil {
-		projectID = ws.Instance().ProjectID
-	}
-	for _, rel := range relPaths {
-		abs := filepath.Join(worktreePath, rel)
-		// Resolve symlinks before the ShouldIndex check: .my-context/ inside a
-		// worktree is a symlink to ~/.yishan/contexts/…, so the unresolved abs
-		// path contains "/.yishan/worktrees/" and would never match the filter.
-		// EvalSymlinks fails for deleted files; in that case resolved stays as
-		// abs and ShouldIndex will return false — delete events for context files
-		// are not currently propagated via this path (pre-existing limitation).
-		resolved := abs
-		if r, err := filepath.EvalSymlinks(abs); err == nil {
-			resolved = r
-		}
-		if h.memory.ShouldIndex(resolved) {
-			// Index under the resolved path: for a .my-context symlink this is
-			// the canonical ~/.yishan/contexts/… target that reconcile also
-			// indexes, so a custom-path git worktree cannot create a second
-			// row under its symlink path. For a real (non-git) .my-context
-			// directory resolved == abs, so nothing changes there.
-			if err := h.memory.OnFileChanged(resolved, worktreePath, projectID); err != nil {
-				log.Warn().Err(err).Str("path", resolved).Msg("memory index update failed")
-			}
-		}
-	}
 }
 
 func (h *JSONRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

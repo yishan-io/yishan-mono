@@ -1,15 +1,16 @@
-package daemon
+package node
 
 import (
+	internalevents "yishan/apps/cli/internal/events"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 
 type eventHubWorkspaceWatcherSink struct {
-	events *eventHub
+	events *internalevents.Hub
 }
 
-func newEventHubWorkspaceWatcherSink(events *eventHub) workspacewatchers.Sink {
+func newEventHubWorkspaceWatcherSink(events *internalevents.Hub) workspacewatchers.Sink {
 	return eventHubWorkspaceWatcherSink{events: events}
 }
 
@@ -17,7 +18,7 @@ func (s eventHubWorkspaceWatcherSink) PublishWorkspaceFilesChanged(event workspa
 	if s.events == nil {
 		return
 	}
-	s.events.Publish(frontendEvent{
+	s.events.Publish(internalevents.Event{
 		Topic: "workspaceFilesChanged",
 		Payload: map[string]any{
 			"workspaceId":           event.WorkspaceID,
@@ -39,21 +40,32 @@ func (s eventHubWorkspaceWatcherSink) PublishGitChanged(event workspacewatchers.
 	if event.CurrentBranch != "" {
 		payload["currentBranch"] = event.CurrentBranch
 	}
-	s.events.Publish(frontendEvent{
+	s.events.Publish(internalevents.Event{
 		Topic:   "gitChanged",
 		Payload: payload,
 	})
 }
 
-func newWorkspaceWatchersForEventHub(events *eventHub, onGitChanged func(worktreePath string)) *workspacewatchers.Watchers {
+// NewWatchers builds the filesystem watchers that publish file/git-change
+// events into the frontend event hub.
+func NewWatchers(events *internalevents.Hub, onGitChanged func(worktreePath string)) *workspacewatchers.Watchers {
+	return newWatchersForEventHub(events, onGitChanged)
+}
+
+func newWatchersForEventHub(events *internalevents.Hub, onGitChanged func(worktreePath string)) *workspacewatchers.Watchers {
 	return workspacewatchers.New(newEventHubWorkspaceWatcherSink(events), onGitChanged)
 }
 
-func publishWorkspacePullRequestUpdatedEvent(events *eventHub, event workspaceprtracker.PullRequestUpdatedEvent) {
+// PublishPullRequestUpdated emits the pull-request-updated frontend event.
+func PublishPullRequestUpdated(events *internalevents.Hub, event workspaceprtracker.PullRequestUpdatedEvent) {
+	publishWorkspacePullRequestUpdatedEvent(events, event)
+}
+
+func publishWorkspacePullRequestUpdatedEvent(events *internalevents.Hub, event workspaceprtracker.PullRequestUpdatedEvent) {
 	if events == nil {
 		return
 	}
-	events.Publish(frontendEvent{
+	events.Publish(internalevents.Event{
 		Topic: "workspacePullRequestUpdated",
 		Payload: map[string]any{
 			"workspaceId":           event.WorkspaceID,

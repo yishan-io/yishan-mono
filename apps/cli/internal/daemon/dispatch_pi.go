@@ -150,9 +150,8 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	}
 
 	// Pi sessions are owned by the daemon, not the desktop WebSocket. A laptop
-	// sleep can close the WebSocket temporarily; Shutdown stops all sessions.
-	h.agentLifecycleMu.Lock()
-	defer h.agentLifecycleMu.Unlock()
+	// sleep can close the WebSocket temporarily; app.Close cancels the agent
+	// lifecycle context and stops all sessions on daemon shutdown.
 	if err := h.agentLifecycleCtx.Err(); err != nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "daemon is shutting down")
 	}

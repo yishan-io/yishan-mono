@@ -1,4 +1,4 @@
-package daemon
+package node
 
 import (
 	"bytes"
@@ -15,10 +15,8 @@ import (
 
 const maxAgentFailureDetailChars = 500
 
-func buildRunAgentFunc() memory.RunAgentFunc {
-	return BuildRunAgentFunc()
-}
-
+// BuildRunAgentFunc returns the memory summarizer's agent runner: it resolves
+// the agent command (agentkind/model/prompt), runs it, and returns its output.
 func BuildRunAgentFunc() memory.RunAgentFunc {
 	return func(ctx context.Context, agentKind, model, prompt, workDir string) (string, error) {
 		cmd, err := agentcmd.ResolveCommand(agentKind, prompt, model, false)
@@ -32,12 +30,12 @@ func BuildRunAgentFunc() memory.RunAgentFunc {
 	}
 }
 
-// buildAgentSubprocessEnv augments baseEnv — the login-shell merged + PATH
+// BuildAgentSubprocessEnv augments baseEnv — the login-shell merged + PATH
 // enriched environment produced by agentcmd.ResolveCommand — with
 // PI_CODING_AGENT_DIR pointing at the managed pi agent dir. This mirrors
 // agentmanager.Manager.Start so spawned pi subprocesses read the managed
 // config/auth instead of the stale ~/.pi/agent default.
-func buildAgentSubprocessEnv(baseEnv []string) ([]string, error) {
+func BuildAgentSubprocessEnv(baseEnv []string) ([]string, error) {
 	piAgentDir, err := config.ManagedPiAgentDir()
 	if err != nil {
 		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
@@ -55,7 +53,7 @@ func buildAgentSubprocessEnv(baseEnv []string) ([]string, error) {
 }
 
 func runResolvedAgentCommand(ctx context.Context, cmd agentcmd.ResolvedCommand, workDir string) (string, error) {
-	env, err := buildAgentSubprocessEnv(cmd.Env)
+	env, err := BuildAgentSubprocessEnv(cmd.Env)
 	if err != nil {
 		return "", err
 	}

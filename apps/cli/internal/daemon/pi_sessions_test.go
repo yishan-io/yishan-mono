@@ -338,7 +338,7 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 		t.Fatalf("dispatchPi attach after reconnect: %v", err)
 	}
 
-	h.Shutdown()
+	h.nodeApp.Close()
 	if _, exists := h.agentMgr.Session(session.ID()); exists {
 		t.Fatal("pi session remained active after daemon shutdown")
 	}
@@ -637,7 +637,6 @@ func TestHandlePiAttach_WaitsForConcurrentStart(t *testing.T) {
 	}
 }
 
-
 func TestHandlePiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
@@ -753,7 +752,6 @@ func TestHandlePiStart_RetriesWhenStopMarkerArrivesLate(t *testing.T) {
 		t.Fatalf("expected reopened tab to own the fresh session, got %#v", state)
 	}
 }
-
 
 func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 	homeDir := t.TempDir()

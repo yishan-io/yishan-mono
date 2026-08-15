@@ -14,16 +14,7 @@ import (
 func newProjectListPreferencesTestHandler(t *testing.T) *JSONRPCHandler {
 	t.Helper()
 	root := t.TempDir()
-	handler := NewJSONRPCHandler(
-		workspace.NewManager(),
-		nil,
-		"node-1",
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	t.Cleanup(handler.Shutdown)
+	handler := newTestJSONRPCHandler(t, workspace.NewManager(), nil, "node-1")
 
 	database, err := localdb.Open(filepath.Join(root, "db"))
 	if err != nil {
@@ -33,7 +24,7 @@ func newProjectListPreferencesTestHandler(t *testing.T) *JSONRPCHandler {
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	handler.SetLocalDatabase(database, root)
+	handler.setTestDatabase(database)
 	return handler
 }
 

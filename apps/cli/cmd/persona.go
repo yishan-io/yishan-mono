@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	daemonpkg "yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/node"
 )
 
 var personaCmd = &cobra.Command{
@@ -58,7 +58,7 @@ Requires the summarizer to be configured (memory.summarizer.enabled = true in pr
 			AgentKind: appConfig.Memory.SummarizerAgentKind,
 			Model:     appConfig.Memory.SummarizerModel,
 		}
-		ps := memory.NewPersonaSummarizer(cfg, daemonpkg.BuildRunAgentFunc())
+		ps := memory.NewPersonaSummarizer(cfg, node.BuildRunAgentFunc())
 		if !ps.Enabled() {
 			return fmt.Errorf("persona summarizer is not ready — check memory.summarizer configuration")
 		}

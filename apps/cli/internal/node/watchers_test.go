@@ -1,4 +1,4 @@
-package daemon
+package node
 
 import (
 	"context"
@@ -9,7 +9,9 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/dbconv"
+	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
@@ -23,7 +25,7 @@ func evalSymlinks(t *testing.T, path string) string {
 	return resolved
 }
 
-func expectEventTopic(t *testing.T, events <-chan frontendEvent, wantTopic string) frontendEvent {
+func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopic string) internalevents.Event {
 	t.Helper()
 	deadline := time.After(3 * time.Second)
 
@@ -39,7 +41,7 @@ func expectEventTopic(t *testing.T, events <-chan frontendEvent, wantTopic strin
 	}
 }
 
-func expectNoEvent(t *testing.T, events <-chan frontendEvent, wait time.Duration) {
+func expectNoEvent(t *testing.T, events <-chan internalevents.Event, wait time.Duration) {
 	t.Helper()
 
 	select {
@@ -50,7 +52,7 @@ func expectNoEvent(t *testing.T, events <-chan frontendEvent, wait time.Duration
 }
 
 func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *testing.T) {
-	hub := newEventHub()
+	hub := internalevents.NewHub()
 	sink := newEventHubWorkspaceWatcherSink(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -58,25 +60,48 @@ func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *t
 	sink.PublishWorkspaceFilesChanged(workspacewatchers.FilesChangedEvent{
 		WorkspaceID:          "ws-1",
 		WorktreePath:         "/tmp/ws-1",
-		ChangedRelativePaths: []string{"a.txt", "nested/b.txt"},
+		ChangedRelativePaths: []string{"a.txt", "b/c.txt"},
 	})
 
 	event := expectEventTopic(t, events, "workspaceFilesChanged")
 	payload, ok := event.Payload.(map[string]any)
 	if !ok {
-		t.Fatalf("expected map payload, got %T", event.Payload)
+		t.Fatalf("payload type = %T, want map[string]any", event.Payload)
 	}
 	if payload["workspaceId"] != "ws-1" || payload["workspaceWorktreePath"] != "/tmp/ws-1" {
 		t.Fatalf("unexpected payload: %#v", payload)
 	}
 	paths, ok := payload["changedRelativePaths"].([]string)
-	if !ok || len(paths) != 2 {
-		t.Fatalf("unexpected changedRelativePaths: %#v", payload["changedRelativePaths"])
+	if !ok || len(paths) != 2 || paths[0] != "a.txt" || paths[1] != "b/c.txt" {
+		t.Fatalf("unexpected changed paths: %#v", payload["changedRelativePaths"])
 	}
 }
 
-func TestPublishWorkspacePullRequestUpdatedEvent_PublishesPayload(t *testing.T) {
-	hub := newEventHub()
+func TestEventHubWorkspaceWatcherSink_PublishesGitChangedPayload(t *testing.T) {
+	hub := internalevents.NewHub()
+	sink := newEventHubWorkspaceWatcherSink(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
+
+	sink.PublishGitChanged(workspacewatchers.GitChangedEvent{
+		WorkspaceID:   "ws-1",
+		WorktreePath:  "/tmp/ws-1",
+		AffectsBranch: true,
+		CurrentBranch: "feature-a",
+	})
+
+	event := expectEventTopic(t, events, "gitChanged")
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("payload type = %T, want map[string]any", event.Payload)
+	}
+	if payload["workspaceId"] != "ws-1" || payload["affectsBranch"] != true || payload["currentBranch"] != "feature-a" {
+		t.Fatalf("unexpected payload: %#v", payload)
+	}
+}
+
+func TestPublishWorkspacePullRequestUpdatedEvent(t *testing.T) {
+	hub := internalevents.NewHub()
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
 
@@ -89,7 +114,7 @@ func TestPublishWorkspacePullRequestUpdatedEvent_PublishesPayload(t *testing.T) 
 	event := expectEventTopic(t, events, "workspacePullRequestUpdated")
 	payload, ok := event.Payload.(map[string]any)
 	if !ok {
-		t.Fatalf("expected map payload, got %T", event.Payload)
+		t.Fatalf("payload type = %T, want map[string]any", event.Payload)
 	}
 	if payload["workspaceId"] != "ws-1" || payload["workspaceWorktreePath"] != "/tmp/ws-1" {
 		t.Fatalf("unexpected payload: %#v", payload)
@@ -100,7 +125,7 @@ func TestPublishWorkspacePullRequestUpdatedEvent_PublishesPayload(t *testing.T) 
 	}
 }
 
-func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
+func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	root := evalSymlinks(t, t.TempDir())
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -114,13 +139,10 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
-	defer handler.Shutdown()
+	app := newWatchTestApp(t, manager)
+	app.StartFileCacheConsumer()
 
-	handle, err := handler.workspaceHandle(openedWorkspace.ID)
-	if err != nil {
-		t.Fatalf("workspace handle: %v", err)
-	}
+	handle := workspaceInstanceHandle(manager, openedWorkspace)
 
 	entries, err := handle.FileList("", false)
 	if err != nil {
@@ -133,7 +155,7 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	if err := os.WriteFile(filepath.Join(root, "b.txt"), []byte("b"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	handler.events.Publish(frontendEvent{
+	app.Events.Publish(internalevents.Event{
 		Topic: "workspaceFilesChanged",
 		Payload: map[string]any{
 			"workspaceWorktreePath": root,
@@ -153,7 +175,7 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	if err := os.WriteFile(filepath.Join(root, "c.txt"), []byte("c"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	handler.events.Publish(frontendEvent{
+	app.Events.Publish(internalevents.Event{
 		Topic: "workspaceFilesChanged",
 		Payload: map[string]any{
 			"workspaceWorktreePath": root,
@@ -171,20 +193,13 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	}
 }
 
-func TestJSONRPCHandler_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *testing.T) {
+func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *testing.T) {
 	root := evalSymlinks(t, t.TempDir())
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	database, err := localdb.Open(t.TempDir())
-	if err != nil {
-		t.Fatalf("open database: %v", err)
-	}
-	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
-		t.Fatalf("migrate database: %v", err)
-	}
+	database := openCleanupStoreTestDB(t)
 	workspaceStore := localdb.NewWorkspaceStore(database)
 	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
@@ -194,32 +209,32 @@ func TestJSONRPCHandler_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspa
 	}
 
 	manager := workspace.NewManagerWithStore(dbconv.NewStore(workspaceStore))
-	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
-	defer handler.Shutdown()
+	app := newWatchTestApp(t, manager)
 
 	// Hydration alone must not register watchers (the regression this guards):
 	// without the explicit watch step, file-change events stop flowing after a
 	// daemon restart.
-	if handler.watchers.IsWatching(root) {
+	if app.Watchers.IsWatching(root) {
 		t.Fatal("expected no watcher before hydration")
 	}
 
-	// Drive the same helper buildHandler uses at boot so removing the watch
+	// Drive the same sequence Bootstrap uses at boot so removing the watch
 	// step from the bootstrap sequence fails this test.
-	if err := hydrateAndWatchWorkspaces(handler, manager); err != nil {
-		t.Fatalf("hydrate and watch workspaces: %v", err)
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate workspaces: %v", err)
 	}
+	app.WatchActiveWorkspaces()
 
 	hydratedWorkspace, ok := manager.Instances().Get("workspace-1")
 	if !ok {
 		t.Fatal("get hydrated workspace: not found")
 	}
-	if !handler.watchers.IsWatching(hydratedWorkspace.Path) {
+	if !app.Watchers.IsWatching(hydratedWorkspace.Path) {
 		t.Fatalf("expected watcher registered for hydrated workspace path %q", hydratedWorkspace.Path)
 	}
 }
 
-func TestJSONRPCHandler_HealthRecoveryRewatchesWorkspace(t *testing.T) {
+func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	root := evalSymlinks(t, t.TempDir())
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -229,11 +244,10 @@ func TestJSONRPCHandler_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	if _, err := manager.Open(workspace.OpenRequest{ID: "workspace-1", Path: root}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
-	defer handler.Shutdown()
+	app := newWatchTestApp(t, manager)
 
-	handler.watchActiveWorkspaces()
-	if !handler.watchers.IsWatching(root) {
+	app.WatchActiveWorkspaces()
+	if !app.Watchers.IsWatching(root) {
 		t.Fatal("expected watcher registered for active workspace")
 	}
 
@@ -242,10 +256,10 @@ func TestJSONRPCHandler_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	if err := os.Rename(root, movedPath); err != nil {
 		t.Fatalf("move workspace path: %v", err)
 	}
-	if _, _, _, err := handler.refreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
+	if _, _, _, err := app.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
 		t.Fatalf("refresh health (error transition): %v", err)
 	}
-	if handler.watchers.IsWatching(root) {
+	if app.Watchers.IsWatching(root) {
 		t.Fatal("expected watcher dropped after error transition")
 	}
 
@@ -254,51 +268,44 @@ func TestJSONRPCHandler_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	if err := os.Rename(movedPath, root); err != nil {
 		t.Fatalf("restore workspace path: %v", err)
 	}
-	if _, _, _, err := handler.refreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
+	if _, _, _, err := app.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
 		t.Fatalf("refresh health (recovery): %v", err)
 	}
-	if !handler.watchers.IsWatching(root) {
+	if !app.Watchers.IsWatching(root) {
 		t.Fatal("expected watcher re-registered after error-to-active recovery")
 	}
 }
 
-func TestJSONRPCHandler_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
-	root := evalSymlinks(t, t.TempDir())
-	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	manager := workspace.NewManager()
-	if _, err := manager.Open(workspace.OpenRequest{
-		ID:        "workspace-1",
-		Path:      root,
-		ProjectID: "project-1",
-		OrgID:     "org-1",
-	}); err != nil {
-		t.Fatalf("open workspace: %v", err)
-	}
-	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
-	defer handler.Shutdown()
-
-	workspaceID, didOpen, err := handler.openProjectWorkspace(workspaceOpenProjectEntry{
-		WorkspaceID:  "workspace-1",
-		WorktreePath: root,
-		ProjectID:    "project-1",
-		OrgID:        "org-1",
+// newWatchTestApp builds a minimal app for watcher/file-cache behavior tests.
+func newWatchTestApp(t *testing.T, manager *workspace.Manager) *App {
+	t.Helper()
+	events := internalevents.NewHub()
+	prTracker := workspaceprtracker.New(manager, nil, func(event workspaceprtracker.PullRequestUpdatedEvent) {
+		PublishPullRequestUpdated(events, event)
 	})
-	if err != nil {
-		t.Fatalf("openProjectWorkspace: %v", err)
+	watchers := NewWatchers(events, prTracker.RefreshWorkspaceByPath)
+	manager.Instances().SetOnRemoved(func(workspaceID string, path string) {
+		watchers.Unwatch(path)
+		prTracker.StopTracking(workspaceID)
+	})
+	app := &App{
+		Manager:      manager,
+		Events:       events,
+		Watchers:     watchers,
+		PRTracker:    prTracker,
+		ContextStore: NewContextStore(""),
+		Runtime:      nil,
+		NodeID:       "node-1",
+		LogFilePath:  filepath.Join(t.TempDir(), "daemon.log"),
+		SettingsPath: filepath.Join(t.TempDir(), "config.yml"),
+		ServerCtx:    context.Background(),
 	}
-	if didOpen {
-		t.Fatal("expected open to be skipped for already-open workspace")
-	}
-	if workspaceID != "workspace-1" {
-		t.Fatalf("unexpected workspace id %q", workspaceID)
-	}
-	// The desktop warmup skips already-open workspaces; the watcher must still
-	// be registered so file-change events flow (the Git Changes tab depends on
-	// them).
-	if !handler.watchers.IsWatching(root) {
-		t.Fatal("expected watcher registered on openProject skip path")
-	}
+	t.Cleanup(func() { _ = app.Close() })
+	return app
+}
+
+// workspaceInstanceHandle builds a workspace-scoped handle from the manager's
+// shared services (file cache, git, terminals).
+func workspaceInstanceHandle(manager *workspace.Manager, ws workspace.Workspace) instance.Handle {
+	return instance.NewHandle(ws, manager.Instances().Files(), manager.Gits(), manager.Terminals())
 }

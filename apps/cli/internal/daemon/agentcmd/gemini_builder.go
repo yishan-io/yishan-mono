@@ -20,4 +20,3 @@ func (b geminiBuilder) Args(prompt, model string, interactive bool) []string {
 }
 
 func (b geminiBuilder) ExtraEnv(_ bool) []string { return nil }
-

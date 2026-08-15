@@ -23,4 +23,3 @@ func (b piBuilder) Args(prompt, model string, interactive bool) []string {
 }
 
 func (b piBuilder) ExtraEnv(_ bool) []string { return nil }
-

@@ -1,4 +1,4 @@
-package daemon
+package node
 
 import (
 	"database/sql"
@@ -10,9 +10,12 @@ import (
 	"time"
 )
 
-const workspaceCleanupFileName = "pending-workspace-cleanups.json"
+const cleanupFileName = "pending-workspace-cleanups.json"
 
-type pendingWorkspaceCleanup struct {
+// PendingWorkspaceCleanup is one entry in the pending workspace cleanup retry
+// queue: a workspace whose close/removal was interrupted and will be retried
+// on the next cleanup tick or daemon restart.
+type PendingWorkspaceCleanup struct {
 	WorkspaceID   string `json:"workspaceId"`
 	Path          string `json:"path"`
 	Branch        string `json:"branch,omitempty"`
@@ -27,26 +30,28 @@ type pendingWorkspaceCleanup struct {
 }
 
 type pendingWorkspaceCleanupFile struct {
-	Items []pendingWorkspaceCleanup `json:"items"`
+	Items []PendingWorkspaceCleanup `json:"items"`
 }
 
-// workspaceCleanupStore persists the pending workspace cleanup retry queue.
-// Data lives in the pending_workspace_cleanups SQLite table; the legacy JSON
-// file is imported once on construction and then removed.
-type workspaceCleanupStore struct {
+// CleanupStore persists the pending workspace cleanup retry queue. Data lives
+// in the pending_workspace_cleanups SQLite table; the legacy JSON file is
+// imported once on construction and then removed.
+type CleanupStore struct {
 	mu sync.Mutex
 	db *sql.DB
 }
 
-func newWorkspaceCleanupStore(database *sql.DB, legacyFilePath string) (*workspaceCleanupStore, error) {
-	store := &workspaceCleanupStore{db: database}
+// NewCleanupStore creates the cleanup store and imports the legacy JSON queue
+// file if one exists.
+func NewCleanupStore(database *sql.DB, legacyFilePath string) (*CleanupStore, error) {
+	store := &CleanupStore{db: database}
 	if err := store.importLegacyFile(legacyFilePath); err != nil {
 		return nil, err
 	}
 	return store, nil
 }
 
-func (s *workspaceCleanupStore) importLegacyFile(path string) error {
+func (s *CleanupStore) importLegacyFile(path string) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -72,7 +77,9 @@ func (s *workspaceCleanupStore) importLegacyFile(path string) error {
 	return nil
 }
 
-func (s *workspaceCleanupStore) Add(item pendingWorkspaceCleanup) error {
+// Add upserts a pending cleanup, preserving the retry history of an existing
+// entry.
+func (s *CleanupStore) Add(item PendingWorkspaceCleanup) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -121,7 +128,8 @@ func (s *workspaceCleanupStore) Add(item pendingWorkspaceCleanup) error {
 	return err
 }
 
-func (s *workspaceCleanupStore) Remove(workspaceID string) error {
+// Remove drops a pending cleanup entry.
+func (s *CleanupStore) Remove(workspaceID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -129,7 +137,8 @@ func (s *workspaceCleanupStore) Remove(workspaceID string) error {
 	return err
 }
 
-func (s *workspaceCleanupStore) List() ([]pendingWorkspaceCleanup, error) {
+// List returns all pending cleanups.
+func (s *CleanupStore) List() ([]PendingWorkspaceCleanup, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -143,9 +152,9 @@ func (s *workspaceCleanupStore) List() ([]pendingWorkspaceCleanup, error) {
 	}
 	defer rows.Close()
 
-	var items []pendingWorkspaceCleanup
+	var items []PendingWorkspaceCleanup
 	for rows.Next() {
-		var item pendingWorkspaceCleanup
+		var item PendingWorkspaceCleanup
 		var removeBranch, forceWorktree, forceBranch int
 		var branch, postHook, lastError sql.NullString
 		if err := rows.Scan(
@@ -166,12 +175,13 @@ func (s *workspaceCleanupStore) List() ([]pendingWorkspaceCleanup, error) {
 		return nil, err
 	}
 	if items == nil {
-		items = []pendingWorkspaceCleanup{}
+		items = []PendingWorkspaceCleanup{}
 	}
 	return items, nil
 }
 
-func (s *workspaceCleanupStore) MarkFailure(workspaceID string, cleanupErr error) error {
+// MarkFailure records one failed retry attempt.
+func (s *CleanupStore) MarkFailure(workspaceID string, cleanupErr error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

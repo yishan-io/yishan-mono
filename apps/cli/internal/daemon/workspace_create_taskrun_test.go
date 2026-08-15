@@ -14,16 +14,7 @@ import (
 
 func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t *testing.T) {
 	root := t.TempDir()
-	handler := NewJSONRPCHandler(
-		workspace.NewManager(),
-		nil,
-		"node-1",
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	defer handler.Shutdown()
+	handler := newTestJSONRPCHandler(t, workspace.NewManager(), nil, "node-1")
 
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)

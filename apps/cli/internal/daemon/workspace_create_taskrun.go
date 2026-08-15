@@ -71,9 +71,7 @@ func (h *JSONRPCHandler) startTaskRunChatSession(created workspace.Workspace, ta
 		return "failed", nil
 	}
 
-	h.agentLifecycleMu.Lock()
 	if err := h.agentLifecycleCtx.Err(); err != nil {
-		h.agentLifecycleMu.Unlock()
 		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: daemon is shutting down")
 		return "failed", nil
 	}
@@ -87,7 +85,6 @@ func (h *JSONRPCHandler) startTaskRunChatSession(created workspace.Workspace, ta
 		ExtraEnv:    extraEnv,
 		OnEvent:     h.makePiEventCallback(sessionID),
 	})
-	h.agentLifecycleMu.Unlock()
 	if startErr != nil {
 		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start pi session")
 		return "failed", nil

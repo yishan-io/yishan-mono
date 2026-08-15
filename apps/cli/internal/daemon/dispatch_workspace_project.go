@@ -47,7 +47,7 @@ func (h *JSONRPCHandler) openProjectWorkspace(entry workspaceOpenProjectEntry) (
 			// path, so ensure the filesystem watcher exists even on the skip
 			// path; otherwise file-change events never flow for this workspace.
 			if existingWorkspace.State == workspace.StateActive && strings.TrimSpace(existingWorkspace.Path) != "" {
-				h.watchAndTrack(existingWorkspace.ID, existingWorkspace.Path)
+				h.nodeApp.WatchAndTrack(existingWorkspace.ID, existingWorkspace.Path)
 			}
 			return workspaceID, false, nil
 		}
@@ -61,7 +61,7 @@ func (h *JSONRPCHandler) openProjectWorkspace(entry workspaceOpenProjectEntry) (
 	if err != nil {
 		return workspaceID, false, err
 	}
-	h.watchAndTrack(openedWorkspace.ID, openedWorkspace.Path)
+	h.nodeApp.WatchAndTrack(openedWorkspace.ID, openedWorkspace.Path)
 	return openedWorkspace.ID, true, nil
 }
 

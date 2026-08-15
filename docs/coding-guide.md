@@ -338,6 +338,12 @@ internal/
 - `internal/daemon` is transport + process bootstrap: JSON-RPC/relay handlers decode
   input, call **one** `application.Service` method, and encode the result. Handlers
   must not decide routing (local vs remote node) or rollback policy.
+- `internal/node.App` is the daemon's only service composition root: `node.Bootstrap`
+  constructs the whole service graph (workspace manager, memory, computer, agents,
+  events, watchers, PR tracker, cleanup/context stores, token usage) for one account
+  and `node.App.Close` owns the shutdown order. `JSONRPCHandler` receives the app and
+  constructs no business services; daemon `Run` keeps the process entry points and
+  calls `node.Bootstrap` after resolving the account data dir.
 - `internal/workspace/application.Service` owns workspace create/close orchestration:
   routing, rollback, and createflow execution. Create and close each have one
   application owner; `internal/workspace/createflow` stays an internal collaborator.

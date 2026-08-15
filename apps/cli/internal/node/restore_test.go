@@ -1,12 +1,14 @@
-package daemon
+package node
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/runtime/shellenv"
@@ -64,9 +66,9 @@ func TestBuildAgentSubprocessEnv_SetsPiAgentDirAndPreservesEntries(t *testing.T)
 		config.PiAgentDirEnvKey + "=/stale/one",
 		config.PiAgentDirEnvKey + "=/stale/two",
 	}
-	got, err := buildAgentSubprocessEnv(base)
+	got, err := BuildAgentSubprocessEnv(base)
 	if err != nil {
-		t.Fatalf("buildAgentSubprocessEnv() error = %v", err)
+		t.Fatalf("BuildAgentSubprocessEnv() error = %v", err)
 	}
 
 	piDirCount := 0
@@ -131,9 +133,9 @@ func TestRunAgent_SetsPiAgentDirOnSubprocess(t *testing.T) {
 	installFakePiBinary(t, markerPath)
 	t.Setenv("SHELL", "/bin/sh")
 
-	out, err := runAgent("pi", "summarize", "", "")
+	out, err := BuildRunAgentFunc()(context.Background(), "pi", "", "summarize", "")
 	if err != nil {
-		t.Fatalf("runAgent() error = %v (output %q)", err, out)
+		t.Fatalf("run agent error = %v (output %q)", err, out)
 	}
 
 	wantAgentDir, err := config.ManagedPiAgentDir()
@@ -170,4 +172,29 @@ func TestBuildRunAgentFunc_FailedCommandIncludesStderr(t *testing.T) {
 	if !strings.Contains(err.Error(), "exit status 1") {
 		t.Fatalf("expected exit status in error, got %q", err)
 	}
+}
+
+func installFakePiBinary(t *testing.T, markerPath string) {
+	t.Helper()
+	binDir := t.TempDir()
+	scriptPath := filepath.Join(binDir, "pi")
+	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$%s\" > %q\n", config.PiAgentDirEnvKey, markerPath)
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake pi binary: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func waitForFileContent(t *testing.T, path string) string {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		content, err := os.ReadFile(path)
+		if err == nil {
+			return string(content)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %s", path)
+	return ""
 }

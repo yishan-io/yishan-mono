@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"yishan/apps/cli/internal/config"
@@ -26,19 +25,9 @@ func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsS
 	}))
 	defer server.Close()
 
-	root := t.TempDir()
 	manager := workspace.NewManager()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := NewJSONRPCHandler(
-		manager,
-		runtime,
-		"node-1",
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	defer handler.Shutdown()
+	handler := newTestJSONRPCHandler(t, manager, runtime, "node-1")
 
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -48,7 +37,7 @@ func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsS
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	handler.SetLocalDatabase(database, t.TempDir())
+	handler.setTestDatabase(database)
 
 	// The local create finalized: the daemon row is active with a real path
 	// (finalizePersistedWorkspace runs before the remote PATCH is attempted).
@@ -94,19 +83,9 @@ func TestListRemoteProjectsWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t
 	}))
 	defer server.Close()
 
-	root := t.TempDir()
 	manager := workspace.NewManager()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := NewJSONRPCHandler(
-		manager,
-		runtime,
-		"node-1",
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	defer handler.Shutdown()
+	handler := newTestJSONRPCHandler(t, manager, runtime, "node-1")
 
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -116,7 +95,7 @@ func TestListRemoteProjectsWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	handler.SetLocalDatabase(database, t.TempDir())
+	handler.setTestDatabase(database)
 
 	results, err := handler.listRemoteProjectsWithWorkspaces(context.Background(), "org-1")
 	if err != nil {

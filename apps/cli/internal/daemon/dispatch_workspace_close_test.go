@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -29,19 +28,9 @@ func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t 
 	}))
 	defer server.Close()
 
-	root := t.TempDir()
 	manager := workspace.NewManager()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := NewJSONRPCHandler(
-		manager,
-		runtime,
-		"node-1",
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	defer handler.Shutdown()
+	handler := newTestJSONRPCHandler(t, manager, runtime, "node-1")
 
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -60,7 +49,7 @@ func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t 
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	handler.SetLocalDatabase(database, t.TempDir())
+	handler.setTestDatabase(database)
 
 	_, err = handler.app.CloseLocal(context.Background(), workspaceCloseParams{
 		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",

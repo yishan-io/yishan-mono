@@ -12,6 +12,7 @@ import (
 
 	"yishan/apps/cli/internal/api"
 	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
+	"yishan/apps/cli/internal/node"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -197,7 +198,7 @@ func runAgent(agentKind, prompt, model, projectPath string) (output string, err 
 		return "", err
 	}
 
-	env, err := buildAgentSubprocessEnv(cmd.Env)
+	env, err := node.BuildAgentSubprocessEnv(cmd.Env)
 	if err != nil {
 		return "", err
 	}

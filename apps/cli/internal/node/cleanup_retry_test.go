@@ -1,4 +1,4 @@
-package daemon
+package node
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	cleanupStore, err := newWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), workspaceCleanupFileName))
+	cleanupStore, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
 	if err != nil {
 		t.Fatalf("new cleanup store: %v", err)
 	}
@@ -24,23 +24,18 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	if err := cleanupStore.Add(pendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
+	if err := cleanupStore.Add(PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
 		t.Fatalf("add pending cleanup: %v", err)
 	}
 
 	manager := workspace.NewManagerWithStore(dbconv.NewStore(workspaceStore))
-	handler := NewJSONRPCHandler(
-		manager,
-		nil,
-		"node-1",
-		filepath.Join(t.TempDir(), "daemon.log"),
-		cleanupStore,
-		filepath.Join(t.TempDir(), "config.yml"),
-		NewAppContextStore(""),
-	)
-	handler.SetLocalDatabase(database, t.TempDir())
+	app := &App{
+		Manager:      manager,
+		CleanupStore: cleanupStore,
+		Database:     database,
+	}
 
-	handler.retryPendingWorkspaceCleanups(context.Background())
+	app.retryPendingCleanups(context.Background())
 
 	items, err := cleanupStore.List()
 	if err != nil {

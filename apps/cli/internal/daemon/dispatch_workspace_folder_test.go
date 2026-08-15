@@ -25,7 +25,7 @@ func newFolderHandler(t *testing.T) (*JSONRPCHandler, *localdb.WorkspaceStore) {
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	h.SetLocalDatabase(database, t.TempDir())
+	h.setTestDatabase(database)
 	return h, localdb.NewWorkspaceStore(database)
 }
 

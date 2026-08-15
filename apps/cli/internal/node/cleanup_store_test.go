@@ -1,4 +1,4 @@
-package daemon
+package node
 
 import (
 	"database/sql"
@@ -25,12 +25,12 @@ func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 
 func TestWorkspaceCleanupStore_AddListRemove(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := newWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), workspaceCleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
 
-	item := pendingWorkspaceCleanup{
+	item := PendingWorkspaceCleanup{
 		WorkspaceID:   "workspace-1",
 		Path:          "/tmp/ws-1",
 		Branch:        "feat/x",
@@ -74,12 +74,12 @@ func TestWorkspaceCleanupStore_AddListRemove(t *testing.T) {
 
 func TestWorkspaceCleanupStore_AddPreservesRetryHistory(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := newWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), workspaceCleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
 
-	if err := store.Add(pendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: "/tmp/ws-1"}); err != nil {
+	if err := store.Add(PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: "/tmp/ws-1"}); err != nil {
 		t.Fatalf("first add: %v", err)
 	}
 	if err := store.MarkFailure("workspace-1", errors.New("boom")); err != nil {
@@ -87,7 +87,7 @@ func TestWorkspaceCleanupStore_AddPreservesRetryHistory(t *testing.T) {
 	}
 
 	// Re-adding the same workspace must preserve attempts and last_error.
-	if err := store.Add(pendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: "/tmp/ws-1", Branch: "feat/y"}); err != nil {
+	if err := store.Add(PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: "/tmp/ws-1", Branch: "feat/y"}); err != nil {
 		t.Fatalf("second add: %v", err)
 	}
 	items, err := store.List()
@@ -107,12 +107,12 @@ func TestWorkspaceCleanupStore_AddPreservesRetryHistory(t *testing.T) {
 
 func TestWorkspaceCleanupStore_MarkFailureIncrementsAttempts(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := newWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), workspaceCleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
 
-	if err := store.Add(pendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: "/tmp/ws-1"}); err != nil {
+	if err := store.Add(PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: "/tmp/ws-1"}); err != nil {
 		t.Fatalf("add: %v", err)
 	}
 	if err := store.MarkFailure("workspace-1", errors.New("first")); err != nil {
@@ -132,7 +132,7 @@ func TestWorkspaceCleanupStore_MarkFailureIncrementsAttempts(t *testing.T) {
 
 func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	legacyPath := filepath.Join(t.TempDir(), workspaceCleanupFileName)
+	legacyPath := filepath.Join(t.TempDir(), cleanupFileName)
 	legacyContent := `{
   "items": [
     {"workspaceId": "ws-legacy-1", "path": "/tmp/legacy-1", "attempts": 3, "lastError": "retried", "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z"}
@@ -142,7 +142,7 @@ func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 		t.Fatalf("write legacy file: %v", err)
 	}
 
-	store, err := newWorkspaceCleanupStore(database, legacyPath)
+	store, err := NewCleanupStore(database, legacyPath)
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 
 func TestWorkspaceCleanupStore_MissingLegacyFileIsFine(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := newWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), workspaceCleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}

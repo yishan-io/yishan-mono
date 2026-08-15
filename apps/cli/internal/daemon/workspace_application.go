@@ -8,6 +8,7 @@ import (
 	apiclient "yishan/apps/cli/internal/apiclient"
 	localdb "yishan/apps/cli/internal/db"
 	dbconv "yishan/apps/cli/internal/dbconv"
+	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -46,7 +47,7 @@ func newWorkspaceApplicationService(h *JSONRPCHandler) *application.Service {
 			if h.cleanupStore == nil {
 				return nil
 			}
-			return h.cleanupStore.Add(pendingWorkspaceCleanup{
+			return h.cleanupStore.Add(node.PendingWorkspaceCleanup{
 				WorkspaceID: req.WorkspaceID, Path: req.Path, Branch: req.Branch,
 				RemoveBranch: req.RemoveBranch, ForceWorktree: req.ForceWorktree,
 				ForceBranch: req.ForceBranch, PostHook: req.PostHook,
@@ -140,27 +141,27 @@ func (a *appDeps) EnsureSharedRepoClone(ctx context.Context, repoKey string, rep
 // ---- WorkspaceRecords ----
 
 func (a *appDeps) CreateRemoteRecord(ctx context.Context, registration application.Registration) {
-	a.h.createRemoteWorkspaceRecord(ctx, registration)
+	a.h.nodeApp.CreateRemoteRecord(ctx, registration)
 }
 
 func (a *appDeps) UpdateRemoteRecord(ctx context.Context, registration application.Registration, localPath string) {
-	a.h.updateRemoteWorkspaceRecord(ctx, registration, localPath)
+	a.h.nodeApp.UpdateRemoteRecord(ctx, registration, localPath)
 }
 
 func (a *appDeps) CloseRemoteRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status workspace.Status) {
-	a.h.closeRemoteWorkspaceRecord(ctx, organizationID, projectID, workspaceID, string(status))
+	a.h.nodeApp.CloseRemoteRecord(ctx, organizationID, projectID, workspaceID, string(status))
 }
 
 func (a *appDeps) PersistPrepared(ctx context.Context, plan application.CreatePlan) error {
-	return a.h.persistPreparedWorkspace(ctx, plan)
+	return a.h.nodeApp.PersistPrepared(ctx, plan)
 }
 
 func (a *appDeps) FinalizePersisted(ctx context.Context, plan application.CreatePlan, created workspace.Workspace) error {
-	return a.h.finalizePersistedWorkspace(ctx, plan, created)
+	return a.h.nodeApp.FinalizePersisted(ctx, plan, created)
 }
 
 func (a *appDeps) ClosePersisted(ctx context.Context, workspaceID string) error {
-	return a.h.closePersistedWorkspace(ctx, workspaceID)
+	return a.h.nodeApp.ClosePersisted(ctx, workspaceID)
 }
 
 func (a *appDeps) LocalRow(ctx context.Context, workspaceID string) (workspace.Record, bool) {
@@ -201,7 +202,7 @@ func (a *appDeps) RemoveFromMemory(workspaceID string) {
 }
 
 func (a *appDeps) WatchAndTrack(workspaceID string, path string) {
-	a.h.watchAndTrack(workspaceID, path)
+	a.h.nodeApp.WatchAndTrack(workspaceID, path)
 }
 
 func (a *appDeps) Unwatch(path string) {
@@ -242,7 +243,7 @@ func (a *appDeps) Publish(topic string, payload any) {
 }
 
 func (a *appDeps) SnapshotChanged(organizationID string, projectID string, workspaceID string, change string) {
-	a.h.publishWorkspaceSnapshotChanged(organizationID, projectID, workspaceID, change)
+	a.h.nodeApp.PublishWorkspaceSnapshotChanged(organizationID, projectID, workspaceID, change)
 }
 
 func (a *appDeps) CreateStarted(event application.StartedEvent) {

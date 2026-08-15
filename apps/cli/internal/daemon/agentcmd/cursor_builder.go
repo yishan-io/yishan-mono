@@ -20,4 +20,3 @@ func (b cursorBuilder) Args(prompt, model string, interactive bool) []string {
 }
 
 func (b cursorBuilder) ExtraEnv(_ bool) []string { return nil }
-
