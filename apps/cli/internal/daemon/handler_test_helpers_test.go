@@ -11,6 +11,7 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
+	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/rpc"
@@ -100,4 +101,62 @@ func (h *JSONRPCHandler) setTestDatabase(database *sql.DB) {
 // path rpc.Server uses for live connections.
 func (h *JSONRPCHandler) callRPCForTest(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	return h.router.Call(ctx, &rpc.Connection{}, method, params)
+}
+
+// TestNewJSONRPCHandler_CopiesAppServices guards the handler↔app wiring:
+// every service the RPC layer needs must be copied from the composed node app
+// at construction (a missed copy silently breaks the daemon in production
+// while tests pass, because test helpers set fields directly).
+func TestNewJSONRPCHandler_CopiesAppServices(t *testing.T) {
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	app := &node.App{
+		Manager:           workspace.NewManager(),
+		Computer:          computer.NewService(computer.NewUnavailableRuntime("unknown")),
+		ModelList:         modellist.NewService(),
+		AgentMgr:          agentmanager.NewManager(),
+		PIAuth:            node.NewManagedPiAuthStore(),
+		Events:            internalevents.NewHub(),
+		Watchers:          node.NewWatchers(internalevents.NewHub(), nil),
+		PRTracker:         workspaceprtracker.New(workspace.NewManager(), nil, nil),
+		ContextStore:      node.NewContextStore(""),
+		Database:          database,
+		Runtime:           nil,
+		NodeID:            "node-1",
+		LogFilePath:       "daemon.log",
+		SettingsPath:      "settings.yml",
+		AgentLifecycleCtx: context.Background(),
+		ServerCtx:         context.Background(),
+	}
+	handler := NewJSONRPCHandler(app)
+
+	if handler.localDatabase != app.Database {
+		t.Fatal("handler.localDatabase must come from app.Database (production wiring)")
+	}
+	if handler.manager != app.Manager || handler.runtime != app.Runtime || handler.nodeID != app.NodeID {
+		t.Fatal("handler did not copy app identity fields")
+	}
+	if handler.events != app.Events || handler.watchers != app.Watchers || handler.prTracker != app.PRTracker {
+		t.Fatal("handler did not copy app event/watcher services")
+	}
+	if handler.tokenUsage != app.TokenUsage || handler.computer != app.Computer ||
+		handler.modelList != app.ModelList || handler.memory != app.Memory ||
+		handler.agentMgr != app.AgentMgr || handler.piAuth != app.PIAuth {
+		t.Fatal("handler did not copy app business services")
+	}
+	if handler.cleanupStore != app.CleanupStore || handler.context != app.ContextStore ||
+		handler.settingsPath != app.SettingsPath || handler.agentLifecycleCtx != app.AgentLifecycleCtx ||
+		handler.serverCtx != app.ServerCtx {
+		t.Fatal("handler did not copy app stores/contexts")
+	}
+	if handler.router == nil || handler.rpcServer == nil {
+		t.Fatal("handler must build its router and rpc server")
+	}
 }

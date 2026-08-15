@@ -96,6 +96,7 @@ func NewJSONRPCHandler(app *node.App) *JSONRPCHandler {
 		nodeApp:           app,
 		manager:           app.Manager,
 		runtime:           app.Runtime,
+		localDatabase:     app.Database,
 		nodeID:            app.NodeID,
 		logFilePath:       app.LogFilePath,
 		cleanupStore:      app.CleanupStore,
