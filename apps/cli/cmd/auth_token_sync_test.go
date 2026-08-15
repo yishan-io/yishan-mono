@@ -12,6 +12,7 @@ import (
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon"
+	"yishan/apps/cli/internal/rpc"
 )
 
 type mockDaemonAuthSyncRPCClient struct {
@@ -69,8 +70,8 @@ func TestSyncDaemonAuthTokensCallsPersistMethodWhenDaemonIsRunning(t *testing.T)
 			t.Fatalf("wsURL = %q, want %q", wsURL, "ws://127.0.0.1:65072/ws")
 		}
 		return &mockDaemonAuthSyncRPCClient{call: func(ctx context.Context, method string, params any, out any) error {
-			if method != daemon.MethodAppPersistAuthTokens {
-				t.Fatalf("method = %q, want %q", method, daemon.MethodAppPersistAuthTokens)
+			if method != rpc.MethodAppPersistAuthTokens {
+				t.Fatalf("method = %q, want %q", method, rpc.MethodAppPersistAuthTokens)
 			}
 			gotUpdate, ok := params.(api.TokenUpdate)
 			if !ok {

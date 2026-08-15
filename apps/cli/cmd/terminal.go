@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/daemon"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/output"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -37,7 +37,7 @@ var terminalListCmd = &cobra.Command{
 		}
 
 		var result []workspace.TerminalSessionSummary
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalListSessions,
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalListSessions,
 			workspace.TerminalListSessionsRequest{IncludeExited: includeExited},
 			&result,
 		); err != nil {
@@ -71,7 +71,7 @@ var terminalStartCmd = &cobra.Command{
 		}
 
 		var result workspace.TerminalStartResponse
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalStart,
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalStart,
 			workspace.TerminalStartRequest{WorkspaceID: workspaceID, Command: command},
 			&result,
 		); err != nil {
@@ -100,7 +100,7 @@ var terminalStopCmd = &cobra.Command{
 		}
 
 		var result workspace.TerminalStopResponse
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalStop,
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalStop,
 			workspace.TerminalStopRequest{SessionID: sessionID},
 			&result,
 		); err != nil {
@@ -129,7 +129,7 @@ var terminalPortsCmd = &cobra.Command{
 		}
 
 		var result []workspace.TerminalDetectedPort
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalListPorts, nil, &result); err != nil {
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalListPorts, nil, &result); err != nil {
 			return err
 		}
 

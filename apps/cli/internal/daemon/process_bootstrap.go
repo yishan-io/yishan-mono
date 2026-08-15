@@ -42,21 +42,20 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtim
 	// but open handles stay on the boot-time account.
 	ensureUserIDForAccountResolution(runtime, filepath.Join(filepath.Dir(statePath), "credential.yaml"))
 
-	handler, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID)
+	app, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID)
 	if err != nil {
 		_ = listener.Close() // listener is not owned by a daemon runtime yet
 		return nil, err
 	}
 
-	server := buildHTTPServer(handler, daemonID, relayStatus)
+	server := buildHTTPServer(app, daemonID, relayStatus)
 
 	return &daemonRuntime{
 		listener:    listener,
 		actualAddr:  actualAddr,
 		actualPort:  actualPort,
 		daemonID:    daemonID,
-		handler:     handler,
-		app:         handler.nodeApp,
+		app:         app,
 		relayStatus: relayStatus,
 		server:      server,
 		statePath:   statePath,
@@ -98,9 +97,9 @@ func resolveDaemonID(statePath string) (string, error) {
 }
 
 // buildHandler composes the account-scoped service graph (node.Bootstrap) and
-// wires the JSON-RPC transport around it. envDir stays env-root scoped (e.g.
-// the token-usage pricing cache); dataDir is the per-account data dir.
-func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*JSONRPCHandler, *relay.Status, error) {
+// returns the composed app. envDir stays env-root scoped (e.g. the token-usage
+// pricing cache); dataDir is the per-account data dir.
+func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*node.App, *relay.Status, error) {
 	envDir := filepath.Dir(statePath)
 	credentialPath := filepath.Join(envDir, "credential.yaml")
 	dataDir, err := config.ResolveAccountDataDir(credentialPath)
@@ -122,25 +121,16 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		DataDir:          dataDir,
 		SettingsPath:     config.SettingsFilePath(dataDir),
 		MemorySummarizer: buildMemorySummarizerConfig(cfg, runtime),
+		RelayEnabled:     cfg.RelayEnabled,
+		RelayURL:         cfg.RelayURL,
+		RelayToken:       cfg.RelayToken,
 	})
 	if err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
 		return nil, nil, err
 	}
-	handler := NewJSONRPCHandler(app)
 
-	relayClient := relay.NewClient(relay.ClientConfig{
-		Runtime:     runtime,
-		NodeID:      daemonID,
-		URL:         cfg.RelayURL,
-		StaticToken: cfg.RelayToken,
-		Server:      handler.rpcServer,
-		Handler:     handler,
-		Events:      app.Events,
-	})
-	handler.relayClient = relayClient
-
-	return handler, relayClient.Status(), nil
+	return app, app.Relay.Status(), nil
 }
 
 func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
@@ -164,10 +154,10 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 	return database, nil
 }
 
-func buildHTTPServer(handler *JSONRPCHandler, daemonID string, relayStatus *relay.Status) *http.Server {
+func buildHTTPServer(app *node.App, daemonID string, relayStatus *relay.Status) *http.Server {
 	mux := http.NewServeMux()
-	mux.Handle("/ws", handler.rpcServer)
-	mux.HandleFunc(agentHookIngestPath, handler.ServeAgentHook)
+	mux.Handle("/ws", app.RPCServer)
+	mux.HandleFunc(node.AgentHookIngestPath, app.Services.ServeAgentHook)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

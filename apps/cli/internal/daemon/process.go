@@ -44,7 +44,6 @@ type daemonRuntime struct {
 	listener    net.Listener
 	actualAddr  string
 	daemonID    string
-	handler     *JSONRPCHandler
 	app         *node.App
 	relayStatus *relay.Status
 	server      *http.Server

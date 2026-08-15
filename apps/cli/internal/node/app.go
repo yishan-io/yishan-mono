@@ -16,6 +16,8 @@ import (
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
@@ -47,6 +49,12 @@ type Config struct {
 	// TokenUsage overrides the default token-usage collector. Tests inject a
 	// fake to record startup/shutdown calls. Nil builds the default collector.
 	TokenUsage tokenusage.Service
+
+	// Relay configures the relay client (connection state owned by
+	// internal/relay). Empty URL disables it.
+	RelayEnabled bool
+	RelayURL     string
+	RelayToken   string
 }
 
 // App is the daemon's service composition root. It owns every business
@@ -76,6 +84,18 @@ type App struct {
 	// ServerCtx is the long-lived context RPC handlers use for server-side
 	// work (memory searches, relayed creates).
 	ServerCtx context.Context
+
+	// Services is the concrete rpc service layer (workspace/file/git/…
+	// implementations). Built by Bootstrap; the daemon process layer serves
+	// its rpc server.
+	Services *Services
+	// Router is the namespace routing table (built with Services).
+	Router *rpc.Router
+	// RPCServer is the JSON-RPC/WebSocket transport server.
+	RPCServer *rpc.Server
+	// Relay is the relay client (connection state owned by internal/relay).
+	Relay *relay.Client
+
 
 	cleanupCtx           context.Context
 	cancelCleanup        context.CancelFunc
@@ -157,6 +177,24 @@ func Bootstrap(cfg Config) (*App, error) {
 
 	// Background tasks (and the lifecycle contexts that bound them).
 	app.Start()
+
+	// Build the rpc service layer and the transport server, then the relay
+	// client (it needs the rpc server and the services as its message
+	// handler).
+	app.Services = NewServices(app)
+	app.Services.BuildRPCLayer()
+	app.Router = app.Services.Router()
+	app.RPCServer = app.Services.RPCServer()
+	app.Relay = relay.NewClient(relay.ClientConfig{
+		Runtime:     cfg.Runtime,
+		NodeID:      cfg.NodeID,
+		URL:         cfg.RelayURL,
+		StaticToken: cfg.RelayToken,
+		Server:      app.RPCServer,
+		Handler:     app.Services,
+		Events:      events,
+	})
+	app.Services.SetRelayClient(app.Relay)
 
 	return app, nil
 }

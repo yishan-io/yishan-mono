@@ -11,6 +11,7 @@ import (
 
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/daemon"
+	"yishan/apps/cli/internal/rpc"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
@@ -88,7 +89,7 @@ func syncDaemonAuthTokens(ctx context.Context, update api.TokenUpdate) (bool, er
 
 	client := newDaemonRPCClientForAuthSync(wsURL)
 	var result map[string]bool
-	if err := client.Call(requestContext, daemon.MethodAppPersistAuthTokens, update, &result); err != nil {
+	if err := client.Call(requestContext, rpc.MethodAppPersistAuthTokens, update, &result); err != nil {
 		return true, fmt.Errorf("sync daemon auth tokens: %w", err)
 	}
 	if ok, exists := result["ok"]; exists && !ok {

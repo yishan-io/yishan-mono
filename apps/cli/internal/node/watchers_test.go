@@ -24,32 +24,6 @@ func evalSymlinks(t *testing.T, path string) string {
 	return resolved
 }
 
-func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopic string) internalevents.Event {
-	t.Helper()
-	deadline := time.After(3 * time.Second)
-
-	for {
-		select {
-		case event := <-events:
-			if event.Topic == wantTopic {
-				return event
-			}
-		case <-deadline:
-			t.Fatalf("timed out waiting for %s event", wantTopic)
-		}
-	}
-}
-
-func expectNoEvent(t *testing.T, events <-chan internalevents.Event, wait time.Duration) {
-	t.Helper()
-
-	select {
-	case event := <-events:
-		t.Fatalf("expected no event, got topic %q", event.Topic)
-	case <-time.After(wait):
-	}
-}
-
 func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *testing.T) {
 	hub := internalevents.NewHub()
 	sink := newEventHubWorkspaceWatcherSink(hub)

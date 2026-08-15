@@ -25,13 +25,13 @@ func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
 	}); err != nil {
 		return fmt.Errorf("save daemon state: %w", err)
 	}
-	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+dr.actualAddr+agentHookIngestPath)
-	if usesRemoteHostPolicy(dr.handler.runtime) {
+	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+dr.actualAddr+node.AgentHookIngestPath)
+	if usesRemoteHostPolicy(dr.app.Runtime) {
 		_ = os.Setenv(agentsetup.RemoteHostPolicyEnvKey, "1")
 	} else {
 		_ = os.Unsetenv(agentsetup.RemoteHostPolicyEnvKey)
 	}
-	agentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.handler.runtime))
+	agentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.app.Runtime))
 	return nil
 }
 
@@ -55,7 +55,7 @@ func startServing(cfg RunConfig, dr *daemonRuntime) (*shutdownContext, error) {
 	shutdownCtx, cancelShutdown := context.WithCancel(context.Background())
 
 	if cfg.RelayEnabled && cfg.RelayURL != "" {
-		go dr.handler.relayClient.Run(shutdownCtx)
+		go dr.app.Relay.Run(shutdownCtx)
 	}
 
 	go handleShutdownSignal(stop, cancelShutdown, dr.app, dr.server)
@@ -84,7 +84,7 @@ func registerNode(dr *daemonRuntime, runtime *cliruntime.Runtime) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
-	agentDetectionStatus := listAgentDetectionStatuses(false)
+	agentDetectionStatus := node.ListAgentDetectionStatuses(false)
 	if err := registerRemoteNode(runtime, NodeRegistration{
 		ID:                   dr.daemonID,
 		Endpoint:             "http://" + dr.actualAddr,
