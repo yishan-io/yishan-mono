@@ -3,8 +3,10 @@ package instance
 import (
 	"context"
 
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/terminal"
 	"yishan/apps/cli/internal/worktree"
 )
 
@@ -13,13 +15,13 @@ import (
 // the instance registry plus the shared services.
 type Handle struct {
 	instance  workspace.Workspace
-	files     *workspace.FileService
-	gits      *workspace.GitService
+	files     *files.FileService
+	gits      *git.GitService
 	terminals *terminal.Manager
 }
 
 // NewHandle builds a handle for an instance with the shared services.
-func NewHandle(inst workspace.Workspace, files *workspace.FileService, gits *workspace.GitService, terminals *terminal.Manager) Handle {
+func NewHandle(inst workspace.Workspace, files *files.FileService, gits *git.GitService, terminals *terminal.Manager) Handle {
 	return Handle{instance: inst, files: files, gits: gits, terminals: terminals}
 }
 
@@ -28,15 +30,15 @@ func (h Handle) Instance() workspace.Workspace {
 	return h.instance
 }
 
-func (h Handle) FileList(path string, recursive bool) ([]workspace.FileEntry, error) {
+func (h Handle) FileList(path string, recursive bool) ([]files.FileEntry, error) {
 	return h.files.List(h.instance.Path, path, recursive)
 }
 
-func (h Handle) FileSearch(query string, limit int, includeDirectories bool) ([]workspace.FileSearchResult, error) {
+func (h Handle) FileSearch(query string, limit int, includeDirectories bool) ([]files.FileSearchResult, error) {
 	return h.files.Search(h.instance.Path, query, limit, includeDirectories)
 }
 
-func (h Handle) FileStat(path string) (workspace.FileEntry, error) {
+func (h Handle) FileStat(path string) (files.FileEntry, error) {
 	return h.files.Stat(h.instance.Path, path)
 }
 
@@ -60,7 +62,7 @@ func (h Handle) FileMkdir(path string, parents bool, mode uint32) error {
 	return h.files.Mkdir(h.instance.Path, path, parents, mode)
 }
 
-func (h Handle) FileReadDiff(ctx context.Context, path string) (workspace.GitDiffContent, error) {
+func (h Handle) FileReadDiff(ctx context.Context, path string) (git.GitDiffContent, error) {
 	return h.files.ReadDiff(ctx, h.instance.Path, path)
 }
 
@@ -74,15 +76,15 @@ func (h Handle) TerminalStart(ctx context.Context, req workspace.TerminalStartRe
 	return h.terminals.Start(ctx, h.instance.Path, req)
 }
 
-func (h Handle) GitInspect(ctx context.Context) (workspace.GitInspectResult, error) {
+func (h Handle) GitInspect(ctx context.Context) (git.GitInspectResult, error) {
 	return h.gits.Inspect(ctx, h.instance.Path)
 }
 
-func (h Handle) GitStatus(ctx context.Context) (workspace.GitStatusResponse, error) {
+func (h Handle) GitStatus(ctx context.Context) (git.GitStatusResponse, error) {
 	return h.gits.Status(ctx, h.instance.Path)
 }
 
-func (h Handle) GitListChanges(ctx context.Context) (workspace.GitChangesBySection, error) {
+func (h Handle) GitListChanges(ctx context.Context) (git.GitChangesBySection, error) {
 	return h.gits.ListChanges(ctx, h.instance.Path)
 }
 
@@ -102,15 +104,15 @@ func (h Handle) GitCommitChanges(ctx context.Context, message string, amend bool
 	return h.gits.CommitChanges(ctx, h.instance.Path, message, amend, signoff)
 }
 
-func (h Handle) GitBranchStatus(ctx context.Context) (workspace.GitBranchStatus, error) {
+func (h Handle) GitBranchStatus(ctx context.Context) (git.GitBranchStatus, error) {
 	return h.gits.BranchStatus(ctx, h.instance.Path)
 }
 
-func (h Handle) GitBranchPullRequest(ctx context.Context, branch string) (workspace.GitBranchPullRequestStatus, error) {
+func (h Handle) GitBranchPullRequest(ctx context.Context, branch string) (git.GitBranchPullRequestStatus, error) {
 	return h.gits.BranchPullRequest(ctx, h.instance.Path, branch)
 }
 
-func (h Handle) RefreshGitBranchPullRequest(ctx context.Context, branch string) (workspace.GitBranchPullRequestStatus, error) {
+func (h Handle) RefreshGitBranchPullRequest(ctx context.Context, branch string) (git.GitBranchPullRequestStatus, error) {
 	return h.gits.RefreshBranchPullRequest(ctx, h.instance.Path, branch)
 }
 
@@ -118,31 +120,31 @@ func (h Handle) GitCurrentBranch(ctx context.Context) (string, error) {
 	return h.gits.CurrentBranch(ctx, h.instance.Path)
 }
 
-func (h Handle) GitBranchPullRequestLite(ctx context.Context, branch string) (workspace.GitBranchPullRequestStatus, error) {
+func (h Handle) GitBranchPullRequestLite(ctx context.Context, branch string) (git.GitBranchPullRequestStatus, error) {
 	return h.gits.BranchPullRequestLite(ctx, h.instance.Path, branch)
 }
 
-func (h Handle) GitBranchPullRequestWithDetails(ctx context.Context, branch string) (workspace.GitBranchPullRequestStatus, error) {
+func (h Handle) GitBranchPullRequestWithDetails(ctx context.Context, branch string) (git.GitBranchPullRequestStatus, error) {
 	return h.gits.BranchPullRequestWithDetails(ctx, h.instance.Path, branch)
 }
 
-func (h Handle) GitListCommitsToTarget(ctx context.Context, targetBranch string) (workspace.GitCommitComparison, error) {
+func (h Handle) GitListCommitsToTarget(ctx context.Context, targetBranch string) (git.GitCommitComparison, error) {
 	return h.gits.ListCommitsToTarget(ctx, h.instance.Path, targetBranch)
 }
 
-func (h Handle) GitBranchDiffSummary(ctx context.Context, targetBranch string) (workspace.GitBranchDiffSummary, error) {
+func (h Handle) GitBranchDiffSummary(ctx context.Context, targetBranch string) (git.GitBranchDiffSummary, error) {
 	return h.gits.BranchDiffSummary(ctx, h.instance.Path, targetBranch)
 }
 
-func (h Handle) GitReadCommitDiff(ctx context.Context, commitHash string, path string) (workspace.GitDiffContent, error) {
+func (h Handle) GitReadCommitDiff(ctx context.Context, commitHash string, path string) (git.GitDiffContent, error) {
 	return h.gits.ReadCommitDiff(ctx, h.instance.Path, commitHash, path)
 }
 
-func (h Handle) GitReadBranchComparisonDiff(ctx context.Context, targetBranch string, path string) (workspace.GitDiffContent, error) {
+func (h Handle) GitReadBranchComparisonDiff(ctx context.Context, targetBranch string, path string) (git.GitDiffContent, error) {
 	return h.gits.ReadBranchComparisonDiff(ctx, h.instance.Path, targetBranch, path)
 }
 
-func (h Handle) GitListBranches(ctx context.Context) (workspace.GitBranchList, error) {
+func (h Handle) GitListBranches(ctx context.Context) (git.GitBranchList, error) {
 	return h.gits.ListBranches(ctx, h.instance.Path)
 }
 

@@ -55,7 +55,7 @@ type StoredPullRequest struct {
 
 // WorkspaceStore is the durable storage the workspace layer needs: workspace
 // rows and observed pull requests. The daemon injects the SQLite adapter
-// (internal/dbconv.Store).
+// (internal/localdb.Store).
 type WorkspaceStore interface {
 	List(ctx context.Context) ([]StoredWorkspace, error)
 	Update(ctx context.Context, workspaceID string, update StoredWorkspaceUpdate) error

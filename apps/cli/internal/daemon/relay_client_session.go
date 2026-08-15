@@ -5,11 +5,12 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
 func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeID string, conn *websocket.Conn) {
-	connState := newWSConnState(conn)
+	connState := rpc.NewConnection(conn)
 	defer connState.Close()
 
 	handler.relayConnMu.Lock()
@@ -38,7 +39,7 @@ func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeI
 		}
 
 		if msgType == websocket.BinaryMessage {
-			handler.handleBinaryFrame(connState, payload)
+			handler.rpcServer.HandleBinaryFrame(connState, payload)
 			continue
 		}
 
@@ -47,7 +48,7 @@ func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeI
 			continue
 		}
 
-		resp := handler.handleRequest(context.Background(), connState, payload)
+		resp := handler.rpcServer.HandleMessage(context.Background(), connState, payload)
 		if resp == nil {
 			continue
 		}
@@ -58,7 +59,7 @@ func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeI
 	}
 }
 
-func forwardTerminalEventsToRelay(connState *wsConnState, events <-chan frontendEvent) {
+func forwardTerminalEventsToRelay(connState *rpc.Connection, events <-chan frontendEvent) {
 	for event := range events {
 		if event.Topic != "terminalSessionChanged" {
 			continue

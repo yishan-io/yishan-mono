@@ -5,22 +5,12 @@ import (
 	"errors"
 	"os"
 
-	"yishan/apps/cli/internal/piauth"
+	piauth "yishan/apps/cli/internal/agent/auth"
 	"yishan/apps/cli/internal/workspace"
 )
 
 // JSON-RPC handlers adapting the piauth store to the desktop. The store itself
 // (auth.json format, locking, ambient detection) lives in internal/piauth.
-
-// mustNewManagedPiAuthStore is nil-safe for handler construction: handlers
-// return a server error when the store is nil.
-func mustNewManagedPiAuthStore() *piauth.Store {
-	store, err := piauth.NewManagedStore()
-	if err != nil {
-		return nil
-	}
-	return store
-}
 
 func (h *JSONRPCHandler) handlePiListProviders() (any, error) {
 	if h.piAuth == nil {

@@ -8,22 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/terminal"
 )
 
 func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t *testing.T) {
 	root := t.TempDir()
-	handler := NewJSONRPCHandler(
-		workspace.NewManager(),
-		nil,
-		"node-1",
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	defer handler.Shutdown()
+	handler := newTestJSONRPCHandler(t, workspace.NewManager(), nil, "node-1")
 
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
@@ -170,7 +162,7 @@ func TestHasDesktopUI_TracksDesktopConnections(t *testing.T) {
 // registry, mirroring the ?client=desktop handshake path used in production.
 func registerTestDesktopConn(h *JSONRPCHandler) {
 	h.desktopConnsMu.Lock()
-	h.desktopConns[&wsConnState{}] = struct{}{}
+	h.desktopConns[&rpc.Connection{}] = struct{}{}
 	h.desktopConnsMu.Unlock()
 }
 
@@ -180,9 +172,7 @@ func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) 
 	// Simulate a task-run session whose pi process exited before any client
 	// attached: the registry still holds the entry (readStdout only unregisters
 	// the process manager) while agentMgr has no live session.
-	h.piSessionsMu.Lock()
-	h.piSessions["task-ws-1"] = &piSessionState{taskRun: true, tabID: "task-ws-1", workspaceID: "ws-1", cwd: t.TempDir()}
-	h.piSessionsMu.Unlock()
+	h.piSessions.Register("task-ws-1", nil, nil, "task-ws-1", "ws-1", t.TempDir(), true)
 
 	_, err := h.handlePiStart(context.Background(), nil, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "task-ws-1",
@@ -198,10 +188,7 @@ func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) 
 		t.Fatalf("error = %v, want rpcCodeNotFound", err)
 	}
 
-	h.piSessionsMu.Lock()
-	_, exists := h.piSessions["task-ws-1"]
-	h.piSessionsMu.Unlock()
-	if exists {
+	if _, exists := h.piSessions.Get("task-ws-1"); exists {
 		t.Fatal("stale task run registry entry was not removed")
 	}
 }

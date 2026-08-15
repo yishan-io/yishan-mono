@@ -29,7 +29,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -40,6 +39,7 @@ import (
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -253,7 +253,7 @@ func wireRelayCapture(t *testing.T, h *JSONRPCHandler, result map[string]any) <-
 		t.Fatalf("dial relay: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	h.relayConn = newWSConnState(conn)
+	h.relayConn = rpc.NewConnection(conn)
 
 	go func() {
 		for {
@@ -342,18 +342,8 @@ func progressStepSequence(progress []workspace.CreateProgressEvent) []string {
 // SetLocalDatabase so no token-usage collector is wired into the test).
 func newBehaviorHandler(t *testing.T, manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, database *sql.DB) *JSONRPCHandler {
 	t.Helper()
-	root := t.TempDir()
-	h := NewJSONRPCHandler(
-		manager,
-		runtime,
-		nodeID,
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	h.localDatabase = database
-	t.Cleanup(func() { h.Shutdown() })
+	h := newTestJSONRPCHandler(t, manager, runtime, nodeID)
+	h.setTestDatabase(database)
 	return h
 }
 

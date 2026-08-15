@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	clidetector "yishan/apps/cli/internal/agent/catalog/detect"
+	clitoolinstall "yishan/apps/cli/internal/agent/catalog/install"
 	"yishan/apps/cli/internal/agentkind"
-	clidetector "yishan/apps/cli/internal/clidetector"
-	"yishan/apps/cli/internal/clitoolinstall"
 	"yishan/apps/cli/internal/workspace"
 )
 

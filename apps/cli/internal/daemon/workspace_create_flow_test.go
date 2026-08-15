@@ -3,7 +3,6 @@ package daemon
 import (
 	"context"
 	"encoding/json"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +33,7 @@ func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *tes
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	_, err = handler.handleWorkspaceCreate(context.Background(), params)
+	_, err = handler.callRPCForTest(context.Background(), MethodWorkspaceCreate, params)
 	if err == nil || !strings.Contains(err.Error(), "unsupported task-run agent kind") {
 		t.Fatalf("err = %v, want unsupported task-run agent kind", err)
 	}
@@ -44,7 +43,6 @@ func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *tes
 func newWorkspaceCreateFlowTestHandler(t *testing.T, baseURL string) *JSONRPCHandler {
 	t.Helper()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: baseURL, Token: "test-token"}})
-	handler := NewJSONRPCHandler(workspace.NewManager(), runtime, "node-local", filepath.Join(t.TempDir(), "daemon.log"), nil, filepath.Join(t.TempDir(), "config.yml"), NewAppContextStore(""))
-	t.Cleanup(func() { handler.Shutdown() })
+	handler := newTestJSONRPCHandler(t, workspace.NewManager(), runtime, "node-local")
 	return handler
 }

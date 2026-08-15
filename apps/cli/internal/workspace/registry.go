@@ -1,6 +1,10 @@
 package workspace
 
-import "sync"
+import (
+	"sync"
+
+	"yishan/apps/cli/internal/files"
+)
 
 // InstanceRegistry is the single owner of the mutable workspace instances on
 // this node. The manager and the daemon route instance reads and writes
@@ -28,7 +32,7 @@ type InstanceRegistry interface {
 	// InvalidateFileCache drops cached file entries under a worktree path.
 	InvalidateFileCache(worktreePath string, changedPaths []string)
 	// Files returns the file service (path-keyed file cache) shared by handles.
-	Files() *FileService
+	Files() *files.FileService
 }
 
 // memoryRegistry is the default in-package implementation used when no
@@ -37,13 +41,13 @@ type InstanceRegistry interface {
 type memoryRegistry struct {
 	mu        sync.RWMutex
 	instances map[string]Workspace
-	files     *FileService
+	files     *files.FileService
 }
 
 func newMemoryRegistry() *memoryRegistry {
 	return &memoryRegistry{
 		instances: make(map[string]Workspace),
-		files:     NewFileService(),
+		files:     files.NewFileService(),
 	}
 }
 
@@ -149,6 +153,6 @@ func (r *memoryRegistry) InvalidateFileCache(worktreePath string, changedPaths [
 	r.files.InvalidateWorkspacePaths(worktreePath, changedPaths)
 }
 
-func (r *memoryRegistry) Files() *FileService {
+func (r *memoryRegistry) Files() *files.FileService {
 	return r.files
 }

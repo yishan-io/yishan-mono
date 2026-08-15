@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"strings"
 
-	"yishan/apps/cli/internal/agentmanager"
-	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
+	agentcmd "yishan/apps/cli/internal/agent/command"
+	agentmanager "yishan/apps/cli/internal/agent/process"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/terminal"
 
 	"github.com/rs/zerolog/log"
 )
@@ -71,9 +71,7 @@ func (h *JSONRPCHandler) startTaskRunChatSession(created workspace.Workspace, ta
 		return "failed", nil
 	}
 
-	h.agentLifecycleMu.Lock()
 	if err := h.agentLifecycleCtx.Err(); err != nil {
-		h.agentLifecycleMu.Unlock()
 		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: daemon is shutting down")
 		return "failed", nil
 	}
@@ -87,21 +85,12 @@ func (h *JSONRPCHandler) startTaskRunChatSession(created workspace.Workspace, ta
 		ExtraEnv:    extraEnv,
 		OnEvent:     h.makePiEventCallback(sessionID),
 	})
-	h.agentLifecycleMu.Unlock()
 	if startErr != nil {
 		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start pi session")
 		return "failed", nil
 	}
 
-	h.piSessionsMu.Lock()
-	h.piSessions[sessionID] = &piSessionState{
-		session:     session,
-		tabID:       tabID,
-		workspaceID: created.ID,
-		cwd:         created.Path,
-		taskRun:     true,
-	}
-	h.piSessionsMu.Unlock()
+	h.piSessions.Register(sessionID, nil, session, tabID, created.ID, created.Path, true)
 
 	promptCmd, marshalErr := json.Marshal(map[string]any{"type": "prompt", "message": taskRun.Prompt})
 	if marshalErr != nil {
@@ -124,19 +113,14 @@ func (h *JSONRPCHandler) cleanupTaskRunSession(sessionID string) {
 	// Mark the session as stopping before the (potentially slow) process
 	// teardown so a concurrent pi.start/pi.attach cannot bind to a dying
 	// process, mirroring handlePiStop.
-	h.piSessionsMu.Lock()
-	if _, exists := h.piSessions[sessionID]; exists {
-		h.stoppingPiSessions[sessionID] = struct{}{}
+	if !h.piSessions.MarkStopping(sessionID) {
+		return
 	}
-	h.piSessionsMu.Unlock()
 
 	if err := h.agentMgr.Stop(sessionID); err != nil {
 		log.Warn().Err(err).Str("sessionId", sessionID).Msg("task run: failed to stop pi session after prompt failure")
 	}
-	h.piSessionsMu.Lock()
-	delete(h.piSessions, sessionID)
-	delete(h.stoppingPiSessions, sessionID)
-	h.piSessionsMu.Unlock()
+	h.piSessions.Delete(sessionID)
 }
 
 func (h *JSONRPCHandler) startTaskRunTerminal(created workspace.Workspace, taskRun *workspace.TaskRunConfig) string {

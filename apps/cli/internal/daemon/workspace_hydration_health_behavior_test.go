@@ -9,7 +9,7 @@ import (
 	"time"
 
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/dbconv"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 )
@@ -28,7 +28,7 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(dbconv.NewStore(store))
+	manager := workspace.NewManagerWithStore(localdb.NewStore(store))
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(dbconv.NewStore(store))
+	manager := workspace.NewManagerWithStore(localdb.NewStore(store))
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
@@ -101,13 +101,13 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal health params: %v", err)
 	}
-	result, err := h.handleWorkspaceHealth(context.Background(), raw)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceHealth, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceHealth: %v", err)
 	}
-	healthResult, ok := result.(workspaceHealthResult)
+	healthResult, ok := result.(rpc.WorkspaceHealthResult)
 	if !ok {
-		t.Fatalf("health result = %T, want workspaceHealthResult", result)
+		t.Fatalf("health result = %T, want rpc.WorkspaceHealthResult", result)
 	}
 	if healthResult.State != string(workspace.StateError) || healthResult.Health != string(workspace.HealthNotWorktree) {
 		t.Fatalf("health result = %#v, want state error health not-worktree", healthResult)
@@ -152,7 +152,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	state, health, healthErr, err := h.refreshWorkspaceHealth(context.Background(), "ws-folder")
+	state, health, healthErr, err := h.nodeApp.RefreshWorkspaceHealth(context.Background(), "ws-folder")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 		t.Fatal("watcher must not be registered before health recovery")
 	}
 
-	state, health, _, err := h.refreshWorkspaceHealth(context.Background(), "ws-recover")
+	state, health, _, err := h.nodeApp.RefreshWorkspaceHealth(context.Background(), "ws-recover")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}

@@ -335,9 +335,33 @@ internal/
   compare against raw string literals.
 
 ### Workspace lifecycle layering (cli daemon)
-- `internal/daemon` is transport + process bootstrap: JSON-RPC/relay handlers decode
-  input, call **one** `application.Service` method, and encode the result. Handlers
-  must not decide routing (local vs remote node) or rollback policy.
+- Final CLI package dependency contract (Phases 7–12):
+  `cmd -> daemon client or application facade`; `daemon -> node.App`;
+  `node.App -> rpc + application services + infrastructure`;
+  `rpc -> application interfaces`; `application -> domain + interfaces`;
+  `infrastructure -> domain`; `domain -> standard library only`. Enforced by
+  `internal/archtest` (forbidden-import test).
+- `internal/node.App` is the daemon's only service composition root: `node.Bootstrap`
+  constructs the whole service graph (workspace manager, memory, computer, agents,
+  events, watchers, PR tracker, cleanup/context stores, token usage) for one account
+  and `node.App.Close` owns the shutdown order. `JSONRPCHandler` receives the app and
+  constructs no business services; daemon `Run` keeps the process entry points and
+  calls `node.Bootstrap` after resolving the account data dir.
+- The JSON-RPC transport lives in `internal/rpc`: `Server` (WebSocket read loop,
+  concurrency limits, binary terminal frames), `Connection`, `Router`, protocol
+  types, and one namespace handler per RPC namespace (`WorkspaceHandler`,
+  `FileHandler`, `GitHandler`, `TerminalHandler`, `MemoryHandler`,
+  `ComputerHandler`, `ContextHandler`, `ProjectHandler`, `SystemHandler`).
+  Each handler decodes params and calls exactly one typed method on a
+  per-namespace `Services` interface implemented by the daemon.
+- File/Git/terminal capabilities live in `internal/files`, `internal/git`,
+  `internal/terminal` (low-level git exec stays in `internal/gitexec`);
+  agent behavior lives in `internal/agent/{session,process,command,setup,
+  auth,catalog}`; PR tracking lives in `workspace/pr`. The workspace root
+  package keeps domain types + lifecycle rules + the Manager composition
+  facade. Infrastructure conversion is single-owner: `internal/api` (cloud
+  client + DTOs) and `internal/db` (SQLite + row conversion) — no
+  `apiclient`/`dbconv` packages.
 - `internal/workspace/application.Service` owns workspace create/close orchestration:
   routing, rollback, and createflow execution. Create and close each have one
   application owner; `internal/workspace/createflow` stays an internal collaborator.

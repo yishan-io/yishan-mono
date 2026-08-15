@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"yishan/apps/cli/internal/rpc"
 )
 
 // relayVerdictTestServer upgrades to a WebSocket, reads one request, and replies
@@ -43,7 +44,7 @@ func wireRelayReader(t *testing.T, h *JSONRPCHandler, result map[string]any) {
 		t.Fatalf("dial: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	h.relayConn = newWSConnState(conn)
+	h.relayConn = rpc.NewConnection(conn)
 
 	go func() {
 		for {

@@ -7,167 +7,172 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
 
-func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
-	switch method {
-	case MethodDaemonPing:
-		return map[string]string{"status": "ok"}, nil
-	case MethodFrontendEventsStream:
-		subscriptionID, events := h.events.Subscribe()
-		connState.AttachEventStream(events, func() {
-			h.events.Unsubscribe(subscriptionID)
-		})
-		return map[string]bool{"subscribed": true}, nil
-	case MethodAgentListDetectionStatuses:
-		refresh, err := parseBoolRefreshParam(params)
-		if err != nil {
-			return nil, err
-		}
-		return listAgentDetectionStatuses(refresh), nil
-	case MethodCLIToolListStatuses:
-		refresh, err := parseBoolRefreshParam(params)
-		if err != nil {
-			return nil, err
-		}
-		return ListCLIToolDetectionStatusesWithRefresh(refresh), nil
-	case MethodCLIToolInstall:
-		toolID, err := parseToolIDParam(params)
-		if err != nil {
-			return nil, err
-		}
-		status, err := installCLITool(ctx, toolID)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"ok": true, "status": status}, nil
-	case MethodCLIToolUninstall:
-		toolID, err := parseToolIDParam(params)
-		if err != nil {
-			return nil, err
-		}
-		status, err := uninstallCLITool(ctx, toolID)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"ok": true, "status": status}, nil
-	case MethodIntegrationGitHubStatus:
-		refresh, err := parseBoolRefreshParam(params)
-		if err != nil {
-			return nil, err
-		}
-		return getGitHubDetectionStatus(refresh), nil
-	case MethodAppPersistAuthTokens:
-		var req api.TokenUpdate
-		if err := decodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		req.AccessToken = strings.TrimSpace(req.AccessToken)
-		req.RefreshToken = strings.TrimSpace(req.RefreshToken)
-		if req.AccessToken == "" {
-			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "accessToken is required")
-		}
-		if err := h.runtime.PersistAuthTokens(req); err != nil {
-			return nil, err
-		}
-		return map[string]bool{"ok": true}, nil
-	case MethodAppGetAccessToken:
-		accessToken, expiresAt, err := h.runtime.EnsureFreshAccessToken()
-		if err != nil {
-			return nil, err
-		}
-		result := map[string]string{"accessToken": accessToken}
-		if expiresAt != "" {
-			result["accessTokenExpiresAt"] = expiresAt
-		}
-		return result, nil
-	case MethodAppCheckAuthStatus:
-		authenticated, expiresAt, err := h.runtime.CheckAuthStatus()
-		if err != nil {
-			log.Warn().Err(err).Msg("failed to check authentication status")
-			return map[string]any{"authenticated": false}, nil
-		}
-		result := map[string]any{"authenticated": authenticated}
-		if expiresAt != "" {
-			result["accessTokenExpiresAt"] = expiresAt
-		}
-		return result, nil
-	case MethodAppLogout:
-		if err := h.runtime.ClearAuthState(); err != nil {
-			return nil, err
-		}
-		return map[string]bool{"ok": true}, nil
-	case MethodAppReloadAuthConfig:
-		if err := h.runtime.ReloadAuthConfig(); err != nil {
-			return nil, err
-		}
-		return map[string]bool{"ok": true}, nil
-	case MethodAgentListModels:
-		type listModelsParams struct {
-			AgentKind    string `json:"agentKind"`
-			ForceRefresh bool   `json:"forceRefresh"`
-		}
-		var req listModelsParams
-		if err := decodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		agentKind := strings.TrimSpace(req.AgentKind)
-		if agentKind == "" {
-			return h.modelList.ListAllModels(req.ForceRefresh), nil
-		}
-		result, err := h.modelList.ListModels(agentKind, req.ForceRefresh)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-	case MethodTokenUsageDebugState:
-		if h.tokenUsage == nil {
-			return map[string]any{"enabled": false}, nil
-		}
-		return map[string]any{
-			"enabled": true,
-			"state":   h.tokenUsage.DebugState(),
-		}, nil
-	case MethodProjectList:
-		var req struct {
-			OrgID string `json:"orgId"`
-		}
-		if err := decodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		orgID := strings.TrimSpace(req.OrgID)
-		if orgID == "" {
-			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "orgId is required")
-		}
-		client := h.runtime.APIClient()
-		resp, err := client.ListProjects(orgID)
-		if err != nil {
-			return nil, fmt.Errorf("list projects: %w", err)
-		}
-		return resp.Projects, nil
-	case MethodNodeList:
-		var req struct {
-			OrgID string `json:"orgId"`
-		}
-		if err := decodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		orgID := strings.TrimSpace(req.OrgID)
-		if orgID == "" {
-			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "orgId is required")
-		}
-		client := h.runtime.APIClient()
-		resp, err := client.ListNodes(orgID)
-		if err != nil {
-			return nil, fmt.Errorf("list nodes: %w", err)
-		}
-		return resp.Nodes, nil
-	default:
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
+// SystemService implementation: the daemon./app./agent./tokenUsage./node.
+// RPC methods that fall through the namespace router to the system handler.
+
+func (h *JSONRPCHandler) SystemDaemonPing() (any, error) {
+	return map[string]string{"status": "ok"}, nil
+}
+
+func (h *JSONRPCHandler) SystemFrontendEventsStream(ctx context.Context, connection *rpc.Connection) (any, error) {
+	subscriptionID, events := h.events.Subscribe()
+	connection.AttachEventStream(events, MethodFrontendEventsStream, func() {
+		h.events.Unsubscribe(subscriptionID)
+	})
+	return map[string]bool{"subscribed": true}, nil
+}
+
+func (h *JSONRPCHandler) SystemAgentListDetectionStatuses(ctx context.Context, params json.RawMessage) (any, error) {
+	refresh, err := parseBoolRefreshParam(params)
+	if err != nil {
+		return nil, err
 	}
+	return listAgentDetectionStatuses(refresh), nil
+}
+
+func (h *JSONRPCHandler) SystemCLIToolListStatuses(ctx context.Context, params json.RawMessage) (any, error) {
+	refresh, err := parseBoolRefreshParam(params)
+	if err != nil {
+		return nil, err
+	}
+	return ListCLIToolDetectionStatusesWithRefresh(refresh), nil
+}
+
+func (h *JSONRPCHandler) SystemCLIToolInstall(ctx context.Context, req rpc.SystemCLIToolInstallParams) (any, error) {
+	toolID := strings.TrimSpace(req.ToolID)
+	if toolID == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "toolId is required")
+	}
+	status, err := installCLITool(ctx, toolID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"ok": true, "status": status}, nil
+}
+
+func (h *JSONRPCHandler) SystemCLIToolUninstall(ctx context.Context, req rpc.SystemCLIToolUninstallParams) (any, error) {
+	toolID := strings.TrimSpace(req.ToolID)
+	if toolID == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "toolId is required")
+	}
+	status, err := uninstallCLITool(ctx, toolID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"ok": true, "status": status}, nil
+}
+
+func (h *JSONRPCHandler) SystemIntegrationGitHubStatus(ctx context.Context, params json.RawMessage) (any, error) {
+	refresh, err := parseBoolRefreshParam(params)
+	if err != nil {
+		return nil, err
+	}
+	return getGitHubDetectionStatus(refresh), nil
+}
+
+func (h *JSONRPCHandler) SystemAppPersistAuthTokens(ctx context.Context, params json.RawMessage) (any, error) {
+	var req api.TokenUpdate
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	req.AccessToken = strings.TrimSpace(req.AccessToken)
+	req.RefreshToken = strings.TrimSpace(req.RefreshToken)
+	if req.AccessToken == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "accessToken is required")
+	}
+	if err := h.runtime.PersistAuthTokens(req); err != nil {
+		return nil, err
+	}
+	return map[string]bool{"ok": true}, nil
+}
+
+func (h *JSONRPCHandler) SystemAppGetAccessToken(ctx context.Context) (any, error) {
+	accessToken, expiresAt, err := h.runtime.EnsureFreshAccessToken()
+	if err != nil {
+		return nil, err
+	}
+	result := map[string]string{"accessToken": accessToken}
+	if expiresAt != "" {
+		result["accessTokenExpiresAt"] = expiresAt
+	}
+	return result, nil
+}
+
+func (h *JSONRPCHandler) SystemAppCheckAuthStatus(ctx context.Context) (any, error) {
+	authenticated, expiresAt, err := h.runtime.CheckAuthStatus()
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to check authentication status")
+		return map[string]any{"authenticated": false}, nil
+	}
+	result := map[string]any{"authenticated": authenticated}
+	if expiresAt != "" {
+		result["accessTokenExpiresAt"] = expiresAt
+	}
+	return result, nil
+}
+
+func (h *JSONRPCHandler) SystemAppLogout(ctx context.Context) (any, error) {
+	if err := h.runtime.ClearAuthState(); err != nil {
+		return nil, err
+	}
+	return map[string]bool{"ok": true}, nil
+}
+
+func (h *JSONRPCHandler) SystemAppReloadAuthConfig(ctx context.Context) (any, error) {
+	if err := h.runtime.ReloadAuthConfig(); err != nil {
+		return nil, err
+	}
+	return map[string]bool{"ok": true}, nil
+}
+
+func (h *JSONRPCHandler) SystemAgentListModels(ctx context.Context, req rpc.SystemAgentListModelsParams) (any, error) {
+	agentKind := strings.TrimSpace(req.AgentKind)
+	if agentKind == "" {
+		return h.modelList.ListAllModels(req.ForceRefresh), nil
+	}
+	return h.modelList.ListModels(agentKind, req.ForceRefresh)
+}
+
+func (h *JSONRPCHandler) SystemTokenUsageDebugState(ctx context.Context) (any, error) {
+	if h.tokenUsage == nil {
+		return map[string]any{"enabled": false}, nil
+	}
+	return map[string]any{
+		"enabled": true,
+		"state":   h.tokenUsage.DebugState(),
+	}, nil
+}
+
+func (h *JSONRPCHandler) SystemProjectList(ctx context.Context, req rpc.SystemProjectListParams) (any, error) {
+	orgID := strings.TrimSpace(req.OrgID)
+	if orgID == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "orgId is required")
+	}
+	client := h.runtime.APIClient()
+	resp, err := client.ListProjects(orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list projects: %w", err)
+	}
+	return resp.Projects, nil
+}
+
+func (h *JSONRPCHandler) SystemNodeList(ctx context.Context, req rpc.SystemNodeListParams) (any, error) {
+	orgID := strings.TrimSpace(req.OrgID)
+	if orgID == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "orgId is required")
+	}
+	client := h.runtime.APIClient()
+	resp, err := client.ListNodes(orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list nodes: %w", err)
+	}
+	return resp.Nodes, nil
 }
 
 // parseBoolRefreshParam extracts the optional `refresh` boolean from a params object.
@@ -183,19 +188,4 @@ func parseBoolRefreshParam(params json.RawMessage) (bool, error) {
 		return false, err
 	}
 	return req.Refresh, nil
-}
-
-// parseToolIDParam extracts the required `toolId` string from a params object.
-func parseToolIDParam(params json.RawMessage) (string, error) {
-	var req struct {
-		ToolID string `json:"toolId"`
-	}
-	if err := decodeParams(params, &req); err != nil {
-		return "", err
-	}
-	toolID := strings.TrimSpace(req.ToolID)
-	if toolID == "" {
-		return "", workspace.NewRPCError(rpcCodeInvalidParams, "toolId is required")
-	}
-	return toolID, nil
 }

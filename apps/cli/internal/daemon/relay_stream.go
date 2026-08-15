@@ -4,28 +4,16 @@ import (
 	"encoding/json"
 
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
-// terminalRemoteSubscribeRequest is sent by the desktop to daemon B to request
-// PTY streaming from a session on another node.
-type terminalRemoteSubscribeRequest struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-}
-
-// terminalRemoteUnsubscribeRequest is sent by the desktop to stop a remote stream.
-type terminalRemoteUnsubscribeRequest struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-}
-
-func (h *JSONRPCHandler) addRemoteStreamSub(sessionID string, connState *wsConnState) bool {
+func (h *JSONRPCHandler) addRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
 	h.remoteStreamMu.Lock()
 	defer h.remoteStreamMu.Unlock()
 	subs := h.remoteStreamSubs[sessionID]
 	if subs == nil {
-		subs = make(map[*wsConnState]struct{})
+		subs = make(map[*rpc.Connection]struct{})
 		h.remoteStreamSubs[sessionID] = subs
 	}
 	_, existed := subs[connState]
@@ -33,7 +21,7 @@ func (h *JSONRPCHandler) addRemoteStreamSub(sessionID string, connState *wsConnS
 	return !existed && len(subs) == 1
 }
 
-func (h *JSONRPCHandler) removeRemoteStreamSub(sessionID string, connState *wsConnState) bool {
+func (h *JSONRPCHandler) removeRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
 	h.remoteStreamMu.Lock()
 	defer h.remoteStreamMu.Unlock()
 	subs := h.remoteStreamSubs[sessionID]
@@ -48,7 +36,7 @@ func (h *JSONRPCHandler) removeRemoteStreamSub(sessionID string, connState *wsCo
 	return false
 }
 
-func (h *JSONRPCHandler) removeRemoteStreamSubsForConn(connState *wsConnState) []string {
+func (h *JSONRPCHandler) removeRemoteStreamSubsForConn(connState *rpc.Connection) []string {
 	h.remoteStreamMu.Lock()
 	defer h.remoteStreamMu.Unlock()
 	var emptied []string
@@ -65,14 +53,14 @@ func (h *JSONRPCHandler) removeRemoteStreamSubsForConn(connState *wsConnState) [
 	return emptied
 }
 
-func (h *JSONRPCHandler) remoteStreamTargets(sessionID string) []*wsConnState {
+func (h *JSONRPCHandler) remoteStreamTargets(sessionID string) []*rpc.Connection {
 	h.remoteStreamMu.Lock()
 	defer h.remoteStreamMu.Unlock()
 	subs := h.remoteStreamSubs[sessionID]
 	if len(subs) == 0 {
 		return nil
 	}
-	targets := make([]*wsConnState, 0, len(subs))
+	targets := make([]*rpc.Connection, 0, len(subs))
 	for conn := range subs {
 		targets = append(targets, conn)
 	}
@@ -81,11 +69,11 @@ func (h *JSONRPCHandler) remoteStreamTargets(sessionID string) []*wsConnState {
 
 // remoteSubscribe sends terminal.stream.request to the relay so the owning
 // daemon starts forwarding PTY output for sessionId to this node.
-func (h *JSONRPCHandler) remoteSubscribe(connState *wsConnState, req terminalRemoteSubscribeRequest) (any, error) {
+func (h *JSONRPCHandler) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRemoteSubscribeParams) (any, error) {
 	firstSub := h.addRemoteStreamSub(req.SessionID, connState)
 	connState.AddCloseHook(func() {
 		for _, sessionID := range h.removeRemoteStreamSubsForConn(connState) {
-			_, _ = h.remoteUnsubscribe(connState, terminalRemoteUnsubscribeRequest{SessionID: sessionID})
+			_, _ = h.remoteUnsubscribe(connState, rpc.TerminalRemoteUnsubscribeParams{SessionID: sessionID})
 		}
 	})
 	if !firstSub {
@@ -114,7 +102,7 @@ func (h *JSONRPCHandler) remoteSubscribe(connState *wsConnState, req terminalRem
 }
 
 // remoteUnsubscribe sends terminal.stream.cancel to the relay.
-func (h *JSONRPCHandler) remoteUnsubscribe(connState *wsConnState, req terminalRemoteUnsubscribeRequest) (any, error) {
+func (h *JSONRPCHandler) remoteUnsubscribe(connState *rpc.Connection, req rpc.TerminalRemoteUnsubscribeParams) (any, error) {
 	if !h.removeRemoteStreamSub(req.SessionID, connState) {
 		return map[string]bool{"ok": true}, nil
 	}
@@ -169,7 +157,7 @@ func (h *JSONRPCHandler) forwardRemoteTerminalInput(sessionID string, payload []
 // handleTerminalStreamRequest is called on the owning daemon (daemon A) when
 // another node wants to subscribe to a PTY session. It subscribes the relay
 // connState to the local terminal session so output flows back over /ws.
-func handleTerminalStreamRequest(handler *JSONRPCHandler, connState *wsConnState, params json.RawMessage) {
+func handleTerminalStreamRequest(handler *JSONRPCHandler, connState *rpc.Connection, params json.RawMessage) {
 	var p struct {
 		SessionID string `json:"sessionId"`
 		FromNode  string `json:"fromNode"`

@@ -2,10 +2,9 @@ package daemon
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
 
-	"yishan/apps/cli/internal/computer"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/rpcerror"
 )
 
@@ -19,45 +18,14 @@ const (
 	rpcCodeNotFound       = rpcerror.CodeNotFound
 )
 
+// decodeParams delegates to the rpc package's param decoder.
 func decodeParams(raw json.RawMessage, out any) error {
-	if len(raw) == 0 {
-		return rpcerror.NewRPCError(rpcCodeInvalidParams, "missing params")
-	}
-	if err := json.Unmarshal(raw, out); err != nil {
-		return rpcerror.NewRPCError(rpcCodeInvalidParams, "invalid params")
-	}
-	return nil
+	return rpc.DecodeParams(raw, out)
 }
 
-func asJSONID(raw json.RawMessage) any {
-	if len(raw) == 0 {
-		return nil
-	}
-	var id any
-	if err := json.Unmarshal(raw, &id); err != nil {
-		return nil
-	}
-	return id
-}
-
-func mapRPCError(err error) *rpcError {
-	var e *rpcerror.Error
-	if errors.As(err, &e) {
-		return &rpcError{Code: e.Code, Message: e.Message}
-	}
-	var computerErr *computer.Error
-	if errors.As(err, &computerErr) {
-		return &rpcError{
-			Code:    rpcCodeServerError,
-			Message: computerErr.Message,
-			Data: map[string]any{
-				"code":      computerErr.Code,
-				"details":   computerErr.Details,
-				"retryable": computerErr.Retryable,
-			},
-		}
-	}
-	return &rpcError{Code: rpcCodeServerError, Message: err.Error()}
+// mapRPCError delegates to the rpc package's error mapping.
+func mapRPCError(err error) *rpc.RPCError {
+	return rpc.MapRPCError(err)
 }
 
 func nowRFC3339Nano() string {

@@ -6,84 +6,80 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"path/filepath"
 	"sync"
-
-	"github.com/gorilla/websocket"
-	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/agentmanager"
+	piauth "yishan/apps/cli/internal/agent/auth"
+	modellist "yishan/apps/cli/internal/agent/catalog"
+	agentmanager "yishan/apps/cli/internal/agent/process"
+	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/modellist"
-	"yishan/apps/cli/internal/piauth"
+	"yishan/apps/cli/internal/node"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
-	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 
 const (
 	// Binary frame opcodes for terminal I/O fast-path.
-	binOpcodeTerminalInput    byte = 0x01
-	binOpcodeTerminalOutput   byte = 0x02
-	maxInFlightJSONRPCPerConn      = 16
+	binOpcodeTerminalInput  byte = 0x01
+	binOpcodeTerminalOutput byte = 0x02
 )
 
+// JSONRPCHandler is the daemon's RPC layer: it implements the rpc.Handler
+// interfaces on top of the composed node app. It does not construct business
+// services and it does not own WebSocket mechanics (rpc.Server does) — it only
+// routes method calls to the namespace dispatch handlers.
 type JSONRPCHandler struct {
-	upgrader             websocket.Upgrader
-	manager              *workspace.Manager
-	runtime              *cliruntime.Runtime
-	localDatabase        *sql.DB
-	nodeID               string
-	logFilePath          string
-	cleanupStore         *workspaceCleanupStore
-	context              *AppContextStore
-	events               *eventHub
-	app                  *application.Service
-	watchers             *workspacewatchers.Watchers
-	prTracker            *workspaceprtracker.Tracker
-	tokenUsage           tokenusage.Service
-	computer             *computerService
-	modelList            *modellist.Service
-	memory               *memory.Service
-	agentMgr             *agentmanager.Manager
-	piAuth               *piauth.Store
-	agentLifecycleCtx    context.Context
-	cancelAgentLifecycle context.CancelFunc
-	agentLifecycleMu     sync.Mutex
-	settingsPath         string
-	serverCtx            context.Context
-	fileCacheSubID       uint64
+	nodeApp           *node.App
+	rpcServer         *rpc.Server
+	router            *rpc.Router
+	manager           *workspace.Manager
+	runtime           *cliruntime.Runtime
+	localDatabase     *sql.DB
+	nodeID            string
+	logFilePath       string
+	cleanupStore      *node.CleanupStore
+	context           *node.ContextStore
+	events            *eventHub
+	app               *application.Service
+	watchers          *workspacewatchers.Watchers
+	prTracker         *workspaceprtracker.Tracker
+	tokenUsage        tokenusage.Service
+	computer          *computer.Service
+	modelList         *modellist.Service
+	memory            *memory.Service
+	agentMgr          *agentmanager.Manager
+	piAuth            *piauth.Store
+	agentLifecycleCtx context.Context
+	serverCtx         context.Context
+	settingsPath      string
 
 	agentUsageMu sync.Mutex
 	agentUsage   map[string]map[string]struct{}
 
-	piSessionsMu sync.Mutex
-	piSessions   map[string]*piSessionState
+	// piSessions owns the pi agent session registry (maps + mutexes live in
+	// internal/agent/session); the handler only coordinates through it.
+	piSessions *session.Registry
 
 	// desktopConns tracks live WebSocket connections tagged as the Yishan
 	// desktop app (client=desktop). Used to decide how task runs attached to
 	// workspace creation execute: agent chat tab when a desktop UI is
 	// connected, pi CLI terminal otherwise (headless/remote daemons).
 	desktopConnsMu sync.Mutex
-	desktopConns   map[*wsConnState]struct{}
-
-	// stoppingPiSessions tracks pi session ids whose teardown (pi.stop) is in
-	// flight, so concurrent pi.start/pi.attach cannot bind to a dying process.
-	stoppingPiSessions map[string]struct{}
+	desktopConns   map[*rpc.Connection]struct{}
 
 	remoteStreamMu   sync.Mutex
-	remoteStreamSubs map[string]map[*wsConnState]struct{}
+	remoteStreamSubs map[string]map[*rpc.Connection]struct{}
 
 	// relayConn is the active relay WebSocket connection, set while a relay
 	// session is running. Used by terminal.remote.subscribe to send stream
 	// requests to the relay on behalf of the desktop.
 	relayConnMu sync.RWMutex
-	relayConn   *wsConnState
+	relayConn   *rpc.Connection
 
 	// relayPending holds pending relay dispatch answers (workspace create/close
 	// routing verdicts) keyed by request id. The relay answers synchronously when
@@ -92,26 +88,59 @@ type JSONRPCHandler struct {
 	relayPending   map[string]chan relayDispatchVerdict
 }
 
-// NewJSONRPCHandler wires a fresh handler. settingsDirAnchor is any path inside
-// the settings directory (the account data dir) — it is used only to derive
-// the settings file path; callers pass the resolved settings file or a test
-// fixture path in that directory.
-func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, settingsDirAnchor string, appContext *AppContextStore) *JSONRPCHandler {
-	events := newEventHub()
-	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
-		publishWorkspacePullRequestUpdatedEvent(events, event)
-	})
-	fileCacheSubID, fileCacheEvents := events.Subscribe()
-	manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
-		events.Publish(frontendEvent{
+// NewJSONRPCHandler wires the RPC layer around a composed node app: it builds
+// the namespace router and the transport server, and binds every business
+// service from the app. The handler itself constructs no services.
+func NewJSONRPCHandler(app *node.App) *JSONRPCHandler {
+	handler := &JSONRPCHandler{
+		nodeApp:           app,
+		manager:           app.Manager,
+		runtime:           app.Runtime,
+		localDatabase:     app.Database,
+		nodeID:            app.NodeID,
+		logFilePath:       app.LogFilePath,
+		cleanupStore:      app.CleanupStore,
+		context:           app.ContextStore,
+		events:            app.Events,
+		watchers:          app.Watchers,
+		prTracker:         app.PRTracker,
+		tokenUsage:        app.TokenUsage,
+		computer:          app.Computer,
+		modelList:         app.ModelList,
+		memory:            app.Memory,
+		agentMgr:          app.AgentMgr,
+		piAuth:            app.PIAuth,
+		agentLifecycleCtx: app.AgentLifecycleCtx,
+		serverCtx:         app.ServerCtx,
+		settingsPath:      app.SettingsPath,
+		agentUsage:        make(map[string]map[string]struct{}),
+		piSessions:        session.NewRegistry(),
+		desktopConns:      make(map[*rpc.Connection]struct{}),
+		remoteStreamSubs:  make(map[string]map[*rpc.Connection]struct{}),
+		relayPending:      make(map[string]chan relayDispatchVerdict),
+	}
+	if handler.agentLifecycleCtx == nil {
+		handler.agentLifecycleCtx = context.Background()
+	}
+	if handler.serverCtx == nil {
+		handler.serverCtx = context.Background()
+	}
+	handler.router = buildNamespaceRouter(handler)
+	handler.rpcServer = rpc.NewServer(handler)
+	handler.rpcServer.BinaryFrameHandler = handler
+	handler.app = newWorkspaceApplicationService(handler)
+
+	// Terminal lifecycle events flow into the frontend event hub.
+	app.Manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
+		app.Events.Publish(frontendEvent{
 			Topic: "terminalDetectedPortsChanged",
 			Payload: map[string]any{
 				"ports": ports,
 			},
 		})
 	})
-	manager.Terminals().SetSessionsChangedListener(func(event workspace.TerminalSessionLifecycleEvent) {
-		events.Publish(frontendEvent{
+	app.Manager.Terminals().SetSessionsChangedListener(func(event workspace.TerminalSessionLifecycleEvent) {
+		app.Events.Publish(frontendEvent{
 			Topic: "terminalSessionChanged",
 			Payload: map[string]any{
 				"action":      event.Action,
@@ -127,266 +156,64 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 			},
 		})
 	})
-	agentLifecycleCtx, cancelAgentLifecycle := context.WithCancel(context.Background())
-	handler := &JSONRPCHandler{
-		upgrader: websocket.Upgrader{
-			CheckOrigin: func(_ *http.Request) bool { return true },
-		},
-		manager:      manager,
-		runtime:      runtime,
-		nodeID:       nodeID,
-		logFilePath:  logFilePath,
-		cleanupStore: cleanupStore,
-
-		context:              appContext,
-		events:               events,
-		watchers:             newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:            prTracker,
-		tokenUsage:           nil,
-		computer:             newComputerService(computer.NewUnavailableRuntime("unknown")),
-		modelList:            modellist.NewService(),
-		agentMgr:             agentmanager.NewManager(),
-		piAuth:               mustNewManagedPiAuthStore(),
-		agentLifecycleCtx:    agentLifecycleCtx,
-		cancelAgentLifecycle: cancelAgentLifecycle,
-		settingsPath:         config.SettingsFilePath(filepath.Dir(settingsDirAnchor)),
-		agentUsage:           make(map[string]map[string]struct{}),
-		piSessions:           make(map[string]*piSessionState),
-		desktopConns:         make(map[*wsConnState]struct{}),
-		stoppingPiSessions:   make(map[string]struct{}),
-		remoteStreamSubs:     make(map[string]map[*wsConnState]struct{}),
-		relayPending:         make(map[string]chan relayDispatchVerdict),
-		fileCacheSubID:       fileCacheSubID,
-	}
-	handler.app = newWorkspaceApplicationService(handler)
-	// Watcher and PR-tracker cleanup follows instance removal (close, rollback,
-	// or same-path replacement in the registry).
-	manager.Instances().SetOnRemoved(func(workspaceID string, path string) {
-		handler.watchers.Unwatch(path)
-		handler.prTracker.StopTracking(workspaceID)
-	})
-	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
 }
 
-// SetLocalDatabase makes daemon-owned SQLite storage available to RPC handlers.
-// envDir is the profile (env root) directory: the token-usage pricing cache
-// stays machine/runtime-level and does not move with the account.
-func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB, envDir string) {
-	h.localDatabase = database
-	h.tokenUsage = tokenusage.NewCollectorWithRepository(
-		h.manager,
-		h.runtime,
-		localdb.NewHourlyUsageStore(database),
-		envDir,
-	)
-}
-
-func (h *JSONRPCHandler) SetComputerService(svc *computerService) {
+// SetComputerService replaces the computer-use service (test injection).
+func (h *JSONRPCHandler) SetComputerService(svc *computer.Service) {
 	if svc == nil {
 		return
 	}
 	h.computer = svc
 }
 
-// SetMemoryService wires the memory service into the handler.
-func (h *JSONRPCHandler) SetMemoryService(svc *memory.Service, ctx context.Context) {
-	h.memory = svc
-	h.serverCtx = ctx
+// Call implements rpc.Handler: it routes the method through the namespace
+// router.
+func (h *JSONRPCHandler) Call(ctx context.Context, connection *rpc.Connection, method string, params json.RawMessage) (any, error) {
+	return h.router.Call(ctx, connection, method, params)
 }
 
-// Shutdown stops background goroutines owned by the handler (PR tracker poll loop, token usage, memory).
-// It must be called when the daemon server shuts down.
-func (h *JSONRPCHandler) Shutdown() {
-	h.events.Unsubscribe(h.fileCacheSubID)
-	h.prTracker.Stop()
-	if h.tokenUsage != nil {
-		h.tokenUsage.Close()
-	}
-	if h.memory != nil {
-		h.memory.Close()
-	}
-	h.agentLifecycleMu.Lock()
-	h.cancelAgentLifecycle()
-	if h.agentMgr != nil {
-		h.agentMgr.StopAll()
-	}
-	h.agentLifecycleMu.Unlock()
-	modellist.ShutdownShell()
-}
-
-func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan frontendEvent) {
-	for event := range events {
-		if event.Topic != "workspaceFilesChanged" {
-			continue
-		}
-		payload, ok := event.Payload.(map[string]any)
-		if !ok {
-			continue
-		}
-		worktreePath, _ := payload["workspaceWorktreePath"].(string)
-		changedPaths, _ := payload["changedRelativePaths"].([]string)
-		if worktreePath == "" {
-			continue
-		}
-		if len(changedPaths) == 0 {
-			h.manager.Instances().InvalidateFileCache(worktreePath, []string{""})
-			continue
-		}
-		h.manager.Instances().InvalidateFileCache(worktreePath, changedPaths)
-		if h.memory != nil {
-			h.forwardMemoryFileChanges(worktreePath, changedPaths)
-		}
-	}
-}
-
-func (h *JSONRPCHandler) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
-	// Resolve projectID from the registered workspace (best-effort; empty is fine).
-	projectID := ""
-	if ws, err := h.workspaceHandleByPath(worktreePath); err == nil {
-		projectID = ws.Instance().ProjectID
-	}
-	for _, rel := range relPaths {
-		abs := filepath.Join(worktreePath, rel)
-		// Resolve symlinks before the ShouldIndex check: .my-context/ inside a
-		// worktree is a symlink to ~/.yishan/contexts/…, so the unresolved abs
-		// path contains "/.yishan/worktrees/" and would never match the filter.
-		// EvalSymlinks fails for deleted files; in that case resolved stays as
-		// abs and ShouldIndex will return false — delete events for context files
-		// are not currently propagated via this path (pre-existing limitation).
-		resolved := abs
-		if r, err := filepath.EvalSymlinks(abs); err == nil {
-			resolved = r
-		}
-		if h.memory.ShouldIndex(resolved) {
-			// Index under the resolved path: for a .my-context symlink this is
-			// the canonical ~/.yishan/contexts/… target that reconcile also
-			// indexes, so a custom-path git worktree cannot create a second
-			// row under its symlink path. For a real (non-git) .my-context
-			// directory resolved == abs, so nothing changes there.
-			if err := h.memory.OnFileChanged(resolved, worktreePath, projectID); err != nil {
-				log.Warn().Err(err).Str("path", resolved).Msg("memory index update failed")
-			}
-		}
-	}
-}
-
-func (h *JSONRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	conn, err := h.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Error().Err(err).Msg("websocket upgrade failed")
+// OnConnect implements rpc.ConnectionHandler: desktop clients are tracked so
+// task-run execution can prefer the agent chat tab over a pi CLI terminal.
+func (h *JSONRPCHandler) OnConnect(connection *rpc.Connection, request *http.Request) {
+	if request.URL.Query().Get("client") != "desktop" {
 		return
 	}
-	connState := newWSConnState(conn)
-	if r.URL.Query().Get("client") == "desktop" {
+	h.desktopConnsMu.Lock()
+	h.desktopConns[connection] = struct{}{}
+	h.desktopConnsMu.Unlock()
+	connection.AddCloseHook(func() {
 		h.desktopConnsMu.Lock()
-		h.desktopConns[connState] = struct{}{}
+		delete(h.desktopConns, connection)
 		h.desktopConnsMu.Unlock()
-		connState.AddCloseHook(func() {
-			h.desktopConnsMu.Lock()
-			delete(h.desktopConns, connState)
-			h.desktopConnsMu.Unlock()
-		})
-	}
-	defer connState.Close()
-	connCtx, cancelConn := context.WithCancel(context.Background())
-	defer cancelConn()
-
-	jsonRPCSem := make(chan struct{}, maxInFlightJSONRPCPerConn)
-	var inFlight sync.WaitGroup
-	defer inFlight.Wait()
-
-	for {
-		msgType, payload, err := conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Error().Err(err).Msg("websocket read failed")
-			}
-			return
-		}
-
-		// Binary frames are terminal I/O fast-path — skip JSON-RPC entirely.
-		if msgType == websocket.BinaryMessage {
-			h.handleBinaryFrame(connState, payload)
-			continue
-		}
-
-		// Dispatch JSON-RPC requests asynchronously so that slow handlers
-		// never block the read loop (and therefore never starve terminal input).
-		//
-		// Use a connection-lifetime context rather than r.Context(). After the
-		// WebSocket upgrade the HTTP request context is no longer meaningful —
-		// it's tied to the upgrade request, not the WS lifetime. Each handler
-		// method still manages its own timeout budget internally.
-		jsonRPCSem <- struct{}{}
-		inFlight.Add(1)
-		go func(data []byte) {
-			defer func() {
-				<-jsonRPCSem
-				inFlight.Done()
-			}()
-
-			resp := h.handleRequest(connCtx, connState, data)
-			if resp == nil {
-				return
-			}
-
-			if err := connState.WriteJSON(resp); err != nil {
-				log.Error().Err(err).Msg("websocket write failed")
-			}
-		}(payload)
-	}
+	})
 }
 
-// handleBinaryFrame processes a binary WebSocket frame for terminal I/O.
-// Frame format: [1 byte opcode] [session ID (null-terminated)] [payload]
-func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byte) {
-	if len(payload) < 3 { // minimum: opcode + at least 1 char session ID + null terminator
-		return
-	}
-
-	opcode := payload[0]
-	rest := payload[1:]
-	nullIdx := bytes.IndexByte(rest, 0)
-	if nullIdx < 0 {
-		return
-	}
-	sessionID := connState.terminalInputSessionID(rest[:nullIdx])
-
+// HandleBinaryFrame implements rpc.BinaryFrameHandler: terminal I/O frames are
+// forwarded to a remote node when the session is remote, or written to the
+// local PTY directly.
+func (h *JSONRPCHandler) HandleBinaryFrame(connection *rpc.Connection, opcode byte, sessionID string, payload []byte) {
 	switch opcode {
 	case binOpcodeTerminalInput:
-		inputData := rest[nullIdx+1:]
-		if len(inputData) == 0 {
-			return
-		}
 		if h.forwardRemoteTerminalInput(sessionID, payload) {
 			return
 		}
 		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
+		inputData := terminalInputData(payload)
+		if len(inputData) == 0 {
+			return
+		}
 		h.manager.Terminals().SendRaw(sessionID, inputData)
 	case binOpcodeTerminalOutput:
 		h.forwardRemoteTerminalOutput(sessionID, payload)
 	}
 }
 
-func (h *JSONRPCHandler) handleRequest(ctx context.Context, connState *wsConnState, payload []byte) *response {
-	var req request
-	if err := json.Unmarshal(payload, &req); err != nil {
-		return &response{JSONRPC: "2.0", Error: &rpcError{Code: rpcCodeParseError, Message: "parse error"}}
-	}
-
-	if req.JSONRPC != "2.0" {
-		return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Error: &rpcError{Code: rpcCodeInvalidRequest, Message: "invalid request"}}
-	}
-
-	result, err := h.dispatch(ctx, connState, req.Method, req.Params)
-	if err != nil {
-		return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Error: mapRPCError(err)}
-	}
-
-	if len(req.ID) == 0 {
+// terminalInputData slices the payload after the null-terminated session id.
+func terminalInputData(payload []byte) []byte {
+	nullIdx := bytes.IndexByte(payload[1:], 0)
+	if nullIdx < 0 {
 		return nil
 	}
-
-	return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Result: result}
+	return payload[1+nullIdx+1:]
 }

@@ -7,21 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	setup "yishan/apps/cli/internal/agentsetup"
+	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/workspace"
 )
 
 func newSkillTestHandler(t *testing.T) *JSONRPCHandler {
 	t.Helper()
-	return NewJSONRPCHandler(
-		workspace.NewManager(),
-		nil,
-		"node-1",
-		filepath.Join(t.TempDir(), "daemon.log"),
-		nil,
-		filepath.Join(t.TempDir(), "config.yml"),
-		NewAppContextStore(""),
-	)
+	return newTestJSONRPCHandler(t, workspace.NewManager(), nil, "node-1")
 }
 
 // TestDispatchSkillListEmptyOnCleanHome verifies skill.list returns no skills

@@ -144,5 +144,3 @@ func closeDaemonLogFile() {
 		activeLogFileWriter = nil
 	}
 }
-
-

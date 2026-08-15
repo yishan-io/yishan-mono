@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/workspace/terminal"
+	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/worktree"
 )
 
@@ -26,24 +27,24 @@ type Workspace struct {
 }
 
 type WorkspacePullRequest struct {
-	Number         int                        `json:"number"`
-	Title          string                     `json:"title,omitempty"`
-	URL            string                     `json:"url,omitempty"`
-	Branch         string                     `json:"branch,omitempty"`
-	BaseBranch     string                     `json:"baseBranch,omitempty"`
-	GitHubState    string                     `json:"githubState,omitempty"`
-	Status         string                     `json:"status,omitempty"`
-	ReviewDecision string                     `json:"reviewDecision,omitempty"`
-	IsDraft        bool                       `json:"isDraft,omitempty"`
-	Complete       bool                       `json:"complete,omitempty"`
-	UpdatedAt      string                     `json:"updatedAt,omitempty"`
-	Checks         []GitPullRequestCheck      `json:"checks,omitempty"`
-	Deployments    []GitPullRequestDeployment `json:"deployments,omitempty"`
+	Number         int                            `json:"number"`
+	Title          string                         `json:"title,omitempty"`
+	URL            string                         `json:"url,omitempty"`
+	Branch         string                         `json:"branch,omitempty"`
+	BaseBranch     string                         `json:"baseBranch,omitempty"`
+	GitHubState    string                         `json:"githubState,omitempty"`
+	Status         string                         `json:"status,omitempty"`
+	ReviewDecision string                         `json:"reviewDecision,omitempty"`
+	IsDraft        bool                           `json:"isDraft,omitempty"`
+	Complete       bool                           `json:"complete,omitempty"`
+	UpdatedAt      string                         `json:"updatedAt,omitempty"`
+	Checks         []git.GitPullRequestCheck      `json:"checks,omitempty"`
+	Deployments    []git.GitPullRequestDeployment `json:"deployments,omitempty"`
 }
 
 type Manager struct {
 	instances InstanceRegistry
-	gits      *GitService
+	gits      *git.GitService
 	terminals *terminal.Manager
 	store     WorkspaceStore
 }
@@ -68,7 +69,7 @@ func NewManagerWithRegistry(registry InstanceRegistry) *Manager {
 func NewManagerWithRegistryAndStore(registry InstanceRegistry, store WorkspaceStore) *Manager {
 	return &Manager{
 		instances: registry,
-		gits:      NewGitService(),
+		gits:      git.NewGitService(),
 		terminals: terminal.NewManager(),
 		store:     store,
 	}
@@ -390,7 +391,7 @@ func (m *Manager) Instances() InstanceRegistry {
 }
 
 // Gits exposes the shared git service for handle construction.
-func (m *Manager) Gits() *GitService {
+func (m *Manager) Gits() *git.GitService {
 	return m.gits
 }
 
@@ -455,7 +456,7 @@ func (m *Manager) ResolvePersistedWorkspacePullRequest(ctx context.Context, work
 	return nil
 }
 
-func (m *Manager) GitInspect(ctx context.Context, path string) (GitInspectResult, error) {
+func (m *Manager) GitInspect(ctx context.Context, path string) (git.GitInspectResult, error) {
 	return m.gits.Inspect(ctx, path)
 }
 

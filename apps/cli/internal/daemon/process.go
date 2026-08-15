@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/node"
 	cliruntime "yishan/apps/cli/internal/runtime"
 
 	"github.com/rs/zerolog/log"
@@ -37,19 +37,18 @@ type RunConfig struct {
 
 // daemonRuntime holds the initialized state produced during daemon bootstrap
 // (phases 1–4). It owns the TCP listener and must be cleaned up via
-// closeListener() when the daemon exits.
+// closeListener() when the daemon exits. Service lifecycle (background tasks,
+// database, shutdown order) is owned by the node app.
 type daemonRuntime struct {
-	listener      net.Listener
-	actualAddr    string
-	daemonID      string
-	handler       *JSONRPCHandler
-	relayStatus   *RelayStatus
-	server        *http.Server
-	statePath     string
-	actualPort    int
-	localDatabase *sql.DB
-
-	cleanupCtxCancel context.CancelFunc
+	listener    net.Listener
+	actualAddr  string
+	daemonID    string
+	handler     *JSONRPCHandler
+	app         *node.App
+	relayStatus *RelayStatus
+	server      *http.Server
+	statePath   string
+	actualPort  int
 }
 
 // shutdownContext holds the coordination channels produced when the daemon
@@ -105,8 +104,6 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 		return err
 	}
 	defer dr.closeListener()
-	defer dr.closeLocalDatabase()
-	defer dr.cleanupCtxCancel()
 
 	sc, err := startServing(cfg, dr)
 	if err != nil {
@@ -115,20 +112,12 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	defer sc.cleanup()
 
 	if err := registerNode(dr, runtime); err != nil {
+		dr.app.Close()
 		shutdownServer(dr.server)
 		return err
 	}
 
 	return sc.waitForShutdown()
-}
-
-func (dr *daemonRuntime) closeLocalDatabase() {
-	if dr.localDatabase == nil {
-		return
-	}
-	if err := dr.localDatabase.Close(); err != nil {
-		log.Warn().Err(err).Msg("failed to close local database")
-	}
 }
 
 func (dr *daemonRuntime) closeListener() {

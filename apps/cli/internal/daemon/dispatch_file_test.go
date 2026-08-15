@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -24,8 +25,7 @@ func TestDispatchFile_Search(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
-	defer handler.Shutdown()
+	handler := newTestJSONRPCHandler(t, manager, nil, "node-1")
 
 	params, err := json.Marshal(map[string]any{
 		"workspaceId": openedWorkspace.ID,
@@ -36,13 +36,13 @@ func TestDispatchFile_Search(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := handler.dispatchFile(context.Background(), MethodFileSearch, params)
+	result, err := handler.callRPCForTest(context.Background(), MethodFileSearch, params)
 	if err != nil {
 		t.Fatalf("dispatch file.search: %v", err)
 	}
-	results, ok := result.([]workspace.FileSearchResult)
+	results, ok := result.([]files.FileSearchResult)
 	if !ok {
-		t.Fatalf("expected []workspace.FileSearchResult, got %T", result)
+		t.Fatalf("expected []files.FileSearchResult, got %T", result)
 	}
 	if len(results) != 1 || results[0].Path != "alpha-search.ts" {
 		t.Fatalf("unexpected search results: %+v", results)

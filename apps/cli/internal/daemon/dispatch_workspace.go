@@ -2,58 +2,45 @@ package daemon
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
 
-func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, method string, params json.RawMessage) (any, error) {
-	switch method {
-	case MethodList:
-		return h.manager.Instances().List(), nil
-	case MethodWorkspaceCreate:
-		return h.handleWorkspaceCreate(ctx, params)
-	case MethodWorkspaceRefreshPullRequest:
-		return h.handleWorkspaceRefreshPullRequest(ctx, params)
-	case MethodWorkspaceSyncContextLink:
-		var req workspace.SyncContextLinkRequest
-		if err := decodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		return h.manager.SyncContextLink(req)
-	case MethodWorkspaceSetActive:
-		var req workspace.SetActiveWorkspaceRequest
-		if err := decodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		return h.manager.Terminals().SetActiveWorkspace(req)
-	case MethodWorkspaceClose:
-		return h.handleWorkspaceClose(ctx, params)
-	case MethodWorkspaceHealth:
-		return h.handleWorkspaceHealth(ctx, params)
-	case MethodWorkspaceOpenProject:
-		return h.handleWorkspaceOpenProject(ctx, params)
-	case MethodWorkspaceCloseProject:
-		return h.handleWorkspaceCloseProject(ctx, params)
-	case MethodWorkspaceCreateLocalFolder:
-		return h.handleWorkspaceCreateLocalFolder(ctx, params)
-	case MethodWorkspaceListLocalFolders:
-		return h.handleWorkspaceListLocalFolders(ctx, params)
-	case MethodWorkspaceDeleteLocalFolder:
-		return h.handleWorkspaceDeleteLocalFolder(ctx, params)
-	default:
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown workspace method: "+method)
-	}
+// WorkspaceService implementation: each method performs one workspace
+// application operation. Create/close route through application.Service;
+// the rest operate on the instance registry / manager.
+
+func (h *JSONRPCHandler) ListWorkspaces() (any, error) {
+	return h.manager.Instances().List(), nil
 }
 
-func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, params json.RawMessage) (any, error) {
-	var req workspace.RefreshPullRequestRequest
-	if err := decodeParams(params, &req); err != nil {
+func (h *JSONRPCHandler) WorkspaceCreate(ctx context.Context, req rpc.WorkspaceCreateParams) (any, error) {
+	result, err := h.app.Create(ctx, application.CreateCommand(req))
+	if err != nil {
 		return nil, err
 	}
+	return map[string]any{"id": result.ID, "status": result.Status}, nil
+}
 
+func (h *JSONRPCHandler) WorkspaceClose(ctx context.Context, req rpc.WorkspaceCloseParams) (any, error) {
+	result, err := h.app.Close(ctx, application.CloseCommand(req))
+	if err != nil {
+		return nil, err
+	}
+	if result.Relayed {
+		return map[string]any{"workspaceId": result.WorkspaceID, "status": result.Status}, nil
+	}
+	return map[string]any{
+		"workspace":   map[string]string{"id": result.WorkspaceID, "status": result.Status},
+		"workspaceId": result.WorkspaceID,
+	}, nil
+}
+
+func (h *JSONRPCHandler) WorkspaceRefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error) {
 	workspaceID := strings.TrimSpace(req.WorkspaceID)
 	workspacePath := strings.TrimSpace(req.Path)
 	if workspaceID == "" && workspacePath == "" {
@@ -84,20 +71,75 @@ func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, pa
 	return refreshedWorkspace, nil
 }
 
-func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.RawMessage) (any, error) {
-	var req workspaceCloseParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
-	result, err := h.app.Close(ctx, application.CloseCommand(req))
+func (h *JSONRPCHandler) WorkspaceSetActive(ctx context.Context, req workspace.SetActiveWorkspaceRequest) (any, error) {
+	return h.manager.Terminals().SetActiveWorkspace(req)
+}
+
+func (h *JSONRPCHandler) WorkspaceSyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error) {
+	return h.manager.SyncContextLink(req)
+}
+
+func (h *JSONRPCHandler) WorkspaceHealth(ctx context.Context, req rpc.WorkspaceHealthParams) (any, error) {
+	ws, err := h.getWorkspace(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
-	if result.Relayed {
-		return map[string]any{"workspaceId": result.WorkspaceID, "status": result.Status}, nil
+
+	state, health, healthErr, err := h.nodeApp.RefreshWorkspaceHealth(ctx, req.WorkspaceID)
+	if err != nil {
+		return nil, err
 	}
-	return map[string]any{
-		"workspace":   map[string]string{"id": result.WorkspaceID, "status": result.Status},
-		"workspaceId": result.WorkspaceID,
+
+	return rpc.WorkspaceHealthResult{
+		WorkspaceID: req.WorkspaceID,
+		State:       state,
+		Health:      health,
+		Path:        ws.Path,
+		Error:       healthErr,
 	}, nil
+}
+
+func (h *JSONRPCHandler) WorkspaceOpenProject(ctx context.Context, req rpc.WorkspaceOpenProjectParams) (any, error) {
+	opened, skipped, openErrors := []string{}, []string{}, []string{}
+	for _, entry := range req.Workspaces {
+		workspaceID, didOpenWorkspace, err := h.openProjectWorkspace(entry)
+		if err != nil {
+			if workspaceID != "" {
+				log.Warn().Err(err).Str("workspaceId", workspaceID).Str("path", strings.TrimSpace(entry.WorktreePath)).
+					Msg("workspace.openProject: failed to open workspace")
+				openErrors = append(openErrors, workspaceID+": "+err.Error())
+				continue
+			}
+			openErrors = append(openErrors, err.Error())
+			continue
+		}
+		if didOpenWorkspace {
+			opened = append(opened, workspaceID)
+			continue
+		}
+		skipped = append(skipped, workspaceID)
+	}
+	if len(opened) > 0 && h.tokenUsage != nil {
+		h.tokenUsage.RequestRecentRecoveryScan("workspace.openProject")
+	}
+
+	return rpc.WorkspaceOpenProjectResult{
+		Opened:  opened,
+		Skipped: skipped,
+		Errors:  openErrors,
+	}, nil
+}
+
+func (h *JSONRPCHandler) WorkspaceCloseProject(ctx context.Context, req rpc.WorkspaceCloseProjectParams) (any, error) {
+	stopped := []string{}
+	for _, wsID := range req.WorkspaceIDs {
+		wsID = strings.TrimSpace(wsID)
+		if wsID == "" {
+			continue
+		}
+		h.manager.Terminals().StopAllForWorkspace(wsID)
+		stopped = append(stopped, wsID)
+	}
+
+	return rpc.WorkspaceCloseProjectResult{Stopped: stopped}, nil
 }

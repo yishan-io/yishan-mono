@@ -47,7 +47,7 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 		t.Fatalf("marshal create params: %v", err)
 	}
 
-	result, err := h.handleWorkspaceCreate(context.Background(), raw)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreate, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceCreate: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestCreateRemoteNode_EventSequence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreate(context.Background(), raw); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreate, raw); err != nil {
 		t.Fatalf("handleWorkspaceCreate: %v", err)
 	}
 
@@ -218,7 +218,7 @@ func TestCreateLocalNode_WorktreeStepFailureRollsBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreate(context.Background(), raw); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreate, raw); err != nil {
 		t.Fatalf("handleWorkspaceCreate: %v", err)
 	}
 
@@ -300,7 +300,7 @@ func TestCreateLocalNode_ContextStepFailureRollsBackWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreate(context.Background(), raw); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreate, raw); err != nil {
 		t.Fatalf("handleWorkspaceCreate: %v", err)
 	}
 
@@ -363,7 +363,7 @@ func TestCreateLocalNode_SetupHookWarningCompletes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreate(context.Background(), raw); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreate, raw); err != nil {
 		t.Fatalf("handleWorkspaceCreate: %v", err)
 	}
 
@@ -410,7 +410,7 @@ func TestCreateRemoteNode_DispatchRejectedRollsBackRegistration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreate(context.Background(), raw); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreate, raw); err != nil {
 		t.Fatalf("handleWorkspaceCreate: %v", err)
 	}
 
@@ -462,7 +462,7 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal create params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreate(context.Background(), raw); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreate, raw); err != nil {
 		t.Fatalf("handleWorkspaceCreate: %v", err)
 	}
 

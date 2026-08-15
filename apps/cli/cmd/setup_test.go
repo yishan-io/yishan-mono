@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	setup "yishan/apps/cli/internal/agentsetup"
+	setup "yishan/apps/cli/internal/agent/setup"
 )
 
 func TestRenderSetupStateIncludesExtensionResource(t *testing.T) {

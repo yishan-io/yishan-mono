@@ -2,11 +2,11 @@ package daemon
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
@@ -19,27 +19,16 @@ type projectWithWorkspaces struct {
 	Workspaces []localdb.Workspace `json:"workspaces"`
 }
 
-func (h *JSONRPCHandler) dispatchProject(ctx context.Context, method string, params json.RawMessage) (any, error) {
-	switch method {
-	case MethodProjectList:
-		return h.handleProjectList(ctx, params)
-	case MethodProjectListWithWkspaces:
-		return h.handleProjectListWithWorkspaces(ctx, params)
-	case MethodProjectGetListPreferences:
-		return h.handleProjectGetListPreferences(ctx, params)
-	case MethodProjectSetListPreferences:
-		return h.handleProjectSetListPreferences(ctx, params)
-	default:
-		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown project method: "+method)
+func optionalWorkspaceString(value string) *string {
+	trimmedValue := strings.TrimSpace(value)
+	if trimmedValue == "" {
+		return nil
 	}
+	return &trimmedValue
 }
 
 func (h *JSONRPCHandler) projectListPreferenceStore() *localdb.ProjectListPreferenceStore {
 	return localdb.NewProjectListPreferenceStore(h.localDatabase)
-}
-
-type projectListParams struct {
-	OrganizationID string `json:"organizationId"`
 }
 
 // apiProjectToLocalRecord maps a remote project list record to the
@@ -127,11 +116,11 @@ func (h *JSONRPCHandler) listRemoteProjectsWithWorkspaces(ctx context.Context, o
 			record := apiWorkspaceToLocalRecord(workspace)
 			if runtime, ok := runtimeByID[record.ID]; ok {
 				// The local row is the authoritative lifecycle for the host: the
-				// create flow flips it to active in finalizePersistedWorkspace
-				// before the remote PATCH is attempted, so overlaying Status here
-				// keeps the desktop from rendering a locally-completed workspace
-				// as still provisioning when the remote record is stale (PATCH
-				// failed or never ran).
+				// create flow flips it to active in FinalizePersisted before the
+				// remote PATCH is attempted, so overlaying Status here keeps the
+				// desktop from rendering a locally-completed workspace as still
+				// provisioning when the remote record is stale (PATCH failed or
+				// never ran).
 				record.Status = runtime.Status
 				record.State = runtime.State
 				record.Health = runtime.Health
@@ -144,14 +133,10 @@ func (h *JSONRPCHandler) listRemoteProjectsWithWorkspaces(ctx context.Context, o
 	return results, nil
 }
 
-// handleProjectList returns the org's projects from the remote API. There is no
+// ProjectList returns the org's projects from the remote API. There is no
 // local project store anymore, so a failed/unconfigured remote read returns an
 // empty list.
-func (h *JSONRPCHandler) handleProjectList(ctx context.Context, params json.RawMessage) (any, error) {
-	var req projectListParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) ProjectList(ctx context.Context, req rpc.ProjectListParams) (any, error) {
 	if h.runtime == nil || !h.runtime.APIConfigured() {
 		return []localdb.Project{}, nil
 	}
@@ -163,19 +148,11 @@ func (h *JSONRPCHandler) handleProjectList(ctx context.Context, params json.RawM
 	return projects, nil
 }
 
-type projectListWithWorkspacesParams struct {
-	OrganizationID string `json:"organizationId"`
-}
-
-// handleProjectListWithWorkspaces returns the org's projects with the actor's
+// ProjectListWithWorkspaces returns the org's projects with the actor's
 // live workspaces from the remote API, overlaying host-local runtime. There is
 // no local project store anymore; a failed/unconfigured remote read returns an
 // empty list.
-func (h *JSONRPCHandler) handleProjectListWithWorkspaces(ctx context.Context, params json.RawMessage) (any, error) {
-	var req projectListWithWorkspacesParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) ProjectListWithWorkspaces(ctx context.Context, req rpc.ProjectListWithWorkspacesParams) (any, error) {
 	if h.runtime == nil || !h.runtime.APIConfigured() {
 		return []projectWithWorkspaces{}, nil
 	}
@@ -187,31 +164,14 @@ func (h *JSONRPCHandler) handleProjectListWithWorkspaces(ctx context.Context, pa
 	return results, nil
 }
 
-type projectGetListPreferencesParams struct {
-	OrganizationID string `json:"organizationId"`
-}
-
-func (h *JSONRPCHandler) handleProjectGetListPreferences(ctx context.Context, params json.RawMessage) (any, error) {
-	var req projectGetListPreferencesParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) ProjectGetListPreferences(ctx context.Context, req rpc.ProjectGetListPreferencesParams) (any, error) {
 	if strings.TrimSpace(req.OrganizationID) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "organizationId is required")
 	}
 	return h.projectListPreferenceStore().Get(ctx, req.OrganizationID)
 }
 
-type projectSetListPreferencesParams struct {
-	OrganizationID string                        `json:"organizationId"`
-	Preferences    localdb.ProjectListPreference `json:"preferences"`
-}
-
-func (h *JSONRPCHandler) handleProjectSetListPreferences(ctx context.Context, params json.RawMessage) (any, error) {
-	var req projectSetListPreferencesParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
+func (h *JSONRPCHandler) ProjectSetListPreferences(ctx context.Context, req rpc.ProjectSetListPreferencesParams) (any, error) {
 	if strings.TrimSpace(req.OrganizationID) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "organizationId is required")
 	}

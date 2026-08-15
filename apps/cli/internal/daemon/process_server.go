@@ -9,7 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	agentsetup "yishan/apps/cli/internal/agentsetup"
+	agentsetup "yishan/apps/cli/internal/agent/setup"
+	"yishan/apps/cli/internal/node"
 	cliruntime "yishan/apps/cli/internal/runtime"
 
 	"github.com/rs/zerolog/log"
@@ -57,7 +58,7 @@ func startServing(cfg RunConfig, dr *daemonRuntime) (*shutdownContext, error) {
 		go runRelayClientLoop(shutdownCtx, dr.handler.runtime, dr.handler, dr.daemonID, cfg.RelayURL, cfg.RelayToken, dr.relayStatus)
 	}
 
-	go handleShutdownSignal(stop, cancelShutdown, dr.handler, dr.server)
+	go handleShutdownSignal(stop, cancelShutdown, dr.app, dr.server)
 
 	startLog := log.Info()
 	if os.Getenv(detachedEnvKey) == "1" {
@@ -68,10 +69,10 @@ func startServing(cfg RunConfig, dr *daemonRuntime) (*shutdownContext, error) {
 	return &shutdownContext{ctx: shutdownCtx, cancel: cancelShutdown, stop: stop, serverErr: serverErr}, nil
 }
 
-func handleShutdownSignal(stop chan os.Signal, cancelShutdown context.CancelFunc, handler *JSONRPCHandler, server *http.Server) {
+func handleShutdownSignal(stop chan os.Signal, cancelShutdown context.CancelFunc, app *node.App, server *http.Server) {
 	<-stop
 	cancelShutdown()
-	handler.Shutdown()
+	app.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {

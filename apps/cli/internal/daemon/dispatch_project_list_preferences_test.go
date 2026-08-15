@@ -14,16 +14,7 @@ import (
 func newProjectListPreferencesTestHandler(t *testing.T) *JSONRPCHandler {
 	t.Helper()
 	root := t.TempDir()
-	handler := NewJSONRPCHandler(
-		workspace.NewManager(),
-		nil,
-		"node-1",
-		filepath.Join(root, "daemon.log"),
-		nil,
-		filepath.Join(root, "config.yml"),
-		NewAppContextStore(""),
-	)
-	t.Cleanup(handler.Shutdown)
+	handler := newTestJSONRPCHandler(t, workspace.NewManager(), nil, "node-1")
 
 	database, err := localdb.Open(filepath.Join(root, "db"))
 	if err != nil {
@@ -33,15 +24,16 @@ func newProjectListPreferencesTestHandler(t *testing.T) *JSONRPCHandler {
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	handler.SetLocalDatabase(database, root)
+	handler.setTestDatabase(database)
 	return handler
 }
 
 func TestHandleProjectGetListPreferences_ReturnsDefaultsForMissingOrg(t *testing.T) {
 	handler := newProjectListPreferencesTestHandler(t)
 
-	result, err := handler.handleProjectGetListPreferences(
+	result, err := handler.callRPCForTest(
 		context.Background(),
+		MethodProjectGetListPreferences,
 		marshalParams(t, map[string]any{"organizationId": "org-1"}),
 	)
 	if err != nil {
@@ -64,8 +56,9 @@ func TestHandleProjectSetGetListPreferences_RoundTrip(t *testing.T) {
 			ProjectOrderIds: []string{"project-1"},
 		},
 	}
-	_, err := handler.handleProjectSetListPreferences(
+	_, err := handler.callRPCForTest(
 		context.Background(),
+		MethodProjectSetListPreferences,
 		marshalParams(t, map[string]any{
 			"organizationId": "org-1",
 			"preferences":    preferences,
@@ -75,8 +68,9 @@ func TestHandleProjectSetGetListPreferences_RoundTrip(t *testing.T) {
 		t.Fatalf("set list preferences: %v", err)
 	}
 
-	result, err := handler.handleProjectGetListPreferences(
+	result, err := handler.callRPCForTest(
 		context.Background(),
+		MethodProjectGetListPreferences,
 		marshalParams(t, map[string]any{"organizationId": "org-1"}),
 	)
 	if err != nil {
@@ -91,10 +85,10 @@ func TestHandleProjectSetGetListPreferences_RoundTrip(t *testing.T) {
 func TestHandleProjectGetListPreferences_RequiresOrganizationID(t *testing.T) {
 	handler := newProjectListPreferencesTestHandler(t)
 
-	_, err := handler.handleProjectGetListPreferences(context.Background(), marshalParams(t, map[string]any{}))
+	_, err := handler.callRPCForTest(context.Background(), MethodProjectGetListPreferences, marshalParams(t, map[string]any{}))
 	requireRPCError(t, err, "organizationId is required")
 
-	_, err = handler.handleProjectSetListPreferences(context.Background(), marshalParams(t, map[string]any{}))
+	_, err = handler.callRPCForTest(context.Background(), MethodProjectSetListPreferences, marshalParams(t, map[string]any{}))
 	requireRPCError(t, err, "organizationId is required")
 }
 
@@ -109,8 +103,9 @@ func TestHandleProjectGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if _, err := handler.handleProjectSetListPreferences(
+	if _, err := handler.callRPCForTest(
 		context.Background(),
+		MethodProjectSetListPreferences,
 		marshalParams(t, map[string]any{
 			"organizationId": "org-1",
 			"preferences": localdb.ProjectListPreference{
@@ -125,8 +120,9 @@ func TestHandleProjectGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
 		t.Fatalf("delete workspace: %v", err)
 	}
 
-	result, err := handler.handleProjectGetListPreferences(
+	result, err := handler.callRPCForTest(
 		context.Background(),
+		MethodProjectGetListPreferences,
 		marshalParams(t, map[string]any{"organizationId": "org-1"}),
 	)
 	if err != nil {

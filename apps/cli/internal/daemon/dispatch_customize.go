@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	setup "yishan/apps/cli/internal/agentsetup"
+	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/workspace"
 )
 
