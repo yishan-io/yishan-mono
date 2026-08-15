@@ -1,4 +1,4 @@
-package daemon
+package rpc
 
 import (
 	"sync"
@@ -8,11 +8,16 @@ import (
 	"yishan/apps/cli/internal/workspace/terminal"
 )
 
-const terminalOutputFlushInterval = 16 * time.Millisecond
-const terminalOutputMaxBatchBytes = 32 * 1024
-const websocketWriteTimeout = 5 * time.Second
+const (
+	terminalOutputFlushInterval = 16 * time.Millisecond
+	terminalOutputMaxBatchBytes = 32 * 1024
+	websocketWriteTimeout       = 5 * time.Second
+)
 
-type wsConnState struct {
+// Connection is the state of one WebSocket connection: write serialization,
+// close hooks, the frontend event stream, and terminal session subscriptions.
+// The zero value is usable (no underlying socket) for tests.
+type Connection struct {
 	conn                            *websocket.Conn
 	writeMu                         sync.Mutex
 	closeOnce                       sync.Once
@@ -32,11 +37,19 @@ type subscriptionHandle struct {
 	cancel         func(sessionID string, subscriptionID uint64)
 }
 
-func newWSConnState(conn *websocket.Conn) *wsConnState {
-	return &wsConnState{conn: conn, subscriptions: make(map[string]subscriptionHandle)}
+// NewConnection wraps a WebSocket connection.
+func NewConnection(conn *websocket.Conn) *Connection {
+	return &Connection{conn: conn, subscriptions: make(map[string]subscriptionHandle)}
 }
 
-func (c *wsConnState) terminalInputSessionID(raw []byte) string {
+// IsOpen reports whether the connection has an underlying WebSocket socket.
+func (c *Connection) IsOpen() bool {
+	return c != nil && c.conn != nil
+}
+
+// TerminalInputSessionID resolves the session id prefix of a binary frame,
+// caching the last value to avoid repeated string allocations.
+func (c *Connection) TerminalInputSessionID(raw []byte) string {
 	if stringBytesEqual(raw, c.lastTerminalInputSessionIDBytes) {
 		return c.lastTerminalInputSessionID
 	}
@@ -46,7 +59,8 @@ func (c *wsConnState) terminalInputSessionID(raw []byte) string {
 	return c.lastTerminalInputSessionID
 }
 
-func (c *wsConnState) WriteJSON(v any) error {
+// WriteJSON writes a JSON message to the connection with a write deadline.
+func (c *Connection) WriteJSON(v any) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
 	if err := c.conn.SetWriteDeadline(time.Now().Add(websocketWriteTimeout)); err != nil {
@@ -58,7 +72,7 @@ func (c *wsConnState) WriteJSON(v any) error {
 
 // WriteBinary sends a binary WebSocket frame. Used for terminal I/O fast-path
 // to avoid JSON marshal overhead on every PTY output chunk.
-func (c *wsConnState) WriteBinary(data []byte) error {
+func (c *Connection) WriteBinary(data []byte) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
 	if err := c.conn.SetWriteDeadline(time.Now().Add(websocketWriteTimeout)); err != nil {
@@ -68,11 +82,14 @@ func (c *wsConnState) WriteBinary(data []byte) error {
 	return c.conn.WriteMessage(websocket.BinaryMessage, data)
 }
 
-func (c *wsConnState) Notify(method string, params any) error {
-	return c.WriteJSON(notification{JSONRPC: "2.0", Method: method, Params: params})
+// Notify sends a server-initiated JSON-RPC notification.
+func (c *Connection) Notify(method string, params any) error {
+	return c.WriteJSON(Notification{JSONRPC: "2.0", Method: method, Params: params})
 }
 
-func (c *wsConnState) Close() {
+// Close runs close hooks, cancels terminal subscriptions and the event stream,
+// then closes the underlying socket. Safe to call multiple times.
+func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
 		c.closeHooksMu.Lock()
 		hooks := append([]func(){}, c.closeHooks...)
@@ -99,13 +116,16 @@ func (c *wsConnState) Close() {
 	})
 }
 
-func (c *wsConnState) AddCloseHook(hook func()) {
+// AddCloseHook registers a callback run when the connection closes.
+func (c *Connection) AddCloseHook(hook func()) {
 	c.closeHooksMu.Lock()
 	c.closeHooks = append(c.closeHooks, hook)
 	c.closeHooksMu.Unlock()
 }
 
-func (c *wsConnState) AttachSubscription(sessionID string, subscriptionID uint64, events <-chan terminal.Event, cancel func(sessionID string, subscriptionID uint64)) {
+// AttachSubscription streams terminal events for one session to the client as
+// binary output frames, replacing any prior subscription for the same session.
+func (c *Connection) AttachSubscription(sessionID string, subscriptionID uint64, events <-chan terminal.Event, cancel func(sessionID string, subscriptionID uint64)) {
 	c.subsMu.Lock()
 	if current, ok := c.subscriptions[sessionID]; ok {
 		delete(c.subscriptions, sessionID)
@@ -121,7 +141,21 @@ func (c *wsConnState) AttachSubscription(sessionID string, subscriptionID uint64
 	}()
 }
 
-func (c *wsConnState) streamTerminalEvents(sessionID string, events <-chan terminal.Event) error {
+// DetachSubscription stops streaming terminal events for a session.
+func (c *Connection) DetachSubscription(sessionID string) {
+	c.subsMu.Lock()
+	handle, ok := c.subscriptions[sessionID]
+	if ok {
+		delete(c.subscriptions, sessionID)
+	}
+	c.subsMu.Unlock()
+
+	if ok {
+		handle.cancel(handle.sessionID, handle.subscriptionID)
+	}
+}
+
+func (c *Connection) streamTerminalEvents(sessionID string, events <-chan terminal.Event) error {
 	batcher := newTerminalOutputBatcher(sessionID)
 	flushTimer := time.NewTimer(terminalOutputFlushInterval)
 	if !flushTimer.Stop() {
@@ -161,7 +195,7 @@ func (c *wsConnState) streamTerminalEvents(sessionID string, events <-chan termi
 	}
 }
 
-func (c *wsConnState) handleTerminalEvent(event terminal.Event, batcher *terminalOutputBatcher) (bool, error) {
+func (c *Connection) handleTerminalEvent(event terminal.Event, batcher *terminalOutputBatcher) (bool, error) {
 	switch event.Type {
 	case "output":
 		if len(event.RawChunk) == 0 {
@@ -202,7 +236,7 @@ func newTerminalOutputBatcher(sessionID string) *terminalOutputBatcher {
 	}
 }
 
-func (b *terminalOutputBatcher) append(conn *wsConnState, chunk []byte) error {
+func (b *terminalOutputBatcher) append(conn *Connection, chunk []byte) error {
 	b.pendingPayload = append(b.pendingPayload, chunk...)
 	if len(b.pendingPayload) < terminalOutputMaxBatchBytes {
 		return nil
@@ -210,7 +244,7 @@ func (b *terminalOutputBatcher) append(conn *wsConnState, chunk []byte) error {
 	return b.flush(conn)
 }
 
-func (b *terminalOutputBatcher) flush(conn *wsConnState) error {
+func (b *terminalOutputBatcher) flush(conn *Connection) error {
 	if len(b.pendingPayload) == 0 {
 		return nil
 	}
@@ -224,53 +258,6 @@ func (b *terminalOutputBatcher) flush(conn *wsConnState) error {
 
 func (b *terminalOutputBatcher) hasPendingPayload() bool {
 	return len(b.pendingPayload) > 0
-}
-
-func (c *wsConnState) DetachSubscription(sessionID string) {
-	c.subsMu.Lock()
-	handle, ok := c.subscriptions[sessionID]
-	if ok {
-		delete(c.subscriptions, sessionID)
-	}
-	c.subsMu.Unlock()
-
-	if ok {
-		handle.cancel(handle.sessionID, handle.subscriptionID)
-	}
-}
-
-func (c *wsConnState) AttachEventStream(events <-chan frontendEvent, cancel func()) {
-	c.eventsMu.Lock()
-	previousCancel := c.eventsCancel
-	c.eventsCancel = cancel
-	c.eventsMu.Unlock()
-
-	if previousCancel != nil {
-		previousCancel()
-	}
-
-	go func() {
-		for event := range events {
-			if err := c.Notify(MethodFrontendEventsStream, map[string]any{
-				"topic":   event.Topic,
-				"payload": event.Payload,
-			}); err != nil {
-				c.DetachEventStream()
-				return
-			}
-		}
-	}()
-}
-
-func (c *wsConnState) DetachEventStream() {
-	c.eventsMu.Lock()
-	cancel := c.eventsCancel
-	c.eventsCancel = nil
-	c.eventsMu.Unlock()
-
-	if cancel != nil {
-		cancel()
-	}
 }
 
 func stringBytesEqual(value []byte, candidate []byte) bool {

@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"strings"
 
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
 
-func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, method string, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *rpc.Connection, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodList:
 		return h.manager.Instances().List(), nil

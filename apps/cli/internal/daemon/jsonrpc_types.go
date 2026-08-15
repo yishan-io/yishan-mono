@@ -1,32 +1,16 @@
 package daemon
 
-import "encoding/json"
+import "yishan/apps/cli/internal/rpc"
 
-type request struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
-}
+// notification is the daemon-side alias for the JSON-RPC notification envelope
+// (protocol types are defined in internal/rpc).
+type notification = rpc.Notification
 
-type response struct {
-	JSONRPC string    `json:"jsonrpc"`
-	ID      any       `json:"id,omitempty"`
-	Result  any       `json:"result,omitempty"`
-	Error   *rpcError `json:"error,omitempty"`
-}
+// request is the daemon-side alias for the JSON-RPC request envelope.
+type request = rpc.Request
 
-type notification struct {
-	JSONRPC string `json:"jsonrpc"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
-
-type rpcError struct {
-	Code    int            `json:"code"`
-	Message string         `json:"message"`
-	Data    map[string]any `json:"data,omitempty"`
-}
+// response is the daemon-side alias for the JSON-RPC response envelope.
+type response = rpc.Response
 
 type fileListParams struct {
 	WorkspaceID string `json:"workspaceId"`

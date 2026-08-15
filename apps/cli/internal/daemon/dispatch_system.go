@@ -7,18 +7,19 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
 
-func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *rpc.Connection, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodDaemonPing:
 		return map[string]string{"status": "ok"}, nil
 	case MethodFrontendEventsStream:
 		subscriptionID, events := h.events.Subscribe()
-		connState.AttachEventStream(events, func() {
+		connState.AttachEventStream(events, MethodFrontendEventsStream, func() {
 			h.events.Unsubscribe(subscriptionID)
 		})
 		return map[string]bool{"subscribed": true}, nil

@@ -13,6 +13,7 @@ import (
 	"yishan/apps/cli/internal/api"
 	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/node"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -34,7 +35,7 @@ type jobRunParams struct {
 
 // handleJobRun processes a job.run notification received from the relay.
 // It sends job.ack / job.result back over the relay WS connection.
-func handleJobRun(runtime *cliruntime.Runtime, connState *wsConnState, nodeID string, raw json.RawMessage) {
+func handleJobRun(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
 	var params jobRunParams
 	if err := json.Unmarshal(raw, &params); err != nil {
 		log.Warn().Err(err).Msg("scheduler: invalid job.run params")
@@ -61,7 +62,7 @@ func handleJobRun(runtime *cliruntime.Runtime, connState *wsConnState, nodeID st
 	go processRelayJob(runtime, connState, nodeID, params)
 }
 
-func processRelayJob(runtime *cliruntime.Runtime, connState *wsConnState, nodeID string, params jobRunParams) {
+func processRelayJob(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, params jobRunParams) {
 	startTime := time.Now()
 	client := runtime.APIClient()
 
@@ -156,7 +157,7 @@ type jobResultError struct {
 	Message string `json:"message"`
 }
 
-func sendJobAck(connState *wsConnState, runID, status, reason string) {
+func sendJobAck(connState *rpc.Connection, runID, status, reason string) {
 	msg := jobAckNotification{
 		JSONRPC: "2.0",
 		Method:  "job.ack",
@@ -171,7 +172,7 @@ func sendJobAck(connState *wsConnState, runID, status, reason string) {
 	}
 }
 
-func sendJobResult(connState *wsConnState, runID, status string, durationMs int64, output map[string]any, jobErr *jobResultError) {
+func sendJobResult(connState *rpc.Connection, runID, status string, durationMs int64, output map[string]any, jobErr *jobResultError) {
 	msg := jobResultNotification{
 		JSONRPC: "2.0",
 		Method:  "job.result",

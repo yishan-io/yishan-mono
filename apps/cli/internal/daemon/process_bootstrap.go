@@ -155,7 +155,7 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 
 func buildHTTPServer(handler *JSONRPCHandler, daemonID string, relayStatus *RelayStatus) *http.Server {
 	mux := http.NewServeMux()
-	mux.Handle("/ws", handler)
+	mux.Handle("/ws", handler.rpcServer)
 	mux.HandleFunc(agentHookIngestPath, handler.ServeAgentHook)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

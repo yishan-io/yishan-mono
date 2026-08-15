@@ -39,6 +39,7 @@ import (
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -252,7 +253,7 @@ func wireRelayCapture(t *testing.T, h *JSONRPCHandler, result map[string]any) <-
 		t.Fatalf("dial relay: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	h.relayConn = newWSConnState(conn)
+	h.relayConn = rpc.NewConnection(conn)
 
 	go func() {
 		for {

@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -208,7 +209,7 @@ func TestHandlePiListActiveSessions_ReturnsLiveSessions(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	connState := &wsConnState{}
+	connState := &rpc.Connection{}
 	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-1",
 		"tabId":       "tab-1",
@@ -252,7 +253,7 @@ func TestHandlePiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	originalConnState := &wsConnState{}
+	originalConnState := &rpc.Connection{}
 	_, err := h.dispatchPi(context.Background(), originalConnState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach",
 		"tabId":       "tab-attach",
@@ -268,7 +269,7 @@ func TestHandlePiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
 		}))
 	}()
 
-	reboundConnState := &wsConnState{}
+	reboundConnState := &rpc.Connection{}
 	_, err = h.dispatchPi(context.Background(), reboundConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach",
 		"tabId":       "tab-reopened",
@@ -311,7 +312,7 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 	}
 
 	connectionCtx, cancelConnection := context.WithCancel(context.Background())
-	connState := &wsConnState{}
+	connState := &rpc.Connection{}
 	_, err := h.dispatchPi(connectionCtx, connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-survives-disconnect",
 		"tabId":       "tab-1",
@@ -329,7 +330,7 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 		t.Fatal("expected pi session to remain active after its WebSocket context was cancelled")
 	}
 
-	reconnectedConnState := &wsConnState{}
+	reconnectedConnState := &rpc.Connection{}
 	_, err = h.dispatchPi(context.Background(), reconnectedConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
 		"sessionId": "session-survives-disconnect",
 		"tabId":     "tab-reconnected",
@@ -363,7 +364,7 @@ func TestHandlePiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	connState := &wsConnState{}
+	connState := &rpc.Connection{}
 	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-exists",
 		"tabId":       "tab-1",
@@ -412,7 +413,7 @@ func TestHandlePiStart_OverridesLegacyAgentDirEnv(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	connState := &wsConnState{}
+	connState := &rpc.Connection{}
 	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-1",
 		"tabId":       "tab-1",
@@ -589,7 +590,7 @@ func TestHandlePiAttach_WaitsForConcurrentStart(t *testing.T) {
 	startDone := make(chan struct{})
 	go func() {
 		defer close(startDone)
-		_, _ = h.dispatchPi(context.Background(), &wsConnState{}, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		_, _ = h.dispatchPi(context.Background(), &rpc.Connection{}, MethodPiStart, mustMarshalJSON(t, map[string]any{
 			"sessionId":   "session-concurrent",
 			"tabId":       "tab-1",
 			"workspaceId": "workspace-1",
@@ -600,7 +601,7 @@ func TestHandlePiAttach_WaitsForConcurrentStart(t *testing.T) {
 
 	// A second opener attaches while the start is still in flight: it must wait
 	// for the start to finish and then bind to the winning process.
-	attachConnState := &wsConnState{}
+	attachConnState := &rpc.Connection{}
 	attachDone := make(chan error, 1)
 	go func() {
 		_, err := h.dispatchPi(context.Background(), attachConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
@@ -648,7 +649,7 @@ func TestHandlePiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	connState := &wsConnState{}
+	connState := &rpc.Connection{}
 	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-race",
 		"tabId":       "tab-1",
@@ -709,7 +710,7 @@ func TestHandlePiStart_RetriesWhenStopMarkerArrivesLate(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	connState := &wsConnState{}
+	connState := &rpc.Connection{}
 	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-race-late",
 		"tabId":       "tab-1",
@@ -764,7 +765,7 @@ func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	connState := &wsConnState{}
+	connState := &rpc.Connection{}
 	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach-stop",
 		"tabId":       "tab-1",
@@ -785,7 +786,7 @@ func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 	waitForStoppingMarker(t, h, "session-attach-stop")
 
 	// Attach during the teardown must not rebind a doomed process.
-	reboundConnState := &wsConnState{}
+	reboundConnState := &rpc.Connection{}
 	_, err = h.dispatchPi(context.Background(), reboundConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach-stop",
 		"tabId":       "tab-reopened",
@@ -846,7 +847,7 @@ func waitForFileContent(t *testing.T, path string) string {
 	return ""
 }
 
-func newTestWSConnState(t *testing.T) (*wsConnState, *websocket.Conn) {
+func newTestWSConnState(t *testing.T) (*rpc.Connection, *websocket.Conn) {
 	t.Helper()
 	upgrader := websocket.Upgrader{}
 	serverConns := make(chan *websocket.Conn, 1)
@@ -874,7 +875,7 @@ func newTestWSConnState(t *testing.T) (*wsConnState, *websocket.Conn) {
 	}
 	t.Cleanup(func() { _ = serverConn.Close() })
 
-	return &wsConnState{conn: serverConn}, clientConn
+	return rpc.NewConnection(serverConn), clientConn
 }
 
 func TestHandlePiSessionExit_ForwardsSessionEndOnProcessExit(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/terminal"
 )
@@ -161,7 +162,7 @@ func TestHasDesktopUI_TracksDesktopConnections(t *testing.T) {
 // registry, mirroring the ?client=desktop handshake path used in production.
 func registerTestDesktopConn(h *JSONRPCHandler) {
 	h.desktopConnsMu.Lock()
-	h.desktopConns[&wsConnState{}] = struct{}{}
+	h.desktopConns[&rpc.Connection{}] = struct{}{}
 	h.desktopConnsMu.Unlock()
 }
 

@@ -10,6 +10,7 @@ import (
 
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	terminalruntime "yishan/apps/cli/internal/workspace/terminal"
 
@@ -18,7 +19,7 @@ import (
 
 // piSessionState tracks the desktop connection and recovery metadata for one live pi session.
 type piSessionState struct {
-	connState   *wsConnState
+	connState   *rpc.Connection
 	session     *agentmanager.Session
 	tabID       string
 	workspaceID string
@@ -38,7 +39,7 @@ type piActiveSessionSummary struct {
 	CWD         string `json:"cwd"`
 }
 
-func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *rpc.Connection, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodPiStart:
 		return h.handlePiStart(ctx, connState, params)
@@ -87,7 +88,7 @@ const piStopWaitTimeout = 10 * time.Second
 // the pi.stop RPC arrives, so a short grace is ample.
 const stoppingMarkGracePeriod = 150 * time.Millisecond
 
-func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *rpc.Connection, params json.RawMessage) (any, error) {
 	var req piStartParams
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -205,7 +206,7 @@ type piAttachParams struct {
 // pi.start of the same session id to finish spawning.
 const attachStartWaitTimeout = 2 * time.Second
 
-func (h *JSONRPCHandler) handlePiAttach(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) handlePiAttach(ctx context.Context, connState *rpc.Connection, params json.RawMessage) (any, error) {
 	var req piAttachParams
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -573,7 +574,7 @@ func (h *JSONRPCHandler) makePiEventCallback(sessionID string) func(string, stri
 	return func(_ string, tabID string, workspaceID string, event []byte) {
 		h.piSessionsMu.Lock()
 		state, exists := h.piSessions[sessionID]
-		var connState *wsConnState
+		var connState *rpc.Connection
 		resolvedTabID := tabID
 		resolvedWorkspaceID := workspaceID
 		if exists {
@@ -624,7 +625,7 @@ func (h *JSONRPCHandler) handlePiSessionExit(exited *agentmanager.Session) {
 	workspaceID := state.workspaceID
 	h.piSessionsMu.Unlock()
 
-	if connState == nil || connState.conn == nil {
+	if connState == nil || !connState.IsOpen() {
 		return
 	}
 

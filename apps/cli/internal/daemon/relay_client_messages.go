@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -34,7 +35,7 @@ func handleRelayDispatchResponse(handler *JSONRPCHandler, id json.RawMessage, re
 
 // handleRelayMessage handles relay-protocol messages (heartbeat, job dispatch).
 // Returns true if the message was consumed and should not be passed to the daemon handler.
-func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, connState *wsConnState, nodeID string, payload []byte) bool {
+func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, payload []byte) bool {
 	var msg struct {
 		Method string          `json:"method"`
 		Params json.RawMessage `json:"params,omitempty"`

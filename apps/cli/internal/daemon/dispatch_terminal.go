@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
-func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *rpc.Connection, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodTerminalStart:
 		var req workspace.TerminalStartRequest
