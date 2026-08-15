@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../store/workspaceUiStore";
@@ -30,7 +31,9 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
 
   // Non-git projects only have the files pane: fall back when the persisted
   // tab points at a git-only tab (changes/PR).
-  const gitCapable = supportsGitFeatures(selectedProject?.sourceType);
+  // Folder workspaces have no real project (undefined). Derive git capability
+  // from the workspace first so folders never resolve to git-capable.
+  const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
   const activeTab =
     !gitCapable || activeRightPaneTab === "files"
       ? "files"

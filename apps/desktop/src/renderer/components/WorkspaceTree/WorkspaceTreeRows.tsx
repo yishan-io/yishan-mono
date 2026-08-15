@@ -103,7 +103,7 @@ export function WorkspaceTreeRows({
       >
         <WorkspaceTreeRowView
           row={row}
-          draggable
+          draggable={!row.isLocalFolder && !row.isLocalFolderGroup}
           isExpanded={row.hasChildren && isExpanded(row.id)}
           isSelected={isSelected}
           onDragStart={(event) => {
@@ -146,6 +146,9 @@ export function WorkspaceTreeRows({
           }}
           onContextMenu={(event) => {
             if (row.kind === "project") {
+              if (row.isLocalFolderGroup) {
+                return;
+              }
               onProjectContextMenu?.(event, parseProjectRowId(row.id)?.projectId ?? "");
               return;
             }
@@ -161,18 +164,24 @@ export function WorkspaceTreeRows({
             }
           }}
           onProjectActionsClick={(event) => {
-            if (row.kind === "project") {
+            if (row.kind === "project" && !row.isLocalFolderGroup) {
               onProjectActionsClick?.(event, parseProjectRowId(row.id)?.projectId ?? "");
             }
           }}
           onProjectCreateWorkspaceClick={(event) => {
-            if (row.kind === "project") {
+            if (row.kind === "project" && !row.isLocalFolderGroup) {
               onProjectCreateWorkspaceClick?.(event, parseProjectRowId(row.id)?.projectId ?? "");
             }
           }}
           onClick={() => {
             scrollRef.current?.focus();
             if (row.kind === "project") {
+              if (row.isLocalFolderGroup) {
+                // The group is synthetic: toggling it folds/unfolds the folder
+                // children but never selects a real project.
+                toggleExpanded(row.id);
+                return;
+              }
               const projectId = parseProjectRowId(row.id)?.projectId ?? "";
               onSelectProject?.(projectId);
               if (row.hasChildren) {

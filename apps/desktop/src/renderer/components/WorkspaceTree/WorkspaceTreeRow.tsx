@@ -164,23 +164,39 @@ export function WorkspaceTreeRowView({
         <Box sx={{ width: 20, height: 20, mr: 0.5 }} />
       )}
       {row.kind === "project" ? (
-        <Box
-          component="span"
-          sx={{
-            width: 20,
-            height: 20,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            bgcolor: row.color ?? theme.palette.primary.main,
-            color: theme.palette.common.white,
-            fontSize: 12,
-            fontWeight: 700,
-            borderRadius: 0.5,
-          }}
-        >
-          {renderProjectIcon(row.icon ?? undefined, 12)}
-        </Box>
+        row.isLocalFolderGroup ? (
+          <Box
+            component="span"
+            sx={{
+              width: 20,
+              height: 20,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "text.secondary",
+            }}
+          >
+            {isExpanded ? <LuFolderOpen size={16} /> : <LuFolder size={16} />}
+          </Box>
+        ) : (
+          <Box
+            component="span"
+            sx={{
+              width: 20,
+              height: 20,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: row.color ?? theme.palette.primary.main,
+              color: theme.palette.common.white,
+              fontSize: 12,
+              fontWeight: 700,
+              borderRadius: 0.5,
+            }}
+          >
+            {renderProjectIcon(row.icon ?? undefined, 12)}
+          </Box>
+        )
       ) : row.kind === "node" ? (
         <Box component="span" sx={{ width: 16, height: 16, display: "inline-flex", color: "text.secondary" }}>
           {row.nodeKind === "managed" ? (
@@ -208,6 +224,8 @@ export function WorkspaceTreeRowView({
             >
               <CgSpinner size={16} />
             </Box>
+          ) : row.isLocalFolder ? (
+            <LuFolder size={16} data-testid={`workspace-folder-icon-${workspaceId}`} />
           ) : row.runtimeStatus === "running" ? (
             <Box component="span" data-testid={`workspace-status-running-spinner-${workspaceId}`}>
               <CliSpinner fontSize={20} />
@@ -283,7 +301,7 @@ export function WorkspaceTreeRowView({
               sx={{ justifyContent: "flex-end", width: "100%", flexShrink: 0 }}
             />
           ) : null}
-          {row.workspaceKind === "local" ? null : (
+          {row.workspaceKind === "local" || row.isLocalFolder ? null : (
             <Box
               className="workspace-actions"
               data-testid={`workspace-actions-${workspaceId}`}
@@ -331,19 +349,21 @@ export function WorkspaceTreeRowView({
               </IconButton>
             </Tooltip>
           ) : null}
-          <IconButton
-            className="project-actions"
-            aria-label="Project actions"
-            onClick={(event) => {
-              event.stopPropagation();
-              onProjectActionsClick?.(event);
-            }}
-            // With no add-workspace button (non-git projects) the auto margin
-            // moves here so the actions stay pinned to the row's right edge.
-            sx={row.supportsGitFeatures === false ? { ml: "auto" } : undefined}
-          >
-            <LuEllipsis size={14} />
-          </IconButton>
+          {row.isLocalFolderGroup ? null : (
+            <IconButton
+              className="project-actions"
+              aria-label="Project actions"
+              onClick={(event) => {
+                event.stopPropagation();
+                onProjectActionsClick?.(event);
+              }}
+              // With no add-workspace button (non-git projects) the auto margin
+              // moves here so the actions stay pinned to the row's right edge.
+              sx={row.supportsGitFeatures === false ? { ml: "auto" } : undefined}
+            >
+              <LuEllipsis size={14} />
+            </IconButton>
+          )}
         </>
       ) : null}
     </Box>

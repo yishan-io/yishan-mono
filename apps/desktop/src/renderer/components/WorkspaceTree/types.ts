@@ -9,6 +9,8 @@ export type WorkspaceTreeProject = {
   color?: string | null;
   /** False for non-git projects; hides workspace-creation affordances. */
   supportsGitFeatures?: boolean;
+  /** Synthetic "Local Folders" group row; never a real project. */
+  isLocalFolderGroup?: boolean;
 };
 
 export type WorkspaceTreeNode = {
@@ -25,6 +27,8 @@ export type WorkspaceTreeWorkspace = {
   projectId: string;
   nodeId: string;
   kind?: "managed" | "local";
+  /** Non-git local folder workspace rendered under the synthetic group. */
+  isLocalFolder?: boolean;
   additions?: number;
   deletions?: number;
   runtimeStatus?: WorkspaceAgentStatus;
@@ -43,12 +47,16 @@ export type WorkspaceTreeRow = {
   hasChildren: boolean;
   /** False for non-git projects; hides workspace-creation affordances. */
   supportsGitFeatures?: boolean;
+  /** Synthetic "Local Folders" group row; never a real project. */
+  isLocalFolderGroup?: boolean;
   icon?: string | null;
   color?: string | null;
   nodeKind?: "managed" | "external";
   nodeScope?: "private" | "shared";
   nodeIsOnline?: boolean;
   workspaceKind?: "managed" | "local";
+  /** Non-git local folder workspace rendered under the synthetic group. */
+  isLocalFolder?: boolean;
   additions?: number;
   deletions?: number;
   runtimeStatus?: WorkspaceAgentStatus;
@@ -67,6 +75,8 @@ export type WorkspaceTreeProps = {
   selectedWorkspaceId?: string;
   hierarchyMode?: "by_project" | "by_node";
   expandedItems?: string[];
+  /** Translated label for the synthetic "Local Folders" group row. */
+  localFolderGroupLabel?: string;
   onExpandedItemsChange?: (items: string[]) => void;
   onSelectProject?: (projectId: string) => void;
   onSelectNode?: (nodeId: string, projectId: string) => void;

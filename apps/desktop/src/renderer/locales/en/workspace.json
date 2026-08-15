@@ -20,7 +20,8 @@
       "openInExternalAppQuick": "Open Workspace in {{app}}",
       "openInExternalApp": "Open Workspace in...",
       "delete": "Close workspace",
-      "close": "Close"
+      "close": "Close",
+      "deleteFolder": "Delete folder"
     },
     "title": "Workspace title",
     "column": "Workspace",

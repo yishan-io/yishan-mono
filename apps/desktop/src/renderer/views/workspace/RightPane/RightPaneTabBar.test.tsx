@@ -29,7 +29,8 @@ vi.mock("../../../helpers/platform", () => ({
 }));
 
 vi.mock("../../../shortcuts/shortcutDisplay", () => ({
-  getShortcutDisplayLabelById: (shortcutId: string) => (shortcutId === "activate-files-pane" ? "⌘1" : `⌘ ${shortcutId}`),
+  getShortcutDisplayLabelById: (shortcutId: string) =>
+    shortcutId === "activate-files-pane" ? "⌘1" : `⌘ ${shortcutId}`,
 }));
 
 afterEach(() => {
@@ -48,6 +49,24 @@ describe("RightPaneTabBar", () => {
     expect(screen.getByLabelText("files.files")).toBeTruthy();
     expect(screen.getByLabelText("files.changes")).toBeTruthy();
     expect(screen.getByLabelText("workspace.pr.tab")).toBeTruthy();
+  });
+
+  it("shows only the files tab for a folder workspace (no project in projects[]) ", () => {
+    workspaceStoreState.current.projects = [];
+    workspaceStoreState.current.workspaces = [
+      {
+        id: "workspace-1",
+        projectId: "local-folder",
+        repoId: "workspace-1",
+        worktreePath: "/tmp/plain-folder",
+        kind: "folder",
+      },
+    ];
+    render(<RightPaneTabBar rightCollapsed={false} />);
+
+    expect(screen.getByLabelText("files.files")).toBeTruthy();
+    expect(screen.queryByLabelText("files.changes")).toBeNull();
+    expect(screen.queryByLabelText("workspace.pr.tab")).toBeNull();
   });
 
   it("hides changes and PR tabs for a non-git project", () => {

@@ -1,7 +1,8 @@
 import { useCallback } from "react";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
 import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./projectListHelpers";
 
-type TreeWorkspace = { id: string; projectId: string; nodeId: string };
+type TreeWorkspace = { id: string; projectId: string; nodeId: string; isLocalFolder?: boolean };
 
 type UseProjectListTreeHandlersInput = {
   workspaceListHierarchyMode: "by_project" | "by_node";
@@ -75,11 +76,20 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
         const expandedProjectKeys = new Set(
           items.filter((item) => item.startsWith("project:")).map((item) => item.replace(/^project:/, "")),
         );
+        const nonFolderWorkspaces = treeWorkspaces.filter((workspace) => !workspace.isLocalFolder);
         const visibleNodeIds = Array.from(new Set(treeWorkspaces.map((workspace) => workspace.nodeId)));
+        // Project keys for regular workspaces plus the per-node "Local Folders"
+        // group key (nodeId:local-folder) so its fold state persists too.
         const visibleProjectKeys = Array.from(
-          new Set(treeWorkspaces.map((workspace) => `${workspace.nodeId}:${workspace.projectId}`)),
+          new Set([
+            ...nonFolderWorkspaces.map((workspace) => `${workspace.nodeId}:${workspace.projectId}`),
+            ...treeWorkspaces
+              .filter((workspace) => workspace.isLocalFolder)
+              .map((workspace) => `${workspace.nodeId}:${LOCAL_FOLDER_PROJECT_ID}`),
+          ]),
         );
-        setFoldedProjectIds(visibleNodeIds.filter((nodeId) => !expandedNodeIds.has(nodeId)));
+        const nextFoldedProjectIds = visibleNodeIds.filter((nodeId) => !expandedNodeIds.has(nodeId));
+        setFoldedProjectIds(nextFoldedProjectIds);
         setFoldedNodeKeys((current) => {
           const next = new Set(current);
           for (const projectKey of visibleProjectKeys) {
@@ -111,8 +121,17 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
       const nextFoldedProjectIds = filteredProjects
         .map((project) => project.id)
         .filter((projectId) => !expandedProjectIds.has(projectId));
+      // The synthetic "Local Folders" group is not in filteredProjects, so the
+      // sentinel id must be folded/unfolded explicitly to persist its state.
+      if (!expandedProjectIds.has(LOCAL_FOLDER_PROJECT_ID)) {
+        nextFoldedProjectIds.push(LOCAL_FOLDER_PROJECT_ID);
+      }
       const visibleNodeKeys = Array.from(
-        new Set(treeWorkspaces.map((workspace) => `${workspace.projectId}:${workspace.nodeId}`)),
+        new Set(
+          treeWorkspaces
+            .filter((workspace) => !workspace.isLocalFolder)
+            .map((workspace) => `${workspace.projectId}:${workspace.nodeId}`),
+        ),
       );
       setFoldedProjectIds(nextFoldedProjectIds);
       setFoldedNodeKeys((current) => {

@@ -3,7 +3,8 @@
     "list": {
       "title": "\u9879\u76ee",
       "workspaces": "\u5de5\u4f5c\u533a",
-      "globalWorkspaces": "\u5168\u5c40\u5de5\u4f5c\u533a"
+      "globalWorkspaces": "\u5168\u5c40\u5de5\u4f5c\u533a",
+      "localFolders": "\u672c\u5730\u6587\u4ef6\u5939"
     },
     "form": {
       "name": "\u9879\u76ee\u540d\u79f0",

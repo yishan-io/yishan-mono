@@ -2,6 +2,7 @@ import { Badge, Box, IconButton, Tooltip } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../components/PaneHeader";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
@@ -35,7 +36,8 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
   );
   const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
   const changesCount = workspaceStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
-  const gitCapable = supportsGitFeatures(selectedProject?.sourceType);
+  // Folder workspaces have no real project (undefined): never show git tabs.
+  const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
 
   const handleTabClick = (tab: WorkspaceRightPaneTab) => {
     if (rightCollapsed) {

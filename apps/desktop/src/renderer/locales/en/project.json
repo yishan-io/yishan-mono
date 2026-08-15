@@ -3,7 +3,8 @@
     "list": {
       "title": "Projects",
       "workspaces": "Workspaces",
-      "globalWorkspaces": "Global workspaces"
+      "globalWorkspaces": "Global workspaces",
+      "localFolders": "Local Folders"
     },
     "form": {
       "name": "Project name",

@@ -19,6 +19,7 @@ export function WorkspaceTree({
   hierarchyMode = "by_project",
   expandedItems,
   onExpandedItemsChange,
+  localFolderGroupLabel,
   onSelectProject,
   onSelectNode,
   onSelectWorkspace,
@@ -43,6 +44,7 @@ export function WorkspaceTree({
     hierarchyMode,
     expandedItemsOverride: expandedItems,
     onExpandedItemsChange,
+    localFolderGroupLabel,
   });
 
   const virtualizer = useVirtualizer({

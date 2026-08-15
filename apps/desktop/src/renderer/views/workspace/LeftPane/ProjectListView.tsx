@@ -50,6 +50,7 @@ export function ProjectListView() {
     reorderWorkspace,
     closeWorkspace,
     deleteProject,
+    deleteLocalFolder,
     openEntryInExternalApp,
     setLastUsedExternalAppId,
   } = useCommands();
@@ -234,18 +235,6 @@ export function ProjectListView() {
     setProjectActionsProjectId("");
   };
 
-  const workspaceContextTarget =
-    workspaceContextMenu &&
-    workspaces.find(
-      (workspace) =>
-        workspace.repoId === workspaceContextMenu.repoId && workspace.id === workspaceContextMenu.workspaceId,
-    );
-  const isWorkspaceContextTargetLocal = Boolean(
-    workspaceContextTarget &&
-      (workspaceContextTarget.kind === "local" ||
-        displayWorkspaceIdByProjectId[workspaceContextTarget.repoId] === workspaceContextTarget.id),
-  );
-
   const {
     workspaceInfoAnchorEl,
     hoveredWorkspace,
@@ -335,6 +324,12 @@ export function ProjectListView() {
     }
   };
 
+  /** Deletes one local folder workspace via its id, then closes its context menu. */
+  const handleDeleteLocalFolder = (folderId: string) => {
+    closeWorkspaceMenus();
+    void deleteLocalFolder(folderId);
+  };
+
   const projectContextMenuAnchorPosition = useMemo(
     () =>
       projectContextMenu
@@ -408,6 +403,7 @@ export function ProjectListView() {
           onWorkspaceMouseLeave={treeHandlers.onWorkspaceMouseLeave}
           onWorkspaceRequestDelete={treeHandlers.onWorkspaceRequestDelete}
           onRowReorder={treeHandlers.onRowReorder}
+          localFolderGroupLabel={t("project.list.localFolders")}
         />
       </Box>
       <ProjectListMenus
@@ -427,6 +423,7 @@ export function ProjectListView() {
         handleOpenProjectConfig={handleOpenProjectConfig}
         handleRequestProjectDeletion={handleRequestProjectDeletion}
         handleRequestWorkspaceDeletion={handleRequestWorkspaceDeletion}
+        handleDeleteLocalFolder={handleDeleteLocalFolder}
         handleOpenWorkspaceInExternalApp={handleOpenWorkspaceInExternalApp}
         handleOpenWorkspaceInFileManager={handleOpenWorkspaceInFileManager}
         setRenameWorkspaceContext={setRenameWorkspaceContext}
