@@ -104,7 +104,7 @@ func TestHandleProjectGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
 
 	if err := database.Create(context.Background(), &localdb.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
-		Kind: workspace.KindWorktree, Status: "active", LocalPath: "/tmp/ws", State: "active",
+		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: "/tmp/ws", State: "active",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}

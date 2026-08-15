@@ -22,7 +22,7 @@ func TestBuildWorkspaceCreateRPCRequest(t *testing.T) {
 
 	cmd := newWorkspaceCreateTestCommand()
 	cmd.Flags().Set("project-id", "proj-1")
-	cmd.Flags().Set("kind", workspace.KindWorktree)
+	cmd.Flags().Set("kind", string(workspace.KindWorktree))
 	cmd.Flags().Set("branch", "feature/test")
 	cmd.Flags().Set("source-branch", "main")
 	cmd.Flags().Set("name", "feature-test")
@@ -44,8 +44,8 @@ func TestBuildWorkspaceCreateRPCRequest(t *testing.T) {
 	if request.NodeID != "node-2" {
 		t.Fatalf("NodeID = %q, want %q", request.NodeID, "node-2")
 	}
-	if request.Kind != workspace.KindWorktree {
-		t.Fatalf("Kind = %q, want %q", request.Kind, workspace.KindWorktree)
+	if request.Kind != string(workspace.KindWorktree) {
+		t.Fatalf("Kind = %q, want %q", request.Kind, string(workspace.KindWorktree))
 	}
 	if request.Branch != "feature/test" {
 		t.Fatalf("Branch = %q, want %q", request.Branch, "feature/test")
@@ -73,7 +73,7 @@ func TestBuildWorkspaceCreateRPCRequest_RejectsPrimaryWorkspaceCreate(t *testing
 
 	cmd := newWorkspaceCreateTestCommand()
 	cmd.Flags().Set("project-id", "proj-1")
-	cmd.Flags().Set("kind", workspace.KindPrimary)
+	cmd.Flags().Set("kind", string(workspace.KindPrimary))
 
 	_, err := buildWorkspaceCreateRPCRequest(cmd)
 	want := "workspace create only supports worktree workspaces; create a new project to create a primary workspace"
@@ -172,7 +172,7 @@ func newWorkspaceCreateTestCommand() *cobra.Command {
 	addOrgIDFlag(cmd)
 	cmd.Flags().String("project-id", "", "")
 	cmd.Flags().String("local-path", "", "")
-	cmd.Flags().String("kind", workspace.KindWorktree, "")
+	cmd.Flags().String("kind", string(workspace.KindWorktree), "")
 	cmd.Flags().String("branch", "", "")
 	cmd.Flags().String("source-branch", "", "")
 	cmd.Flags().String("target-node", "", "")

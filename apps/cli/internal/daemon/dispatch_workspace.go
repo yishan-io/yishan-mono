@@ -177,7 +177,7 @@ func (h *JSONRPCHandler) closeWorkspaceLocally(ctx context.Context, req workspac
 	h.clearAgentUsage(req.WorkspaceID)
 
 	return map[string]any{
-		"workspace":   map[string]string{"id": req.WorkspaceID, "status": "closed"},
+		"workspace":   map[string]string{"id": req.WorkspaceID, "status": string(workspace.StatusClosed)},
 		"workspaceId": req.WorkspaceID,
 	}, nil
 }
@@ -190,7 +190,7 @@ func (h *JSONRPCHandler) markRemoteWorkspaceClosing(ctx context.Context, req wor
 	if strings.TrimSpace(req.OrganizationID) == "" || strings.TrimSpace(req.ProjectID) == "" {
 		return
 	}
-	h.closeRemoteWorkspaceRecord(ctx, req.OrganizationID, req.ProjectID, req.WorkspaceID, "closing")
+	h.closeRemoteWorkspaceRecord(ctx, req.OrganizationID, req.ProjectID, req.WorkspaceID, string(workspace.StatusClosing))
 }
 
 // revertRemoteWorkspaceClosing flips a remotely-closing record back to active

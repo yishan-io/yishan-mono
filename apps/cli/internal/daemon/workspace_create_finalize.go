@@ -34,7 +34,7 @@ func (h *JSONRPCHandler) persistPreparedWorkspace(ctx context.Context, prepared 
 		ProjectID:      registration.ProjectID,
 		NodeID:         registration.NodeID,
 		Kind:           registration.Kind,
-		Status:         "provisioning",
+		Status:         string(workspace.StatusProvisioning),
 		Branch:         optionalWorkspaceString(registration.Branch),
 		SourceBranch:   optionalWorkspaceString(registration.SourceBranch),
 		LocalPath:      "",
@@ -46,7 +46,7 @@ func (h *JSONRPCHandler) finalizePersistedWorkspace(ctx context.Context, prepare
 	if h.localDatabase == nil || prepared.registration == nil {
 		return nil
 	}
-	status := "active"
+	status := string(workspace.StatusActive)
 	state := created.State
 	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, created.ID, localdb.WorkspaceUpdate{
 		Status: &status, State: &state, LocalPath: &created.Path,
@@ -78,14 +78,14 @@ func (h *JSONRPCHandler) closePersistedWorkspace(ctx context.Context, workspaceI
 		return nil
 	}
 	workspaceStore := localdb.NewWorkspaceStore(h.localDatabase)
-	status := "closed"
+	status := string(workspace.StatusClosed)
 	if err := workspaceStore.Update(ctx, workspaceID, localdb.WorkspaceUpdate{Status: &status}); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
 	// Mirror the closed status on the remote record (best-effort). The local row
 	// still carries the org/project ids after the status update.
 	if record, err := workspaceStore.Get(ctx, workspaceID); err == nil {
-		h.closeRemoteWorkspaceRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID, "closed")
+		h.closeRemoteWorkspaceRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID, string(workspace.StatusClosed))
 	}
 	return nil
 }

@@ -94,14 +94,14 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 		// Folder workspaces are plain local directories that the desktop opens
 		// on demand (workspace.openProject). They are not git worktrees, so they
 		// must never be auto-opened here at daemon boot.
-		if storedWorkspace.Kind == KindFolder {
+		if storedWorkspace.Kind == string(KindFolder) {
 			continue
 		}
 		// A provisioning row has no worktree yet (create is in flight, or the
 		// daemon stopped mid-create): a missing path is expected then, not an
 		// error. Skip it so it is never opened and marked error/path-missing;
 		// the create goroutine (or a later recovery pass) owns it.
-		if storedWorkspace.Status == "provisioning" {
+		if storedWorkspace.Status == string(StatusProvisioning) {
 			continue
 		}
 		if err := m.hydrateWorkspace(storedWorkspace); err != nil {
@@ -227,7 +227,7 @@ func parsePersistedPullRequest(persistedPullRequest localdb.WorkspacePullRequest
 }
 
 func isLiveWorkspaceStatus(status string) bool {
-	return status == "active" || status == "provisioning"
+	return status == string(StatusActive) || status == string(StatusProvisioning)
 }
 
 type OpenRequest struct {

@@ -211,9 +211,9 @@ func init() {
 
 func validateWorkspaceKind(kind string) error {
 	switch strings.TrimSpace(kind) {
-	case workspace.KindWorktree:
+	case string(workspace.KindWorktree):
 		return nil
-	case workspace.KindPrimary:
+	case string(workspace.KindPrimary):
 		return fmt.Errorf("workspace create only supports worktree workspaces; create a new project to create a primary workspace")
 	default:
 		return fmt.Errorf("invalid kind %q: expected worktree", kind)

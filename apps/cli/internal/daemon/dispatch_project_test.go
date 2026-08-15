@@ -58,7 +58,7 @@ func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsS
 		OrganizationID: "org-1",
 		ProjectID:      "project-1",
 		NodeID:         "node-1",
-		Kind:           workspace.KindWorktree,
+		Kind:           string(workspace.KindWorktree),
 		Status:         "active",
 		Branch:         strPtr("feature-a"),
 		SourceBranch:   strPtr("main"),

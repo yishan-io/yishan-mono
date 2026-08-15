@@ -34,7 +34,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 
 	prepared := preparedWorkspaceCreate{registration: &WorkspaceCreation{
 		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
-		Kind: workspace.KindWorktree, Branch: "feature/local-db", SourceBranch: "main",
+		Kind: string(workspace.KindWorktree), Branch: "feature/local-db", SourceBranch: "main",
 	}}
 	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: "project-1", Path: t.TempDir(), State: workspace.WorkspaceStateActive}
 
@@ -467,7 +467,7 @@ func newCloseRoutingTestHandler(t *testing.T, workspaceNodeID string) *JSONRPCHa
 	}
 	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: workspaceNodeID,
-		Kind: workspace.KindWorktree, Status: "active", LocalPath: "/tmp/ws", State: "active",
+		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: "/tmp/ws", State: "active",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
@@ -553,7 +553,7 @@ func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegistered
 			NodeID:         "node-1",
 			OrganizationID: "org-1",
 			ProjectID:      "project-1",
-			Kind:           workspace.KindWorktree,
+			Kind:           string(workspace.KindWorktree),
 			Branch:         "feature-fail",
 			SourceBranch:   "main",
 		},

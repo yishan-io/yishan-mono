@@ -89,7 +89,7 @@ func TestPrepareWorkspaceCreate_RejectsPrimaryWorkspaceCreate(t *testing.T) {
 	_, err := handler.prepareWorkspaceCreate(context.Background(), workspaceCreateParams{
 		OrganizationID: "org-1",
 		ProjectID:      "proj-1",
-		Kind:           workspace.KindPrimary,
+		Kind:           string(workspace.KindPrimary),
 	})
 	want := "workspace create only supports worktree workspaces; create a new project to create a primary workspace"
 	if err == nil || err.Error() != want {
@@ -114,7 +114,7 @@ func TestPrepareWorktreeWorkspaceCreate_UsesPrimaryWorkspacePath(t *testing.T) {
 	plan, err := handler.prepareWorkspaceCreate(context.Background(), workspaceCreateParams{
 		OrganizationID: "org-1",
 		ProjectID:      "proj-1",
-		Kind:           workspace.KindWorktree,
+		Kind:           string(workspace.KindWorktree),
 		Branch:         "feature/test",
 		SourceBranch:   "main",
 	})
@@ -153,7 +153,7 @@ func TestPrepareWorktreeWorkspaceCreate_RemoteNodeReturnsRelayRequest(t *testing
 	plan, err := handler.prepareWorkspaceCreate(context.Background(), workspaceCreateParams{
 		OrganizationID: "org-1",
 		ProjectID:      "proj-1",
-		Kind:           workspace.KindWorktree,
+		Kind:           string(workspace.KindWorktree),
 		Branch:         "feature/test",
 		SourceBranch:   "main",
 		NodeID:         "node-remote",

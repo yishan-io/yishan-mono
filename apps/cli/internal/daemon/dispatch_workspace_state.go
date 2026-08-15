@@ -215,5 +215,5 @@ func (h *JSONRPCHandler) isFolderWorkspace(ctx context.Context, workspaceID stri
 	if err != nil {
 		return false
 	}
-	return row.Kind == workspace.KindFolder
+	return row.Kind == string(workspace.KindFolder)
 }
