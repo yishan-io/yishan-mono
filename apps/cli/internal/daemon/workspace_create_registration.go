@@ -51,5 +51,5 @@ func (h *JSONRPCHandler) closeRemoteWorkspaceRecordForRegistration(ctx context.C
 		return
 	}
 	registration := prepared.registration
-	h.closeRemoteWorkspaceRecord(ctx, registration.OrganizationID, registration.ProjectID, registration.ID)
+	h.closeRemoteWorkspaceRecord(ctx, registration.OrganizationID, registration.ProjectID, registration.ID, "closed")
 }

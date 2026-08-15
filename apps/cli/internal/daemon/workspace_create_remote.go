@@ -62,21 +62,28 @@ func (h *JSONRPCHandler) updateRemoteWorkspaceRecord(ctx context.Context, regist
 	}
 }
 
-// closeRemoteWorkspaceRecord marks the workspace record closed in the remote
-// API. Best-effort: failures are logged and the local record remains the source
-// of truth until the next remote→local cache sync reconciles the row.
-func (h *JSONRPCHandler) closeRemoteWorkspaceRecord(ctx context.Context, organizationID string, projectID string, workspaceID string) {
+// closeRemoteWorkspaceRecord marks the workspace record in the remote API.
+// Status "closing" is written before the local teardown starts so live lists
+// stop showing the workspace; "closed" is the terminal state written after
+// teardown succeeds. Best-effort: failures are logged and the local record
+// remains the source of truth until the next remote→local cache sync
+// reconciles the row.
+func (h *JSONRPCHandler) closeRemoteWorkspaceRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status string) {
 	if !remoteWorkspaceRecordsEnabled(h.runtime) {
 		return
 	}
 	if strings.TrimSpace(organizationID) == "" || strings.TrimSpace(projectID) == "" {
 		return
 	}
+	if status == "" {
+		status = "closed"
+	}
 	_, err := h.runtime.APIClient().CloseWorkspace(organizationID, projectID, api.CloseWorkspaceInput{
 		WorkspaceID:  workspaceID,
 		SourceNodeID: h.nodeID,
+		Status:       status,
 	})
 	if err != nil {
-		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("failed to close remote workspace record")
+		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("status", status).Msg("failed to close remote workspace record")
 	}
 }

@@ -215,7 +215,18 @@ function preservePendingWorkspaceDisplayMetadata(
     const hasPreviousPlaceholderPath = !previousPath;
     const hasHydratedPath = Boolean(hydratedPath);
     const isProvisioning = workspace.status === "provisioning" || previousWorkspace.status === "provisioning";
-    if (!hasPreviousPlaceholderPath && previousWorkspace.status === "active" && !hasHydratedPath) {
+    // A workspace that already completed locally (active + real worktree path)
+    // must never be downgraded back to provisioning by a weaker same-id
+    // snapshot. The daemon overlays the host-local runtime path onto the remote
+    // record, so a stale remote status (PATCH failed / never ran) arrives as
+    // `provisioning` WITH a real localPath — the path check alone is not enough.
+    const previousWorkspaceCompleted = previousWorkspace.status === "active" && Boolean(previousPath);
+    const snapshotPathMatchesCompleted = hasHydratedPath && hydratedPath === previousPath;
+    if (
+      previousWorkspaceCompleted &&
+      workspace.status === "provisioning" &&
+      (!hasHydratedPath || snapshotPathMatchesCompleted)
+    ) {
       return {
         ...workspace,
         name: previousWorkspace.name,
@@ -299,6 +310,12 @@ function mapApiData(
       const parentId = workspace.projectId ?? "";
       return projectIdSet.has(parentId);
     })
+    // Closed rows are tombstones, not live workspaces: the remote list already
+    // excludes them, and the only way one reaches the renderer is the daemon's
+    // local-status overlay (a workspace closed on this host whose remote record
+    // is still stale-active because the close PATCH failed or lagged). Re-adding
+    // it resurrects a workspace the user just deleted.
+    .filter((workspace) => workspace.status !== "closed")
     .map((workspace) => {
       const displayMetadata = resolveHydratedWorkspaceDisplayMetadata(workspace);
       return {

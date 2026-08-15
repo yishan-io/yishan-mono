@@ -65,6 +65,8 @@ type CloseWorkspaceInput = {
   organizationId: string;
   actorUserId: string;
   projectId: string;
+  /** "closing" marks the record before local teardown; "closed" is terminal. Defaults to "closed". */
+  status?: WorkspaceStatus;
 };
 
 export type CloseWorkspaceResult = {
@@ -258,6 +260,8 @@ export class WorkspaceService {
   async closeWorkspace(input: CloseWorkspaceInput): Promise<CloseWorkspaceResult> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
+    const targetStatus = input.status ?? "closed";
+
     const existingRows = await this.db
       .select()
       .from(workspaces)
@@ -282,23 +286,27 @@ export class WorkspaceService {
       throw new PrimaryWorkspaceCloseNotAllowedError(input.workspaceId);
     }
 
-    if (existing.status === "closed") {
+    if (existing.status === targetStatus) {
       return {
         workspace: { ...existing, latestPullRequest: null },
         changed: false,
       };
     }
 
+    // "closing" is marked from a live status; the terminal "closed" may also
+    // transition from "closing" (teardown finished).
+    const sourceStatuses: WorkspaceStatus[] =
+      targetStatus === "closed" ? ["active", "provisioning", "closing"] : ["active", "provisioning"];
     const rows = await this.db
       .update(workspaces)
-      .set({ status: "closed", updatedAt: new Date() })
+      .set({ status: targetStatus, updatedAt: new Date() })
       .where(
         and(
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
           eq(workspaces.id, input.workspaceId),
-          inArray(workspaces.status, ["active", "provisioning"]),
+          inArray(workspaces.status, sourceStatuses),
         ),
       )
       .returning();
@@ -352,7 +360,9 @@ export class WorkspaceService {
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
-          eq(workspaces.status, "provisioning"),
+          // "closing" is included so a failed close can revert the record to
+          // active (the daemon re-activates after a teardown failure).
+          inArray(workspaces.status, ["provisioning", "closing"]),
         ),
       )
       .returning();

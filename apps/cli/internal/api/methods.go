@@ -44,6 +44,9 @@ type UpdateWorkspaceInput struct {
 type CloseWorkspaceInput struct {
 	WorkspaceID  string
 	SourceNodeID string
+	// Status marks the remote record: "closing" (before local teardown) or
+	// "closed" (terminal, after cleanup). Empty defaults to "closed" server-side.
+	Status string
 }
 
 func (c *Client) Health() (HealthResponse, error) {
@@ -337,6 +340,9 @@ func (c *Client) CloseWorkspace(orgID string, projectID string, input CloseWorks
 	}
 	if input.SourceNodeID != "" {
 		payload["sourceNodeId"] = input.SourceNodeID
+	}
+	if input.Status != "" {
+		payload["status"] = input.Status
 	}
 
 	var response CreateWorkspaceResponse
