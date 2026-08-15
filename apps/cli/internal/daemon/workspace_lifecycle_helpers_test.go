@@ -39,9 +39,9 @@ import (
 	"github.com/gorilla/websocket"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
-	createflow "yishan/apps/cli/internal/workspace/createflow"
 )
 
 // lifecycleEventTopics are the workspace lifecycle events this suite records.
@@ -270,7 +270,7 @@ func wireRelayCapture(t *testing.T, h *JSONRPCHandler, result map[string]any) <-
 	return received
 }
 
-func decodeRelayCreateEnvelope(t *testing.T, msg map[string]any) createflow.RelayWorkspaceCreateEnvelope {
+func decodeRelayCreateEnvelope(t *testing.T, msg map[string]any) relay.CreateEnvelope {
 	t.Helper()
 	params, ok := msg["params"].(map[string]any)
 	if !ok {
@@ -280,7 +280,7 @@ func decodeRelayCreateEnvelope(t *testing.T, msg map[string]any) createflow.Rela
 	if err != nil {
 		t.Fatalf("marshal relay params: %v", err)
 	}
-	var envelope createflow.RelayWorkspaceCreateEnvelope
+	var envelope relay.CreateEnvelope
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		t.Fatalf("decode relay create envelope: %v", err)
 	}

@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
+	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/workspace"
-	createflow "yishan/apps/cli/internal/workspace/createflow"
 
 	"github.com/rs/zerolog/log"
 )
 
 func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams, started workspaceCreateStartedEvent) error {
-	payload := createflow.BuildRelayRequestEnvelope(req, h.nodeID, started)
+	payload := relay.BuildCreateRequest(req, h.nodeID, started)
 	return h.sendRelayDispatchRequest(payload, strings.TrimSpace(req.NodeID))
 }
 
@@ -20,7 +20,7 @@ func (h *JSONRPCHandler) relayWorkspaceCreateProgress(prepared preparedWorkspace
 	if strings.TrimSpace(prepared.RelayReplyNodeID) == "" {
 		return
 	}
-	payload := createflow.BuildRelayProgressEnvelope(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, event)
+	payload := relay.BuildCreateProgress(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, event)
 	if err := h.sendWorkspaceSnapshotRelayNotification(payload); err != nil {
 		log.Warn().Err(err).Str("workspaceId", prepared.WorkspaceID).Msg("relay workspace create progress failed")
 	}
@@ -30,7 +30,7 @@ func (h *JSONRPCHandler) relayWorkspaceCreateCompleted(prepared preparedWorkspac
 	if strings.TrimSpace(prepared.RelayReplyNodeID) == "" {
 		return
 	}
-	payload := createflow.BuildRelayCompletedEnvelope(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, completed)
+	payload := relay.BuildCreateCompleted(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, completed)
 	if err := h.sendWorkspaceSnapshotRelayNotification(payload); err != nil {
 		log.Warn().Err(err).Str("workspaceId", prepared.WorkspaceID).Msg("relay workspace create completed failed")
 	}
@@ -40,7 +40,7 @@ func (h *JSONRPCHandler) relayWorkspaceCreateFailed(prepared preparedWorkspaceCr
 	if strings.TrimSpace(prepared.RelayReplyNodeID) == "" {
 		return
 	}
-	payload := createflow.BuildRelayFailedEnvelope(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, failed)
+	payload := relay.BuildCreateFailed(prepared.WorkspaceID, prepared.OrganizationID, prepared.ProjectID, h.nodeID, prepared.RelayReplyNodeID, failed)
 	if err := h.sendWorkspaceSnapshotRelayNotification(payload); err != nil {
 		log.Warn().Err(err).Str("workspaceId", prepared.WorkspaceID).Msg("relay workspace create failed relay failed")
 	}
@@ -74,7 +74,7 @@ func (h *JSONRPCHandler) handleRelayedWorkspaceCreate(payload relayWorkspaceCrea
 }
 
 func (h *JSONRPCHandler) republishRelayedWorkspaceCreate(payload relayWorkspaceCreateEnvelope) {
-	if event, ok := createflow.RepublishedRelayCreateEvent(payload, h.nodeID); ok {
+	if event, ok := relay.RepublishedCreateEvent(payload, h.nodeID); ok {
 		h.events.Publish(*event)
 	}
 }

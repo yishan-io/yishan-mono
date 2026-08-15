@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -27,30 +28,15 @@ func (h *JSONRPCHandler) persistPreparedWorkspace(ctx context.Context, prepared 
 	if h.localDatabase == nil || prepared.Registration == nil {
 		return nil
 	}
-	registration := prepared.Registration
-	return localdb.NewWorkspaceStore(h.localDatabase).Create(ctx, &localdb.Workspace{
-		ID:             registration.ID,
-		OrganizationID: registration.OrganizationID,
-		ProjectID:      registration.ProjectID,
-		NodeID:         registration.NodeID,
-		Kind:           string(registration.Kind),
-		Status:         string(workspace.StatusProvisioning),
-		Branch:         optionalWorkspaceString(registration.Branch),
-		SourceBranch:   optionalWorkspaceString(registration.SourceBranch),
-		LocalPath:      "",
-		State:          workspace.WorkspaceStateActive,
-	})
+	row := dbconv.ProvisioningRow(*prepared.Registration)
+	return localdb.NewWorkspaceStore(h.localDatabase).Create(ctx, &row)
 }
 
 func (h *JSONRPCHandler) finalizePersistedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace) error {
 	if h.localDatabase == nil || prepared.Registration == nil {
 		return nil
 	}
-	status := string(workspace.StatusActive)
-	state := created.State
-	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, created.ID, localdb.WorkspaceUpdate{
-		Status: &status, State: &state, LocalPath: &created.Path,
-	})
+	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, created.ID, dbconv.ActiveUpdate(created))
 	// A relayed create runs on the executor node, which may not have a local row
 	// for the workspace (the origin node wrote it). Tolerate a missing row: the
 	// remote record is authoritative and the cache is reconciled on the next sync.
@@ -64,9 +50,7 @@ func (h *JSONRPCHandler) updatePersistedWorkspaceState(ctx context.Context, work
 	if h.localDatabase == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
-	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, workspaceID, localdb.WorkspaceUpdate{
-		State: &state, Health: &health,
-	})
+	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, workspaceID, dbconv.StateUpdate(state, health))
 	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
@@ -78,8 +62,7 @@ func (h *JSONRPCHandler) closePersistedWorkspace(ctx context.Context, workspaceI
 		return nil
 	}
 	workspaceStore := localdb.NewWorkspaceStore(h.localDatabase)
-	status := string(workspace.StatusClosed)
-	if err := workspaceStore.Update(ctx, workspaceID, localdb.WorkspaceUpdate{Status: &status}); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	if err := workspaceStore.Update(ctx, workspaceID, dbconv.StatusUpdate(string(workspace.StatusClosed))); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
 	// Mirror the closed status on the remote record (best-effort). The local row

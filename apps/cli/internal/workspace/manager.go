@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace/terminal"
 	"yishan/apps/cli/internal/worktree"
 )
@@ -55,7 +54,7 @@ type Manager struct {
 	instances InstanceRegistry
 	gits      *GitService
 	terminals *terminal.Manager
-	store     *localdb.WorkspaceStore
+	store     WorkspaceStore
 }
 
 func NewManager() *Manager {
@@ -63,7 +62,7 @@ func NewManager() *Manager {
 }
 
 // NewManagerWithStore creates a manager with optional durable workspace storage.
-func NewManagerWithStore(store *localdb.WorkspaceStore) *Manager {
+func NewManagerWithStore(store WorkspaceStore) *Manager {
 	return NewManagerWithRegistryAndStore(newMemoryRegistry(), store)
 }
 
@@ -75,7 +74,7 @@ func NewManagerWithRegistry(registry InstanceRegistry) *Manager {
 
 // NewManagerWithRegistryAndStore wires both the instance registry and durable
 // workspace storage.
-func NewManagerWithRegistryAndStore(registry InstanceRegistry, store *localdb.WorkspaceStore) *Manager {
+func NewManagerWithRegistryAndStore(registry InstanceRegistry, store WorkspaceStore) *Manager {
 	return &Manager{
 		instances: registry,
 		gits:      NewGitService(),
@@ -145,15 +144,15 @@ func (m *Manager) persistWorkspaceLifecycleState(ctx context.Context, workspaceI
 	if m.store == nil {
 		return
 	}
-	err := m.store.Update(ctx, workspaceID, localdb.WorkspaceUpdate{State: &state, Health: &health})
-	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	err := m.store.Update(ctx, workspaceID, StoredWorkspaceUpdate{State: &state, Health: &health})
+	if err != nil && !errors.Is(err, ErrWorkspaceNotFound) {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("failed to persist workspace lifecycle state")
 	}
 }
 
 // isPersistedNotWorktreeError reports whether the stored row carries a
 // previously-detected not-worktree error that must survive rehydration.
-func isPersistedNotWorktreeError(storedWorkspace localdb.Workspace) bool {
+func isPersistedNotWorktreeError(storedWorkspace StoredWorkspace) bool {
 	return storedWorkspace.State == WorkspaceStateError &&
 		storedWorkspace.Health != nil && *storedWorkspace.Health == WorkspaceHealthNotWorktree
 }
@@ -161,7 +160,7 @@ func isPersistedNotWorktreeError(storedWorkspace localdb.Workspace) bool {
 // registerErrorWorkspace registers or updates an in-memory workspace as error
 // with the given health detail. Used when a persisted workspace cannot be
 // opened (missing path) or must stay error (not-worktree).
-func (m *Manager) registerErrorWorkspace(storedWorkspace localdb.Workspace, health string) {
+func (m *Manager) registerErrorWorkspace(storedWorkspace StoredWorkspace, health string) {
 	ws, ok := m.instances.Get(storedWorkspace.ID)
 	if !ok {
 		ws = Workspace{
@@ -190,7 +189,7 @@ func canonicalizeWorkspacePath(path string) string {
 	return filepath.Clean(absolutePath)
 }
 
-func (m *Manager) hydrateWorkspace(storedWorkspace localdb.Workspace) error {
+func (m *Manager) hydrateWorkspace(storedWorkspace StoredWorkspace) error {
 	_, err := m.Open(OpenRequest{ID: storedWorkspace.ID, Path: storedWorkspace.LocalPath,
 		OrgID: storedWorkspace.OrganizationID, ProjectID: storedWorkspace.ProjectID})
 	if err != nil {
@@ -217,7 +216,7 @@ func (m *Manager) hydrateWorkspacePullRequest(ctx context.Context, workspaceID s
 	return nil
 }
 
-func parsePersistedPullRequest(persistedPullRequest localdb.WorkspacePullRequest) (*WorkspacePullRequest, error) {
+func parsePersistedPullRequest(persistedPullRequest StoredPullRequest) (*WorkspacePullRequest, error) {
 	pullRequest := &WorkspacePullRequest{}
 	if persistedPullRequest.Metadata != nil {
 		if err := json.Unmarshal([]byte(*persistedPullRequest.Metadata), pullRequest); err != nil {
@@ -417,7 +416,7 @@ func (m *Manager) PersistWorkspacePullRequest(ctx context.Context, workspaceID s
 	if err != nil {
 		return fmt.Errorf("marshal workspace pull request: %w", err)
 	}
-	return m.store.UpsertPR(ctx, &localdb.WorkspacePullRequest{
+	return m.store.UpsertPR(ctx, &StoredPullRequest{
 		WorkspaceID: workspaceID, OrganizationID: workspace.OrgID, PRID: fmt.Sprintf("%d", pullRequest.Number),
 		Title: optionalString(pullRequest.Title), URL: optionalString(pullRequest.URL), Branch: optionalString(pullRequest.Branch),
 		BaseBranch: optionalString(pullRequest.BaseBranch), State: persistedPullRequestState(pullRequest),

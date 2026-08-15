@@ -1,18 +1,20 @@
 package daemon
 
 import (
+	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/workspace/application"
 	createflow "yishan/apps/cli/internal/workspace/createflow"
 )
 
 const (
-	workspaceRelayChangeCreateRequest   = createflow.RelayChangeCreateRequest
-	workspaceRelayChangeCreateProgress  = createflow.RelayChangeCreateProgress
-	workspaceRelayChangeCreateCompleted = createflow.RelayChangeCreateCompleted
-	workspaceRelayChangeCreateFailed    = createflow.RelayChangeCreateFailed
+	workspaceRelayChangeCreateRequest   = relay.ChangeCreateRequest
+	workspaceRelayChangeCreateProgress  = relay.ChangeCreateProgress
+	workspaceRelayChangeCreateCompleted = relay.ChangeCreateCompleted
+	workspaceRelayChangeCreateFailed    = relay.ChangeCreateFailed
+	relayChangeWorkspaceCloseRequest    = relay.ChangeCloseRequest
 )
 
-var decodeRelayWorkspaceCreateEnvelope = createflow.DecodeRelayWorkspaceCreateEnvelope
+var decodeRelayWorkspaceCreateEnvelope = relay.DecodeCreateEnvelope
 
 type workspaceCreateParams = createflow.WorkspaceCreateParams
 
@@ -29,4 +31,8 @@ type workspaceCreateStartedEvent = createflow.WorkspaceCreateStartedEvent
 
 type workspaceCreateFailedEvent = createflow.WorkspaceCreateFailedEvent
 
-type relayWorkspaceCreateEnvelope = createflow.RelayWorkspaceCreateEnvelope
+type relayWorkspaceCreateEnvelope = relay.CreateEnvelope
+
+type relayWorkspaceCloseEnvelope = relay.CloseEnvelope
+
+var decodeRelayWorkspaceCloseEnvelope = relay.DecodeCloseEnvelope

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/workspace"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
@@ -192,7 +193,7 @@ func TestJSONRPCHandler_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspa
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(workspaceStore)
+	manager := workspace.NewManagerWithStore(dbconv.NewStore(workspaceStore))
 	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
 	defer handler.Shutdown()
 

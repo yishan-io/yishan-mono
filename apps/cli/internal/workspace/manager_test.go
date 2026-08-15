@@ -34,7 +34,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 		t.Fatalf("create pull request: %v", err)
 	}
 
-	manager := NewManagerWithStore(workspaceStore)
+	manager := NewManagerWithStore(newTestManagerStore(workspaceStore))
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
@@ -175,7 +175,7 @@ func openTestManagerStore(t *testing.T) (*Manager, *localdb.WorkspaceStore) {
 		t.Fatalf("migrate database: %v", err)
 	}
 	store := localdb.NewWorkspaceStore(database)
-	return NewManagerWithStore(store), store
+	return NewManagerWithStore(newTestManagerStore(store)), store
 }
 
 func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
@@ -364,4 +364,69 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 	if persisted.State != WorkspaceStateError || persisted.Health == nil || *persisted.Health != WorkspaceHealthNotWorktree {
 		t.Fatalf("expected persisted error/not-worktree, got state=%q health=%v", persisted.State, persisted.Health)
 	}
+}
+
+// testManagerStore adapts the real SQLite store to the workspace.WorkspaceStore
+// interface for workspace-package tests (the package cannot import dbconv
+// without an import cycle).
+type testManagerStore struct {
+	raw *localdb.WorkspaceStore
+}
+
+func newTestManagerStore(raw *localdb.WorkspaceStore) *testManagerStore {
+	return &testManagerStore{raw: raw}
+}
+
+func (s *testManagerStore) List(ctx context.Context) ([]StoredWorkspace, error) {
+	rows, err := s.raw.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]StoredWorkspace, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, StoredWorkspace{
+			ID: row.ID, OrganizationID: row.OrganizationID, ProjectID: row.ProjectID,
+			NodeID: row.NodeID, Kind: row.Kind, Status: row.Status,
+			Branch: row.Branch, SourceBranch: row.SourceBranch,
+			LocalPath: row.LocalPath, State: row.State, Health: row.Health,
+		})
+	}
+	return out, nil
+}
+
+func (s *testManagerStore) Update(ctx context.Context, workspaceID string, update StoredWorkspaceUpdate) error {
+	return s.raw.Update(ctx, workspaceID, localdb.WorkspaceUpdate{
+		Status: update.Status, State: update.State, Health: update.Health,
+		LocalPath: update.LocalPath, Branch: update.Branch,
+	})
+}
+
+func (s *testManagerStore) ListPRsByWorkspace(ctx context.Context, workspaceID string) ([]StoredPullRequest, error) {
+	rows, err := s.raw.ListPRsByWorkspace(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]StoredPullRequest, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, StoredPullRequest{
+			ID: row.ID, WorkspaceID: row.WorkspaceID, OrganizationID: row.OrganizationID,
+			PRID: row.PRID, Title: row.Title, URL: row.URL, Branch: row.Branch,
+			BaseBranch: row.BaseBranch, State: row.State, Metadata: row.Metadata,
+			DetectedAt: row.DetectedAt, ResolvedAt: row.ResolvedAt,
+		})
+	}
+	return out, nil
+}
+
+func (s *testManagerStore) UpsertPR(ctx context.Context, pr *StoredPullRequest) error {
+	return s.raw.UpsertPR(ctx, &localdb.WorkspacePullRequest{
+		ID: pr.ID, WorkspaceID: pr.WorkspaceID, OrganizationID: pr.OrganizationID,
+		PRID: pr.PRID, Title: pr.Title, URL: pr.URL, Branch: pr.Branch,
+		BaseBranch: pr.BaseBranch, State: pr.State, Metadata: pr.Metadata,
+		DetectedAt: pr.DetectedAt, ResolvedAt: pr.ResolvedAt,
+	})
+}
+
+func (s *testManagerStore) ResolvePR(ctx context.Context, workspaceID string, pullRequestID string) error {
+	return s.raw.ResolvePR(ctx, workspaceID, pullRequestID)
 }

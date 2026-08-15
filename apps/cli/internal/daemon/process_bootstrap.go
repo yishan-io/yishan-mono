@@ -17,6 +17,7 @@ import (
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -150,7 +151,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 // (e.g. the token-usage pricing cache).
 func buildAccountScopedHandler(database *sql.DB, envDir string, dataDir string, cfg RunConfig, runtime *cliruntime.Runtime, daemonID string) (*workspace.Manager, *JSONRPCHandler, error) {
 	registry := instance.NewRegistry(workspace.NewFileService())
-	workspaceManager := workspace.NewManagerWithRegistryAndStore(registry, localdb.NewWorkspaceStore(database))
+	workspaceManager := workspace.NewManagerWithRegistryAndStore(registry, dbconv.NewStore(localdb.NewWorkspaceStore(database)))
 	legacyCleanupPath := filepath.Join(dataDir, workspaceCleanupFileName)
 	cleanupStore, err := newWorkspaceCleanupStore(database, legacyCleanupPath)
 	if err != nil {

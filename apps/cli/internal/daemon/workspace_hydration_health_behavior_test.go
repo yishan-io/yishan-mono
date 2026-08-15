@@ -9,6 +9,7 @@ import (
 	"time"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 )
@@ -27,7 +28,7 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(store)
+	manager := workspace.NewManagerWithStore(dbconv.NewStore(store))
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(store)
+	manager := workspace.NewManagerWithStore(dbconv.NewStore(store))
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}

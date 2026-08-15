@@ -12,9 +12,9 @@ import (
 
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
-	createflow "yishan/apps/cli/internal/workspace/createflow"
 	"yishan/apps/cli/internal/worktree"
 )
 
@@ -158,8 +158,8 @@ func TestCreateRemoteNode_EventSequence(t *testing.T) {
 	events := collectUntil(t, eventCh, "workspaceCreateStarted", 5*time.Second)
 
 	envelope := decodeRelayCreateEnvelope(t, relayMsg)
-	if envelope.Change != createflow.RelayChangeCreateRequest {
-		t.Fatalf("relay change = %q, want %q", envelope.Change, createflow.RelayChangeCreateRequest)
+	if envelope.Change != relay.ChangeCreateRequest {
+		t.Fatalf("relay change = %q, want %q", envelope.Change, relay.ChangeCreateRequest)
 	}
 	if envelope.TargetNodeID != "node-2" || envelope.SourceNodeID != "node-1" {
 		t.Fatalf("relay envelope = %#v, want target node-2 source node-1", envelope)
