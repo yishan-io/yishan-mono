@@ -1,8 +1,9 @@
-package workspace
+package git
 
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -895,4 +896,22 @@ func TestListCommitsToTargetFileStatus(t *testing.T) {
 	if firstCommitStatusByPath["existing.txt"] != "D" {
 		t.Errorf("first commit: expected existing.txt status D, got %q", firstCommitStatusByPath["existing.txt"])
 	}
+}
+
+func initGitRepo(t *testing.T, root string) {
+	t.Helper()
+	runGit(t, root, "init")
+	runGit(t, root, "config", "user.name", "Test User")
+	runGit(t, root, "config", "user.email", "test@example.com")
+}
+
+func runGit(t *testing.T, root string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = root
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+	return string(out)
 }

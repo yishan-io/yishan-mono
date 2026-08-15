@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/terminal"
 )
 
 func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t *testing.T) {

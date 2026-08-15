@@ -2,8 +2,10 @@ package workspace
 
 import (
 	"os"
+
 	"path/filepath"
 	"testing"
+	"yishan/apps/cli/internal/gitexec"
 )
 
 func TestEnsureContextLink_CreatesSymlinkAndContextDir(t *testing.T) {
@@ -722,7 +724,7 @@ func TestEnsureGitExclude_NoOpOnSecondCall(t *testing.T) {
 
 func splitLines(s string) []string {
 	var lines []string
-	for _, line := range splitNonEmptyLines(s) {
+	for _, line := range gitexec.SplitNonEmptyLines(s) {
 		lines = append(lines, line)
 	}
 	return lines

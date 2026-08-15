@@ -19,7 +19,7 @@ import (
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
-	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 

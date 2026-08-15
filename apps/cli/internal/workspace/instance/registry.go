@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -14,13 +15,13 @@ import (
 type Registry struct {
 	mu        sync.RWMutex
 	instances map[string]workspace.Workspace
-	files     *workspace.FileService
+	files     *files.FileService
 	onRemoved func(workspaceID string, path string)
 }
 
 // NewRegistry creates an instance registry backed by the given file service
 // (shared path-keyed file cache).
-func NewRegistry(files *workspace.FileService) *Registry {
+func NewRegistry(files *files.FileService) *Registry {
 	return &Registry{
 		instances: make(map[string]workspace.Workspace),
 		files:     files,
@@ -154,7 +155,7 @@ func (r *Registry) InvalidateFileCache(worktreePath string, changedPaths []strin
 	r.files.InvalidateWorkspacePaths(worktreePath, changedPaths)
 }
 
-func (r *Registry) Files() *workspace.FileService {
+func (r *Registry) Files() *files.FileService {
 	return r.files
 }
 

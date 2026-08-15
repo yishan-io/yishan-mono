@@ -1,10 +1,12 @@
-package prtracker
+package pr
 
 import (
 	"context"
+
 	"strings"
 	"sync"
 	"time"
+	"yishan/apps/cli/internal/git"
 
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
@@ -35,10 +37,10 @@ type Tracker struct {
 	started              bool
 	done                 chan struct{}
 	onPullRequestUpdated func(PullRequestUpdatedEvent)
-	inspectResolver      func(context.Context, string) (workspace.GitInspectResult, error)
+	inspectResolver      func(context.Context, string) (git.GitInspectResult, error)
 	branchResolver       func(context.Context, string) (string, error)
-	prResolver           func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
-	detailResolver       func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
+	prResolver           func(context.Context, string, string) (git.GitBranchPullRequestStatus, error)
+	detailResolver       func(context.Context, string, string) (git.GitBranchPullRequestStatus, error)
 }
 
 func New(manager *workspace.Manager, runtime *cliruntime.Runtime, onPullRequestUpdated func(PullRequestUpdatedEvent)) *Tracker {
@@ -57,20 +59,20 @@ func New(manager *workspace.Manager, runtime *cliruntime.Runtime, onPullRequestU
 		}
 		return handle.GitCurrentBranch(ctx)
 	}
-	tracker.inspectResolver = func(ctx context.Context, root string) (workspace.GitInspectResult, error) {
+	tracker.inspectResolver = func(ctx context.Context, root string) (git.GitInspectResult, error) {
 		return manager.GitInspect(ctx, root)
 	}
-	tracker.prResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
+	tracker.prResolver = func(ctx context.Context, root string, branch string) (git.GitBranchPullRequestStatus, error) {
 		handle, ok := tracker.handleByPath(root)
 		if !ok {
-			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+			return git.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
 		return handle.GitBranchPullRequestLite(ctx, branch)
 	}
-	tracker.detailResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
+	tracker.detailResolver = func(ctx context.Context, root string, branch string) (git.GitBranchPullRequestStatus, error) {
 		handle, ok := tracker.handleByPath(root)
 		if !ok {
-			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+			return git.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
 		return handle.GitBranchPullRequestWithDetails(ctx, branch)
 	}
@@ -353,7 +355,7 @@ func prMeaningfullyChanged(prev, next *workspace.WorkspacePullRequest) bool {
 
 // checksEqual compares two check slices field-by-field.
 // Length-first comparison short-circuits the common case of different counts.
-func checksEqual(a, b []workspace.GitPullRequestCheck) bool {
+func checksEqual(a, b []git.GitPullRequestCheck) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -371,7 +373,7 @@ func checksEqual(a, b []workspace.GitPullRequestCheck) bool {
 
 // deploymentsEqual compares two deployment slices field-by-field.
 // Length-first comparison short-circuits the common case of different counts.
-func deploymentsEqual(a, b []workspace.GitPullRequestDeployment) bool {
+func deploymentsEqual(a, b []git.GitPullRequestDeployment) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -391,7 +393,7 @@ func nowRFC3339Nano() string {
 	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
-func normalizeWorkspacePullRequestStatus(pr workspace.GitBranchPullRequestStatus) string {
+func normalizeWorkspacePullRequestStatus(pr git.GitBranchPullRequestStatus) string {
 	state := strings.ToUpper(strings.TrimSpace(pr.State))
 	if state == "MERGED" || strings.TrimSpace(pr.MergedAt) != "" {
 		return "merged"

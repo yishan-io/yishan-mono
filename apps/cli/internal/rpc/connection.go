@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"yishan/apps/cli/internal/workspace/terminal"
+	"yishan/apps/cli/internal/terminal"
 )
 
 const (

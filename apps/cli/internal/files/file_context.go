@@ -1,4 +1,4 @@
-package workspace
+package files
 
 import (
 	"os"
@@ -156,3 +156,9 @@ func contextLinkFallbackEntry(linkPath string, cleanPath string) []FileEntry {
 		ModifiedAt: formatModifiedAt(info),
 	}}
 }
+
+// ContextLinkName is the symlink directory created inside each worktree that
+// points to the shared .my-context directory. It mirrors the workspace package
+// constant so the file service does not import the workspace domain (which
+// would create an import cycle through the instance registry).
+const ContextLinkName = ".my-context"

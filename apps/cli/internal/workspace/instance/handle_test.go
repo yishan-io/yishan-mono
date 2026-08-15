@@ -4,16 +4,18 @@ import (
 	"path/filepath"
 	"testing"
 
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/terminal"
 )
 
 func TestHandle_FileOperationsScopedToInstancePath(t *testing.T) {
 	root := t.TempDir()
 	handle := NewHandle(
 		workspace.Workspace{ID: "ws-1", Path: root},
-		workspace.NewFileService(),
-		workspace.NewGitService(),
+		files.NewFileService(),
+		git.NewGitService(),
 		terminal.NewManager(),
 	)
 
@@ -40,8 +42,8 @@ func TestHandle_FileOperationsScopedToInstancePath(t *testing.T) {
 func TestHandle_InstanceReturnsScopedWorkspace(t *testing.T) {
 	handle := NewHandle(
 		workspace.Workspace{ID: "ws-1", Path: "/tmp/ws", ProjectID: "project-1"},
-		workspace.NewFileService(),
-		workspace.NewGitService(),
+		files.NewFileService(),
+		git.NewGitService(),
 		terminal.NewManager(),
 	)
 	inst := handle.Instance()

@@ -2,9 +2,11 @@ package node
 
 import (
 	"context"
+
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"yishan/apps/cli/internal/files"
 
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
@@ -19,7 +21,7 @@ import (
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
-	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 
 	"github.com/rs/zerolog/log"
@@ -87,7 +89,7 @@ type App struct {
 // context store → token usage → computer (+ settings) → memory → hydrate →
 // watch → background tasks.
 func Bootstrap(cfg Config) (*App, error) {
-	registry := instance.NewRegistry(workspace.NewFileService())
+	registry := instance.NewRegistry(files.NewFileService())
 	manager := workspace.NewManagerWithRegistryAndStore(registry, dbconv.NewStore(localdb.NewWorkspaceStore(cfg.Database)))
 
 	legacyCleanupPath := filepath.Join(cfg.DataDir, cleanupFileName)

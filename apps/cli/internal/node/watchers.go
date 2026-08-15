@@ -2,7 +2,7 @@ package node
 
 import (
 	internalevents "yishan/apps/cli/internal/events"
-	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 

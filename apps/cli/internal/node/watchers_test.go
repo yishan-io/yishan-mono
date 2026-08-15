@@ -12,7 +12,7 @@ import (
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
-	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 

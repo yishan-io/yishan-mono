@@ -1,6 +1,6 @@
 package workspace
 
-import "yishan/apps/cli/internal/workspace/terminal"
+import "yishan/apps/cli/internal/terminal"
 
 type TerminalStartRequest = terminal.StartRequest
 type TerminalStartResponse = terminal.StartResponse

@@ -7,8 +7,8 @@ import (
 
 	agentcmd "yishan/apps/cli/internal/agent/command"
 	agentmanager "yishan/apps/cli/internal/agent/process"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/terminal"
 
 	"github.com/rs/zerolog/log"
 )

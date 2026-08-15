@@ -10,8 +10,8 @@ import (
 	"yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/rpc"
+	terminalruntime "yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	terminalruntime "yishan/apps/cli/internal/workspace/terminal"
 
 	"github.com/rs/zerolog/log"
 )

@@ -1,4 +1,4 @@
-package prtracker
+package pr
 
 import (
 	"context"

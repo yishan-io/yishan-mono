@@ -1,4 +1,4 @@
-package prtracker
+package pr
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -20,8 +21,8 @@ func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
 	}
-	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
-		return workspace.GitBranchPullRequestStatus{
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
+		return git.GitBranchPullRequestStatus{
 			Found:          true,
 			Number:         42,
 			Title:          "Add tracker",
@@ -57,8 +58,8 @@ func TestWorkspacePRTracker_StopsTrackingMergedPullRequest(t *testing.T) {
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
 	}
-	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
-		return workspace.GitBranchPullRequestStatus{
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
+		return git.GitBranchPullRequestStatus{
 			Found:       true,
 			Number:      99,
 			Title:       "Merged PR",
@@ -94,8 +95,8 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
 	}
-	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
-		return workspace.GitBranchPullRequestStatus{Found: false}, nil
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
+		return git.GitBranchPullRequestStatus{Found: false}, nil
 	}
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
@@ -123,8 +124,8 @@ func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T)
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
 	}
-	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
-		return workspace.GitBranchPullRequestStatus{}, errors.New("none of the git remotes configured for this repository point to a known GitHub host. To tell gh about a new GitHub host, please use `gh auth login`")
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
+		return git.GitBranchPullRequestStatus{}, errors.New("none of the git remotes configured for this repository point to a known GitHub host. To tell gh about a new GitHub host, please use `gh auth login`")
 	}
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
@@ -151,11 +152,11 @@ func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 	var resolverCalls atomic.Int32
 	started := make(chan struct{}, 1)
 	release := make(chan struct{})
-	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
 		resolverCalls.Add(1)
 		started <- struct{}{}
 		<-release
-		return workspace.GitBranchPullRequestStatus{Found: false}, nil
+		return git.GitBranchPullRequestStatus{Found: false}, nil
 	}
 
 	// Start goroutine 1 and wait until it is inside detailResolver so that
@@ -214,8 +215,8 @@ func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing
 func TestWorkspacePRTracker_EnsureTrackedSkipsUnsupportedProvider(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
 	tracker := New(manager, nil, nil)
-	tracker.inspectResolver = func(context.Context, string) (workspace.GitInspectResult, error) {
-		return workspace.GitInspectResult{
+	tracker.inspectResolver = func(context.Context, string) (git.GitInspectResult, error) {
+		return git.GitInspectResult{
 			IsGitRepository: true,
 			RemoteURL:       "git@bitbucket.org:acme/repo.git",
 			CurrentBranch:   "feature/test",
@@ -237,8 +238,8 @@ func TestWorkspacePRTracker_EnsureTrackedSkipsUnsupportedProvider(t *testing.T) 
 func TestWorkspacePRTracker_EnsureTrackedSkipsWorkspaceWithoutRemote(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
 	tracker := New(manager, nil, nil)
-	tracker.inspectResolver = func(context.Context, string) (workspace.GitInspectResult, error) {
-		return workspace.GitInspectResult{
+	tracker.inspectResolver = func(context.Context, string) (git.GitInspectResult, error) {
+		return git.GitInspectResult{
 			IsGitRepository: true,
 			CurrentBranch:   "feature/test",
 		}, nil
@@ -265,8 +266,8 @@ func TestWorkspacePRTracker_PublishesTypedUpdateOnMeaningfulChange(t *testing.T)
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
 	}
-	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
-		return workspace.GitBranchPullRequestStatus{
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
+		return git.GitBranchPullRequestStatus{
 			Found:       true,
 			Number:      42,
 			Title:       "Add tracker",

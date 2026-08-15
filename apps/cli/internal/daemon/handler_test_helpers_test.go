@@ -16,7 +16,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
-	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 )
 
 // newTestJSONRPCHandler builds a handler around a composed test node app,
