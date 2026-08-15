@@ -58,6 +58,10 @@ export const createWorkspaceBodySchema = z.object({
 export const closeWorkspaceBodySchema = z.object({
   workspaceId: nonEmptyStringSchema,
   sourceNodeId: nonEmptyStringSchema.optional(),
+  // "closing" marks the remote record before the executor tears the worktree
+  // down (so live lists stop showing it); "closed" is the terminal state set
+  // after cleanup succeeds. Defaults to "closed" for backward compatibility.
+  status: z.enum(["closing", "closed"]).optional(),
 });
 
 export const updateWorkspaceParamsSchema = z.object({

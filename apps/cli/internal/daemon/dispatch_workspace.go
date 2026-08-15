@@ -118,6 +118,13 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 func (h *JSONRPCHandler) closeWorkspaceLocally(ctx context.Context, req workspaceCloseParams) (any, error) {
 	h.manager.SetWorkspaceState(req.WorkspaceID, workspace.WorkspaceStateClosing, "")
 
+	// Mark the remote record "closing" BEFORE the (potentially slow) local
+	// teardown so live workspace lists stop showing the workspace immediately.
+	// Otherwise a snapshot reload during cleanup resurrects it from the still
+	// active remote record. Best-effort: when the write fails the local record
+	// stays authoritative and the close proceeds as before.
+	h.markRemoteWorkspaceClosing(ctx, req)
+
 	if h.tokenUsage != nil {
 		h.tokenUsage.SyncNow("close")
 	}
@@ -154,6 +161,9 @@ func (h *JSONRPCHandler) closeWorkspaceLocally(ctx context.Context, req workspac
 				return nil, err
 			}
 		}
+		// Teardown failed: revert the remote record so the workspace is not left
+		// hidden behind the closing tombstone. Best-effort.
+		h.revertRemoteWorkspaceClosing(ctx, req, ws, wsErr)
 		return nil, err
 	}
 	if h.cleanupStore != nil {
@@ -170,4 +180,41 @@ func (h *JSONRPCHandler) closeWorkspaceLocally(ctx context.Context, req workspac
 		"workspace":   map[string]string{"id": req.WorkspaceID, "status": "closed"},
 		"workspaceId": req.WorkspaceID,
 	}, nil
+}
+
+// markRemoteWorkspaceClosing writes the "closing" status to the remote record
+// before the local teardown starts. Best-effort: skipped when org/project ids
+// are missing (relayed closes carry them; a missing id means no remote record
+// to mark) or when the write fails.
+func (h *JSONRPCHandler) markRemoteWorkspaceClosing(ctx context.Context, req workspaceCloseParams) {
+	if strings.TrimSpace(req.OrganizationID) == "" || strings.TrimSpace(req.ProjectID) == "" {
+		return
+	}
+	h.closeRemoteWorkspaceRecord(ctx, req.OrganizationID, req.ProjectID, req.WorkspaceID, "closing")
+}
+
+// revertRemoteWorkspaceClosing flips a remotely-closing record back to active
+// after a failed teardown, so the workspace stays visible. The worktree path is
+// taken from the manager first, then the local DB row. Best-effort.
+func (h *JSONRPCHandler) revertRemoteWorkspaceClosing(ctx context.Context, req workspaceCloseParams, ws workspace.Workspace, wsErr error) {
+	if !remoteWorkspaceRecordsEnabled(h.runtime) {
+		return
+	}
+	if strings.TrimSpace(req.OrganizationID) == "" || strings.TrimSpace(req.ProjectID) == "" {
+		return
+	}
+	path := strings.TrimSpace(ws.Path)
+	if path == "" && h.localDatabase != nil {
+		if record, err := localdb.NewWorkspaceStore(h.localDatabase).Get(ctx, req.WorkspaceID); err == nil {
+			path = strings.TrimSpace(record.LocalPath)
+		}
+	}
+	if path == "" {
+		return
+	}
+	h.updateRemoteWorkspaceRecord(ctx, WorkspaceCreation{
+		ID:             req.WorkspaceID,
+		OrganizationID: req.OrganizationID,
+		ProjectID:      req.ProjectID,
+	}, path)
 }

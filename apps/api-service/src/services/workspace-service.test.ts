@@ -515,4 +515,67 @@ describe("WorkspaceService.closeWorkspace", () => {
       }),
     ).rejects.toBeInstanceOf(WorkspaceNotFoundError);
   });
+
+  it("marks an active workspace closing before teardown when status closing is requested", async () => {
+    const closingRow = {
+      ...WORKSPACE_ROW,
+      kind: "worktree" as const,
+      status: "closing" as const,
+    };
+    const { db, updateWhere } = makeCloseDb({
+      existingRows: [WORKTREE_ACTIVE_ROW],
+      updatedRows: [closingRow],
+    });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+      status: "closing",
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.workspace.status).toBe("closing");
+    expect(updateWhere).toHaveBeenCalledOnce();
+  });
+
+  it("transitions a closing workspace to closed for the terminal phase", async () => {
+    const { db, updateWhere } = makeCloseDb({
+      existingRows: [{ ...WORKTREE_ACTIVE_ROW, status: "closing" as const }],
+      updatedRows: [WORKTREE_CLOSED_ROW],
+    });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+      status: "closed",
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.workspace.status).toBe("closed");
+    expect(updateWhere).toHaveBeenCalledOnce();
+  });
+
+  it("returns changed false when the workspace is already closing", async () => {
+    const { db } = makeCloseDb({
+      existingRows: [{ ...WORKTREE_ACTIVE_ROW, status: "closing" as const }],
+    });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+      status: "closing",
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.workspace.status).toBe("closing");
+  });
 });

@@ -126,6 +126,13 @@ func (h *JSONRPCHandler) listRemoteProjectsWithWorkspaces(ctx context.Context, o
 		for _, workspace := range project.Workspaces {
 			record := apiWorkspaceToLocalRecord(workspace)
 			if runtime, ok := runtimeByID[record.ID]; ok {
+				// The local row is the authoritative lifecycle for the host: the
+				// create flow flips it to active in finalizePersistedWorkspace
+				// before the remote PATCH is attempted, so overlaying Status here
+				// keeps the desktop from rendering a locally-completed workspace
+				// as still provisioning when the remote record is stale (PATCH
+				// failed or never ran).
+				record.Status = runtime.Status
 				record.State = runtime.State
 				record.Health = runtime.Health
 				record.LocalPath = runtime.LocalPath

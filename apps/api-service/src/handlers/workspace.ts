@@ -60,8 +60,12 @@ export async function closeWorkspaceHandler(
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     projectId: params.projectId,
+    status: body.status,
   });
-  if (closeResult.changed) {
+  // Only the terminal "closed" transition invalidates the workspace snapshot;
+  // the intermediate "closing" mark is a teardown signal, not a state change
+  // the desktop should reload for (the workspace was already removed locally).
+  if (closeResult.changed && (body.status ?? "closed") === "closed") {
     await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
       organizationId: params.orgId,
       resource: "workspace",

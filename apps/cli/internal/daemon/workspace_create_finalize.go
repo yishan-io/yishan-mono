@@ -85,7 +85,7 @@ func (h *JSONRPCHandler) closePersistedWorkspace(ctx context.Context, workspaceI
 	// Mirror the closed status on the remote record (best-effort). The local row
 	// still carries the org/project ids after the status update.
 	if record, err := workspaceStore.Get(ctx, workspaceID); err == nil {
-		h.closeRemoteWorkspaceRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID)
+		h.closeRemoteWorkspaceRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID, "closed")
 	}
 	return nil
 }
