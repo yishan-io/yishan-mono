@@ -13,6 +13,7 @@ type Workspace struct {
 	LocalPath      string  `json:"localPath"`
 	State          string  `json:"state"`
 	Health         *string `json:"health,omitempty"`
+	Name           *string `json:"name,omitempty"`
 	CreatedAt      string  `json:"createdAt"`
 	UpdatedAt      string  `json:"updatedAt"`
 }
@@ -42,4 +43,18 @@ type WorkspacePullRequest struct {
 	ResolvedAt     *string `json:"resolvedAt,omitempty"`
 	CreatedAt      string  `json:"createdAt"`
 	UpdatedAt      string  `json:"updatedAt"`
+}
+
+// FolderWorkspaceInput defines a local-only folder workspace that exists solely
+// in the daemon DB (project_id NULL, organization_id NULL).
+type FolderWorkspaceInput struct {
+	ID        string
+	LocalPath string
+	NodeID    string
+	Name      string
+}
+
+// stringPointer returns a pointer to value.
+func stringPointer(value string) *string {
+	return &value
 }

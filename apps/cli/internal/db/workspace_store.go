@@ -13,7 +13,7 @@ import (
 var ErrWorkspaceNotFound = errors.New("workspace not found")
 
 const workspaceColumns = `id, organization_id, project_id, node_id, kind, status, branch,
-	source_branch, local_path, state, health, created_at, updated_at`
+	source_branch, local_path, state, health, name, created_at, updated_at`
 const workspacePullRequestColumns = `id, workspace_id, organization_id, pr_id, title, url,
 	branch, base_branch, state, metadata, detected_at, resolved_at, created_at, updated_at`
 
@@ -33,14 +33,50 @@ func (store *WorkspaceStore) Create(ctx context.Context, workspace *Workspace) e
 		workspace.ID = uuid.NewString()
 	}
 	_, err := store.database.ExecContext(ctx, `INSERT INTO workspaces (`+workspaceColumns+`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
 		workspace.ID, workspace.OrganizationID, workspace.ProjectID, workspace.NodeID,
 		defaultWorkspaceKind(workspace.Kind), defaultWorkspaceStatus(workspace.Status), workspace.Branch,
-		workspace.SourceBranch, workspace.LocalPath, defaultWorkspaceState(workspace.State), workspace.Health)
+		workspace.SourceBranch, workspace.LocalPath, defaultWorkspaceState(workspace.State), workspace.Health,
+		workspace.Name)
 	if err != nil {
 		return fmt.Errorf("create workspace: %w", err)
 	}
 	return nil
+}
+
+// CreateFolder inserts a local-only folder workspace with NULL project_id and
+// organization_id. It never exists remotely and is keyed purely by its local
+// path and daemon node.
+func (store *WorkspaceStore) CreateFolder(ctx context.Context, input FolderWorkspaceInput) (Workspace, error) {
+	id := input.ID
+	if id == "" {
+		id = uuid.NewString()
+	}
+	var name any
+	if trimmedName := strings.TrimSpace(input.Name); trimmedName != "" {
+		name = trimmedName
+	}
+	_, err := store.database.ExecContext(ctx, `INSERT INTO workspaces
+		(id, organization_id, project_id, node_id, kind, status, branch, source_branch, local_path, state, health, name, created_at, updated_at)
+		VALUES (?, NULL, NULL, ?, 'folder', 'active', NULL, NULL, ?, 'active', NULL, ?, datetime('now'), datetime('now'))`,
+		id, input.NodeID, input.LocalPath, name)
+	if err != nil {
+		return Workspace{}, fmt.Errorf("create folder workspace: %w", err)
+	}
+	var createdName *string
+	if trimmedName := strings.TrimSpace(input.Name); trimmedName != "" {
+		createdName = stringPointer(trimmedName)
+	}
+	return Workspace{
+		ID: id, OrganizationID: "", ProjectID: "", NodeID: input.NodeID, Kind: "folder",
+		Status: "active", LocalPath: input.LocalPath, State: "active", Name: createdName,
+	}, nil
+}
+
+// ListFolders returns all local-only folder workspaces in creation order.
+func (store *WorkspaceStore) ListFolders(ctx context.Context) ([]Workspace, error) {
+	return store.list(ctx, `SELECT `+workspaceColumns+` FROM workspaces
+		WHERE project_id IS NULL AND kind = 'folder' ORDER BY created_at, id`)
 }
 
 // List returns all local workspaces in creation order.
@@ -167,11 +203,17 @@ func scanWorkspaces(rows *sql.Rows) ([]Workspace, error) {
 
 func scanWorkspace(scanner interface{ Scan(...any) error }) (Workspace, error) {
 	var workspace Workspace
-	err := scanner.Scan(&workspace.ID, &workspace.OrganizationID, &workspace.ProjectID, &workspace.NodeID,
+	var organizationID, projectID, name sql.NullString
+	err := scanner.Scan(&workspace.ID, &organizationID, &projectID, &workspace.NodeID,
 		&workspace.Kind, &workspace.Status, &workspace.Branch, &workspace.SourceBranch, &workspace.LocalPath,
-		&workspace.State, &workspace.Health, &workspace.CreatedAt, &workspace.UpdatedAt)
+		&workspace.State, &workspace.Health, &name, &workspace.CreatedAt, &workspace.UpdatedAt)
 	if err != nil {
 		return Workspace{}, err
+	}
+	workspace.OrganizationID = organizationID.String
+	workspace.ProjectID = projectID.String
+	if name.Valid {
+		workspace.Name = stringPointer(name.String)
 	}
 	return workspace, nil
 }
