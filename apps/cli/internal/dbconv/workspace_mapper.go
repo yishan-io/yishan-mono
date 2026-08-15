@@ -1,8 +1,8 @@
 // Package sqlite owns conversion between the local SQLite workspace row and
 // the workspace domain record. Created in Phase 1 of the CLI/daemon refactor
 // as the named mapper boundary; Phase 5 moves all remaining SQLite row
-// conversion (state/health updates, folder rows) into this adapter.
-package sqlite
+// conversion (state/health updates, folder rows) into this package.
+package dbconv
 
 import (
 	localdb "yishan/apps/cli/internal/db"

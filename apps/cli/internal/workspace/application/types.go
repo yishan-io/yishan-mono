@@ -1,5 +1,5 @@
 // Package application owns the workspace create/close orchestration. The
-// JSON-RPC handler is a compatibility adapter: it decodes input, calls one
+// JSON-RPC handler is a thin wrapper: it decodes input, calls one
 // Service method, and encodes output. Routing (local vs remote node) and
 // rollback policy live here; the daemon implements the ports with its existing
 // manager / API client / SQLite store / relay connection / event hub.

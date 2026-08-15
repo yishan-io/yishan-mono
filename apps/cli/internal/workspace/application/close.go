@@ -11,13 +11,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// CloseResult is the outcome of a workspace close, encoded by the RPC adapter
+// CloseResult is the outcome of a workspace close, encoded by the JSON-RPC handler
 // into the workspace.close result payload.
 type CloseResult struct {
 	WorkspaceID string
 	Status      string
 	// Relayed reports that the close was forwarded to the owning node; the
-	// adapter encodes a different result shape for relayed closes.
+	// Relayed marks that the handler must emit the relay result shape.
 	Relayed bool
 }
 

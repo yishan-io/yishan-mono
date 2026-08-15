@@ -8,7 +8,7 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// fakeEnvironment implements EnvironmentPort for prepare tests.
+// fakeEnvironment implements Environment for prepare tests.
 type fakeEnvironment struct {
 	apiConfigured bool
 	projects      []Project
@@ -35,7 +35,7 @@ func (f *fakeEnvironment) EnsureSharedRepoClone(_ context.Context, _ string, _ s
 	return f.clonePath, nil
 }
 
-func newPrepareTestService(env EnvironmentPort) *Service {
+func newPrepareTestService(env Environment) *Service {
 	if env == nil {
 		env = &fakeEnvironment{}
 	}

@@ -13,7 +13,7 @@ type Service struct {
 	deps Dependencies
 }
 
-// New wires a Service. The daemon provides the ports and hooks; tests provide
+// New wires a Service. The daemon provides the dependencies and hooks; tests provide
 // fakes for the same interfaces.
 func New(deps Dependencies) *Service {
 	return &Service{deps: deps}

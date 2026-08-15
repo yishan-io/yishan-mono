@@ -5,7 +5,7 @@ package workspace
 // must use them instead of lifecycle string literals. Transport structs
 // (JSON-RPC params, relay envelopes, API DTOs, SQLite rows) keep plain string
 // fields; conversion happens in named mapper functions (see
-// internal/adapters) so the domain stays free of transport imports.
+// internal/apiclient and internal/dbconv) so the domain stays free of transport imports.
 
 // ID is the canonical workspace identifier shared across the local SQLite
 // record, the cloud API record, and relay payloads.

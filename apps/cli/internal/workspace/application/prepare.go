@@ -174,7 +174,7 @@ func buildStartedEvent(command CreateCommand, nodeID string, branch string) Star
 	}
 }
 
-func resolveCreateNode(ctx context.Context, env EnvironmentPort, localNodeID string, organizationID string, requestedNodeID string) (string, error) {
+func resolveCreateNode(ctx context.Context, env Environment, localNodeID string, organizationID string, requestedNodeID string) (string, error) {
 	resolvedNodeID := strings.TrimSpace(requestedNodeID)
 	if resolvedNodeID == "" {
 		resolvedNodeID = strings.TrimSpace(localNodeID)
@@ -194,7 +194,7 @@ func resolveCreateNode(ctx context.Context, env EnvironmentPort, localNodeID str
 	return resolvedNodeID, nil
 }
 
-func ensureNodeUsableForWorkspace(env EnvironmentPort, organizationID string, nodeID string) error {
+func ensureNodeUsableForWorkspace(env Environment, organizationID string, nodeID string) error {
 	nodes, err := env.ListNodes(context.Background(), organizationID)
 	if err != nil {
 		return fmt.Errorf("load organization nodes: %w", err)
@@ -207,7 +207,7 @@ func ensureNodeUsableForWorkspace(env EnvironmentPort, organizationID string, no
 	return fmt.Errorf("node %s was not found in this organization", nodeID)
 }
 
-func loadProjectForCreate(env EnvironmentPort, organizationID string, projectID string) (Project, error) {
+func loadProjectForCreate(env Environment, organizationID string, projectID string) (Project, error) {
 	if !env.APIConfigured() {
 		return Project{}, fmt.Errorf("workspace creation requires an authenticated API session")
 	}
@@ -223,7 +223,7 @@ func loadProjectForCreate(env EnvironmentPort, organizationID string, projectID 
 	return Project{}, fmt.Errorf("project %s not found in organization %s", projectID, organizationID)
 }
 
-func resolveLocalCreateSourcePath(ctx context.Context, env EnvironmentPort, organizationID string, projectID string, nodeID string, project Project) (string, error) {
+func resolveLocalCreateSourcePath(ctx context.Context, env Environment, organizationID string, projectID string, nodeID string, project Project) (string, error) {
 	primary, err := resolvePrimaryWorkspaceForNode(env, organizationID, projectID, nodeID)
 	if err == nil {
 		return strings.TrimSpace(primary.LocalPath), nil
@@ -234,7 +234,7 @@ func resolveLocalCreateSourcePath(ctx context.Context, env EnvironmentPort, orga
 	return env.EnsureSharedRepoClone(ctx, project.RepoKey, project.RepoURL)
 }
 
-func resolvePrimaryWorkspaceForNode(env EnvironmentPort, organizationID string, projectID string, nodeID string) (workspace.Record, error) {
+func resolvePrimaryWorkspaceForNode(env Environment, organizationID string, projectID string, nodeID string) (workspace.Record, error) {
 	records, err := env.ListWorkspaces(context.Background(), organizationID, projectID)
 	if err != nil {
 		return workspace.Record{}, fmt.Errorf("load project workspaces: %w", err)

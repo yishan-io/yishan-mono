@@ -7,9 +7,11 @@ import (
 	"yishan/apps/cli/internal/workspace/instance"
 )
 
-// Ports are the application's dependencies. The daemon implements them with
-// its manager, API client, SQLite store, relay connection, and event hub;
-// the application package never imports daemon or transport types.
+// The interfaces in this file are the capabilities the Service needs from the
+// outside world. The daemon implements them with its manager, API client,
+// SQLite store, relay connection, and event hub; the application package never
+// imports daemon or transport types. They are injected via the constructor so
+// tests can substitute fakes.
 
 // Project is the domain-shaped project metadata needed for create routing
 // (a transport-free view of the api-service project record).
@@ -26,8 +28,8 @@ type Node struct {
 	ID string
 }
 
-// EnvironmentPort resolves projects, workspaces, and nodes from the cloud API.
-type EnvironmentPort interface {
+// Environment resolves projects, workspaces, and nodes from the cloud API.
+type Environment interface {
 	APIConfigured() bool
 	ListProjects(ctx context.Context, organizationID string) ([]Project, error)
 	ListWorkspaces(ctx context.Context, organizationID string, projectID string) ([]workspace.Record, error)
@@ -37,10 +39,10 @@ type EnvironmentPort interface {
 	EnsureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) (string, error)
 }
 
-// WorkspaceRecordPort owns workspace record persistence: the cloud API record
-// and the local SQLite row. Cloud writes are best-effort (failures are logged
-// by the implementation and the local record stays authoritative).
-type WorkspaceRecordPort interface {
+// WorkspaceRecords owns workspace record persistence: the cloud API record and
+// the local SQLite row. Cloud writes are best-effort (failures are logged by
+// the implementation and the local record stays authoritative).
+type WorkspaceRecords interface {
 	// CreateRemoteRecord writes the cloud record (provisioning) before the
 	// worktree is provisioned.
 	CreateRemoteRecord(ctx context.Context, registration Registration)
@@ -60,9 +62,9 @@ type WorkspaceRecordPort interface {
 	LocalRow(ctx context.Context, workspaceID string) (workspace.Record, bool)
 }
 
-// WorkspaceInstancePort owns the runtime instances of open workspaces (the
-// manager today, the instance registry in Phase 3).
-type WorkspaceInstancePort interface {
+// Instances owns the runtime instances of open workspaces (the manager today,
+// the instance registry in Phase 3).
+type Instances interface {
 	CreateWorkspaceWithProgress(ctx context.Context, req workspace.CreateRequest, report workspace.CreateProgressReporter) (workspace.Workspace, error)
 	CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error)
 	CloseWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error)
@@ -77,8 +79,8 @@ type WorkspaceInstancePort interface {
 	StopTracking(workspaceID string)
 }
 
-// RelayPort delivers workspace create/close envelopes to the relay.
-type RelayPort interface {
+// Relay delivers workspace create/close envelopes to the relay.
+type Relay interface {
 	// DispatchCreate sends a workspace.create.request envelope and waits for
 	// the routing verdict (rejected when the target node is offline).
 	DispatchCreate(ctx context.Context, plan CreatePlan, command CreateCommand) error
@@ -86,10 +88,10 @@ type RelayPort interface {
 	DispatchClose(ctx context.Context, command CloseCommand, targetNodeID string) error
 }
 
-// EventPort publishes frontend events and relays create progress/completion
-// back to the origin node. The CreateCompleted implementation stays daemon-side
+// Events publishes frontend events and relays create progress/completion back
+// to the origin node. The CreateCompleted implementation stays daemon-side
 // because task-run start needs the agent manager and desktop connection state.
-type EventPort interface {
+type Events interface {
 	Publish(topic string, payload any)
 	SnapshotChanged(organizationID string, projectID string, workspaceID string, change string)
 	CreateStarted(event StartedEvent)
@@ -105,11 +107,11 @@ type Dependencies struct {
 	NodeID string
 	Now    func() string
 
-	Environment EnvironmentPort
-	Records     WorkspaceRecordPort
-	Instances   WorkspaceInstancePort
-	Relay       RelayPort
-	Events      EventPort
+	Environment Environment
+	Records     WorkspaceRecords
+	Instances   Instances
+	Relay       Relay
+	Events      Events
 
 	// HookWarnings builds the lifecycle-script warnings for the completed
 	// event (daemon-side: needs the daemon log path).
