@@ -9,6 +9,7 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/contextstore"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/git"
@@ -306,7 +307,7 @@ func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 		Events:       events,
 		Watchers:     watchers,
 		PRTracker:    prTracker,
-		ContextStore: node.NewContextStore(""),
+		ContextStore: contextstore.NewStore(""),
 		NodeID:       "node-1",
 	})
 	app := &App{
@@ -317,7 +318,7 @@ func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 		events:       events,
 		watchers:     watchers,
 		prTracker:    prTracker,
-		contextStore: node.NewContextStore(""),
+		contextStore: contextstore.NewStore(""),
 		service:      service,
 		Runtime:      nil,
 		NodeID:       "node-1",

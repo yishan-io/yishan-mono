@@ -18,6 +18,7 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
+	"yishan/apps/cli/internal/contextstore"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
@@ -88,7 +89,7 @@ type App struct {
 	watchers     *workspacewatchers.Watchers
 	prTracker    *workspaceprtracker.Tracker
 	cleanupStore *node.CleanupStore
-	contextStore *node.ContextStore
+	contextStore *contextstore.Store
 	database     *sql.DB
 	Runtime      *cliruntime.Runtime
 	NodeID       string
@@ -181,7 +182,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	modelList := modellist.NewService()
 	agentMgr := agentmanager.NewManager()
 	piAuth := node.NewManagedPiAuthStore()
-	contextStore := node.NewContextStore(cfg.SettingsPath)
+	contextStore := contextstore.NewStore(cfg.SettingsPath)
 	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer)
 
 	service := node.NewService(node.Dependencies{

@@ -12,7 +12,6 @@ import (
 
 	"github.com/creack/pty"
 
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartResponse, error) {
@@ -193,7 +192,7 @@ func (m *Manager) Resize(req ResizeRequest) (ResizeResponse, error) {
 	}
 
 	if req.Cols == 0 || req.Rows == 0 {
-		return ResizeResponse{}, rpcerror.New(rpcCodeInvalidParams, "cols and rows are required")
+		return ResizeResponse{}, NewError(ErrCodeInvalidParams, "cols and rows are required")
 	}
 
 	if err := pty.Setsize(s.pty, &pty.Winsize{Cols: req.Cols, Rows: req.Rows}); err != nil {
@@ -234,7 +233,7 @@ func (m *Manager) Unsubscribe(req UnsubscribeRequest) (UnsubscribeResponse, erro
 	s.subsMu.Unlock()
 
 	if !ok {
-		return UnsubscribeResponse{}, rpcerror.New(rpcCodeNotFound, "terminal subscription not found")
+		return UnsubscribeResponse{}, NewError(ErrCodeNotFound, "terminal subscription not found")
 	}
 
 	return UnsubscribeResponse{Unsubscribed: true}, nil
@@ -242,14 +241,14 @@ func (m *Manager) Unsubscribe(req UnsubscribeRequest) (UnsubscribeResponse, erro
 
 func (m *Manager) session(id string) (*session, error) {
 	if id == "" {
-		return nil, rpcerror.New(rpcCodeInvalidParams, "sessionId is required")
+		return nil, NewError(ErrCodeInvalidParams, "sessionId is required")
 	}
 
 	m.mu.RLock()
 	s, ok := m.sessions[id]
 	m.mu.RUnlock()
 	if !ok {
-		return nil, rpcerror.New(rpcCodeNotFound, "terminal session not found")
+		return nil, NewError(ErrCodeNotFound, "terminal session not found")
 	}
 	return s, nil
 }

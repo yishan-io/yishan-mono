@@ -52,13 +52,13 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "terminal",
-		targets:      []string{"daemon", "rpc", "agent", "node"},
-		reason:       "terminal services are standalone infrastructure",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "terminal services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "worktree",
-		targets:      []string{"daemon", "rpc", "agent", "node"},
-		reason:       "worktree provisioning is standalone infrastructure",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "worktree provisioning is standalone infrastructure and returns domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "gitexec",

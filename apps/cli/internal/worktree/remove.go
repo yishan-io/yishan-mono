@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // RemoveRequest carries the teardown options for a worktree.
@@ -27,7 +26,7 @@ type RemoveRequest struct {
 // already gone (the leftover directory is deliberately not removed).
 func Remove(ctx context.Context, req RemoveRequest) error {
 	if strings.TrimSpace(req.Path) == "" {
-		return rpcerror.NewRPCError(rpcerror.CodeInvalidParams, "path is required")
+		return NewError(ErrCodeInvalidParams, "path is required")
 	}
 
 	mainWorktreePath, err := MainWorktreePath(ctx, req.Path)
@@ -63,7 +62,7 @@ func Remove(ctx context.Context, req RemoveRequest) error {
 // worktree/repo root).
 func RemoveWorktree(ctx context.Context, root string, worktreePath string, force bool) error {
 	if strings.TrimSpace(worktreePath) == "" {
-		return rpcerror.NewRPCError(rpcerror.CodeInvalidParams, "worktreePath is required")
+		return NewError(ErrCodeInvalidParams, "worktreePath is required")
 	}
 
 	absWorktreePath, err := filepath.Abs(worktreePath)
@@ -95,7 +94,7 @@ func MainWorktreePath(ctx context.Context, root string) (string, error) {
 			}
 		}
 	}
-	return "", rpcerror.NewRPCError(rpcerror.CodeToolUnavailable, "main worktree not found")
+	return "", NewError(ErrCodeToolUnavailable, "main worktree not found")
 }
 
 // CleanupPartial removes a partially created worktree and its branch on a
@@ -129,7 +128,7 @@ func currentBranch(ctx context.Context, root string) (string, error) {
 	}
 	branch := strings.TrimSpace(out)
 	if branch == "" || branch == "HEAD" {
-		return "", rpcerror.NewRPCError(rpcerror.CodeToolUnavailable, "workspace is not on a branch")
+		return "", NewError(ErrCodeToolUnavailable, "workspace is not on a branch")
 	}
 	return branch, nil
 }

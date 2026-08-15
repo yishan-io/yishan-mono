@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // DefaultRepoPath returns the local path of the shared clone for a repo key.
@@ -47,11 +46,11 @@ func AbsUserPath(path string) (string, error) {
 func SafeRelativePath(input string, field string) (string, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" || filepath.IsAbs(trimmed) {
-		return "", rpcerror.NewRPCError(rpcerror.CodeInvalidParams, field+" must be relative")
+		return "", NewError(ErrCodeInvalidParams, field+" must be relative")
 	}
 	cleaned := filepath.Clean(trimmed)
 	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
-		return "", rpcerror.NewRPCError(rpcerror.CodeInvalidParams, field+" must not escape .yishan")
+		return "", NewError(ErrCodeInvalidParams, field+" must not escape .yishan")
 	}
 	return cleaned, nil
 }

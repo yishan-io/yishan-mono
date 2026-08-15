@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // CreateRequest carries everything needed to resolve and provision a worktree.
@@ -45,7 +44,7 @@ func ResolveCreatePaths(req CreateRequest) (CreatePaths, error) {
 	// changed; TargetBranch is left untouched.
 	workspaceName = strings.ReplaceAll(workspaceName, "/", "-")
 	if workspaceName == "" {
-		return CreatePaths{}, rpcerror.NewRPCError(rpcerror.CodeInvalidParams, "workspaceName is empty after sanitization")
+		return CreatePaths{}, NewError(ErrCodeInvalidParams, "workspaceName is empty after sanitization")
 	}
 	worktreePath, err := DefaultWorktreePath(repoKey, workspaceName)
 	if err != nil {
@@ -93,10 +92,10 @@ func Create(ctx context.Context, req CreateRequest, paths CreatePaths) (string, 
 // existing branch.
 func CreateWorktree(ctx context.Context, root string, branch string, worktreePath string, createBranch bool, fromRef string) error {
 	if strings.TrimSpace(branch) == "" {
-		return rpcerror.NewRPCError(rpcerror.CodeInvalidParams, "branch is required")
+		return NewError(ErrCodeInvalidParams, "branch is required")
 	}
 	if strings.TrimSpace(worktreePath) == "" {
-		return rpcerror.NewRPCError(rpcerror.CodeInvalidParams, "worktreePath is required")
+		return NewError(ErrCodeInvalidParams, "worktreePath is required")
 	}
 
 	absWorktreePath, err := filepath.Abs(worktreePath)

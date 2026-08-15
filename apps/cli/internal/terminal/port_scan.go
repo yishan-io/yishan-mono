@@ -9,7 +9,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 func (m *Manager) ListDetectedPorts() []DetectedPort {
@@ -274,7 +273,7 @@ func buildPortSnapshotKey(ports []DetectedPort) string {
 
 func (m *Manager) KillProcess(req KillProcessRequest) (KillProcessResponse, error) {
 	if req.PID <= 0 {
-		return KillProcessResponse{}, rpcerror.New(rpcCodeInvalidParams, "pid is required")
+		return KillProcessResponse{}, NewError(ErrCodeInvalidParams, "pid is required")
 	}
 
 	if err := stopProcessByPID(req.PID); err != nil {

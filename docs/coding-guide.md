@@ -754,10 +754,13 @@ go vet ./...
 - Small packages live under their natural owner: `agent/kind` (agent kind
   constants — shared vocabulary, not agent domain logic), `git/exec` (low-level
   git command adapter), `node/id` (node identity file), `release` (version +
-  self-update, merged from buildinfo + selfupdate).
-- File and Git capabilities return domain errors (files.Error / git.Error)
-  and never import rpcerror; `rpc.MapRPCError` maps capability domain errors
-  to wire errors (the same pattern as computer.Error).
+  self-update, merged from buildinfo + selfupdate), `contextstore` (the
+  renderer-pushed desktop context state, moved out of the node package).
+- Capability owners (files, git, worktree, terminal) return domain errors
+  (files.Error / git.Error / worktree.Error / terminal.Error) and never import
+  rpcerror; `rpc.MapRPCError` maps capability domain errors to wire errors
+  (the same pattern as computer.Error). workspace.RPCError remains the
+  domain-wide error base used by the RPC service layer.
 - `node.Service` is the local Node application boundary and must not import
   `internal/app`; `internal/app` is the only composition root and may import
   every concrete package.

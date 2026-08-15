@@ -11,6 +11,7 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
+	"yishan/apps/cli/internal/contextstore"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
@@ -62,7 +63,7 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		Events:               events,
 		Watchers:             watchers,
 		PRTracker:            prTracker,
-		ContextStore:         NewContextStore(""),
+		ContextStore:         contextstore.NewStore(""),
 		Runtime:              runtime,
 		NodeID:               nodeID,
 		LogFilePath:          filepath.Join(root, "daemon.log"),
@@ -149,7 +150,7 @@ func TestNewService_ReceivesDependencies(t *testing.T) {
 		Events:            internalevents.NewHub(),
 		Watchers:          NewWatchers(internalevents.NewHub(), nil),
 		PRTracker:         workspaceprtracker.New(workspaceprtracker.TrackerDeps{Instances: registry, Gits: gitService}),
-		ContextStore:      NewContextStore(""),
+		ContextStore:      contextstore.NewStore(""),
 		Runtime:           nil,
 		NodeID:            "node-1",
 		LogFilePath:       "daemon.log",

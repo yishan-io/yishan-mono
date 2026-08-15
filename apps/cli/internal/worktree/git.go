@@ -12,18 +12,17 @@ import (
 	"strings"
 
 	gitexec "yishan/apps/cli/internal/git/exec"
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 func gitCommand(ctx context.Context, cwd string, args ...string) (string, error) {
 	runner := gitexec.DefaultRunner()
 	out, err, ok := runner.Run(ctx, cwd, args...)
 	if !ok {
-		return "", rpcerror.NewRPCError(rpcerror.CodeToolUnavailable, "git is not installed")
+		return "", NewError(ErrCodeToolUnavailable, "git is not installed")
 	}
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", rpcerror.NewRPCError(rpcerror.CodeToolUnavailable, strings.TrimSpace(string(exitErr.Stderr)))
+			return "", NewError(ErrCodeToolUnavailable, strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return "", err
 	}
@@ -34,10 +33,10 @@ func gitCommandCombined(ctx context.Context, cwd string, args ...string) (string
 	runner := gitexec.DefaultRunner()
 	out, err, ok := runner.RunCombined(ctx, cwd, args...)
 	if !ok {
-		return "", rpcerror.NewRPCError(rpcerror.CodeToolUnavailable, "git is not installed")
+		return "", NewError(ErrCodeToolUnavailable, "git is not installed")
 	}
 	if err != nil {
-		return "", rpcerror.NewRPCError(rpcerror.CodeToolUnavailable, strings.TrimSpace(string(out)))
+		return "", NewError(ErrCodeToolUnavailable, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
 }
@@ -51,9 +50,9 @@ func splitNonEmptyLines(input string) []string {
 // but has lost its git registration (no .git file/dir) can never be resolved
 // by retrying, so callers treat it as an already-gone state.
 func isNotGitRepositoryError(err error) bool {
-	var rpcErr *rpcerror.Error
-	if !errors.As(err, &rpcErr) {
+	var worktreeErr *Error
+	if !errors.As(err, &worktreeErr) {
 		return false
 	}
-	return strings.Contains(rpcErr.Message, "not a git repository")
+	return strings.Contains(worktreeErr.Message, "not a git repository")
 }

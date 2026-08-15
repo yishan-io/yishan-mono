@@ -8,14 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"yishan/apps/cli/internal/rpcerror"
 )
 
-const (
-	rpcCodeInvalidParams   = rpcerror.CodeInvalidParams
-	rpcCodeNotFound        = rpcerror.CodeNotFound
-	rpcCodeSessionInactive = rpcerror.CodeSessionInactive
-)
+
 
 const maxSessionOutputBytes = 2 * 1024 * 1024
 const portScanActivityWindow = 15 * time.Second
