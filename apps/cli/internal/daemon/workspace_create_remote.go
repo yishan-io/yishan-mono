@@ -4,8 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/apiclient"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
@@ -29,14 +30,7 @@ func (h *JSONRPCHandler) createRemoteWorkspaceRecord(ctx context.Context, regist
 	if !remoteWorkspaceRecordsEnabled(h.runtime) {
 		return
 	}
-	_, err := h.runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, api.CreateWorkspaceInput{
-		ID:           registration.ID,
-		NodeID:       registration.NodeID,
-		Kind:         registration.Kind,
-		Branch:       registration.Branch,
-		SourceBranch: registration.SourceBranch,
-		SourceNodeID: h.nodeID,
-	})
+	_, err := h.runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, apiclient.CreateWorkspaceInput(registration, h.nodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to create remote workspace record")
 	}
@@ -52,11 +46,7 @@ func (h *JSONRPCHandler) updateRemoteWorkspaceRecord(ctx context.Context, regist
 	if !remoteWorkspaceRecordsEnabled(h.runtime) {
 		return
 	}
-	_, err := h.runtime.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, api.UpdateWorkspaceInput{
-		WorkspaceID:  registration.ID,
-		LocalPath:    localPath,
-		SourceNodeID: h.nodeID,
-	})
+	_, err := h.runtime.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, apiclient.UpdateWorkspaceInput(registration, localPath, h.nodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to update remote workspace record")
 	}
@@ -78,11 +68,7 @@ func (h *JSONRPCHandler) closeRemoteWorkspaceRecord(ctx context.Context, organiz
 	if status == "" {
 		status = "closed"
 	}
-	_, err := h.runtime.APIClient().CloseWorkspace(organizationID, projectID, api.CloseWorkspaceInput{
-		WorkspaceID:  workspaceID,
-		SourceNodeID: h.nodeID,
-		Status:       status,
-	})
+	_, err := h.runtime.APIClient().CloseWorkspace(organizationID, projectID, apiclient.CloseWorkspaceInput(workspaceID, h.nodeID, workspace.Status(status)))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("status", status).Msg("failed to close remote workspace record")
 	}

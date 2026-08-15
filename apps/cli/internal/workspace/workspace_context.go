@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"yishan/apps/cli/internal/worktree"
 )
 
 // SyncContextLinkRequest applies the project-level `contextEnabled` flag to a
@@ -38,7 +40,7 @@ type SyncContextLinkResult struct {
 func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkResult, error) {
 	var contextPath string
 	if !req.NonGit {
-		repoKey, err := safeRelativePath(req.RepoKey, "repoKey")
+		repoKey, err := worktree.SafeRelativePath(req.RepoKey, "repoKey")
 		if err != nil {
 			return SyncContextLinkResult{}, err
 		}
@@ -67,7 +69,7 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 			result.Errors[raw] = "worktree path must be absolute"
 			continue
 		}
-		path, err := absUserPath(trimmed)
+		path, err := worktree.AbsUserPath(trimmed)
 		if err != nil {
 			result.Errors[raw] = fmt.Sprintf("invalid worktree path: %v", err)
 			continue

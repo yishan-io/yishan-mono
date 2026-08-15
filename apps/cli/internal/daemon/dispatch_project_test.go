@@ -58,12 +58,12 @@ func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsS
 		OrganizationID: "org-1",
 		ProjectID:      "project-1",
 		NodeID:         "node-1",
-		Kind:           workspace.KindWorktree,
+		Kind:           string(workspace.KindWorktree),
 		Status:         "active",
 		Branch:         strPtr("feature-a"),
 		SourceBranch:   strPtr("main"),
 		LocalPath:      "/tmp/repo-1/.worktrees/feature-a",
-		State:          workspace.WorkspaceStateActive,
+		State:          string(workspace.StateActive),
 	}); err != nil {
 		t.Fatalf("create local workspace: %v", err)
 	}

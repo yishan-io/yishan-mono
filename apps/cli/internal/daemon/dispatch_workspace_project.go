@@ -40,13 +40,13 @@ func (h *JSONRPCHandler) openProjectWorkspace(entry workspaceOpenProjectEntry) (
 	if workspaceID == "" || workspacePath == "" {
 		return "", false, fmt.Errorf("missing workspaceId or worktreePath")
 	}
-	if existingWorkspace, err := h.manager.GetWorkspace(workspaceID); err == nil {
+	if existingWorkspace, err := h.getWorkspace(workspaceID); err == nil {
 		if shouldSkipWorkspaceOpenProject(existingWorkspace, entry) {
 			// The workspace is already open (for example restored from the local
 			// DB at daemon boot). Watch registration is idempotent per worktree
 			// path, so ensure the filesystem watcher exists even on the skip
 			// path; otherwise file-change events never flow for this workspace.
-			if existingWorkspace.State == workspace.WorkspaceStateActive && strings.TrimSpace(existingWorkspace.Path) != "" {
+			if existingWorkspace.State == workspace.StateActive && strings.TrimSpace(existingWorkspace.Path) != "" {
 				h.watchAndTrack(existingWorkspace.ID, existingWorkspace.Path)
 			}
 			return workspaceID, false, nil

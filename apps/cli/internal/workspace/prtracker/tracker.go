@@ -8,6 +8,7 @@ import (
 
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 
 	"github.com/rs/zerolog/log"
 )
@@ -50,9 +51,9 @@ func New(manager *workspace.Manager, runtime *cliruntime.Runtime, onPullRequestU
 		onPullRequestUpdated: onPullRequestUpdated,
 	}
 	tracker.branchResolver = func(ctx context.Context, root string) (string, error) {
-		handle, err := manager.WorkspaceHandleByPath(root)
-		if err != nil {
-			return "", workspace.NewRPCError(-32004, "workspace not found")
+		handle, ok := tracker.handleByPath(root)
+		if !ok {
+			return "", workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
 		return handle.GitCurrentBranch(ctx)
 	}
@@ -60,20 +61,30 @@ func New(manager *workspace.Manager, runtime *cliruntime.Runtime, onPullRequestU
 		return manager.GitInspect(ctx, root)
 	}
 	tracker.prResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
-		handle, err := manager.WorkspaceHandleByPath(root)
-		if err != nil {
-			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(-32004, "workspace not found")
+		handle, ok := tracker.handleByPath(root)
+		if !ok {
+			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
 		return handle.GitBranchPullRequestLite(ctx, branch)
 	}
 	tracker.detailResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
-		handle, err := manager.WorkspaceHandleByPath(root)
-		if err != nil {
-			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(-32004, "workspace not found")
+		handle, ok := tracker.handleByPath(root)
+		if !ok {
+			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
 		return handle.GitBranchPullRequestWithDetails(ctx, branch)
 	}
 	return tracker
+}
+
+// handleByPath builds a workspace-scoped handle for the open instance at the
+// given path (path lookup lives in the instance registry).
+func (t *Tracker) handleByPath(root string) (instance.Handle, bool) {
+	ws, ok := t.manager.Instances().GetByPath(root)
+	if !ok {
+		return instance.Handle{}, false
+	}
+	return instance.NewHandle(ws, t.manager.Instances().Files(), t.manager.Gits(), t.manager.Terminals()), true
 }
 
 func (t *Tracker) EnsureTracked(worktreePath string, refreshImmediately bool) {
@@ -81,7 +92,7 @@ func (t *Tracker) EnsureTracked(worktreePath string, refreshImmediately bool) {
 		return
 	}
 
-	ws, ok := t.manager.FindWorkspaceByPath(worktreePath)
+	ws, ok := t.manager.Instances().GetByPath(worktreePath)
 	if !ok {
 		return
 	}
@@ -123,7 +134,7 @@ func (t *Tracker) Stop() {
 }
 
 func (t *Tracker) RefreshWorkspaceByPath(worktreePath string) {
-	ws, ok := t.manager.FindWorkspaceByPath(worktreePath)
+	ws, ok := t.manager.Instances().GetByPath(worktreePath)
 	if !ok {
 		log.Warn().Str("path", worktreePath).Msg("workspace PR refresh skipped because workspace path is not open")
 		return
@@ -286,7 +297,7 @@ func shouldDisableTrackingForBranchError(err error) bool {
 
 func (t *Tracker) setWorkspacePullRequest(ws workspace.Workspace, pr *workspace.WorkspacePullRequest, keepActive bool) {
 	previousPullRequest := ws.PullRequest
-	if err := t.manager.SetWorkspacePullRequest(ws.ID, pr); err != nil {
+	if err := t.manager.Instances().SetPullRequest(ws.ID, pr); err != nil {
 		return
 	}
 	if prMeaningfullyChanged(previousPullRequest, pr) && t.onPullRequestUpdated != nil {

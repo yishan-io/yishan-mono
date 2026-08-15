@@ -14,7 +14,7 @@ func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *wsConn
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		handle, err := h.workspaceHandle(req.WorkspaceID)
 		if err != nil {
 			return nil, err
 		}

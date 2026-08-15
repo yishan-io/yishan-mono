@@ -33,8 +33,8 @@ func (h *JSONRPCHandler) dispatchMemory(method string, params json.RawMessage) (
 		}
 		projectID := ""
 		if req.WorkspaceID != "" {
-			if handle, err := h.manager.WorkspaceHandle(req.WorkspaceID); err == nil {
-				projectID = handle.Workspace().ProjectID
+			if handle, err := h.workspaceHandle(req.WorkspaceID); err == nil {
+				projectID = handle.Instance().ProjectID
 			}
 		}
 		log.Debug().
@@ -48,7 +48,7 @@ func (h *JSONRPCHandler) dispatchMemory(method string, params json.RawMessage) (
 
 	case MethodMemoryReconcile:
 		refs := make([]memory.WorkspaceRef, 0)
-		for _, ws := range h.manager.List() {
+		for _, ws := range h.manager.Instances().List() {
 			if ws.Path != "" {
 				refs = append(refs, memory.WorkspaceRef{
 					WorktreePath: ws.Path,

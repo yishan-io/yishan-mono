@@ -35,9 +35,9 @@ func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, err := manager.GetWorkspace(ws.ID)
-	if err != nil {
-		t.Fatalf("GetWorkspace: %v", err)
+	updated, ok := manager.Instances().Get(ws.ID)
+	if !ok {
+		t.Fatalf("GetWorkspace: not found")
 	}
 	if updated.PullRequest == nil {
 		t.Fatal("expected bound pull request")
@@ -72,9 +72,9 @@ func TestWorkspacePRTracker_StopsTrackingMergedPullRequest(t *testing.T) {
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, err := manager.GetWorkspace(ws.ID)
-	if err != nil {
-		t.Fatalf("GetWorkspace: %v", err)
+	updated, ok := manager.Instances().Get(ws.ID)
+	if !ok {
+		t.Fatalf("GetWorkspace: not found")
 	}
 	if updated.PullRequest == nil || updated.PullRequest.Status != "merged" || !updated.PullRequest.Complete {
 		t.Fatalf("expected merged completed pull request, got %+v", updated.PullRequest)
@@ -86,8 +86,8 @@ func TestWorkspacePRTracker_StopsTrackingMergedPullRequest(t *testing.T) {
 
 func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
-		t.Fatalf("SetWorkspacePullRequest: %v", err)
+	if err := manager.Instances().SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+		t.Fatalf("SetPullRequest: %v", err)
 	}
 	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
@@ -100,9 +100,9 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, err := manager.GetWorkspace(ws.ID)
-	if err != nil {
-		t.Fatalf("GetWorkspace: %v", err)
+	updated, ok := manager.Instances().Get(ws.ID)
+	if !ok {
+		t.Fatalf("GetWorkspace: not found")
 	}
 	if updated.PullRequest != nil {
 		t.Fatalf("expected pull request to be cleared, got %+v", updated.PullRequest)
@@ -115,8 +115,8 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 
 func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
-		t.Fatalf("SetWorkspacePullRequest: %v", err)
+	if err := manager.Instances().SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+		t.Fatalf("SetPullRequest: %v", err)
 	}
 	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
@@ -129,9 +129,9 @@ func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T)
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, err := manager.GetWorkspace(ws.ID)
-	if err != nil {
-		t.Fatalf("GetWorkspace: %v", err)
+	updated, ok := manager.Instances().Get(ws.ID)
+	if !ok {
+		t.Fatalf("GetWorkspace: not found")
 	}
 	if updated.PullRequest != nil {
 		t.Fatalf("expected pull request to be cleared for non-GitHub repo, got %+v", updated.PullRequest)
@@ -187,8 +187,8 @@ func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 
 func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
-		t.Fatalf("SetWorkspacePullRequest: %v", err)
+	if err := manager.Instances().SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+		t.Fatalf("SetPullRequest: %v", err)
 	}
 
 	tracker := New(manager, nil, nil)
@@ -199,9 +199,9 @@ func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, err := manager.GetWorkspace(ws.ID)
-	if err != nil {
-		t.Fatalf("GetWorkspace: %v", err)
+	updated, ok := manager.Instances().Get(ws.ID)
+	if !ok {
+		t.Fatalf("GetWorkspace: not found")
 	}
 	if updated.PullRequest != nil {
 		t.Fatalf("expected pull request to be cleared when HEAD is unresolved, got %+v", updated.PullRequest)

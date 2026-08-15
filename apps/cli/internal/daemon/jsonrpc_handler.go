@@ -21,6 +21,7 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/application"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
@@ -42,6 +43,7 @@ type JSONRPCHandler struct {
 	cleanupStore         *workspaceCleanupStore
 	context              *AppContextStore
 	events               *eventHub
+	app                  *application.Service
 	watchers             *workspacewatchers.Watchers
 	prTracker            *workspaceprtracker.Tracker
 	tokenUsage           tokenusage.Service
@@ -156,6 +158,13 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		relayPending:         make(map[string]chan relayDispatchVerdict),
 		fileCacheSubID:       fileCacheSubID,
 	}
+	handler.app = newWorkspaceApplicationService(handler)
+	// Watcher and PR-tracker cleanup follows instance removal (close, rollback,
+	// or same-path replacement in the registry).
+	manager.Instances().SetOnRemoved(func(workspaceID string, path string) {
+		handler.watchers.Unwatch(path)
+		handler.prTracker.StopTracking(workspaceID)
+	})
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
 }
@@ -221,10 +230,10 @@ func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan fronte
 			continue
 		}
 		if len(changedPaths) == 0 {
-			h.manager.InvalidateWorkspaceFileCacheByPath(worktreePath, []string{""})
+			h.manager.Instances().InvalidateFileCache(worktreePath, []string{""})
 			continue
 		}
-		h.manager.InvalidateWorkspaceFileCacheByPath(worktreePath, changedPaths)
+		h.manager.Instances().InvalidateFileCache(worktreePath, changedPaths)
 		if h.memory != nil {
 			h.forwardMemoryFileChanges(worktreePath, changedPaths)
 		}
@@ -234,8 +243,8 @@ func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan fronte
 func (h *JSONRPCHandler) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
 	// Resolve projectID from the registered workspace (best-effort; empty is fine).
 	projectID := ""
-	if ws, err := h.manager.WorkspaceHandleByPath(worktreePath); err == nil {
-		projectID = ws.Workspace().ProjectID
+	if ws, err := h.workspaceHandleByPath(worktreePath); err == nil {
+		projectID = ws.Instance().ProjectID
 	}
 	for _, rel := range relPaths {
 		abs := filepath.Join(worktreePath, rel)

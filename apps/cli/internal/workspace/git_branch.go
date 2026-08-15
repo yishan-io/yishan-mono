@@ -50,22 +50,6 @@ func (s *GitService) CurrentBranch(ctx context.Context, root string) (string, er
 	return branch, nil
 }
 
-func (s *GitService) MainWorktreePath(ctx context.Context, root string) (string, error) {
-	out, err := gitCommand(ctx, root, "worktree", "list", "--porcelain")
-	if err != nil {
-		return "", err
-	}
-	for line := range strings.SplitSeq(out, "\n") {
-		if path, ok := strings.CutPrefix(line, "worktree "); ok {
-			path = strings.TrimSpace(path)
-			if path != "" {
-				return path, nil
-			}
-		}
-	}
-	return "", NewRPCError(rpcCodeToolUnavailable, "main worktree not found")
-}
-
 func (s *GitService) AuthorName(ctx context.Context, root string) (string, error) {
 	out, err := gitCommand(ctx, root, "config", "user.name")
 	if err != nil {

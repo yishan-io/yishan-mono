@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"yishan/apps/cli/internal/worktree"
 )
 
 // TestResolveCreatePaths_SlashInWorkspaceName verifies that a branch name
@@ -30,7 +32,13 @@ func TestResolveCreatePaths_SlashInWorkspaceName(t *testing.T) {
 		SourceBranch:  "main",
 	}
 
-	paths, err := resolveCreatePaths(req)
+	paths, err := worktree.ResolveCreatePaths(worktree.CreateRequest{
+		RepoKey:       req.RepoKey,
+		WorkspaceName: req.WorkspaceName,
+		SourcePath:    req.SourcePath,
+		TargetBranch:  req.TargetBranch,
+		SourceBranch:  req.SourceBranch,
+	})
 	if err != nil {
 		t.Fatalf("resolveCreatePaths: %v", err)
 	}
@@ -45,14 +53,14 @@ func TestResolveCreatePaths_SlashInWorkspaceName(t *testing.T) {
 	wantSuffix := filepath.Join(".yishan", "worktrees", "owner", "repo", "feature-my-branch")
 	want := filepath.Join(home, wantSuffix)
 
-	if paths.worktreePath != want {
-		t.Errorf("worktreePath = %q, want %q", paths.worktreePath, want)
+	if paths.WorktreePath != want {
+		t.Errorf("worktreePath = %q, want %q", paths.WorktreePath, want)
 	}
 
 	// The worktree path must not contain more path segments than expected —
 	// i.e. "feature/my-branch" must not have been interpreted as two
 	// directories.
-	rel, err := filepath.Rel(filepath.Join(home, ".yishan", "worktrees", "owner", "repo"), paths.worktreePath)
+	rel, err := filepath.Rel(filepath.Join(home, ".yishan", "worktrees", "owner", "repo"), paths.WorktreePath)
 	if err != nil {
 		t.Fatalf("filepath.Rel: %v", err)
 	}
@@ -79,7 +87,13 @@ func TestResolveCreatePaths_SimpleName(t *testing.T) {
 		SourceBranch:  "main",
 	}
 
-	paths, err := resolveCreatePaths(req)
+	paths, err := worktree.ResolveCreatePaths(worktree.CreateRequest{
+		RepoKey:       req.RepoKey,
+		WorkspaceName: req.WorkspaceName,
+		SourcePath:    req.SourcePath,
+		TargetBranch:  req.TargetBranch,
+		SourceBranch:  req.SourceBranch,
+	})
 	if err != nil {
 		t.Fatalf("resolveCreatePaths: %v", err)
 	}
@@ -90,8 +104,8 @@ func TestResolveCreatePaths_SimpleName(t *testing.T) {
 	}
 
 	want := filepath.Join(home, ".yishan", "worktrees", "owner", "repo", "my-branch")
-	if paths.worktreePath != want {
-		t.Errorf("worktreePath = %q, want %q", paths.worktreePath, want)
+	if paths.WorktreePath != want {
+		t.Errorf("worktreePath = %q, want %q", paths.WorktreePath, want)
 	}
 }
 
@@ -113,7 +127,13 @@ func TestResolveCreatePaths_MultipleSlashes(t *testing.T) {
 		SourceBranch:  "main",
 	}
 
-	paths, err := resolveCreatePaths(req)
+	paths, err := worktree.ResolveCreatePaths(worktree.CreateRequest{
+		RepoKey:       req.RepoKey,
+		WorkspaceName: req.WorkspaceName,
+		SourcePath:    req.SourcePath,
+		TargetBranch:  req.TargetBranch,
+		SourceBranch:  req.SourceBranch,
+	})
 	if err != nil {
 		t.Fatalf("resolveCreatePaths: %v", err)
 	}
@@ -124,13 +144,13 @@ func TestResolveCreatePaths_MultipleSlashes(t *testing.T) {
 	}
 
 	want := filepath.Join(home, ".yishan", "worktrees", "owner", "repo", "a-b-c")
-	if paths.worktreePath != want {
-		t.Errorf("worktreePath = %q, want %q", paths.worktreePath, want)
+	if paths.WorktreePath != want {
+		t.Errorf("worktreePath = %q, want %q", paths.WorktreePath, want)
 	}
 }
 
 // TestCreateWorkspaceWithProgress_SetsStateActive verifies that a successfully
-// created workspace carries State == WorkspaceStateActive so that the daemon
+// created workspace carries State == StateActive so that the daemon
 // index and in-memory map reflect the correct lifecycle state.
 func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 	// Set up a bare-style source repo with one commit so CreateWorktree has a
@@ -145,7 +165,7 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 	// Resolve the worktree target path so we can clean it up after the test.
 	repoKey := "test/state-active"
 	workspaceName := "test-state-branch"
-	worktreePath, err := DefaultWorktreePath(repoKey, workspaceName)
+	worktreePath, err := worktree.DefaultWorktreePath(repoKey, workspaceName)
 	if err != nil {
 		t.Fatalf("DefaultWorktreePath: %v", err)
 	}
@@ -170,17 +190,17 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 		t.Fatalf("CreateWorkspaceWithProgress: %v", err)
 	}
 
-	if ws.State != WorkspaceStateActive {
-		t.Errorf("Workspace.State = %q, want %q", ws.State, WorkspaceStateActive)
+	if ws.State != StateActive {
+		t.Errorf("Workspace.State = %q, want %q", ws.State, StateActive)
 	}
 
 	// Also confirm the in-memory manager entry carries the correct state.
-	stored, err := manager.GetWorkspace("ws-state-test")
-	if err != nil {
-		t.Fatalf("GetWorkspace: %v", err)
+	stored, ok := manager.Instances().Get("ws-state-test")
+	if !ok {
+		t.Fatal("GetWorkspace: not found")
 	}
-	if stored.State != WorkspaceStateActive {
-		t.Errorf("stored Workspace.State = %q, want %q", stored.State, WorkspaceStateActive)
+	if stored.State != StateActive {
+		t.Errorf("stored Workspace.State = %q, want %q", stored.State, StateActive)
 	}
 }
 

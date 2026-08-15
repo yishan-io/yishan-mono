@@ -17,10 +17,12 @@ import (
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 )
 
 func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) (*daemonRuntime, error) {
@@ -148,7 +150,8 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 // handler. dataDir is the per-account data dir; envDir stays env-root scoped
 // (e.g. the token-usage pricing cache).
 func buildAccountScopedHandler(database *sql.DB, envDir string, dataDir string, cfg RunConfig, runtime *cliruntime.Runtime, daemonID string) (*workspace.Manager, *JSONRPCHandler, error) {
-	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
+	registry := instance.NewRegistry(workspace.NewFileService())
+	workspaceManager := workspace.NewManagerWithRegistryAndStore(registry, dbconv.NewStore(localdb.NewWorkspaceStore(database)))
 	legacyCleanupPath := filepath.Join(dataDir, workspaceCleanupFileName)
 	cleanupStore, err := newWorkspaceCleanupStore(database, legacyCleanupPath)
 	if err != nil {

@@ -67,8 +67,8 @@ func (h *JSONRPCHandler) ServeAgentHook(w http.ResponseWriter, r *http.Request) 
 	h.recordAgentUsage(event.workspaceID, event.agent)
 
 	if event.eventType == "stop" && h.memory != nil {
-		if handle, err := h.manager.WorkspaceHandle(event.workspaceID); err == nil {
-			ws := handle.Workspace()
+		if handle, err := h.workspaceHandle(event.workspaceID); err == nil {
+			ws := handle.Instance()
 			h.memory.SummarizeSession(event.agent, ws.Path, ws.ProjectID)
 		}
 		// Trigger the daily persona batch independently of workspace lookup — persona

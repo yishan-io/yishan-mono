@@ -3,10 +3,10 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
+
+	"yishan/apps/cli/internal/worktree"
 )
 
 type TaskRunConfig struct {
@@ -59,14 +59,6 @@ type createProgressStep struct {
 	Run     func(ctx context.Context) (CreateProgressStatus, string, error)
 }
 
-// resolvedCreatePaths holds the validated and resolved filesystem paths for a
-// CreateWorkspace request.
-type resolvedCreatePaths struct {
-	sourcePath   string
-	worktreePath string
-	repoKey      string // validated relative path, used for context dir resolution
-}
-
 // CreateStepTimeouts maps step IDs to their timeout durations.
 type CreateStepTimeouts map[string]time.Duration
 
@@ -100,17 +92,23 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 		return Workspace{}, err
 	}
 
-	paths, err := resolveCreatePaths(req)
+	paths, err := worktree.ResolveCreatePaths(worktree.CreateRequest{
+		RepoKey:       req.RepoKey,
+		WorkspaceName: req.WorkspaceName,
+		SourcePath:    req.SourcePath,
+		TargetBranch:  req.TargetBranch,
+		SourceBranch:  req.SourceBranch,
+	})
 	if err != nil {
 		return Workspace{}, err
 	}
 
 	ws := Workspace{
 		ID:        strings.TrimSpace(req.ID),
-		Path:      paths.worktreePath,
+		Path:      paths.WorktreePath,
 		OrgID:     req.OrganizationID,
 		ProjectID: req.ProjectID,
-		State:     WorkspaceStateActive,
+		State:     StateActive,
 	}
 
 	steps := []createProgressStep{
@@ -120,13 +118,11 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 	}
 
 	if err := runCreateSteps(ctx, req.ID, steps, reportProgress); err != nil {
-		m.cleanupFailedCreate(ctx, paths.sourcePath, paths.worktreePath, req.TargetBranch)
+		m.cleanupFailedCreate(ctx, paths.SourcePath, paths.WorktreePath, req.TargetBranch)
 		return Workspace{}, err
 	}
 
-	m.mu.Lock()
-	m.workspaces[ws.ID] = ws
-	m.mu.Unlock()
+	m.instances.Open(ws)
 
 	return ws, nil
 }
@@ -151,77 +147,33 @@ func validateCreateRequest(req CreateRequest) error {
 	return nil
 }
 
-// resolveCreatePaths validates and resolves filesystem paths for a create request.
-func resolveCreatePaths(req CreateRequest) (resolvedCreatePaths, error) {
-	sourcePath, err := absUserPath(req.SourcePath)
-	if err != nil {
-		return resolvedCreatePaths{}, err
-	}
-	repoKey, err := safeRelativePath(req.RepoKey, "repoKey")
-	if err != nil {
-		return resolvedCreatePaths{}, err
-	}
-	workspaceName, err := safeRelativePath(req.WorkspaceName, "workspaceName")
-	if err != nil {
-		return resolvedCreatePaths{}, err
-	}
-	// Sanitize workspaceName so that branch names like "feature/my-branch" do
-	// not produce nested directories. Only the filesystem path component is
-	// changed; TargetBranch is left untouched.
-	workspaceName = strings.ReplaceAll(workspaceName, "/", "-")
-	if workspaceName == "" {
-		return resolvedCreatePaths{}, NewRPCError(rpcCodeInvalidParams, "workspaceName is empty after sanitization")
-	}
-	worktreePath, err := DefaultWorktreePath(repoKey, workspaceName)
-	if err != nil {
-		return resolvedCreatePaths{}, err
-	}
-	return resolvedCreatePaths{sourcePath: sourcePath, worktreePath: worktreePath, repoKey: repoKey}, nil
-}
-
 // makeWorktreeStep returns the step that creates the local git worktree.
 // It checks whether the source ref exists locally first. If it does, it runs
 // worktree add directly (fast path, no network). If the ref is missing it
 // fetches it with a shallow, blobless fetch before creating the worktree.
-func makeWorktreeStep(m *Manager, req CreateRequest, paths resolvedCreatePaths) createProgressStep {
+func makeWorktreeStep(m *Manager, req CreateRequest, paths worktree.CreatePaths) createProgressStep {
 	return createProgressStep{
 		ID:      "worktree",
 		Label:   "Fetch & create worktree",
 		Timeout: defaultCreateStepTimeouts["worktree"],
 		Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
-			sourceBranch := strings.TrimSpace(req.SourceBranch)
-
-			// Fast path: ref already available locally — no network round-trip.
-			if m.gits.RefExists(stepCtx, paths.sourcePath, sourceBranch) {
-				// Resolve to the safe full ref path to avoid "fatal: ambiguous
-				// object name" errors (stale packed-ref divergence or a local
-				// branch with the same slash-delimited name as the remote ref).
-				resolved := resolveRef(stepCtx, paths.sourcePath, sourceBranch)
-				err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, resolved)
-				if err != nil {
-					return CreateProgressFailed, err.Error(), err
-				}
-				return CreateProgressCompleted, paths.worktreePath, nil
-			}
-
-			// Slow path: fetch the ref (shallow + blobless) then create the worktree.
-			if fetchErr := m.gits.FetchRefShallow(stepCtx, paths.sourcePath, sourceBranch); fetchErr != nil {
-				return CreateProgressFailed, fetchErr.Error(), fetchErr
-			}
-
-			// Re-resolve after fetch in case the ref is now available as a full
-			// remote-tracking ref (e.g. refs/remotes/origin/main).
-			resolved := resolveRef(stepCtx, paths.sourcePath, sourceBranch)
-			if err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, resolved); err != nil {
+			createdPath, err := worktree.Create(stepCtx, worktree.CreateRequest{
+				RepoKey:       req.RepoKey,
+				WorkspaceName: req.WorkspaceName,
+				SourcePath:    req.SourcePath,
+				TargetBranch:  req.TargetBranch,
+				SourceBranch:  req.SourceBranch,
+			}, paths)
+			if err != nil {
 				return CreateProgressFailed, err.Error(), err
 			}
-			return CreateProgressCompleted, paths.worktreePath, nil
+			return CreateProgressCompleted, createdPath, nil
 		},
 	}
 }
 
 // makeContextStep returns the step that links the project context directory.
-func makeContextStep(req CreateRequest, paths resolvedCreatePaths) createProgressStep {
+func makeContextStep(req CreateRequest, paths worktree.CreatePaths) createProgressStep {
 	return createProgressStep{
 		ID:      "context",
 		Label:   "Link project context",
@@ -231,11 +183,11 @@ func makeContextStep(req CreateRequest, paths resolvedCreatePaths) createProgres
 				return CreateProgressSkipped, "Context link disabled", nil
 			}
 
-			contextPath, err := DefaultContextPath(paths.repoKey)
+			contextPath, err := DefaultContextPath(paths.RepoKey)
 			if err != nil {
 				return CreateProgressFailed, err.Error(), err
 			}
-			if err := ensureContextLink(contextPath, paths.worktreePath); err != nil {
+			if err := ensureContextLink(contextPath, paths.WorktreePath); err != nil {
 				wrappedErr := fmt.Errorf("create context link: %w", err)
 				return CreateProgressFailed, err.Error(), wrappedErr
 			}
@@ -294,49 +246,11 @@ func runCreateSteps(ctx context.Context, workspaceID string, steps []createProgr
 }
 
 // cleanupFailedCreate removes a partially created worktree and its branch on
-// best-effort basis. This prevents orphaned branches and worktree directories
-// from accumulating when a creation step fails after the worktree step succeeded.
+// best-effort basis, using the same removal primitives as the normal close
+// path. This prevents orphaned branches and worktree directories from
+// accumulating when a creation step fails after the worktree step succeeded.
 func (m *Manager) cleanupFailedCreate(ctx context.Context, repoRoot string, worktreePath string, branch string) {
 	cleanupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-
-	// Try to remove the worktree first (this also cleans up .git/worktrees entry).
-	if _, err := os.Stat(worktreePath); err == nil {
-		if removeErr := m.gits.RemoveWorktree(cleanupCtx, repoRoot, worktreePath, true); removeErr != nil {
-			// Worktree removal via git failed — try removing directory directly.
-			_ = os.RemoveAll(worktreePath)
-		}
-	}
-
-	// Remove the branch that was created by `git worktree add -b`.
-	if strings.TrimSpace(branch) != "" && m.gits.RefExists(cleanupCtx, repoRoot, branch) {
-		_ = m.gits.RemoveBranch(cleanupCtx, repoRoot, branch, true)
-	}
-}
-
-func absUserPath(path string) (string, error) {
-	if path == "~" || strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		if path == "~" {
-			path = home
-		} else {
-			path = filepath.Join(home, path[2:])
-		}
-	}
-	return filepath.Abs(path)
-}
-
-func safeRelativePath(input string, field string) (string, error) {
-	trimmed := strings.TrimSpace(input)
-	if trimmed == "" || filepath.IsAbs(trimmed) {
-		return "", NewRPCError(rpcCodeInvalidParams, field+" must be relative")
-	}
-	cleaned := filepath.Clean(trimmed)
-	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
-		return "", NewRPCError(rpcCodeInvalidParams, field+" must not escape .yishan")
-	}
-	return cleaned, nil
+	worktree.CleanupPartial(cleanupCtx, repoRoot, worktreePath, branch)
 }

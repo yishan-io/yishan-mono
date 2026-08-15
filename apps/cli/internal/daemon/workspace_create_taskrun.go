@@ -42,10 +42,10 @@ func (h *JSONRPCHandler) publishWorkspaceCreateCompleted(prepared preparedWorksp
 // daemon, remote service node) the run executes in a terminal via the agent
 // CLI, matching the pre-existing behavior.
 func (h *JSONRPCHandler) maybeStartTaskRun(prepared preparedWorkspaceCreate, created workspace.Workspace) (string, *taskRunSessionInfo) {
-	if prepared.localCreate == nil || prepared.localCreate.TaskRun == nil {
+	if prepared.LocalCreate == nil || prepared.LocalCreate.TaskRun == nil {
 		return "", nil
 	}
-	taskRun := prepared.localCreate.TaskRun
+	taskRun := prepared.LocalCreate.TaskRun
 	if h.hasDesktopUI() {
 		return h.startTaskRunChatSession(created, taskRun)
 	}

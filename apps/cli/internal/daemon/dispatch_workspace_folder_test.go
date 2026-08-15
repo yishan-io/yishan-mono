@@ -208,7 +208,7 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	if _, err := h.manager.Open(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
 		t.Fatalf("open folder in manager: %v", err)
 	}
-	if _, err := h.manager.GetWorkspace(created.ID); err != nil {
+	if _, err := h.getWorkspace(created.ID); err != nil {
 		t.Fatalf("folder should be open in manager: %v", err)
 	}
 
@@ -220,7 +220,7 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 		t.Fatalf("delete local folder: %v", err)
 	}
 
-	if _, err := h.manager.GetWorkspace(created.ID); err == nil {
+	if _, err := h.getWorkspace(created.ID); err == nil {
 		t.Fatal("expected folder to be removed from the manager")
 	}
 	if _, err := store.Get(context.Background(), created.ID); err == nil {

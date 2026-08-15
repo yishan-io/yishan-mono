@@ -8,6 +8,7 @@ import (
 	"time"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/workspace"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
@@ -116,7 +117,7 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
 	defer handler.Shutdown()
 
-	handle, err := manager.WorkspaceHandle(openedWorkspace.ID)
+	handle, err := handler.workspaceHandle(openedWorkspace.ID)
 	if err != nil {
 		t.Fatalf("workspace handle: %v", err)
 	}
@@ -192,7 +193,7 @@ func TestJSONRPCHandler_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspa
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(workspaceStore)
+	manager := workspace.NewManagerWithStore(dbconv.NewStore(workspaceStore))
 	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
 	defer handler.Shutdown()
 
@@ -209,9 +210,9 @@ func TestJSONRPCHandler_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspa
 		t.Fatalf("hydrate and watch workspaces: %v", err)
 	}
 
-	hydratedWorkspace, err := manager.GetWorkspace("workspace-1")
-	if err != nil {
-		t.Fatalf("get hydrated workspace: %v", err)
+	hydratedWorkspace, ok := manager.Instances().Get("workspace-1")
+	if !ok {
+		t.Fatal("get hydrated workspace: not found")
 	}
 	if !handler.watchers.IsWatching(hydratedWorkspace.Path) {
 		t.Fatalf("expected watcher registered for hydrated workspace path %q", hydratedWorkspace.Path)

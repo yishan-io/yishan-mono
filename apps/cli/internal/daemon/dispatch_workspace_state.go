@@ -10,6 +10,7 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 
 	"github.com/rs/zerolog/log"
 )
@@ -22,7 +23,7 @@ func (h *JSONRPCHandler) handleWorkspaceHealth(ctx context.Context, params json.
 		return nil, err
 	}
 
-	ws, err := h.manager.GetWorkspace(req.WorkspaceID)
+	ws, err := h.getWorkspace(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,18 +47,18 @@ func (h *JSONRPCHandler) handleWorkspaceHealth(ctx context.Context, params json.
 // workspace state changed event. Returns the resolved state, health detail,
 // and any health-check error message.
 func (h *JSONRPCHandler) refreshWorkspaceHealth(ctx context.Context, workspaceID string) (string, string, string, error) {
-	ws, err := h.manager.GetWorkspace(workspaceID)
+	ws, err := h.getWorkspace(workspaceID)
 	if err != nil {
 		return "", "", "", err
 	}
 
-	state := workspace.WorkspaceStateActive
-	health := ""
+	state := instance.StateActive
+	health := instance.HealthOK
 	healthErr := ""
 
 	if _, statErr := os.Stat(ws.Path); statErr != nil {
-		state = workspace.WorkspaceStateError
-		health = workspace.WorkspaceHealthPathMissing
+		state = instance.StateError
+		health = instance.HealthPathMissing
 		healthErr = statErr.Error()
 	}
 
@@ -67,36 +68,36 @@ func (h *JSONRPCHandler) refreshWorkspaceHealth(ctx context.Context, workspaceID
 	if !h.isFolderWorkspace(ctx, workspaceID) && healthErr == "" {
 		isWorktree, checkErr := isGitWorktree(ws.Path)
 		if checkErr != nil {
-			state = workspace.WorkspaceStateError
-			health = workspace.WorkspaceHealthPathMissing
+			state = instance.StateError
+			health = instance.HealthPathMissing
 			healthErr = checkErr.Error()
 		} else if !isWorktree {
-			state = workspace.WorkspaceStateError
-			health = workspace.WorkspaceHealthNotWorktree
+			state = instance.StateError
+			health = instance.HealthNotWorktree
 		}
 	}
 
-	if err := h.manager.SetWorkspaceState(workspaceID, state, health); err != nil {
+	if err := h.manager.Instances().SetState(workspaceID, state, health); err != nil {
 		return "", "", "", err
 	}
 
-	if state == workspace.WorkspaceStateError {
+	if state == instance.StateError {
 		h.watchers.Unwatch(ws.Path)
 		h.prTracker.StopTracking(workspaceID)
-	} else if ws.State == workspace.WorkspaceStateError {
+	} else if instance.State(ws.State) == instance.StateError {
 		// Recovery from error back to active: re-register the filesystem watcher
 		// that was removed on the error transition, so file-change events (which
 		// drive the Git Changes tab) resume without a daemon restart.
 		h.watchAndTrack(workspaceID, ws.Path)
 	}
 
-	if err := h.updatePersistedWorkspaceState(ctx, workspaceID, state, health); err != nil {
+	if err := h.updatePersistedWorkspaceState(ctx, workspaceID, string(state), string(health)); err != nil {
 		return "", "", "", err
 	}
 
-	h.emitWorkspaceStateChanged(workspaceID, state, health, false)
+	h.emitWorkspaceStateChanged(workspaceID, string(state), string(health), false)
 
-	return state, health, healthErr, nil
+	return string(state), string(health), healthErr, nil
 }
 
 // startWorkspaceHealthMonitor periodically re-checks active workspaces whose
@@ -123,8 +124,8 @@ func (h *JSONRPCHandler) startWorkspaceHealthMonitor(ctx context.Context) {
 // stays on demand (workspace.health) to avoid false positives for
 // git-local/primary workspaces that are plain directories.
 func (h *JSONRPCHandler) checkWorkspaceHealth(ctx context.Context) {
-	for _, ws := range h.manager.List() {
-		if ws.State != workspace.WorkspaceStateActive {
+	for _, ws := range h.manager.Instances().List() {
+		if instance.State(ws.State) != instance.StateActive {
 			continue
 		}
 		if _, statErr := os.Stat(ws.Path); statErr == nil {
@@ -168,7 +169,7 @@ func (h *JSONRPCHandler) summarizeUsedAgents(workspaceID string, closeReq worksp
 	if len(agents) == 0 {
 		return
 	}
-	ws, err := h.manager.GetWorkspace(workspaceID)
+	ws, err := h.getWorkspace(workspaceID)
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("cannot resolve workspace for agent summarization")
 		return
@@ -191,8 +192,8 @@ func (h *JSONRPCHandler) watchAndTrack(workspaceID string, path string) {
 // would ever be created for pre-existing workspaces after a daemon restart
 // and file-change events (which drive the Git Changes tab) would stop flowing.
 func (h *JSONRPCHandler) watchActiveWorkspaces() {
-	for _, ws := range h.manager.List() {
-		if ws.State != workspace.WorkspaceStateActive {
+	for _, ws := range h.manager.Instances().List() {
+		if instance.State(ws.State) != instance.StateActive {
 			continue
 		}
 		if strings.TrimSpace(ws.Path) == "" {
@@ -215,5 +216,5 @@ func (h *JSONRPCHandler) isFolderWorkspace(ctx context.Context, workspaceID stri
 	if err != nil {
 		return false
 	}
-	return row.Kind == workspace.KindFolder
+	return row.Kind == string(workspace.KindFolder)
 }

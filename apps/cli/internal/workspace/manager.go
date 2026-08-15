@@ -7,21 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace/terminal"
-)
-
-const (
-	WorkspaceStateActive  = "active"
-	WorkspaceStateError   = "error"
-	WorkspaceStateClosing = "closing"
-
-	WorkspaceHealthPathMissing = "path-missing"
-	WorkspaceHealthNotWorktree = "not-worktree"
+	"yishan/apps/cli/internal/worktree"
 )
 
 type Workspace struct {
@@ -29,8 +19,8 @@ type Workspace struct {
 	Path            string                `json:"path"`
 	OrgID           string                `json:"orgId,omitempty"`
 	ProjectID       string                `json:"projectId,omitempty"`
-	State           string                `json:"state"`
-	Health          string                `json:"health,omitempty"`
+	State           State                 `json:"state"`
+	Health          Health                `json:"health,omitempty"`
 	SetupHookResult *HookResult           `json:"setupHookResult,omitempty"`
 	PullRequest     *WorkspacePullRequest `json:"pullRequest,omitempty"`
 }
@@ -52,26 +42,35 @@ type WorkspacePullRequest struct {
 }
 
 type Manager struct {
-	mu         sync.RWMutex
-	workspaces map[string]Workspace
-	files      *FileService
-	gits       *GitService
-	terminals  *terminal.Manager
-	store      *localdb.WorkspaceStore
+	instances InstanceRegistry
+	gits      *GitService
+	terminals *terminal.Manager
+	store     WorkspaceStore
 }
 
 func NewManager() *Manager {
-	return NewManagerWithStore(nil)
+	return NewManagerWithRegistry(newMemoryRegistry())
 }
 
 // NewManagerWithStore creates a manager with optional durable workspace storage.
-func NewManagerWithStore(store *localdb.WorkspaceStore) *Manager {
+func NewManagerWithStore(store WorkspaceStore) *Manager {
+	return NewManagerWithRegistryAndStore(newMemoryRegistry(), store)
+}
+
+// NewManagerWithRegistry creates a manager backed by the given instance
+// registry (the daemon injects the instance-package registry).
+func NewManagerWithRegistry(registry InstanceRegistry) *Manager {
+	return NewManagerWithRegistryAndStore(registry, nil)
+}
+
+// NewManagerWithRegistryAndStore wires both the instance registry and durable
+// workspace storage.
+func NewManagerWithRegistryAndStore(registry InstanceRegistry, store WorkspaceStore) *Manager {
 	return &Manager{
-		workspaces: make(map[string]Workspace),
-		files:      NewFileService(),
-		gits:       NewGitService(),
-		terminals:  terminal.NewManager(),
-		store:      store,
+		instances: registry,
+		gits:      NewGitService(),
+		terminals: terminal.NewManager(),
+		store:     store,
 	}
 }
 
@@ -94,14 +93,14 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 		// Folder workspaces are plain local directories that the desktop opens
 		// on demand (workspace.openProject). They are not git worktrees, so they
 		// must never be auto-opened here at daemon boot.
-		if storedWorkspace.Kind == KindFolder {
+		if storedWorkspace.Kind == string(KindFolder) {
 			continue
 		}
 		// A provisioning row has no worktree yet (create is in flight, or the
 		// daemon stopped mid-create): a missing path is expected then, not an
 		// error. Skip it so it is never opened and marked error/path-missing;
 		// the create goroutine (or a later recovery pass) owns it.
-		if storedWorkspace.Status == "provisioning" {
+		if storedWorkspace.Status == string(StatusProvisioning) {
 			continue
 		}
 		if err := m.hydrateWorkspace(storedWorkspace); err != nil {
@@ -109,19 +108,19 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 			// Any open failure (missing path, path replaced by a file,
 			// permissions, ...) leaves the workspace unusable: register it as
 			// error so the UI offers close-only and it stays closable.
-			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateError, WorkspaceHealthPathMissing)
-			m.registerErrorWorkspace(storedWorkspace, WorkspaceHealthPathMissing)
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(StateError), string(HealthPathMissing))
+			m.registerErrorWorkspace(storedWorkspace, HealthPathMissing)
 			continue
 		}
 		if isPersistedNotWorktreeError(storedWorkspace) {
 			// Open succeeds for any directory, so a previously-detected
 			// not-worktree error must be preserved, not reset to active.
-			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateError, WorkspaceHealthNotWorktree)
-			m.registerErrorWorkspace(storedWorkspace, WorkspaceHealthNotWorktree)
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(StateError), string(HealthNotWorktree))
+			m.registerErrorWorkspace(storedWorkspace, HealthNotWorktree)
 			continue
 		}
-		if storedWorkspace.State != WorkspaceStateActive || (storedWorkspace.Health != nil && *storedWorkspace.Health != "") {
-			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateActive, "")
+		if storedWorkspace.State != string(StateActive) || (storedWorkspace.Health != nil && *storedWorkspace.Health != "") {
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(StateActive), "")
 		}
 		if err := m.hydrateWorkspacePullRequest(ctx, storedWorkspace.ID); err != nil {
 			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping PR hydration for workspace")
@@ -136,26 +135,24 @@ func (m *Manager) persistWorkspaceLifecycleState(ctx context.Context, workspaceI
 	if m.store == nil {
 		return
 	}
-	err := m.store.Update(ctx, workspaceID, localdb.WorkspaceUpdate{State: &state, Health: &health})
-	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	err := m.store.Update(ctx, workspaceID, StoredWorkspaceUpdate{State: &state, Health: &health})
+	if err != nil && !errors.Is(err, ErrWorkspaceNotFound) {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("failed to persist workspace lifecycle state")
 	}
 }
 
 // isPersistedNotWorktreeError reports whether the stored row carries a
 // previously-detected not-worktree error that must survive rehydration.
-func isPersistedNotWorktreeError(storedWorkspace localdb.Workspace) bool {
-	return storedWorkspace.State == WorkspaceStateError &&
-		storedWorkspace.Health != nil && *storedWorkspace.Health == WorkspaceHealthNotWorktree
+func isPersistedNotWorktreeError(storedWorkspace StoredWorkspace) bool {
+	return storedWorkspace.State == string(StateError) &&
+		storedWorkspace.Health != nil && *storedWorkspace.Health == string(HealthNotWorktree)
 }
 
 // registerErrorWorkspace registers or updates an in-memory workspace as error
 // with the given health detail. Used when a persisted workspace cannot be
 // opened (missing path) or must stay error (not-worktree).
-func (m *Manager) registerErrorWorkspace(storedWorkspace localdb.Workspace, health string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	ws, ok := m.workspaces[storedWorkspace.ID]
+func (m *Manager) registerErrorWorkspace(storedWorkspace StoredWorkspace, health Health) {
+	ws, ok := m.instances.Get(storedWorkspace.ID)
 	if !ok {
 		ws = Workspace{
 			ID:        storedWorkspace.ID,
@@ -164,9 +161,9 @@ func (m *Manager) registerErrorWorkspace(storedWorkspace localdb.Workspace, heal
 			ProjectID: storedWorkspace.ProjectID,
 		}
 	}
-	ws.State = WorkspaceStateError
+	ws.State = StateError
 	ws.Health = health
-	m.workspaces[storedWorkspace.ID] = ws
+	m.instances.Open(ws)
 }
 
 // canonicalizeWorkspacePath resolves a workspace path to its canonical form.
@@ -183,7 +180,7 @@ func canonicalizeWorkspacePath(path string) string {
 	return filepath.Clean(absolutePath)
 }
 
-func (m *Manager) hydrateWorkspace(storedWorkspace localdb.Workspace) error {
+func (m *Manager) hydrateWorkspace(storedWorkspace StoredWorkspace) error {
 	_, err := m.Open(OpenRequest{ID: storedWorkspace.ID, Path: storedWorkspace.LocalPath,
 		OrgID: storedWorkspace.OrganizationID, ProjectID: storedWorkspace.ProjectID})
 	if err != nil {
@@ -205,12 +202,12 @@ func (m *Manager) hydrateWorkspacePullRequest(ctx context.Context, workspaceID s
 		if err != nil {
 			return err
 		}
-		return m.SetWorkspacePullRequest(workspaceID, pullRequest)
+		return m.instances.SetPullRequest(workspaceID, pullRequest)
 	}
 	return nil
 }
 
-func parsePersistedPullRequest(persistedPullRequest localdb.WorkspacePullRequest) (*WorkspacePullRequest, error) {
+func parsePersistedPullRequest(persistedPullRequest StoredPullRequest) (*WorkspacePullRequest, error) {
 	pullRequest := &WorkspacePullRequest{}
 	if persistedPullRequest.Metadata != nil {
 		if err := json.Unmarshal([]byte(*persistedPullRequest.Metadata), pullRequest); err != nil {
@@ -227,7 +224,7 @@ func parsePersistedPullRequest(persistedPullRequest localdb.WorkspacePullRequest
 }
 
 func isLiveWorkspaceStatus(status string) bool {
-	return status == "active" || status == "provisioning"
+	return status == string(StatusActive) || status == string(StatusProvisioning)
 }
 
 type OpenRequest struct {
@@ -279,56 +276,16 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 
 	ensureGitExclude(absPath, ContextLinkName)
 
-	m.mu.Lock()
-	var existing Workspace
-	if current, ok := m.workspaces[req.ID]; ok {
-		existing = current
-	}
-	existingPathID := ""
-	for workspaceID, workspace := range m.workspaces {
-		if workspace.Path != absPath {
-			continue
-		}
-		existingPathID = workspaceID
-		if existing.ID == "" {
-			existing = workspace
-		}
-		break
-	}
-
-	ws := Workspace{
-		ID:              req.ID,
-		Path:            absPath,
-		OrgID:           req.OrgID,
-		ProjectID:       req.ProjectID,
-		State:           WorkspaceStateActive,
-		SetupHookResult: existing.SetupHookResult,
-		PullRequest:     existing.PullRequest,
-	}
-	if ws.OrgID == "" {
-		ws.OrgID = existing.OrgID
-	}
-	if ws.ProjectID == "" {
-		ws.ProjectID = existing.ProjectID
-	}
-	if existingPathID != "" && existingPathID != req.ID {
-		delete(m.workspaces, existingPathID)
-	}
-	m.workspaces[req.ID] = ws
-	m.mu.Unlock()
-
+	// The registry owns the instance map: it preserves runtime fields from any
+	// existing instance and replaces any other instance at the same path.
+	ws := m.instances.Open(Workspace{
+		ID:        req.ID,
+		Path:      absPath,
+		OrgID:     req.OrgID,
+		ProjectID: req.ProjectID,
+		State:     StateActive,
+	})
 	return ws, nil
-}
-
-func (m *Manager) List() []Workspace {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	out := make([]Workspace, 0, len(m.workspaces))
-	for _, ws := range m.workspaces {
-		out = append(out, ws)
-	}
-	return out
 }
 
 // CloseResult captures the outcome of a workspace close operation, including
@@ -368,9 +325,7 @@ func (m *Manager) CloseWorkspace(ctx context.Context, req CloseRequest) (CloseRe
 		return result, err
 	}
 
-	m.mu.Lock()
-	delete(m.workspaces, req.WorkspaceID)
-	m.mu.Unlock()
+	m.instances.Remove(req.WorkspaceID)
 
 	return result, nil
 }
@@ -405,104 +360,38 @@ func (m *Manager) CloseWorkspacePath(ctx context.Context, req ClosePathRequest) 
 		result.PostHookResult = &hookResult
 	}
 
-	mainWorktreePath, err := m.gits.MainWorktreePath(ctx, req.Path)
-	if err != nil {
-		if isNotGitRepositoryError(err) {
-			// Directory exists but git registration is gone: nothing left to
-			// tear down via git, and the error can never resolve on retry.
-			// The leftover directory is deliberately not removed.
-			return result, nil
-		}
+	// Tear down the worktree and (optionally) its branch via the worktree
+	// package: a directory that lost its git registration is treated as
+	// already gone (the leftover directory is deliberately not removed).
+	if err := worktree.Remove(ctx, worktree.RemoveRequest{
+		Path:          req.Path,
+		Branch:        req.Branch,
+		RemoveBranch:  req.RemoveBranch,
+		ForceWorktree: req.ForceWorktree,
+		ForceBranch:   req.ForceBranch,
+	}); err != nil {
 		return result, err
-	}
-
-	branch := req.Branch
-	if req.RemoveBranch && branch == "" {
-		branch, err = m.gits.CurrentBranch(ctx, req.Path)
-		if err != nil {
-			return result, err
-		}
-	}
-
-	if err := m.gits.RemoveWorktree(ctx, mainWorktreePath, req.Path, req.ForceWorktree); err != nil {
-		return result, err
-	}
-	if req.RemoveBranch {
-		if err := m.gits.RemoveBranch(ctx, mainWorktreePath, branch, req.ForceBranch); err != nil {
-			return result, err
-		}
 	}
 
 	return result, nil
 }
 
 func (m *Manager) getWorkspace(id string) (Workspace, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	ws, ok := m.workspaces[id]
+	ws, ok := m.instances.Get(id)
 	if !ok {
 		return Workspace{}, NewRPCError(rpcCodeNotFound, "workspace not found")
 	}
 	return ws, nil
 }
 
-func (m *Manager) GetWorkspace(id string) (Workspace, error) {
-	return m.getWorkspace(id)
+// Instances returns the instance registry (single owner of the instance map).
+func (m *Manager) Instances() InstanceRegistry {
+	return m.instances
 }
 
-func (m *Manager) WorkspaceHandle(id string) (WorkspaceHandle, error) {
-	ws, err := m.getWorkspace(id)
-	if err != nil {
-		return WorkspaceHandle{}, err
-	}
-	return m.handleForWorkspace(ws), nil
-}
-
-func (m *Manager) WorkspaceHandleByPath(path string) (WorkspaceHandle, error) {
-	resolvedPath, err := filepath.Abs(path)
-	if err != nil {
-		return WorkspaceHandle{}, err
-	}
-	canonicalPath, err := filepath.EvalSymlinks(resolvedPath)
-	if err == nil {
-		resolvedPath = canonicalPath
-	}
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	for _, ws := range m.workspaces {
-		if ws.Path == resolvedPath {
-			return m.handleForWorkspace(ws), nil
-		}
-	}
-	return WorkspaceHandle{}, NewRPCError(rpcCodeNotFound, "workspace not found")
-}
-
-func (m *Manager) handleForWorkspace(ws Workspace) WorkspaceHandle {
-	return WorkspaceHandle{workspace: ws, files: m.files, gits: m.gits, terminals: m.terminals}
-}
-
-func (m *Manager) FindWorkspaceByPath(path string) (Workspace, bool) {
-	handle, err := m.WorkspaceHandleByPath(path)
-	if err != nil {
-		return Workspace{}, false
-	}
-	return handle.Workspace(), true
-}
-
-func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullRequest) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	ws, ok := m.workspaces[workspaceID]
-	if !ok {
-		return NewRPCError(rpcCodeNotFound, "workspace not found")
-	}
-
-	ws.PullRequest = pr
-	m.workspaces[workspaceID] = ws
-	return nil
+// Gits exposes the shared git service for handle construction.
+func (m *Manager) Gits() *GitService {
+	return m.gits
 }
 
 // PersistWorkspacePullRequest stores a tracker snapshot in local SQLite.
@@ -510,15 +399,15 @@ func (m *Manager) PersistWorkspacePullRequest(ctx context.Context, workspaceID s
 	if m.store == nil || pullRequest == nil {
 		return nil
 	}
-	workspace, err := m.GetWorkspace(workspaceID)
-	if err != nil {
-		return err
+	workspace, ok := m.instances.Get(workspaceID)
+	if !ok {
+		return NewRPCError(rpcCodeNotFound, "workspace not found")
 	}
 	metadata, err := json.Marshal(pullRequest)
 	if err != nil {
 		return fmt.Errorf("marshal workspace pull request: %w", err)
 	}
-	return m.store.UpsertPR(ctx, &localdb.WorkspacePullRequest{
+	return m.store.UpsertPR(ctx, &StoredPullRequest{
 		WorkspaceID: workspaceID, OrganizationID: workspace.OrgID, PRID: fmt.Sprintf("%d", pullRequest.Number),
 		Title: optionalString(pullRequest.Title), URL: optionalString(pullRequest.URL), Branch: optionalString(pullRequest.Branch),
 		BaseBranch: optionalString(pullRequest.BaseBranch), State: persistedPullRequestState(pullRequest),
@@ -564,31 +453,6 @@ func (m *Manager) ResolvePersistedWorkspacePullRequest(ctx context.Context, work
 		return fmt.Errorf("resolve persisted workspace pull request: %w", err)
 	}
 	return nil
-}
-
-func (m *Manager) SetWorkspaceState(workspaceID string, state string, health string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	ws, ok := m.workspaces[workspaceID]
-	if !ok {
-		return NewRPCError(rpcCodeNotFound, "workspace not found")
-	}
-
-	ws.State = state
-	ws.Health = health
-	m.workspaces[workspaceID] = ws
-	return nil
-}
-
-func (m *Manager) InvalidateWorkspaceFileCacheByPath(worktreePath string, changedPaths []string) {
-	m.files.InvalidateWorkspacePaths(worktreePath, changedPaths)
-}
-
-func (m *Manager) RemoveWorkspaceFromMemory(workspaceID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.workspaces, workspaceID)
 }
 
 func (m *Manager) GitInspect(ctx context.Context, path string) (GitInspectResult, error) {
