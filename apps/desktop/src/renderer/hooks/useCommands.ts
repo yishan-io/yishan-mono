@@ -130,6 +130,7 @@ import {
   activateWorkspacePane as activateWorkspacePaneCommand,
   closeWorkspace as closeWorkspaceCommand,
   createWorkspace as createWorkspaceCommand,
+  deleteLocalFolder as deleteLocalFolderCommand,
   deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
   focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
   openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
@@ -269,6 +270,7 @@ export type Commands = {
     };
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
+  deleteLocalFolder: typeof deleteLocalFolderCommand;
   refreshWorkspacePullRequest: (workspaceId: string) => Promise<void>;
   refreshWorkspaceGitChanges: (workspaceId: string) => Promise<void>;
   selectTab: typeof setSelectedTabCommand;
@@ -400,6 +402,7 @@ export function useCommands(): Commands {
       updateProjectConfig: updateProjectConfigCommand,
       createWorkspace: createWorkspaceCommand,
       closeWorkspace: closeWorkspaceCommand,
+      deleteLocalFolder: deleteLocalFolderCommand,
       createTab: createTabCommand,
       openTab: openTabCommand,
       openTabInOppositePane: openTabInOppositePaneCommand,

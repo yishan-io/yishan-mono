@@ -6,6 +6,7 @@ import {
   commitGitChanges,
   getGitAuthorName,
   getGitBranchStatus,
+  inspectGitRepository,
   listGitBranches,
   listGitChanges,
   listGitCommitsToTarget,
@@ -23,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   commitGitChanges: vi.fn(),
   getGitAuthorName: vi.fn(),
   getGitBranchStatus: vi.fn(),
+  gitInspect: vi.fn(),
   listGitBranches: vi.fn(),
   listGitChanges: vi.fn(),
   listGitCommitsToTarget: vi.fn(),
@@ -45,6 +47,7 @@ vi.mock("../rpc/rpcTransport", () => ({
       commitChanges: mocks.commitGitChanges,
       getBranchStatus: mocks.getGitBranchStatus,
       getAuthorName: mocks.getGitAuthorName,
+      inspect: mocks.gitInspect,
       listBranches: mocks.listGitBranches,
       listChanges: mocks.listGitChanges,
       listCommitsToTarget: mocks.listGitCommitsToTarget,
@@ -151,6 +154,54 @@ describe("gitCommands", () => {
     expect(mocks.getGitAuthorName).toHaveBeenCalledWith({ workspaceId: "workspace-author-forward" });
     expect(mocks.pushGitBranch).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
     expect(mocks.publishGitBranch).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+  });
+
+  it("returns empty git sections for a folder workspace without calling the daemon", async () => {
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "folder-workspace-1",
+          projectId: "local-folder",
+          repoId: "folder-workspace-1",
+          name: "Folder",
+          title: "Folder",
+          sourceBranch: "",
+          branch: "",
+          summaryId: "folder-workspace-1",
+          worktreePath: "/tmp/plain-folder",
+          kind: "folder",
+        },
+      ],
+    });
+
+    const result = await listGitChanges({ workspaceId: "folder-workspace-1" });
+
+    expect(result).toEqual({ staged: [], unstaged: [], untracked: [] });
+    expect(mocks.listGitChanges).not.toHaveBeenCalled();
+  });
+
+  it("returns a non-git result for a folder workspace without calling the daemon inspect", async () => {
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "folder-workspace-1",
+          projectId: "local-folder",
+          repoId: "folder-workspace-1",
+          name: "Folder",
+          title: "Folder",
+          sourceBranch: "",
+          branch: "",
+          summaryId: "folder-workspace-1",
+          worktreePath: "/tmp/plain-folder",
+          kind: "folder",
+        },
+      ],
+    });
+
+    const result = await inspectGitRepository({ workspaceId: "folder-workspace-1" });
+
+    expect(result).toEqual({ isGitRepository: false });
+    expect(mocks.gitInspect).not.toHaveBeenCalled();
   });
 
   it("returns empty git sections for a non-git workspace without calling the daemon", async () => {

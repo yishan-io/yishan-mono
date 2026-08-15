@@ -1,3 +1,4 @@
+import { isFolderWorkspace } from "../helpers/localFolder";
 import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import type { GitChangesBySection } from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
@@ -65,7 +66,7 @@ export async function listGitChanges(params: { workspaceId: string }) {
   const store = workspaceStore.getState();
   const workspace = store.workspaces.find((item) => item.id === workspaceId);
   const project = store.projects.find((item) => item.id === (workspace?.projectId ?? workspace?.repoId));
-  if (!supportsGitFeatures(project?.sourceType)) {
+  if (isFolderWorkspace(workspace) || !supportsGitFeatures(project?.sourceType)) {
     return { staged: [], unstaged: [], untracked: [] };
   }
 
@@ -154,6 +155,13 @@ export async function inspectGitRepository(params: { workspaceId: string }): Pro
   remoteUrl?: string;
   currentBranch?: string;
 }> {
+  const workspace = workspaceStore.getState().workspaces.find((item) => item.id === params.workspaceId.trim());
+
+  // Folder workspaces have no git repository: never fire git.inspect for them.
+  if (isFolderWorkspace(workspace)) {
+    return { isGitRepository: false };
+  }
+
   const client = await getDaemonClient();
   return client.git.inspect({ workspaceId: params.workspaceId });
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
+import { isFolderWorkspace } from "../helpers/localFolder";
 import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import { workspaceStore } from "../store/workspaceStore";
 
@@ -128,7 +129,11 @@ export function useAllWorkspacesGitSync() {
         continue;
       }
 
-      // Non-git projects have no git state to poll.
+      // Folder workspaces (kind="folder"/sentinel project id) and non-git
+      // projects have no git state to poll.
+      if (isFolderWorkspace(workspace)) {
+        continue;
+      }
       const project = projectByProjectId.get(workspace.projectId ?? workspace.repoId);
       if (!supportsGitFeatures(project?.sourceType)) {
         continue;

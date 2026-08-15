@@ -90,6 +90,9 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       setWorkspacePullRequest: vi.fn(),
       setWorkspaceCurrentBranch: vi.fn(),
       incrementGitRefreshVersion: vi.fn(),
+      loadLocalFolders: vi.fn(),
+      addLocalFolder: vi.fn(),
+      removeLocalFolder: vi.fn(),
       setOrderedWorkspaceIds: vi.fn(),
     } as WorkspaceStoreState,
 
