@@ -8,7 +8,6 @@ import (
 	"time"
 
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/dbconv"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -208,7 +207,7 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(dbconv.NewStore(workspaceStore))
+	manager := workspace.NewManagerWithStore(localdb.NewStore(workspaceStore))
 	app := newWatchTestApp(t, manager)
 
 	// Hydration alone must not register watchers (the regression this guards):

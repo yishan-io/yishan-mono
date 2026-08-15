@@ -1,4 +1,4 @@
-package workspace
+package db_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/workspace"
 )
 
 func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
@@ -34,7 +35,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 		t.Fatalf("create pull request: %v", err)
 	}
 
-	manager := NewManagerWithStore(newTestManagerStore(workspaceStore))
+	manager := workspace.NewManagerWithStore(newTestManagerStore(workspaceStore))
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
@@ -65,8 +66,8 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	manager := NewManager()
-	openedWorkspace, err := manager.Open(OpenRequest{ID: "ws-1", Path: symlinkPath})
+	manager := workspace.NewManager()
+	openedWorkspace, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: symlinkPath})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
@@ -87,13 +88,13 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 
 func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 	root := t.TempDir()
-	manager := NewManager()
+	manager := workspace.NewManager()
 
-	if _, err := manager.Open(OpenRequest{ID: "stale-id", Path: root}); err != nil {
+	if _, err := manager.Open(workspace.OpenRequest{ID: "stale-id", Path: root}); err != nil {
 		t.Fatalf("open stale workspace: %v", err)
 	}
 
-	openedWorkspace, err := manager.Open(OpenRequest{
+	openedWorkspace, err := manager.Open(workspace.OpenRequest{
 		ID:        "workspace-1",
 		Path:      root,
 		OrgID:     "org-1",
@@ -126,9 +127,9 @@ func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 }
 
 func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
-	manager := NewManager()
+	manager := workspace.NewManager()
 	workspacePath := t.TempDir()
-	if _, err := manager.Open(OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+	if _, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 	if err := os.RemoveAll(workspacePath); err != nil {
@@ -138,7 +139,7 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 		t.Fatalf("replace path with file: %v", err)
 	}
 
-	if _, err := manager.CloseWorkspace(context.Background(), CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+	if _, err := manager.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with replaced path: %v", err)
 	}
 	if _, ok := manager.Instances().Get("ws-1"); ok {
@@ -147,13 +148,13 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 }
 
 func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
-	manager := NewManager()
+	manager := workspace.NewManager()
 	workspacePath := t.TempDir()
-	if _, err := manager.Open(OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+	if _, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 
-	if _, err := manager.CloseWorkspace(context.Background(), CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+	if _, err := manager.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with non-git path: %v", err)
 	}
 	if _, ok := manager.Instances().Get("ws-1"); ok {
@@ -164,7 +165,7 @@ func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
 	}
 }
 
-func openTestManagerStore(t *testing.T) (*Manager, *localdb.WorkspaceStore) {
+func openTestManagerStore(t *testing.T) (*workspace.Manager, *localdb.WorkspaceStore) {
 	t.Helper()
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -175,7 +176,7 @@ func openTestManagerStore(t *testing.T) (*Manager, *localdb.WorkspaceStore) {
 		t.Fatalf("migrate database: %v", err)
 	}
 	store := localdb.NewWorkspaceStore(database)
-	return NewManagerWithStore(newTestManagerStore(store)), store
+	return workspace.NewManagerWithStore(newTestManagerStore(store)), store
 }
 
 func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
@@ -205,7 +206,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected healthy workspace restored: not found")
 	}
-	if healthy.State != StateActive {
+	if healthy.State != workspace.StateActive {
 		t.Fatalf("expected healthy workspace active, got %q", healthy.State)
 	}
 
@@ -213,7 +214,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected missing-path workspace registered as error: not found")
 	}
-	if broken.State != StateError || broken.Health != HealthPathMissing {
+	if broken.State != workspace.StateError || broken.Health != workspace.HealthPathMissing {
 		t.Fatalf("expected error/path-missing, got state=%q health=%q", broken.State, broken.Health)
 	}
 
@@ -221,7 +222,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != string(StateError) || persisted.Health == nil || *persisted.Health != string(HealthPathMissing) {
+	if persisted.State != string(workspace.StateError) || persisted.Health == nil || *persisted.Health != string(workspace.HealthPathMissing) {
 		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 	if persisted.Status != "active" {
@@ -250,14 +251,14 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected workspace registered as error: not found")
 	}
-	if ws.State != StateError || ws.Health != HealthPathMissing {
+	if ws.State != workspace.StateError || ws.Health != workspace.HealthPathMissing {
 		t.Fatalf("expected error/path-missing, got state=%q health=%q", ws.State, ws.Health)
 	}
 	persisted, err := store.Get(context.Background(), "workspace-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != string(StateError) || persisted.Health == nil || *persisted.Health != string(HealthPathMissing) {
+	if persisted.State != string(workspace.StateError) || persisted.Health == nil || *persisted.Health != string(workspace.HealthPathMissing) {
 		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 }
@@ -304,11 +305,11 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 	manager, store := openTestManagerStore(t)
 	workspacePath := t.TempDir()
 	branch := "feature/restored"
-	health := string(HealthPathMissing)
+	health := string(workspace.HealthPathMissing)
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
-		State: string(StateError), Health: &health,
+		State: string(workspace.StateError), Health: &health,
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
@@ -316,18 +317,18 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	workspace, ok := manager.Instances().Get("workspace-1")
+	ws, ok := manager.Instances().Get("workspace-1")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
-	if workspace.State != StateActive || workspace.Health != "" {
-		t.Fatalf("expected restored workspace active with cleared health, got state=%q health=%q", workspace.State, workspace.Health)
+	if ws.State != workspace.StateActive || ws.Health != "" {
+		t.Fatalf("expected restored workspace active with cleared health, got state=%q health=%q", ws.State, ws.Health)
 	}
 	persisted, err := store.Get(context.Background(), "workspace-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != string(StateActive) || (persisted.Health != nil && *persisted.Health != "") {
+	if persisted.State != string(workspace.StateActive) || (persisted.Health != nil && *persisted.Health != "") {
 		t.Fatalf("expected persisted active with cleared health, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 }
@@ -338,11 +339,11 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 	// not-worktree error must survive rehydration.
 	workspacePath := t.TempDir()
 	branch := "feature/not-worktree"
-	health := string(HealthNotWorktree)
+	health := string(workspace.HealthNotWorktree)
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
-		State: string(StateError), Health: &health,
+		State: string(workspace.StateError), Health: &health,
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
@@ -350,18 +351,18 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	workspace, ok := manager.Instances().Get("workspace-1")
+	ws, ok := manager.Instances().Get("workspace-1")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
-	if workspace.State != StateError || workspace.Health != HealthNotWorktree {
-		t.Fatalf("expected preserved error/not-worktree, got state=%q health=%q", workspace.State, workspace.Health)
+	if ws.State != workspace.StateError || ws.Health != workspace.HealthNotWorktree {
+		t.Fatalf("expected preserved error/not-worktree, got state=%q health=%q", ws.State, ws.Health)
 	}
 	persisted, err := store.Get(context.Background(), "workspace-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != string(StateError) || persisted.Health == nil || *persisted.Health != string(HealthNotWorktree) {
+	if persisted.State != string(workspace.StateError) || persisted.Health == nil || *persisted.Health != string(workspace.HealthNotWorktree) {
 		t.Fatalf("expected persisted error/not-worktree, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 }
@@ -377,14 +378,14 @@ func newTestManagerStore(raw *localdb.WorkspaceStore) *testManagerStore {
 	return &testManagerStore{raw: raw}
 }
 
-func (s *testManagerStore) List(ctx context.Context) ([]StoredWorkspace, error) {
+func (s *testManagerStore) List(ctx context.Context) ([]workspace.StoredWorkspace, error) {
 	rows, err := s.raw.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]StoredWorkspace, 0, len(rows))
+	out := make([]workspace.StoredWorkspace, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, StoredWorkspace{
+		out = append(out, workspace.StoredWorkspace{
 			ID: row.ID, OrganizationID: row.OrganizationID, ProjectID: row.ProjectID,
 			NodeID: row.NodeID, Kind: row.Kind, Status: row.Status,
 			Branch: row.Branch, SourceBranch: row.SourceBranch,
@@ -394,21 +395,21 @@ func (s *testManagerStore) List(ctx context.Context) ([]StoredWorkspace, error) 
 	return out, nil
 }
 
-func (s *testManagerStore) Update(ctx context.Context, workspaceID string, update StoredWorkspaceUpdate) error {
+func (s *testManagerStore) Update(ctx context.Context, workspaceID string, update workspace.StoredWorkspaceUpdate) error {
 	return s.raw.Update(ctx, workspaceID, localdb.WorkspaceUpdate{
 		Status: update.Status, State: update.State, Health: update.Health,
 		LocalPath: update.LocalPath, Branch: update.Branch,
 	})
 }
 
-func (s *testManagerStore) ListPRsByWorkspace(ctx context.Context, workspaceID string) ([]StoredPullRequest, error) {
+func (s *testManagerStore) ListPRsByWorkspace(ctx context.Context, workspaceID string) ([]workspace.StoredPullRequest, error) {
 	rows, err := s.raw.ListPRsByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]StoredPullRequest, 0, len(rows))
+	out := make([]workspace.StoredPullRequest, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, StoredPullRequest{
+		out = append(out, workspace.StoredPullRequest{
 			ID: row.ID, WorkspaceID: row.WorkspaceID, OrganizationID: row.OrganizationID,
 			PRID: row.PRID, Title: row.Title, URL: row.URL, Branch: row.Branch,
 			BaseBranch: row.BaseBranch, State: row.State, Metadata: row.Metadata,
@@ -418,7 +419,7 @@ func (s *testManagerStore) ListPRsByWorkspace(ctx context.Context, workspaceID s
 	return out, nil
 }
 
-func (s *testManagerStore) UpsertPR(ctx context.Context, pr *StoredPullRequest) error {
+func (s *testManagerStore) UpsertPR(ctx context.Context, pr *workspace.StoredPullRequest) error {
 	return s.raw.UpsertPR(ctx, &localdb.WorkspacePullRequest{
 		ID: pr.ID, WorkspaceID: pr.WorkspaceID, OrganizationID: pr.OrganizationID,
 		PRID: pr.PRID, Title: pr.Title, URL: pr.URL, Branch: pr.Branch,

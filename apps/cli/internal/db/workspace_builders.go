@@ -1,7 +1,6 @@
-package dbconv
+package db
 
 import (
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
@@ -12,8 +11,8 @@ import (
 
 // ProvisioningRow builds the local row written before a local create starts
 // (status provisioning, empty path, active runtime state).
-func ProvisioningRow(registration application.Registration) localdb.Workspace {
-	return localdb.Workspace{
+func ProvisioningRow(registration application.Registration) Workspace {
+	return Workspace{
 		ID:             registration.ID,
 		OrganizationID: registration.OrganizationID,
 		ProjectID:      registration.ProjectID,
@@ -29,10 +28,10 @@ func ProvisioningRow(registration application.Registration) localdb.Workspace {
 
 // ActiveUpdate builds the row update that finalizes a create (status active,
 // runtime state, worktree path).
-func ActiveUpdate(created workspace.Workspace) localdb.WorkspaceUpdate {
+func ActiveUpdate(created workspace.Workspace) WorkspaceUpdate {
 	status := string(workspace.StatusActive)
 	state := string(created.State)
-	return localdb.WorkspaceUpdate{
+	return WorkspaceUpdate{
 		Status:    &status,
 		State:     &state,
 		LocalPath: &created.Path,
@@ -40,13 +39,13 @@ func ActiveUpdate(created workspace.Workspace) localdb.WorkspaceUpdate {
 }
 
 // StatusUpdate builds a row update that only flips the lifecycle status.
-func StatusUpdate(status string) localdb.WorkspaceUpdate {
-	return localdb.WorkspaceUpdate{Status: &status}
+func StatusUpdate(status string) WorkspaceUpdate {
+	return WorkspaceUpdate{Status: &status}
 }
 
 // StateUpdate builds a row update that persists runtime state and health.
-func StateUpdate(state string, health string) localdb.WorkspaceUpdate {
-	return localdb.WorkspaceUpdate{State: &state, Health: &health}
+func StateUpdate(state string, health string) WorkspaceUpdate {
+	return WorkspaceUpdate{State: &state, Health: &health}
 }
 
 func optionalWorkspaceString(value string) *string {

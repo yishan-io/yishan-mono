@@ -1,4 +1,4 @@
-package apiclient
+package api
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestCreateWorkspaceInput_FullRegistration(t *testing.T) {
-	input := CreateWorkspaceInput(application.Registration{
+	input := BuildCreateWorkspaceInput(application.Registration{
 		ID: "ws-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
 		Kind: workspace.KindWorktree, Branch: "feature/x", SourceBranch: "main",
 	}, "source-node")
@@ -20,7 +20,7 @@ func TestCreateWorkspaceInput_FullRegistration(t *testing.T) {
 }
 
 func TestCreateWorkspaceInput_EmptyOptionalFields(t *testing.T) {
-	input := CreateWorkspaceInput(application.Registration{ID: "ws-2", Kind: workspace.KindWorktree}, "source-node")
+	input := BuildCreateWorkspaceInput(application.Registration{ID: "ws-2", Kind: workspace.KindWorktree}, "source-node")
 	if input.Branch != "" || input.SourceBranch != "" || input.NodeID != "" {
 		t.Fatalf("optional fields must be empty strings, got %#v", input)
 	}
@@ -30,18 +30,18 @@ func TestCreateWorkspaceInput_EmptyOptionalFields(t *testing.T) {
 }
 
 func TestUpdateWorkspaceInput_MapsPathAndSourceNode(t *testing.T) {
-	input := UpdateWorkspaceInput(application.Registration{ID: "ws-3"}, "/tmp/ws-3", "source-node")
+	input := BuildUpdateWorkspaceInput(application.Registration{ID: "ws-3"}, "/tmp/ws-3", "source-node")
 	if input.WorkspaceID != "ws-3" || input.LocalPath != "/tmp/ws-3" || input.SourceNodeID != "source-node" {
 		t.Fatalf("input = %#v", input)
 	}
 }
 
 func TestCloseWorkspaceInput_StatusIsTyped(t *testing.T) {
-	closing := CloseWorkspaceInput("ws-4", "source-node", workspace.StatusClosing)
+	closing := BuildCloseWorkspaceInput("ws-4", "source-node", workspace.StatusClosing)
 	if closing.WorkspaceID != "ws-4" || closing.Status != "closing" || closing.SourceNodeID != "source-node" {
 		t.Fatalf("closing input = %#v", closing)
 	}
-	closed := CloseWorkspaceInput("ws-4", "source-node", workspace.StatusClosed)
+	closed := BuildCloseWorkspaceInput("ws-4", "source-node", workspace.StatusClosed)
 	if closed.Status != "closed" {
 		t.Fatalf("closed input status = %q, want closed", closed.Status)
 	}

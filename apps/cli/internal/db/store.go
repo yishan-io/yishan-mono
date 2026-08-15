@@ -1,10 +1,9 @@
-package dbconv
+package db
 
 import (
 	"context"
 	"errors"
 
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -13,11 +12,11 @@ import (
 // workspace layer depends on this adapter through the interface, never on the
 // database package directly.
 type Store struct {
-	raw *localdb.WorkspaceStore
+	raw *WorkspaceStore
 }
 
 // NewStore wraps a raw SQLite workspace store.
-func NewStore(raw *localdb.WorkspaceStore) *Store {
+func NewStore(raw *WorkspaceStore) *Store {
 	return &Store{raw: raw}
 }
 
@@ -35,7 +34,7 @@ func (s *Store) List(ctx context.Context) ([]workspace.StoredWorkspace, error) {
 
 func (s *Store) Update(ctx context.Context, workspaceID string, update workspace.StoredWorkspaceUpdate) error {
 	err := s.raw.Update(ctx, workspaceID, storedUpdateFromDomain(update))
-	if errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	if errors.Is(err, ErrWorkspaceNotFound) {
 		return workspace.ErrWorkspaceNotFound
 	}
 	return err
@@ -62,7 +61,7 @@ func (s *Store) ResolvePR(ctx context.Context, workspaceID string, pullRequestID
 }
 
 // storedWorkspaceFromRow converts a raw SQLite row to the domain view.
-func storedWorkspaceFromRow(row localdb.Workspace) workspace.StoredWorkspace {
+func storedWorkspaceFromRow(row Workspace) workspace.StoredWorkspace {
 	return workspace.StoredWorkspace{
 		ID:             row.ID,
 		OrganizationID: row.OrganizationID,
@@ -79,8 +78,8 @@ func storedWorkspaceFromRow(row localdb.Workspace) workspace.StoredWorkspace {
 }
 
 // storedUpdateFromDomain converts the domain update to the raw row update.
-func storedUpdateFromDomain(update workspace.StoredWorkspaceUpdate) localdb.WorkspaceUpdate {
-	return localdb.WorkspaceUpdate{
+func storedUpdateFromDomain(update workspace.StoredWorkspaceUpdate) WorkspaceUpdate {
+	return WorkspaceUpdate{
 		Status:    update.Status,
 		State:     update.State,
 		Health:    update.Health,
@@ -90,7 +89,7 @@ func storedUpdateFromDomain(update workspace.StoredWorkspaceUpdate) localdb.Work
 }
 
 // storedPullRequestFromRow converts a raw PR row to the domain view.
-func storedPullRequestFromRow(row localdb.WorkspacePullRequest) workspace.StoredPullRequest {
+func storedPullRequestFromRow(row WorkspacePullRequest) workspace.StoredPullRequest {
 	return workspace.StoredPullRequest{
 		ID:             row.ID,
 		WorkspaceID:    row.WorkspaceID,
@@ -108,11 +107,11 @@ func storedPullRequestFromRow(row localdb.WorkspacePullRequest) workspace.Stored
 }
 
 // storedPullRequestToRow converts the domain PR to a raw row.
-func storedPullRequestToRow(pr *workspace.StoredPullRequest) *localdb.WorkspacePullRequest {
+func storedPullRequestToRow(pr *workspace.StoredPullRequest) *WorkspacePullRequest {
 	if pr == nil {
 		return nil
 	}
-	return &localdb.WorkspacePullRequest{
+	return &WorkspacePullRequest{
 		ID:             pr.ID,
 		WorkspaceID:    pr.WorkspaceID,
 		OrganizationID: pr.OrganizationID,

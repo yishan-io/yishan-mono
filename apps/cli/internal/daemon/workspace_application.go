@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	apiclient "yishan/apps/cli/internal/apiclient"
+	api "yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
-	dbconv "yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
@@ -114,7 +113,7 @@ func (a *appDeps) ListWorkspaces(ctx context.Context, organizationID string, pro
 	}
 	records := make([]workspace.Record, 0, len(response.Workspaces))
 	for _, item := range response.Workspaces {
-		records = append(records, apiclient.WorkspaceToDomain(item))
+		records = append(records, api.WorkspaceToDomain(item))
 	}
 	return records, nil
 }
@@ -172,7 +171,7 @@ func (a *appDeps) LocalRow(ctx context.Context, workspaceID string) (workspace.R
 	if err != nil {
 		return workspace.Record{}, false
 	}
-	return dbconv.WorkspaceToDomain(row), true
+	return localdb.WorkspaceToDomain(row), true
 }
 
 // ---- Instances ----

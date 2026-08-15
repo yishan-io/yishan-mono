@@ -1,7 +1,6 @@
-package apiclient
+package api
 
 import (
-	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
@@ -12,8 +11,8 @@ import (
 
 // CreateWorkspaceInput builds the provisioning-record request from a create
 // registration.
-func CreateWorkspaceInput(registration application.Registration, sourceNodeID string) api.CreateWorkspaceInput {
-	return api.CreateWorkspaceInput{
+func BuildCreateWorkspaceInput(registration application.Registration, sourceNodeID string) CreateWorkspaceInput {
+	return CreateWorkspaceInput{
 		ID:           registration.ID,
 		NodeID:       registration.NodeID,
 		Kind:         string(registration.Kind),
@@ -25,8 +24,8 @@ func CreateWorkspaceInput(registration application.Registration, sourceNodeID st
 
 // UpdateWorkspaceInput builds the provisioning→active update request (records
 // the final worktree path).
-func UpdateWorkspaceInput(registration application.Registration, localPath string, sourceNodeID string) api.UpdateWorkspaceInput {
-	return api.UpdateWorkspaceInput{
+func BuildUpdateWorkspaceInput(registration application.Registration, localPath string, sourceNodeID string) UpdateWorkspaceInput {
+	return UpdateWorkspaceInput{
 		WorkspaceID:  registration.ID,
 		LocalPath:    localPath,
 		SourceNodeID: sourceNodeID,
@@ -35,8 +34,8 @@ func UpdateWorkspaceInput(registration application.Registration, localPath strin
 
 // CloseWorkspaceInput builds the close request for the remote record (closing
 // before teardown, closed after).
-func CloseWorkspaceInput(workspaceID string, sourceNodeID string, status workspace.Status) api.CloseWorkspaceInput {
-	return api.CloseWorkspaceInput{
+func BuildCloseWorkspaceInput(workspaceID string, sourceNodeID string, status workspace.Status) CloseWorkspaceInput {
+	return CloseWorkspaceInput{
 		WorkspaceID:  workspaceID,
 		SourceNodeID: sourceNodeID,
 		Status:       string(status),

@@ -1,15 +1,14 @@
-package dbconv
+package db
 
 import (
 	"testing"
 
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 )
 
 func TestWorkspaceToDomain_MapsLifecycleFields(t *testing.T) {
 	branch := "feature/x"
-	record := WorkspaceToDomain(localdb.Workspace{
+	record := WorkspaceToDomain(Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, SourceBranch: &branch,
 		LocalPath: "/tmp/ws-1", State: "active",
@@ -30,7 +29,7 @@ func TestWorkspaceToDomain_MapsLifecycleFields(t *testing.T) {
 }
 
 func TestWorkspaceToDomain_NilBranchAndEmptyFields(t *testing.T) {
-	record := WorkspaceToDomain(localdb.Workspace{ID: "ws-2", Kind: "folder"})
+	record := WorkspaceToDomain(Workspace{ID: "ws-2", Kind: "folder"})
 	if record.Branch != "" || record.Status != workspace.Status("") {
 		t.Fatalf("record = %#v, want nil branch → empty, empty status", record)
 	}

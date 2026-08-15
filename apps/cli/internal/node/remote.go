@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"yishan/apps/cli/internal/apiclient"
+	"yishan/apps/cli/internal/api"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
@@ -32,7 +32,7 @@ func (a *App) CreateRemoteRecord(ctx context.Context, registration application.R
 	if !remoteWorkspaceRecordsEnabled(a.Runtime) {
 		return
 	}
-	_, err := a.Runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, apiclient.CreateWorkspaceInput(registration, a.NodeID))
+	_, err := a.Runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildCreateWorkspaceInput(registration, a.NodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to create remote workspace record")
 	}
@@ -48,7 +48,7 @@ func (a *App) UpdateRemoteRecord(ctx context.Context, registration application.R
 	if !remoteWorkspaceRecordsEnabled(a.Runtime) {
 		return
 	}
-	_, err := a.Runtime.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, apiclient.UpdateWorkspaceInput(registration, localPath, a.NodeID))
+	_, err := a.Runtime.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildUpdateWorkspaceInput(registration, localPath, a.NodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to update remote workspace record")
 	}
@@ -69,7 +69,7 @@ func (a *App) CloseRemoteRecord(ctx context.Context, organizationID string, proj
 	if status == "" {
 		status = "closed"
 	}
-	_, err := a.Runtime.APIClient().CloseWorkspace(organizationID, projectID, apiclient.CloseWorkspaceInput(workspaceID, a.NodeID, workspace.Status(status)))
+	_, err := a.Runtime.APIClient().CloseWorkspace(organizationID, projectID, api.BuildCloseWorkspaceInput(workspaceID, a.NodeID, workspace.Status(status)))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("status", status).Msg("failed to close remote workspace record")
 	}

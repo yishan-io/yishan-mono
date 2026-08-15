@@ -1,26 +1,25 @@
-package dbconv
+package db
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
 
-func openTestDB(t *testing.T) *localdb.WorkspaceStore {
+func openTestDB(t *testing.T) *WorkspaceStore {
 	t.Helper()
-	database, err := localdb.Open(t.TempDir())
+	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	return localdb.NewWorkspaceStore(database)
+	return NewWorkspaceStore(database)
 }
 
 func TestStore_ListConvertsOptionalAndEmptyFields(t *testing.T) {
@@ -29,14 +28,14 @@ func TestStore_ListConvertsOptionalAndEmptyFields(t *testing.T) {
 
 	branch := "feature/x"
 	health := "path-missing"
-	if err := raw.Create(ctx, &localdb.Workspace{
+	if err := raw.Create(ctx, &Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: "/tmp/ws-1",
 		State: "error", Health: &health,
 	}); err != nil {
 		t.Fatalf("create ws-1: %v", err)
 	}
-	if err := raw.Create(ctx, &localdb.Workspace{
+	if err := raw.Create(ctx, &Workspace{
 		ID: "ws-2", Kind: "folder", Status: "closed", LocalPath: "/tmp/ws-2", State: "active",
 	}); err != nil {
 		t.Fatalf("create ws-2: %v", err)
@@ -83,7 +82,7 @@ func TestStore_UpdateMapsNotFoundSentinel(t *testing.T) {
 func TestStore_UpdatePersistsState(t *testing.T) {
 	raw := openTestDB(t)
 	ctx := context.Background()
-	if err := raw.Create(ctx, &localdb.Workspace{
+	if err := raw.Create(ctx, &Workspace{
 		ID: "ws-1", Kind: "worktree", Status: "active", LocalPath: "/tmp/ws-1", State: "active",
 	}); err != nil {
 		t.Fatalf("create: %v", err)

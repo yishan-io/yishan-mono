@@ -2,10 +2,9 @@
 // the workspace domain record. Created in Phase 1 of the CLI/daemon refactor
 // as the named mapper boundary; Phase 5 moves all remaining API DTO
 // conversion (request building, cache sync) into this package.
-package apiclient
+package api
 
 import (
-	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -13,7 +12,7 @@ import (
 // The domain record carries lifecycle fields only; fields with no domain
 // counterpart (UserID, timestamps) are dropped. Runtime state and health are
 // not part of the record — they live in instance.Runtime.
-func WorkspaceToDomain(record api.Workspace) workspace.Record {
+func WorkspaceToDomain(record Workspace) workspace.Record {
 	return workspace.Record{
 		ID:        workspace.ID(record.ID),
 		ProjectID: record.ProjectID,

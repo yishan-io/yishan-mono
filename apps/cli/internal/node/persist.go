@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/dbconv"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
@@ -40,7 +39,7 @@ func (a *App) PersistPrepared(ctx context.Context, prepared application.CreatePl
 	if a.Database == nil || prepared.Registration == nil {
 		return nil
 	}
-	row := dbconv.ProvisioningRow(*prepared.Registration)
+	row := localdb.ProvisioningRow(*prepared.Registration)
 	return localdb.NewWorkspaceStore(a.Database).Create(ctx, &row)
 }
 
@@ -53,7 +52,7 @@ func (a *App) FinalizePersisted(ctx context.Context, prepared application.Create
 	if a.Database == nil || prepared.Registration == nil {
 		return nil
 	}
-	err := localdb.NewWorkspaceStore(a.Database).Update(ctx, created.ID, dbconv.ActiveUpdate(created))
+	err := localdb.NewWorkspaceStore(a.Database).Update(ctx, created.ID, localdb.ActiveUpdate(created))
 	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
@@ -66,7 +65,7 @@ func (a *App) UpdatePersistedWorkspaceState(ctx context.Context, workspaceID str
 	if a.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
-	err := localdb.NewWorkspaceStore(a.Database).Update(ctx, workspaceID, dbconv.StateUpdate(state, health))
+	err := localdb.NewWorkspaceStore(a.Database).Update(ctx, workspaceID, localdb.StateUpdate(state, health))
 	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
@@ -80,7 +79,7 @@ func (a *App) ClosePersisted(ctx context.Context, workspaceID string) error {
 		return nil
 	}
 	workspaceStore := localdb.NewWorkspaceStore(a.Database)
-	if err := workspaceStore.Update(ctx, workspaceID, dbconv.StatusUpdate(string(workspace.StatusClosed))); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	if err := workspaceStore.Update(ctx, workspaceID, localdb.StatusUpdate(string(workspace.StatusClosed))); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
 	// Mirror the closed status on the remote record (best-effort). The local row

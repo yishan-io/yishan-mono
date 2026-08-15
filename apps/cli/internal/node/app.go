@@ -14,7 +14,6 @@ import (
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/dbconv"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/memory"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -90,7 +89,7 @@ type App struct {
 // watch → background tasks.
 func Bootstrap(cfg Config) (*App, error) {
 	registry := instance.NewRegistry(files.NewFileService())
-	manager := workspace.NewManagerWithRegistryAndStore(registry, dbconv.NewStore(localdb.NewWorkspaceStore(cfg.Database)))
+	manager := workspace.NewManagerWithRegistryAndStore(registry, localdb.NewStore(localdb.NewWorkspaceStore(cfg.Database)))
 
 	legacyCleanupPath := filepath.Join(cfg.DataDir, cleanupFileName)
 	cleanupStore, err := NewCleanupStore(cfg.Database, legacyCleanupPath)

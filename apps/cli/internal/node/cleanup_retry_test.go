@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/dbconv"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -28,7 +27,7 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 		t.Fatalf("add pending cleanup: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(dbconv.NewStore(workspaceStore))
+	manager := workspace.NewManagerWithStore(localdb.NewStore(workspaceStore))
 	app := &App{
 		Manager:      manager,
 		CleanupStore: cleanupStore,
