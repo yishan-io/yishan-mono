@@ -20,7 +20,8 @@
       "openInExternalAppQuick": "\u5728 {{app}} \u4e2d\u6253\u5f00\u5de5\u4f5c\u533a",
       "openInExternalApp": "\u5728\u5176\u4ed6\u5e94\u7528\u4e2d\u6253\u5f00\u5de5\u4f5c\u533a...",
       "delete": "\u5173\u95ed\u5de5\u4f5c\u533a",
-      "close": "\u5173\u95ed"
+      "close": "\u5173\u95ed",
+      "deleteFolder": "\u5220\u9664\u6587\u4ef6\u5939"
     },
     "title": "\u5de5\u4f5c\u533a\u6807\u9898",
     "column": "\u5de5\u4f5c\u533a",

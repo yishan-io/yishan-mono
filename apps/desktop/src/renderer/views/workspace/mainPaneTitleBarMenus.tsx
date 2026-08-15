@@ -12,9 +12,10 @@ import {
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { LuPlay } from "react-icons/lu";
+import { LuFolder, LuPlay } from "react-icons/lu";
 import { renderProjectIcon } from "../../components/projectIcons";
 import type { WorkspaceNotificationColor } from "../../helpers/workspaceNotification";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../store/types";
 import type { WorkspaceItem, WorkspaceProjectRecord } from "../../store/types";
 import { MenuSearchField, renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 
@@ -24,6 +25,9 @@ type RepoSelectorMenuProps = {
   repoSearchValue: string;
   setRepoSearchValue: (value: string) => void;
   filteredRepoOptions: WorkspaceProjectRecord[];
+  /** Local folder workspaces shown under a synthetic "Local Folders" entry. */
+  localFolderWorkspaces: WorkspaceItem[];
+  isLocalFolderSelected: boolean;
   selectedProjectId: string;
   setSelectedRepoId: (projectId: string) => void;
   setRepoMenuAnchorEl: (value: HTMLElement | null) => void;
@@ -38,6 +42,8 @@ export function RepoSelectorMenu({
   repoSearchValue,
   setRepoSearchValue,
   filteredRepoOptions,
+  localFolderWorkspaces,
+  isLocalFolderSelected,
   selectedProjectId,
   setSelectedRepoId,
   setRepoMenuAnchorEl,
@@ -45,6 +51,9 @@ export function RepoSelectorMenu({
   setWorkspaceSearchValue,
   t,
 }: RepoSelectorMenuProps) {
+  const visibleLocalFolderWorkspaces = localFolderWorkspaces.filter((workspace) =>
+    workspace.name.toLowerCase().includes(repoSearchValue.trim().toLowerCase()),
+  );
   return (
     <Menu
       open={open}
@@ -75,6 +84,25 @@ export function RepoSelectorMenu({
           </Typography>
         </MenuItem>
       ))}
+      {visibleLocalFolderWorkspaces.length > 0 ? (
+        <MenuItem
+          selected={isLocalFolderSelected}
+          onClick={() => {
+            setSelectedRepoId(LOCAL_FOLDER_PROJECT_ID);
+            setRepoMenuAnchorEl(null);
+            setWorkspaceMenuAnchorEl(null);
+            setRepoSearchValue("");
+            setWorkspaceSearchValue("");
+          }}
+        >
+          <Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 1 }}>
+            <LuFolder size={14} />
+          </Box>
+          <Typography variant="body2" noWrap>
+            {t("project.list.localFolders")}
+          </Typography>
+        </MenuItem>
+      ) : null}
     </Menu>
   );
 }

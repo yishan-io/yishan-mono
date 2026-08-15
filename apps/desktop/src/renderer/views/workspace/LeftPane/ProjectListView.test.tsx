@@ -17,6 +17,7 @@ const mocked = vi.hoisted(() => {
   const setLastUsedExternalAppId = vi.fn();
   const openEntryInExternalApp = vi.fn();
   const listDetectedExternalAppIds = vi.fn();
+  const deleteLocalFolder = vi.fn();
   let rendererPlatform = "darwin";
 
   const stateRef: {
@@ -39,7 +40,9 @@ const mocked = vi.hoisted(() => {
         branch: string;
         summaryId: string;
         worktreePath?: string;
-        kind?: "managed" | "local";
+        projectId?: string;
+        nodeId?: string;
+        kind?: "managed" | "local" | "folder";
         status?: "active" | "closed" | "provisioning";
       }>;
       selectedProjectId: string;
@@ -139,6 +142,7 @@ const mocked = vi.hoisted(() => {
       rendererPlatform = value;
     },
     stateRef,
+    deleteLocalFolder,
     workspaceStore,
   };
 });
@@ -224,6 +228,7 @@ vi.mock("../../../hooks/useCommands", () => ({
     openEntryInExternalApp: mocked.openEntryInExternalApp,
     listDetectedExternalAppIds: mocked.listDetectedExternalAppIds,
     setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
+    deleteLocalFolder: mocked.deleteLocalFolder,
   }),
 }));
 
@@ -254,6 +259,63 @@ function renderProjectListView() {
       <ProjectListView />
     </QueryClientProvider>,
   );
+}
+
+/** Renders the project list with one non-git local-folder workspace. */
+function renderFolderList() {
+  mocked.deleteLocalFolder.mockResolvedValue(undefined);
+  mocked.stateRef.current = {
+    projects: [
+      {
+        id: "repo-1",
+        name: "Repo 1",
+        path: "/tmp/repo-1",
+        missing: false,
+        worktreePath: "/tmp/worktrees",
+        icon: "folder",
+        color: "#111111",
+      },
+    ],
+    workspaces: [
+      {
+        id: "folder-1",
+        repoId: "folder-1",
+        projectId: "local-folder",
+        nodeId: "node-1",
+        name: "My Folder",
+        title: "My Folder",
+        sourceBranch: "",
+        branch: "",
+        summaryId: "folder-1",
+        worktreePath: "/tmp/my-folder",
+        kind: "folder",
+        status: "active",
+      },
+    ],
+    selectedProjectId: "local-folder",
+    selectedWorkspaceId: "folder-1",
+    displayProjectIds: ["repo-1"],
+    lastUsedExternalAppId: undefined,
+    pullRequestByWorkspaceId: {},
+    latestPullRequestByWorkspaceId: {},
+    currentBranchByWorkspaceId: {},
+    setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
+    gitChangeTotalsByWorkspaceId: {},
+    setSelectedRepoId: mocked.setSelectedRepoId,
+    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
+    setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
+    renameWorkspace: mocked.renameWorkspace,
+    renameWorkspaceBranch: mocked.renameWorkspaceBranch,
+    closeWorkspace: mocked.closeWorkspace,
+    deleteProject: mocked.deleteProject,
+    workspaceAgentStatusByWorkspaceId: {},
+    workspaceUnreadToneByWorkspaceId: {},
+    markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
+    orderedWorkspaceIds: [],
+    setOrderedWorkspaceIds: vi.fn(),
+    progressByWorkspaceId: {},
+  };
+  renderProjectListView();
 }
 
 function createDeferred<T>() {
@@ -576,6 +638,62 @@ describe("ProjectListView", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "workspace.actions.rename" }));
 
     expect(screen.getByTestId("rename-workspace-dialog")).toBeTruthy();
+  });
+
+  it("shows delete-folder only (no git rename/delete) for a folder workspace context menu", async () => {
+    mocked.listDetectedExternalAppIds.mockResolvedValue(["cursor"]);
+    mocked.stateRef.current.lastUsedExternalAppId = "cursor";
+    renderFolderList();
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    fireEvent.contextMenu(screen.getByTestId("workspace-row-folder-1"));
+
+    // Folder menu = open-in-file-manager + delete-folder. No git actions.
+    expect(screen.getByRole("menuitem", { name: "workspace.actions.deleteFolder" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "workspace.actions.rename" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "workspace.actions.delete" })).toBeNull();
+    // External-app (IDE/quick-open) entries are hidden for folders even when
+    // a usable app is detected for regular workspaces.
+    expect(screen.queryByRole("menuitem", { name: /^workspace.actions.openInExternalAppQuick:/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "workspace.actions.openInExternalApp" })).toBeNull();
+  });
+
+  it("invokes the deleteLocalFolder command from the folder context menu", async () => {
+    renderFolderList();
+
+    fireEvent.contextMenu(screen.getByTestId("workspace-row-folder-1"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "workspace.actions.deleteFolder" }));
+
+    await waitFor(() => {
+      expect(mocked.deleteLocalFolder).toHaveBeenCalledWith("folder-1");
+    });
+  });
+
+  it("folds the Local Folders group to hide folder children", () => {
+    renderFolderList();
+
+    // The group renders expanded with folder children visible.
+    expect(screen.getByText("My Folder")).toBeTruthy();
+    const collapseButton = screen.getByRole("button", { name: "repo.actions.collapse" });
+    expect(collapseButton).toBeTruthy();
+
+    fireEvent.click(collapseButton);
+
+    // Folding the group hides the folder child rows.
+    expect(screen.queryByText("My Folder")).toBeNull();
+  });
+
+  it("does not select a project when the Local Folders group row is clicked", () => {
+    renderFolderList();
+    mocked.setSelectedRepoId.mockClear();
+
+    fireEvent.click(screen.getByText("project.list.localFolders"));
+
+    // Clicking the group only folds/unfolds it; no project selection occurs.
+    expect(mocked.setSelectedRepoId).not.toHaveBeenCalled();
   });
 
   it("shows detected external apps directly in workspace context submenu when host detection succeeds", async () => {

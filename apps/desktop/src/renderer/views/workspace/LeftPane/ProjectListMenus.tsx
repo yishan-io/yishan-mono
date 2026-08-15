@@ -57,6 +57,7 @@ type ProjectListMenusProps = {
   handleOpenProjectConfig: (projectId: string) => void;
   handleRequestProjectDeletion: (projectId: string) => void;
   handleRequestWorkspaceDeletion: (projectId: string, workspaceId: string) => void;
+  handleDeleteLocalFolder: (folderId: string) => void;
   handleOpenWorkspaceInExternalApp: (appId: ExternalAppId) => Promise<void>;
   handleOpenWorkspaceInFileManager: () => Promise<void>;
   setRenameWorkspaceContext: (value: RenameWorkspaceContext) => void;
@@ -112,6 +113,7 @@ export function ProjectListMenus({
   handleOpenProjectConfig,
   handleRequestProjectDeletion,
   handleRequestWorkspaceDeletion,
+  handleDeleteLocalFolder,
   handleOpenWorkspaceInExternalApp,
   handleOpenWorkspaceInFileManager,
   setRenameWorkspaceContext,
@@ -227,13 +229,18 @@ export function ProjectListMenus({
     workspaceContextMenu &&
     workspaces.find(
       (workspace) =>
-        workspace.repoId === workspaceContextMenu.repoId && workspace.id === workspaceContextMenu.workspaceId,
+        workspace.id === workspaceContextMenu.workspaceId &&
+        // Folder rows carry projectId = "local-folder" (repoId = folder id),
+        // while git workspace rows carry repoId = project id. Accept either
+        // identity field so folder rows resolve to a context target.
+        (workspace.repoId === workspaceContextMenu.repoId || workspace.projectId === workspaceContextMenu.repoId),
     );
   const isWorkspaceContextTargetLocal = Boolean(
     workspaceContextTarget &&
       (workspaceContextTarget.kind === "local" ||
         displayWorkspaceIdByProjectId[workspaceContextTarget.repoId] === workspaceContextTarget.id),
   );
+  const isWorkspaceContextTargetFolder = Boolean(workspaceContextTarget?.kind === "folder");
 
   const hasWorkspaceExternalAppItems = workspaceExternalAppItems.length > 0;
 
@@ -245,7 +252,10 @@ export function ProjectListMenus({
         void handleOpenWorkspaceInFileManager();
       },
     },
-    ...(canOpenWorkspaceInExternalApp && hasWorkspaceExternalAppItems && lastUsedWorkspaceExternalAppPreset
+    ...(!isWorkspaceContextTargetFolder &&
+    canOpenWorkspaceInExternalApp &&
+    hasWorkspaceExternalAppItems &&
+    lastUsedWorkspaceExternalAppPreset
       ? [
           {
             id: "workspace-open-last-used-external-app",
@@ -264,7 +274,7 @@ export function ProjectListMenus({
           },
         ]
       : []),
-    ...(canOpenWorkspaceInExternalApp && hasWorkspaceExternalAppItems
+    ...(!isWorkspaceContextTargetFolder && canOpenWorkspaceInExternalApp && hasWorkspaceExternalAppItems
       ? [
           {
             id: "workspace-open-external-app-submenu",
@@ -273,7 +283,7 @@ export function ProjectListMenus({
           },
         ]
       : []),
-    ...(workspaceContextMenu && !isWorkspaceContextTargetLocal
+    ...(workspaceContextMenu && !isWorkspaceContextTargetLocal && !isWorkspaceContextTargetFolder
       ? [
           {
             id: "workspace-rename",
@@ -307,6 +317,21 @@ export function ProjectListMenus({
               }
 
               handleRequestWorkspaceDeletion(workspaceContextMenu.repoId, workspaceContextMenu.workspaceId);
+            },
+          },
+        ]
+      : []),
+    ...(workspaceContextMenu && isWorkspaceContextTargetFolder
+      ? [
+          {
+            id: "workspace-folder-delete",
+            label: t("workspace.actions.deleteFolder"),
+            onSelect: () => {
+              if (!workspaceContextMenu) {
+                return;
+              }
+
+              handleDeleteLocalFolder(workspaceContextMenu.workspaceId);
             },
           },
         ]

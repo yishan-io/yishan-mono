@@ -66,4 +66,132 @@ describe("DaemonWorkspaceClient", () => {
     expect(invoke).toHaveBeenCalledTimes(1);
     expect(invoke).toHaveBeenCalledWith("list");
   });
+
+  it("creates a local folder and maps localPath to path", async () => {
+    const invoke = vi.fn(async (method: string, params?: unknown) => {
+      if (method === "workspace.createLocalFolder") {
+        expect(params).toEqual({ path: "/tmp/repo", name: "My Folder" });
+        return {
+          id: "folder-1",
+          localPath: "/tmp/repo",
+          state: "ready",
+          health: "healthy",
+        };
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    const folder = await client.createLocalFolder({ path: "/tmp/repo", name: "My Folder" });
+
+    expect(folder).toEqual({
+      id: "folder-1",
+      path: "/tmp/repo",
+      state: "ready",
+      health: "healthy",
+    });
+    expect(folder.name).toBeUndefined();
+  });
+
+  it("surfaces createLocalFolder invoke errors", async () => {
+    const invoke = vi.fn(async (method: string) => {
+      if (method === "workspace.createLocalFolder") {
+        throw new Error("daemon refused to create");
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(client.createLocalFolder({ path: "/tmp/repo" })).rejects.toThrow("daemon refused to create");
+  });
+
+  it("creates a local folder rejects when path is missing", async () => {
+    const invoke = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(client.createLocalFolder({ path: "  " })).rejects.toThrow("path is required");
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("creates a local folder rejects for an invalid response record", async () => {
+    const invoke = vi.fn(async (method: string) => {
+      if (method === "workspace.createLocalFolder") {
+        return { localPath: "/tmp/repo" };
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(client.createLocalFolder({ path: "/tmp/repo" })).rejects.toThrow(
+      "createLocalFolder returned invalid response",
+    );
+  });
+
+  it("lists local folders and returns an empty array for a non-array response", async () => {
+    const invoke = vi.fn(async (method: string) => {
+      if (method === "workspace.listLocalFolders") {
+        return { not: "an array" };
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(client.listLocalFolders()).resolves.toEqual([]);
+  });
+
+  it("lists local folders, parsing valid records and skipping malformed ones", async () => {
+    const invoke = vi.fn(async (method: string) => {
+      if (method === "workspace.listLocalFolders") {
+        return [
+          { id: "folder-1", localPath: "/tmp/a" },
+          { id: "folder-2", localPath: "/tmp/b", name: "B" },
+          { id: "folder-3" },
+          { localPath: "/tmp/c" },
+          "garbage",
+        ];
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    const folders = await client.listLocalFolders();
+
+    expect(folders).toEqual([
+      { id: "folder-1", path: "/tmp/a" },
+      { id: "folder-2", path: "/tmp/b", name: "B" },
+    ]);
+  });
+
+  it("deletes a local folder by id", async () => {
+    const invoke = vi.fn(async (method: string, params?: unknown) => {
+      if (method === "workspace.deleteLocalFolder") {
+        expect(params).toEqual({ id: "folder-1" });
+        return { ok: true };
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await client.deleteLocalFolder({ id: "  folder-1  " });
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes a local folder rejects for an empty id", async () => {
+    const invoke = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(client.deleteLocalFolder({ id: "  " })).rejects.toThrow("id is required");
+    expect(invoke).not.toHaveBeenCalled();
+  });
 });

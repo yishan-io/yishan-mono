@@ -12,6 +12,7 @@ import {
   OPEN_CREATE_WORKSPACE_DIALOG_EVENT,
   closeWorkspace,
   createWorkspace,
+  deleteLocalFolder,
   focusWorkspaceFileTree,
   openCreateWorkspaceDialog,
   openWorkspaceFileSearch,
@@ -39,6 +40,7 @@ const rpcMocks = vi.hoisted(() => ({
   gitInspect: vi.fn(async () => ({ isGitRepository: true })),
   enqueueWorkspaceErrorNotice: vi.fn(),
   enqueueWorkspaceLifecycleWarnings: vi.fn(),
+  deleteLocalFolder: vi.fn(async () => undefined),
 }));
 
 vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
@@ -62,6 +64,7 @@ vi.mock("../rpc/rpcTransport", () => ({
       closeProject: rpcMocks.closeProject,
       refreshPullRequest: rpcMocks.refreshWorkspacePullRequest,
       close: rpcMocks.closeWorkspace,
+      deleteLocalFolder: rpcMocks.deleteLocalFolder,
     },
   })),
 }));
@@ -223,6 +226,30 @@ describe("workspaceCommands", () => {
       workspaceIds: ["workspace-2"],
     });
     expect(rpcMocks.openProject).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh pull request for a folder workspace (no daemon PR call)", async () => {
+    workspaceStore.setState({
+      projects: [],
+      workspaces: [
+        {
+          id: "folder-workspace-1",
+          projectId: "local-folder",
+          repoId: "folder-workspace-1",
+          name: "Folder",
+          title: "Folder",
+          summaryId: "folder-workspace-1",
+          sourceBranch: "",
+          branch: "",
+          worktreePath: "/tmp/plain-folder",
+          kind: "folder",
+        },
+      ],
+    });
+
+    await refreshWorkspacePullRequest("folder-workspace-1");
+
+    expect(rpcMocks.refreshWorkspacePullRequest).not.toHaveBeenCalled();
   });
 
   it("refreshes one workspace pull request through the daemon", async () => {
@@ -565,6 +592,44 @@ describe("workspaceCommands", () => {
     expect(closeWorkspaceAction).not.toHaveBeenCalled();
   });
 
+  it("closing a folder routes to deleteLocalFolder instead of workspace.close", async () => {
+    const removeLocalFolderAction = vi.fn().mockResolvedValue(undefined);
+    const removeWorkspaceAction = vi.fn().mockResolvedValue(undefined);
+    const retainWorkspaceTabs = vi.fn().mockReturnValue([]);
+    const resolveTabForWorkspace = vi.fn();
+    tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "folder-1",
+          projectId: "local-folder",
+          repoId: "folder-1",
+          name: "Folder 1",
+          title: "Folder 1",
+          summaryId: "folder-1",
+          branch: "",
+          sourceBranch: "",
+          worktreePath: "/tmp/folder-1",
+          kind: "folder",
+        },
+      ],
+      removeLocalFolder: removeLocalFolderAction,
+      removeWorkspace: removeWorkspaceAction,
+    });
+
+    await closeWorkspace("folder-1");
+
+    // Folder closes must delete the daemon row, never run the workspace-close
+    // path (which would mark the row 'closed' and resurrect it next snapshot).
+    expect(rpcMocks.closeWorkspace).not.toHaveBeenCalled();
+    expect(rpcMocks.deleteLocalFolder).toHaveBeenCalledWith({ id: "folder-1" });
+    expect(removeWorkspaceAction).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => {
+      expect(removeLocalFolderAction).toHaveBeenCalledWith("folder-1");
+    });
+  });
+
   it("returns before backend close completes so UI is non-blocking", async () => {
     const closeWorkspaceAction = vi.fn().mockResolvedValue(undefined);
     workspaceStore.setState({
@@ -646,6 +711,36 @@ describe("workspaceCommands", () => {
       additions: 3,
       deletions: 1,
     });
+  });
+
+  it("skips git refresh for a folder workspace (no project / no RPC)", async () => {
+    const setWorkspaceGitChangesCount = vi.fn();
+    const setWorkspaceGitChangeTotals = vi.fn();
+    workspaceStore.setState({
+      projects: [],
+      workspaces: [
+        {
+          id: "folder-workspace-1",
+          projectId: "local-folder",
+          repoId: "folder-workspace-1",
+          name: "Folder",
+          title: "Folder",
+          summaryId: "folder-workspace-1",
+          sourceBranch: "",
+          branch: "",
+          worktreePath: "/tmp/plain-folder",
+          kind: "folder",
+        },
+      ],
+      setWorkspaceGitChangesCount,
+      setWorkspaceGitChangeTotals,
+    });
+
+    await refreshWorkspaceGitChanges("folder-workspace-1");
+
+    expect(rpcMocks.listGitChanges).not.toHaveBeenCalled();
+    expect(rpcMocks.getBranchDiffSummary).not.toHaveBeenCalled();
+    expect(setWorkspaceGitChangesCount).not.toHaveBeenCalled();
   });
 
   it("skips git refresh for a non-git workspace", async () => {
@@ -1054,6 +1149,37 @@ describe("workspaceCommands", () => {
     window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
   });
 
+  it("does not dispatch open-create-workspace event for a folder workspace", () => {
+    workspaceStore.setState({
+      selectedProjectId: "local-folder",
+      projects: [],
+      workspaces: [
+        {
+          id: "folder-workspace-1",
+          projectId: "local-folder",
+          repoId: "folder-workspace-1",
+          name: "Folder",
+          title: "Folder",
+          summaryId: "folder-workspace-1",
+          sourceBranch: "",
+          branch: "",
+          worktreePath: "/tmp/plain-folder",
+          kind: "folder",
+        },
+      ],
+      selectedWorkspaceId: "folder-workspace-1",
+    });
+
+    const eventListener = vi.fn();
+    window.addEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
+
+    openCreateWorkspaceDialog();
+
+    expect(eventListener).not.toHaveBeenCalled();
+
+    window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
+  });
+
   it("does not dispatch open-create-workspace event for a non-git project", () => {
     workspaceStore.setState({
       selectedProjectId: "project-plain",
@@ -1068,5 +1194,29 @@ describe("workspaceCommands", () => {
     expect(eventListener).not.toHaveBeenCalled();
 
     window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
+  });
+
+  it("deletes a local folder on the daemon and removes it from store state", async () => {
+    const removeLocalFolder = vi.fn();
+    const retainWorkspaceTabs = vi.fn().mockReturnValue([]);
+    const resolveTabForWorkspace = vi.fn();
+    workspaceStore.setState({ removeLocalFolder });
+    tabStore.setState({
+      retainWorkspaceTabs,
+      resolveTabForWorkspace,
+      tabs: [],
+    });
+
+    await deleteLocalFolder("folder-1");
+
+    expect(rpcMocks.deleteLocalFolder).toHaveBeenCalledWith({ id: "folder-1" });
+    expect(removeLocalFolder).toHaveBeenCalledWith("folder-1");
+    expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
+    expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call the daemon when deleting an empty local folder id", async () => {
+    await deleteLocalFolder("  ");
+    expect(rpcMocks.deleteLocalFolder).not.toHaveBeenCalled();
   });
 });

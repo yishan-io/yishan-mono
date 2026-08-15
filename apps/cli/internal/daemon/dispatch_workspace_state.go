@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
@@ -60,7 +61,10 @@ func (h *JSONRPCHandler) refreshWorkspaceHealth(ctx context.Context, workspaceID
 		healthErr = statErr.Error()
 	}
 
-	if healthErr == "" {
+	// Folder workspaces are plain directories, never git worktrees; skip the
+	// git-worktree check so an open folder is never marked not-worktree/error.
+	// Path-missing detection above still applies.
+	if !h.isFolderWorkspace(ctx, workspaceID) && healthErr == "" {
 		isWorktree, checkErr := isGitWorktree(ws.Path)
 		if checkErr != nil {
 			state = workspace.WorkspaceStateError
@@ -196,4 +200,20 @@ func (h *JSONRPCHandler) watchActiveWorkspaces() {
 		}
 		h.watchAndTrack(ws.ID, ws.Path)
 	}
+}
+
+// isFolderWorkspace reports whether the persisted workspace row for workspaceID
+// is a local folder (kind 'folder'). The in-memory manager does not carry the
+// kind, so the durable store is the source of truth. Returns false when the row
+// cannot be resolved (no local DB, unknown id) so git workspaces keep current
+// health behavior.
+func (h *JSONRPCHandler) isFolderWorkspace(ctx context.Context, workspaceID string) bool {
+	if h.localDatabase == nil || strings.TrimSpace(workspaceID) == "" {
+		return false
+	}
+	row, err := localdb.NewWorkspaceStore(h.localDatabase).Get(ctx, workspaceID)
+	if err != nil {
+		return false
+	}
+	return row.Kind == workspace.KindFolder
 }

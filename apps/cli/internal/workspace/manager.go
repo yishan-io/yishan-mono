@@ -91,6 +91,12 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 		if !isLiveWorkspaceStatus(storedWorkspace.Status) {
 			continue
 		}
+		// Folder workspaces are plain local directories that the desktop opens
+		// on demand (workspace.openProject). They are not git worktrees, so they
+		// must never be auto-opened here at daemon boot.
+		if storedWorkspace.Kind == KindFolder {
+			continue
+		}
 		// A provisioning row has no worktree yet (create is in flight, or the
 		// daemon stopped mid-create): a missing path is expected then, not an
 		// error. Skip it so it is never opened and marked error/path-missing;

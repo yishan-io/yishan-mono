@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { inspectGitRepository } from "../../../commands/gitCommands";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { WorkspaceItem } from "../../../store/types";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -74,6 +75,10 @@ export function useWorkspaceInfoHover({
 
     const workspace = workspaces.find((ws) => ws.id === hoveredWorkspaceId);
     if (!workspace?.worktreePath?.trim()) {
+      return;
+    }
+    // Folder workspaces have no git state: never inspect git for them.
+    if (isFolderWorkspace(workspace)) {
       return;
     }
 

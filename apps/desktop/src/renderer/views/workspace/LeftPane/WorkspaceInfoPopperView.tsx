@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
 import { PullRequestIcon } from "../../../components/PullRequestIcon";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { livePrStatus } from "../../../helpers/pullRequestUtils";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import type { WorkspaceItem } from "../../../store/types";
@@ -40,6 +41,8 @@ export function WorkspaceInfoPopperView({
   const shouldShowSourceBranch = !isPrimaryWorkspace && Boolean(sourceBranch);
   const sourceBranchValue = sourceBranch || unavailableLabel;
   const showSourceBranch = shouldShowSourceBranch && sourceBranchValue !== displayBranch;
+  // Folder workspaces have no git branch/source metadata: suppress the branch rows.
+  const isFolder = isFolderWorkspace(workspace);
 
   // Prefer live daemon PR; fall back to latest snapshot from api-service.
   const prSection = pullRequest ? (
@@ -129,28 +132,30 @@ export function WorkspaceInfoPopperView({
           >
             {workspace?.name}
           </Typography>
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{
-              alignItems: "center",
-            }}
-          >
-            <LuGitBranch size={14} />
-            <Typography
-              variant="caption"
+          {isFolder ? null : (
+            <Stack
+              direction="row"
+              spacing={0.5}
               sx={{
-                color: "text.secondary",
-                lineHeight: 1.2,
+                alignItems: "center",
               }}
             >
-              <Box component="span" sx={{ textTransform: "uppercase", letterSpacing: 0.4, color: "info.main" }}>
-                {t("workspace.info.branch")}:
-              </Box>{" "}
-              {displayBranch}
-            </Typography>
-          </Stack>
-          {showSourceBranch ? (
+              <LuGitBranch size={14} />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  lineHeight: 1.2,
+                }}
+              >
+                <Box component="span" sx={{ textTransform: "uppercase", letterSpacing: 0.4, color: "info.main" }}>
+                  {t("workspace.info.branch")}:
+                </Box>{" "}
+                {displayBranch}
+              </Typography>
+            </Stack>
+          )}
+          {showSourceBranch && !isFolder ? (
             <Stack
               direction="row"
               spacing={0.5}

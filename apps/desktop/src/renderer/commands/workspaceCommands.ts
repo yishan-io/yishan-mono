@@ -1,5 +1,6 @@
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import { isWorkspaceNotFoundError } from "../helpers/errorHelpers";
+import { isFolderWorkspace } from "../helpers/localFolder";
 import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../helpers/projectHelpers";
 import {
@@ -19,6 +20,7 @@ export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
 import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
+export { deleteLocalFolder } from "./localFolderCommands";
 
 export const OPEN_CREATE_WORKSPACE_DIALOG_EVENT = "workspace:open-create-workspace-dialog";
 
@@ -66,7 +68,11 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     return;
   }
 
-  // Non-git projects have no git state to poll.
+  // Folder workspaces (kind="folder"/sentinel project id) and non-git
+  // projects have no git state to poll.
+  if (isFolderWorkspace(workspace)) {
+    return;
+  }
   const project = store.projects.find((item) => item.id === (workspace.projectId ?? workspace.repoId));
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
@@ -127,6 +133,11 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
 
   const workspace = readWorkspaceStoreState().workspaces.find((candidate) => candidate.id === workspaceId);
   if (!workspace) {
+    return;
+  }
+
+  // Folder workspaces have no git state nor pull requests: never query the daemon.
+  if (isFolderWorkspace(workspace)) {
     return;
   }
 
@@ -200,6 +211,12 @@ export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
   }
 
   const workspaceId = readWorkspaceStoreState().selectedWorkspaceId;
+  // Folder workspaces have no git state: never open git tabs for them.
+  const workspace = readWorkspaceStoreState().workspaces.find((item) => item.id === workspaceId);
+  if ((pane === "changes" || pane === "pr") && isFolderWorkspace(workspace)) {
+    return;
+  }
+
   const uiState = workspaceUiStore.getState();
   const currentTab = uiState.rightPaneTabByWorkspaceId[workspaceId] ?? DEFAULT_RIGHT_PANE_TAB;
   const isHidden = uiState.isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
@@ -219,13 +236,14 @@ export function openCreateWorkspaceDialog() {
   }
 
   const state = readWorkspaceStoreState();
+  const selectedWorkspace = state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId);
+  // Folder workspaces have no worktrees: never surface the create dialog.
+  if (isFolderWorkspace(selectedWorkspace)) {
+    return;
+  }
   const selectedProjectId = state.selectedProjectId.trim();
-  const selectedWorkspaceProjectId = state.workspaces.find(
-    (workspace) => workspace.id === state.selectedWorkspaceId,
-  )?.projectId;
-  const selectedWorkspaceRepoId = state.workspaces.find(
-    (workspace) => workspace.id === state.selectedWorkspaceId,
-  )?.repoId;
+  const selectedWorkspaceProjectId = selectedWorkspace?.projectId;
+  const selectedWorkspaceRepoId = selectedWorkspace?.repoId;
   const fallbackProjectId = filterVisibleProjects(state.projects, state.displayProjectIds)[0]?.id;
   const projectId = selectedProjectId || selectedWorkspaceProjectId || selectedWorkspaceRepoId || fallbackProjectId;
 

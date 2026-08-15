@@ -6,6 +6,10 @@ package workspace
 const (
 	KindPrimary  = "primary"
 	KindWorktree = "worktree"
+	// KindFolder marks a workspace that lives only in the daemon DB (project_id
+	// NULL, organization_id NULL) and represents a local folder rather than a
+	// remote project worktree.
+	KindFolder = "folder"
 )
 
 // ContextLinkName is the symlink directory created inside each worktree that

@@ -1,5 +1,7 @@
 import { MenuItem, TextField } from "@mui/material";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
+import { LuFolder } from "react-icons/lu";
+import { isFolderWorkspace } from "../../helpers/localFolder";
 import type { WorkspaceItem, WorkspaceProjectRecord } from "../../store/types";
 
 /** Resolves the workspace displayed as local in the left pane for a project. */
@@ -24,6 +26,10 @@ export function renderWorkspaceKindIcon(
   isPrimaryWorkspace: boolean,
   size: number,
 ) {
+  if (isFolderWorkspace(workspace)) {
+    return <LuFolder size={size} />;
+  }
+
   if (workspace?.kind === "local" || isPrimaryWorkspace) {
     return <HiOutlineCube size={size} />;
   }

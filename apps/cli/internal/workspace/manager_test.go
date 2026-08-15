@@ -279,6 +279,25 @@ func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
 	}
 }
 
+func TestManagerHydrateFromDB_SkipsFolderWorkspaces(t *testing.T) {
+	manager, store := openTestManagerStore(t)
+	folderPath := t.TempDir()
+	if _, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{
+		LocalPath: folderPath, NodeID: "node-1",
+	}); err != nil {
+		t.Fatalf("create folder workspace: %v", err)
+	}
+
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate manager: %v", err)
+	}
+	// Folder workspaces must never be auto-opened at boot; the desktop opens
+	// them on demand, so the manager must have no workspace for the folder.
+	if folders := manager.List(); len(folders) != 0 {
+		t.Fatalf("expected no hydrated folder workspace, got %#v", folders)
+	}
+}
+
 func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testing.T) {
 	manager, store := openTestManagerStore(t)
 	workspacePath := t.TempDir()

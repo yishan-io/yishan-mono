@@ -1,14 +1,16 @@
 import { api } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
-import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getErrorMessage } from "../helpers/errorHelpers";
+import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../store/types";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { createLocalFolderImport, openFoldersForSnapshot, restoreFolderSelectionIfNeeded } from "./localFolderCommands";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 import {
   buildWorkspaceOpenProjectEntries,
@@ -69,6 +71,7 @@ export async function inspectLocalProjectSource(path: string): Promise<{
 export async function loadWorkspaceSnapshot(): Promise<void> {
   const requestId = ++latestWorkspaceSnapshotRequestId;
   const previousWorkspaces = workspaceStore.getState().workspaces;
+  const previousSelectedWorkspaceId = workspaceStore.getState().selectedWorkspaceId;
 
   try {
     const sessionState = sessionStore.getState();
@@ -85,6 +88,18 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       }
 
       workspaceStore.getState().load("", [], []);
+
+      const orphanDaemonClient = await getDaemonClient();
+      const orphanFolders = await orphanDaemonClient.workspace.listLocalFolders();
+      if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+        return;
+      }
+      workspaceStore.getState().loadLocalFolders(orphanFolders);
+      restoreFolderSelectionIfNeeded(previousWorkspaces, previousSelectedWorkspaceId);
+      // Best-effort: re-open persisted folders on the daemon on demand so file
+      // list/read/write and terminal.start work after a daemon restart.
+      void openFoldersForSnapshot(orphanFolders, "");
+
       syncTabStoreWithWorkspace(previousWorkspaces);
       return;
     }
@@ -117,6 +132,18 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     }
 
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
+
+    // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
+    const daemonFolders = await daemonClient.workspace.listLocalFolders();
+    if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+      return;
+    }
+    workspaceStore.getState().loadLocalFolders(daemonFolders);
+    restoreFolderSelectionIfNeeded(previousWorkspaces, previousSelectedWorkspaceId);
+    // Best-effort: re-open persisted folders on the daemon on demand so file
+    // list/read/write and terminal.start work after a daemon restart.
+    void openFoldersForSnapshot(daemonFolders, selectedOrganization.id);
+
     workspaceCreateProgressStore
       .getState()
       .reconcileHydratedWorkspaceCreateProgress(workspaceStore.getState().workspaces);
@@ -149,22 +176,15 @@ export async function createProject(input: {
     return;
   }
 
-  const sessionState = sessionStore.getState();
-  const selectedOrganizationId = sessionState.selectedOrganizationId?.trim();
-  if (!selectedOrganizationId) {
-    return;
-  }
-
   let inferredSourceTypeHint: "unknown" | "git-local" | "git" =
     input.sourceTypeHint ?? (isLocalSource ? "git-local" : "git");
   let inferredRemoteUrl = normalizedGitUrl || undefined;
   let inferredDefaultBranch: string | undefined;
   let inferredNodeId: string | undefined;
+  const localRepositoryMetadata = isLocalSource ? await inspectLocalRepository(normalizedPath) : undefined;
 
-  if (isLocalSource) {
+  if (isLocalSource && localRepositoryMetadata) {
     inferredNodeId = sessionStore.getState().daemonId?.trim();
-    const localRepositoryMetadata = await inspectLocalRepository(normalizedPath);
-
     inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
     inferredSourceTypeHint = inferredRemoteUrl
       ? "git"
@@ -182,6 +202,18 @@ export async function createProject(input: {
         inferredNodeId,
       });
     }
+  }
+
+  // Non-git local folders live only on the daemon: no backend record or context link.
+  if (isLocalSource && inferredSourceTypeHint === "unknown") {
+    await createLocalFolderImport({ path: normalizedPath, name: normalizedName });
+    return;
+  }
+
+  const sessionState = sessionStore.getState();
+  const selectedOrganizationId = sessionState.selectedOrganizationId?.trim();
+  if (!selectedOrganizationId) {
+    return;
   }
 
   let project: ProjectWithWorkspacesRecord | undefined;

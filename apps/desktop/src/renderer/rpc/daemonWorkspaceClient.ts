@@ -90,6 +90,29 @@ export function readDaemonWorkspacePullRequest(value: unknown): Rpc.DaemonWorksp
   };
 }
 
+/** Parses a local folder workspace from a raw daemon payload. */
+function readDaemonLocalFolder(value: unknown): Rpc.DaemonLocalFolder | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const id = readOptionalString(record.id);
+  const rawPath = readOptionalString(record.localPath) || readOptionalString(record.path) || "";
+  const path = normalizeWorktreePath(rawPath);
+  if (!id || !path) {
+    return undefined;
+  }
+
+  return {
+    id,
+    path,
+    name: readOptionalString(record.name),
+    state: readOptionalString(record.state),
+    health: readOptionalString(record.health),
+  };
+}
+
 /** Workspace namespace methods for the daemon RPC client. */
 export class DaemonWorkspaceClient {
   private readonly invoke: InvokeFn;
@@ -352,5 +375,50 @@ export class DaemonWorkspaceClient {
 
   async closeProject(input: Rpc.WorkspaceCloseProjectInput): Promise<Rpc.WorkspaceCloseProjectOutput> {
     return (await this.invoke("workspace.closeProject", input)) as Rpc.WorkspaceCloseProjectOutput;
+  }
+
+  async createLocalFolder(input: { path: string; name?: string }): Promise<Rpc.DaemonLocalFolder> {
+    const record = asRecord(input);
+    const rawPath = readOptionalString(record?.path);
+    if (!rawPath) {
+      throw new Error("path is required");
+    }
+
+    const created = readDaemonLocalFolder(
+      await this.invoke("workspace.createLocalFolder", {
+        path: rawPath,
+        name: readOptionalString(record?.name),
+      }),
+    );
+    if (!created || !created.id) {
+      throw new Error("daemon workspace createLocalFolder returned invalid response");
+    }
+
+    return created;
+  }
+
+  async listLocalFolders(): Promise<Rpc.DaemonLocalFolder[]> {
+    const result = await this.invoke("workspace.listLocalFolders");
+    if (!Array.isArray(result)) {
+      return [];
+    }
+
+    const folders: Rpc.DaemonLocalFolder[] = [];
+    for (const candidate of result) {
+      const parsed = readDaemonLocalFolder(candidate);
+      if (parsed) {
+        folders.push(parsed);
+      }
+    }
+    return folders;
+  }
+
+  async deleteLocalFolder(input: { id: string }): Promise<void> {
+    const folderId = (input.id || "").trim();
+    if (!folderId) {
+      throw new Error("id is required");
+    }
+
+    await this.invoke("workspace.deleteLocalFolder", { id: folderId });
   }
 }

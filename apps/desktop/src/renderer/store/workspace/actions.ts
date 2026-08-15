@@ -1,4 +1,5 @@
 import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../types";
+import { createLocalFolderActions } from "./actions.localFolders";
 import { createWorkspaceRepoActions } from "./actions.projects";
 import { createWorkspaceSelectionActions } from "./actions.selection";
 import { createWorkspaceActions } from "./actions.workspaces";
@@ -11,5 +12,6 @@ export function createWorkspaceStoreActions(
     ...createWorkspaceSelectionActions(set, get),
     ...createWorkspaceRepoActions(set, get),
     ...createWorkspaceActions(set, get),
+    ...createLocalFolderActions(set, get),
   };
 }

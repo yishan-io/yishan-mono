@@ -545,4 +545,38 @@ describe("RightPaneView delete flow", () => {
     workspaceStoreState.current.projects = previousProjects;
     workspaceStoreState.current.workspaces = previousWorkspaces;
   });
+
+  it("falls back to the files pane for a folder workspace with no project", async () => {
+    const previousProjects = workspaceStoreState.current.projects;
+    const previousWorkspaces = workspaceStoreState.current.workspaces;
+    // Folder workspaces have no real project: selectedProject resolves to
+    // undefined (which supportsGitFeatures would treat as git-capable). The
+    // workspace-first folder guard must keep the changes pane hidden.
+    workspaceStoreState.current.projects = [];
+    workspaceStoreState.current.workspaces = [
+      {
+        id: "workspace-1",
+        projectId: "local-folder",
+        repoId: "workspace-1",
+        name: "Folder",
+        title: "Folder",
+        sourceBranch: "",
+        branch: "",
+        summaryId: "workspace-1",
+        worktreePath: "/tmp/repo",
+        kind: "folder",
+      },
+    ];
+
+    render(<RightPaneView />);
+
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
+    const fileManager = screen.getByTestId("mock-file-manager");
+    expect(fileManager.parentElement && window.getComputedStyle(fileManager.parentElement).visibility).toBe("visible");
+    const changesTab = screen.getByTestId("mock-changes-tab");
+    expect(changesTab.parentElement && window.getComputedStyle(changesTab.parentElement).visibility).toBe("hidden");
+
+    workspaceStoreState.current.projects = previousProjects;
+    workspaceStoreState.current.workspaces = previousWorkspaces;
+  });
 });

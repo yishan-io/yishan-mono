@@ -39,6 +39,12 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 		return h.handleWorkspaceOpenProject(ctx, params)
 	case MethodWorkspaceCloseProject:
 		return h.handleWorkspaceCloseProject(ctx, params)
+	case MethodWorkspaceCreateLocalFolder:
+		return h.handleWorkspaceCreateLocalFolder(ctx, params)
+	case MethodWorkspaceListLocalFolders:
+		return h.handleWorkspaceListLocalFolders(ctx, params)
+	case MethodWorkspaceDeleteLocalFolder:
+		return h.handleWorkspaceDeleteLocalFolder(ctx, params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown workspace method: "+method)
 	}

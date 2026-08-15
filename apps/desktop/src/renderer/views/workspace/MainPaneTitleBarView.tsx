@@ -6,6 +6,7 @@ import { getMainWindowFullscreenState } from "../../commands/appCommands";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../components/projectIcons";
+import { isFolderWorkspace } from "../../helpers/localFolder";
 import { getRendererPlatform } from "../../helpers/platform";
 import { filterVisibleProjects } from "../../helpers/projectHelpers";
 import {
@@ -16,6 +17,7 @@ import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../store/chatStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../store/types";
 import { workspaceStore } from "../../store/workspaceStore";
 import { DaemonVersionWarningControl } from "./DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
@@ -41,7 +43,11 @@ export function MainPaneTitleBarView() {
   const { setSelectedRepoId, setSelectedWorkspaceId, openTab, updateProjectConfig } = useCommands();
   const selectedRepo = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
-  const workspacesForSelectedRepo = workspaces.filter((workspace) => workspace.repoId === selectedRepo?.id);
+  const isLocalFolderSelected = isFolderWorkspace(selectedWorkspace) || selectedProjectId === LOCAL_FOLDER_PROJECT_ID;
+  const localFolderWorkspaces = workspaces.filter((workspace) => isFolderWorkspace(workspace));
+  const workspacesForSelectedRepo = isLocalFolderSelected
+    ? localFolderWorkspaces
+    : workspaces.filter((workspace) => workspace.repoId === selectedRepo?.id);
   const primaryWorkspaceId = resolvePrimaryWorkspaceId(selectedRepo, workspacesForSelectedRepo);
   const rendererPlatform = getRendererPlatform();
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", rendererPlatform);
@@ -206,7 +212,7 @@ export function MainPaneTitleBarView() {
             }}
           >
             <Typography variant="body2" noWrap>
-              {selectedRepo?.name ?? t("project.unknown")}
+              {selectedRepo?.name ?? (isLocalFolderSelected ? t("project.list.localFolders") : t("project.unknown"))}
             </Typography>
           </Button>
           <LuChevronRight size={14} />
@@ -275,6 +281,8 @@ export function MainPaneTitleBarView() {
         repoSearchValue={repoSearchValue}
         setRepoSearchValue={setRepoSearchValue}
         filteredRepoOptions={filteredRepoOptions}
+        localFolderWorkspaces={localFolderWorkspaces}
+        isLocalFolderSelected={isLocalFolderSelected}
         selectedProjectId={selectedProjectId}
         setSelectedRepoId={setSelectedRepoId}
         setRepoMenuAnchorEl={setRepoMenuAnchorEl}

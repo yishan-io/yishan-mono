@@ -5,6 +5,7 @@ import { chatStore } from "../store/chatStore";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";
 import { createProject, deleteProject, loadWorkspaceSnapshot, updateProjectConfig } from "./projectCommands";
 
@@ -39,6 +40,10 @@ const rpcMocks = vi.hoisted(() => ({
   workspaceList: vi.fn(async () => []),
   workspaceOpenProject: vi.fn(async () => ({ opened: [], skipped: [], errors: [] })),
   workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
+  workspaceCreateLocalFolder: vi.fn(),
+  workspaceListLocalFolders: vi.fn(
+    async () => [] as Array<{ id: string; path: string; name?: string; state?: string; health?: string }>,
+  ),
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
@@ -50,6 +55,8 @@ vi.mock("../rpc/rpcTransport", () => ({
       list: rpcMocks.workspaceList,
       openProject: rpcMocks.workspaceOpenProject,
       syncContextLink: rpcMocks.workspaceSyncContextLink,
+      createLocalFolder: rpcMocks.workspaceCreateLocalFolder,
+      listLocalFolders: rpcMocks.workspaceListLocalFolders,
     },
     project: {
       listByOrg: rpcMocks.listProjects,
@@ -136,6 +143,221 @@ describe("projectCommands", () => {
     expect(hydrate.mock.calls[0]?.[2]).toEqual([]);
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
+  });
+
+  it("merges daemon local folders after the org snapshot load()", async () => {
+    sessionStore.setState({
+      organizations: [{ id: "org-1", name: "Org 1" }],
+      selectedOrganizationId: "org-1",
+      loaded: true,
+    });
+    rpcMocks.listProjects.mockResolvedValueOnce([]);
+    rpcMocks.workspaceListLocalFolders.mockResolvedValueOnce([
+      { id: "folder-1", path: "/tmp/folder-1", name: "Folder 1" },
+    ]);
+
+    await loadWorkspaceSnapshot();
+
+    expect(rpcMocks.workspaceListLocalFolders).toHaveBeenCalledTimes(1);
+    expect(workspaceStore.getState().workspaces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "folder-1",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          kind: "folder",
+          worktreePath: "/tmp/folder-1",
+        }),
+      ]),
+    );
+  });
+
+  it("merges daemon local folders even when no org is selected", async () => {
+    sessionStore.setState({
+      organizations: [],
+      selectedOrganizationId: "",
+      loaded: true,
+    });
+    apiMocks.listOrganizations.mockResolvedValueOnce([]);
+    rpcMocks.workspaceListLocalFolders.mockResolvedValueOnce([
+      { id: "folder-1", path: "/tmp/folder-1", name: "Folder 1" },
+    ]);
+
+    await loadWorkspaceSnapshot();
+
+    expect(rpcMocks.workspaceListLocalFolders).toHaveBeenCalledTimes(1);
+    expect(workspaceStore.getState().workspaces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "folder-1",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          kind: "folder",
+          worktreePath: "/tmp/folder-1",
+        }),
+      ]),
+    );
+  });
+
+  it("re-opens merged daemon local folders on the daemon during snapshot load", async () => {
+    sessionStore.setState({
+      organizations: [{ id: "org-1", name: "Org 1" }],
+      selectedOrganizationId: "org-1",
+    });
+    rpcMocks.listProjects.mockResolvedValueOnce([]);
+    rpcMocks.workspaceListLocalFolders.mockResolvedValueOnce([
+      { id: "folder-1", path: "/tmp/folder-1", name: "Folder 1" },
+      { id: "folder-2", path: "/tmp/folder-2", name: "Folder 2" },
+    ]);
+
+    await loadWorkspaceSnapshot();
+
+    // File list/read/write and terminal.start need the folders open on the
+    // daemon after a restart, so the snapshot must call workspace.openProject
+    // with entries for every merged folder (org-scoped).
+    expect(rpcMocks.workspaceOpenProject).toHaveBeenCalledWith({
+      workspaces: [
+        {
+          workspaceId: "folder-1",
+          worktreePath: "/tmp/folder-1",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          orgId: "org-1",
+        },
+        {
+          workspaceId: "folder-2",
+          worktreePath: "/tmp/folder-2",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          orgId: "org-1",
+        },
+      ],
+    });
+  });
+
+  it("re-opens merged daemon local folders on the daemon with no org selected", async () => {
+    sessionStore.setState({
+      organizations: [],
+      selectedOrganizationId: "",
+      loaded: true,
+    });
+    apiMocks.listOrganizations.mockResolvedValueOnce([]);
+    rpcMocks.workspaceListLocalFolders.mockResolvedValueOnce([
+      { id: "folder-1", path: "/tmp/folder-1", name: "Folder 1" },
+    ]);
+
+    await loadWorkspaceSnapshot();
+
+    expect(rpcMocks.workspaceOpenProject).toHaveBeenCalledWith({
+      workspaces: [
+        {
+          workspaceId: "folder-1",
+          worktreePath: "/tmp/folder-1",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          orgId: "",
+        },
+      ],
+    });
+  });
+
+  it("restores the previously selected folder after a snapshot reload", async () => {
+    sessionStore.setState({
+      organizations: [{ id: "org-1", name: "Org 1" }],
+      selectedOrganizationId: "org-1",
+    });
+    rpcMocks.listProjects.mockResolvedValueOnce([]);
+    rpcMocks.workspaceListLocalFolders.mockResolvedValueOnce([
+      { id: "folder-1", path: "/tmp/folder-1", name: "Folder 1" },
+    ]);
+    // The user is viewing a folder before the snapshot reload. Because
+    // load() rebuilds workspaces[] without folder items, selection would
+    // otherwise fall back to the first org workspace. It must be restored to
+    // the folder after loadLocalFolders re-adds it.
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "folder-1",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          repoId: "folder-1",
+          name: "Folder 1",
+          title: "Folder 1",
+          sourceBranch: "",
+          branch: "",
+          summaryId: "folder-1",
+          worktreePath: "/tmp/folder-1",
+          kind: "folder",
+        },
+      ],
+      selectedWorkspaceId: "folder-1",
+      selectedProjectId: LOCAL_FOLDER_PROJECT_ID,
+    });
+
+    await loadWorkspaceSnapshot();
+
+    expect(workspaceStore.getState().selectedWorkspaceId).toBe("folder-1");
+    expect(workspaceStore.getState().selectedProjectId).toBe(LOCAL_FOLDER_PROJECT_ID);
+  });
+
+  it("creates a non-git local folder on the daemon instead of the backend project api", async () => {
+    // Keep the real addLocalFolder so the folder lands in the store and the
+    // import-open path can run end to end.
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: false });
+    rpcMocks.workspaceCreateLocalFolder.mockResolvedValueOnce({
+      id: "folder-1",
+      path: "/tmp/plain-folder",
+      name: "Plain Folder",
+    });
+
+    await createProject({
+      name: "Plain Folder",
+      path: "/tmp/plain-folder",
+    });
+
+    expect(rpcMocks.workspaceCreateLocalFolder).toHaveBeenCalledWith({
+      path: "/tmp/plain-folder",
+      name: "Plain Folder",
+    });
+    expect(apiMocks.createProject).not.toHaveBeenCalled();
+    expect(workspaceStore.getState().workspaces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "folder-1",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          kind: "folder",
+          worktreePath: "/tmp/plain-folder",
+          name: "Plain Folder",
+        }),
+      ]),
+    );
+    expect(rpcMocks.workspaceOpenProject).toHaveBeenCalledWith({
+      workspaces: [
+        {
+          workspaceId: "folder-1",
+          worktreePath: "/tmp/plain-folder",
+          projectId: LOCAL_FOLDER_PROJECT_ID,
+          orgId: "",
+        },
+      ],
+    });
+    expect(rpcMocks.workspaceSyncContextLink).not.toHaveBeenCalled();
+  });
+
+  it("selects the newly created local folder and resolves its tab", async () => {
+    const resolveTabForWorkspace = vi.fn();
+    tabStore.setState({ resolveTabForWorkspace });
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: false });
+    rpcMocks.workspaceCreateLocalFolder.mockResolvedValueOnce({
+      id: "folder-new",
+      path: "/tmp/new-folder",
+      name: "New Folder",
+    });
+
+    await createProject({
+      name: "New Folder",
+      path: "/tmp/new-folder",
+    });
+
+    expect(workspaceStore.getState().selectedWorkspaceId).toBe("folder-new");
+    expect(workspaceStore.getState().selectedProjectId).toBe(LOCAL_FOLDER_PROJECT_ID);
+    expect(resolveTabForWorkspace).toHaveBeenCalledWith("folder-new");
   });
 
   it("loads visible hydrated workspaces without reopening them in daemon", async () => {
@@ -442,7 +664,7 @@ describe("projectCommands", () => {
     );
   });
 
-  it("creates a non-git project from a plain local folder without throwing", async () => {
+  it("creates a git-local project from a plain local git repo via the backend api", async () => {
     const appendRepo = vi.fn();
     const addWorkspace = vi.fn();
     sessionStore.setState({ selectedOrganizationId: "org-1" });
@@ -452,13 +674,13 @@ describe("projectCommands", () => {
           id: "project-plain",
           key: "project-plain",
           repoKey: null,
-          name: "Plain Folder",
+          name: "Plain Git Repo",
           path: "/tmp/plain-folder",
           missing: false,
           localPath: "/tmp/plain-folder",
           gitUrl: "",
           worktreePath: "/tmp/plain-folder",
-          sourceType: "unknown",
+          sourceType: "git-local",
           contextEnabled: true,
         },
       ],
@@ -478,13 +700,14 @@ describe("projectCommands", () => {
       createProject: appendRepo,
       addWorkspace,
     });
+    // A git repo without a remote is git-local: still a backend project.
     rpcMocks.gitInspect.mockResolvedValueOnce({
-      isGitRepository: false,
+      isGitRepository: true,
     });
     apiMocks.createProject.mockResolvedValueOnce({
       id: "project-plain",
-      name: "Plain Folder",
-      sourceType: "unknown",
+      name: "Plain Git Repo",
+      sourceType: "git-local",
       repoProvider: null,
       repoUrl: null,
       repoKey: null,
@@ -509,7 +732,7 @@ describe("projectCommands", () => {
     });
     apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-plain",
-      name: "Plain Folder",
+      name: "Plain Git Repo",
       icon: "folder",
       color: "#1E66F5",
       contextEnabled: true,
@@ -519,23 +742,25 @@ describe("projectCommands", () => {
     });
 
     await createProject({
-      name: "Plain Folder",
+      name: "Plain Git Repo",
       path: "/tmp/plain-folder",
     });
 
     expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
-      name: "Plain Folder",
-      sourceTypeHint: "unknown",
+      name: "Plain Git Repo",
+      sourceTypeHint: "git-local",
       repoUrl: undefined,
       nodeId: undefined,
       localPath: "/tmp/plain-folder",
       contextEnabled: true,
     });
+    // git-local folders must NOT be routed to the local-folder daemon create.
+    expect(rpcMocks.workspaceCreateLocalFolder).not.toHaveBeenCalled();
     expect(appendRepo).toHaveBeenCalledTimes(1);
     expect(appendRepo.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         backendProject: expect.objectContaining({
-          sourceType: "unknown",
+          sourceType: "git-local",
           defaultBranch: null,
         }),
       }),
@@ -544,33 +769,25 @@ describe("projectCommands", () => {
       projectId: "project-plain",
       workspaceId: "workspace-1",
       name: "local",
-      sourceBranch: "",
-      branch: "",
+      sourceBranch: "main",
+      branch: "main",
       worktreePath: "/tmp/plain-folder",
       nodeId: "node-1",
     });
-    // Non-git projects sync context with an empty repoKey + nonGit flag.
-    expect(rpcMocks.workspaceSyncContextLink).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repoKey: "",
-        nonGit: true,
-        enabled: true,
-      }),
-    );
   });
 
-  it("adds and opens the primary workspace returned by the daemon for a non-git folder", async () => {
+  it("adds and opens the primary workspace for a git-local local folder via the backend api", async () => {
     const appendRepo = vi.fn();
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     // Keep the real addWorkspace so the returned primary workspace lands in
     // the store and the import-open path can run.
     workspaceStore.setState({ createProject: appendRepo });
-    rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: false });
-    // The daemon project.create now returns the primary workspace row.
+    // git-local (no remote) still flows through the backend api.project.create.
+    rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: true });
     apiMocks.createProject.mockResolvedValueOnce({
       id: "project-plain",
-      name: "Plain Folder",
-      sourceType: "unknown",
+      name: "Plain Git Repo",
+      sourceType: "git-local",
       repoProvider: null,
       repoUrl: null,
       repoKey: null,
@@ -584,8 +801,8 @@ describe("projectCommands", () => {
           nodeId: "node-1",
           kind: "primary",
           status: "active",
-          branch: null,
-          sourceBranch: null,
+          branch: "main",
+          sourceBranch: "main",
           localPath: "/tmp/plain-folder",
           latestPullRequest: null,
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -595,7 +812,7 @@ describe("projectCommands", () => {
     });
     apiMocks.updateProject.mockResolvedValueOnce({
       id: "project-plain",
-      name: "Plain Folder",
+      name: "Plain Git Repo",
       icon: "folder",
       color: "#1E66F5",
       contextEnabled: true,
@@ -605,10 +822,12 @@ describe("projectCommands", () => {
     });
 
     await createProject({
-      name: "Plain Folder",
+      name: "Plain Git Repo",
       path: "/tmp/plain-folder",
     });
 
+    expect(apiMocks.createProject).toHaveBeenCalled();
+    expect(rpcMocks.workspaceCreateLocalFolder).not.toHaveBeenCalled();
     // The project row + its primary workspace reach the store, and the
     // workspace is opened on the daemon immediately.
     expect(appendRepo).toHaveBeenCalledTimes(1);
@@ -618,8 +837,8 @@ describe("projectCommands", () => {
         expect.objectContaining({
           id: "workspace-1",
           projectId: "project-plain",
-          sourceBranch: "",
-          branch: "",
+          sourceBranch: "main",
+          branch: "main",
           worktreePath: "/tmp/plain-folder",
           nodeId: "node-1",
         }),

@@ -1,7 +1,9 @@
+import { isFolderWorkspace } from "../helpers/localFolder";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
+import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
@@ -68,6 +70,27 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   const workspace = store.workspaces.find((item) => item.id === workspaceId);
 
   if (!workspace) {
+    return;
+  }
+
+  // Folder workspaces are daemon-owned rows, not backend-managed worktrees:
+  // closing one must delete the local folder row on the daemon rather than run
+  // the workspace close path (which would flip its status to 'closed' and leave
+  // a zombie row that resurrects on the next snapshot and blocks re-adding the
+  // path). Route the selected-folder close (Cmd+W or menu) through the delete
+  // path so the folder + its tabs are removed cleanly.
+  if (isFolderWorkspace(workspace)) {
+    workspaceUiStore.setState((state) => {
+      delete state.rightPaneTabByWorkspaceId[workspaceId];
+      delete state.isRightPaneHiddenByWorkspaceId[workspaceId];
+    });
+    void deleteLocalFolder(workspaceId).catch((error) => {
+      console.error("Failed to delete local folder workspace", error);
+      notifyWorkspaceCloseFailure({
+        workspaceName: workspace.name,
+        error,
+      });
+    });
     return;
   }
 

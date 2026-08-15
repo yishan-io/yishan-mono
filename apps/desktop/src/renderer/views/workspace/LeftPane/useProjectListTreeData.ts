@@ -9,6 +9,7 @@ import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDispl
 import { resolveWorkspaceNotificationTone } from "../../../helpers/workspaceNotification";
 import { chatStore } from "../../../store/chatStore";
 import { sessionStore } from "../../../store/sessionStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { reconcileOrder } from "./projectListHelpers";
 
@@ -172,6 +173,27 @@ export function useProjectListTreeData(input: {
         });
       }
     }
+
+    // Non-git local folder workspaces are synthetic rows keyed by the sentinel
+    // project id. They never map to a real project, so they are rendered under
+    // a dedicated group row (useVisibleWorkspaceTree) and mirrored as children
+    // of that group. They are ordered before real projects only by node (folders
+    // are node-scoped), matching how managed workspaces behave under the group.
+    const folderWorkspaces = workspaces.filter(
+      (workspace) => workspace.projectId === LOCAL_FOLDER_PROJECT_ID || workspace.kind === "folder",
+    );
+    for (const workspace of folderWorkspaces) {
+      rows.push({
+        id: workspace.id,
+        name: resolveWorkspaceListDisplayName(workspace, ""),
+        projectId: LOCAL_FOLDER_PROJECT_ID,
+        nodeId: workspace.nodeId?.trim() || "unknown",
+        isLocalFolder: true,
+        lifecycleState: workspace.state,
+        health: workspace.health,
+      });
+    }
+
     if (workspaceListHierarchyMode !== "by_node") {
       return rows;
     }
@@ -204,6 +226,7 @@ export function useProjectListTreeData(input: {
     workspaceAgentStatusByWorkspaceId,
     workspaceByProjectId,
     workspaceUnreadToneByWorkspaceId,
+    workspaces,
   ]);
 
   useEffect(() => {
@@ -214,9 +237,21 @@ export function useProjectListTreeData(input: {
     const items: string[] = [];
     const foldedTopSet = new Set(foldedProjectIds);
     const foldedChildSet = new Set(foldedNodeKeys);
+    // Folder workspaces are synthetic rows; they never drive the fold state of
+    // real projects/nodes. In by_project mode they render under the synthetic
+    // "Local Folders" group; in by_node mode they render under a per-node
+    // "Local Folders" group row (folded via that group's own key).
+    const nonFolderWorkspaces = treeWorkspaces.filter((workspace) => !workspace.isLocalFolder);
+    const folderNodeIds = Array.from(
+      new Set(treeWorkspaces.filter((workspace) => workspace.isLocalFolder).map((workspace) => workspace.nodeId)),
+    );
 
     if (workspaceListHierarchyMode === "by_node") {
-      const nodeIds = Array.from(new Set(treeWorkspaces.map((workspace) => workspace.nodeId)));
+      // Include folder workspaces' node ids so a node that hosts only folder
+      // workspaces still renders (and can be folded) as a node row.
+      const nodeIds = Array.from(
+        new Set([...nonFolderWorkspaces.map((workspace) => workspace.nodeId), ...folderNodeIds]),
+      );
       for (const nodeId of nodeIds) {
         if (foldedTopSet.has(nodeId)) {
           continue;
@@ -225,7 +260,9 @@ export function useProjectListTreeData(input: {
         items.push(`node:${nodeId}`);
         const projectIds = Array.from(
           new Set(
-            treeWorkspaces.filter((workspace) => workspace.nodeId === nodeId).map((workspace) => workspace.projectId),
+            nonFolderWorkspaces
+              .filter((workspace) => workspace.nodeId === nodeId)
+              .map((workspace) => workspace.projectId),
           ),
         );
         for (const projectId of projectIds) {
@@ -234,8 +271,21 @@ export function useProjectListTreeData(input: {
             items.push(`project:${projectKey}`);
           }
         }
+
+        // The per-node "Local Folders" group row: expanded by default, folds
+        // via its node-scoped key in foldedNodeKeys.
+        const folderGroupKey = `${nodeId}:${LOCAL_FOLDER_PROJECT_ID}`;
+        if (folderNodeIds.includes(nodeId) && !foldedChildSet.has(folderGroupKey)) {
+          items.push(`project:${folderGroupKey}`);
+        }
       }
       return items;
+    }
+
+    // The synthetic "Local Folders" group is expanded by default and folds via
+    // the sentinel project id in foldedProjectIds.
+    if (!foldedTopSet.has(LOCAL_FOLDER_PROJECT_ID)) {
+      items.push(`project:${LOCAL_FOLDER_PROJECT_ID}`);
     }
 
     for (const project of filteredProjects) {
@@ -245,7 +295,7 @@ export function useProjectListTreeData(input: {
 
       items.push(`project:${project.id}`);
       const projectNodeIds = new Set(
-        treeWorkspaces.filter((workspace) => workspace.projectId === project.id).map((w) => w.nodeId),
+        nonFolderWorkspaces.filter((workspace) => workspace.projectId === project.id).map((w) => w.nodeId),
       );
       for (const nodeId of projectNodeIds) {
         const nodeKey = `${project.id}:${nodeId}`;

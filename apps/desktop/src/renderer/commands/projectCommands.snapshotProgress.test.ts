@@ -21,10 +21,14 @@ vi.mock("../api", () => ({
 
 const rpcMocks = vi.hoisted(() => ({
   listProjects: vi.fn(),
+  listLocalFolders: vi.fn(async () => []),
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
+    workspace: {
+      listLocalFolders: rpcMocks.listLocalFolders,
+    },
     project: {
       listByOrg: rpcMocks.listProjects,
     },
