@@ -21,7 +21,7 @@ func (s *GitService) PublishBranch(ctx context.Context, root string) (string, er
 		remotes := splitNonEmptyLines(remotesOut)
 		if !slices.Contains(remotes, "origin") {
 			if len(remotes) == 0 {
-				return "", NewRPCError(rpcCodeToolUnavailable, "no git remote configured")
+				return "", NewError(ErrCodeToolUnavailable, "no git remote configured")
 			}
 			remote = remotes[0]
 		}
@@ -36,7 +36,7 @@ func (s *GitService) PublishBranch(ctx context.Context, root string) (string, er
 
 func (s *GitService) RenameBranch(ctx context.Context, root string, nextBranch string) error {
 	if strings.TrimSpace(nextBranch) == "" {
-		return NewRPCError(rpcCodeInvalidParams, "nextBranch is required")
+		return NewError(ErrCodeInvalidParams, "nextBranch is required")
 	}
 	_, err := gitCommandCombined(ctx, root, "branch", "-m", nextBranch)
 	return err

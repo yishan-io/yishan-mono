@@ -1,3 +1,3 @@
-package buildinfo
+package release
 
 var Version = "dev"

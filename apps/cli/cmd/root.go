@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/buildinfo"
+	release "yishan/apps/cli/internal/release"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/logx"
 	"yishan/apps/cli/internal/output"
@@ -112,7 +112,7 @@ func configureLogger(level string, format string) error {
 		Level:   level,
 		Format:  format,
 		Out:     os.Stderr,
-		Version: buildinfo.Version,
+		Version: release.Version,
 	}
 	if activeLogFileWriter != nil {
 		cfg.FileOut = activeLogFileWriter

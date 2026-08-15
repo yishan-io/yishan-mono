@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/buildinfo"
+	release "yishan/apps/cli/internal/release"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -64,7 +64,7 @@ func registerRemoteNode(runtime *cliruntime.Runtime, registration NodeRegistrati
 		Endpoint: registration.Endpoint,
 		Metadata: map[string]any{
 			"os":      goruntime.GOOS,
-			"version": buildinfo.Version,
+			"version": release.Version,
 			"agents":  agentDetection,
 		},
 	})

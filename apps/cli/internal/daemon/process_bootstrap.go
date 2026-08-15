@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/app"
-	"yishan/apps/cli/internal/buildinfo"
+	release "yishan/apps/cli/internal/release"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/node"
-	"yishan/apps/cli/internal/nodeid"
+	nodeid "yishan/apps/cli/internal/node/id"
 	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
@@ -164,7 +164,7 @@ func buildHTTPServer(app *app.App, daemonID string, relayStatus *relay.Status) *
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"status":   "running",
-			"version":  buildinfo.Version,
+			"version":  release.Version,
 			"daemonId": daemonID,
 			"relay":    relayStatus.Snapshot(),
 		})

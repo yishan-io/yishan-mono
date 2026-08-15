@@ -5,8 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"yishan/apps/cli/internal/buildinfo"
-	"yishan/apps/cli/internal/selfupdate"
+	selfupdate "yishan/apps/cli/internal/release"
 )
 
 var selfUpdateCmd = &cobra.Command{
@@ -47,7 +46,7 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Latest version: %s\n", rel.Version)
 	}
 
-	fmt.Printf("Current version: %s\n", buildinfo.Version)
+	fmt.Printf("Current version: %s\n", selfupdate.Version)
 
 	if !selfUpdateForce && !rel.IsNewer() {
 		fmt.Println("Already up to date.")

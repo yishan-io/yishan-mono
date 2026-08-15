@@ -10,6 +10,8 @@ import (
 	"errors"
 
 	"yishan/apps/cli/internal/computer"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/rpcerror"
 )
 
@@ -98,5 +100,43 @@ func MapRPCError(err error) *RPCError {
 			},
 		}
 	}
+	var filesErr *files.Error
+	if errors.As(err, &filesErr) {
+		return &RPCError{Code: mapFileErrorCode(filesErr.Code), Message: filesErr.Message}
+	}
+	var gitErr *git.Error
+	if errors.As(err, &gitErr) {
+		return &RPCError{Code: mapGitErrorCode(gitErr.Code), Message: gitErr.Message}
+	}
 	return &RPCError{Code: CodeServerError, Message: err.Error()}
+}
+
+// mapFileErrorCode maps a file-service domain error code to the wire error
+// code. The wire mapping is explicit here so the capability package never
+// imports rpc/transport types.
+func mapFileErrorCode(code files.ErrorCode) int {
+	switch code {
+	case files.ErrCodeInvalidParams:
+		return rpcerror.CodeInvalidParams
+	case files.ErrCodeNotFound:
+		return rpcerror.CodeNotFound
+	case files.ErrCodePathRestricted:
+		return rpcerror.CodePathRestricted
+	default:
+		return rpcerror.CodeServerError
+	}
+}
+
+// mapGitErrorCode maps a git-service domain error code to the wire error code.
+func mapGitErrorCode(code git.ErrorCode) int {
+	switch code {
+	case git.ErrCodeInvalidParams:
+		return rpcerror.CodeInvalidParams
+	case git.ErrCodeNotFound:
+		return rpcerror.CodeNotFound
+	case git.ErrCodeToolUnavailable:
+		return rpcerror.CodeToolUnavailable
+	default:
+		return rpcerror.CodeServerError
+	}
 }

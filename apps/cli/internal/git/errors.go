@@ -1,16 +1,28 @@
 package git
 
-import "yishan/apps/cli/internal/rpcerror"
+// Domain errors for the git service boundary. The git service never imports
+// transport or RPC packages: it returns plain domain errors and the RPC layer
+// (node services / rpc.MapRPCError) maps them to wire errors.
 
-// Error codes and helpers for the git service boundary. RPC errors produced
-// here surface through the daemon's transport error mapping.
+// ErrorCode classifies git-service failures for the RPC mapping.
+type ErrorCode string
+
 const (
-	rpcCodeInvalidParams   = rpcerror.CodeInvalidParams
-	rpcCodeNotFound        = rpcerror.CodeNotFound
-	rpcCodeToolUnavailable = rpcerror.CodeToolUnavailable
+	ErrCodeInvalidParams   ErrorCode = "invalid_params"
+	ErrCodeNotFound        ErrorCode = "not_found"
+	ErrCodeToolUnavailable ErrorCode = "tool_unavailable"
 )
 
-// NewRPCError builds an RPC error.
-func NewRPCError(code int, message string) error {
-	return rpcerror.NewRPCError(code, message)
+// Error is the domain error returned by git operations.
+type Error struct {
+	Code    ErrorCode
+	Message string
+}
+
+// Error implements error.
+func (e *Error) Error() string { return e.Message }
+
+// NewError builds a git-service domain error.
+func NewError(code ErrorCode, message string) error {
+	return &Error{Code: code, Message: message}
 }

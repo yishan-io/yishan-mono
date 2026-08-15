@@ -87,8 +87,33 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "node",
-		targets:      []string{"daemon"},
-		reason:       "node.App is the composition root and must not depend on the daemon",
+		targets:      []string{"daemon", "app"},
+		reason:       "node.Service is the local Node application boundary; it must not depend on the daemon or the composition root",
+	},
+	{
+		sourcePrefix: "node/id",
+		targets:      []string{"node"},
+		reason:       "small packages under an owner must not import the owner package in reverse",
+	},
+	{
+		sourcePrefix: "agent/kind",
+		targets:      []string{"agent", "agent/session", "agent/process", "agent/command", "agent/setup", "agent/auth", "agent/catalog"},
+		reason:       "the agent-kind constants package must not import agent domain logic",
+	},
+	{
+		sourcePrefix: "git/exec",
+		targets:      []string{"git"},
+		reason:       "the low-level git exec adapter must not import the git service package",
+	},
+	{
+		sourcePrefix: "files",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "file services are standalone infrastructure and return domain errors, not RPC errors",
+	},
+	{
+		sourcePrefix: "git",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "git services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "tokenusage",
@@ -173,10 +198,11 @@ func TestForbiddenImports(t *testing.T) {
 					continue // self-import of the package prefix
 				}
 				for _, forbidden := range edge.targets {
-					if target == forbidden || strings.HasPrefix(target, forbidden+"/") {
-						violations = append(violations,
-							fmt.Sprintf("%s (%s) imports %s: %s", sourceRel, path, importPath, edge.reason))
+					if !matchesForbiddenTarget(forbidden, target) {
+						continue
 					}
+					violations = append(violations,
+						fmt.Sprintf("%s (%s) imports %s: %s", sourceRel, path, importPath, edge.reason))
 				}
 			}
 		}
@@ -238,4 +264,24 @@ func packageImports(path string, t *testing.T) []string {
 		imports = append(imports, strings.Trim(spec.Path.Value, `"`))
 	}
 	return imports
+}
+
+// matchesForbiddenTarget reports whether target (an internal import path)
+// falls under the forbidden package prefix. Shared vocabulary packages that
+// moved under a domain owner (agent/kind carries the agent-kind constants
+// that the old top-level agentkind package provided) stay importable by any
+// package — they are constants, not domain logic.
+func matchesForbiddenTarget(forbidden string, target string) bool {
+	if target == forbidden {
+		return true
+	}
+	if !strings.HasPrefix(target, forbidden+"/") {
+		return false
+	}
+	// The agent-kind constants package is shared vocabulary, not agent
+	// domain logic: allow it for packages that read agent-kind constants.
+	if forbidden == "agent" && strings.HasPrefix(target, "agent/kind") {
+		return false
+	}
+	return true
 }

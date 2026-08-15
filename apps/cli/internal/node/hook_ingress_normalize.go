@@ -3,7 +3,7 @@ package node
 import (
 	"strings"
 
-	"yishan/apps/cli/internal/agentkind"
+	agentkind "yishan/apps/cli/internal/agent/kind"
 )
 
 func mergeHookIngressPayload(envelope hookIngressEvent, rawPayload hookIngressEvent) hookIngressEvent {

@@ -6,7 +6,7 @@ import (
 
 	clidetector "yishan/apps/cli/internal/agent/catalog/detect"
 	clitoolinstall "yishan/apps/cli/internal/agent/catalog/install"
-	"yishan/apps/cli/internal/agentkind"
+	agentkind "yishan/apps/cli/internal/agent/kind"
 	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/workspace"
 )

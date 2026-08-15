@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 )
 
 func TestBoundChangedPaths_OverflowSignalsFullRefresh(t *testing.T) {

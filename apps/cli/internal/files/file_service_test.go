@@ -93,12 +93,12 @@ func TestFileServicePathEscapeRejected(t *testing.T) {
 		t.Fatal("expected path escape error")
 	}
 
-	rpcErr, ok := err.(*RPCError)
+	fileErr, ok := err.(*Error)
 	if !ok {
-		t.Fatalf("expected RPCError, got %T", err)
+		t.Fatalf("expected file domain Error, got %T", err)
 	}
-	if rpcErr.Code != -32003 {
-		t.Fatalf("expected code -32003, got %d", rpcErr.Code)
+	if fileErr.Code != ErrCodePathRestricted {
+		t.Fatalf("expected ErrCodePathRestricted, got %q", fileErr.Code)
 	}
 }
 
@@ -114,12 +114,12 @@ func TestFileServiceReadRejectsLargeFiles(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected large file read to be rejected")
 	}
-	rpcErr, ok := err.(*RPCError)
+	fileErr, ok := err.(*Error)
 	if !ok {
-		t.Fatalf("expected RPCError, got %T", err)
+		t.Fatalf("expected file domain Error, got %T", err)
 	}
-	if rpcErr.Code != rpcCodeInvalidParams {
-		t.Fatalf("expected invalid params code %d, got %d", rpcCodeInvalidParams, rpcErr.Code)
+	if fileErr.Code != ErrCodeInvalidParams {
+		t.Fatalf("expected ErrCodeInvalidParams, got %q", fileErr.Code)
 	}
 }
 
@@ -178,12 +178,12 @@ func TestFileServiceReadRejectsUnrelatedSymlinkEscape(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unrelated symlink read to be rejected")
 	}
-	rpcErr, ok := err.(*RPCError)
+	fileErr, ok := err.(*Error)
 	if !ok {
-		t.Fatalf("expected RPCError, got %T", err)
+		t.Fatalf("expected file domain Error, got %T", err)
 	}
-	if rpcErr.Code != rpcCodePathRestricted {
-		t.Fatalf("expected path restricted code %d, got %d", rpcCodePathRestricted, rpcErr.Code)
+	if fileErr.Code != ErrCodePathRestricted {
+		t.Fatalf("expected ErrCodePathRestricted, got %q", fileErr.Code)
 	}
 }
 
@@ -199,12 +199,12 @@ func TestFileServiceWriteRejectsUnrelatedSymlinkEscape(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unrelated symlink write to be rejected")
 	}
-	rpcErr, ok := err.(*RPCError)
+	fileErr, ok := err.(*Error)
 	if !ok {
-		t.Fatalf("expected RPCError, got %T", err)
+		t.Fatalf("expected file domain Error, got %T", err)
 	}
-	if rpcErr.Code != rpcCodePathRestricted {
-		t.Fatalf("expected path restricted code %d, got %d", rpcCodePathRestricted, rpcErr.Code)
+	if fileErr.Code != ErrCodePathRestricted {
+		t.Fatalf("expected ErrCodePathRestricted, got %q", fileErr.Code)
 	}
 }
 
@@ -224,12 +224,12 @@ func TestFileServiceGitMetadataRejected(t *testing.T) {
 		t.Fatal("expected .git path to be rejected")
 	}
 
-	rpcErr, ok := err.(*RPCError)
+	fileErr, ok := err.(*Error)
 	if !ok {
-		t.Fatalf("expected RPCError, got %T", err)
+		t.Fatalf("expected file domain Error, got %T", err)
 	}
-	if rpcErr.Code != -32003 {
-		t.Fatalf("expected code -32003, got %d", rpcErr.Code)
+	if fileErr.Code != ErrCodePathRestricted {
+		t.Fatalf("expected ErrCodePathRestricted, got %q", fileErr.Code)
 	}
 
 	if _, err := svc.List(root, ".git", false); err == nil {

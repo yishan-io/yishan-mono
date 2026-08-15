@@ -169,7 +169,7 @@ func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChan
 
 func (s *GitService) TrackChanges(ctx context.Context, root string, paths []string) error {
 	if len(paths) == 0 {
-		return NewRPCError(rpcCodeInvalidParams, "paths are required")
+		return NewError(ErrCodeInvalidParams, "paths are required")
 	}
 	_, err := gitCommandCombined(ctx, root, append([]string{"add", "--"}, paths...)...)
 	return err
@@ -177,7 +177,7 @@ func (s *GitService) TrackChanges(ctx context.Context, root string, paths []stri
 
 func (s *GitService) UnstageChanges(ctx context.Context, root string, paths []string) error {
 	if len(paths) == 0 {
-		return NewRPCError(rpcCodeInvalidParams, "paths are required")
+		return NewError(ErrCodeInvalidParams, "paths are required")
 	}
 	_, err := gitCommandCombined(ctx, root, append([]string{"restore", "--staged", "--"}, paths...)...)
 	return err
@@ -185,7 +185,7 @@ func (s *GitService) UnstageChanges(ctx context.Context, root string, paths []st
 
 func (s *GitService) RevertChanges(ctx context.Context, root string, paths []string) error {
 	if len(paths) == 0 {
-		return NewRPCError(rpcCodeInvalidParams, "paths are required")
+		return NewError(ErrCodeInvalidParams, "paths are required")
 	}
 
 	untrackedPaths, err := s.listUntrackedPaths(ctx, root, paths)
@@ -219,7 +219,7 @@ func (s *GitService) RevertChanges(ctx context.Context, root string, paths []str
 
 func (s *GitService) CommitChanges(ctx context.Context, root string, message string, amend bool, signoff bool) (string, error) {
 	if strings.TrimSpace(message) == "" {
-		return "", NewRPCError(rpcCodeInvalidParams, "message is required")
+		return "", NewError(ErrCodeInvalidParams, "message is required")
 	}
 
 	args := []string{"commit", "-m", message}

@@ -10,7 +10,7 @@ import (
 	"slices"
 
 	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/agentkind"
+	agentkind "yishan/apps/cli/internal/agent/kind"
 	"yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
 	cliruntime "yishan/apps/cli/internal/runtime"

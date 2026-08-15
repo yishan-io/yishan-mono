@@ -14,7 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/buildinfo"
+	release "yishan/apps/cli/internal/release"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -200,7 +200,7 @@ func (c *Client) Run(ctx context.Context) {
 			continue
 		}
 
-		log.Info().Str("relay_url", endpointWithMetadata).Str("nodeId", c.nodeID).Str("daemonVersion", buildinfo.Version).Msg("relay websocket connected")
+		log.Info().Str("relay_url", endpointWithMetadata).Str("nodeId", c.nodeID).Str("daemonVersion", release.Version).Msg("relay websocket connected")
 		delay = reconnectInitialDelay
 		// Invalidate the cached token after a successful session ends so the
 		// next reconnect always gets a fresh token.
@@ -282,7 +282,7 @@ func appendClientMetadata(endpoint string) string {
 		return endpoint
 	}
 	query := parsed.Query()
-	if version := strings.TrimSpace(buildinfo.Version); version != "" {
+	if version := strings.TrimSpace(release.Version); version != "" {
 		query.Set("version", version)
 	}
 	parsed.RawQuery = query.Encode()

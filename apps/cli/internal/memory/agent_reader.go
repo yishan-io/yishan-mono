@@ -12,7 +12,7 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
-	"yishan/apps/cli/internal/agentkind"
+	agentkind "yishan/apps/cli/internal/agent/kind"
 )
 
 type agentDBReader struct{}

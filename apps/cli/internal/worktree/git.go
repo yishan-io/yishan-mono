@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 	"yishan/apps/cli/internal/rpcerror"
 )
 

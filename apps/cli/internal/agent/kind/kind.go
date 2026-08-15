@@ -1,6 +1,6 @@
 // Package agentkind defines the canonical agent kind string constants shared
 // across the yishan CLI. Must stay in sync with packages/core/src/agentKinds.ts.
-package agentkind
+package kind
 
 const (
 	OpenCode = "opencode"

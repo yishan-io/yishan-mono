@@ -3,7 +3,7 @@ package node
 import (
 	"slices"
 
-	"yishan/apps/cli/internal/agentkind"
+	agentkind "yishan/apps/cli/internal/agent/kind"
 )
 
 func isKnownAgentKind(kind string) bool {

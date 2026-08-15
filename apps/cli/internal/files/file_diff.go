@@ -2,7 +2,7 @@ package files
 
 import (
 	"yishan/apps/cli/internal/git"
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 
 	"bytes"
 	"context"

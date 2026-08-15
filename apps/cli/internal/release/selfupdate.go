@@ -1,4 +1,4 @@
-package selfupdate
+package release
 
 import (
 	"archive/tar"
@@ -15,7 +15,6 @@ import (
 	"runtime"
 	"strings"
 
-	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
@@ -90,7 +89,7 @@ func releaseForVersion(version string) *Release {
 
 // IsNewer returns true when the release is newer than the running binary.
 func (r *Release) IsNewer() bool {
-	return r.Version != buildinfo.Version && buildinfo.Version != "dev"
+	return r.Version != Version && Version != "dev"
 }
 
 // Apply downloads, verifies, and replaces the current binary.

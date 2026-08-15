@@ -10,10 +10,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/buildinfo"
+	release "yishan/apps/cli/internal/release"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/login"
-	"yishan/apps/cli/internal/nodeid"
+	nodeid "yishan/apps/cli/internal/node/id"
 	"yishan/apps/cli/internal/output"
 )
 
@@ -175,7 +175,7 @@ func registerLocalNodeAfterLogin() error {
 		Scope:  "private",
 		Metadata: map[string]any{
 			"os":      runtime.GOOS,
-			"version": buildinfo.Version,
+			"version": release.Version,
 		},
 		UpdateIfExists: &updateIfExists,
 	})

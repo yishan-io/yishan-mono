@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 

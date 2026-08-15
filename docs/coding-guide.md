@@ -744,3 +744,20 @@ go vet ./...
 - Setup code never imports rpc or daemon (param decoding lives in the node
   RPC services); no setup function forwards to another package — the
   hook-install forwarder was removed and callers use `setup/hooks` directly.
+
+### Internal package taxonomy (cli, Phase 16C)
+- Every top-level internal package has one documented role: domain owner
+  (workspace, agent, tokenusage, memory), capability owner (files, git,
+  terminal, computer), edge adapter (api, db, relay, fswatch, gitexec),
+  host/transport owner (daemon, app, node, rpc), or shared runtime owner
+  (config, events, runtime, output, logx, rpcerror, release).
+- Small packages live under their natural owner: `agent/kind` (agent kind
+  constants — shared vocabulary, not agent domain logic), `git/exec` (low-level
+  git command adapter), `node/id` (node identity file), `release` (version +
+  self-update, merged from buildinfo + selfupdate).
+- File and Git capabilities return domain errors (files.Error / git.Error)
+  and never import rpcerror; `rpc.MapRPCError` maps capability domain errors
+  to wire errors (the same pattern as computer.Error).
+- `node.Service` is the local Node application boundary and must not import
+  `internal/app`; `internal/app` is the only composition root and may import
+  every concrete package.

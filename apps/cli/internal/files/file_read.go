@@ -17,7 +17,7 @@ func (s *FileService) Read(root string, path string) (string, error) {
 		return "", err
 	}
 	if info.Size() > maxReadBytes {
-		return "", NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("file exceeds %d byte read limit", maxReadBytes))
+		return "", NewError(ErrCodeInvalidParams, fmt.Sprintf("file exceeds %d byte read limit", maxReadBytes))
 	}
 
 	b, err := os.ReadFile(fullPath)

@@ -5,7 +5,7 @@ import (
 
 	"path/filepath"
 	"testing"
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 )
 
 func TestEnsureContextLink_CreatesSymlinkAndContextDir(t *testing.T) {

@@ -1,4 +1,4 @@
-package agentkind
+package kind
 
 import (
 	"slices"
