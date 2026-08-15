@@ -19,7 +19,7 @@ func (a *App) CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (w
 
 	var result workspace.CloseResult
 
-	cleanupErrors := a.Terminals.StopAllForWorkspace(req.WorkspaceID)
+	cleanupErrors := a.terminals.StopAllForWorkspace(req.WorkspaceID)
 	if len(cleanupErrors) > 0 {
 		messages := make([]string, len(cleanupErrors))
 		for i, e := range cleanupErrors {
@@ -41,13 +41,13 @@ func (a *App) CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (w
 		return result, err
 	}
 
-	a.Registry.Remove(req.WorkspaceID)
+	a.registry.Remove(req.WorkspaceID)
 
 	return result, nil
 }
 
 func (a *App) registryWorkspace(id string) (workspace.Workspace, error) {
-	ws, ok := a.Registry.Get(id)
+	ws, ok := a.registry.Get(id)
 	if !ok {
 		return workspace.Workspace{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 	}

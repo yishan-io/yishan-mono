@@ -19,10 +19,10 @@ import (
 // registered as error instead of aborting the whole hydration, so daemon
 // bootstrap never fails because of one broken workspace.
 func (a *App) HydrateFromDB(ctx context.Context) error {
-	if a.Store == nil {
+	if a.store == nil {
 		return nil
 	}
-	workspaces, err := a.Store.List(ctx)
+	workspaces, err := a.store.List(ctx)
 	if err != nil {
 		return fmt.Errorf("list persisted workspaces: %w", err)
 	}
@@ -72,10 +72,10 @@ func (a *App) HydrateFromDB(ctx context.Context) error {
 // persistWorkspaceLifecycleState best-effort persists a workspace lifecycle
 // state transition. Persistence failures are logged and never fail hydration.
 func (a *App) persistWorkspaceLifecycleState(ctx context.Context, workspaceID string, state string, health string) {
-	if a.Store == nil {
+	if a.store == nil {
 		return
 	}
-	err := a.Store.Update(ctx, workspaceID, workspace.StoredWorkspaceUpdate{State: &state, Health: &health})
+	err := a.store.Update(ctx, workspaceID, workspace.StoredWorkspaceUpdate{State: &state, Health: &health})
 	if err != nil && !errors.Is(err, workspace.ErrWorkspaceNotFound) {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("failed to persist workspace lifecycle state")
 	}
@@ -92,7 +92,7 @@ func isPersistedNotWorktreeError(storedWorkspace workspace.StoredWorkspace) bool
 // with the given health detail. Used when a persisted workspace cannot be
 // opened (missing path) or must stay error (not-worktree).
 func (a *App) registerErrorWorkspace(storedWorkspace workspace.StoredWorkspace, health workspace.Health) {
-	ws, ok := a.Registry.Get(storedWorkspace.ID)
+	ws, ok := a.registry.Get(storedWorkspace.ID)
 	if !ok {
 		ws = workspace.Workspace{
 			ID:        storedWorkspace.ID,
@@ -103,7 +103,7 @@ func (a *App) registerErrorWorkspace(storedWorkspace workspace.StoredWorkspace, 
 	}
 	ws.State = workspace.StateError
 	ws.Health = health
-	a.Registry.Open(ws)
+	a.registry.Open(ws)
 }
 
 // canonicalizeWorkspacePath resolves a workspace path to its canonical form.
@@ -130,7 +130,7 @@ func (a *App) hydrateWorkspace(storedWorkspace workspace.StoredWorkspace) error 
 }
 
 func (a *App) hydrateWorkspacePullRequest(ctx context.Context, workspaceID string) error {
-	pullRequests, err := a.Store.ListPRsByWorkspace(ctx, workspaceID)
+	pullRequests, err := a.store.ListPRsByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return fmt.Errorf("list persisted pull requests: %w", err)
 	}
@@ -142,7 +142,7 @@ func (a *App) hydrateWorkspacePullRequest(ctx context.Context, workspaceID strin
 		if err != nil {
 			return err
 		}
-		return a.Registry.SetPullRequest(workspaceID, pullRequest)
+		return a.registry.SetPullRequest(workspaceID, pullRequest)
 	}
 	return nil
 }
@@ -187,7 +187,7 @@ func (a *App) OpenWorkspace(req workspace.OpenRequest) (workspace.Workspace, err
 
 	workspace.EnsureGitExclude(absPath, workspace.ContextLinkName)
 
-	return a.Registry.Open(workspace.Workspace{
+	return a.registry.Open(workspace.Workspace{
 		ID:        req.ID,
 		Path:      absPath,
 		OrgID:     req.OrgID,

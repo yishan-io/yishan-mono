@@ -283,10 +283,14 @@ cmd/                Cobra command definitions only — no business logic
 internal/
   auth/             JWT validation
   config/           Environment config reading
-  daemon/           Daemon process, JSON-RPC dispatch, git watcher, PR tracker, scheduler
-  provision/        Workspace provisioning orchestration
+  daemon/           Daemon process lifecycle (lock, state, HTTP serving) + daemon client
+  node/             Composition root (node.App) + concrete RPC services + hydrate/close engines
+  rpc/              JSON-RPC/WebSocket transport, router, namespace handlers
+  relay/            Relay envelopes + relay client
   runtime/          API client, credential persistence
-  workspace/        Workspace manager, git operations, terminal, file ops
+  workspace/        Workspace domain types + lifecycle rules
+  workspace/application/  Create/close orchestration (application.Service)
+  files/ git/ terminal/ worktree/  Workspace capability packages
   output/           CLI output formatting
   logx/             Log file management
 ```
@@ -335,42 +339,54 @@ internal/
   compare against raw string literals.
 
 ### Workspace lifecycle layering (cli daemon)
-- Final CLI package dependency contract (Phases 7–12):
+- Final CLI package dependency contract (Phases 7–13):
   `cmd -> daemon client or application facade`; `daemon -> node.App`;
   `node.App -> rpc + application services + infrastructure`;
   `rpc -> application interfaces`; `application -> domain + interfaces`;
   `infrastructure -> domain`; `domain -> standard library only`. Enforced by
-  `internal/archtest` (forbidden-import test).
+  `internal/archtest` (forbidden-import test). The archtest also forbids domain
+  and application packages from importing `node`, `rpc`, or `daemon` (relay may
+  use the rpc transport types for its client).
 - `internal/node.App` is the daemon's only service composition root: `node.Bootstrap`
-  constructs the whole service graph (workspace manager, memory, computer, agents,
-  events, watchers, PR tracker, cleanup/context stores, token usage) for one account
-  and `node.App.Close` owns the shutdown order. `JSONRPCHandler` receives the app and
-  constructs no business services; daemon `Run` keeps the process entry points and
-  calls `node.Bootstrap` after resolving the account data dir.
+  constructs the whole service graph (instance registry, SQLite store, file/git/
+  terminal services, memory, computer, agents, events, watchers, PR tracker,
+  cleanup/context stores, token usage) for one account and `node.App.Close` owns
+  the shutdown order. App exposes no public service fields — only `RPCServer()`,
+  `Relay()`, `ServeAgentHook`, `Close`, `Start`, and identity (`Runtime`, `NodeID`).
+  daemon `Run` keeps the process entry points and calls `node.Bootstrap` after
+  resolving the account data dir.
 - The JSON-RPC transport lives in `internal/rpc`: `Server` (WebSocket read loop,
   concurrency limits, binary terminal frames), `Connection`, `Router`, protocol
   types, and one namespace handler per RPC namespace (`WorkspaceHandler`,
   `FileHandler`, `GitHandler`, `TerminalHandler`, `MemoryHandler`,
-  `ComputerHandler`, `ContextHandler`, `ProjectHandler`, `SystemHandler`).
-  Each handler decodes params and calls exactly one typed method on a
-  per-namespace `Services` interface implemented by the daemon.
+  `ComputerHandler`, `ContextHandler`, `ProjectHandler`, `SystemHandler`,
+  `AgentHandler`). Each handler decodes params and calls exactly one typed
+  method on a per-namespace service interface implemented by `node.Services`
+  (the concrete RPC service layer built by the composition root).
+- `internal/relay` owns the relay client: the reconnect loop, the connection
+  handle, token minting, connection status, pending dispatch verdicts, and
+  terminal-session event forwarding. The app implements `relay.MessageHandler`
+  for relay-protocol messages (job.run, snapshot changes, terminal stream
+  notifications).
 - File/Git/terminal capabilities live in `internal/files`, `internal/git`,
   `internal/terminal` (low-level git exec stays in `internal/gitexec`);
   agent behavior lives in `internal/agent/{session,process,command,setup,
   auth,catalog}`; PR tracking lives in `workspace/pr`. The workspace root
-  package keeps domain types + lifecycle rules + the Manager composition
-  facade. Infrastructure conversion is single-owner: `internal/api` (cloud
-  client + DTOs) and `internal/db` (SQLite + row conversion) — no
-  `apiclient`/`dbconv` packages.
+  package keeps domain types + lifecycle rules + free functions only —
+  `workspace.Manager` and `workspace/createflow` no longer exist. The create
+  engine lives in `workspace/application`, and the close/hydrate/open engines
+  live in `internal/node` (App methods). Infrastructure conversion is
+  single-owner: `internal/api` (cloud client + DTOs) and `internal/db`
+  (SQLite + row conversion).
 - `internal/workspace/application.Service` owns workspace create/close orchestration:
-  routing, rollback, and createflow execution. Create and close each have one
-  application owner; `internal/workspace/createflow` stays an internal collaborator.
+  routing, rollback, and the create engine. Create and close each have one
+  application owner.
 - The workspace layer depends on `internal/workspace` interfaces (`InstanceRegistry`,
-  `WorkspaceStore`) and `internal/worktree` for git worktree provisioning. The daemon
-  injects the concrete adapters: `internal/workspace/instance.Registry`,
-  `internal/dbconv.Store`, `internal/apiclient` builders.
+  `WorkspaceStore`) and `internal/worktree` for git worktree provisioning. The
+  composition root injects the concrete adapters: `internal/workspace/instance.Registry`,
+  `internal/db.Store`, `internal/api` builders.
 - Conversion between domain and transport/persistence types lives in the adapter
-  packages only: `internal/apiclient` (API DTOs), `internal/dbconv` (SQLite rows),
+  packages only: `internal/api` (API DTOs), `internal/db` (SQLite rows),
   `internal/relay` (relay envelopes). The domain packages must not import
   `internal/api` or `internal/db`.
 - Runtime state/health are the typed `workspace.State`/`workspace.Health` values

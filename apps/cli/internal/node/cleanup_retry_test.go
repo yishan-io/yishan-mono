@@ -27,9 +27,9 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	}
 
 	app := &App{
-		Store:        localdb.NewStore(workspaceStore),
-		CleanupStore: cleanupStore,
-	Database:     database,
+		store:        localdb.NewStore(workspaceStore),
+		cleanupStore: cleanupStore,
+	database:     database,
 	}
 
 	app.retryPendingCleanups(context.Background())

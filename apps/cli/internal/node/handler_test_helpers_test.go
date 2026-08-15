@@ -39,7 +39,7 @@ func newTestServices(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *
 		// wires it to a fake relay (wireRelayReader/wireRelayCapture).
 		Server:  handler.rpcServer,
 		Handler: handler,
-		Events:  app.Events,
+		Events:  app.events,
 	})
 	t.Cleanup(func() { _ = app.Close() })
 	return handler
@@ -68,24 +68,24 @@ func newTestApp(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *App {
 		prTracker.StopTracking(workspaceID)
 	})
 	app := &App{
-		Registry:     registry,
-		Store:        store,
-		Files:        filesService,
-		Git:          gitService,
-		Terminals:    terminals,
-		Computer:     computer.NewService(computer.NewUnavailableRuntime("unknown")),
-		ModelList:    modellist.NewService(),
-		AgentMgr:     agentmanager.NewManager(),
-		PIAuth:       NewManagedPiAuthStore(),
-		Events:       events,
-		Watchers:     watchers,
-		PRTracker:    prTracker,
-		ContextStore: NewContextStore(""),
+		registry:     registry,
+		store:        store,
+		files:        filesService,
+		git:          gitService,
+		terminals:    terminals,
+		computer:     computer.NewService(computer.NewUnavailableRuntime("unknown")),
+		modelList:    modellist.NewService(),
+		agentMgr:     agentmanager.NewManager(),
+		piAuth:       NewManagedPiAuthStore(),
+		events:       events,
+		watchers:     watchers,
+		prTracker:    prTracker,
+		contextStore: NewContextStore(""),
 		Runtime:      runtime,
 		NodeID:       nodeID,
-		LogFilePath:  filepath.Join(root, "daemon.log"),
-		SettingsPath: filepath.Join(root, "config.yml"),
-		ServerCtx:    context.Background(),
+		logFilePath:  filepath.Join(root, "daemon.log"),
+		settingsPath: filepath.Join(root, "config.yml"),
+		serverCtx:    context.Background(),
 	}
 	app.Start()
 	return app
@@ -121,7 +121,7 @@ func expectNoEvent(t *testing.T, events <-chan internalevents.Event, wait time.D
 // node app (production sets both from node.Bootstrap).
 func (s *Services) setTestDatabase(database *sql.DB) {
 	s.localDatabase = database
-	s.nodeApp.Database = database
+	s.nodeApp.database = database
 }
 
 // callRPCForTest routes a method+params through the namespace router, the same
@@ -153,50 +153,50 @@ func TestNewServices_CopiesAppServices(t *testing.T) {
 
 	registry := instance.NewRegistry(files.NewFileService())
 	app := &App{
-		Registry:          registry,
-		Store:             localdb.NewStore(localdb.NewWorkspaceStore(database)),
-		Files:             files.NewFileService(),
-		Git:               git.NewGitService(),
-		Terminals:         terminal.NewManager(),
-		Computer:          computer.NewService(computer.NewUnavailableRuntime("unknown")),
-		ModelList:         modellist.NewService(),
-		AgentMgr:          agentmanager.NewManager(),
-		PIAuth:            NewManagedPiAuthStore(),
-		Events:            internalevents.NewHub(),
-		Watchers:          NewWatchers(internalevents.NewHub(), nil),
-		PRTracker:         workspaceprtracker.New(workspaceprtracker.TrackerDeps{Instances: registry, Gits: git.NewGitService()}),
-		ContextStore:      NewContextStore(""),
-		Database:          database,
+		registry:          registry,
+		store:             localdb.NewStore(localdb.NewWorkspaceStore(database)),
+		files:             files.NewFileService(),
+		git:               git.NewGitService(),
+		terminals:         terminal.NewManager(),
+		computer:          computer.NewService(computer.NewUnavailableRuntime("unknown")),
+		modelList:         modellist.NewService(),
+		agentMgr:          agentmanager.NewManager(),
+		piAuth:            NewManagedPiAuthStore(),
+		events:            internalevents.NewHub(),
+		watchers:          NewWatchers(internalevents.NewHub(), nil),
+		prTracker:         workspaceprtracker.New(workspaceprtracker.TrackerDeps{Instances: registry, Gits: git.NewGitService()}),
+		contextStore:      NewContextStore(""),
+		database:          database,
 		Runtime:           nil,
 		NodeID:            "node-1",
-		LogFilePath:       "daemon.log",
-		SettingsPath:      "settings.yml",
-		AgentLifecycleCtx: context.Background(),
-		ServerCtx:         context.Background(),
+		logFilePath:       "daemon.log",
+		settingsPath:      "settings.yml",
+		agentLifecycleCtx: context.Background(),
+		serverCtx:         context.Background(),
 	}
 	handler := NewServices(app)
 	handler.BuildRPCLayer()
 
-	if handler.localDatabase != app.Database {
-		t.Fatal("handler.localDatabase must come from app.Database (production wiring)")
+	if handler.localDatabase != app.database {
+		t.Fatal("handler.localDatabase must come from app.database (production wiring)")
 	}
-	if handler.registry != app.Registry || handler.files != app.Files || handler.gits != app.Git || handler.terminals != app.Terminals {
+	if handler.registry != app.registry || handler.files != app.files || handler.gits != app.git || handler.terminals != app.terminals {
 		t.Fatal("handler did not copy app workspace capability services")
 	}
 	if handler.runtime != app.Runtime || handler.nodeID != app.NodeID {
 		t.Fatal("handler did not copy app identity fields")
 	}
-	if handler.events != app.Events || handler.watchers != app.Watchers || handler.prTracker != app.PRTracker {
+	if handler.events != app.events || handler.watchers != app.watchers || handler.prTracker != app.prTracker {
 		t.Fatal("handler did not copy app event/watcher services")
 	}
-	if handler.tokenUsage != app.TokenUsage || handler.computer != app.Computer ||
-		handler.modelList != app.ModelList || handler.memory != app.Memory ||
-		handler.agentMgr != app.AgentMgr || handler.piAuth != app.PIAuth {
+	if handler.tokenUsage != app.tokenUsage || handler.computer != app.computer ||
+		handler.modelList != app.modelList || handler.memory != app.memory ||
+		handler.agentMgr != app.agentMgr || handler.piAuth != app.piAuth {
 		t.Fatal("handler did not copy app business services")
 	}
-	if handler.cleanupStore != app.CleanupStore || handler.context != app.ContextStore ||
-		handler.settingsPath != app.SettingsPath || handler.agentLifecycleCtx != app.AgentLifecycleCtx ||
-		handler.serverCtx != app.ServerCtx {
+	if handler.cleanupStore != app.cleanupStore || handler.context != app.contextStore ||
+		handler.settingsPath != app.settingsPath || handler.agentLifecycleCtx != app.agentLifecycleCtx ||
+		handler.serverCtx != app.serverCtx {
 		t.Fatal("handler did not copy app stores/contexts")
 	}
 	if handler.router == nil || handler.rpcServer == nil {

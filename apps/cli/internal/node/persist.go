@@ -17,11 +17,11 @@ func (a *App) PublishWorkspaceSnapshotChanged(organizationID string, projectID s
 	if strings.TrimSpace(organizationID) == "" || strings.TrimSpace(projectID) == "" || strings.TrimSpace(workspaceID) == "" {
 		return
 	}
-	if a.Events == nil {
+	if a.events == nil {
 		return
 	}
 
-	a.Events.Publish(internalevents.Event{
+	a.events.Publish(internalevents.Event{
 		Topic: "workspaceSnapshotChanged",
 		Payload: map[string]any{
 			"organizationId": organizationID,
@@ -36,11 +36,11 @@ func (a *App) PublishWorkspaceSnapshotChanged(organizationID string, projectID s
 // PersistPrepared writes the provisioning row for a prepared create before the
 // worktree is provisioned, so the workspace survives a crash mid-create.
 func (a *App) PersistPrepared(ctx context.Context, prepared application.CreatePlan) error {
-	if a.Database == nil || prepared.Registration == nil {
+	if a.database == nil || prepared.Registration == nil {
 		return nil
 	}
 	row := localdb.ProvisioningRow(*prepared.Registration)
-	return localdb.NewWorkspaceStore(a.Database).Create(ctx, &row)
+	return localdb.NewWorkspaceStore(a.database).Create(ctx, &row)
 }
 
 // FinalizePersisted transitions the persisted row to active once the local
@@ -49,10 +49,10 @@ func (a *App) PersistPrepared(ctx context.Context, prepared application.CreatePl
 // a missing row is tolerated because the remote record is authoritative and
 // the cache is reconciled on the next sync.
 func (a *App) FinalizePersisted(ctx context.Context, prepared application.CreatePlan, created workspace.Workspace) error {
-	if a.Database == nil || prepared.Registration == nil {
+	if a.database == nil || prepared.Registration == nil {
 		return nil
 	}
-	err := localdb.NewWorkspaceStore(a.Database).Update(ctx, created.ID, localdb.ActiveUpdate(created))
+	err := localdb.NewWorkspaceStore(a.database).Update(ctx, created.ID, localdb.ActiveUpdate(created))
 	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
@@ -62,10 +62,10 @@ func (a *App) FinalizePersisted(ctx context.Context, prepared application.Create
 // UpdatePersistedWorkspaceState writes the runtime state/health to the local
 // row.
 func (a *App) UpdatePersistedWorkspaceState(ctx context.Context, workspaceID string, state string, health string) error {
-	if a.Database == nil || strings.TrimSpace(workspaceID) == "" {
+	if a.database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
-	err := localdb.NewWorkspaceStore(a.Database).Update(ctx, workspaceID, localdb.StateUpdate(state, health))
+	err := localdb.NewWorkspaceStore(a.database).Update(ctx, workspaceID, localdb.StateUpdate(state, health))
 	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}
@@ -75,10 +75,10 @@ func (a *App) UpdatePersistedWorkspaceState(ctx context.Context, workspaceID str
 // ClosePersisted marks the workspace record closed locally and mirrors the
 // closed status on the remote record (best-effort).
 func (a *App) ClosePersisted(ctx context.Context, workspaceID string) error {
-	if a.Database == nil || strings.TrimSpace(workspaceID) == "" {
+	if a.database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
-	workspaceStore := localdb.NewWorkspaceStore(a.Database)
+	workspaceStore := localdb.NewWorkspaceStore(a.database)
 	if err := workspaceStore.Update(ctx, workspaceID, localdb.StatusUpdate(string(workspace.StatusClosed))); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return err
 	}

@@ -30,14 +30,14 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	app := &App{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())}
+	app := &App{store: localdb.NewStore(store), registry: instance.NewRegistry(files.NewFileService())}
 	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 	// A closing row is a tombstone-for-listing: it must not be restored, and
 	// it must not be promoted to error (which would resurrect it as closable).
-	if len(app.Registry.List()) != 0 {
-		t.Fatalf("expected closing row skipped, got %v", app.Registry.List())
+	if len(app.registry.List()) != 0 {
+		t.Fatalf("expected closing row skipped, got %v", app.registry.List())
 	}
 }
 
@@ -54,12 +54,12 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	app := &App{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())}
+	app := &App{store: localdb.NewStore(store), registry: instance.NewRegistry(files.NewFileService())}
 	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 
-	ws, ok := app.Registry.Get("ws-recovered")
+	ws, ok := app.registry.Get("ws-recovered")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}

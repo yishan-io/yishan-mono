@@ -130,7 +130,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		return nil, nil, err
 	}
 
-	return app, app.Relay.Status(), nil
+	return app, app.Relay().Status(), nil
 }
 
 func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
@@ -156,8 +156,8 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 
 func buildHTTPServer(app *node.App, daemonID string, relayStatus *relay.Status) *http.Server {
 	mux := http.NewServeMux()
-	mux.Handle("/ws", app.RPCServer)
-	mux.HandleFunc(node.AgentHookIngestPath, app.Services.ServeAgentHook)
+	mux.Handle("/ws", app.RPCServer())
+	mux.HandleFunc(node.AgentHookIngestPath, app.ServeAgentHook)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

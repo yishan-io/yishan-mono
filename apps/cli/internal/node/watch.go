@@ -9,8 +9,8 @@ import (
 // WatchAndTrack registers the filesystem watcher for a workspace and starts
 // PR tracking for its worktree path.
 func (a *App) WatchAndTrack(workspaceID string, path string) {
-	a.Watchers.Watch(workspaceID, path)
-	a.PRTracker.EnsureTracked(path, true)
+	a.watchers.Watch(workspaceID, path)
+	a.prTracker.EnsureTracked(path, true)
 }
 
 // WatchActiveWorkspaces registers filesystem watchers for every active
@@ -20,7 +20,7 @@ func (a *App) WatchAndTrack(workspaceID string, path string) {
 // would ever be created for pre-existing workspaces after a daemon restart
 // and file-change events (which drive the Git Changes tab) would stop flowing.
 func (a *App) WatchActiveWorkspaces() {
-	for _, ws := range a.Registry.List() {
+	for _, ws := range a.registry.List() {
 		if instance.State(ws.State) != instance.StateActive {
 			continue
 		}

@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"net/http"
 
 	"database/sql"
 	"fmt"
@@ -66,46 +67,46 @@ type App struct {
 	// the open workspace map), the durable SQLite-backed store, and the shared
 	// file/git/terminal services. These replace the historical
 	// workspace.Manager facade.
-	Registry   *instance.Registry
-	Store      workspace.WorkspaceStore
-	Files      *files.FileService
-	Git        *git.GitService
-	Terminals  *terminal.Manager
+	registry  *instance.Registry
+	store     workspace.WorkspaceStore
+	files     *files.FileService
+	git       *git.GitService
+	terminals *terminal.Manager
 
-	Memory       *memory.Service
-	Computer     *computer.Service
-	ModelList    *modellist.Service
-	AgentMgr     *agentmanager.Manager
-	PIAuth       *piauth.Store
-	TokenUsage   tokenusage.Service
-	Events       *internalevents.Hub
-	Watchers     *workspacewatchers.Watchers
-	PRTracker    *workspaceprtracker.Tracker
-	CleanupStore *CleanupStore
-	ContextStore *ContextStore
-	Database     *sql.DB
+	memory       *memory.Service
+	computer     *computer.Service
+	modelList    *modellist.Service
+	agentMgr     *agentmanager.Manager
+	piAuth       *piauth.Store
+	tokenUsage   tokenusage.Service
+	events       *internalevents.Hub
+	watchers     *workspacewatchers.Watchers
+	prTracker    *workspaceprtracker.Tracker
+	cleanupStore *CleanupStore
+	contextStore *ContextStore
+	database     *sql.DB
 	Runtime      *cliruntime.Runtime
 	NodeID       string
-	LogFilePath  string
-	SettingsPath string
+	logFilePath  string
+	settingsPath string
 
-	// AgentLifecycleCtx bounds pi agent process lifetimes; Close cancels it
+	// agentLifecycleCtx bounds pi agent process lifetimes; Close cancels it
 	// before stopping the agent manager.
-	AgentLifecycleCtx context.Context
-	// ServerCtx is the long-lived context RPC handlers use for server-side
+	agentLifecycleCtx context.Context
+	// serverCtx is the long-lived context RPC handlers use for server-side
 	// work (memory searches, relayed creates).
-	ServerCtx context.Context
+	serverCtx context.Context
 
-	// Services is the concrete rpc service layer (workspace/file/git/…
+	// services is the concrete rpc service layer (workspace/file/git/…
 	// implementations). Built by Bootstrap; the daemon process layer serves
 	// its rpc server.
-	Services *Services
-	// Router is the namespace routing table (built with Services).
-	Router *rpc.Router
-	// RPCServer is the JSON-RPC/WebSocket transport server.
-	RPCServer *rpc.Server
-	// Relay is the relay client (connection state owned by internal/relay).
-	Relay *relay.Client
+	services *Services
+	// router is the namespace routing table (built with services).
+	router *rpc.Router
+	// rpcServer is the JSON-RPC/WebSocket transport server.
+	rpcServer *rpc.Server
+	// relay is the relay client (connection state owned by internal/relay).
+	relay *relay.Client
 
 
 	cleanupCtx           context.Context
@@ -171,27 +172,27 @@ func Bootstrap(cfg Config) (*App, error) {
 	}
 
 	app := &App{
-		Registry:     registry,
-		Store:        store,
-		Files:        filesService,
-		Git:          gitService,
-		Terminals:    terminals,
-		Computer:     NewDefaultComputerService(),
-		ModelList:    modellist.NewService(),
-		AgentMgr:     agentmanager.NewManager(),
-		PIAuth:       newManagedPiAuthStore(),
-		TokenUsage:   tokenUsage,
-		Events:       events,
-		Watchers:     watchers,
-		PRTracker:    prTracker,
-		CleanupStore: cleanupStore,
-		ContextStore: NewContextStore(cfg.SettingsPath),
-		Database:     cfg.Database,
+		registry:     registry,
+		store:        store,
+		files:        filesService,
+		git:          gitService,
+		terminals:    terminals,
+		computer:     NewDefaultComputerService(),
+		modelList:    modellist.NewService(),
+		agentMgr:     agentmanager.NewManager(),
+		piAuth:       newManagedPiAuthStore(),
+		tokenUsage:   tokenUsage,
+		events:       events,
+		watchers:     watchers,
+		prTracker:    prTracker,
+		cleanupStore: cleanupStore,
+		contextStore: NewContextStore(cfg.SettingsPath),
+		database:     cfg.Database,
 		Runtime:      cfg.Runtime,
 		NodeID:       cfg.NodeID,
-		LogFilePath:  cfg.LogFilePath,
-		SettingsPath: cfg.SettingsPath,
-		ServerCtx:    context.Background(),
+		logFilePath:  cfg.LogFilePath,
+		settingsPath: cfg.SettingsPath,
+		serverCtx:    context.Background(),
 	}
 
 	// Computer feature config comes from settings.yaml.
@@ -216,20 +217,20 @@ func Bootstrap(cfg Config) (*App, error) {
 	// Build the rpc service layer and the transport server, then the relay
 	// client (it needs the rpc server and the services as its message
 	// handler).
-	app.Services = NewServices(app)
-	app.Services.BuildRPCLayer()
-	app.Router = app.Services.Router()
-	app.RPCServer = app.Services.RPCServer()
-	app.Relay = relay.NewClient(relay.ClientConfig{
+	app.services = NewServices(app)
+	app.services.BuildRPCLayer()
+	app.router = app.services.Router()
+	app.rpcServer = app.services.RPCServer()
+	app.relay = relay.NewClient(relay.ClientConfig{
 		Runtime:     cfg.Runtime,
 		NodeID:      cfg.NodeID,
 		URL:         cfg.RelayURL,
 		StaticToken: cfg.RelayToken,
-		Server:      app.RPCServer,
-		Handler:     app.Services,
+		Server:      app.rpcServer,
+		Handler:     app.services,
 		Events:      events,
 	})
-	app.Services.SetRelayClient(app.Relay)
+	app.services.SetRelayClient(app.relay)
 
 	return app, nil
 }
@@ -239,10 +240,10 @@ func Bootstrap(cfg Config) (*App, error) {
 // scan, pending-cleanup retry, and the workspace health monitor.
 func (a *App) Start() {
 	a.cleanupCtx, a.cancelCleanup = context.WithCancel(context.Background())
-	a.AgentLifecycleCtx, a.cancelAgentLifecycle = context.WithCancel(context.Background())
+	a.agentLifecycleCtx, a.cancelAgentLifecycle = context.WithCancel(context.Background())
 	a.StartFileCacheConsumer()
-	if a.TokenUsage != nil {
-		a.TokenUsage.StartStartupScan()
+	if a.tokenUsage != nil {
+		a.tokenUsage.StartStartupScan()
 	}
 	a.StartCleanupRetry()
 	a.StartHealthMonitor()
@@ -251,14 +252,14 @@ func (a *App) Start() {
 // applyComputerSettings loads the computer-use feature config from
 // settings.yaml. A missing/empty settings path leaves the defaults.
 func (a *App) applyComputerSettings() error {
-	if a.SettingsPath == "" || a.Computer == nil {
+	if a.settingsPath == "" || a.computer == nil {
 		return nil
 	}
-	cfg, err := config.LoadSettings(a.SettingsPath, nil)
+	cfg, err := config.LoadSettings(a.settingsPath, nil)
 	if err != nil {
 		return fmt.Errorf("load computer settings: %w", err)
 	}
-	a.Computer.UpdateConfig(computer.FeatureConfig{
+	a.computer.UpdateConfig(computer.FeatureConfig{
 		Enabled:            cfg.ComputerUse.Enabled,
 		Observe:            cfg.ComputerUse.Observe,
 		Capture:            cfg.ComputerUse.Capture,
@@ -278,34 +279,51 @@ func (a *App) applyComputerSettings() error {
 // lifecycle → agent manager → model list shell → cleanup/health background
 // tasks → local database.
 func (a *App) Close() error {
-	if a.Events != nil {
-		a.Events.Unsubscribe(a.fileCacheSubID)
+	if a.events != nil {
+		a.events.Unsubscribe(a.fileCacheSubID)
 	}
-	if a.PRTracker != nil {
-		a.PRTracker.Stop()
+	if a.prTracker != nil {
+		a.prTracker.Stop()
 	}
-	if a.TokenUsage != nil {
-		a.TokenUsage.Close()
+	if a.tokenUsage != nil {
+		a.tokenUsage.Close()
 	}
-	if a.Memory != nil {
-		if err := a.Memory.Close(); err != nil {
+	if a.memory != nil {
+		if err := a.memory.Close(); err != nil {
 			log.Warn().Err(err).Msg("failed to close memory service")
 		}
 	}
 	if a.cancelAgentLifecycle != nil {
 		a.cancelAgentLifecycle()
 	}
-	if a.AgentMgr != nil {
-		a.AgentMgr.StopAll()
+	if a.agentMgr != nil {
+		a.agentMgr.StopAll()
 	}
 	modellist.ShutdownShell()
 	if a.cancelCleanup != nil {
 		a.cancelCleanup()
 	}
-	if a.Database != nil {
-		if err := a.Database.Close(); err != nil {
+	if a.database != nil {
+		if err := a.database.Close(); err != nil {
 			log.Warn().Err(err).Msg("failed to close local database")
 		}
 	}
 	return nil
+}
+
+// RPCServer exposes the JSON-RPC/WebSocket transport server to the daemon
+// process layer. The app owns composition and lifecycle; the daemon only
+// serves.
+func (a *App) RPCServer() *rpc.Server {
+	return a.rpcServer
+}
+
+// Relay exposes the relay client (connection state owned by internal/relay).
+func (a *App) Relay() *relay.Client {
+	return a.relay
+}
+
+// ServeAgentHook handles the agent hook HTTP ingress (pi notify bridge).
+func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
+	a.services.ServeAgentHook(w, r)
 }

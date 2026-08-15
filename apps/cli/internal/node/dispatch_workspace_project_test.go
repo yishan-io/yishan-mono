@@ -43,7 +43,7 @@ func TestServices_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
 	// The desktop warmup skips already-open workspaces; the watcher must still
 	// be registered so file-change events flow (the Git Changes tab depends on
 	// them).
-	if !handler.nodeApp.Watchers.IsWatching(root) {
+	if !handler.nodeApp.watchers.IsWatching(root) {
 		t.Fatal("expected watcher registered on openProject skip path")
 	}
 }

@@ -41,7 +41,7 @@ func (a *App) StartHealthMonitor() {
 // stays on demand (workspace.health) to avoid false positives for
 // git-local/primary workspaces that are plain directories.
 func (a *App) CheckWorkspaceHealth(ctx context.Context) {
-	for _, ws := range a.Registry.List() {
+	for _, ws := range a.registry.List() {
 		if instance.State(ws.State) != instance.StateActive {
 			continue
 		}
@@ -59,7 +59,7 @@ func (a *App) CheckWorkspaceHealth(ctx context.Context) {
 // workspace state changed event. Returns the resolved state, health detail,
 // and any health-check error message.
 func (a *App) RefreshWorkspaceHealth(ctx context.Context, workspaceID string) (string, string, string, error) {
-	ws, ok := a.Registry.Get(workspaceID)
+	ws, ok := a.registry.Get(workspaceID)
 	if !ok {
 		return "", "", "", workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 	}
@@ -89,13 +89,13 @@ func (a *App) RefreshWorkspaceHealth(ctx context.Context, workspaceID string) (s
 		}
 	}
 
-	if err := a.Registry.SetState(workspaceID, state, health); err != nil {
+	if err := a.registry.SetState(workspaceID, state, health); err != nil {
 		return "", "", "", err
 	}
 
 	if state == instance.StateError {
-		a.Watchers.Unwatch(ws.Path)
-		a.PRTracker.StopTracking(workspaceID)
+		a.watchers.Unwatch(ws.Path)
+		a.prTracker.StopTracking(workspaceID)
 	} else if instance.State(ws.State) == instance.StateError {
 		// Recovery from error back to active: re-register the filesystem watcher
 		// that was removed on the error transition, so file-change events (which
@@ -113,10 +113,10 @@ func (a *App) RefreshWorkspaceHealth(ctx context.Context, workspaceID string) (s
 }
 
 func (a *App) emitWorkspaceStateChanged(workspaceID string, state string, health string, removed bool) {
-	if a.Events == nil {
+	if a.events == nil {
 		return
 	}
-	a.Events.Publish(internalevents.Event{
+	a.events.Publish(internalevents.Event{
 		Topic: "workspaceStateChanged",
 		Payload: map[string]any{
 			"workspaceId": workspaceID,
@@ -145,10 +145,10 @@ func isGitWorktree(path string) (bool, error) {
 // cannot be resolved (no local DB, unknown id) so git workspaces keep current
 // health behavior.
 func (a *App) IsFolderWorkspace(ctx context.Context, workspaceID string) bool {
-	if a.Database == nil || strings.TrimSpace(workspaceID) == "" {
+	if a.database == nil || strings.TrimSpace(workspaceID) == "" {
 		return false
 	}
-	row, err := localdb.NewWorkspaceStore(a.Database).Get(ctx, workspaceID)
+	row, err := localdb.NewWorkspaceStore(a.database).Get(ctx, workspaceID)
 	if err != nil {
 		return false
 	}

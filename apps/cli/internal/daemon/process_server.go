@@ -55,7 +55,7 @@ func startServing(cfg RunConfig, dr *daemonRuntime) (*shutdownContext, error) {
 	shutdownCtx, cancelShutdown := context.WithCancel(context.Background())
 
 	if cfg.RelayEnabled && cfg.RelayURL != "" {
-		go dr.app.Relay.Run(shutdownCtx)
+		go dr.app.Relay().Run(shutdownCtx)
 	}
 
 	go handleShutdownSignal(stop, cancelShutdown, dr.app, dr.server)

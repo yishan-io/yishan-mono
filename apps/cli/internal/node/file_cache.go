@@ -12,7 +12,7 @@ import (
 // invalidates the instance file cache (and forwards memory indexing) for
 // changed paths.
 func (a *App) StartFileCacheConsumer() {
-	subID, events := a.Events.Subscribe()
+	subID, events := a.events.Subscribe()
 	a.fileCacheSubID = subID
 	go a.consumeFileCacheInvalidationEvents(events)
 }
@@ -32,11 +32,11 @@ func (a *App) consumeFileCacheInvalidationEvents(events <-chan internalevents.Ev
 			continue
 		}
 		if len(changedPaths) == 0 {
-			a.Registry.InvalidateFileCache(worktreePath, []string{""})
+			a.registry.InvalidateFileCache(worktreePath, []string{""})
 			continue
 		}
-		a.Registry.InvalidateFileCache(worktreePath, changedPaths)
-		if a.Memory != nil {
+		a.registry.InvalidateFileCache(worktreePath, changedPaths)
+		if a.memory != nil {
 			a.forwardMemoryFileChanges(worktreePath, changedPaths)
 		}
 	}
@@ -45,7 +45,7 @@ func (a *App) consumeFileCacheInvalidationEvents(events <-chan internalevents.Ev
 func (a *App) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
 	// Resolve projectID from the registered workspace (best-effort; empty is fine).
 	projectID := ""
-	if ws, ok := a.Registry.GetByPath(worktreePath); ok {
+	if ws, ok := a.registry.GetByPath(worktreePath); ok {
 		projectID = ws.ProjectID
 	}
 	for _, rel := range relPaths {
@@ -60,13 +60,13 @@ func (a *App) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
 		if r, err := filepath.EvalSymlinks(abs); err == nil {
 			resolved = r
 		}
-		if a.Memory.ShouldIndex(resolved) {
+		if a.memory.ShouldIndex(resolved) {
 			// Index under the resolved path: for a .my-context symlink this is
 			// the canonical ~/.yishan/contexts/… target that reconcile also
 			// indexes, so a custom-path git worktree cannot create a second
 			// row under its symlink path. For a real (non-git) .my-context
 			// directory resolved == abs, so nothing changes there.
-			if err := a.Memory.OnFileChanged(resolved, worktreePath, projectID); err != nil {
+			if err := a.memory.OnFileChanged(resolved, worktreePath, projectID); err != nil {
 				log.Warn().Err(err).Str("path", resolved).Msg("memory index update failed")
 			}
 		}

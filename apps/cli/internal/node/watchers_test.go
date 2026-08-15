@@ -117,7 +117,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	}
 	app.StartFileCacheConsumer()
 
-	handle := instance.NewHandle(openedWorkspace, app.Files, app.Git, app.Terminals)
+	handle := instance.NewHandle(openedWorkspace, app.files, app.git, app.terminals)
 
 	entries, err := handle.FileList("", false)
 	if err != nil {
@@ -130,7 +130,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "b.txt"), []byte("b"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	app.Events.Publish(internalevents.Event{
+	app.events.Publish(internalevents.Event{
 		Topic: "workspaceFilesChanged",
 		Payload: map[string]any{
 			"workspaceWorktreePath": root,
@@ -150,7 +150,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "c.txt"), []byte("c"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	app.Events.Publish(internalevents.Event{
+	app.events.Publish(internalevents.Event{
 		Topic: "workspaceFilesChanged",
 		Payload: map[string]any{
 			"workspaceWorktreePath": root,
@@ -184,12 +184,12 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 	}
 
 	app := newWatchTestApp(t)
-	app.Store = localdb.NewStore(workspaceStore)
+	app.store = localdb.NewStore(workspaceStore)
 
 	// Hydration alone must not register watchers (the regression this guards):
 	// without the explicit watch step, file-change events stop flowing after a
 	// daemon restart.
-	if app.Watchers.IsWatching(root) {
+	if app.watchers.IsWatching(root) {
 		t.Fatal("expected no watcher before hydration")
 	}
 
@@ -200,11 +200,11 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 	}
 	app.WatchActiveWorkspaces()
 
-	hydratedWorkspace, ok := app.Registry.Get("workspace-1")
+	hydratedWorkspace, ok := app.registry.Get("workspace-1")
 	if !ok {
 		t.Fatal("get hydrated workspace: not found")
 	}
-	if !app.Watchers.IsWatching(hydratedWorkspace.Path) {
+	if !app.watchers.IsWatching(hydratedWorkspace.Path) {
 		t.Fatalf("expected watcher registered for hydrated workspace path %q", hydratedWorkspace.Path)
 	}
 }
@@ -221,7 +221,7 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	}
 
 	app.WatchActiveWorkspaces()
-	if !app.Watchers.IsWatching(root) {
+	if !app.watchers.IsWatching(root) {
 		t.Fatal("expected watcher registered for active workspace")
 	}
 
@@ -233,7 +233,7 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	if _, _, _, err := app.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
 		t.Fatalf("refresh health (error transition): %v", err)
 	}
-	if app.Watchers.IsWatching(root) {
+	if app.watchers.IsWatching(root) {
 		t.Fatal("expected watcher dropped after error transition")
 	}
 
@@ -245,7 +245,7 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	if _, _, _, err := app.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
 		t.Fatalf("refresh health (recovery): %v", err)
 	}
-	if !app.Watchers.IsWatching(root) {
+	if !app.watchers.IsWatching(root) {
 		t.Fatal("expected watcher re-registered after error-to-active recovery")
 	}
 }
@@ -272,19 +272,19 @@ func newWatchTestApp(t *testing.T) *App {
 		prTracker.StopTracking(workspaceID)
 	})
 	app := &App{
-		Registry:     registry,
-		Files:        filesService,
-		Git:          gitService,
-		Terminals:    terminals,
-		Events:       events,
-		Watchers:     watchers,
-		PRTracker:    prTracker,
-		ContextStore: NewContextStore(""),
+		registry:     registry,
+		files:        filesService,
+		git:          gitService,
+		terminals:    terminals,
+		events:       events,
+		watchers:     watchers,
+		prTracker:    prTracker,
+		contextStore: NewContextStore(""),
 		Runtime:      nil,
 		NodeID:       "node-1",
-		LogFilePath:  filepath.Join(t.TempDir(), "daemon.log"),
-		SettingsPath: filepath.Join(t.TempDir(), "config.yml"),
-		ServerCtx:    context.Background(),
+		logFilePath:  filepath.Join(t.TempDir(), "daemon.log"),
+		settingsPath: filepath.Join(t.TempDir(), "config.yml"),
+		serverCtx:    context.Background(),
 	}
 	t.Cleanup(func() { _ = app.Close() })
 	return app

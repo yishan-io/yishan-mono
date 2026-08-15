@@ -33,5 +33,5 @@ func (a *App) initMemory(dataDir string, summarizer memory.SummarizerConfig) {
 		log.Warn().Err(memErr).Msg("memory service initialization failed, memory features disabled")
 		return
 	}
-	a.Memory = memSvc
+	a.memory = memSvc
 }

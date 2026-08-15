@@ -67,8 +67,8 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "agent",
-		targets:      []string{"daemon", "node"},
-		reason:       "the agent domain does not depend on the daemon transport or composition root",
+		targets:      []string{"daemon", "node", "rpc"},
+		reason:       "the agent domain does not depend on the daemon transport, the composition root, or the rpc wire types",
 	},
 	{
 		sourcePrefix: "api",
@@ -89,6 +89,26 @@ var forbiddenEdges = []struct {
 		sourcePrefix: "node",
 		targets:      []string{"daemon"},
 		reason:       "node.App is the composition root and must not depend on the daemon",
+	},
+	{
+		sourcePrefix: "tokenusage",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "token usage collection is application infrastructure and must not depend on transport or the composition root",
+	},
+	{
+		sourcePrefix: "computer",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "computer-use is standalone infrastructure",
+	},
+	{
+		sourcePrefix: "memory",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "memory services are standalone infrastructure",
+	},
+	{
+		sourcePrefix: "events",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "the frontend event hub is standalone infrastructure",
 	},
 }
 

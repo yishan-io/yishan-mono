@@ -97,22 +97,22 @@ func TestBootstrap_StartupSequence(t *testing.T) {
 	defer app.Close()
 
 	// Hydration restored the persisted workspace as an open instance.
-	if _, ok := app.Registry.Get("ws-1"); !ok {
+	if _, ok := app.registry.Get("ws-1"); !ok {
 		t.Fatal("expected hydrated workspace instance after Bootstrap")
 	}
 	// Watch registration followed hydration (no watcher exists before the
 	// explicit watch step — the regression this guards).
-	if !app.Watchers.IsWatching(root) {
+	if !app.watchers.IsWatching(root) {
 		t.Fatal("expected filesystem watcher registered for hydrated active workspace")
 	}
 	// Service graph is fully composed.
-	if app.Memory == nil {
+	if app.memory == nil {
 		t.Fatal("expected memory service after Bootstrap")
 	}
-	if app.Computer == nil || app.AgentMgr == nil || app.ModelList == nil || app.Events == nil {
+	if app.computer == nil || app.agentMgr == nil || app.modelList == nil || app.events == nil {
 		t.Fatal("expected full service graph after Bootstrap")
 	}
-	if app.PRTracker == nil || app.Watchers == nil || app.CleanupStore == nil || app.ContextStore == nil {
+	if app.prTracker == nil || app.watchers == nil || app.cleanupStore == nil || app.contextStore == nil {
 		t.Fatal("expected full service graph after Bootstrap")
 	}
 	// The startup scan ran exactly once (background tasks start after hydrate
