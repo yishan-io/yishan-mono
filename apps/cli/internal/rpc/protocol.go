@@ -10,6 +10,10 @@ import (
 	"errors"
 
 	"yishan/apps/cli/internal/computer"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/worktree"
 	"yishan/apps/cli/internal/rpcerror"
 )
 
@@ -98,5 +102,79 @@ func MapRPCError(err error) *RPCError {
 			},
 		}
 	}
+	var filesErr *files.Error
+	if errors.As(err, &filesErr) {
+		return &RPCError{Code: mapFileErrorCode(filesErr.Code), Message: filesErr.Message}
+	}
+	var gitErr *git.Error
+	if errors.As(err, &gitErr) {
+		return &RPCError{Code: mapGitErrorCode(gitErr.Code), Message: gitErr.Message}
+	}
+	var worktreeErr *worktree.Error
+	if errors.As(err, &worktreeErr) {
+		return &RPCError{Code: mapWorktreeErrorCode(worktreeErr.Code), Message: worktreeErr.Message}
+	}
+	var terminalErr *terminal.Error
+	if errors.As(err, &terminalErr) {
+		return &RPCError{Code: mapTerminalErrorCode(terminalErr.Code), Message: terminalErr.Message}
+	}
 	return &RPCError{Code: CodeServerError, Message: err.Error()}
+}
+
+// mapFileErrorCode maps a file-service domain error code to the wire error
+// code. The wire mapping is explicit here so the capability package never
+// imports rpc/transport types.
+func mapFileErrorCode(code files.ErrorCode) int {
+	switch code {
+	case files.ErrCodeInvalidParams:
+		return rpcerror.CodeInvalidParams
+	case files.ErrCodeNotFound:
+		return rpcerror.CodeNotFound
+	case files.ErrCodePathRestricted:
+		return rpcerror.CodePathRestricted
+	default:
+		return rpcerror.CodeServerError
+	}
+}
+
+// mapGitErrorCode maps a git-service domain error code to the wire error code.
+func mapGitErrorCode(code git.ErrorCode) int {
+	switch code {
+	case git.ErrCodeInvalidParams:
+		return rpcerror.CodeInvalidParams
+	case git.ErrCodeNotFound:
+		return rpcerror.CodeNotFound
+	case git.ErrCodeToolUnavailable:
+		return rpcerror.CodeToolUnavailable
+	default:
+		return rpcerror.CodeServerError
+	}
+}
+
+// mapWorktreeErrorCode maps a worktree domain error code to the wire error code.
+func mapWorktreeErrorCode(code worktree.ErrorCode) int {
+	switch code {
+	case worktree.ErrCodeInvalidParams:
+		return rpcerror.CodeInvalidParams
+	case worktree.ErrCodeNotFound:
+		return rpcerror.CodeNotFound
+	case worktree.ErrCodeToolUnavailable:
+		return rpcerror.CodeToolUnavailable
+	default:
+		return rpcerror.CodeServerError
+	}
+}
+
+// mapTerminalErrorCode maps a terminal domain error code to the wire error code.
+func mapTerminalErrorCode(code terminal.ErrorCode) int {
+	switch code {
+	case terminal.ErrCodeInvalidParams:
+		return rpcerror.CodeInvalidParams
+	case terminal.ErrCodeNotFound:
+		return rpcerror.CodeNotFound
+	case terminal.ErrCodeSessionInactive:
+		return rpcerror.CodeSessionInactive
+	default:
+		return rpcerror.CodeServerError
+	}
 }

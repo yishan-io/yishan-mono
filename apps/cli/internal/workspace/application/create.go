@@ -4,20 +4,19 @@ import (
 	"context"
 
 	"yishan/apps/cli/internal/workspace"
-	createflow "yishan/apps/cli/internal/workspace/createflow"
 )
 
-// executePlan runs the createflow engine for a prepared plan. This is the
+// executePlan runs the create engine for a prepared plan. This is the
 // single place that decides the execution path (relay dispatch vs local
 // provision) and the rollback policy on failure.
 func (s *Service) executePlan(ctx context.Context, prepared CreatePlan) {
-	createflow.ExecutePreparedPlan(ctx, createflow.PreparedPlan{
+	ExecutePreparedPlan(ctx, PreparedPlan{
 		WorkspaceID:   prepared.WorkspaceID,
 		LocalCreate:   prepared.LocalCreate,
-		RemoteRequest: (*createflow.WorkspaceCreateParams)(prepared.RemoteRequest),
-	}, createflow.ExecutePreparedPlanDependencies{
+		RemoteRequest: (*CreateCommand)(prepared.RemoteRequest),
+	}, ExecutePreparedPlanDependencies{
 		Now: s.deps.Now,
-		DispatchRemote: func(req createflow.WorkspaceCreateParams) error {
+		DispatchRemote: func(req CreateCommand) error {
 			command := CreateCommand(req)
 			return s.deps.Relay.DispatchCreate(ctx, prepared, command)
 		},
@@ -30,8 +29,8 @@ func (s *Service) executePlan(ctx context.Context, prepared CreatePlan) {
 		PublishProgress: func(event workspace.CreateProgressEvent) {
 			s.deps.Events.CreateProgress(prepared, event)
 		},
-		PublishFailed: func(failed createflow.WorkspaceCreateFailedEvent) {
-			s.deps.Events.CreateFailed(prepared, FailedEvent(failed))
+		PublishFailed: func(failed FailedEvent) {
+			s.deps.Events.CreateFailed(prepared, failed)
 		},
 	})
 }
@@ -39,7 +38,7 @@ func (s *Service) executePlan(ctx context.Context, prepared CreatePlan) {
 // executeLocalCreate runs the local provision pipeline and its finalize
 // step (watcher registration, local+cloud record finalization, completion).
 func (s *Service) executeLocalCreate(ctx context.Context, prepared CreatePlan, reportProgress workspace.CreateProgressReporter) error {
-	return createflow.ExecuteLocalCreate(ctx, prepared.WorkspaceID, *prepared.LocalCreate, createflow.ExecuteLocalCreateDependencies{
+	return ExecuteLocalCreate(ctx, prepared.WorkspaceID, *prepared.LocalCreate, ExecuteLocalCreateDependencies{
 		Now: s.deps.Now,
 		CreateWorkspaceWithProgress: func(ctx context.Context, req workspace.CreateRequest, report workspace.CreateProgressReporter) (workspace.Workspace, error) {
 			return s.deps.Instances.CreateWorkspaceWithProgress(ctx, req, report)
@@ -87,7 +86,7 @@ func (s *Service) rollbackCreateFailure(ctx context.Context, prepared CreatePlan
 	}
 	s.closeRemoteRecordForRegistration(ctx, prepared)
 
-	closeReq := createflow.BuildCreateFailureClosePathRequest(created, prepared.LocalCreate.TargetBranch)
+	closeReq := BuildCreateFailureClosePathRequest(created, prepared.LocalCreate.TargetBranch)
 	s.cleanupCreateFailure(ctx, closeReq)
 }
 
@@ -106,7 +105,7 @@ func (s *Service) closeRemoteRecordForRegistration(ctx context.Context, prepared
 // cleanupCreateFailure tears down a partially created worktree and clears the
 // runtime record, wiring the daemon's side-effect hooks into createflow.
 func (s *Service) cleanupCreateFailure(ctx context.Context, closeReq workspace.ClosePathRequest) {
-	createflow.CleanupLocalWorkspaceCreateFailure(ctx, createflow.CleanupDependencies{
+	CleanupLocalWorkspaceCreateFailure(ctx, CleanupDependencies{
 		Unwatch:      s.deps.Instances.Unwatch,
 		StopTracking: s.deps.Instances.StopTracking,
 		RegisterCleanup: func(req workspace.ClosePathRequest) error {

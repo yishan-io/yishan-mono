@@ -6,6 +6,7 @@ import (
 
 	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/terminal"
 )
 
 // WorkspaceHandler owns the workspace.* (and list) RPC namespace decoding.
@@ -45,7 +46,7 @@ func (h *WorkspaceHandler) Call(ctx context.Context, connection *Connection, met
 		}
 		return h.Services.WorkspaceSyncContextLink(ctx, req)
 	case MethodWorkspaceSetActive:
-		var req workspace.SetActiveWorkspaceRequest
+		var req terminal.SetActiveWorkspaceRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 )
 
 func (s *FileService) List(root string, path string, recursive bool) ([]FileEntry, error) {

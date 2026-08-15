@@ -67,11 +67,11 @@ func formatModifiedAt(info os.FileInfo) string {
 
 func safeJoin(root string, p string, allowMissingLeaf bool) (string, error) {
 	if p == "" {
-		return "", NewRPCError(rpcCodeInvalidParams, "path is required")
+		return "", NewError(ErrCodeInvalidParams, "path is required")
 	}
 
 	if containsGitMetadataPath(p) {
-		return "", NewRPCError(rpcCodePathRestricted, "path points to ignored git metadata")
+		return "", NewError(ErrCodePathRestricted, "path points to ignored git metadata")
 	}
 
 	candidate := filepath.Join(root, p)
@@ -90,7 +90,7 @@ func safeJoin(root string, p string, allowMissingLeaf bool) (string, error) {
 		return "", err
 	}
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", NewRPCError(rpcCodePathRestricted, "path escapes workspace root")
+		return "", NewError(ErrCodePathRestricted, "path escapes workspace root")
 	}
 
 	resolvedAncestor, err := resolveExistingAncestor(full, allowMissingLeaf)
@@ -106,7 +106,7 @@ func safeJoin(root string, p string, allowMissingLeaf bool) (string, error) {
 			return full, nil
 		}
 	}
-	return "", NewRPCError(rpcCodePathRestricted, "path escapes workspace root")
+	return "", NewError(ErrCodePathRestricted, "path escapes workspace root")
 }
 
 func resolveExistingAncestor(fullPath string, allowMissingLeaf bool) (string, error) {

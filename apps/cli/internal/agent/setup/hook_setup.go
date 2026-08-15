@@ -12,17 +12,10 @@ import (
 	"yishan/apps/cli/internal/config"
 )
 
-type AgentHookSetupConfig = hooksetup.AgentHookSetupConfig
-
 const RemoteHostPolicyEnvKey = "YISHAN_REMOTE_HOST_POLICY"
 
 // NotifyScriptPathEnvKey is the env var set in managed terminals pointing to the notify script.
 const NotifyScriptPathEnvKey = "YISHAN_NOTIFY_SCRIPT_PATH"
-
-// EnsureAgentHookSetup installs managed Claude, Gemini, and OpenCode hook integrations.
-func EnsureAgentHookSetup(cfg AgentHookSetupConfig) error {
-	return hooksetup.EnsureAgentHookSetup(cfg)
-}
 
 // EnsureManagedAgentRuntime materializes managed agent wrapper assets and hook configuration.
 func EnsureManagedAgentRuntime(disablePersona bool) {
@@ -46,7 +39,7 @@ func EnsureManagedAgentRuntime(disablePersona bool) {
 		notifyScriptPath = assets.notifyPowerShellScriptPath
 	}
 
-	if err := EnsureAgentHookSetup(AgentHookSetupConfig{
+	if err := hooksetup.EnsureAgentHookSetup(hooksetup.AgentHookSetupConfig{
 		NotifyScriptPath: notifyScriptPath,
 		XDGConfigHome:    managedOpenCodeConfigHome,
 		DisablePersona:   disablePersona,

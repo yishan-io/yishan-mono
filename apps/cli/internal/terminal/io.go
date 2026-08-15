@@ -8,7 +8,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 func (m *Manager) Send(req SendRequest) (SendResponse, error) {
@@ -18,7 +17,7 @@ func (m *Manager) Send(req SendRequest) (SendResponse, error) {
 	}
 
 	if !s.running.Load() {
-		return SendResponse{}, rpcerror.New(rpcCodeSessionInactive, "terminal session not running")
+		return SendResponse{}, NewError(ErrCodeSessionInactive, "terminal session not running")
 	}
 
 	n, err := io.WriteString(s.pty, req.Input)

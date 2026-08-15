@@ -5,7 +5,7 @@ import (
 
 	"path/filepath"
 	"testing"
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 )
 
 func TestEnsureContextLink_CreatesSymlinkAndContextDir(t *testing.T) {
@@ -17,8 +17,8 @@ func TestEnsureContextLink_CreatesSymlinkAndContextDir(t *testing.T) {
 		t.Fatalf("setup worktree: %v", err)
 	}
 
-	if err := ensureContextLink(contextPath, worktreePath); err != nil {
-		t.Fatalf("ensureContextLink: %v", err)
+	if err := EnsureContextLink(contextPath, worktreePath); err != nil {
+		t.Fatalf("EnsureContextLink: %v", err)
 	}
 
 	contextInfo, err := os.Stat(contextPath)
@@ -56,10 +56,10 @@ func TestEnsureContextLink_IsIdempotent(t *testing.T) {
 		t.Fatalf("setup worktree: %v", err)
 	}
 
-	if err := ensureContextLink(contextPath, worktreePath); err != nil {
+	if err := EnsureContextLink(contextPath, worktreePath); err != nil {
 		t.Fatalf("first call: %v", err)
 	}
-	if err := ensureContextLink(contextPath, worktreePath); err != nil {
+	if err := EnsureContextLink(contextPath, worktreePath); err != nil {
 		t.Fatalf("second call: %v", err)
 	}
 
@@ -89,8 +89,8 @@ func TestEnsureContextLink_ReplacesStaleSymlink(t *testing.T) {
 		t.Fatalf("setup stale symlink: %v", err)
 	}
 
-	if err := ensureContextLink(contextPath, worktreePath); err != nil {
-		t.Fatalf("ensureContextLink: %v", err)
+	if err := EnsureContextLink(contextPath, worktreePath); err != nil {
+		t.Fatalf("EnsureContextLink: %v", err)
 	}
 
 	target, err := os.Readlink(linkPath)
@@ -116,8 +116,8 @@ func TestEnsureContextLink_PreservesExistingDirectory(t *testing.T) {
 		t.Fatalf("write sentinel: %v", err)
 	}
 
-	if err := ensureContextLink(contextPath, worktreePath); err != nil {
-		t.Fatalf("ensureContextLink: %v", err)
+	if err := EnsureContextLink(contextPath, worktreePath); err != nil {
+		t.Fatalf("EnsureContextLink: %v", err)
 	}
 
 	info, err := os.Lstat(existingContextDir)
@@ -140,7 +140,7 @@ func TestRemoveContextLink_RemovesOwnedSymlink(t *testing.T) {
 	if err := os.MkdirAll(worktreePath, 0o755); err != nil {
 		t.Fatalf("setup worktree: %v", err)
 	}
-	if err := ensureContextLink(contextPath, worktreePath); err != nil {
+	if err := EnsureContextLink(contextPath, worktreePath); err != nil {
 		t.Fatalf("seed link: %v", err)
 	}
 
@@ -221,15 +221,13 @@ func TestRemoveContextLink_NoOpWhenMissing(t *testing.T) {
 }
 
 func TestSyncContextLink_RequiresRepoKey(t *testing.T) {
-	m := NewManager()
-	if _, err := m.SyncContextLink(SyncContextLinkRequest{RepoKey: "", Enabled: true}); err == nil {
+	if _, err := SyncContextLink(SyncContextLinkRequest{RepoKey: "", Enabled: true}); err == nil {
 		t.Fatalf("expected error for empty repoKey")
 	}
 }
 
 func TestSyncContextLink_RejectsAbsoluteRepoKey(t *testing.T) {
-	m := NewManager()
-	if _, err := m.SyncContextLink(SyncContextLinkRequest{RepoKey: "/etc", Enabled: true}); err == nil {
+	if _, err := SyncContextLink(SyncContextLinkRequest{RepoKey: "/etc", Enabled: true}); err == nil {
 		t.Fatalf("expected error for absolute repoKey")
 	}
 }
@@ -240,9 +238,8 @@ func TestSyncContextLink_RejectsAbsoluteRepoKey(t *testing.T) {
 // outcomes line up with input shape (empty input, dedup).
 func TestSyncContextLink_ResultShape(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	m := NewManager()
 
-	res, err := m.SyncContextLink(SyncContextLinkRequest{
+	res, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       "repo_abc",
 		Enabled:       true,
 		WorktreePaths: []string{},
@@ -258,9 +255,8 @@ func TestSyncContextLink_ResultShape(t *testing.T) {
 func TestSyncContextLink_RejectsEmptyAndRelativePaths(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
-	res, err := m.SyncContextLink(SyncContextLinkRequest{
+	res, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       "repo_abc",
 		Enabled:       true,
 		WorktreePaths: []string{"", "   ", "relative/path", "./also-relative"},
@@ -284,14 +280,13 @@ func TestSyncContextLink_RejectsEmptyAndRelativePaths(t *testing.T) {
 func TestSyncContextLink_AcceptsTildePaths(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
 	worktreeDir := filepath.Join(home, "wt")
 	if err := os.MkdirAll(worktreeDir, 0o755); err != nil {
 		t.Fatalf("setup worktree: %v", err)
 	}
 
-	res, err := m.SyncContextLink(SyncContextLinkRequest{
+	res, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       "repo_abc",
 		Enabled:       true,
 		WorktreePaths: []string{"~/wt"},
@@ -310,7 +305,6 @@ func TestSyncContextLink_AcceptsTildePaths(t *testing.T) {
 func TestSyncContextLink_AppliesEnabledThenDisabledAcrossWorktrees(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
 	repoKey := "repo_abc"
 	worktreeA := filepath.Join(home, "wt-a")
@@ -321,7 +315,7 @@ func TestSyncContextLink_AppliesEnabledThenDisabledAcrossWorktrees(t *testing.T)
 		}
 	}
 
-	enableRes, err := m.SyncContextLink(SyncContextLinkRequest{
+	enableRes, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       repoKey,
 		Enabled:       true,
 		WorktreePaths: []string{worktreeA, worktreeB, worktreeA},
@@ -344,7 +338,7 @@ func TestSyncContextLink_AppliesEnabledThenDisabledAcrossWorktrees(t *testing.T)
 		}
 	}
 
-	disableRes, err := m.SyncContextLink(SyncContextLinkRequest{
+	disableRes, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       repoKey,
 		Enabled:       false,
 		WorktreePaths: []string{worktreeA, worktreeB},
@@ -366,14 +360,13 @@ func TestSyncContextLink_AppliesEnabledThenDisabledAcrossWorktrees(t *testing.T)
 func TestSyncContextLink_NonGitEnabledCreatesMarkedRealDir(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
 	worktree := filepath.Join(home, "plain-folder")
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
 		t.Fatalf("setup worktree: %v", err)
 	}
 
-	result, err := m.SyncContextLink(SyncContextLinkRequest{
+	result, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       "",
 		NonGit:        true,
 		Enabled:       true,
@@ -410,7 +403,6 @@ func TestSyncContextLink_NonGitEnabledCreatesMarkedRealDir(t *testing.T) {
 func TestSyncContextLink_NonGitEnabledIsIdempotent(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
 	worktree := filepath.Join(home, "plain-folder")
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
@@ -418,7 +410,7 @@ func TestSyncContextLink_NonGitEnabledIsIdempotent(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		result, err := m.SyncContextLink(SyncContextLinkRequest{
+		result, err := SyncContextLink(SyncContextLinkRequest{
 			RepoKey:       "",
 			NonGit:        true,
 			Enabled:       true,
@@ -442,7 +434,6 @@ func TestSyncContextLink_NonGitEnabledIsIdempotent(t *testing.T) {
 func TestSyncContextLink_NonGitDisabledRemovesOnlyMarkedDir(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
 	markedWorktree := filepath.Join(home, "marked")
 	userWorktree := filepath.Join(home, "user")
@@ -465,7 +456,7 @@ func TestSyncContextLink_NonGitDisabledRemovesOnlyMarkedDir(t *testing.T) {
 		t.Fatalf("write user notes: %v", err)
 	}
 
-	result, err := m.SyncContextLink(SyncContextLinkRequest{
+	result, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       "",
 		NonGit:        true,
 		Enabled:       false,
@@ -489,7 +480,6 @@ func TestSyncContextLink_NonGitDisabledRemovesOnlyMarkedDir(t *testing.T) {
 func TestSyncContextLink_NonGitLeavesExistingSymlinkAlone(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
 	worktree := filepath.Join(home, "folder")
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
@@ -505,7 +495,7 @@ func TestSyncContextLink_NonGitLeavesExistingSymlinkAlone(t *testing.T) {
 	}
 
 	// Disabling for a non-git project must not remove a git-project symlink.
-	result, err := m.SyncContextLink(SyncContextLinkRequest{
+	result, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       "",
 		NonGit:        true,
 		Enabled:       false,
@@ -525,7 +515,6 @@ func TestSyncContextLink_NonGitLeavesExistingSymlinkAlone(t *testing.T) {
 func TestSyncContextLink_NonGitEnableLeavesStaleSymlinkAlone(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	m := NewManager()
 
 	worktree := filepath.Join(home, "folder")
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
@@ -542,7 +531,7 @@ func TestSyncContextLink_NonGitEnableLeavesStaleSymlinkAlone(t *testing.T) {
 
 	// Enabling for a non-git project must not follow the stale symlink and
 	// write the marker into the old repo's shared context dir.
-	result, err := m.SyncContextLink(SyncContextLinkRequest{
+	result, err := SyncContextLink(SyncContextLinkRequest{
 		RepoKey:       "",
 		NonGit:        true,
 		Enabled:       true,
@@ -651,7 +640,7 @@ func TestEnsureGitExclude_RegularRepo(t *testing.T) {
 		t.Fatalf("mkdir .git: %v", err)
 	}
 
-	ensureGitExclude(root, ".my-context")
+	EnsureGitExclude(root, ".my-context")
 
 	excludePath := filepath.Join(gitDir, "info", "exclude")
 	data, err := os.ReadFile(excludePath)
@@ -679,7 +668,7 @@ func TestEnsureGitExclude_Worktree(t *testing.T) {
 		t.Fatalf("write .git file: %v", err)
 	}
 
-	ensureGitExclude(worktreePath, ".my-context")
+	EnsureGitExclude(worktreePath, ".my-context")
 
 	excludePath := filepath.Join(mainGitDir, "info", "exclude")
 	data, err := os.ReadFile(excludePath)
@@ -693,7 +682,7 @@ func TestEnsureGitExclude_Worktree(t *testing.T) {
 
 func TestEnsureGitExclude_NoGitDir(t *testing.T) {
 	root := t.TempDir()
-	ensureGitExclude(root, ".my-context")
+	EnsureGitExclude(root, ".my-context")
 }
 
 func TestEnsureGitExclude_NoOpOnSecondCall(t *testing.T) {
@@ -703,8 +692,8 @@ func TestEnsureGitExclude_NoOpOnSecondCall(t *testing.T) {
 		t.Fatalf("mkdir .git: %v", err)
 	}
 
-	ensureGitExclude(root, ".my-context")
-	ensureGitExclude(root, ".my-context")
+	EnsureGitExclude(root, ".my-context")
+	EnsureGitExclude(root, ".my-context")
 
 	excludePath := filepath.Join(gitDir, "info", "exclude")
 	data, err := os.ReadFile(excludePath)

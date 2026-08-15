@@ -1,5 +1,7 @@
 package workspace
 
+import "yishan/apps/cli/internal/git"
+
 // Workspace domain model. These types are the vocabulary for workspace
 // lifecycle code written during the CLI/daemon refactor: new application code
 // must use them instead of lifecycle string literals. Transport structs
@@ -50,4 +52,31 @@ type Record struct {
 	// LocalPath is the worktree path on the owning node (from the cloud
 	// record; empty when the workspace has not been provisioned yet).
 	LocalPath string
+}
+
+type Workspace struct {
+	ID              string                `json:"id"`
+	Path            string                `json:"path"`
+	OrgID           string                `json:"orgId,omitempty"`
+	ProjectID       string                `json:"projectId,omitempty"`
+	State           State                 `json:"state"`
+	Health          Health                `json:"health,omitempty"`
+	SetupHookResult *HookResult           `json:"setupHookResult,omitempty"`
+	PullRequest     *WorkspacePullRequest `json:"pullRequest,omitempty"`
+}
+
+type WorkspacePullRequest struct {
+	Number         int                            `json:"number"`
+	Title          string                         `json:"title,omitempty"`
+	URL            string                         `json:"url,omitempty"`
+	Branch         string                         `json:"branch,omitempty"`
+	BaseBranch     string                         `json:"baseBranch,omitempty"`
+	GitHubState    string                         `json:"githubState,omitempty"`
+	Status         string                         `json:"status,omitempty"`
+	ReviewDecision string                         `json:"reviewDecision,omitempty"`
+	IsDraft        bool                           `json:"isDraft,omitempty"`
+	Complete       bool                           `json:"complete,omitempty"`
+	UpdatedAt      string                         `json:"updatedAt,omitempty"`
+	Checks         []git.GitPullRequestCheck      `json:"checks,omitempty"`
+	Deployments    []git.GitPullRequestDeployment `json:"deployments,omitempty"`
 }

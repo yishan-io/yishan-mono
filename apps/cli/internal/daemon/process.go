@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/node"
+	"yishan/apps/cli/internal/app"
+	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
 
 	"github.com/rs/zerolog/log"
@@ -43,9 +44,8 @@ type daemonRuntime struct {
 	listener    net.Listener
 	actualAddr  string
 	daemonID    string
-	handler     *JSONRPCHandler
-	app         *node.App
-	relayStatus *RelayStatus
+	app         *app.App
+	relayStatus *relay.Status
 	server      *http.Server
 	statePath   string
 	actualPort  int

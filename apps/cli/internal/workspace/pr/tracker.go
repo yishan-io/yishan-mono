@@ -27,66 +27,71 @@ type PullRequestUpdatedEvent struct {
 
 type Tracker struct {
 	mu      sync.Mutex
-	manager *workspace.Manager
+	gits    *git.GitService
+	instances *instance.Registry
 	runtime *cliruntime.Runtime
 	// active maps workspaceID → Workspace for all workspaces currently being
-	// tracked. Storing the full Workspace avoids calling manager.List() on
+	// tracked. Storing the full Workspace avoids calling registry.List() on
 	// every poll tick and filtering by active map membership.
 	active               map[string]workspace.Workspace
 	inFlight             map[string]bool
 	started              bool
 	done                 chan struct{}
 	onPullRequestUpdated func(PullRequestUpdatedEvent)
+	persistPR            func(context.Context, string, *workspace.WorkspacePullRequest) error
+	resolvePR            func(context.Context, string, int) error
 	inspectResolver      func(context.Context, string) (git.GitInspectResult, error)
 	branchResolver       func(context.Context, string) (string, error)
 	prResolver           func(context.Context, string, string) (git.GitBranchPullRequestStatus, error)
 	detailResolver       func(context.Context, string, string) (git.GitBranchPullRequestStatus, error)
 }
 
-func New(manager *workspace.Manager, runtime *cliruntime.Runtime, onPullRequestUpdated func(PullRequestUpdatedEvent)) *Tracker {
+// TrackerDeps wires the tracker. Instances provides open-instance lookup and
+// PR state writes; Gits is the shared git service; persistPR/resolvePR are the
+// durable PR persistence hooks (SQLite-backed, owned by the composition root).
+type TrackerDeps struct {
+	Instances            *instance.Registry
+	Gits                 *git.GitService
+	Runtime              *cliruntime.Runtime
+	PersistPR            func(context.Context, string, *workspace.WorkspacePullRequest) error
+	ResolvePR            func(context.Context, string, int) error
+	OnPullRequestUpdated func(PullRequestUpdatedEvent)
+}
+
+func New(deps TrackerDeps) *Tracker {
 	tracker := &Tracker{
-		manager:              manager,
-		runtime:              runtime,
+		gits:                 deps.Gits,
+		instances:            deps.Instances,
+		runtime:              deps.Runtime,
 		active:               make(map[string]workspace.Workspace),
 		inFlight:             make(map[string]bool),
 		done:                 make(chan struct{}),
-		onPullRequestUpdated: onPullRequestUpdated,
+		onPullRequestUpdated: deps.OnPullRequestUpdated,
+		persistPR:            deps.PersistPR,
+		resolvePR:            deps.ResolvePR,
 	}
 	tracker.branchResolver = func(ctx context.Context, root string) (string, error) {
-		handle, ok := tracker.handleByPath(root)
-		if !ok {
+		if _, ok := tracker.instances.GetByPath(root); !ok {
 			return "", workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
-		return handle.GitCurrentBranch(ctx)
+		return tracker.gits.CurrentBranch(ctx, root)
 	}
 	tracker.inspectResolver = func(ctx context.Context, root string) (git.GitInspectResult, error) {
-		return manager.GitInspect(ctx, root)
+		return tracker.gits.Inspect(ctx, root)
 	}
 	tracker.prResolver = func(ctx context.Context, root string, branch string) (git.GitBranchPullRequestStatus, error) {
-		handle, ok := tracker.handleByPath(root)
-		if !ok {
+		if _, ok := tracker.instances.GetByPath(root); !ok {
 			return git.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
-		return handle.GitBranchPullRequestLite(ctx, branch)
+		return tracker.gits.BranchPullRequestLite(ctx, root, branch)
 	}
 	tracker.detailResolver = func(ctx context.Context, root string, branch string) (git.GitBranchPullRequestStatus, error) {
-		handle, ok := tracker.handleByPath(root)
-		if !ok {
+		if _, ok := tracker.instances.GetByPath(root); !ok {
 			return git.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 		}
-		return handle.GitBranchPullRequestWithDetails(ctx, branch)
+		return tracker.gits.BranchPullRequestWithDetails(ctx, root, branch)
 	}
 	return tracker
-}
-
-// handleByPath builds a workspace-scoped handle for the open instance at the
-// given path (path lookup lives in the instance registry).
-func (t *Tracker) handleByPath(root string) (instance.Handle, bool) {
-	ws, ok := t.manager.Instances().GetByPath(root)
-	if !ok {
-		return instance.Handle{}, false
-	}
-	return instance.NewHandle(ws, t.manager.Instances().Files(), t.manager.Gits(), t.manager.Terminals()), true
 }
 
 func (t *Tracker) EnsureTracked(worktreePath string, refreshImmediately bool) {
@@ -94,7 +99,7 @@ func (t *Tracker) EnsureTracked(worktreePath string, refreshImmediately bool) {
 		return
 	}
 
-	ws, ok := t.manager.Instances().GetByPath(worktreePath)
+	ws, ok := t.instances.GetByPath(worktreePath)
 	if !ok {
 		return
 	}
@@ -136,7 +141,7 @@ func (t *Tracker) Stop() {
 }
 
 func (t *Tracker) RefreshWorkspaceByPath(worktreePath string) {
-	ws, ok := t.manager.Instances().GetByPath(worktreePath)
+	ws, ok := t.instances.GetByPath(worktreePath)
 	if !ok {
 		log.Warn().Str("path", worktreePath).Msg("workspace PR refresh skipped because workspace path is not open")
 		return
@@ -299,7 +304,7 @@ func shouldDisableTrackingForBranchError(err error) bool {
 
 func (t *Tracker) setWorkspacePullRequest(ws workspace.Workspace, pr *workspace.WorkspacePullRequest, keepActive bool) {
 	previousPullRequest := ws.PullRequest
-	if err := t.manager.Instances().SetPullRequest(ws.ID, pr); err != nil {
+	if err := t.instances.SetPullRequest(ws.ID, pr); err != nil {
 		return
 	}
 	if prMeaningfullyChanged(previousPullRequest, pr) && t.onPullRequestUpdated != nil {
@@ -416,13 +421,19 @@ func normalizeWorkspacePullRequestStatus(pr git.GitBranchPullRequestStatus) stri
 // persistPullRequest writes a PR snapshot to local SQLite.
 // Called in a goroutine; failures are logged and do not affect live state.
 func (t *Tracker) persistPullRequest(workspaceID string, pullRequest *workspace.WorkspacePullRequest) {
-	if err := t.manager.PersistWorkspacePullRequest(context.Background(), workspaceID, pullRequest); err != nil {
+	if t.persistPR == nil {
+		return
+	}
+	if err := t.persistPR(context.Background(), workspaceID, pullRequest); err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("pr persist: failed to upsert locally")
 	}
 }
 
 func (t *Tracker) resolvePullRequest(workspaceID string, pullRequestNumber int) {
-	if err := t.manager.ResolvePersistedWorkspacePullRequest(context.Background(), workspaceID, pullRequestNumber); err != nil {
+	if t.resolvePR == nil {
+		return
+	}
+	if err := t.resolvePR(context.Background(), workspaceID, pullRequestNumber); err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("pr persist: failed to resolve locally")
 	}
 }

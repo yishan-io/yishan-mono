@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/daemon"
+	"yishan/apps/cli/internal/rpc"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/workspace"
 
@@ -82,14 +83,14 @@ func runWorkspaceCreateViaDaemon(cmd *cobra.Command) error {
 	client.SetNotificationHandler(watcher.handleNotification)
 	defer client.SetNotificationHandler(nil)
 
-	if err := client.Call(daemon.MethodFrontendEventsStream, nil, nil); err != nil {
+	if err := client.Call(rpc.MethodFrontendEventsStream, nil, nil); err != nil {
 		return fmt.Errorf("subscribe to daemon event stream: %w", err)
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), "Creating workspace...")
 
 	var accepted workspaceCreateAccepted
-	if err := client.Call(daemon.MethodWorkspaceCreate, request, &accepted); err != nil {
+	if err := client.Call(rpc.MethodWorkspaceCreate, request, &accepted); err != nil {
 		return err
 	}
 	if strings.TrimSpace(accepted.ID) == "" {
@@ -239,7 +240,7 @@ func (w *workspaceCreateWatcher) setWorkspaceID(workspaceID string) {
 }
 
 func (w *workspaceCreateWatcher) handleNotification(method string, params json.RawMessage) {
-	if method != daemon.MethodFrontendEventsStream {
+	if method != rpc.MethodFrontendEventsStream {
 		return
 	}
 

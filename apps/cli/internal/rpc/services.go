@@ -6,6 +6,7 @@ import (
 
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/terminal"
 )
 
 // The Services interfaces are the application-facing contract the rpc
@@ -18,7 +19,7 @@ type WorkspaceService interface {
 	WorkspaceCreate(ctx context.Context, req WorkspaceCreateParams) (any, error)
 	WorkspaceClose(ctx context.Context, req WorkspaceCloseParams) (any, error)
 	WorkspaceRefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error)
-	WorkspaceSetActive(ctx context.Context, req workspace.SetActiveWorkspaceRequest) (any, error)
+	WorkspaceSetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error)
 	WorkspaceSyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error)
 	WorkspaceHealth(ctx context.Context, req WorkspaceHealthParams) (any, error)
 	WorkspaceOpenProject(ctx context.Context, req WorkspaceOpenProjectParams) (any, error)
@@ -72,16 +73,16 @@ type GitService interface {
 // TerminalService backs the terminal.* RPC methods. Connection-bound
 // subscriptions are wired by the handler (the connection is passed in).
 type TerminalService interface {
-	TerminalStart(ctx context.Context, connection *Connection, req workspace.TerminalStartRequest) (any, error)
-	TerminalSend(ctx context.Context, req workspace.TerminalSendRequest) (any, error)
-	TerminalRead(ctx context.Context, req workspace.TerminalReadRequest) (any, error)
-	TerminalStop(ctx context.Context, req workspace.TerminalStopRequest) (any, error)
-	TerminalKillProcess(ctx context.Context, req workspace.TerminalKillProcessRequest) (any, error)
-	TerminalListSessions(ctx context.Context, req workspace.TerminalListSessionsRequest) (any, error)
+	TerminalStart(ctx context.Context, connection *Connection, req terminal.StartRequest) (any, error)
+	TerminalSend(ctx context.Context, req terminal.SendRequest) (any, error)
+	TerminalRead(ctx context.Context, req terminal.ReadRequest) (any, error)
+	TerminalStop(ctx context.Context, req terminal.StopRequest) (any, error)
+	TerminalKillProcess(ctx context.Context, req terminal.KillProcessRequest) (any, error)
+	TerminalListSessions(ctx context.Context, req terminal.ListSessionsRequest) (any, error)
 	TerminalListPorts(ctx context.Context) (any, error)
-	TerminalResize(ctx context.Context, req workspace.TerminalResizeRequest) (any, error)
-	TerminalSubscribe(ctx context.Context, connection *Connection, req workspace.TerminalSubscribeRequest) (any, error)
-	TerminalUnsubscribe(ctx context.Context, connection *Connection, req workspace.TerminalUnsubscribeRequest) (any, error)
+	TerminalResize(ctx context.Context, req terminal.ResizeRequest) (any, error)
+	TerminalSubscribe(ctx context.Context, connection *Connection, req terminal.SubscribeRequest) (any, error)
+	TerminalUnsubscribe(ctx context.Context, connection *Connection, req terminal.UnsubscribeRequest) (any, error)
 	TerminalRemoteSubscribe(ctx context.Context, connection *Connection, req TerminalRemoteSubscribeParams) (any, error)
 	TerminalRemoteUnsubscribe(ctx context.Context, connection *Connection, req TerminalRemoteUnsubscribeParams) (any, error)
 }

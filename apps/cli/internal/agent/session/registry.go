@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/rpc"
 )
 
 // piStopWaitTimeout bounds how long pi.start waits for an in-flight pi.stop of
@@ -27,10 +26,20 @@ const stoppingMarkGracePeriod = 150 * time.Millisecond
 // pi.start of the same session id to finish spawning.
 const attachStartWaitTimeout = 2 * time.Second
 
+// SessionConnection is the transport connection a session's events are
+// forwarded to. rpc.Connection implements it; the session domain depends on
+// this interface so it never imports the rpc transport.
+type SessionConnection interface {
+	// Notify sends a server-initiated notification to the connection.
+	Notify(method string, params any) error
+	// IsOpen reports whether the underlying transport is still open.
+	IsOpen() bool
+}
+
 // Session is the daemon-side metadata for one live pi session: the process,
 // the desktop connection bound to it, and the recovery metadata.
 type Session struct {
-	Conn        *rpc.Connection
+	Conn        SessionConnection
 	Process     *process.Session
 	TabID       string
 	WorkspaceID string
@@ -73,7 +82,7 @@ func (r *Registry) Get(sessionID string) (*Session, bool) {
 }
 
 // Register inserts a fresh session.
-func (r *Registry) Register(sessionID string, conn *rpc.Connection, proc *process.Session, tabID string, workspaceID string, cwd string, taskRun bool) {
+func (r *Registry) Register(sessionID string, conn SessionConnection, proc *process.Session, tabID string, workspaceID string, cwd string, taskRun bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.sessions[sessionID] = &Session{
@@ -88,7 +97,7 @@ func (r *Registry) Register(sessionID string, conn *rpc.Connection, proc *proces
 
 // Attach rebinds an existing session to a (possibly reconnected) connection
 // and overlays optional recovery metadata.
-func (r *Registry) Attach(sessionID string, conn *rpc.Connection, tabID string, workspaceID string, cwd string) (*Session, bool) {
+func (r *Registry) Attach(sessionID string, conn SessionConnection, tabID string, workspaceID string, cwd string) (*Session, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	state, exists := r.sessions[sessionID]

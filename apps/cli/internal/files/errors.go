@@ -1,19 +1,28 @@
 package files
 
-import "yishan/apps/cli/internal/rpcerror"
+// Domain errors for the file service boundary. The file service never imports
+// transport or RPC packages: it returns plain domain errors and the RPC layer
+// (node services / rpc.MapRPCError) maps them to wire errors.
 
-// Error codes and helpers for the file service boundary. RPC errors produced
-// here surface through the daemon's transport error mapping.
+// ErrorCode classifies file-service failures for the RPC mapping.
+type ErrorCode string
+
 const (
-	rpcCodeInvalidParams  = rpcerror.CodeInvalidParams
-	rpcCodePathRestricted = rpcerror.CodePathRestricted
-	rpcCodeNotFound       = rpcerror.CodeNotFound
+	ErrCodeInvalidParams  ErrorCode = "invalid_params"
+	ErrCodePathRestricted ErrorCode = "path_restricted"
+	ErrCodeNotFound       ErrorCode = "not_found"
 )
 
-// NewRPCError builds an RPC error.
-func NewRPCError(code int, message string) error {
-	return rpcerror.NewRPCError(code, message)
+// Error is the domain error returned by file operations.
+type Error struct {
+	Code    ErrorCode
+	Message string
 }
 
-// RPCError is the RPC error type surfaced from file-service errors.
-type RPCError = rpcerror.Error
+// Error implements error.
+func (e *Error) Error() string { return e.Message }
+
+// NewError builds a file-service domain error.
+func NewError(code ErrorCode, message string) error {
+	return &Error{Code: code, Message: message}
+}

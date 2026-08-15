@@ -52,13 +52,13 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "terminal",
-		targets:      []string{"daemon", "rpc", "agent", "node"},
-		reason:       "terminal services are standalone infrastructure",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "terminal services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "worktree",
-		targets:      []string{"daemon", "rpc", "agent", "node"},
-		reason:       "worktree provisioning is standalone infrastructure",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "worktree provisioning is standalone infrastructure and returns domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "gitexec",
@@ -67,8 +67,8 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "agent",
-		targets:      []string{"daemon", "node"},
-		reason:       "the agent domain does not depend on the daemon transport or composition root",
+		targets:      []string{"daemon", "node", "rpc"},
+		reason:       "the agent domain does not depend on the daemon transport, the composition root, or the rpc wire types",
 	},
 	{
 		sourcePrefix: "api",
@@ -82,13 +82,88 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "relay",
-		targets:      []string{"daemon", "rpc", "node", "agent"},
-		reason:       "relay envelopes are infrastructure",
+		targets:      []string{"daemon", "node", "agent"},
+		reason:       "relay envelopes and the relay client are infrastructure; the client may use the rpc transport types",
 	},
 	{
 		sourcePrefix: "node",
-		targets:      []string{"daemon"},
-		reason:       "node.App is the composition root and must not depend on the daemon",
+		targets:      []string{"daemon", "app"},
+		reason:       "node.Service is the local Node application boundary; it must not depend on the daemon or the composition root",
+	},
+	{
+		sourcePrefix: "node/id",
+		targets:      []string{"node"},
+		reason:       "small packages under an owner must not import the owner package in reverse",
+	},
+	{
+		sourcePrefix: "agent/kind",
+		targets:      []string{"agent", "agent/session", "agent/process", "agent/command", "agent/setup", "agent/auth", "agent/catalog"},
+		reason:       "the agent-kind constants package must not import agent domain logic",
+	},
+	{
+		sourcePrefix: "git/exec",
+		targets:      []string{"git"},
+		reason:       "the low-level git exec adapter must not import the git service package",
+	},
+	{
+		sourcePrefix: "files",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "file services are standalone infrastructure and return domain errors, not RPC errors",
+	},
+	{
+		sourcePrefix: "git",
+		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		reason:       "git services are standalone infrastructure and return domain errors, not RPC errors",
+	},
+	{
+		sourcePrefix: "tokenusage",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "token usage collection is application infrastructure and must not depend on transport or the composition root",
+	},
+	{
+		sourcePrefix: "tokenusage/record",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/attribution", "tokenusage/pricing", "tokenusage/repository"},
+		reason:       "the normalized usage record is the leaf vocabulary; nothing may depend on it in reverse",
+	},
+	{
+		sourcePrefix: "tokenusage/pricing",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/attribution", "tokenusage/repository"},
+		reason:       "pricing is a leaf owner; it must not reach into scanners or the collector",
+	},
+	{
+		sourcePrefix: "tokenusage/attribution",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/pricing", "tokenusage/repository"},
+		reason:       "attribution is a leaf owner; it must not reach into scanners or the collector",
+	},
+	{
+		sourcePrefix: "tokenusage/scanner",
+		targets:      []string{"tokenusage/collection", "tokenusage/ingestion", "tokenusage/repository"},
+		reason:       "provider scanners must not depend on collection, ingestion, or persistence",
+	},
+	{
+		sourcePrefix: "tokenusage/ingestion",
+		targets:      []string{"tokenusage/collection", "tokenusage/repository", "tokenusage/attribution"},
+		reason:       "source discovery depends on the scanner contract, not on the collector or persistence",
+	},
+	{
+		sourcePrefix: "tokenusage/repository",
+		targets:      []string{"tokenusage/collection", "tokenusage/scanner", "tokenusage/ingestion", "tokenusage/attribution", "tokenusage/pricing"},
+		reason:       "the repository is persistence-only; it converts records, it does not scan or orchestrate",
+	},
+	{
+		sourcePrefix: "computer",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "computer-use is standalone infrastructure",
+	},
+	{
+		sourcePrefix: "memory",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "memory services are standalone infrastructure",
+	},
+	{
+		sourcePrefix: "events",
+		targets:      []string{"daemon", "rpc", "node", "agent"},
+		reason:       "the frontend event hub is standalone infrastructure",
 	},
 }
 
@@ -123,10 +198,11 @@ func TestForbiddenImports(t *testing.T) {
 					continue // self-import of the package prefix
 				}
 				for _, forbidden := range edge.targets {
-					if target == forbidden || strings.HasPrefix(target, forbidden+"/") {
-						violations = append(violations,
-							fmt.Sprintf("%s (%s) imports %s: %s", sourceRel, path, importPath, edge.reason))
+					if !matchesForbiddenTarget(forbidden, target) {
+						continue
 					}
+					violations = append(violations,
+						fmt.Sprintf("%s (%s) imports %s: %s", sourceRel, path, importPath, edge.reason))
 				}
 			}
 		}
@@ -188,4 +264,24 @@ func packageImports(path string, t *testing.T) []string {
 		imports = append(imports, strings.Trim(spec.Path.Value, `"`))
 	}
 	return imports
+}
+
+// matchesForbiddenTarget reports whether target (an internal import path)
+// falls under the forbidden package prefix. Shared vocabulary packages that
+// moved under a domain owner (agent/kind carries the agent-kind constants
+// that the old top-level agentkind package provided) stay importable by any
+// package — they are constants, not domain logic.
+func matchesForbiddenTarget(forbidden string, target string) bool {
+	if target == forbidden {
+		return true
+	}
+	if !strings.HasPrefix(target, forbidden+"/") {
+		return false
+	}
+	// The agent-kind constants package is shared vocabulary, not agent
+	// domain logic: allow it for packages that read agent-kind constants.
+	if forbidden == "agent" && strings.HasPrefix(target, "agent/kind") {
+		return false
+	}
+	return true
 }

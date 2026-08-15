@@ -11,11 +11,13 @@ import (
 	"strconv"
 	"time"
 
-	"yishan/apps/cli/internal/buildinfo"
+	"yishan/apps/cli/internal/app"
+	release "yishan/apps/cli/internal/release"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/node"
-	"yishan/apps/cli/internal/nodeid"
+	hook "yishan/apps/cli/internal/node/hook"
+	nodeid "yishan/apps/cli/internal/node/id"
+	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -41,21 +43,20 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtim
 	// but open handles stay on the boot-time account.
 	ensureUserIDForAccountResolution(runtime, filepath.Join(filepath.Dir(statePath), "credential.yaml"))
 
-	handler, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID)
+	app, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID)
 	if err != nil {
 		_ = listener.Close() // listener is not owned by a daemon runtime yet
 		return nil, err
 	}
 
-	server := buildHTTPServer(handler, daemonID, relayStatus)
+	server := buildHTTPServer(app, daemonID, relayStatus)
 
 	return &daemonRuntime{
 		listener:    listener,
 		actualAddr:  actualAddr,
 		actualPort:  actualPort,
 		daemonID:    daemonID,
-		handler:     handler,
-		app:         handler.nodeApp,
+		app:         app,
 		relayStatus: relayStatus,
 		server:      server,
 		statePath:   statePath,
@@ -97,9 +98,9 @@ func resolveDaemonID(statePath string) (string, error) {
 }
 
 // buildHandler composes the account-scoped service graph (node.Bootstrap) and
-// wires the JSON-RPC transport around it. envDir stays env-root scoped (e.g.
-// the token-usage pricing cache); dataDir is the per-account data dir.
-func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*JSONRPCHandler, *RelayStatus, error) {
+// returns the composed app. envDir stays env-root scoped (e.g. the token-usage
+// pricing cache); dataDir is the per-account data dir.
+func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*app.App, *relay.Status, error) {
 	envDir := filepath.Dir(statePath)
 	credentialPath := filepath.Join(envDir, "credential.yaml")
 	dataDir, err := config.ResolveAccountDataDir(credentialPath)
@@ -112,7 +113,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		return nil, nil, err
 	}
 
-	app, err := node.Bootstrap(node.Config{
+	app, err := app.Bootstrap(app.Config{
 		Runtime:          runtime,
 		NodeID:           daemonID,
 		LogFilePath:      cfg.LogFilePath,
@@ -121,15 +122,16 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		DataDir:          dataDir,
 		SettingsPath:     config.SettingsFilePath(dataDir),
 		MemorySummarizer: buildMemorySummarizerConfig(cfg, runtime),
+		RelayEnabled:     cfg.RelayEnabled,
+		RelayURL:         cfg.RelayURL,
+		RelayToken:       cfg.RelayToken,
 	})
 	if err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
 		return nil, nil, err
 	}
-	handler := NewJSONRPCHandler(app)
 
-	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
-	return handler, relayStatus, nil
+	return app, app.Relay().Status(), nil
 }
 
 func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
@@ -153,16 +155,16 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 	return database, nil
 }
 
-func buildHTTPServer(handler *JSONRPCHandler, daemonID string, relayStatus *RelayStatus) *http.Server {
+func buildHTTPServer(app *app.App, daemonID string, relayStatus *relay.Status) *http.Server {
 	mux := http.NewServeMux()
-	mux.Handle("/ws", handler.rpcServer)
-	mux.HandleFunc(agentHookIngestPath, handler.ServeAgentHook)
+	mux.Handle("/ws", app.RPCServer())
+	mux.HandleFunc(hook.AgentHookIngestPath, app.ServeAgentHook)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"status":   "running",
-			"version":  buildinfo.Version,
+			"version":  release.Version,
 			"daemonId": daemonID,
 			"relay":    relayStatus.Snapshot(),
 		})

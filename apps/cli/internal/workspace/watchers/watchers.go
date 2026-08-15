@@ -9,7 +9,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/fswatch"
-	"yishan/apps/cli/internal/gitexec"
+	gitexec "yishan/apps/cli/internal/git/exec"
 	"yishan/apps/cli/internal/workspace"
 )
 

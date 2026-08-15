@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/daemon"
+	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/output"
-	"yishan/apps/cli/internal/workspace"
 )
 
 var terminalCmd = &cobra.Command{
@@ -36,9 +36,9 @@ var terminalListCmd = &cobra.Command{
 			return err
 		}
 
-		var result []workspace.TerminalSessionSummary
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalListSessions,
-			workspace.TerminalListSessionsRequest{IncludeExited: includeExited},
+		var result []terminal.SessionSummary
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalListSessions,
+			terminal.ListSessionsRequest{IncludeExited: includeExited},
 			&result,
 		); err != nil {
 			return err
@@ -70,9 +70,9 @@ var terminalStartCmd = &cobra.Command{
 			return err
 		}
 
-		var result workspace.TerminalStartResponse
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalStart,
-			workspace.TerminalStartRequest{WorkspaceID: workspaceID, Command: command},
+		var result terminal.StartResponse
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalStart,
+			terminal.StartRequest{WorkspaceID: workspaceID, Command: command},
 			&result,
 		); err != nil {
 			return err
@@ -99,9 +99,9 @@ var terminalStopCmd = &cobra.Command{
 			return err
 		}
 
-		var result workspace.TerminalStopResponse
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalStop,
-			workspace.TerminalStopRequest{SessionID: sessionID},
+		var result terminal.StopResponse
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalStop,
+			terminal.StopRequest{SessionID: sessionID},
 			&result,
 		); err != nil {
 			return err
@@ -128,8 +128,8 @@ var terminalPortsCmd = &cobra.Command{
 			return err
 		}
 
-		var result []workspace.TerminalDetectedPort
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalListPorts, nil, &result); err != nil {
+		var result []terminal.DetectedPort
+		if err := client.Call(cmd.Context(), rpc.MethodTerminalListPorts, nil, &result); err != nil {
 			return err
 		}
 
@@ -157,7 +157,7 @@ func init() {
 	terminalPortsCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
 }
 
-func renderTerminalSessionsList(sessions []workspace.TerminalSessionSummary, includeAll bool) output.RenderData {
+func renderTerminalSessionsList(sessions []terminal.SessionSummary, includeAll bool) output.RenderData {
 	rows := make([]map[string]any, 0, len(sessions))
 	for _, session := range sessions {
 		row := map[string]any{
@@ -181,7 +181,7 @@ func renderTerminalSessionsList(sessions []workspace.TerminalSessionSummary, inc
 	return output.RenderData{Title: "sessions", Columns: columns, Rows: rows}
 }
 
-func renderTerminalPortsList(ports []workspace.TerminalDetectedPort, includeAll bool) output.RenderData {
+func renderTerminalPortsList(ports []terminal.DetectedPort, includeAll bool) output.RenderData {
 	rows := make([]map[string]any, 0, len(ports))
 	for _, port := range ports {
 		row := map[string]any{
