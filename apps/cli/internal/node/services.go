@@ -14,13 +14,16 @@ import (
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/computer"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/tokenusage"
-	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
+	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
@@ -50,7 +53,10 @@ type Services struct {
 	rpcServer *rpc.Server
 
 	// Services the RPC methods operate on (mirrors the composed app).
-	manager       *workspace.Manager
+	registry      *instance.Registry
+	files         *files.FileService
+	gits          *git.GitService
+	terminals     *terminal.Manager
 	runtime       *cliruntime.Runtime
 	localDatabase *sql.DB
 	nodeID        string
@@ -101,7 +107,10 @@ type Services struct {
 func NewServices(app *App) *Services {
 	services := &Services{
 		nodeApp:           app,
-		manager:           app.Manager,
+		registry:          app.Registry,
+		files:             app.Files,
+		gits:              app.Git,
+		terminals:         app.Terminals,
 		runtime:           app.Runtime,
 		localDatabase:     app.Database,
 		nodeID:            app.NodeID,
@@ -143,7 +152,7 @@ func (s *Services) BuildRPCLayer() {
 	s.rpcServer.BinaryFrameHandler = s
 
 	// Terminal lifecycle events flow into the frontend event hub.
-	s.manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
+	s.terminals.SetPortsChangedListener(func(ports []terminal.DetectedPort) {
 		s.events.Publish(internalevents.Event{
 			Topic: "terminalDetectedPortsChanged",
 			Payload: map[string]any{
@@ -151,7 +160,7 @@ func (s *Services) BuildRPCLayer() {
 			},
 		})
 	})
-	s.manager.Terminals().SetSessionsChangedListener(func(event workspace.TerminalSessionLifecycleEvent) {
+	s.terminals.SetSessionsChangedListener(func(event terminal.SessionLifecycleEvent) {
 		s.events.Publish(internalevents.Event{
 			Topic: "terminalSessionChanged",
 			Payload: map[string]any{
@@ -226,7 +235,7 @@ func (s *Services) HandleBinaryFrame(connection *rpc.Connection, opcode byte, se
 		if len(inputData) == 0 {
 			return
 		}
-		s.manager.Terminals().SendRaw(sessionID, inputData)
+		s.terminals.SendRaw(sessionID, inputData)
 	case binOpcodeTerminalOutput:
 		s.forwardRemoteTerminalOutput(sessionID, payload)
 	}

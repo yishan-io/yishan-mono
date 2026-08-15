@@ -16,7 +16,7 @@ import (
 
 func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t *testing.T) {
 	root := t.TempDir()
-	handler := newTestServices(t, workspace.NewManager(), nil, "node-1")
+	handler := newTestServices(t, nil, "node-1")
 
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
@@ -132,9 +132,9 @@ func TestBuildTaskRunTerminalTitle(t *testing.T) {
 }
 
 func stopAllTerminalSessions(handler *Services) {
-	sessions := handler.manager.Terminals().ListSessions(terminal.ListSessionsRequest{IncludeExited: true})
+	sessions := handler.terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true})
 	for _, session := range sessions {
-		_, _ = handler.manager.Terminals().Stop(terminal.StopRequest{SessionID: session.SessionID})
+		_, _ = handler.terminals.Stop(terminal.StopRequest{SessionID: session.SessionID})
 	}
 }
 
@@ -259,7 +259,7 @@ done
 	if _, ok := s.agentMgr.Session("task-ws-1"); !ok {
 		t.Fatal("expected pi session task-ws-1 to be active")
 	}
-	if sessions := s.manager.Terminals().ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 0 {
+	if sessions := s.terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 0 {
 		t.Fatalf("chat-mode task run started terminal sessions: %#v", sessions)
 	}
 }

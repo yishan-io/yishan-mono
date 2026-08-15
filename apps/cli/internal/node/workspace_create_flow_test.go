@@ -43,6 +43,6 @@ func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *tes
 func newWorkspaceCreateFlowTestHandler(t *testing.T, baseURL string) *Services {
 	t.Helper()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: baseURL, Token: "test-token"}})
-	handler := newTestServices(t, workspace.NewManager(), runtime, "node-local")
+	handler := newTestServices(t, runtime, "node-local")
 	return handler
 }

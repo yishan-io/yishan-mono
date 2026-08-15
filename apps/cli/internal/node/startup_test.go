@@ -97,7 +97,7 @@ func TestBootstrap_StartupSequence(t *testing.T) {
 	defer app.Close()
 
 	// Hydration restored the persisted workspace as an open instance.
-	if _, ok := app.Manager.Instances().Get("ws-1"); !ok {
+	if _, ok := app.Registry.Get("ws-1"); !ok {
 		t.Fatal("expected hydrated workspace instance after Bootstrap")
 	}
 	// Watch registration followed hydration (no watcher exists before the

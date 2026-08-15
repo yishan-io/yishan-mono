@@ -28,9 +28,8 @@ func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t 
 	}))
 	defer server.Close()
 
-	manager := workspace.NewManager()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := newTestServices(t, manager, runtime, "node-1")
+	handler := newTestServices(t, runtime, "node-1")
 
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {

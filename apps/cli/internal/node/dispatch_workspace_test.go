@@ -63,7 +63,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 // newTestHandler creates a Services for dispatch handler unit tests.
 func newTestHandler(t *testing.T) *Services {
 	t.Helper()
-	return newTestServices(t, workspace.NewManager(), nil, "node-1")
+	return newTestServices(t, nil, "node-1")
 }
 
 func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *testing.T) {
@@ -92,8 +92,7 @@ func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *test
 
 func TestHandleWorkspaceCreate_ReturnsPendingWhenAPIRegistrationIsSkipped(t *testing.T) {
 	root := t.TempDir()
-	manager := workspace.NewManager()
-	handler := newTestServices(t, manager, nil, "node-1")
+	handler := newTestServices(t, nil, "node-1")
 
 	params, err := json.Marshal(map[string]any{
 		"repoKey":       "owner/repo",
@@ -134,9 +133,8 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 	defer server.Close()
 
 	root := t.TempDir()
-	manager := workspace.NewManager()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := newTestServices(t, manager, runtime, "node-1")
+	handler := newTestServices(t, runtime, "node-1")
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -283,7 +281,7 @@ func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, s)
 
 	// Pre-open the workspace directly in the manager with matching metadata.
-	if _, err := s.manager.Open(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
+	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
 		t.Fatalf("pre-open: %v", err)
 	}
 
@@ -321,7 +319,7 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 	s := newTestHandler(t)
 	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, s)
 
-	if _, err := s.manager.Open(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
+	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
 		t.Fatalf("pre-open: %v", err)
 	}
 
@@ -504,7 +502,7 @@ func runDispatchWorkspaceTestGitCmd(t *testing.T, dir string, args ...string) {
 func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 	s := newTestHandler(t)
 	workspacePath := t.TempDir()
-	if _, err := s.manager.Open(workspace.OpenRequest{
+	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
@@ -540,7 +538,7 @@ func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 func TestCheckWorkspaceHealth_KeepsHealthyWorkspaceActive(t *testing.T) {
 	s := newTestHandler(t)
 	workspacePath := t.TempDir()
-	if _, err := s.manager.Open(workspace.OpenRequest{
+	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
@@ -578,7 +576,7 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	if _, err := s.manager.Open(workspace.OpenRequest{
+	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "project-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)

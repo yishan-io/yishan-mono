@@ -16,14 +16,13 @@ import (
 func TestCloseLocalNode_RecordSequence(t *testing.T) {
 	var recorder apiCallRecorder
 	apiServer := newWorkspaceAPIStub(t, &recorder)
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, apiConfiguredRuntime(apiServer), "node-1", database)
+	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 
 	path := t.TempDir() // plain dir: no git teardown needed, close succeeds fast
-	openLocalWorkspace(t, manager, "ws-close-1", path)
+	openLocalWorkspace(t, s, "ws-close-1", path)
 	store := localdb.NewWorkspaceStore(database)
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "ws-close-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
@@ -65,7 +64,7 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 	if row.Status != "closed" {
 		t.Fatalf("persisted status = %q, want closed", row.Status)
 	}
-	if _, ok := manager.Instances().Get("ws-close-1"); ok {
+	if _, ok := s.registry.Get("ws-close-1"); ok {
 		t.Fatal("expected workspace removed from manager after close")
 	}
 
@@ -76,9 +75,8 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 }
 
 func TestCloseRemoteNode_Relays(t *testing.T) {
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, nil, "node-1", database)
+	s := newBehaviorHandler(t, nil, "node-1", database)
 	relayMessages := wireRelayCapture(t, s, map[string]any{"accepted": true})
 
 	store := localdb.NewWorkspaceStore(database)
@@ -131,7 +129,7 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 	if row.Status != "active" {
 		t.Fatalf("persisted status = %q, want active (origin does not close remote rows)", row.Status)
 	}
-	if len(manager.Instances().List()) != 0 {
-		t.Fatalf("expected no manager runtime records, got %v", manager.Instances().List())
+	if len(s.registry.List()) != 0 {
+		t.Fatalf("expected no manager runtime records, got %v", s.registry.List())
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace/application"
 )
 
@@ -16,7 +17,7 @@ import (
 // the rest operate on the instance registry / manager.
 
 func (s *Services) ListWorkspaces() (any, error) {
-	return s.manager.Instances().List(), nil
+	return s.registry.List(), nil
 }
 
 func (s *Services) WorkspaceCreate(ctx context.Context, req rpc.WorkspaceCreateParams) (any, error) {
@@ -52,7 +53,7 @@ func (s *Services) WorkspaceRefreshPullRequest(ctx context.Context, req workspac
 		if workspaceID != "" {
 			return s.getWorkspace(workspaceID)
 		}
-		resolvedWorkspace, ok := s.manager.Instances().GetByPath(workspacePath)
+		resolvedWorkspace, ok := s.registry.GetByPath(workspacePath)
 		if !ok {
 			return workspace.Workspace{}, workspace.NewRPCError(rpcerror.CodeNotFound, "workspace not found")
 		}
@@ -72,12 +73,12 @@ func (s *Services) WorkspaceRefreshPullRequest(ctx context.Context, req workspac
 	return refreshedWorkspace, nil
 }
 
-func (s *Services) WorkspaceSetActive(ctx context.Context, req workspace.SetActiveWorkspaceRequest) (any, error) {
-	return s.manager.Terminals().SetActiveWorkspace(req)
+func (s *Services) WorkspaceSetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error) {
+	return s.terminals.SetActiveWorkspace(req)
 }
 
 func (s *Services) WorkspaceSyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error) {
-	return s.manager.SyncContextLink(req)
+	return workspace.SyncContextLink(req)
 }
 
 func (s *Services) WorkspaceHealth(ctx context.Context, req rpc.WorkspaceHealthParams) (any, error) {
@@ -138,7 +139,7 @@ func (s *Services) WorkspaceCloseProject(ctx context.Context, req rpc.WorkspaceC
 		if wsID == "" {
 			continue
 		}
-		s.manager.Terminals().StopAllForWorkspace(wsID)
+		s.terminals.StopAllForWorkspace(wsID)
 		stopped = append(stopped, wsID)
 	}
 

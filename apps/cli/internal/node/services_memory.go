@@ -52,7 +52,7 @@ func (s *Services) MemoryReconcile(ctx context.Context) (any, error) {
 		return nil, err
 	}
 	refs := make([]memory.WorkspaceRef, 0)
-	for _, ws := range s.manager.Instances().List() {
+	for _, ws := range s.registry.List() {
 		if ws.Path != "" {
 			refs = append(refs, memory.WorkspaceRef{
 				WorktreePath: ws.Path,

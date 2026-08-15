@@ -1,4 +1,4 @@
-package db_test
+package node
 
 import (
 	"context"
@@ -7,7 +7,10 @@ import (
 	"testing"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
+	"yishan/apps/cli/internal/terminal"
 )
 
 func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
@@ -35,11 +38,11 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 		t.Fatalf("create pull request: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(newTestManagerStore(workspaceStore))
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	app := &App{Store: localdb.NewStore(workspaceStore), Registry: instance.NewRegistry(files.NewFileService())}
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	workspace, ok := manager.Instances().Get("workspace-1")
+	workspace, ok := app.Registry.Get("workspace-1")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
@@ -66,8 +69,8 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	manager := workspace.NewManager()
-	openedWorkspace, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: symlinkPath})
+	app := &App{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}
+	openedWorkspace, err := app.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: symlinkPath})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
@@ -77,7 +80,7 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 
 	// The instance registry resolves the canonical path: a symlink path must
 	// resolve to the same instance as the real path.
-	resolvedHandle, ok := manager.Instances().GetByPath(symlinkPath)
+	resolvedHandle, ok := app.Registry.GetByPath(symlinkPath)
 	if !ok {
 		t.Fatalf("workspace handle by symlink path not found")
 	}
@@ -88,13 +91,13 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 
 func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 	root := t.TempDir()
-	manager := workspace.NewManager()
+	app := &App{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}
 
-	if _, err := manager.Open(workspace.OpenRequest{ID: "stale-id", Path: root}); err != nil {
+	if _, err := app.OpenWorkspace(workspace.OpenRequest{ID: "stale-id", Path: root}); err != nil {
 		t.Fatalf("open stale workspace: %v", err)
 	}
 
-	openedWorkspace, err := manager.Open(workspace.OpenRequest{
+	openedWorkspace, err := app.OpenWorkspace(workspace.OpenRequest{
 		ID:        "workspace-1",
 		Path:      root,
 		OrgID:     "org-1",
@@ -113,11 +116,11 @@ func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 		t.Fatalf("expected project id to be updated, got %q", openedWorkspace.ProjectID)
 	}
 
-	if _, ok := manager.Instances().Get("stale-id"); ok {
+	if _, ok := app.Registry.Get("stale-id"); ok {
 		t.Fatal("expected stale workspace id to be removed after path re-open")
 	}
 
-	workspaces := manager.Instances().List()
+	workspaces := app.Registry.List()
 	if len(workspaces) != 1 {
 		t.Fatalf("expected exactly one workspace after re-open, got %d", len(workspaces))
 	}
@@ -127,9 +130,9 @@ func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 }
 
 func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
-	manager := workspace.NewManager()
+	app := &App{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}
 	workspacePath := t.TempDir()
-	if _, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+	if _, err := app.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 	if err := os.RemoveAll(workspacePath); err != nil {
@@ -139,25 +142,25 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 		t.Fatalf("replace path with file: %v", err)
 	}
 
-	if _, err := manager.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+	if _, err := app.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with replaced path: %v", err)
 	}
-	if _, ok := manager.Instances().Get("ws-1"); ok {
+	if _, ok := app.Registry.Get("ws-1"); ok {
 		t.Fatal("expected workspace removed from memory after close")
 	}
 }
 
 func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
-	manager := workspace.NewManager()
+	app := &App{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}
 	workspacePath := t.TempDir()
-	if _, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+	if _, err := app.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 
-	if _, err := manager.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+	if _, err := app.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with non-git path: %v", err)
 	}
-	if _, ok := manager.Instances().Get("ws-1"); ok {
+	if _, ok := app.Registry.Get("ws-1"); ok {
 		t.Fatal("expected workspace removed from memory after close")
 	}
 	if _, err := os.Stat(workspacePath); err != nil {
@@ -165,7 +168,7 @@ func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
 	}
 }
 
-func openTestManagerStore(t *testing.T) (*workspace.Manager, *localdb.WorkspaceStore) {
+func openTestManagerStore(t *testing.T) (*App, *localdb.WorkspaceStore) {
 	t.Helper()
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -176,11 +179,11 @@ func openTestManagerStore(t *testing.T) (*workspace.Manager, *localdb.WorkspaceS
 		t.Fatalf("migrate database: %v", err)
 	}
 	store := localdb.NewWorkspaceStore(database)
-	return workspace.NewManagerWithStore(newTestManagerStore(store)), store
+	return &App{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}, store
 }
 
 func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
-	manager, store := openTestManagerStore(t)
+	app, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branchMissing := "feature/missing"
 	if err := store.Create(context.Background(), &localdb.Workspace{
@@ -198,11 +201,11 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 
-	healthy, ok := manager.Instances().Get("workspace-2")
+	healthy, ok := app.Registry.Get("workspace-2")
 	if !ok {
 		t.Fatalf("expected healthy workspace restored: not found")
 	}
@@ -210,7 +213,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 		t.Fatalf("expected healthy workspace active, got %q", healthy.State)
 	}
 
-	broken, ok := manager.Instances().Get("workspace-1")
+	broken, ok := app.Registry.Get("workspace-1")
 	if !ok {
 		t.Fatalf("expected missing-path workspace registered as error: not found")
 	}
@@ -231,7 +234,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 }
 
 func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
-	manager, store := openTestManagerStore(t)
+	app, store := openTestManagerStore(t)
 	filePath := filepath.Join(t.TempDir(), "not-a-directory")
 	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
 		t.Fatalf("write file: %v", err)
@@ -244,10 +247,10 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	ws, ok := manager.Instances().Get("workspace-1")
+	ws, ok := app.Registry.Get("workspace-1")
 	if !ok {
 		t.Fatalf("expected workspace registered as error: not found")
 	}
@@ -264,7 +267,7 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 }
 
 func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
-	manager, store := openTestManagerStore(t)
+	app, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branch := "feature/closed"
 	if err := store.Create(context.Background(), &localdb.Workspace{
@@ -274,16 +277,16 @@ func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	if _, ok := manager.Instances().Get("workspace-1"); ok {
+	if _, ok := app.Registry.Get("workspace-1"); ok {
 		t.Fatal("expected closed workspace to be skipped, not registered")
 	}
 }
 
 func TestManagerHydrateFromDB_SkipsFolderWorkspaces(t *testing.T) {
-	manager, store := openTestManagerStore(t)
+	app, store := openTestManagerStore(t)
 	folderPath := t.TempDir()
 	if _, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{
 		LocalPath: folderPath, NodeID: "node-1",
@@ -291,18 +294,18 @@ func TestManagerHydrateFromDB_SkipsFolderWorkspaces(t *testing.T) {
 		t.Fatalf("create folder workspace: %v", err)
 	}
 
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 	// Folder workspaces must never be auto-opened at boot; the desktop opens
 	// them on demand, so the manager must have no workspace for the folder.
-	if folders := manager.Instances().List(); len(folders) != 0 {
+	if folders := app.Registry.List(); len(folders) != 0 {
 		t.Fatalf("expected no hydrated folder workspace, got %#v", folders)
 	}
 }
 
 func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testing.T) {
-	manager, store := openTestManagerStore(t)
+	app, store := openTestManagerStore(t)
 	workspacePath := t.TempDir()
 	branch := "feature/restored"
 	health := string(workspace.HealthPathMissing)
@@ -314,10 +317,10 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	ws, ok := manager.Instances().Get("workspace-1")
+	ws, ok := app.Registry.Get("workspace-1")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
@@ -334,7 +337,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 }
 
 func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
-	manager, store := openTestManagerStore(t)
+	app, store := openTestManagerStore(t)
 	// Plain directory without .git: Open succeeds, but the persisted
 	// not-worktree error must survive rehydration.
 	workspacePath := t.TempDir()
@@ -348,10 +351,10 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
-	ws, ok := manager.Instances().Get("workspace-1")
+	ws, ok := app.Registry.Get("workspace-1")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
@@ -365,69 +368,4 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 	if persisted.State != string(workspace.StateError) || persisted.Health == nil || *persisted.Health != string(workspace.HealthNotWorktree) {
 		t.Fatalf("expected persisted error/not-worktree, got state=%q health=%v", persisted.State, persisted.Health)
 	}
-}
-
-// testManagerStore adapts the real SQLite store to the workspace.WorkspaceStore
-// interface for workspace-package tests (the package cannot import dbconv
-// without an import cycle).
-type testManagerStore struct {
-	raw *localdb.WorkspaceStore
-}
-
-func newTestManagerStore(raw *localdb.WorkspaceStore) *testManagerStore {
-	return &testManagerStore{raw: raw}
-}
-
-func (s *testManagerStore) List(ctx context.Context) ([]workspace.StoredWorkspace, error) {
-	rows, err := s.raw.List(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]workspace.StoredWorkspace, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, workspace.StoredWorkspace{
-			ID: row.ID, OrganizationID: row.OrganizationID, ProjectID: row.ProjectID,
-			NodeID: row.NodeID, Kind: row.Kind, Status: row.Status,
-			Branch: row.Branch, SourceBranch: row.SourceBranch,
-			LocalPath: row.LocalPath, State: row.State, Health: row.Health,
-		})
-	}
-	return out, nil
-}
-
-func (s *testManagerStore) Update(ctx context.Context, workspaceID string, update workspace.StoredWorkspaceUpdate) error {
-	return s.raw.Update(ctx, workspaceID, localdb.WorkspaceUpdate{
-		Status: update.Status, State: update.State, Health: update.Health,
-		LocalPath: update.LocalPath, Branch: update.Branch,
-	})
-}
-
-func (s *testManagerStore) ListPRsByWorkspace(ctx context.Context, workspaceID string) ([]workspace.StoredPullRequest, error) {
-	rows, err := s.raw.ListPRsByWorkspace(ctx, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]workspace.StoredPullRequest, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, workspace.StoredPullRequest{
-			ID: row.ID, WorkspaceID: row.WorkspaceID, OrganizationID: row.OrganizationID,
-			PRID: row.PRID, Title: row.Title, URL: row.URL, Branch: row.Branch,
-			BaseBranch: row.BaseBranch, State: row.State, Metadata: row.Metadata,
-			DetectedAt: row.DetectedAt, ResolvedAt: row.ResolvedAt,
-		})
-	}
-	return out, nil
-}
-
-func (s *testManagerStore) UpsertPR(ctx context.Context, pr *workspace.StoredPullRequest) error {
-	return s.raw.UpsertPR(ctx, &localdb.WorkspacePullRequest{
-		ID: pr.ID, WorkspaceID: pr.WorkspaceID, OrganizationID: pr.OrganizationID,
-		PRID: pr.PRID, Title: pr.Title, URL: pr.URL, Branch: pr.Branch,
-		BaseBranch: pr.BaseBranch, State: pr.State, Metadata: pr.Metadata,
-		DetectedAt: pr.DetectedAt, ResolvedAt: pr.ResolvedAt,
-	})
-}
-
-func (s *testManagerStore) ResolvePR(ctx context.Context, workspaceID string, pullRequestID string) error {
-	return s.raw.ResolvePR(ctx, workspaceID, pullRequestID)
 }

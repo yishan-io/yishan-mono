@@ -15,8 +15,8 @@ func TestServices_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	manager := workspace.NewManager()
-	if _, err := manager.Open(workspace.OpenRequest{
+	handler := newTestServices(t, nil, "node-1")
+	if _, err := handler.nodeApp.OpenWorkspace(workspace.OpenRequest{
 		ID:        "workspace-1",
 		Path:      root,
 		ProjectID: "project-1",
@@ -24,7 +24,6 @@ func TestServices_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	handler := newTestServices(t, manager, nil, "node-1")
 
 	workspaceID, didOpen, err := handler.openProjectWorkspace(rpc.WorkspaceOpenProjectEntry{
 		WorkspaceID:  "workspace-1",

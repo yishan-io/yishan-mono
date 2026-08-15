@@ -16,6 +16,7 @@ import (
 	localdb "yishan/apps/cli/internal/db"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 )
 
 const (
@@ -31,7 +32,7 @@ var tokenUsageScannableAgentKinds = agentkind.WithActiveTokenScanners
 
 type Collector struct {
 	mu                   sync.Mutex
-	manager              *workspace.Manager
+	registry             *instance.Registry
 	runtime              *cliruntime.Runtime
 	repo                 HourlyUsageRepository
 	pricingCatalog       *modelPricingCatalog
@@ -55,7 +56,7 @@ type CollectorDebugState struct {
 }
 
 func NewCollectorWithRepository(
-	manager *workspace.Manager,
+	registry *instance.Registry,
 	runtime *cliruntime.Runtime,
 	repo HourlyUsageRepository,
 	profileDir string,
@@ -65,7 +66,7 @@ func NewCollectorWithRepository(
 		cachePath = filepath.Join(profileDir, modelPricingCacheFileName)
 	}
 	return &Collector{
-		manager:              manager,
+		registry:              registry,
 		runtime:              runtime,
 		repo:                 repo,
 		pricingCatalog:       newModelPricingCatalog(cachePath, fetchPublicModelPrices),
@@ -179,7 +180,7 @@ func (c *Collector) runScan(agentKind string, source string) {
 
 func (c *Collector) filterKnownTokenUsageRows(rows []HourlyUsageRow) []HourlyUsageRow {
 	workspaceByID := make(map[string]workspace.Workspace)
-	for _, ws := range c.manager.Instances().List() {
+	for _, ws := range c.registry.List() {
 		workspaceByID[ws.ID] = ws
 	}
 
@@ -213,7 +214,7 @@ func (c *Collector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) (
 		RunID:               "daemon-" + agentKind,
 		IngestedAt:          time.Now().UnixMilli(),
 		ScanSinceUnixMilli:  scanSinceUnixMilli,
-		Worktrees:           buildTokenUsageWorktreeRefs(c.manager.Instances().List()),
+		Worktrees:           buildTokenUsageWorktreeRefs(c.registry.List()),
 		ModelPricingCatalog: c.pricingCatalog,
 	}
 	switch agentKind {
@@ -473,7 +474,7 @@ func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]HourlyUsageRow, error
 }
 
 func (c *Collector) resolveOrgIDForWorkspace(workspaceID string) string {
-	for _, ws := range c.manager.Instances().List() {
+	for _, ws := range c.registry.List() {
 		if ws.ID == workspaceID {
 			return ws.OrgID
 		}

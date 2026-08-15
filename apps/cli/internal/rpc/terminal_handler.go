@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/terminal"
 )
 
 // TerminalHandler owns the terminal.* RPC namespace decoding. Connection-bound
@@ -19,37 +19,37 @@ type TerminalHandler struct {
 func (h *TerminalHandler) Call(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodTerminalStart:
-		var req workspace.TerminalStartRequest
+		var req terminal.StartRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.Services.TerminalStart(ctx, connection, req)
 	case MethodTerminalSend:
-		var req workspace.TerminalSendRequest
+		var req terminal.SendRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.Services.TerminalSend(ctx, req)
 	case MethodTerminalRead:
-		var req workspace.TerminalReadRequest
+		var req terminal.ReadRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.Services.TerminalRead(ctx, req)
 	case MethodTerminalStop:
-		var req workspace.TerminalStopRequest
+		var req terminal.StopRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.Services.TerminalStop(ctx, req)
 	case MethodTerminalKillProcess:
-		var req workspace.TerminalKillProcessRequest
+		var req terminal.KillProcessRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.Services.TerminalKillProcess(ctx, req)
 	case MethodTerminalListSessions:
-		var req workspace.TerminalListSessionsRequest
+		var req terminal.ListSessionsRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
@@ -57,19 +57,19 @@ func (h *TerminalHandler) Call(ctx context.Context, connection *Connection, meth
 	case MethodTerminalListPorts:
 		return h.Services.TerminalListPorts(ctx)
 	case MethodTerminalResize:
-		var req workspace.TerminalResizeRequest
+		var req terminal.ResizeRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.Services.TerminalResize(ctx, req)
 	case MethodTerminalSubscribe:
-		var req workspace.TerminalSubscribeRequest
+		var req terminal.SubscribeRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.Services.TerminalSubscribe(ctx, connection, req)
 	case MethodTerminalUnsubscribe:
-		var req workspace.TerminalUnsubscribeRequest
+		var req terminal.UnsubscribeRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}

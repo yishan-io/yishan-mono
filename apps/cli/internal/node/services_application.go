@@ -180,27 +180,26 @@ func (d *appDeps) LocalRow(ctx context.Context, workspaceID string) (workspace.R
 // ---- Instances ----
 
 func (d *appDeps) CreateWorkspaceWithProgress(ctx context.Context, req workspace.CreateRequest, report workspace.CreateProgressReporter) (workspace.Workspace, error) {
-	return d.s.manager.CreateWorkspaceWithProgress(ctx, req, report)
+	return application.CreateWorkspace(d.s.registry, ctx, req, report)
 }
 
 func (d *appDeps) CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error) {
-	return d.s.manager.CloseWorkspace(ctx, req)
+	return d.s.closeWorkspace(ctx, req)
 }
 
 func (d *appDeps) CloseWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error) {
-	return d.s.manager.CloseWorkspacePath(ctx, req)
+	return d.s.closeWorkspacePath(ctx, req)
 }
 
 func (d *appDeps) SetState(workspaceID string, state instance.State, health instance.Health) error {
-	return d.s.manager.Instances().SetState(workspaceID, state, health)
+	return d.s.registry.SetState(workspaceID, state, health)
 }
-
 func (d *appDeps) Get(workspaceID string) (workspace.Workspace, error) {
 	return d.s.getWorkspace(workspaceID)
 }
 
 func (d *appDeps) RemoveFromMemory(workspaceID string) {
-	d.s.manager.Instances().Remove(workspaceID)
+	d.s.registry.Remove(workspaceID)
 }
 
 func (d *appDeps) WatchAndTrack(workspaceID string, path string) {
@@ -269,7 +268,7 @@ func (d *appDeps) CreateCompleted(plan application.CreatePlan, created workspace
 // workspaceHandle builds a workspace-scoped handle from the instance registry
 // and the manager's shared services (file cache, git, terminals).
 func (s *Services) workspaceHandle(workspaceID string) (instance.Handle, error) {
-	ws, ok := s.manager.Instances().Get(workspaceID)
+	ws, ok := s.registry.Get(workspaceID)
 	if !ok {
 		return instance.Handle{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 	}
@@ -279,7 +278,7 @@ func (s *Services) workspaceHandle(workspaceID string) (instance.Handle, error) 
 // workspaceHandleByPath resolves the canonical path and builds the handle for
 // the instance at that path.
 func (s *Services) workspaceHandleByPath(path string) (instance.Handle, error) {
-	ws, ok := s.manager.Instances().GetByPath(path)
+	ws, ok := s.registry.GetByPath(path)
 	if !ok {
 		return instance.Handle{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 	}
@@ -287,13 +286,21 @@ func (s *Services) workspaceHandleByPath(path string) (instance.Handle, error) {
 }
 
 func (s *Services) handleForInstance(ws workspace.Workspace) instance.Handle {
-	return instance.NewHandle(ws, s.manager.Instances().Files(), s.manager.Gits(), s.manager.Terminals())
+	return instance.NewHandle(ws, s.files, s.gits, s.terminals)
 }
 
 // getWorkspace returns the open instance for a workspace id, mapping a missing
 // instance to the RPC not-found error (instance reads go through the registry).
+func (s *Services) closeWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error) {
+	return s.nodeApp.CloseWorkspace(ctx, req)
+}
+
+func (s *Services) closeWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error) {
+	return s.nodeApp.CloseWorkspacePath(ctx, req)
+}
+
 func (s *Services) getWorkspace(workspaceID string) (workspace.Workspace, error) {
-	ws, ok := s.manager.Instances().Get(workspaceID)
+	ws, ok := s.registry.Get(workspaceID)
 	if !ok {
 		return workspace.Workspace{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 	}

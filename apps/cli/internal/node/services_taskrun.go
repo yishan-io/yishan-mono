@@ -131,7 +131,7 @@ func (s *Services) startTaskRunTerminal(created workspace.Workspace, taskRun *wo
 		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build agent command")
 		return "failed"
 	}
-	resp, startErr := s.manager.Terminals().Start(context.Background(), created.Path, terminal.StartRequest{
+	resp, startErr := s.terminals.Start(context.Background(), created.Path, terminal.StartRequest{
 		WorkspaceID: created.ID,
 		TabID:       "task-" + created.ID,
 		PaneID:      "pane-task-" + created.ID,
@@ -142,7 +142,7 @@ func (s *Services) startTaskRunTerminal(created workspace.Workspace, taskRun *wo
 		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start terminal session")
 		return "failed"
 	}
-	_, sendErr := s.manager.Terminals().Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
+	_, sendErr := s.terminals.Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
 	if sendErr != nil {
 		log.Warn().Err(sendErr).Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to send agent command")
 		return "failed"

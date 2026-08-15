@@ -64,7 +64,7 @@ func (s *Services) validateFolderWorkspacePath(ctx context.Context, rawPath stri
 	if !info.IsDir() {
 		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "path is not a directory: "+resolvedPath)
 	}
-	inspect, err := s.manager.GitInspect(ctx, resolvedPath)
+	inspect, err := s.gits.Inspect(ctx, resolvedPath)
 	if err != nil {
 		return "", err
 	}
@@ -119,10 +119,10 @@ func (s *Services) WorkspaceDeleteLocalFolder(ctx context.Context, req rpc.Works
 	// teardown so no filesystem watcher or pull-request tracker entry leaks and
 	// keeps polling a deleted folder.
 	if ws, err := s.getWorkspace(req.ID); err == nil {
-		s.manager.Terminals().StopAllForWorkspace(req.ID)
+		s.terminals.StopAllForWorkspace(req.ID)
 		s.watchers.Unwatch(ws.Path)
 		s.prTracker.StopTracking(req.ID)
-		s.manager.Instances().Remove(req.ID)
+		s.registry.Remove(req.ID)
 	}
 	// Mirror the workspace-close teardown: summarize and clear any agent usage
 	// recorded against the folder before its row is deleted, so no in-flight

@@ -9,6 +9,9 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
@@ -107,15 +110,14 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	manager := workspace.NewManager()
-	openedWorkspace, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: root})
+	app := newWatchTestApp(t)
+	openedWorkspace, err := app.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: root})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	app := newWatchTestApp(t, manager)
 	app.StartFileCacheConsumer()
 
-	handle := workspaceInstanceHandle(manager, openedWorkspace)
+	handle := instance.NewHandle(openedWorkspace, app.Files, app.Git, app.Terminals)
 
 	entries, err := handle.FileList("", false)
 	if err != nil {
@@ -181,8 +183,8 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(localdb.NewStore(workspaceStore))
-	app := newWatchTestApp(t, manager)
+	app := newWatchTestApp(t)
+	app.Store = localdb.NewStore(workspaceStore)
 
 	// Hydration alone must not register watchers (the regression this guards):
 	// without the explicit watch step, file-change events stop flowing after a
@@ -193,12 +195,12 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 
 	// Drive the same sequence Bootstrap uses at boot so removing the watch
 	// step from the bootstrap sequence fails this test.
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate workspaces: %v", err)
 	}
 	app.WatchActiveWorkspaces()
 
-	hydratedWorkspace, ok := manager.Instances().Get("workspace-1")
+	hydratedWorkspace, ok := app.Registry.Get("workspace-1")
 	if !ok {
 		t.Fatal("get hydrated workspace: not found")
 	}
@@ -213,11 +215,10 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	manager := workspace.NewManager()
-	if _, err := manager.Open(workspace.OpenRequest{ID: "workspace-1", Path: root}); err != nil {
+	app := newWatchTestApp(t)
+	if _, err := app.OpenWorkspace(workspace.OpenRequest{ID: "workspace-1", Path: root}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	app := newWatchTestApp(t, manager)
 
 	app.WatchActiveWorkspaces()
 	if !app.Watchers.IsWatching(root) {
@@ -250,19 +251,31 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 }
 
 // newWatchTestApp builds a minimal app for watcher/file-cache behavior tests.
-func newWatchTestApp(t *testing.T, manager *workspace.Manager) *App {
+func newWatchTestApp(t *testing.T) *App {
 	t.Helper()
 	events := internalevents.NewHub()
-	prTracker := workspaceprtracker.New(manager, nil, func(event workspaceprtracker.PullRequestUpdatedEvent) {
-		PublishPullRequestUpdated(events, event)
+	filesService := files.NewFileService()
+	registry := instance.NewRegistry(filesService)
+	gitService := git.NewGitService()
+	terminals := terminal.NewManager()
+	prTracker := workspaceprtracker.New(workspaceprtracker.TrackerDeps{
+		Instances: registry,
+		Gits:      gitService,
+		Runtime:   nil,
+		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
+			PublishPullRequestUpdated(events, event)
+		},
 	})
 	watchers := NewWatchers(events, prTracker.RefreshWorkspaceByPath)
-	manager.Instances().SetOnRemoved(func(workspaceID string, path string) {
+	registry.SetOnRemoved(func(workspaceID string, path string) {
 		watchers.Unwatch(path)
 		prTracker.StopTracking(workspaceID)
 	})
 	app := &App{
-		Manager:      manager,
+		Registry:     registry,
+		Files:        filesService,
+		Git:          gitService,
+		Terminals:    terminals,
 		Events:       events,
 		Watchers:     watchers,
 		PRTracker:    prTracker,
@@ -275,10 +288,4 @@ func newWatchTestApp(t *testing.T, manager *workspace.Manager) *App {
 	}
 	t.Cleanup(func() { _ = app.Close() })
 	return app
-}
-
-// workspaceInstanceHandle builds a workspace-scoped handle from the manager's
-// shared services (file cache, git, terminals).
-func workspaceInstanceHandle(manager *workspace.Manager, ws workspace.Workspace) instance.Handle {
-	return instance.NewHandle(ws, manager.Instances().Files(), manager.Gits(), manager.Terminals())
 }

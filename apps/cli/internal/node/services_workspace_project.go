@@ -51,7 +51,7 @@ func (s *Services) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (st
 			return workspaceID, false, nil
 		}
 	}
-	openedWorkspace, err := s.manager.Open(workspace.OpenRequest{
+	openedWorkspace, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
 		ID:        workspaceID,
 		Path:      workspacePath,
 		ProjectID: entry.ProjectID,

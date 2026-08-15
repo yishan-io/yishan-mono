@@ -10,6 +10,7 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -29,14 +30,14 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(localdb.NewStore(store))
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	app := &App{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())}
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 	// A closing row is a tombstone-for-listing: it must not be restored, and
 	// it must not be promoted to error (which would resurrect it as closable).
-	if len(manager.Instances().List()) != 0 {
-		t.Fatalf("expected closing row skipped, got %v", manager.Instances().List())
+	if len(app.Registry.List()) != 0 {
+		t.Fatalf("expected closing row skipped, got %v", app.Registry.List())
 	}
 }
 
@@ -53,12 +54,12 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	manager := workspace.NewManagerWithStore(localdb.NewStore(store))
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	app := &App{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())}
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 
-	ws, ok := manager.Instances().Get("ws-recovered")
+	ws, ok := app.Registry.Get("ws-recovered")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
@@ -77,9 +78,8 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 // ============================= health transitions =============================
 
 func TestHealthTransition_NotWorktree(t *testing.T) {
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, nil, "node-1", database)
+	s := newBehaviorHandler(t, nil, "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 
@@ -89,7 +89,7 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(path, ".git"), []byte("not a git dir"), 0o644); err != nil {
 		t.Fatalf("write .git file: %v", err)
 	}
-	openLocalWorkspace(t, manager, "ws-h1", path)
+	openLocalWorkspace(t, s, "ws-h1", path)
 	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
 		ID: "ws-h1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: path,
@@ -138,13 +138,12 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 }
 
 func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, nil, "node-1", database)
+	s := newBehaviorHandler(t, nil, "node-1", database)
 
 	// A folder workspace is a plain directory (no git) but must stay healthy.
 	path := t.TempDir()
-	openLocalWorkspace(t, manager, "ws-folder", path)
+	openLocalWorkspace(t, s, "ws-folder", path)
 	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
 		ID: "ws-folder", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindFolder), Status: "active", LocalPath: path,
@@ -167,10 +166,9 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 	gitRepo := filepath.Join(root, "repo")
 	initDispatchWorkspaceTestGitRepoWithCommit(t, gitRepo)
 
-	manager := workspace.NewManager()
-	s := newBehaviorHandler(t, manager, nil, "node-1", nil)
-	openLocalWorkspace(t, manager, "ws-recover", gitRepo)
-	if err := manager.Instances().SetState("ws-recover", instance.StateError, instance.HealthPathMissing); err != nil {
+	s := newBehaviorHandler(t, nil, "node-1", nil)
+	openLocalWorkspace(t, s, "ws-recover", gitRepo)
+	if err := s.registry.SetState("ws-recover", instance.StateError, instance.HealthPathMissing); err != nil {
 		t.Fatalf("SetState: %v", err)
 	}
 	if s.watchers.IsWatching(gitRepo) {
@@ -187,7 +185,7 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 	// The watcher is registered under the canonicalized path (EvalSymlinks
 	// resolves /var → /private/var on macOS), so assert against the manager's
 	// resolved path, not the raw test path.
-	ws, ok := manager.Instances().Get("ws-recover")
+	ws, ok := s.registry.Get("ws-recover")
 	if !ok {
 		t.Fatal("get workspace: not found")
 	}

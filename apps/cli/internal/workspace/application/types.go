@@ -5,20 +5,7 @@
 // manager / API client / SQLite store / relay connection / event hub.
 package application
 
-import (
-	"yishan/apps/cli/internal/workspace"
-	createflow "yishan/apps/cli/internal/workspace/createflow"
-)
-
-// StartedEvent is the workspace create started event payload (alias of the
-// createflow type so the envelope builders stay shared).
-type StartedEvent = createflow.WorkspaceCreateStartedEvent
-
-// FailedEvent is the workspace create failed event payload.
-type FailedEvent = createflow.WorkspaceCreateFailedEvent
-
-// CreateCommand is the decoded workspace.create JSON-RPC request.
-type CreateCommand = createflow.WorkspaceCreateParams
+import "yishan/apps/cli/internal/workspace"
 
 // CreateResult is the synchronous result of a create request; the actual
 // create executes asynchronously.

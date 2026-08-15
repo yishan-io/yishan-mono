@@ -10,7 +10,7 @@ import (
 
 	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
-	createflow "yishan/apps/cli/internal/workspace/createflow"
+	application "yishan/apps/cli/internal/workspace/application"
 )
 
 // Relay change kinds carried by the create envelopes.
@@ -26,17 +26,17 @@ const (
 // CreateEnvelope is the relay payload for a workspace create (request,
 // progress, completed, or failed).
 type CreateEnvelope struct {
-	OrganizationID string                                  `json:"organizationId,omitempty"`
-	ProjectID      string                                  `json:"projectId,omitempty"`
-	WorkspaceID    string                                  `json:"workspaceId,omitempty"`
-	SourceNodeID   string                                  `json:"sourceNodeId,omitempty"`
-	TargetNodeID   string                                  `json:"targetNodeId,omitempty"`
-	Change         string                                  `json:"change,omitempty"`
-	Started        *createflow.WorkspaceCreateStartedEvent `json:"started,omitempty"`
-	Request        *createflow.WorkspaceCreateParams       `json:"request,omitempty"`
-	Progress       *workspace.CreateProgressEvent          `json:"progress,omitempty"`
-	Completed      map[string]any                          `json:"completed,omitempty"`
-	Failed         *createflow.WorkspaceCreateFailedEvent  `json:"failed,omitempty"`
+	OrganizationID string                         `json:"organizationId,omitempty"`
+	ProjectID      string                         `json:"projectId,omitempty"`
+	WorkspaceID    string                         `json:"workspaceId,omitempty"`
+	SourceNodeID   string                         `json:"sourceNodeId,omitempty"`
+	TargetNodeID   string                         `json:"targetNodeId,omitempty"`
+	Change         string                         `json:"change,omitempty"`
+	Started        *application.StartedEvent      `json:"started,omitempty"`
+	Request        *application.CreateCommand     `json:"request,omitempty"`
+	Progress       *workspace.CreateProgressEvent `json:"progress,omitempty"`
+	Completed      map[string]any                 `json:"completed,omitempty"`
+	Failed         *application.FailedEvent       `json:"failed,omitempty"`
 }
 
 // CloseEnvelope is the relay payload for a workspace close request.
@@ -56,7 +56,7 @@ type CloseEnvelope struct {
 
 // BuildCreateRequest builds the relay envelope that dispatches a create to its
 // executor node.
-func BuildCreateRequest(req createflow.WorkspaceCreateParams, sourceNodeID string, started createflow.WorkspaceCreateStartedEvent) CreateEnvelope {
+func BuildCreateRequest(req application.CreateCommand, sourceNodeID string, started application.StartedEvent) CreateEnvelope {
 	return CreateEnvelope{
 		OrganizationID: req.OrganizationID,
 		ProjectID:      req.ProjectID,
@@ -99,7 +99,7 @@ func BuildCreateCompleted(workspaceID string, organizationID string, projectID s
 
 // BuildCreateFailed builds the relay envelope that relays a create failure
 // back to the origin node.
-func BuildCreateFailed(workspaceID string, organizationID string, projectID string, sourceNodeID string, targetNodeID string, failed createflow.WorkspaceCreateFailedEvent) CreateEnvelope {
+func BuildCreateFailed(workspaceID string, organizationID string, projectID string, sourceNodeID string, targetNodeID string, failed application.FailedEvent) CreateEnvelope {
 	return CreateEnvelope{
 		OrganizationID: organizationID,
 		ProjectID:      projectID,

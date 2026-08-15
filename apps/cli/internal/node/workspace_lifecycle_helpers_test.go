@@ -332,12 +332,12 @@ func progressStepSequence(progress []workspace.CreateProgressEvent) []string {
 	return out
 }
 
-// newBehaviorHandler builds a handler with the given manager, runtime and
-// node. When database is non-nil it is attached directly (bypassing
-// SetLocalDatabase so no token-usage collector is wired into the test).
-func newBehaviorHandler(t *testing.T, manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, database *sql.DB) *Services {
+// newBehaviorHandler builds a handler with the given runtime and node. When
+// database is non-nil it is attached directly (bypassing SetLocalDatabase so
+// no token-usage collector is wired into the test).
+func newBehaviorHandler(t *testing.T, runtime *cliruntime.Runtime, nodeID string, database *sql.DB) *Services {
 	t.Helper()
-	s := newTestServices(t, manager, runtime, nodeID)
+	s := newTestServices(t, runtime, nodeID)
 	s.setTestDatabase(database)
 	return s
 }
@@ -351,11 +351,22 @@ func findTopic(events []internalevents.Event, topic string) internalevents.Event
 	return internalevents.Event{}
 }
 
-func openLocalWorkspace(t *testing.T, manager *workspace.Manager, id string, path string) {
+func openLocalWorkspace(t *testing.T, services *Services, id string, path string) {
 	t.Helper()
-	if _, err := manager.Open(workspace.OpenRequest{ID: id, Path: path, OrgID: "org-1", ProjectID: "project-1"}); err != nil {
+	if _, err := services.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: id, Path: path, OrgID: "org-1", ProjectID: "project-1"}); err != nil {
 		t.Fatalf("open workspace %s: %v", id, err)
 	}
+}
+
+// openTestWorkspace registers a workspace instance at the given path via the
+// production open path.
+func openTestWorkspace(t *testing.T, services *Services, id string, path string) workspace.Workspace {
+	t.Helper()
+	ws, err := services.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: id, Path: path})
+	if err != nil {
+		t.Fatalf("open test workspace %s: %v", id, err)
+	}
+	return ws
 }
 
 func containsString(list []string, target string) bool {

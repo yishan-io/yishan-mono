@@ -1,4 +1,4 @@
-package createflow
+package application
 
 import (
 	"context"
@@ -8,16 +8,16 @@ import (
 type PreparedPlan struct {
 	WorkspaceID   string
 	LocalCreate   *workspace.CreateRequest
-	RemoteRequest *WorkspaceCreateParams
+	RemoteRequest *CreateCommand
 }
 
 type ExecutePreparedPlanDependencies struct {
 	Now                  func() string
-	DispatchRemote       func(req WorkspaceCreateParams) error
+	DispatchRemote       func(req CreateCommand) error
 	RollbackRegistration func(context.Context)
 	ExecuteLocalCreate   func(context.Context, workspace.CreateProgressReporter) error
 	PublishProgress      func(workspace.CreateProgressEvent)
-	PublishFailed        func(WorkspaceCreateFailedEvent)
+	PublishFailed        func(FailedEvent)
 }
 
 type ExecuteLocalCreateDependencies struct {
@@ -39,7 +39,7 @@ func ExecutePreparedPlan(ctx context.Context, plan PreparedPlan, deps ExecutePre
 	reportFailed := func(message string) {
 		reportProgress(BuildFailedProgressEvent(plan.WorkspaceID, message, deps.Now))
 		if deps.PublishFailed != nil {
-			deps.PublishFailed(WorkspaceCreateFailedEvent{WorkspaceID: plan.WorkspaceID, Message: message})
+			deps.PublishFailed(FailedEvent{WorkspaceID: plan.WorkspaceID, Message: message})
 		}
 	}
 

@@ -32,10 +32,10 @@ func (a *App) consumeFileCacheInvalidationEvents(events <-chan internalevents.Ev
 			continue
 		}
 		if len(changedPaths) == 0 {
-			a.Manager.Instances().InvalidateFileCache(worktreePath, []string{""})
+			a.Registry.InvalidateFileCache(worktreePath, []string{""})
 			continue
 		}
-		a.Manager.Instances().InvalidateFileCache(worktreePath, changedPaths)
+		a.Registry.InvalidateFileCache(worktreePath, changedPaths)
 		if a.Memory != nil {
 			a.forwardMemoryFileChanges(worktreePath, changedPaths)
 		}
@@ -45,7 +45,7 @@ func (a *App) consumeFileCacheInvalidationEvents(events <-chan internalevents.Ev
 func (a *App) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
 	// Resolve projectID from the registered workspace (best-effort; empty is fine).
 	projectID := ""
-	if ws, ok := a.Manager.Instances().GetByPath(worktreePath); ok {
+	if ws, ok := a.Registry.GetByPath(worktreePath); ok {
 		projectID = ws.ProjectID
 	}
 	for _, rel := range relPaths {

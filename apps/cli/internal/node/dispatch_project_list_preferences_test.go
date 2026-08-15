@@ -14,7 +14,7 @@ import (
 func newProjectListPreferencesTestHandler(t *testing.T) *Services {
 	t.Helper()
 	root := t.TempDir()
-	handler := newTestServices(t, workspace.NewManager(), nil, "node-1")
+	handler := newTestServices(t, nil, "node-1")
 
 	database, err := localdb.Open(filepath.Join(root, "db"))
 	if err != nil {

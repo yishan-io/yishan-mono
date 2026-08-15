@@ -2,8 +2,7 @@ package node
 
 import (
 	"yishan/apps/cli/internal/relay"
-	"yishan/apps/cli/internal/workspace/application"
-	createflow "yishan/apps/cli/internal/workspace/createflow"
+	application "yishan/apps/cli/internal/workspace/application"
 )
 
 const (
@@ -16,7 +15,7 @@ const (
 
 var decodeRelayWorkspaceCreateEnvelope = relay.DecodeCreateEnvelope
 
-type workspaceCreateParams = createflow.WorkspaceCreateParams
+type workspaceCreateParams = application.CreateCommand
 
 // preparedWorkspaceCreate and friends are the daemon's aliases for the
 // application package types so the transport layer speaks the domain
@@ -27,9 +26,9 @@ type WorkspaceCreation = application.Registration
 
 type workspaceCloseParams = application.CloseCommand
 
-type workspaceCreateStartedEvent = createflow.WorkspaceCreateStartedEvent
+type workspaceCreateStartedEvent = application.StartedEvent
 
-type workspaceCreateFailedEvent = createflow.WorkspaceCreateFailedEvent
+type workspaceCreateFailedEvent = application.FailedEvent
 
 type relayWorkspaceCreateEnvelope = relay.CreateEnvelope
 

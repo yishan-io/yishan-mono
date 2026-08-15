@@ -1,8 +1,8 @@
-package createflow
+package application
 
 import "yishan/apps/cli/internal/workspace"
 
-type WorkspaceCreateParams struct {
+type CreateCommand struct {
 	ID             string                   `json:"id,omitempty"`
 	OrganizationID string                   `json:"organizationId,omitempty"`
 	NodeID         string                   `json:"nodeId,omitempty"`
@@ -20,7 +20,7 @@ type WorkspaceCreateParams struct {
 	ReplyNodeID    string                   `json:"replyNodeId,omitempty"`
 }
 
-type WorkspaceCreateStartedEvent struct {
+type StartedEvent struct {
 	WorkspaceID    string `json:"workspaceId"`
 	OrganizationID string `json:"organizationId"`
 	ProjectID      string `json:"projectId"`
@@ -30,7 +30,7 @@ type WorkspaceCreateStartedEvent struct {
 	NodeID         string `json:"nodeId,omitempty"`
 }
 
-type WorkspaceCreateFailedEvent struct {
+type FailedEvent struct {
 	WorkspaceID string `json:"workspaceId"`
 	Message     string `json:"message"`
 }

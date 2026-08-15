@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/terminal"
 
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
@@ -60,7 +62,16 @@ type Config struct {
 // App is the daemon's service composition root. It owns every business
 // service, the background tasks, and the shutdown order (Close).
 type App struct {
-	Manager      *workspace.Manager
+	// Workspace runtime capabilities: the instance registry (single owner of
+	// the open workspace map), the durable SQLite-backed store, and the shared
+	// file/git/terminal services. These replace the historical
+	// workspace.Manager facade.
+	Registry   *instance.Registry
+	Store      workspace.WorkspaceStore
+	Files      *files.FileService
+	Git        *git.GitService
+	Terminals  *terminal.Manager
+
 	Memory       *memory.Service
 	Computer     *computer.Service
 	ModelList    *modellist.Service
@@ -108,8 +119,11 @@ type App struct {
 // context store → token usage → computer (+ settings) → memory → hydrate →
 // watch → background tasks.
 func Bootstrap(cfg Config) (*App, error) {
-	registry := instance.NewRegistry(files.NewFileService())
-	manager := workspace.NewManagerWithRegistryAndStore(registry, localdb.NewStore(localdb.NewWorkspaceStore(cfg.Database)))
+	filesService := files.NewFileService()
+	registry := instance.NewRegistry(filesService)
+	store := localdb.NewStore(localdb.NewWorkspaceStore(cfg.Database))
+	gitService := git.NewGitService()
+	terminals := terminal.NewManager()
 
 	legacyCleanupPath := filepath.Join(cfg.DataDir, cleanupFileName)
 	cleanupStore, err := NewCleanupStore(cfg.Database, legacyCleanupPath)
@@ -118,13 +132,30 @@ func Bootstrap(cfg Config) (*App, error) {
 	}
 
 	events := internalevents.NewHub()
-	prTracker := workspaceprtracker.New(manager, cfg.Runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
-		publishWorkspacePullRequestUpdatedEvent(events, event)
+	prTracker := workspaceprtracker.New(workspaceprtracker.TrackerDeps{
+		Instances: registry,
+		Gits:      gitService,
+		Runtime:   cfg.Runtime,
+		PersistPR: func(ctx context.Context, workspaceID string, pr *workspace.WorkspacePullRequest) error {
+			return store.UpsertPR(ctx, &workspace.StoredPullRequest{
+				WorkspaceID: workspaceID, OrganizationID: prOrgID(registry, workspaceID), PRID: fmt.Sprintf("%d", pr.Number),
+				Title: optionalString(pr.Title), URL: optionalString(pr.URL), Branch: optionalString(pr.Branch),
+				BaseBranch: optionalString(pr.BaseBranch), State: persistedPullRequestState(pr),
+				Metadata: optionalString(marshalPRMetadata(pr)), DetectedAt: persistedPullRequestDetectedAt(pr),
+				ResolvedAt: persistedPullRequestResolvedAt(pr),
+			})
+		},
+		ResolvePR: func(ctx context.Context, workspaceID string, prNumber int) error {
+			return store.ResolvePR(ctx, workspaceID, fmt.Sprintf("%d", prNumber))
+		},
+		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
+			publishWorkspacePullRequestUpdatedEvent(events, event)
+		},
 	})
 	watchers := newWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath)
 	// Watcher and PR-tracker cleanup follows instance removal (close, rollback,
 	// or same-path replacement in the registry).
-	manager.Instances().SetOnRemoved(func(workspaceID string, path string) {
+	registry.SetOnRemoved(func(workspaceID string, path string) {
 		watchers.Unwatch(path)
 		prTracker.StopTracking(workspaceID)
 	})
@@ -132,7 +163,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	tokenUsage := cfg.TokenUsage
 	if tokenUsage == nil {
 		tokenUsage = tokenusage.NewCollectorWithRepository(
-			manager,
+			registry,
 			cfg.Runtime,
 			localdb.NewHourlyUsageStore(cfg.Database),
 			cfg.EnvDir,
@@ -140,7 +171,11 @@ func Bootstrap(cfg Config) (*App, error) {
 	}
 
 	app := &App{
-		Manager:      manager,
+		Registry:     registry,
+		Store:        store,
+		Files:        filesService,
+		Git:          gitService,
+		Terminals:    terminals,
 		Computer:     NewDefaultComputerService(),
 		ModelList:    modellist.NewService(),
 		AgentMgr:     agentmanager.NewManager(),
@@ -170,7 +205,7 @@ func Bootstrap(cfg Config) (*App, error) {
 
 	// Restore persisted workspaces and register a filesystem watcher for every
 	// active one (see WatchActiveWorkspaces for why hydration is not enough).
-	if err := manager.HydrateFromDB(context.Background()); err != nil {
+	if err := app.HydrateFromDB(context.Background()); err != nil {
 		return nil, fmt.Errorf("restore persisted workspaces: %w", err)
 	}
 	app.WatchActiveWorkspaces()

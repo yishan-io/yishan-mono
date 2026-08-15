@@ -10,12 +10,11 @@ import (
 	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 func newSkillTestHandler(t *testing.T) *Services {
 	t.Helper()
-	return newTestServices(t, workspace.NewManager(), nil, "node-1")
+	return newTestServices(t, nil, "node-1")
 }
 
 // TestDispatchSkillListEmptyOnCleanHome verifies skill.list returns no skills

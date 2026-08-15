@@ -11,12 +11,14 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/workspace/instance"
 	"yishan/apps/cli/internal/workspace"
 )
 
 func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -36,7 +38,7 @@ func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, ok := manager.Instances().Get(ws.ID)
+	updated, ok := manager.Get(ws.ID)
 	if !ok {
 		t.Fatalf("GetWorkspace: not found")
 	}
@@ -53,7 +55,7 @@ func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {
 
 func TestWorkspacePRTracker_StopsTrackingMergedPullRequest(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -73,7 +75,7 @@ func TestWorkspacePRTracker_StopsTrackingMergedPullRequest(t *testing.T) {
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, ok := manager.Instances().Get(ws.ID)
+	updated, ok := manager.Get(ws.ID)
 	if !ok {
 		t.Fatalf("GetWorkspace: not found")
 	}
@@ -87,10 +89,10 @@ func TestWorkspacePRTracker_StopsTrackingMergedPullRequest(t *testing.T) {
 
 func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	if err := manager.Instances().SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+	if err := manager.SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
 		t.Fatalf("SetPullRequest: %v", err)
 	}
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -101,7 +103,7 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, ok := manager.Instances().Get(ws.ID)
+	updated, ok := manager.Get(ws.ID)
 	if !ok {
 		t.Fatalf("GetWorkspace: not found")
 	}
@@ -116,10 +118,10 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 
 func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	if err := manager.Instances().SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+	if err := manager.SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
 		t.Fatalf("SetPullRequest: %v", err)
 	}
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -130,7 +132,7 @@ func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T)
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, ok := manager.Instances().Get(ws.ID)
+	updated, ok := manager.Get(ws.ID)
 	if !ok {
 		t.Fatalf("GetWorkspace: not found")
 	}
@@ -144,7 +146,7 @@ func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T)
 
 func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -188,11 +190,11 @@ func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 
 func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	if err := manager.Instances().SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+	if err := manager.SetPullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
 		t.Fatalf("SetPullRequest: %v", err)
 	}
 
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "", errors.New("fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree")
@@ -200,7 +202,7 @@ func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing
 
 	tracker.RefreshWorkspaceByPath(ws.Path)
 
-	updated, ok := manager.Instances().Get(ws.ID)
+	updated, ok := manager.Get(ws.ID)
 	if !ok {
 		t.Fatalf("GetWorkspace: not found")
 	}
@@ -214,7 +216,7 @@ func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing
 
 func TestWorkspacePRTracker_EnsureTrackedSkipsUnsupportedProvider(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.inspectResolver = func(context.Context, string) (git.GitInspectResult, error) {
 		return git.GitInspectResult{
 			IsGitRepository: true,
@@ -237,7 +239,7 @@ func TestWorkspacePRTracker_EnsureTrackedSkipsUnsupportedProvider(t *testing.T) 
 
 func TestWorkspacePRTracker_EnsureTrackedSkipsWorkspaceWithoutRemote(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := New(manager, nil, nil)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
 	tracker.inspectResolver = func(context.Context, string) (git.GitInspectResult, error) {
 		return git.GitInspectResult{
 			IsGitRepository: true,
@@ -259,9 +261,9 @@ func TestWorkspacePRTracker_EnsureTrackedSkipsWorkspaceWithoutRemote(t *testing.
 func TestWorkspacePRTracker_PublishesTypedUpdateOnMeaningfulChange(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
 	published := make(chan PullRequestUpdatedEvent, 1)
-	tracker := New(manager, nil, func(event PullRequestUpdatedEvent) {
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService(), OnPullRequestUpdated: func(event PullRequestUpdatedEvent) {
 		published <- event
-	})
+	}})
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -293,16 +295,16 @@ func TestWorkspacePRTracker_PublishesTypedUpdateOnMeaningfulChange(t *testing.T)
 	}
 }
 
-func openTrackedWorkspace(t *testing.T) (*workspace.Manager, workspace.Workspace) {
+func openTrackedWorkspace(t *testing.T) (*instance.Registry, workspace.Workspace) {
 	t.Helper()
 	root := t.TempDir()
+	if resolved, err := filepath.EvalSymlinks(root); err == nil {
+		root = resolved
+	}
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatalf("mkdir .git: %v", err)
 	}
-	manager := workspace.NewManager()
-	ws, err := manager.Open(workspace.OpenRequest{ID: "workspace-1", Path: root})
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	return manager, ws
+	registry := instance.NewRegistry(files.NewFileService())
+	ws := registry.Open(workspace.Workspace{ID: "workspace-1", Path: root, State: workspace.StateActive})
+	return registry, ws
 }

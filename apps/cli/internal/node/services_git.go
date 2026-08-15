@@ -26,7 +26,7 @@ func (s *Services) GitInspect(ctx context.Context, req rpc.GitInspectParams) (an
 }
 
 func (s *Services) GitInspectPath(ctx context.Context, req rpc.GitInspectPathParams) (any, error) {
-	return s.manager.GitInspect(ctx, req.Path)
+	return s.gits.Inspect(ctx, req.Path)
 }
 
 func (s *Services) GitListChanges(ctx context.Context, req rpc.GitStatusParams) (any, error) {

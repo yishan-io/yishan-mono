@@ -206,7 +206,7 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	// is exercised. Folders are strictly non-git so no real watcher is ever
 	// registered, but the manager entry means the delete path must still run
 	// the same teardown calls the workspace-close flow uses without panic.
-	if _, err := s.manager.Open(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
+	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
 		t.Fatalf("open folder in manager: %v", err)
 	}
 	if _, err := s.getWorkspace(created.ID); err != nil {

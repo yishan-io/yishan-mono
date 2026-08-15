@@ -20,7 +20,7 @@ func (a *App) WatchAndTrack(workspaceID string, path string) {
 // would ever be created for pre-existing workspaces after a daemon restart
 // and file-change events (which drive the Git Changes tab) would stop flowing.
 func (a *App) WatchActiveWorkspaces() {
-	for _, ws := range a.Manager.Instances().List() {
+	for _, ws := range a.Registry.List() {
 		if instance.State(ws.State) != instance.StateActive {
 			continue
 		}

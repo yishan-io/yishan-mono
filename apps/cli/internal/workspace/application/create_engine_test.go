@@ -1,4 +1,4 @@
-package workspace
+package application
 
 import (
 	"context"
@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 )
 
 // TestResolveCreatePaths_SlashInWorkspaceName verifies that a branch name
@@ -23,7 +26,7 @@ func TestResolveCreatePaths_SlashInWorkspaceName(t *testing.T) {
 		t.Fatalf("eval symlinks: %v", err)
 	}
 
-	req := CreateRequest{
+	req := workspace.CreateRequest{
 		ID:            "ws-1",
 		RepoKey:       "owner/repo",
 		WorkspaceName: "feature/my-branch",
@@ -78,7 +81,7 @@ func TestResolveCreatePaths_SimpleName(t *testing.T) {
 		t.Fatalf("eval symlinks: %v", err)
 	}
 
-	req := CreateRequest{
+	req := workspace.CreateRequest{
 		ID:            "ws-2",
 		RepoKey:       "owner/repo",
 		WorkspaceName: "my-branch",
@@ -118,7 +121,7 @@ func TestResolveCreatePaths_MultipleSlashes(t *testing.T) {
 		t.Fatalf("eval symlinks: %v", err)
 	}
 
-	req := CreateRequest{
+	req := workspace.CreateRequest{
 		ID:            "ws-3",
 		RepoKey:       "owner/repo",
 		WorkspaceName: "a/b/c",
@@ -173,8 +176,8 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 		_ = os.RemoveAll(worktreePath)
 	})
 
-	manager := NewManager()
-	req := CreateRequest{
+	registry := instance.NewRegistry(files.NewFileService())
+	req := workspace.CreateRequest{
 		ID:             "ws-state-test",
 		RepoKey:        repoKey,
 		WorkspaceName:  workspaceName,
@@ -185,22 +188,22 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 		ProjectID:      "project-1",
 	}
 
-	ws, err := manager.CreateWorkspaceWithProgress(context.Background(), req, nil)
+	ws, err := CreateWorkspace(registry, context.Background(), req, nil)
 	if err != nil {
-		t.Fatalf("CreateWorkspaceWithProgress: %v", err)
+		t.Fatalf("CreateWorkspace: %v", err)
 	}
 
-	if ws.State != StateActive {
-		t.Errorf("Workspace.State = %q, want %q", ws.State, StateActive)
+	if ws.State != workspace.StateActive {
+		t.Errorf("Workspace.State = %q, want %q", ws.State, workspace.StateActive)
 	}
 
-	// Also confirm the in-memory manager entry carries the correct state.
-	stored, ok := manager.Instances().Get("ws-state-test")
+	// Also confirm the runtime registry entry carries the correct state.
+	stored, ok := registry.Get("ws-state-test")
 	if !ok {
 		t.Fatal("GetWorkspace: not found")
 	}
-	if stored.State != StateActive {
-		t.Errorf("stored Workspace.State = %q, want %q", stored.State, StateActive)
+	if stored.State != workspace.StateActive {
+		t.Errorf("stored Workspace.State = %q, want %q", stored.State, workspace.StateActive)
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/terminal"
 )
 
 // The remote terminal stream subscription map is app-side state: it tracks
@@ -176,13 +177,13 @@ func handleTerminalStreamRequest(handler *Services, connState *rpc.Connection, p
 		return
 	}
 
-	subscription, err := handler.manager.Terminals().Subscribe(workspace.TerminalSubscribeRequest{SessionID: p.SessionID})
+	subscription, err := handler.terminals.Subscribe(terminal.SubscribeRequest{SessionID: p.SessionID})
 	if err != nil {
 		log.Warn().Err(err).Str("sessionId", p.SessionID).Msg("relay: terminal.stream.request subscribe failed")
 		return
 	}
 	connState.AttachSubscription(p.SessionID, subscription.ID, subscription.Events, func(sessionID string, subscriptionID uint64) {
-		_, _ = handler.manager.Terminals().Unsubscribe(workspace.TerminalUnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
+		_, _ = handler.terminals.Unsubscribe(terminal.UnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
 	})
 
 	// Acknowledge the stream to the relay (relay forwards to subscriber).

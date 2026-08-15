@@ -27,8 +27,7 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 
 	var recorder apiCallRecorder
 	apiServer := newWorkspaceAPIStub(t, &recorder)
-	manager := workspace.NewManager()
-	s := newBehaviorHandler(t, manager, apiConfiguredRuntime(apiServer), "node-1", openMigratedTestDB(t))
+	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", openMigratedTestDB(t))
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 
@@ -120,7 +119,7 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 	}
 
 	// In-memory runtime record.
-	ws, ok := manager.Instances().Get("ws-seq-1")
+	ws, ok := s.registry.Get("ws-seq-1")
 	if !ok || ws.State != workspace.StateActive {
 		t.Fatalf("manager workspace = %#v, ok %v; want active", ws, ok)
 	}
@@ -131,9 +130,8 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 func TestCreateRemoteNode_EventSequence(t *testing.T) {
 	var recorder apiCallRecorder
 	apiServer := newWorkspaceAPIStub(t, &recorder)
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, apiConfiguredRuntime(apiServer), "node-1", database)
+	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 	relayMessages := wireRelayCapture(t, s, map[string]any{"accepted": true})
@@ -188,8 +186,8 @@ func TestCreateRemoteNode_EventSequence(t *testing.T) {
 	if _, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-remote-1"); err == nil {
 		t.Fatal("expected no local SQLite row for remote-target create")
 	}
-	if len(manager.Instances().List()) != 0 {
-		t.Fatalf("expected no manager runtime records, got %v", manager.Instances().List())
+	if len(s.registry.List()) != 0 {
+		t.Fatalf("expected no manager runtime records, got %v", s.registry.List())
 	}
 }
 
@@ -202,9 +200,8 @@ func TestCreateRemoteNode_EventSequence(t *testing.T) {
 func TestCreateLocalNode_WorktreeStepFailureRollsBack(t *testing.T) {
 	var recorder apiCallRecorder
 	apiServer := newWorkspaceAPIStub(t, &recorder)
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, apiConfiguredRuntime(apiServer), "node-1", database)
+	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 
@@ -250,8 +247,8 @@ func TestCreateLocalNode_WorktreeStepFailureRollsBack(t *testing.T) {
 	if row.Status != "closed" {
 		t.Fatalf("persisted status = %q, want closed", row.Status)
 	}
-	if len(manager.Instances().List()) != 0 {
-		t.Fatalf("expected no manager runtime records after failed create, got %v", manager.Instances().List())
+	if len(s.registry.List()) != 0 {
+		t.Fatalf("expected no manager runtime records after failed create, got %v", s.registry.List())
 	}
 }
 
@@ -266,9 +263,8 @@ func TestCreateLocalNode_ContextStepFailureRollsBackWorktree(t *testing.T) {
 
 	var recorder apiCallRecorder
 	apiServer := newWorkspaceAPIStub(t, &recorder)
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, apiConfiguredRuntime(apiServer), "node-1", database)
+	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 
@@ -343,9 +339,8 @@ func TestCreateLocalNode_SetupHookWarningCompletes(t *testing.T) {
 	sourceRepo := filepath.Join(root, "src-repo")
 	initDispatchWorkspaceTestGitRepoWithCommit(t, sourceRepo)
 
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, nil, "node-1", database)
+	s := newBehaviorHandler(t, nil, "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 
@@ -396,9 +391,8 @@ func TestCreateLocalNode_SetupHookWarningCompletes(t *testing.T) {
 func TestCreateRemoteNode_DispatchRejectedRollsBackRegistration(t *testing.T) {
 	var recorder apiCallRecorder
 	apiServer := newWorkspaceAPIStub(t, &recorder)
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, manager, apiConfiguredRuntime(apiServer), "node-1", database)
+	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 	wireRelayCapture(t, s, map[string]any{"accepted": false, "reason": "target node offline"})
@@ -441,10 +435,9 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	sourceRepo := filepath.Join(root, "src-repo")
 	initDispatchWorkspaceTestGitRepoWithCommit(t, sourceRepo)
 
-	manager := workspace.NewManager()
 	database := openMigratedTestDB(t)
 	unreachableRuntime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: "http://127.0.0.1:1", Token: "test-token"}})
-	s := newBehaviorHandler(t, manager, unreachableRuntime, "node-1", database)
+	s := newBehaviorHandler(t, unreachableRuntime, "node-1", database)
 	subscriptionID, eventCh := s.events.Subscribe()
 	defer s.events.Unsubscribe(subscriptionID)
 
@@ -477,7 +470,7 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	if err != nil || row.Status != "active" {
 		t.Fatalf("persisted workspace = %#v, err %v; want status active", row, err)
 	}
-	if _, ok := manager.Instances().Get("ws-unreachable"); !ok {
+	if _, ok := s.registry.Get("ws-unreachable"); !ok {
 		t.Fatal("manager workspace missing")
 	}
 }

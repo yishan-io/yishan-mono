@@ -37,7 +37,7 @@ type SyncContextLinkResult struct {
 // the requested context state. Failures on individual paths are recorded in
 // the result rather than aborting, which matches the UI semantics: the user
 // flipped a single toggle and expects best-effort propagation.
-func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkResult, error) {
+func SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkResult, error) {
 	var contextPath string
 	if !req.NonGit {
 		repoKey, err := worktree.SafeRelativePath(req.RepoKey, "repoKey")
@@ -107,7 +107,7 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 	}
 
 	for _, path := range paths {
-		opErr := ensureContextLink(contextPath, path)
+		opErr := EnsureContextLink(contextPath, path)
 		if opErr != nil {
 			result.Errors[path] = opErr.Error()
 			continue
@@ -190,12 +190,12 @@ func removeNonGitContextDir(worktreePath string) error {
 // links it from `<worktreePath>/.my-context`. It is idempotent: if the link is
 // already correct, it is left in place; existing non-symlink entries at the
 // link path are left untouched to avoid clobbering user data.
-func ensureContextLink(contextPath string, worktreePath string) error {
+func EnsureContextLink(contextPath string, worktreePath string) error {
 	if err := os.MkdirAll(contextPath, 0o755); err != nil {
 		return fmt.Errorf("ensure context dir: %w", err)
 	}
 
-	ensureGitExclude(worktreePath, ContextLinkName)
+	EnsureGitExclude(worktreePath, ContextLinkName)
 
 	linkPath := filepath.Join(worktreePath, ContextLinkName)
 	info, err := os.Lstat(linkPath)
@@ -229,7 +229,7 @@ func ensureContextLink(contextPath string, worktreePath string) error {
 // ensureGitExclude appends pattern to the repository's .git/info/exclude so
 // the entry stays local (not committed via .gitignore). It resolves the common
 // git directory for both regular repos and worktrees, and is idempotent.
-func ensureGitExclude(worktreePath string, pattern string) {
+func EnsureGitExclude(worktreePath string, pattern string) {
 	gitEntry := filepath.Join(worktreePath, ".git")
 
 	info, err := os.Lstat(gitEntry)

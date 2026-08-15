@@ -20,12 +20,11 @@ func TestDispatchFile_Search(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	manager := workspace.NewManager()
-	openedWorkspace, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: root})
+	handler := newTestServices(t, nil, "node-1")
+	openedWorkspace, err := handler.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: root})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	handler := newTestServices(t, manager, nil, "node-1")
 
 	params, err := json.Marshal(map[string]any{
 		"workspaceId": openedWorkspace.ID,

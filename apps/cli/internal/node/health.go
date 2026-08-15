@@ -41,7 +41,7 @@ func (a *App) StartHealthMonitor() {
 // stays on demand (workspace.health) to avoid false positives for
 // git-local/primary workspaces that are plain directories.
 func (a *App) CheckWorkspaceHealth(ctx context.Context) {
-	for _, ws := range a.Manager.Instances().List() {
+	for _, ws := range a.Registry.List() {
 		if instance.State(ws.State) != instance.StateActive {
 			continue
 		}
@@ -59,7 +59,7 @@ func (a *App) CheckWorkspaceHealth(ctx context.Context) {
 // workspace state changed event. Returns the resolved state, health detail,
 // and any health-check error message.
 func (a *App) RefreshWorkspaceHealth(ctx context.Context, workspaceID string) (string, string, string, error) {
-	ws, ok := a.Manager.Instances().Get(workspaceID)
+	ws, ok := a.Registry.Get(workspaceID)
 	if !ok {
 		return "", "", "", workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
 	}
@@ -89,7 +89,7 @@ func (a *App) RefreshWorkspaceHealth(ctx context.Context, workspaceID string) (s
 		}
 	}
 
-	if err := a.Manager.Instances().SetState(workspaceID, state, health); err != nil {
+	if err := a.Registry.SetState(workspaceID, state, health); err != nil {
 		return "", "", "", err
 	}
 

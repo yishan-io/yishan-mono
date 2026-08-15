@@ -66,7 +66,7 @@ func (h Handle) FileReadDiff(ctx context.Context, path string) (git.GitDiffConte
 	return h.files.ReadDiff(ctx, h.instance.Path, path)
 }
 
-func (h Handle) TerminalStart(ctx context.Context, req workspace.TerminalStartRequest) (workspace.TerminalStartResponse, error) {
+func (h Handle) TerminalStart(ctx context.Context, req terminal.StartRequest) (terminal.StartResponse, error) {
 	if req.ProjectID == "" {
 		req.ProjectID = h.instance.ProjectID
 	}

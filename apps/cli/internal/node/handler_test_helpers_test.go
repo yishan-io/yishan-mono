@@ -13,20 +13,23 @@ import (
 	"yishan/apps/cli/internal/computer"
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
-	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 )
 
-// newTestServices builds a handler around a composed test node app,
+// newTestServices builds the services layer around a composed test node app,
 // mirroring the non-database steps of node.Bootstrap (events, watchers, PR
 // tracker, computer, model list, agent manager, pi auth, contexts). Tests that
-// need the local database attach it afterwards via handler.localDatabase.
-func newTestServices(t *testing.T, manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string) *Services {
+// need the local database attach it afterwards via setTestDatabase.
+func newTestServices(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *Services {
 	t.Helper()
-	app := newTestApp(t, manager, runtime, nodeID)
+	app := newTestApp(t, runtime, nodeID)
 	handler := NewServices(app)
 	handler.BuildRPCLayer()
 	handler.relayClient = relay.NewClient(relay.ClientConfig{
@@ -42,20 +45,34 @@ func newTestServices(t *testing.T, manager *workspace.Manager, runtime *clirunti
 	return handler
 }
 
-func newTestApp(t *testing.T, manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string) *App {
+func newTestApp(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *App {
 	t.Helper()
 	root := t.TempDir()
 	events := internalevents.NewHub()
-	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
-		PublishPullRequestUpdated(events, event)
+	filesService := files.NewFileService()
+	registry := instance.NewRegistry(filesService)
+	store := localdb.NewStore(localdb.NewWorkspaceStore(nil))
+	gitService := git.NewGitService()
+	terminals := terminal.NewManager()
+	prTracker := workspaceprtracker.New(workspaceprtracker.TrackerDeps{
+		Instances: registry,
+		Gits:      gitService,
+		Runtime:   runtime,
+		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
+			PublishPullRequestUpdated(events, event)
+		},
 	})
 	watchers := NewWatchers(events, prTracker.RefreshWorkspaceByPath)
-	manager.Instances().SetOnRemoved(func(workspaceID string, path string) {
+	registry.SetOnRemoved(func(workspaceID string, path string) {
 		watchers.Unwatch(path)
 		prTracker.StopTracking(workspaceID)
 	})
 	app := &App{
-		Manager:      manager,
+		Registry:     registry,
+		Store:        store,
+		Files:        filesService,
+		Git:          gitService,
+		Terminals:    terminals,
 		Computer:     computer.NewService(computer.NewUnavailableRuntime("unknown")),
 		ModelList:    modellist.NewService(),
 		AgentMgr:     agentmanager.NewManager(),
@@ -134,15 +151,20 @@ func TestNewServices_CopiesAppServices(t *testing.T) {
 		t.Fatalf("migrate database: %v", err)
 	}
 
+	registry := instance.NewRegistry(files.NewFileService())
 	app := &App{
-		Manager:           workspace.NewManager(),
+		Registry:          registry,
+		Store:             localdb.NewStore(localdb.NewWorkspaceStore(database)),
+		Files:             files.NewFileService(),
+		Git:               git.NewGitService(),
+		Terminals:         terminal.NewManager(),
 		Computer:          computer.NewService(computer.NewUnavailableRuntime("unknown")),
 		ModelList:         modellist.NewService(),
 		AgentMgr:          agentmanager.NewManager(),
 		PIAuth:            NewManagedPiAuthStore(),
 		Events:            internalevents.NewHub(),
 		Watchers:          NewWatchers(internalevents.NewHub(), nil),
-		PRTracker:         workspaceprtracker.New(workspace.NewManager(), nil, nil),
+		PRTracker:         workspaceprtracker.New(workspaceprtracker.TrackerDeps{Instances: registry, Gits: git.NewGitService()}),
 		ContextStore:      NewContextStore(""),
 		Database:          database,
 		Runtime:           nil,
@@ -158,7 +180,10 @@ func TestNewServices_CopiesAppServices(t *testing.T) {
 	if handler.localDatabase != app.Database {
 		t.Fatal("handler.localDatabase must come from app.Database (production wiring)")
 	}
-	if handler.manager != app.Manager || handler.runtime != app.Runtime || handler.nodeID != app.NodeID {
+	if handler.registry != app.Registry || handler.files != app.Files || handler.gits != app.Git || handler.terminals != app.Terminals {
+		t.Fatal("handler did not copy app workspace capability services")
+	}
+	if handler.runtime != app.Runtime || handler.nodeID != app.NodeID {
 		t.Fatal("handler did not copy app identity fields")
 	}
 	if handler.events != app.Events || handler.watchers != app.Watchers || handler.prTracker != app.PRTracker {

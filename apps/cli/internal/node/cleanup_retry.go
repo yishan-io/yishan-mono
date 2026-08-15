@@ -42,7 +42,7 @@ func (a *App) retryPendingCleanups(ctx context.Context) {
 		if err := ctx.Err(); err != nil {
 			return
 		}
-		_, cleanupErr := a.Manager.CloseWorkspacePath(ctx, workspace.ClosePathRequest{
+		_, cleanupErr := a.CloseWorkspacePath(ctx, workspace.ClosePathRequest{
 			WorkspaceID:   item.WorkspaceID,
 			Path:          item.Path,
 			Branch:        item.Branch,
