@@ -35,7 +35,7 @@ func TestDispatchFile_Search(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := handler.dispatchFile(context.Background(), MethodFileSearch, params)
+	result, err := handler.callRPCForTest(context.Background(), MethodFileSearch, params)
 	if err != nil {
 		t.Fatalf("dispatch file.search: %v", err)
 	}

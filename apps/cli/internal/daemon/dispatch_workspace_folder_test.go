@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -33,11 +34,11 @@ func TestHandleWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
 	h, store := newFolderHandler(t)
 	folderPath := t.TempDir()
 
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{Path: folderPath})
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: folderPath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
@@ -70,22 +71,22 @@ func TestHandleWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
 
 func TestHandleWorkspaceCreateLocalFolder_RejectsEmptyPath(t *testing.T) {
 	h, _ := newFolderHandler(t)
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{Path: "   "})
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: "   "})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params); err == nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for empty path")
 	}
 }
 
 func TestHandleWorkspaceCreateLocalFolder_RejectsNonexistentPath(t *testing.T) {
 	h, _ := newFolderHandler(t)
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{Path: filepath.Join(t.TempDir(), "does-not-exist")})
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: filepath.Join(t.TempDir(), "does-not-exist")})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params); err == nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for nonexistent path")
 	}
 }
@@ -96,11 +97,11 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsFilePath(t *testing.T) {
 	if err := os.WriteFile(filePath, []byte("x"), 0o644); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{Path: filePath})
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: filePath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params); err == nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for file path (not a directory)")
 	}
 }
@@ -110,11 +111,11 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
 	repoPath := t.TempDir()
 	initDispatchWorkspaceTestGitRepoWithCommit(t, repoPath)
 
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{Path: repoPath})
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: repoPath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params); err == nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for git repository folder")
 	}
 	// Ensure nothing was persisted for the rejected git folder.
@@ -130,14 +131,14 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
 func TestHandleWorkspaceCreateLocalFolder_RejectsDuplicatePath(t *testing.T) {
 	h, _ := newFolderHandler(t)
 	folderPath := t.TempDir()
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{Path: folderPath})
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: folderPath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err != nil {
 		t.Fatalf("first create: %v", err)
 	}
-	if _, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params); err == nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for duplicate path")
 	}
 }
@@ -155,7 +156,7 @@ func TestHandleWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
 		t.Fatalf("create worktree row: %v", err)
 	}
 
-	result, err := h.handleWorkspaceListLocalFolders(context.Background(), json.RawMessage{})
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceListLocalFolders, json.RawMessage{})
 	if err != nil {
 		t.Fatalf("list local folders: %v", err)
 	}
@@ -177,11 +178,11 @@ func TestHandleWorkspaceDeleteLocalFolder_RemovesRow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create folder: %v", err)
 	}
-	params, err := json.Marshal(workspaceDeleteLocalFolderParams{ID: created.ID})
+	params, err := json.Marshal(rpc.WorkspaceDeleteLocalFolderParams{ID: created.ID})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := h.handleWorkspaceDeleteLocalFolder(context.Background(), params)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params)
 	if err != nil {
 		t.Fatalf("delete local folder: %v", err)
 	}
@@ -212,11 +213,11 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 		t.Fatalf("folder should be open in manager: %v", err)
 	}
 
-	params, err := json.Marshal(workspaceDeleteLocalFolderParams{ID: created.ID})
+	params, err := json.Marshal(rpc.WorkspaceDeleteLocalFolderParams{ID: created.ID})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := h.handleWorkspaceDeleteLocalFolder(context.Background(), params); err != nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params); err != nil {
 		t.Fatalf("delete local folder: %v", err)
 	}
 
@@ -230,23 +231,23 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 
 func TestHandleWorkspaceDeleteLocalFolder_UnknownID(t *testing.T) {
 	h, _ := newFolderHandler(t)
-	params, err := json.Marshal(workspaceDeleteLocalFolderParams{ID: "does-not-exist"})
+	params, err := json.Marshal(rpc.WorkspaceDeleteLocalFolderParams{ID: "does-not-exist"})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
 	// Per Delete convention an unknown id returns a not-found error.
-	if _, err := h.handleWorkspaceDeleteLocalFolder(context.Background(), params); err == nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params); err == nil {
 		t.Fatal("expected error for unknown id")
 	}
 }
 
 func TestHandleWorkspaceDeleteLocalFolder_RejectsEmptyID(t *testing.T) {
 	h, _ := newFolderHandler(t)
-	params, err := json.Marshal(workspaceDeleteLocalFolderParams{ID: ""})
+	params, err := json.Marshal(rpc.WorkspaceDeleteLocalFolderParams{ID: ""})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := h.handleWorkspaceDeleteLocalFolder(context.Background(), params); err == nil {
+	if _, err := h.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params); err == nil {
 		t.Fatal("expected error for empty id")
 	}
 }
@@ -254,14 +255,14 @@ func TestHandleWorkspaceDeleteLocalFolder_RejectsEmptyID(t *testing.T) {
 func TestHandleWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
 	h, store := newFolderHandler(t)
 
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{
 		Path: t.TempDir(),
 		Name: "  Marketing Site  ",
 	})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
@@ -285,11 +286,11 @@ func TestHandleWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
 func TestHandleWorkspaceCreateLocalFolder_EmptyNameIsNil(t *testing.T) {
 	h, store := newFolderHandler(t)
 
-	params, err := json.Marshal(workspaceCreateLocalFolderParams{Path: t.TempDir(), Name: "   "})
+	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: t.TempDir(), Name: "   "})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := h.handleWorkspaceCreateLocalFolder(context.Background(), params)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}

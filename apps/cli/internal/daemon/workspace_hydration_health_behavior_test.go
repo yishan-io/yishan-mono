@@ -10,6 +10,7 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/dbconv"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 )
@@ -101,13 +102,13 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal health params: %v", err)
 	}
-	result, err := h.handleWorkspaceHealth(context.Background(), raw)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceHealth, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceHealth: %v", err)
 	}
-	healthResult, ok := result.(workspaceHealthResult)
+	healthResult, ok := result.(rpc.WorkspaceHealthResult)
 	if !ok {
-		t.Fatalf("health result = %T, want workspaceHealthResult", result)
+		t.Fatalf("health result = %T, want rpc.WorkspaceHealthResult", result)
 	}
 	if healthResult.State != string(workspace.StateError) || healthResult.Health != string(workspace.HealthNotWorktree) {
 		t.Fatalf("health result = %#v, want state error health not-worktree", healthResult)

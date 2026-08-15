@@ -1,38 +1,10 @@
 package daemon
 
 import (
-	"context"
-	"encoding/json"
-
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
-
-func (h *JSONRPCHandler) handleWorkspaceHealth(ctx context.Context, params json.RawMessage) (any, error) {
-	var req workspaceHealthParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
-
-	ws, err := h.getWorkspace(req.WorkspaceID)
-	if err != nil {
-		return nil, err
-	}
-
-	state, health, healthErr, err := h.nodeApp.RefreshWorkspaceHealth(ctx, req.WorkspaceID)
-	if err != nil {
-		return nil, err
-	}
-
-	return workspaceHealthResult{
-		WorkspaceID: req.WorkspaceID,
-		State:       state,
-		Health:      health,
-		Path:        ws.Path,
-		Error:       healthErr,
-	}, nil
-}
 
 func (h *JSONRPCHandler) summarizeUsedAgents(workspaceID string, closeReq workspace.CloseRequest) {
 	if h.memory == nil {

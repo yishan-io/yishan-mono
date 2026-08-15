@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -34,7 +35,7 @@ func TestJSONRPCHandler_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testin
 	}
 	handler := newTestJSONRPCHandler(t, manager, nil, "node-1")
 
-	workspaceID, didOpen, err := handler.openProjectWorkspace(workspaceOpenProjectEntry{
+	workspaceID, didOpen, err := handler.openProjectWorkspace(rpc.WorkspaceOpenProjectEntry{
 		WorkspaceID:  "workspace-1",
 		WorktreePath: root,
 		ProjectID:    "project-1",

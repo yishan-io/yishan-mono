@@ -2,35 +2,22 @@ package daemon
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"strings"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
-type workspaceCreateLocalFolderParams struct {
-	Path string `json:"path"`
-	Name string `json:"name,omitempty"`
-}
-
-type workspaceDeleteLocalFolderParams struct {
-	ID string `json:"id"`
-}
-
-// handleWorkspaceCreateLocalFolder registers a local non-git folder as a
+// WorkspaceCreateLocalFolder registers a local non-git folder as a
 // daemon-owned workspace row. The folder is validated before insertion: it must
 // exist, be a directory, must not already be a git repository (folder
 // workspaces are strictly non-git), and must not already be tracked.
-func (h *JSONRPCHandler) handleWorkspaceCreateLocalFolder(ctx context.Context, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) WorkspaceCreateLocalFolder(ctx context.Context, req rpc.WorkspaceCreateLocalFolderParams) (any, error) {
 	if h.localDatabase == nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "local database is not configured")
-	}
-	var req workspaceCreateLocalFolderParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
 	}
 	rawPath := strings.TrimSpace(req.Path)
 	if rawPath == "" {
@@ -105,27 +92,23 @@ func isFolderPathUniqueViolation(err error) bool {
 	return strings.Contains(lower, "unique constraint") && strings.Contains(lower, "local_path")
 }
 
-// handleWorkspaceListLocalFolders returns all local-only folder workspaces that
+// WorkspaceListLocalFolders returns all local-only folder workspaces that
 // the daemon has persisted. They are not required to be open in the runtime
 // manager; the desktop opens them on demand.
-func (h *JSONRPCHandler) handleWorkspaceListLocalFolders(ctx context.Context, _ json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) WorkspaceListLocalFolders(ctx context.Context) (any, error) {
 	if h.localDatabase == nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "local database is not configured")
 	}
 	return localdb.NewWorkspaceStore(h.localDatabase).ListFolders(ctx)
 }
 
-// handleWorkspaceDeleteLocalFolder removes a folder workspace row. If the folder
+// WorkspaceDeleteLocalFolder removes a folder workspace row. If the folder
 // is currently open in the runtime manager, its terminals are stopped and it is
 // unregistered from memory before the row is deleted. Git teardown is not
 // performed: folder workspaces are plain directories, not worktrees.
-func (h *JSONRPCHandler) handleWorkspaceDeleteLocalFolder(ctx context.Context, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) WorkspaceDeleteLocalFolder(ctx context.Context, req rpc.WorkspaceDeleteLocalFolderParams) (any, error) {
 	if h.localDatabase == nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "local database is not configured")
-	}
-	var req workspaceDeleteLocalFolderParams
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
 	}
 	if strings.TrimSpace(req.ID) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "id is required")

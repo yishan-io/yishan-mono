@@ -17,7 +17,7 @@ func TestDispatchComputerPermissions(t *testing.T) {
 	h := newTestHandler(t)
 	h.SetComputerService(computer.NewService(computermock.Runtime{}))
 
-	result, err := h.dispatchComputer(context.Background(), MethodComputerPermissions, nil)
+	result, err := h.callRPCForTest(context.Background(), MethodComputerPermissions, nil)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestDispatchComputerListDisplays(t *testing.T) {
 		},
 	}))
 
-	result, err := h.dispatchComputer(context.Background(), MethodComputerListDisplays, nil)
+	result, err := h.callRPCForTest(context.Background(), MethodComputerListDisplays, nil)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestDispatchComputerListWindowsUsesFilter(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := h.dispatchComputer(context.Background(), MethodComputerListWindows, params)
+	result, err := h.callRPCForTest(context.Background(), MethodComputerListWindows, params)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestDispatchComputerCaptureDisplay(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := h.dispatchComputer(context.Background(), MethodComputerCaptureDisplay, params)
+	result, err := h.callRPCForTest(context.Background(), MethodComputerCaptureDisplay, params)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestDispatchComputerCaptureWindowRequiresWindowID(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	_, err = h.dispatchComputer(context.Background(), MethodComputerCaptureWindow, params)
+	_, err = h.callRPCForTest(context.Background(), MethodComputerCaptureWindow, params)
 	var rpcErr *workspace.RPCError
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)
@@ -159,7 +159,7 @@ func TestDispatchComputerOpenPermissionSettingsRequiresPermission(t *testing.T) 
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	_, err = h.dispatchComputer(context.Background(), MethodComputerOpenPermissionSettings, params)
+	_, err = h.callRPCForTest(context.Background(), MethodComputerOpenPermissionSettings, params)
 	var rpcErr *workspace.RPCError
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)

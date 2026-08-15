@@ -33,7 +33,7 @@ func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *tes
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	_, err = handler.handleWorkspaceCreate(context.Background(), params)
+	_, err = handler.callRPCForTest(context.Background(), MethodWorkspaceCreate, params)
 	if err == nil || !strings.Contains(err.Error(), "unsupported task-run agent kind") {
 		t.Fatalf("err = %v, want unsupported task-run agent kind", err)
 	}

@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"path/filepath"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/modellist"
 	"yishan/apps/cli/internal/node"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
@@ -92,4 +94,10 @@ func expectNoEvent(t *testing.T, events <-chan frontendEvent, wait time.Duration
 func (h *JSONRPCHandler) setTestDatabase(database *sql.DB) {
 	h.localDatabase = database
 	h.nodeApp.Database = database
+}
+
+// callRPCForTest routes a method+params through the namespace router, the same
+// path rpc.Server uses for live connections.
+func (h *JSONRPCHandler) callRPCForTest(ctx context.Context, method string, params json.RawMessage) (any, error) {
+	return h.router.Call(ctx, &rpc.Connection{}, method, params)
 }

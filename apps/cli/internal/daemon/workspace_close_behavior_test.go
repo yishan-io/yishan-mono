@@ -40,7 +40,7 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 		t.Fatalf("marshal close params: %v", err)
 	}
 
-	result, err := h.handleWorkspaceClose(context.Background(), raw)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceClose, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceClose: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 		t.Fatalf("marshal close params: %v", err)
 	}
 
-	result, err := h.handleWorkspaceClose(context.Background(), raw)
+	result, err := h.callRPCForTest(context.Background(), MethodWorkspaceClose, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceClose: %v", err)
 	}

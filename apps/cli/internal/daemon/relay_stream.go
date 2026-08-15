@@ -8,19 +8,6 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// terminalRemoteSubscribeRequest is sent by the desktop to daemon B to request
-// PTY streaming from a session on another node.
-type terminalRemoteSubscribeRequest struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-}
-
-// terminalRemoteUnsubscribeRequest is sent by the desktop to stop a remote stream.
-type terminalRemoteUnsubscribeRequest struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-}
-
 func (h *JSONRPCHandler) addRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
 	h.remoteStreamMu.Lock()
 	defer h.remoteStreamMu.Unlock()
@@ -82,11 +69,11 @@ func (h *JSONRPCHandler) remoteStreamTargets(sessionID string) []*rpc.Connection
 
 // remoteSubscribe sends terminal.stream.request to the relay so the owning
 // daemon starts forwarding PTY output for sessionId to this node.
-func (h *JSONRPCHandler) remoteSubscribe(connState *rpc.Connection, req terminalRemoteSubscribeRequest) (any, error) {
+func (h *JSONRPCHandler) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRemoteSubscribeParams) (any, error) {
 	firstSub := h.addRemoteStreamSub(req.SessionID, connState)
 	connState.AddCloseHook(func() {
 		for _, sessionID := range h.removeRemoteStreamSubsForConn(connState) {
-			_, _ = h.remoteUnsubscribe(connState, terminalRemoteUnsubscribeRequest{SessionID: sessionID})
+			_, _ = h.remoteUnsubscribe(connState, rpc.TerminalRemoteUnsubscribeParams{SessionID: sessionID})
 		}
 	})
 	if !firstSub {
@@ -115,7 +102,7 @@ func (h *JSONRPCHandler) remoteSubscribe(connState *rpc.Connection, req terminal
 }
 
 // remoteUnsubscribe sends terminal.stream.cancel to the relay.
-func (h *JSONRPCHandler) remoteUnsubscribe(connState *rpc.Connection, req terminalRemoteUnsubscribeRequest) (any, error) {
+func (h *JSONRPCHandler) remoteUnsubscribe(connState *rpc.Connection, req rpc.TerminalRemoteUnsubscribeParams) (any, error) {
 	if !h.removeRemoteStreamSub(req.SessionID, connState) {
 		return map[string]bool{"ok": true}, nil
 	}
