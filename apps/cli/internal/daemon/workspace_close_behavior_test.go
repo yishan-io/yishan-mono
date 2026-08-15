@@ -28,7 +28,7 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "ws-close-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: path,
-		State: workspace.WorkspaceStateActive,
+		State: string(workspace.StateActive),
 	}); err != nil {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "ws-remote-close", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-2",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: t.TempDir(),
-		State: workspace.WorkspaceStateActive,
+		State: string(workspace.StateActive),
 	}); err != nil {
 		t.Fatalf("create persisted workspace: %v", err)
 	}

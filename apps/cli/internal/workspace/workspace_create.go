@@ -108,7 +108,7 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 		Path:      paths.WorktreePath,
 		OrgID:     req.OrganizationID,
 		ProjectID: req.ProjectID,
-		State:     WorkspaceStateActive,
+		State:     StateActive,
 	}
 
 	steps := []createProgressStep{

@@ -62,7 +62,7 @@ Each app has a defined layering contract. Do not skip layers.
 |---|---|
 | `desktop` | views → commands → store actions → domain helpers |
 | `api-service` | routes → handlers → services → db (Drizzle) |
-| `cli` | cmd → internal packages (daemon, workspace, provision, auth) |
+| `cli` | cmd → daemon (transport) → `workspace/application.Service` (create/close) → workspace interfaces → adapters (`instance`, `worktree`, `apiclient`, `dbconv`, `relay`) |
 | `relay` | cmd → internal/relay → internal/jobqueue, internal/auth |
 
 **A handler must not query the database.** A view must not call a store action's domain
@@ -333,6 +333,25 @@ internal/
   inline business logic. Each case must call a dedicated handler method.
 - Method name constants (e.g., `MethodGitBranches`) must be used in every case — never
   compare against raw string literals.
+
+### Workspace lifecycle layering (cli daemon)
+- `internal/daemon` is transport + process bootstrap: JSON-RPC/relay handlers decode
+  input, call **one** `application.Service` method, and encode the result. Handlers
+  must not decide routing (local vs remote node) or rollback policy.
+- `internal/workspace/application.Service` owns workspace create/close orchestration:
+  routing, rollback, and createflow execution. Create and close each have one
+  application owner; `internal/workspace/createflow` stays an internal collaborator.
+- The workspace layer depends on `internal/workspace` interfaces (`InstanceRegistry`,
+  `WorkspaceStore`) and `internal/worktree` for git worktree provisioning. The daemon
+  injects the concrete adapters: `internal/workspace/instance.Registry`,
+  `internal/dbconv.Store`, `internal/apiclient` builders.
+- Conversion between domain and transport/persistence types lives in the adapter
+  packages only: `internal/apiclient` (API DTOs), `internal/dbconv` (SQLite rows),
+  `internal/relay` (relay envelopes). The domain packages must not import
+  `internal/api` or `internal/db`.
+- Runtime state/health are the typed `workspace.State`/`workspace.Health` values
+  (aliased as `instance.State`/`instance.Health`); use `State.Transition` for state
+  changes. Do not add new lifecycle string constants.
 
 ---
 

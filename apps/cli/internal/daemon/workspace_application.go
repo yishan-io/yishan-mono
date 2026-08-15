@@ -189,7 +189,7 @@ func (a *appDeps) CloseWorkspacePath(ctx context.Context, req workspace.ClosePat
 }
 
 func (a *appDeps) SetState(workspaceID string, state instance.State, health instance.Health) error {
-	return a.h.manager.Instances().SetState(workspaceID, string(state), string(health))
+	return a.h.manager.Instances().SetState(workspaceID, state, health)
 }
 
 func (a *appDeps) Get(workspaceID string) (workspace.Workspace, error) {

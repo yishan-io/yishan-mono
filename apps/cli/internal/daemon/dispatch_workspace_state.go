@@ -77,7 +77,7 @@ func (h *JSONRPCHandler) refreshWorkspaceHealth(ctx context.Context, workspaceID
 		}
 	}
 
-	if err := h.manager.Instances().SetState(workspaceID, string(state), string(health)); err != nil {
+	if err := h.manager.Instances().SetState(workspaceID, state, health); err != nil {
 		return "", "", "", err
 	}
 

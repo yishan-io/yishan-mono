@@ -23,7 +23,7 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "ws-closing", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "closing", LocalPath: path,
-		State: workspace.WorkspaceStateClosing,
+		State: string(workspace.StateClosing),
 	}); err != nil {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
@@ -43,11 +43,11 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 	database := openMigratedTestDB(t)
 	store := localdb.NewWorkspaceStore(database)
 	path := t.TempDir() // exists, so the row can be opened
-	health := workspace.WorkspaceHealthPathMissing
+	health := string(workspace.HealthPathMissing)
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "ws-recovered", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: path,
-		State: workspace.WorkspaceStateActive, Health: &health,
+		State: string(workspace.StateActive), Health: &health,
 	}); err != nil {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
@@ -61,14 +61,14 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
-	if ws.State != workspace.WorkspaceStateActive || ws.Health != "" {
+	if ws.State != workspace.StateActive || ws.Health != "" {
 		t.Fatalf("hydrated workspace = %#v, want state active health empty", ws)
 	}
 	row, err := store.Get(context.Background(), "ws-recovered")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if row.State != workspace.WorkspaceStateActive || row.Health == nil || *row.Health != "" {
+	if row.State != string(workspace.StateActive) || row.Health == nil || *row.Health != "" {
 		t.Fatalf("persisted row = %#v, want state active health reset to empty", row)
 	}
 }
@@ -92,7 +92,7 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
 		ID: "ws-h1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: path,
-		State: workspace.WorkspaceStateActive,
+		State: string(workspace.StateActive),
 	}); err != nil {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	if !ok {
 		t.Fatalf("health result = %T, want workspaceHealthResult", result)
 	}
-	if healthResult.State != workspace.WorkspaceStateError || healthResult.Health != workspace.WorkspaceHealthNotWorktree {
+	if healthResult.State != string(workspace.StateError) || healthResult.Health != string(workspace.HealthNotWorktree) {
 		t.Fatalf("health result = %#v, want state error health not-worktree", healthResult)
 	}
 
@@ -118,7 +118,7 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if row.State != workspace.WorkspaceStateError || row.Health == nil || *row.Health != workspace.WorkspaceHealthNotWorktree {
+	if row.State != string(workspace.StateError) || row.Health == nil || *row.Health != string(workspace.HealthNotWorktree) {
 		t.Fatalf("persisted row = %#v, want error/not-worktree", row)
 	}
 	stateEvents := []frontendEvent{}
@@ -131,7 +131,7 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 		t.Fatalf("expected one workspaceStateChanged event, got %v", eventTopicNames(stateEvents))
 	}
 	payload := stateEvents[0].Payload.(map[string]any)
-	if payload["state"] != workspace.WorkspaceStateError || payload["health"] != workspace.WorkspaceHealthNotWorktree {
+	if payload["state"] != string(workspace.StateError) || payload["health"] != string(workspace.HealthNotWorktree) {
 		t.Fatalf("workspaceStateChanged payload = %#v", payload)
 	}
 }
@@ -147,7 +147,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
 		ID: "ws-folder", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindFolder), Status: "active", LocalPath: path,
-		State: workspace.WorkspaceStateActive,
+		State: string(workspace.StateActive),
 	}); err != nil {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}
-	if state != workspace.WorkspaceStateActive || health != "" || healthErr != "" {
+	if state != string(workspace.StateActive) || health != "" || healthErr != "" {
 		t.Fatalf("folder health = state %q health %q err %q, want active/''/''", state, health, healthErr)
 	}
 }
@@ -169,7 +169,7 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 	manager := workspace.NewManager()
 	h := newBehaviorHandler(t, manager, nil, "node-1", nil)
 	openLocalWorkspace(t, manager, "ws-recover", gitRepo)
-	if err := manager.Instances().SetState("ws-recover", string(instance.StateError), string(instance.HealthPathMissing)); err != nil {
+	if err := manager.Instances().SetState("ws-recover", instance.StateError, instance.HealthPathMissing); err != nil {
 		t.Fatalf("SetState: %v", err)
 	}
 	if h.watchers.IsWatching(gitRepo) {
@@ -180,7 +180,7 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}
-	if state != workspace.WorkspaceStateActive || health != "" {
+	if state != string(workspace.StateActive) || health != "" {
 		t.Fatalf("recovered health = state %q health %q, want active/''", state, health)
 	}
 	// The watcher is registered under the canonicalized path (EvalSymlinks

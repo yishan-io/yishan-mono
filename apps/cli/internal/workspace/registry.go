@@ -17,7 +17,7 @@ type InstanceRegistry interface {
 	// List returns all instances.
 	List() []Workspace
 	// SetState updates the runtime state and health of an instance.
-	SetState(workspaceID string, state string, health string) error
+	SetState(workspaceID string, state State, health Health) error
 	// SetPullRequest attaches the observed pull request to an instance.
 	SetPullRequest(workspaceID string, pr *WorkspacePullRequest) error
 	// Remove drops an instance (firing the removal hook when one is set).
@@ -109,7 +109,7 @@ func (r *memoryRegistry) List() []Workspace {
 	return out
 }
 
-func (r *memoryRegistry) SetState(workspaceID string, state string, health string) error {
+func (r *memoryRegistry) SetState(workspaceID string, state State, health Health) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	ws, ok := r.instances[workspaceID]

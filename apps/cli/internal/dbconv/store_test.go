@@ -109,7 +109,7 @@ func TestProvisioningRow_NilBranchWhenEmpty(t *testing.T) {
 		ID: "ws-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
 		Kind: workspace.KindWorktree, Branch: "", SourceBranch: "main",
 	})
-	if row.Status != "provisioning" || row.State != workspace.WorkspaceStateActive || row.LocalPath != "" {
+	if row.Status != "provisioning" || row.State != string(workspace.StateActive) || row.LocalPath != "" {
 		t.Fatalf("row = %#v", row)
 	}
 	if row.Branch != nil {

@@ -14,22 +14,13 @@ import (
 	"yishan/apps/cli/internal/worktree"
 )
 
-const (
-	WorkspaceStateActive  = "active"
-	WorkspaceStateError   = "error"
-	WorkspaceStateClosing = "closing"
-
-	WorkspaceHealthPathMissing = "path-missing"
-	WorkspaceHealthNotWorktree = "not-worktree"
-)
-
 type Workspace struct {
 	ID              string                `json:"id"`
 	Path            string                `json:"path"`
 	OrgID           string                `json:"orgId,omitempty"`
 	ProjectID       string                `json:"projectId,omitempty"`
-	State           string                `json:"state"`
-	Health          string                `json:"health,omitempty"`
+	State           State                 `json:"state"`
+	Health          Health                `json:"health,omitempty"`
 	SetupHookResult *HookResult           `json:"setupHookResult,omitempty"`
 	PullRequest     *WorkspacePullRequest `json:"pullRequest,omitempty"`
 }
@@ -117,19 +108,19 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 			// Any open failure (missing path, path replaced by a file,
 			// permissions, ...) leaves the workspace unusable: register it as
 			// error so the UI offers close-only and it stays closable.
-			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateError, WorkspaceHealthPathMissing)
-			m.registerErrorWorkspace(storedWorkspace, WorkspaceHealthPathMissing)
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(StateError), string(HealthPathMissing))
+			m.registerErrorWorkspace(storedWorkspace, HealthPathMissing)
 			continue
 		}
 		if isPersistedNotWorktreeError(storedWorkspace) {
 			// Open succeeds for any directory, so a previously-detected
 			// not-worktree error must be preserved, not reset to active.
-			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateError, WorkspaceHealthNotWorktree)
-			m.registerErrorWorkspace(storedWorkspace, WorkspaceHealthNotWorktree)
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(StateError), string(HealthNotWorktree))
+			m.registerErrorWorkspace(storedWorkspace, HealthNotWorktree)
 			continue
 		}
-		if storedWorkspace.State != WorkspaceStateActive || (storedWorkspace.Health != nil && *storedWorkspace.Health != "") {
-			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, WorkspaceStateActive, "")
+		if storedWorkspace.State != string(StateActive) || (storedWorkspace.Health != nil && *storedWorkspace.Health != "") {
+			m.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(StateActive), "")
 		}
 		if err := m.hydrateWorkspacePullRequest(ctx, storedWorkspace.ID); err != nil {
 			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping PR hydration for workspace")
@@ -153,14 +144,14 @@ func (m *Manager) persistWorkspaceLifecycleState(ctx context.Context, workspaceI
 // isPersistedNotWorktreeError reports whether the stored row carries a
 // previously-detected not-worktree error that must survive rehydration.
 func isPersistedNotWorktreeError(storedWorkspace StoredWorkspace) bool {
-	return storedWorkspace.State == WorkspaceStateError &&
-		storedWorkspace.Health != nil && *storedWorkspace.Health == WorkspaceHealthNotWorktree
+	return storedWorkspace.State == string(StateError) &&
+		storedWorkspace.Health != nil && *storedWorkspace.Health == string(HealthNotWorktree)
 }
 
 // registerErrorWorkspace registers or updates an in-memory workspace as error
 // with the given health detail. Used when a persisted workspace cannot be
 // opened (missing path) or must stay error (not-worktree).
-func (m *Manager) registerErrorWorkspace(storedWorkspace StoredWorkspace, health string) {
+func (m *Manager) registerErrorWorkspace(storedWorkspace StoredWorkspace, health Health) {
 	ws, ok := m.instances.Get(storedWorkspace.ID)
 	if !ok {
 		ws = Workspace{
@@ -170,7 +161,7 @@ func (m *Manager) registerErrorWorkspace(storedWorkspace StoredWorkspace, health
 			ProjectID: storedWorkspace.ProjectID,
 		}
 	}
-	ws.State = WorkspaceStateError
+	ws.State = StateError
 	ws.Health = health
 	m.instances.Open(ws)
 }
@@ -292,7 +283,7 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 		Path:      absPath,
 		OrgID:     req.OrgID,
 		ProjectID: req.ProjectID,
-		State:     WorkspaceStateActive,
+		State:     StateActive,
 	})
 	return ws, nil
 }

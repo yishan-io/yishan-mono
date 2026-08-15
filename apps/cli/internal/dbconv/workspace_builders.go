@@ -23,7 +23,7 @@ func ProvisioningRow(registration application.Registration) localdb.Workspace {
 		Branch:         optionalWorkspaceString(registration.Branch),
 		SourceBranch:   optionalWorkspaceString(registration.SourceBranch),
 		LocalPath:      "",
-		State:          workspace.WorkspaceStateActive,
+		State:          string(workspace.StateActive),
 	}
 }
 
@@ -31,7 +31,7 @@ func ProvisioningRow(registration application.Registration) localdb.Workspace {
 // runtime state, worktree path).
 func ActiveUpdate(created workspace.Workspace) localdb.WorkspaceUpdate {
 	status := string(workspace.StatusActive)
-	state := created.State
+	state := string(created.State)
 	return localdb.WorkspaceUpdate{
 		Status:    &status,
 		State:     &state,

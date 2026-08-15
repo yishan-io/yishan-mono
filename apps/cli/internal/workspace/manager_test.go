@@ -205,7 +205,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected healthy workspace restored: not found")
 	}
-	if healthy.State != WorkspaceStateActive {
+	if healthy.State != StateActive {
 		t.Fatalf("expected healthy workspace active, got %q", healthy.State)
 	}
 
@@ -213,7 +213,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected missing-path workspace registered as error: not found")
 	}
-	if broken.State != WorkspaceStateError || broken.Health != WorkspaceHealthPathMissing {
+	if broken.State != StateError || broken.Health != HealthPathMissing {
 		t.Fatalf("expected error/path-missing, got state=%q health=%q", broken.State, broken.Health)
 	}
 
@@ -221,7 +221,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != WorkspaceStateError || persisted.Health == nil || *persisted.Health != WorkspaceHealthPathMissing {
+	if persisted.State != string(StateError) || persisted.Health == nil || *persisted.Health != string(HealthPathMissing) {
 		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 	if persisted.Status != "active" {
@@ -250,14 +250,14 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected workspace registered as error: not found")
 	}
-	if ws.State != WorkspaceStateError || ws.Health != WorkspaceHealthPathMissing {
+	if ws.State != StateError || ws.Health != HealthPathMissing {
 		t.Fatalf("expected error/path-missing, got state=%q health=%q", ws.State, ws.Health)
 	}
 	persisted, err := store.Get(context.Background(), "workspace-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != WorkspaceStateError || persisted.Health == nil || *persisted.Health != WorkspaceHealthPathMissing {
+	if persisted.State != string(StateError) || persisted.Health == nil || *persisted.Health != string(HealthPathMissing) {
 		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 }
@@ -304,11 +304,11 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 	manager, store := openTestManagerStore(t)
 	workspacePath := t.TempDir()
 	branch := "feature/restored"
-	health := WorkspaceHealthPathMissing
+	health := string(HealthPathMissing)
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
-		State: WorkspaceStateError, Health: &health,
+		State: string(StateError), Health: &health,
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
@@ -320,14 +320,14 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
-	if workspace.State != WorkspaceStateActive || workspace.Health != "" {
+	if workspace.State != StateActive || workspace.Health != "" {
 		t.Fatalf("expected restored workspace active with cleared health, got state=%q health=%q", workspace.State, workspace.Health)
 	}
 	persisted, err := store.Get(context.Background(), "workspace-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != WorkspaceStateActive || (persisted.Health != nil && *persisted.Health != "") {
+	if persisted.State != string(StateActive) || (persisted.Health != nil && *persisted.Health != "") {
 		t.Fatalf("expected persisted active with cleared health, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 }
@@ -338,11 +338,11 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 	// not-worktree error must survive rehydration.
 	workspacePath := t.TempDir()
 	branch := "feature/not-worktree"
-	health := WorkspaceHealthNotWorktree
+	health := string(HealthNotWorktree)
 	if err := store.Create(context.Background(), &localdb.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
-		State: WorkspaceStateError, Health: &health,
+		State: string(StateError), Health: &health,
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
@@ -354,14 +354,14 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
-	if workspace.State != WorkspaceStateError || workspace.Health != WorkspaceHealthNotWorktree {
+	if workspace.State != StateError || workspace.Health != HealthNotWorktree {
 		t.Fatalf("expected preserved error/not-worktree, got state=%q health=%q", workspace.State, workspace.Health)
 	}
 	persisted, err := store.Get(context.Background(), "workspace-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != WorkspaceStateError || persisted.Health == nil || *persisted.Health != WorkspaceHealthNotWorktree {
+	if persisted.State != string(StateError) || persisted.Health == nil || *persisted.Health != string(HealthNotWorktree) {
 		t.Fatalf("expected persisted error/not-worktree, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 }

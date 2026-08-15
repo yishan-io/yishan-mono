@@ -35,7 +35,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
 		Kind: workspace.KindWorktree, Branch: "feature/local-db", SourceBranch: "main",
 	}}
-	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: "project-1", Path: t.TempDir(), State: workspace.WorkspaceStateActive}
+	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: "project-1", Path: t.TempDir(), State: workspace.StateActive}
 
 	if err := handler.persistPreparedWorkspace(context.Background(), prepared); err != nil {
 		t.Fatalf("persist prepared workspace: %v", err)
@@ -551,14 +551,14 @@ func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get workspace: %v", err)
 	}
-	if ws.State != workspace.WorkspaceStateError || ws.Health != workspace.WorkspaceHealthPathMissing {
+	if ws.State != workspace.StateError || ws.Health != workspace.HealthPathMissing {
 		t.Fatalf("expected error/path-missing, got state=%q health=%q", ws.State, ws.Health)
 	}
 
 	select {
 	case event := <-events:
 		payload, ok := event.Payload.(map[string]any)
-		if !ok || payload["workspaceId"] != "ws-1" || payload["state"] != workspace.WorkspaceStateError {
+		if !ok || payload["workspaceId"] != "ws-1" || payload["state"] != string(workspace.StateError) {
 			t.Fatalf("unexpected state changed event: %#v", event.Payload)
 		}
 	case <-time.After(time.Second):
@@ -581,7 +581,7 @@ func TestCheckWorkspaceHealth_KeepsHealthyWorkspaceActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get workspace: %v", err)
 	}
-	if ws.State != workspace.WorkspaceStateActive {
+	if ws.State != workspace.StateActive {
 		t.Fatalf("expected healthy workspace to stay active, got %q", ws.State)
 	}
 }
@@ -622,7 +622,7 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if persisted.State != workspace.WorkspaceStateError || persisted.Health == nil || *persisted.Health != workspace.WorkspaceHealthPathMissing {
+	if persisted.State != string(workspace.StateError) || persisted.Health == nil || *persisted.Health != string(workspace.HealthPathMissing) {
 		t.Fatalf("expected persisted error/path-missing, got state=%q health=%v", persisted.State, persisted.Health)
 	}
 }

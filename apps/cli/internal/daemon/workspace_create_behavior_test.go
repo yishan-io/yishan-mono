@@ -115,13 +115,13 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
-	if row.Status != "active" || row.LocalPath != createdPath || row.State != workspace.WorkspaceStateActive {
+	if row.Status != "active" || row.LocalPath != createdPath || row.State != string(workspace.StateActive) {
 		t.Fatalf("persisted workspace = %#v, want status active state active localPath %q", row, createdPath)
 	}
 
 	// In-memory runtime record.
 	ws, ok := manager.Instances().Get("ws-seq-1")
-	if !ok || ws.State != workspace.WorkspaceStateActive {
+	if !ok || ws.State != workspace.StateActive {
 		t.Fatalf("manager workspace = %#v, ok %v; want active", ws, ok)
 	}
 }

@@ -150,7 +150,7 @@ func TestResolveCreatePaths_MultipleSlashes(t *testing.T) {
 }
 
 // TestCreateWorkspaceWithProgress_SetsStateActive verifies that a successfully
-// created workspace carries State == WorkspaceStateActive so that the daemon
+// created workspace carries State == StateActive so that the daemon
 // index and in-memory map reflect the correct lifecycle state.
 func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 	// Set up a bare-style source repo with one commit so CreateWorktree has a
@@ -190,8 +190,8 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 		t.Fatalf("CreateWorkspaceWithProgress: %v", err)
 	}
 
-	if ws.State != WorkspaceStateActive {
-		t.Errorf("Workspace.State = %q, want %q", ws.State, WorkspaceStateActive)
+	if ws.State != StateActive {
+		t.Errorf("Workspace.State = %q, want %q", ws.State, StateActive)
 	}
 
 	// Also confirm the in-memory manager entry carries the correct state.
@@ -199,8 +199,8 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 	if !ok {
 		t.Fatal("GetWorkspace: not found")
 	}
-	if stored.State != WorkspaceStateActive {
-		t.Errorf("stored Workspace.State = %q, want %q", stored.State, WorkspaceStateActive)
+	if stored.State != StateActive {
+		t.Errorf("stored Workspace.State = %q, want %q", stored.State, StateActive)
 	}
 }
 

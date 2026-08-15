@@ -46,7 +46,7 @@ func (h *JSONRPCHandler) openProjectWorkspace(entry workspaceOpenProjectEntry) (
 			// DB at daemon boot). Watch registration is idempotent per worktree
 			// path, so ensure the filesystem watcher exists even on the skip
 			// path; otherwise file-change events never flow for this workspace.
-			if existingWorkspace.State == workspace.WorkspaceStateActive && strings.TrimSpace(existingWorkspace.Path) != "" {
+			if existingWorkspace.State == workspace.StateActive && strings.TrimSpace(existingWorkspace.Path) != "" {
 				h.watchAndTrack(existingWorkspace.ID, existingWorkspace.Path)
 			}
 			return workspaceID, false, nil

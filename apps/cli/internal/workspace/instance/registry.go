@@ -110,7 +110,7 @@ func (r *Registry) List() []workspace.Workspace {
 	return out
 }
 
-func (r *Registry) SetState(workspaceID string, state string, health string) error {
+func (r *Registry) SetState(workspaceID string, state workspace.State, health workspace.Health) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	ws, ok := r.instances[workspaceID]
