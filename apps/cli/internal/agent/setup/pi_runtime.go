@@ -12,17 +12,6 @@ import (
 	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
-const (
-	piNotifyExtensionName    = "@yishan-io/pi-notify"
-	piSubagentsExtensionName = "@yishan-io/pi-subagents"
-	piMemoryExtensionName    = "@yishan-io/pi-memory"
-	piTaskExtensionName      = "@yishan-io/pi-task"
-	piDevFlowExtensionName   = "@yishan-io/pi-dev-flow"
-	piWorkspaceExtensionName = "@yishan-io/pi-workspace"
-	piAskExtensionName       = "@yishan-io/pi-ask"
-	piLspExtensionName       = "@yishan-io/pi-lsp"
-)
-
 var (
 	// execCommandContext is injectable so tests can stub the pi/skills CLI
 	// invocations and assert args + env without running real commands.
@@ -37,17 +26,6 @@ var (
 	managedPiEnvBase = func() []string {
 		base := shellenv.MergeLoginShellEnv(os.Environ())
 		return shellenv.ResolveEnvWithUserPath(base, os.Getenv("SHELL"))
-	}
-
-	defaultPiExtensionNames = []string{
-		piNotifyExtensionName,
-		piSubagentsExtensionName,
-		piMemoryExtensionName,
-		piTaskExtensionName,
-		piDevFlowExtensionName,
-		piWorkspaceExtensionName,
-		piAskExtensionName,
-		piLspExtensionName,
 	}
 )
 
@@ -87,10 +65,6 @@ func removePiExtensions(ctx context.Context, names []string) error {
 	return nil
 }
 
-func piExtensionInstallSource(name string) string {
-	return "npm:" + name
-}
-
 func runPiCommand(ctx context.Context, args ...string) error {
 	cmd, err := newPiCommand(ctx, args...)
 	if err != nil {
@@ -103,16 +77,12 @@ func runPiCommand(ctx context.Context, args ...string) error {
 	return nil
 }
 
+// isManagedPiExtensionInstalled reports whether a default extension is
+// installed, using the same rule as the catalog (the package.json presence in
+// the managed install dirs). The reconcile state reuses this single
+// installed-state rule instead of owning a second discovery check.
 func isManagedPiExtensionInstalled(name string) bool {
-	cmd, err := newPiCommand(context.Background(), "package", "list")
-	if err != nil {
-		return false
-	}
-	out, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return strings.Contains(string(out), name)
+	return isExtensionPackageInstalled(name, piExtensionInstallSource(name))
 }
 
 func newPiCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {

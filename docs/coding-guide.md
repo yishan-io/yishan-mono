@@ -727,3 +727,20 @@ go vet ./...
 - archtest enforces the sub-package boundaries (record/pricing/attribution are
   leaves; scanner must not import collection/ingestion/repository; the
   collector never imports provider parse code).
+
+### Agent setup ownership (cli)
+- `internal/agent/setup` is the single owner of agent installation, extension
+  setup, and skill discovery (Phase 15). It is partitioned by concept:
+  catalog (ListPiExtensions / ListPiAgents / ListSkills + EnumeratePiSkills
+  discovery), installation (Install/Remove/Update extension + agent mutations
+  + skill add/remove/update + managed-runtime sync — each takes an explicit
+  target), and reconciliation (`GetInstalledState` compares desired state with
+  installed state). Provider declarations (`defaultPiExtensionNames`,
+  `piExtensionInstallSource`) live in `provider.go`, separate from execution.
+- Discovery rules have one owner each: extension discovery = ListPiExtensions,
+  skill discovery = EnumeratePiSkills, agent discovery = ListPiAgents. The
+  reconcile state reuses the catalog's installed-state rule (package.json
+  presence) instead of a second subprocess check.
+- Setup code never imports rpc or daemon (param decoding lives in the node
+  RPC services); no setup function forwards to another package — the
+  hook-install forwarder was removed and callers use `setup/hooks` directly.
