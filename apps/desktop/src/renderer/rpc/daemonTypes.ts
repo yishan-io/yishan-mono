@@ -79,6 +79,14 @@ export type DaemonWorkspace = {
   pullRequest?: DaemonWorkspacePullRequest;
 };
 
+export type DaemonLocalFolder = {
+  id: string;
+  path: string;
+  name?: string;
+  state?: string;
+  health?: string;
+};
+
 export type DaemonWorkspacePullRequest = {
   number: number;
   title?: string;

@@ -104,6 +104,9 @@ export class DaemonClient {
     health: (input: Rpc.WorkspaceHealthInput) => this._workspaceClient.health(input),
     openProject: (input: Rpc.WorkspaceOpenProjectInput) => this._workspaceClient.openProject(input),
     closeProject: (input: Rpc.WorkspaceCloseProjectInput) => this._workspaceClient.closeProject(input),
+    createLocalFolder: (input: { path: string; name?: string }) => this._workspaceClient.createLocalFolder(input),
+    listLocalFolders: () => this._workspaceClient.listLocalFolders(),
+    deleteLocalFolder: (input: { id: string }) => this._workspaceClient.deleteLocalFolder(input),
   };
 
   readonly file = {

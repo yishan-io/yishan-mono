@@ -2,10 +2,17 @@ import type { StateCreator } from "zustand";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspacePullRequestSummary, WorkspaceRecord } from "../api/types";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
-import type { DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
+import type { DaemonLocalFolder, DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
 
 // Re-export chat-domain types from their canonical location.
 export type { AvailableCommand, AvailableModel, ChatMessage } from "./chatTypes";
+
+/**
+ * Synthetic project id used for local (non-git) folder workspaces. Folder
+ * workspaces are daemon-owned rows (kind="folder") mapped into the workspace
+ * list but have no real backend project, so they share this sentinel value.
+ */
+export const LOCAL_FOLDER_PROJECT_ID = "local-folder";
 
 export type WorkspaceProjectCommand = {
   name: string;
@@ -49,7 +56,7 @@ export type WorkspaceItem = {
   summaryId: string;
   worktreePath?: string;
   nodeId?: string;
-  kind?: "managed" | "local";
+  kind?: "managed" | "local" | "folder";
   status?: WorkspaceRecord["status"];
   preserveOnMissingSnapshot?: boolean;
   state?: WorkspaceLifecycleState;
@@ -342,6 +349,9 @@ export type WorkspaceStoreState = {
   setWorkspacePullRequest: (workspaceId: string, pullRequest?: DaemonWorkspacePullRequest) => void;
   setWorkspaceCurrentBranch: (workspaceId: string, branch: string) => void;
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
+  loadLocalFolders: (folders: DaemonLocalFolder[]) => void;
+  addLocalFolder: (folder: DaemonLocalFolder) => void;
+  removeLocalFolder: (id: string) => void;
   setOrderedWorkspaceIds: (ids: string[]) => void;
 };
 
@@ -378,6 +388,9 @@ export type WorkspaceStoreActions = Pick<
   | "setWorkspacePullRequest"
   | "setWorkspaceCurrentBranch"
   | "incrementGitRefreshVersion"
+  | "loadLocalFolders"
+  | "addLocalFolder"
+  | "removeLocalFolder"
   | "setOrderedWorkspaceIds"
 >;
 

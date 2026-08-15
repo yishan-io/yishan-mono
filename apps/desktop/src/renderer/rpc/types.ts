@@ -42,6 +42,9 @@ export type DaemonRpcClient = {
     health: (input: Rpc.WorkspaceHealthInput) => Promise<Rpc.WorkspaceHealthOutput>;
     openProject: (input: Rpc.WorkspaceOpenProjectInput) => Promise<Rpc.WorkspaceOpenProjectOutput>;
     closeProject: (input: Rpc.WorkspaceCloseProjectInput) => Promise<Rpc.WorkspaceCloseProjectOutput>;
+    createLocalFolder: (input: { path: string; name?: string }) => Promise<Rpc.DaemonLocalFolder>;
+    listLocalFolders: () => Promise<Rpc.DaemonLocalFolder[]>;
+    deleteLocalFolder: (input: { id: string }) => Promise<void>;
   };
   file: {
     listFiles: (input: Rpc.FileListInput) => Promise<Rpc.FileListResponse>;
