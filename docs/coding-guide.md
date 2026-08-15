@@ -764,3 +764,13 @@ go vet ./...
 - `node.Service` is the local Node application boundary and must not import
   `internal/app`; `internal/app` is the only composition root and may import
   every concrete package.
+- Behavior moved to its owner (Phase 16B): the renderer-pushed desktop
+  context state lives in `internal/contextstore`; the pending workspace
+  cleanup retry queue lives in `internal/db` (db.WorkspaceCleanupStore); the
+  agent hook HTTP ingress lives in `internal/node/hook` (hook.Ingress +
+  hook.UsageTracker). Workspace lifecycle operations (open/close/hydrate/
+  health/persist) stay on node.Service: they are local-Node application
+  operations that depend on the SQLite adapter and the cloud API client —
+  pushing them into workspace/application would leak db/api into the
+  application layer, breaking the `application -> domain + interfaces`
+  contract.
