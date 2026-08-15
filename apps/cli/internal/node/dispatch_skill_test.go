@@ -12,9 +12,9 @@ import (
 	"yishan/apps/cli/internal/rpcerror"
 )
 
-func newSkillTestHandler(t *testing.T) *Services {
+func newSkillTestHandler(t *testing.T) *Service {
 	t.Helper()
-	return newTestServices(t, nil, "node-1")
+	return newTestService(t, nil, "node-1")
 }
 
 // TestDispatchSkillListEmptyOnCleanHome verifies skill.list returns no skills

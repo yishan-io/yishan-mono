@@ -17,19 +17,19 @@ import (
 // SystemService implementation: the daemon./app./agent./tokenUsage./node.
 // RPC methods that fall through the namespace router to the system handler.
 
-func (s *Services) SystemDaemonPing() (any, error) {
+func (s *Service) SystemDaemonPing() (any, error) {
 	return map[string]string{"status": "ok"}, nil
 }
 
-func (s *Services) SystemFrontendEventsStream(ctx context.Context, connection *rpc.Connection) (any, error) {
-	subscriptionID, events := s.events.Subscribe()
+func (s *Service) SystemFrontendEventsStream(ctx context.Context, connection *rpc.Connection) (any, error) {
+	subscriptionID, events := s.deps.Events.Subscribe()
 	connection.AttachEventStream(events, MethodFrontendEventsStream, func() {
-		s.events.Unsubscribe(subscriptionID)
+		s.deps.Events.Unsubscribe(subscriptionID)
 	})
 	return map[string]bool{"subscribed": true}, nil
 }
 
-func (s *Services) SystemAgentListDetectionStatuses(ctx context.Context, params json.RawMessage) (any, error) {
+func (s *Service) SystemAgentListDetectionStatuses(ctx context.Context, params json.RawMessage) (any, error) {
 	refresh, err := parseBoolRefreshParam(params)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (s *Services) SystemAgentListDetectionStatuses(ctx context.Context, params 
 	return ListAgentDetectionStatuses(refresh), nil
 }
 
-func (s *Services) SystemCLIToolListStatuses(ctx context.Context, params json.RawMessage) (any, error) {
+func (s *Service) SystemCLIToolListStatuses(ctx context.Context, params json.RawMessage) (any, error) {
 	refresh, err := parseBoolRefreshParam(params)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (s *Services) SystemCLIToolListStatuses(ctx context.Context, params json.Ra
 	return ListCLIToolDetectionStatusesWithRefresh(refresh), nil
 }
 
-func (s *Services) SystemCLIToolInstall(ctx context.Context, req rpc.SystemCLIToolInstallParams) (any, error) {
+func (s *Service) SystemCLIToolInstall(ctx context.Context, req rpc.SystemCLIToolInstallParams) (any, error) {
 	toolID := strings.TrimSpace(req.ToolID)
 	if toolID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "toolId is required")
@@ -57,7 +57,7 @@ func (s *Services) SystemCLIToolInstall(ctx context.Context, req rpc.SystemCLITo
 	return map[string]any{"ok": true, "status": status}, nil
 }
 
-func (s *Services) SystemCLIToolUninstall(ctx context.Context, req rpc.SystemCLIToolUninstallParams) (any, error) {
+func (s *Service) SystemCLIToolUninstall(ctx context.Context, req rpc.SystemCLIToolUninstallParams) (any, error) {
 	toolID := strings.TrimSpace(req.ToolID)
 	if toolID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "toolId is required")
@@ -69,7 +69,7 @@ func (s *Services) SystemCLIToolUninstall(ctx context.Context, req rpc.SystemCLI
 	return map[string]any{"ok": true, "status": status}, nil
 }
 
-func (s *Services) SystemIntegrationGitHubStatus(ctx context.Context, params json.RawMessage) (any, error) {
+func (s *Service) SystemIntegrationGitHubStatus(ctx context.Context, params json.RawMessage) (any, error) {
 	refresh, err := parseBoolRefreshParam(params)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (s *Services) SystemIntegrationGitHubStatus(ctx context.Context, params jso
 	return getGitHubDetectionStatus(refresh), nil
 }
 
-func (s *Services) SystemAppPersistAuthTokens(ctx context.Context, params json.RawMessage) (any, error) {
+func (s *Service) SystemAppPersistAuthTokens(ctx context.Context, params json.RawMessage) (any, error) {
 	var req api.TokenUpdate
 	if err := rpc.DecodeParams(params, &req); err != nil {
 		return nil, err
@@ -87,14 +87,14 @@ func (s *Services) SystemAppPersistAuthTokens(ctx context.Context, params json.R
 	if req.AccessToken == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "accessToken is required")
 	}
-	if err := s.runtime.PersistAuthTokens(req); err != nil {
+	if err := s.deps.Runtime.PersistAuthTokens(req); err != nil {
 		return nil, err
 	}
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Services) SystemAppGetAccessToken(ctx context.Context) (any, error) {
-	accessToken, expiresAt, err := s.runtime.EnsureFreshAccessToken()
+func (s *Service) SystemAppGetAccessToken(ctx context.Context) (any, error) {
+	accessToken, expiresAt, err := s.deps.Runtime.EnsureFreshAccessToken()
 	if err != nil {
 		return nil, err
 	}
@@ -105,8 +105,8 @@ func (s *Services) SystemAppGetAccessToken(ctx context.Context) (any, error) {
 	return result, nil
 }
 
-func (s *Services) SystemAppCheckAuthStatus(ctx context.Context) (any, error) {
-	authenticated, expiresAt, err := s.runtime.CheckAuthStatus()
+func (s *Service) SystemAppCheckAuthStatus(ctx context.Context) (any, error) {
+	authenticated, expiresAt, err := s.deps.Runtime.CheckAuthStatus()
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to check authentication status")
 		return map[string]any{"authenticated": false}, nil
@@ -118,44 +118,44 @@ func (s *Services) SystemAppCheckAuthStatus(ctx context.Context) (any, error) {
 	return result, nil
 }
 
-func (s *Services) SystemAppLogout(ctx context.Context) (any, error) {
-	if err := s.runtime.ClearAuthState(); err != nil {
+func (s *Service) SystemAppLogout(ctx context.Context) (any, error) {
+	if err := s.deps.Runtime.ClearAuthState(); err != nil {
 		return nil, err
 	}
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Services) SystemAppReloadAuthConfig(ctx context.Context) (any, error) {
-	if err := s.runtime.ReloadAuthConfig(); err != nil {
+func (s *Service) SystemAppReloadAuthConfig(ctx context.Context) (any, error) {
+	if err := s.deps.Runtime.ReloadAuthConfig(); err != nil {
 		return nil, err
 	}
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Services) SystemAgentListModels(ctx context.Context, req rpc.SystemAgentListModelsParams) (any, error) {
+func (s *Service) SystemAgentListModels(ctx context.Context, req rpc.SystemAgentListModelsParams) (any, error) {
 	agentKind := strings.TrimSpace(req.AgentKind)
 	if agentKind == "" {
-		return s.modelList.ListAllModels(req.ForceRefresh), nil
+		return s.deps.ModelList.ListAllModels(req.ForceRefresh), nil
 	}
-	return s.modelList.ListModels(agentKind, req.ForceRefresh)
+	return s.deps.ModelList.ListModels(agentKind, req.ForceRefresh)
 }
 
-func (s *Services) SystemTokenUsageDebugState(ctx context.Context) (any, error) {
-	if s.tokenUsage == nil {
+func (s *Service) SystemTokenUsageDebugState(ctx context.Context) (any, error) {
+	if s.deps.TokenUsage == nil {
 		return map[string]any{"enabled": false}, nil
 	}
 	return map[string]any{
 		"enabled": true,
-		"state":   s.tokenUsage.DebugState(),
+		"state":   s.deps.TokenUsage.DebugState(),
 	}, nil
 }
 
-func (s *Services) SystemProjectList(ctx context.Context, req rpc.SystemProjectListParams) (any, error) {
+func (s *Service) SystemProjectList(ctx context.Context, req rpc.SystemProjectListParams) (any, error) {
 	orgID := strings.TrimSpace(req.OrgID)
 	if orgID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "orgId is required")
 	}
-	client := s.runtime.APIClient()
+	client := s.deps.Runtime.APIClient()
 	resp, err := client.ListProjects(orgID)
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
@@ -163,12 +163,12 @@ func (s *Services) SystemProjectList(ctx context.Context, req rpc.SystemProjectL
 	return resp.Projects, nil
 }
 
-func (s *Services) SystemNodeList(ctx context.Context, req rpc.SystemNodeListParams) (any, error) {
+func (s *Service) SystemNodeList(ctx context.Context, req rpc.SystemNodeListParams) (any, error) {
 	orgID := strings.TrimSpace(req.OrgID)
 	if orgID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "orgId is required")
 	}
-	client := s.runtime.APIClient()
+	client := s.deps.Runtime.APIClient()
 	resp, err := client.ListNodes(orgID)
 	if err != nil {
 		return nil, fmt.Errorf("list nodes: %w", err)

@@ -17,7 +17,7 @@ import (
 // which desktop connections on THIS node subscribe to a remote PTY session.
 // The relay connection itself is owned by the relay client (internal/relay).
 
-func (s *Services) addRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
+func (s *Service) addRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
 	s.remoteStreamMu.Lock()
 	defer s.remoteStreamMu.Unlock()
 	subs := s.remoteStreamSubs[sessionID]
@@ -30,7 +30,7 @@ func (s *Services) addRemoteStreamSub(sessionID string, connState *rpc.Connectio
 	return !existed && len(subs) == 1
 }
 
-func (s *Services) removeRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
+func (s *Service) removeRemoteStreamSub(sessionID string, connState *rpc.Connection) bool {
 	s.remoteStreamMu.Lock()
 	defer s.remoteStreamMu.Unlock()
 	subs := s.remoteStreamSubs[sessionID]
@@ -45,7 +45,7 @@ func (s *Services) removeRemoteStreamSub(sessionID string, connState *rpc.Connec
 	return false
 }
 
-func (s *Services) removeRemoteStreamSubsForConn(connState *rpc.Connection) []string {
+func (s *Service) removeRemoteStreamSubsForConn(connState *rpc.Connection) []string {
 	s.remoteStreamMu.Lock()
 	defer s.remoteStreamMu.Unlock()
 	var emptied []string
@@ -62,7 +62,7 @@ func (s *Services) removeRemoteStreamSubsForConn(connState *rpc.Connection) []st
 	return emptied
 }
 
-func (s *Services) remoteStreamTargets(sessionID string) []*rpc.Connection {
+func (s *Service) remoteStreamTargets(sessionID string) []*rpc.Connection {
 	s.remoteStreamMu.Lock()
 	defer s.remoteStreamMu.Unlock()
 	subs := s.remoteStreamSubs[sessionID]
@@ -78,7 +78,7 @@ func (s *Services) remoteStreamTargets(sessionID string) []*rpc.Connection {
 
 // remoteSubscribe sends terminal.stream.request to the relay so the owning
 // daemon starts forwarding PTY output for sessionId to this node.
-func (s *Services) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRemoteSubscribeParams) (any, error) {
+func (s *Service) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRemoteSubscribeParams) (any, error) {
 	firstSub := s.addRemoteStreamSub(req.SessionID, connState)
 	connState.AddCloseHook(func() {
 		for _, sessionID := range s.removeRemoteStreamSubsForConn(connState) {
@@ -91,7 +91,7 @@ func (s *Services) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRe
 	if err := s.relayClient.SendNotification(relay.MethodTerminalStreamRequest, map[string]string{
 		"sessionId": req.SessionID,
 		"ownerNode": req.OwnerNode,
-		"fromNode":  s.nodeID,
+		"fromNode":  s.deps.NodeID,
 	}); err != nil {
 		s.removeRemoteStreamSub(req.SessionID, connState)
 		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
@@ -100,19 +100,19 @@ func (s *Services) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRe
 }
 
 // remoteUnsubscribe sends terminal.stream.cancel to the relay.
-func (s *Services) remoteUnsubscribe(connState *rpc.Connection, req rpc.TerminalRemoteUnsubscribeParams) (any, error) {
+func (s *Service) remoteUnsubscribe(connState *rpc.Connection, req rpc.TerminalRemoteUnsubscribeParams) (any, error) {
 	if !s.removeRemoteStreamSub(req.SessionID, connState) {
 		return map[string]bool{"ok": true}, nil
 	}
 	// Best-effort: the relay may be gone, in which case there is nothing to cancel.
 	_ = s.relayClient.SendNotification(relay.MethodTerminalStreamCancel, map[string]string{
 		"sessionId": req.SessionID,
-		"fromNode":  s.nodeID,
+		"fromNode":  s.deps.NodeID,
 	})
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Services) forwardRemoteTerminalOutput(sessionID string, payload []byte) bool {
+func (s *Service) forwardRemoteTerminalOutput(sessionID string, payload []byte) bool {
 	targets := s.remoteStreamTargets(sessionID)
 	if len(targets) == 0 {
 		return false
@@ -125,7 +125,7 @@ func (s *Services) forwardRemoteTerminalOutput(sessionID string, payload []byte)
 	return true
 }
 
-func (s *Services) forwardRemoteTerminalInput(sessionID string, payload []byte) bool {
+func (s *Service) forwardRemoteTerminalInput(sessionID string, payload []byte) bool {
 	if len(s.remoteStreamTargets(sessionID)) == 0 {
 		return false
 	}
@@ -139,10 +139,10 @@ func (s *Services) forwardRemoteTerminalInput(sessionID string, payload []byte) 
 // HandleRelayMessage implements relay.MessageHandler for the relay-level
 // messages the relay client does not own: job dispatch, workspace snapshot
 // changes, and terminal session/stream notifications.
-func (s *Services) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
+func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
 	switch method {
 	case relay.MethodJobRun:
-		handleJobRun(s.runtime, connState, nodeID, params)
+		handleJobRun(s.deps.Runtime, connState, nodeID, params)
 		return true
 	case relay.MethodWorkspaceSnapshotChanged:
 		publishWorkspaceSnapshotChanged(s, params)
@@ -167,7 +167,7 @@ func (s *Services) HandleRelayMessage(ctx context.Context, connState *rpc.Connec
 // handleTerminalStreamRequest is called on the owning daemon (daemon A) when
 // another node wants to subscribe to a PTY session. It subscribes the relay
 // connState to the local terminal session so output flows back over /ws.
-func handleTerminalStreamRequest(handler *Services, connState *rpc.Connection, params json.RawMessage) {
+func handleTerminalStreamRequest(handler *Service, connState *rpc.Connection, params json.RawMessage) {
 	var p struct {
 		SessionID string `json:"sessionId"`
 		FromNode  string `json:"fromNode"`
@@ -177,13 +177,13 @@ func handleTerminalStreamRequest(handler *Services, connState *rpc.Connection, p
 		return
 	}
 
-	subscription, err := handler.terminals.Subscribe(terminal.SubscribeRequest{SessionID: p.SessionID})
+	subscription, err := handler.deps.Terminals.Subscribe(terminal.SubscribeRequest{SessionID: p.SessionID})
 	if err != nil {
 		log.Warn().Err(err).Str("sessionId", p.SessionID).Msg("relay: terminal.stream.request subscribe failed")
 		return
 	}
 	connState.AttachSubscription(p.SessionID, subscription.ID, subscription.Events, func(sessionID string, subscriptionID uint64) {
-		_, _ = handler.terminals.Unsubscribe(terminal.UnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
+		_, _ = handler.deps.Terminals.Unsubscribe(terminal.UnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
 	})
 
 	// Acknowledge the stream to the relay (relay forwards to subscriber).
@@ -198,7 +198,7 @@ func handleTerminalStreamRequest(handler *Services, connState *rpc.Connection, p
 }
 
 // publishTerminalStreamAccept notifies the desktop that a remote stream was accepted.
-func publishTerminalStreamAccept(handler *Services, params json.RawMessage) {
+func publishTerminalStreamAccept(handler *Service, params json.RawMessage) {
 	var payload map[string]any
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &payload); err != nil {
@@ -206,11 +206,11 @@ func publishTerminalStreamAccept(handler *Services, params json.RawMessage) {
 			return
 		}
 	}
-	handler.events.Publish(internalevents.Event{Topic: "terminalStreamAccepted", Payload: payload})
+	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalStreamAccepted", Payload: payload})
 }
 
 // publishTerminalStreamCancel notifies the desktop that a remote stream was cancelled.
-func publishTerminalStreamCancel(handler *Services, params json.RawMessage) {
+func publishTerminalStreamCancel(handler *Service, params json.RawMessage) {
 	var payload map[string]any
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &payload); err != nil {
@@ -218,5 +218,5 @@ func publishTerminalStreamCancel(handler *Services, params json.RawMessage) {
 			return
 		}
 	}
-	handler.events.Publish(internalevents.Event{Topic: "terminalStreamCancelled", Payload: payload})
+	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalStreamCancelled", Payload: payload})
 }

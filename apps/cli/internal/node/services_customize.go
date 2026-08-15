@@ -20,7 +20,7 @@ import (
 // network fetch cannot occupy an RPC handler slot indefinitely.
 const managedCommandTimeout = 10 * time.Minute
 
-func (s *Services) CustomizeExtensionsList(ctx context.Context) (any, error) {
+func (s *Service) CustomizeExtensionsList(ctx context.Context) (any, error) {
 	extensions, err := setup.ListPiExtensions()
 	if err != nil {
 		return nil, fmt.Errorf("list pi extensions: %w", err)
@@ -29,7 +29,7 @@ func (s *Services) CustomizeExtensionsList(ctx context.Context) (any, error) {
 	return map[string]any{"extensions": extensions}, nil
 }
 
-func (s *Services) CustomizeExtensionsInstall(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
+func (s *Service) CustomizeExtensionsInstall(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
 	source, err := requireExtensionSource(req.Source)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (s *Services) CustomizeExtensionsInstall(ctx context.Context, req rpc.Custo
 // official-extension gating: official extensions are part of the managed base
 // install that `yishan setup` restores, so they are updated through the panel
 // but not removable.
-func (s *Services) CustomizeExtensionsRemove(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
+func (s *Service) CustomizeExtensionsRemove(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
 	source, err := requireExtensionSource(req.Source)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (s *Services) CustomizeExtensionsRemove(ctx context.Context, req rpc.Custom
 	return map[string]any{"removed": true}, nil
 }
 
-func (s *Services) CustomizeExtensionsUpdate(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
+func (s *Service) CustomizeExtensionsUpdate(ctx context.Context, req rpc.CustomizeExtensionSourceParams) (any, error) {
 	source, err := requireExtensionSource(req.Source)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func extensionRemoveTargetError(source string) error {
 	return nil
 }
 
-func (s *Services) CustomizeAgentsList(ctx context.Context) (any, error) {
+func (s *Service) CustomizeAgentsList(ctx context.Context) (any, error) {
 	agents, err := setup.ListPiAgents()
 	if err != nil {
 		return nil, fmt.Errorf("list pi agents: %w", err)
@@ -107,7 +107,7 @@ func (s *Services) CustomizeAgentsList(ctx context.Context) (any, error) {
 	return map[string]any{"agents": agents}, nil
 }
 
-func (s *Services) CustomizeAgentsDetail(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
+func (s *Service) CustomizeAgentsDetail(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
 	name, err := requireAgentName(req.Name)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (s *Services) CustomizeAgentsDetail(ctx context.Context, req rpc.CustomizeA
 	return detail, nil
 }
 
-func (s *Services) CustomizeAgentsCreate(ctx context.Context, req rpc.CustomizeAgentCreateParams) (any, error) {
+func (s *Service) CustomizeAgentsCreate(ctx context.Context, req rpc.CustomizeAgentCreateParams) (any, error) {
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "content is required")
 	}
@@ -129,7 +129,7 @@ func (s *Services) CustomizeAgentsCreate(ctx context.Context, req rpc.CustomizeA
 	return map[string]any{"created": true}, nil
 }
 
-func (s *Services) CustomizeAgentsUpdate(ctx context.Context, req rpc.CustomizeAgentUpdateParams) (any, error) {
+func (s *Service) CustomizeAgentsUpdate(ctx context.Context, req rpc.CustomizeAgentUpdateParams) (any, error) {
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "content is required")
 	}
@@ -139,7 +139,7 @@ func (s *Services) CustomizeAgentsUpdate(ctx context.Context, req rpc.CustomizeA
 	return map[string]any{"updated": true}, nil
 }
 
-func (s *Services) CustomizeAgentsRemove(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
+func (s *Service) CustomizeAgentsRemove(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
 	name, err := requireAgentName(req.Name)
 	if err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ func (s *Services) CustomizeAgentsRemove(ctx context.Context, req rpc.CustomizeA
 	return map[string]any{"removed": true}, nil
 }
 
-func (s *Services) CustomizeAgentsRestore(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
+func (s *Service) CustomizeAgentsRestore(ctx context.Context, req rpc.CustomizeAgentNameParams) (any, error) {
 	name, err := requireAgentName(req.Name)
 	if err != nil {
 		return nil, err

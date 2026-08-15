@@ -1,16 +1,32 @@
-package node
+package app
 
 import (
 	"context"
+	"database/sql"
 	"path/filepath"
 	"testing"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/node"
 )
+
+func openCleanupStoreTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	return database
+}
+
 
 func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	cleanupStore, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
+	cleanupStore, err := node.NewCleanupStore(database, filepath.Join(t.TempDir(), node.CleanupFileName))
 	if err != nil {
 		t.Fatalf("new cleanup store: %v", err)
 	}
@@ -22,14 +38,20 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	if err := cleanupStore.Add(PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
+	if err := cleanupStore.Add(node.PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
 		t.Fatalf("add pending cleanup: %v", err)
 	}
 
+	service := node.NewService(node.Dependencies{
+		Store:        localdb.NewStore(workspaceStore),
+		Database:     database,
+		CleanupStore: cleanupStore,
+	})
 	app := &App{
 		store:        localdb.NewStore(workspaceStore),
 		cleanupStore: cleanupStore,
-	database:     database,
+		database:     database,
+		service:      service,
 	}
 
 	app.retryPendingCleanups(context.Background())

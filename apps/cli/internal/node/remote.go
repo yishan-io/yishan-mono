@@ -28,11 +28,11 @@ func remoteWorkspaceRecordsEnabled(runtime *cliruntime.Runtime) bool {
 //
 // Best-effort: failures are logged and the local record remains the source of
 // truth until the next remote→local cache sync reconciles the row.
-func (a *App) CreateRemoteRecord(ctx context.Context, registration application.Registration) {
-	if !remoteWorkspaceRecordsEnabled(a.Runtime) {
+func (s *Service) CreateRemoteRecord(ctx context.Context, registration application.Registration) {
+	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
 		return
 	}
-	_, err := a.Runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildCreateWorkspaceInput(registration, a.NodeID))
+	_, err := s.deps.Runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildCreateWorkspaceInput(registration, s.deps.NodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to create remote workspace record")
 	}
@@ -44,11 +44,11 @@ func (a *App) CreateRemoteRecord(ctx context.Context, registration application.R
 //
 // Best-effort: failures are logged and the local record remains the source of
 // truth until the next remote→local cache sync reconciles the row.
-func (a *App) UpdateRemoteRecord(ctx context.Context, registration application.Registration, localPath string) {
-	if !remoteWorkspaceRecordsEnabled(a.Runtime) {
+func (s *Service) UpdateRemoteRecord(ctx context.Context, registration application.Registration, localPath string) {
+	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
 		return
 	}
-	_, err := a.Runtime.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildUpdateWorkspaceInput(registration, localPath, a.NodeID))
+	_, err := s.deps.Runtime.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildUpdateWorkspaceInput(registration, localPath, s.deps.NodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to update remote workspace record")
 	}
@@ -59,8 +59,8 @@ func (a *App) UpdateRemoteRecord(ctx context.Context, registration application.R
 // showing the workspace; "closed" is the terminal state written after teardown
 // succeeds. Best-effort: failures are logged and the local record remains the
 // source of truth until the next remote→local cache sync reconciles the row.
-func (a *App) CloseRemoteRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status string) {
-	if !remoteWorkspaceRecordsEnabled(a.Runtime) {
+func (s *Service) CloseRemoteRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status string) {
+	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
 		return
 	}
 	if strings.TrimSpace(organizationID) == "" || strings.TrimSpace(projectID) == "" {
@@ -69,7 +69,7 @@ func (a *App) CloseRemoteRecord(ctx context.Context, organizationID string, proj
 	if status == "" {
 		status = "closed"
 	}
-	_, err := a.Runtime.APIClient().CloseWorkspace(organizationID, projectID, api.BuildCloseWorkspaceInput(workspaceID, a.NodeID, workspace.Status(status)))
+	_, err := s.deps.Runtime.APIClient().CloseWorkspace(organizationID, projectID, api.BuildCloseWorkspaceInput(workspaceID, s.deps.NodeID, workspace.Status(status)))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("status", status).Msg("failed to close remote workspace record")
 	}

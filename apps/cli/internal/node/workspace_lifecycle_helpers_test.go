@@ -41,6 +41,7 @@ import (
 	internalevents "yishan/apps/cli/internal/events"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -229,7 +230,7 @@ func assertTopicSequence(t *testing.T, events []internalevents.Event, want []str
 // wireRelayCapture runs a real relay client against a fake relay that echoes a
 // verdict and forwards every received JSON-RPC message (the relay envelope) to
 // the returned channel.
-func wireRelayCapture(t *testing.T, s *Services, result map[string]any) <-chan map[string]any {
+func wireRelayCapture(t *testing.T, s *Service, result map[string]any) <-chan map[string]any {
 	t.Helper()
 	received := make(chan map[string]any, 16)
 	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
@@ -250,12 +251,12 @@ func wireRelayCapture(t *testing.T, s *Services, result map[string]any) <-chan m
 
 	client := relay.NewClient(relay.ClientConfig{
 		Runtime:     nil,
-		NodeID:      s.nodeID,
+		NodeID:      s.deps.NodeID,
 		URL:         server.URL,
 		StaticToken: "test-token",
-		Server:      s.rpcServer,
+		Server:      rpc.NewServer(s),
 		Handler:     s,
-		Events:      s.events,
+		Events:      s.deps.Events,
 	})
 	s.relayClient = client
 	ctx, cancel := context.WithCancel(context.Background())
@@ -335,9 +336,9 @@ func progressStepSequence(progress []workspace.CreateProgressEvent) []string {
 // newBehaviorHandler builds a handler with the given runtime and node. When
 // database is non-nil it is attached directly (bypassing SetLocalDatabase so
 // no token-usage collector is wired into the test).
-func newBehaviorHandler(t *testing.T, runtime *cliruntime.Runtime, nodeID string, database *sql.DB) *Services {
+func newBehaviorHandler(t *testing.T, runtime *cliruntime.Runtime, nodeID string, database *sql.DB) *Service {
 	t.Helper()
-	s := newTestServices(t, runtime, nodeID)
+	s := newTestService(t, runtime, nodeID)
 	s.setTestDatabase(database)
 	return s
 }
@@ -351,18 +352,18 @@ func findTopic(events []internalevents.Event, topic string) internalevents.Event
 	return internalevents.Event{}
 }
 
-func openLocalWorkspace(t *testing.T, services *Services, id string, path string) {
+func openLocalWorkspace(t *testing.T, services *Service, id string, path string) {
 	t.Helper()
-	if _, err := services.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: id, Path: path, OrgID: "org-1", ProjectID: "project-1"}); err != nil {
+	if _, err := services.OpenWorkspace(workspace.OpenRequest{ID: id, Path: path, OrgID: "org-1", ProjectID: "project-1"}); err != nil {
 		t.Fatalf("open workspace %s: %v", id, err)
 	}
 }
 
 // openTestWorkspace registers a workspace instance at the given path via the
 // production open path.
-func openTestWorkspace(t *testing.T, services *Services, id string, path string) workspace.Workspace {
+func openTestWorkspace(t *testing.T, services *Service, id string, path string) workspace.Workspace {
 	t.Helper()
-	ws, err := services.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: id, Path: path})
+	ws, err := services.OpenWorkspace(workspace.OpenRequest{ID: id, Path: path})
 	if err != nil {
 		t.Fatalf("open test workspace %s: %v", id, err)
 	}

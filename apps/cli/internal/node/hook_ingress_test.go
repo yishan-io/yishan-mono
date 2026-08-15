@@ -13,9 +13,9 @@ import (
 )
 
 func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":       "codex",
@@ -49,9 +49,9 @@ func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":        "claude",
@@ -78,9 +78,9 @@ func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":        "claude",
@@ -103,9 +103,9 @@ func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":       "opencode",
@@ -131,9 +131,9 @@ func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
 func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 	for _, agent := range agentkind.All {
 		t.Run(agent, func(t *testing.T) {
-			handler := newTestServices(t, nil, "node-1")
-			subscriptionID, events := handler.events.Subscribe()
-			defer handler.events.Unsubscribe(subscriptionID)
+			handler := newTestService(t, nil, "node-1")
+			subscriptionID, events := handler.deps.Events.Subscribe()
+			defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 			response := postHookPayload(t, handler, map[string]any{
 				"agent":       agent,
@@ -159,9 +159,9 @@ func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 }
 
 func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":       "cursor-agent",
@@ -185,7 +185,7 @@ func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
 }
 
 func TestServeAgentHookRejectsInvalidPayload(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
+	handler := newTestService(t, nil, "node-1")
 	response := postHookPayload(t, handler, map[string]any{"event": "Start"})
 
 	if response.Code != http.StatusBadRequest {
@@ -193,7 +193,7 @@ func TestServeAgentHookRejectsInvalidPayload(t *testing.T) {
 	}
 }
 
-func postHookPayload(t *testing.T, handler *Services, payload map[string]any) *httptest.ResponseRecorder {
+func postHookPayload(t *testing.T, handler *Service, payload map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -233,9 +233,9 @@ func drainHookEvents(t *testing.T, events <-chan internalevents.Event) []interna
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":       "opencode",
@@ -273,9 +273,9 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":       "opencode",
@@ -309,9 +309,9 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
 }
 
 func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	// No tabId in payload — terminalAgentChanged must not be published.
 	response := postHookPayload(t, handler, map[string]any{
@@ -334,9 +334,9 @@ func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
 }
 
 func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t *testing.T) {
-	handler := newTestServices(t, nil, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, nil, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	response := postHookPayload(t, handler, map[string]any{
 		"agent":       "opencode",

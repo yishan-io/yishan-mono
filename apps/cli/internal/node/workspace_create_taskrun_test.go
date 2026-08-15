@@ -16,10 +16,10 @@ import (
 
 func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t *testing.T) {
 	root := t.TempDir()
-	handler := newTestServices(t, nil, "node-1")
+	handler := newTestService(t, nil, "node-1")
 
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	handler.publishWorkspaceCreateCompleted(
 		preparedWorkspaceCreate{
@@ -131,10 +131,10 @@ func TestBuildTaskRunTerminalTitle(t *testing.T) {
 	}
 }
 
-func stopAllTerminalSessions(handler *Services) {
-	sessions := handler.terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true})
+func stopAllTerminalSessions(handler *Service) {
+	sessions := handler.deps.Terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true})
 	for _, session := range sessions {
-		_, _ = handler.terminals.Stop(terminal.StopRequest{SessionID: session.SessionID})
+		_, _ = handler.deps.Terminals.Stop(terminal.StopRequest{SessionID: session.SessionID})
 	}
 }
 
@@ -161,7 +161,7 @@ func TestHasDesktopUI_TracksDesktopConnections(t *testing.T) {
 
 // registerTestDesktopConn registers a fake desktop connection in the handler's
 // registry, mirroring the ?client=desktop handshake path used in production.
-func registerTestDesktopConn(s *Services) {
+func registerTestDesktopConn(s *Service) {
 	s.desktopConnsMu.Lock()
 	s.desktopConns[&rpc.Connection{}] = struct{}{}
 	s.desktopConnsMu.Unlock()
@@ -215,8 +215,8 @@ done
 	// Simulate a connected Yishan desktop UI: task runs switch to chat mode.
 	registerTestDesktopConn(s)
 
-	subscriptionID, events := s.events.Subscribe()
-	defer s.events.Unsubscribe(subscriptionID)
+	subscriptionID, events := s.deps.Events.Subscribe()
+	defer s.deps.Events.Unsubscribe(subscriptionID)
 
 	root := t.TempDir()
 	s.publishWorkspaceCreateCompleted(
@@ -256,10 +256,10 @@ done
 	}
 
 	// The run must be a Pi session, not a terminal session.
-	if _, ok := s.agentMgr.Session("task-ws-1"); !ok {
+	if _, ok := s.deps.AgentMgr.Session("task-ws-1"); !ok {
 		t.Fatal("expected pi session task-ws-1 to be active")
 	}
-	if sessions := s.terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 0 {
+	if sessions := s.deps.Terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 0 {
 		t.Fatalf("chat-mode task run started terminal sessions: %#v", sessions)
 	}
 }

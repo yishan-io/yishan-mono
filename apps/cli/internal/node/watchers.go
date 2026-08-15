@@ -10,7 +10,7 @@ type eventHubWorkspaceWatcherSink struct {
 	events *internalevents.Hub
 }
 
-func newEventHubWorkspaceWatcherSink(events *internalevents.Hub) workspacewatchers.Sink {
+func NewEventHubWatcherSink(events *internalevents.Hub) workspacewatchers.Sink {
 	return eventHubWorkspaceWatcherSink{events: events}
 }
 
@@ -53,15 +53,15 @@ func NewWatchers(events *internalevents.Hub, onGitChanged func(worktreePath stri
 }
 
 func newWatchersForEventHub(events *internalevents.Hub, onGitChanged func(worktreePath string)) *workspacewatchers.Watchers {
-	return workspacewatchers.New(newEventHubWorkspaceWatcherSink(events), onGitChanged)
+	return workspacewatchers.New(NewEventHubWatcherSink(events), onGitChanged)
 }
 
 // PublishPullRequestUpdated emits the pull-request-updated frontend event.
 func PublishPullRequestUpdated(events *internalevents.Hub, event workspaceprtracker.PullRequestUpdatedEvent) {
-	publishWorkspacePullRequestUpdatedEvent(events, event)
+	PublishWorkspacePullRequestUpdatedEvent(events, event)
 }
 
-func publishWorkspacePullRequestUpdatedEvent(events *internalevents.Hub, event workspaceprtracker.PullRequestUpdatedEvent) {
+func PublishWorkspacePullRequestUpdatedEvent(events *internalevents.Hub, event workspaceprtracker.PullRequestUpdatedEvent) {
 	if events == nil {
 		return
 	}

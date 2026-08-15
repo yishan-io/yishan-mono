@@ -9,7 +9,7 @@ import (
 // GitService implementation: each method resolves the workspace handle and
 // performs one git operation.
 
-func (s *Services) GitStatus(ctx context.Context, req rpc.GitStatusParams) (any, error) {
+func (s *Service) GitStatus(ctx context.Context, req rpc.GitStatusParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -17,7 +17,7 @@ func (s *Services) GitStatus(ctx context.Context, req rpc.GitStatusParams) (any,
 	return handle.GitStatus(ctx)
 }
 
-func (s *Services) GitInspect(ctx context.Context, req rpc.GitInspectParams) (any, error) {
+func (s *Service) GitInspect(ctx context.Context, req rpc.GitInspectParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -25,11 +25,11 @@ func (s *Services) GitInspect(ctx context.Context, req rpc.GitInspectParams) (an
 	return handle.GitInspect(ctx)
 }
 
-func (s *Services) GitInspectPath(ctx context.Context, req rpc.GitInspectPathParams) (any, error) {
-	return s.gits.Inspect(ctx, req.Path)
+func (s *Service) GitInspectPath(ctx context.Context, req rpc.GitInspectPathParams) (any, error) {
+	return s.deps.Git.Inspect(ctx, req.Path)
 }
 
-func (s *Services) GitListChanges(ctx context.Context, req rpc.GitStatusParams) (any, error) {
+func (s *Service) GitListChanges(ctx context.Context, req rpc.GitStatusParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (s *Services) GitListChanges(ctx context.Context, req rpc.GitStatusParams) 
 	return handle.GitListChanges(ctx)
 }
 
-func (s *Services) GitTrack(ctx context.Context, req rpc.GitPathsParams) (any, error) {
+func (s *Service) GitTrack(ctx context.Context, req rpc.GitPathsParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (s *Services) GitTrack(ctx context.Context, req rpc.GitPathsParams) (any, e
 	return map[string]bool{"tracked": true}, nil
 }
 
-func (s *Services) GitUnstage(ctx context.Context, req rpc.GitPathsParams) (any, error) {
+func (s *Service) GitUnstage(ctx context.Context, req rpc.GitPathsParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (s *Services) GitUnstage(ctx context.Context, req rpc.GitPathsParams) (any,
 	return map[string]bool{"unstaged": true}, nil
 }
 
-func (s *Services) GitRevert(ctx context.Context, req rpc.GitPathsParams) (any, error) {
+func (s *Service) GitRevert(ctx context.Context, req rpc.GitPathsParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (s *Services) GitRevert(ctx context.Context, req rpc.GitPathsParams) (any, 
 	return map[string]bool{"reverted": true}, nil
 }
 
-func (s *Services) GitCommit(ctx context.Context, req rpc.GitCommitParams) (any, error) {
+func (s *Service) GitCommit(ctx context.Context, req rpc.GitCommitParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *Services) GitCommit(ctx context.Context, req rpc.GitCommitParams) (any,
 	return handle.GitCommitChanges(ctx, req.Message, req.Amend, req.Signoff)
 }
 
-func (s *Services) GitBranchStatus(ctx context.Context, req rpc.GitStatusParams) (any, error) {
+func (s *Service) GitBranchStatus(ctx context.Context, req rpc.GitStatusParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (s *Services) GitBranchStatus(ctx context.Context, req rpc.GitStatusParams)
 	return handle.GitBranchStatus(ctx)
 }
 
-func (s *Services) GitBranchPullRequest(ctx context.Context, req rpc.GitBranchPullRequestParams) (any, error) {
+func (s *Service) GitBranchPullRequest(ctx context.Context, req rpc.GitBranchPullRequestParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (s *Services) GitBranchPullRequest(ctx context.Context, req rpc.GitBranchPu
 	return handle.GitBranchPullRequest(ctx, req.Branch)
 }
 
-func (s *Services) GitCommitsToTarget(ctx context.Context, req rpc.GitTargetBranchParams) (any, error) {
+func (s *Service) GitCommitsToTarget(ctx context.Context, req rpc.GitTargetBranchParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (s *Services) GitCommitsToTarget(ctx context.Context, req rpc.GitTargetBran
 	return handle.GitListCommitsToTarget(ctx, req.TargetBranch)
 }
 
-func (s *Services) GitBranchDiffSummary(ctx context.Context, req rpc.GitTargetBranchParams) (any, error) {
+func (s *Service) GitBranchDiffSummary(ctx context.Context, req rpc.GitTargetBranchParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (s *Services) GitBranchDiffSummary(ctx context.Context, req rpc.GitTargetBr
 	return handle.GitBranchDiffSummary(ctx, req.TargetBranch)
 }
 
-func (s *Services) GitCommitDiff(ctx context.Context, req rpc.GitCommitDiffParams) (any, error) {
+func (s *Service) GitCommitDiff(ctx context.Context, req rpc.GitCommitDiffParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (s *Services) GitCommitDiff(ctx context.Context, req rpc.GitCommitDiffParam
 	return handle.GitReadCommitDiff(ctx, req.CommitHash, req.Path)
 }
 
-func (s *Services) GitBranchDiff(ctx context.Context, req rpc.GitBranchDiffParams) (any, error) {
+func (s *Service) GitBranchDiff(ctx context.Context, req rpc.GitBranchDiffParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (s *Services) GitBranchDiff(ctx context.Context, req rpc.GitBranchDiffParam
 	return handle.GitReadBranchComparisonDiff(ctx, req.TargetBranch, req.Path)
 }
 
-func (s *Services) GitBranches(ctx context.Context, req rpc.GitStatusParams) (any, error) {
+func (s *Service) GitBranches(ctx context.Context, req rpc.GitStatusParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (s *Services) GitBranches(ctx context.Context, req rpc.GitStatusParams) (an
 	return handle.GitListBranches(ctx)
 }
 
-func (s *Services) GitPush(ctx context.Context, req rpc.GitStatusParams) (any, error) {
+func (s *Service) GitPush(ctx context.Context, req rpc.GitStatusParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (s *Services) GitPush(ctx context.Context, req rpc.GitStatusParams) (any, e
 	return handle.GitPushBranch(ctx)
 }
 
-func (s *Services) GitPublish(ctx context.Context, req rpc.GitStatusParams) (any, error) {
+func (s *Service) GitPublish(ctx context.Context, req rpc.GitStatusParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ func (s *Services) GitPublish(ctx context.Context, req rpc.GitStatusParams) (any
 	return handle.GitPublishBranch(ctx)
 }
 
-func (s *Services) GitRenameBranch(ctx context.Context, req rpc.GitRenameBranchParams) (any, error) {
+func (s *Service) GitRenameBranch(ctx context.Context, req rpc.GitRenameBranchParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -161,7 +161,7 @@ func (s *Services) GitRenameBranch(ctx context.Context, req rpc.GitRenameBranchP
 	return map[string]bool{"renamed": true}, nil
 }
 
-func (s *Services) GitRemoveBranch(ctx context.Context, req rpc.GitRemoveBranchParams) (any, error) {
+func (s *Service) GitRemoveBranch(ctx context.Context, req rpc.GitRemoveBranchParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (s *Services) GitRemoveBranch(ctx context.Context, req rpc.GitRemoveBranchP
 	return map[string]bool{"removed": true}, nil
 }
 
-func (s *Services) GitPrMerge(ctx context.Context, req rpc.GitPrMergeParams) (any, error) {
+func (s *Service) GitPrMerge(ctx context.Context, req rpc.GitPrMergeParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (s *Services) GitPrMerge(ctx context.Context, req rpc.GitPrMergeParams) (an
 	return map[string]string{"output": out}, nil
 }
 
-func (s *Services) GitPrClose(ctx context.Context, req rpc.GitPrCloseParams) (any, error) {
+func (s *Service) GitPrClose(ctx context.Context, req rpc.GitPrCloseParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -196,7 +196,7 @@ func (s *Services) GitPrClose(ctx context.Context, req rpc.GitPrCloseParams) (an
 	return map[string]string{"output": out}, nil
 }
 
-func (s *Services) GitWorktreeCreate(ctx context.Context, req rpc.GitCreateWorktreeParams) (any, error) {
+func (s *Service) GitWorktreeCreate(ctx context.Context, req rpc.GitCreateWorktreeParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (s *Services) GitWorktreeCreate(ctx context.Context, req rpc.GitCreateWorkt
 	return map[string]bool{"created": true}, nil
 }
 
-func (s *Services) GitWorktreeRemove(ctx context.Context, req rpc.GitRemoveWorktreeParams) (any, error) {
+func (s *Service) GitWorktreeRemove(ctx context.Context, req rpc.GitRemoveWorktreeParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -218,7 +218,7 @@ func (s *Services) GitWorktreeRemove(ctx context.Context, req rpc.GitRemoveWorkt
 	return map[string]bool{"removed": true}, nil
 }
 
-func (s *Services) GitAuthorName(ctx context.Context, req rpc.GitStatusParams) (any, error) {
+func (s *Service) GitAuthorName(ctx context.Context, req rpc.GitStatusParams) (any, error) {
 	handle, err := s.workspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return nil, err

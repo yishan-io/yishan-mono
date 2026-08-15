@@ -33,7 +33,7 @@ type normalizedHookEvent struct {
 	sessionKey   string
 }
 
-func (s *Services) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
+func (s *Service) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -61,24 +61,24 @@ func (s *Services) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if s.tokenUsage != nil {
-		s.tokenUsage.Trigger(event.agent, "hook")
+	if s.deps.TokenUsage != nil {
+		s.deps.TokenUsage.Trigger(event.agent, "hook")
 	}
 
 	s.recordAgentUsage(event.workspaceID, event.agent)
 
-	if event.eventType == "stop" && s.memory != nil {
+	if event.eventType == "stop" && s.deps.Memory != nil {
 		if handle, err := s.workspaceHandle(event.workspaceID); err == nil {
 			ws := handle.Instance()
-			s.memory.SummarizeSession(event.agent, ws.Path, ws.ProjectID)
+			s.deps.Memory.SummarizeSession(event.agent, ws.Path, ws.ProjectID)
 		}
 		// Trigger the daily persona batch independently of workspace lookup — persona
 		// extraction is user-level (not workspace-level) so it fires on every stop.
-		s.memory.MaybeRunDailyPersonaBatch(event.agent)
+		s.deps.Memory.MaybeRunDailyPersonaBatch(event.agent)
 	}
 
 	if notification := buildHookNotificationPayload(event); notification != nil {
-		s.events.Publish(internalevents.Event{Topic: "notificationEvent", Payload: notification})
+		s.deps.Events.Publish(internalevents.Event{Topic: "notificationEvent", Payload: notification})
 	}
 
 	if event.tabID != "" && (event.eventType == "start" || event.eventType == "stop" || event.eventType == "launched") {
@@ -86,7 +86,7 @@ func (s *Services) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 		if event.eventType == "stop" {
 			agentForEvent = ""
 		}
-		s.events.Publish(internalevents.Event{
+		s.deps.Events.Publish(internalevents.Event{
 			Topic: "terminalAgentChanged",
 			Payload: map[string]any{
 				"tabId": event.tabID,

@@ -23,7 +23,7 @@ type taskRunSessionInfo struct {
 	title     string
 }
 
-func (s *Services) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any) {
+func (s *Service) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any) {
 	completionPayload := map[string]any{"workspaceId": created.ID, "worktreePath": created.Path, "lifecycleScriptWarnings": warnings}
 	taskRunStatus, taskRunSession := s.maybeStartTaskRun(prepared, created)
 	if taskRunStatus != "" {
@@ -33,7 +33,7 @@ func (s *Services) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCre
 		completionPayload["taskRunSessionId"] = taskRunSession.sessionID
 		completionPayload["taskRunTitle"] = taskRunSession.title
 	}
-	s.events.Publish(internalevents.Event{Topic: "workspaceCreateCompleted", Payload: completionPayload})
+	s.deps.Events.Publish(internalevents.Event{Topic: "workspaceCreateCompleted", Payload: completionPayload})
 	s.relayWorkspaceCreateCompleted(prepared, completionPayload)
 }
 
@@ -43,7 +43,7 @@ func (s *Services) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCre
 // session so the desktop can show it as an agent chat tab. Otherwise (headless
 // daemon, remote service node) the run executes in a terminal via the agent
 // CLI, matching the pre-existing behavior.
-func (s *Services) maybeStartTaskRun(prepared preparedWorkspaceCreate, created workspace.Workspace) (string, *taskRunSessionInfo) {
+func (s *Service) maybeStartTaskRun(prepared preparedWorkspaceCreate, created workspace.Workspace) (string, *taskRunSessionInfo) {
 	if prepared.LocalCreate == nil || prepared.LocalCreate.TaskRun == nil {
 		return "", nil
 	}
@@ -54,7 +54,7 @@ func (s *Services) maybeStartTaskRun(prepared preparedWorkspaceCreate, created w
 	return s.startTaskRunTerminal(created, taskRun), nil
 }
 
-func (s *Services) startTaskRunChatSession(created workspace.Workspace, taskRun *workspace.TaskRunConfig) (string, *taskRunSessionInfo) {
+func (s *Service) startTaskRunChatSession(created workspace.Workspace, taskRun *workspace.TaskRunConfig) (string, *taskRunSessionInfo) {
 	sessionID := "task-" + created.ID
 	tabID := sessionID
 	paneID := "pane-" + sessionID
@@ -73,11 +73,11 @@ func (s *Services) startTaskRunChatSession(created workspace.Workspace, taskRun 
 		return "failed", nil
 	}
 
-	if err := s.agentLifecycleCtx.Err(); err != nil {
+	if err := s.deps.AgentLifecycleCtx.Err(); err != nil {
 		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: daemon is shutting down")
 		return "failed", nil
 	}
-	session, startErr := s.agentMgr.Start(s.agentLifecycleCtx, agentmanager.StartOptions{
+	session, startErr := s.deps.AgentMgr.Start(s.deps.AgentLifecycleCtx, agentmanager.StartOptions{
 		SessionID:   sessionID,
 		TabID:       tabID,
 		WorkspaceID: created.ID,
@@ -111,7 +111,7 @@ func (s *Services) startTaskRunChatSession(created workspace.Workspace, taskRun 
 
 // cleanupTaskRunSession stops a just-started task run pi session and removes it
 // from the registry when the run cannot proceed (e.g. prompt send failed).
-func (s *Services) cleanupTaskRunSession(sessionID string) {
+func (s *Service) cleanupTaskRunSession(sessionID string) {
 	// Mark the session as stopping before the (potentially slow) process
 	// teardown so a concurrent pi.start/pi.attach cannot bind to a dying
 	// process, mirroring handlePiStop.
@@ -119,19 +119,19 @@ func (s *Services) cleanupTaskRunSession(sessionID string) {
 		return
 	}
 
-	if err := s.agentMgr.Stop(sessionID); err != nil {
+	if err := s.deps.AgentMgr.Stop(sessionID); err != nil {
 		log.Warn().Err(err).Str("sessionId", sessionID).Msg("task run: failed to stop pi session after prompt failure")
 	}
 	s.piSessions.Delete(sessionID)
 }
 
-func (s *Services) startTaskRunTerminal(created workspace.Workspace, taskRun *workspace.TaskRunConfig) string {
+func (s *Service) startTaskRunTerminal(created workspace.Workspace, taskRun *workspace.TaskRunConfig) string {
 	cmd, buildErr := agentcmd.BuildRunCommand(taskRun.AgentKind, taskRun.Prompt, taskRun.Model, true)
 	if buildErr != nil {
 		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build agent command")
 		return "failed"
 	}
-	resp, startErr := s.terminals.Start(context.Background(), created.Path, terminal.StartRequest{
+	resp, startErr := s.deps.Terminals.Start(context.Background(), created.Path, terminal.StartRequest{
 		WorkspaceID: created.ID,
 		TabID:       "task-" + created.ID,
 		PaneID:      "pane-task-" + created.ID,
@@ -142,7 +142,7 @@ func (s *Services) startTaskRunTerminal(created workspace.Workspace, taskRun *wo
 		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start terminal session")
 		return "failed"
 	}
-	_, sendErr := s.terminals.Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
+	_, sendErr := s.deps.Terminals.Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
 	if sendErr != nil {
 		log.Warn().Err(sendErr).Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to send agent command")
 		return "failed"
@@ -154,7 +154,7 @@ func (s *Services) startTaskRunTerminal(created workspace.Workspace, taskRun *wo
 // hasDesktopUI reports whether a Yishan desktop app connection is currently
 // attached to this daemon. Task runs switch to agent chat tab execution when
 // true; headless daemons (remote service nodes) keep the pi CLI terminal.
-func (s *Services) hasDesktopUI() bool {
+func (s *Service) hasDesktopUI() bool {
 	s.desktopConnsMu.Lock()
 	defer s.desktopConnsMu.Unlock()
 	return len(s.desktopConns) > 0

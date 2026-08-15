@@ -15,14 +15,14 @@ import (
 // MemoryService implementation: each method performs one memory operation.
 // A missing memory service is a server error for every memory method.
 
-func (s *Services) memoryServiceOrError() (*memory.Service, error) {
-	if s.memory == nil {
+func (s *Service) memoryServiceOrError() (*memory.Service, error) {
+	if s.deps.Memory == nil {
 		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "memory service not available")
 	}
-	return s.memory, nil
+	return s.deps.Memory, nil
 }
 
-func (s *Services) MemorySearch(ctx context.Context, req rpc.MemorySearchParams) (any, error) {
+func (s *Service) MemorySearch(ctx context.Context, req rpc.MemorySearchParams) (any, error) {
 	memSvc, err := s.memoryServiceOrError()
 	if err != nil {
 		return nil, err
@@ -43,16 +43,16 @@ func (s *Services) MemorySearch(ctx context.Context, req rpc.MemorySearchParams)
 		Str("scope", req.Scope).
 		Int("limit", req.Limit).
 		Msg("memory search requested")
-	return memSvc.Search(s.serverCtx, req.Query, projectID, req.Scope, req.Limit)
+	return memSvc.Search(s.deps.ServerCtx, req.Query, projectID, req.Scope, req.Limit)
 }
 
-func (s *Services) MemoryReconcile(ctx context.Context) (any, error) {
+func (s *Service) MemoryReconcile(ctx context.Context) (any, error) {
 	memSvc, err := s.memoryServiceOrError()
 	if err != nil {
 		return nil, err
 	}
 	refs := make([]memory.WorkspaceRef, 0)
-	for _, ws := range s.registry.List() {
+	for _, ws := range s.deps.Registry.List() {
 		if ws.Path != "" {
 			refs = append(refs, memory.WorkspaceRef{
 				WorktreePath: ws.Path,
@@ -64,7 +64,7 @@ func (s *Services) MemoryReconcile(ctx context.Context) (any, error) {
 	return memSvc.ReconcileNow(refs)
 }
 
-func (s *Services) MemoryStatus(ctx context.Context) (any, error) {
+func (s *Service) MemoryStatus(ctx context.Context) (any, error) {
 	memSvc, err := s.memoryServiceOrError()
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (s *Services) MemoryStatus(ctx context.Context) (any, error) {
 	}, nil
 }
 
-func (s *Services) MemoryGetConfig(ctx context.Context) (any, error) {
+func (s *Service) MemoryGetConfig(ctx context.Context) (any, error) {
 	memSvc, err := s.memoryServiceOrError()
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (s *Services) MemoryGetConfig(ctx context.Context) (any, error) {
 	}, nil
 }
 
-func (s *Services) MemoryUpdateConfig(ctx context.Context, req rpc.MemoryUpdateConfigParams) (any, error) {
+func (s *Service) MemoryUpdateConfig(ctx context.Context, req rpc.MemoryUpdateConfigParams) (any, error) {
 	memSvc, err := s.memoryServiceOrError()
 	if err != nil {
 		return nil, err
@@ -111,8 +111,8 @@ func (s *Services) MemoryUpdateConfig(ctx context.Context, req rpc.MemoryUpdateC
 	cfg.Enabled = req.Enabled
 	cfg.AgentKind = req.AgentKind
 	cfg.Model = req.Model
-	if s.settingsPath != "" {
-		if err := config.UpdateSettings(s.settingsPath, func(v *viper.Viper) {
+	if s.deps.SettingsPath != "" {
+		if err := config.UpdateSettings(s.deps.SettingsPath, func(v *viper.Viper) {
 			v.Set("memory.summarizer.enabled", cfg.Enabled)
 			v.Set("memory.summarizer.agent_kind", cfg.AgentKind)
 			v.Set("memory.summarizer.model", cfg.Model)

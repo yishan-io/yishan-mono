@@ -38,7 +38,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	}}
 	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: "project-1", Path: t.TempDir(), State: workspace.StateActive}
 
-	if err := handler.nodeApp.PersistPrepared(context.Background(), prepared); err != nil {
+	if err := handler.PersistPrepared(context.Background(), prepared); err != nil {
 		t.Fatalf("persist prepared workspace: %v", err)
 	}
 	provisioningWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
@@ -48,7 +48,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	if provisioningWorkspace.Status != "provisioning" || provisioningWorkspace.LocalPath != "" {
 		t.Fatalf("unexpected provisioning workspace: %#v", provisioningWorkspace)
 	}
-	if err := handler.nodeApp.FinalizePersisted(context.Background(), prepared, created); err != nil {
+	if err := handler.FinalizePersisted(context.Background(), prepared, created); err != nil {
 		t.Fatalf("finalize persisted workspace: %v", err)
 	}
 	storedWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
@@ -60,18 +60,18 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	}
 }
 
-// newTestHandler creates a Services for dispatch handler unit tests.
-func newTestHandler(t *testing.T) *Services {
+// newTestHandler creates a Service for dispatch handler unit tests.
+func newTestHandler(t *testing.T) *Service {
 	t.Helper()
-	return newTestServices(t, nil, "node-1")
+	return newTestService(t, nil, "node-1")
 }
 
 func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *testing.T) {
 	s := newTestHandler(t)
-	subscriptionID, events := s.events.Subscribe()
-	defer s.events.Unsubscribe(subscriptionID)
+	subscriptionID, events := s.deps.Events.Subscribe()
+	defer s.deps.Events.Unsubscribe(subscriptionID)
 
-	s.nodeApp.PublishWorkspaceSnapshotChanged("org-1", "project-1", "workspace-1", "updated")
+	s.PublishWorkspaceSnapshotChanged("org-1", "project-1", "workspace-1", "updated")
 
 	select {
 	case event := <-events:
@@ -92,7 +92,7 @@ func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *test
 
 func TestHandleWorkspaceCreate_ReturnsPendingWhenAPIRegistrationIsSkipped(t *testing.T) {
 	root := t.TempDir()
-	handler := newTestServices(t, nil, "node-1")
+	handler := newTestService(t, nil, "node-1")
 
 	params, err := json.Marshal(map[string]any{
 		"repoKey":       "owner/repo",
@@ -134,9 +134,9 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 
 	root := t.TempDir()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := newTestServices(t, runtime, "node-1")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler := newTestService(t, runtime, "node-1")
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	params, err := json.Marshal(map[string]any{
 		"organizationId": "org-1",
@@ -214,14 +214,14 @@ func (p *tokenUsageRecoveryProbe) RequestRecentRecoveryScan(_ string) {
 	}
 }
 
-func installTokenUsageRecoveryProbe(t *testing.T, services *Services) (string, *tokenUsageRecoveryProbe) {
+func installTokenUsageRecoveryProbe(t *testing.T, services *Service) (string, *tokenUsageRecoveryProbe) {
 	t.Helper()
 	collector := &tokenUsageRecoveryProbe{
 		recoverySinceByAgent: make(map[string]int64),
 		needsRerun:           make(map[string]bool),
 		inFlight:             map[string]bool{"recovery-probe": true},
 	}
-	services.tokenUsage = collector
+	services.deps.TokenUsage = collector
 	return "recovery-probe", collector
 }
 
@@ -281,7 +281,7 @@ func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, s)
 
 	// Pre-open the workspace directly in the manager with matching metadata.
-	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
+	if _, err := s.OpenWorkspace(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
 		t.Fatalf("pre-open: %v", err)
 	}
 
@@ -319,7 +319,7 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 	s := newTestHandler(t)
 	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, s)
 
-	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
+	if _, err := s.OpenWorkspace(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
 		t.Fatalf("pre-open: %v", err)
 	}
 
@@ -422,7 +422,7 @@ func TestHandleWorkspaceCloseProject(t *testing.T) {
 	}
 }
 
-func newCloseRoutingTestHandler(t *testing.T, workspaceNodeID string) *Services {
+func newCloseRoutingTestHandler(t *testing.T, workspaceNodeID string) *Service {
 	t.Helper()
 	s := newTestHandler(t)
 	database, err := localdb.Open(t.TempDir())
@@ -442,7 +442,7 @@ func newCloseRoutingTestHandler(t *testing.T, workspaceNodeID string) *Services 
 	s.setTestDatabase(database)
 	// Keep the close-routing test fast: the token-usage scan on close is
 	// incidental to the routing decision under test.
-	s.tokenUsage = nil
+	s.deps.TokenUsage = nil
 	return s
 }
 
@@ -502,19 +502,19 @@ func runDispatchWorkspaceTestGitCmd(t *testing.T, dir string, args ...string) {
 func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 	s := newTestHandler(t)
 	workspacePath := t.TempDir()
-	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
+	if _, err := s.OpenWorkspace(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	subscriptionID, events := s.events.Subscribe()
-	defer s.events.Unsubscribe(subscriptionID)
+	subscriptionID, events := s.deps.Events.Subscribe()
+	defer s.deps.Events.Unsubscribe(subscriptionID)
 
 	if err := os.RemoveAll(workspacePath); err != nil {
 		t.Fatalf("remove workspace path: %v", err)
 	}
 
-	s.nodeApp.CheckWorkspaceHealth(context.Background())
+	s.CheckWorkspaceHealth(context.Background())
 
 	ws, err := s.getWorkspace("ws-1")
 	if err != nil {
@@ -538,13 +538,13 @@ func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 func TestCheckWorkspaceHealth_KeepsHealthyWorkspaceActive(t *testing.T) {
 	s := newTestHandler(t)
 	workspacePath := t.TempDir()
-	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
+	if _, err := s.OpenWorkspace(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 
-	s.nodeApp.CheckWorkspaceHealth(context.Background())
+	s.CheckWorkspaceHealth(context.Background())
 
 	ws, err := s.getWorkspace("ws-1")
 	if err != nil {
@@ -576,7 +576,7 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
+	if _, err := s.OpenWorkspace(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "project-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
@@ -585,7 +585,7 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 		t.Fatalf("remove workspace path: %v", err)
 	}
 
-	s.nodeApp.CheckWorkspaceHealth(context.Background())
+	s.CheckWorkspaceHealth(context.Background())
 
 	persisted, err := workspaceStore.Get(context.Background(), "ws-1")
 	if err != nil {

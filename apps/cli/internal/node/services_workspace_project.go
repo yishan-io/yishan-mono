@@ -33,7 +33,7 @@ func shouldSkipWorkspaceOpenProject(existing workspace.Workspace, entry rpc.Work
 
 // openProjectWorkspace opens one entry from a workspace.openProject request.
 // Returns the workspace id, whether it was newly opened, and any error.
-func (s *Services) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (string, bool, error) {
+func (s *Service) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (string, bool, error) {
 	workspaceID := strings.TrimSpace(entry.WorkspaceID)
 	workspacePath := strings.TrimSpace(entry.WorktreePath)
 	if workspaceID == "" || workspacePath == "" {
@@ -46,12 +46,12 @@ func (s *Services) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (st
 			// path, so ensure the filesystem watcher exists even on the skip
 			// path; otherwise file-change events never flow for this workspace.
 			if existingWorkspace.State == workspace.StateActive && strings.TrimSpace(existingWorkspace.Path) != "" {
-				s.nodeApp.WatchAndTrack(existingWorkspace.ID, existingWorkspace.Path)
+				s.WatchAndTrack(existingWorkspace.ID, existingWorkspace.Path)
 			}
 			return workspaceID, false, nil
 		}
 	}
-	openedWorkspace, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{
+	openedWorkspace, err := s.OpenWorkspace(workspace.OpenRequest{
 		ID:        workspaceID,
 		Path:      workspacePath,
 		ProjectID: entry.ProjectID,
@@ -60,6 +60,6 @@ func (s *Services) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (st
 	if err != nil {
 		return workspaceID, false, err
 	}
-	s.nodeApp.WatchAndTrack(openedWorkspace.ID, openedWorkspace.Path)
+	s.WatchAndTrack(openedWorkspace.ID, openedWorkspace.Path)
 	return openedWorkspace.ID, true, nil
 }

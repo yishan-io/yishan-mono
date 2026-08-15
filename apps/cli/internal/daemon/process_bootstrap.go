@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"yishan/apps/cli/internal/app"
 	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
@@ -99,7 +100,7 @@ func resolveDaemonID(statePath string) (string, error) {
 // buildHandler composes the account-scoped service graph (node.Bootstrap) and
 // returns the composed app. envDir stays env-root scoped (e.g. the token-usage
 // pricing cache); dataDir is the per-account data dir.
-func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*node.App, *relay.Status, error) {
+func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*app.App, *relay.Status, error) {
 	envDir := filepath.Dir(statePath)
 	credentialPath := filepath.Join(envDir, "credential.yaml")
 	dataDir, err := config.ResolveAccountDataDir(credentialPath)
@@ -112,7 +113,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		return nil, nil, err
 	}
 
-	app, err := node.Bootstrap(node.Config{
+	app, err := app.Bootstrap(app.Config{
 		Runtime:          runtime,
 		NodeID:           daemonID,
 		LogFilePath:      cfg.LogFilePath,
@@ -154,7 +155,7 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 	return database, nil
 }
 
-func buildHTTPServer(app *node.App, daemonID string, relayStatus *relay.Status) *http.Server {
+func buildHTTPServer(app *app.App, daemonID string, relayStatus *relay.Status) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/ws", app.RPCServer())
 	mux.HandleFunc(node.AgentHookIngestPath, app.ServeAgentHook)

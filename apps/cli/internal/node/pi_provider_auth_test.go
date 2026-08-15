@@ -14,10 +14,10 @@ import (
 	"yishan/apps/cli/internal/rpcerror"
 )
 
-func newPiAuthTestHandler(t *testing.T) *Services {
+func newPiAuthTestHandler(t *testing.T) *Service {
 	t.Helper()
 	s := newTestHandler(t)
-	s.piAuth = piauth.NewStore(
+	s.deps.PIAuth = piauth.NewStore(
 		t.TempDir(),
 		piauth.WithLockPolicy(piauth.LockPolicy{MaxAttempts: 3, MinDelay: 5 * time.Millisecond, MaxDelay: 10 * time.Millisecond}),
 		piauth.WithAmbientDetector(func(string) string { return "" }), // hermetic
@@ -128,7 +128,7 @@ func TestPiProviderDispatch_CorruptAuthFileIsServerError(t *testing.T) {
 	s := newTestHandler(t)
 	dir := t.TempDir()
 	writeAuthFile(t, dir, "{ broken")
-	s.piAuth = piauth.NewStore(dir, piauth.WithLockPolicy(
+	s.deps.PIAuth = piauth.NewStore(dir, piauth.WithLockPolicy(
 		piauth.LockPolicy{MaxAttempts: 3, MinDelay: 5 * time.Millisecond, MaxDelay: 10 * time.Millisecond},
 	))
 
@@ -138,7 +138,7 @@ func TestPiProviderDispatch_CorruptAuthFileIsServerError(t *testing.T) {
 
 func TestPiProviderDispatch_NilStoreIsServerError(t *testing.T) {
 	s := newTestHandler(t)
-	s.piAuth = nil
+	s.deps.PIAuth = nil
 	_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListProviders, nil)
 	assertRPCErrorCode(t, err, rpcerror.CodeServerError)
 }

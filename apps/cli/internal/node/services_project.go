@@ -28,8 +28,8 @@ func optionalWorkspaceString(value string) *string {
 	return &trimmedValue
 }
 
-func (s *Services) projectListPreferenceStore() *localdb.ProjectListPreferenceStore {
-	return localdb.NewProjectListPreferenceStore(s.localDatabase)
+func (s *Service) projectListPreferenceStore() *localdb.ProjectListPreferenceStore {
+	return localdb.NewProjectListPreferenceStore(s.deps.Database)
 }
 
 // apiProjectToLocalRecord maps a remote project list record to the
@@ -79,8 +79,8 @@ func apiWorkspaceToLocalRecord(workspace api.Workspace) localdb.Workspace {
 
 // listRemoteProjects fetches the org's projects from the remote list endpoint
 // (org-scoped), mapped to the local-shaped records used by the RPC response.
-func (s *Services) listRemoteProjects(ctx context.Context, orgID string) ([]localdb.Project, error) {
-	response, err := s.runtime.APIClient().ListProjects(orgID)
+func (s *Service) listRemoteProjects(ctx context.Context, orgID string) ([]localdb.Project, error) {
+	response, err := s.deps.Runtime.APIClient().ListProjects(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,15 +95,15 @@ func (s *Services) listRemoteProjects(ctx context.Context, orgID string) ([]loca
 // actor's live (non-closed) workspaces from the remote `withWorkspaces` list
 // endpoint (one backend call), then overlays the host-local workspace runtime
 // (state/health/localPath) from the local workspace store.
-func (s *Services) listRemoteProjectsWithWorkspaces(ctx context.Context, orgID string) ([]projectWithWorkspaces, error) {
-	response, err := s.runtime.APIClient().ListProjectsWithWorkspaces(orgID)
+func (s *Service) listRemoteProjectsWithWorkspaces(ctx context.Context, orgID string) ([]projectWithWorkspaces, error) {
+	response, err := s.deps.Runtime.APIClient().ListProjectsWithWorkspaces(orgID)
 	if err != nil {
 		return nil, err
 	}
 
 	runtimeByID := map[string]localdb.Workspace{}
-	if s.localDatabase != nil {
-		if local, err := localdb.NewWorkspaceStore(s.localDatabase).List(ctx); err == nil {
+	if s.deps.Database != nil {
+		if local, err := localdb.NewWorkspaceStore(s.deps.Database).List(ctx); err == nil {
 			for _, workspace := range local {
 				runtimeByID[workspace.ID] = workspace
 			}
@@ -137,8 +137,8 @@ func (s *Services) listRemoteProjectsWithWorkspaces(ctx context.Context, orgID s
 // ProjectList returns the org's projects from the remote API. There is no
 // local project store anymore, so a failed/unconfigured remote read returns an
 // empty list.
-func (s *Services) ProjectList(ctx context.Context, req rpc.ProjectListParams) (any, error) {
-	if s.runtime == nil || !s.runtime.APIConfigured() {
+func (s *Service) ProjectList(ctx context.Context, req rpc.ProjectListParams) (any, error) {
+	if s.deps.Runtime == nil || !s.deps.Runtime.APIConfigured() {
 		return []localdb.Project{}, nil
 	}
 	projects, err := s.listRemoteProjects(ctx, req.OrganizationID)
@@ -153,8 +153,8 @@ func (s *Services) ProjectList(ctx context.Context, req rpc.ProjectListParams) (
 // live workspaces from the remote API, overlaying host-local runtime. There is
 // no local project store anymore; a failed/unconfigured remote read returns an
 // empty list.
-func (s *Services) ProjectListWithWorkspaces(ctx context.Context, req rpc.ProjectListWithWorkspacesParams) (any, error) {
-	if s.runtime == nil || !s.runtime.APIConfigured() {
+func (s *Service) ProjectListWithWorkspaces(ctx context.Context, req rpc.ProjectListWithWorkspacesParams) (any, error) {
+	if s.deps.Runtime == nil || !s.deps.Runtime.APIConfigured() {
 		return []projectWithWorkspaces{}, nil
 	}
 	results, err := s.listRemoteProjectsWithWorkspaces(ctx, req.OrganizationID)
@@ -165,14 +165,14 @@ func (s *Services) ProjectListWithWorkspaces(ctx context.Context, req rpc.Projec
 	return results, nil
 }
 
-func (s *Services) ProjectGetListPreferences(ctx context.Context, req rpc.ProjectGetListPreferencesParams) (any, error) {
+func (s *Service) ProjectGetListPreferences(ctx context.Context, req rpc.ProjectGetListPreferencesParams) (any, error) {
 	if strings.TrimSpace(req.OrganizationID) == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "organizationId is required")
 	}
 	return s.projectListPreferenceStore().Get(ctx, req.OrganizationID)
 }
 
-func (s *Services) ProjectSetListPreferences(ctx context.Context, req rpc.ProjectSetListPreferencesParams) (any, error) {
+func (s *Service) ProjectSetListPreferences(ctx context.Context, req rpc.ProjectSetListPreferencesParams) (any, error) {
 	if strings.TrimSpace(req.OrganizationID) == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "organizationId is required")
 	}

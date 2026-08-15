@@ -1,6 +1,6 @@
 package node
 
-func (s *Services) recordAgentUsage(workspaceID string, agent string) {
+func (s *Service) recordAgentUsage(workspaceID string, agent string) {
 	if workspaceID == "" || agent == "" || agent == "unknown" {
 		return
 	}
@@ -12,7 +12,7 @@ func (s *Services) recordAgentUsage(workspaceID string, agent string) {
 	s.agentUsage[workspaceID][agent] = struct{}{}
 }
 
-func (s *Services) getAgentUsage(workspaceID string) []string {
+func (s *Service) getAgentUsage(workspaceID string) []string {
 	s.agentUsageMu.Lock()
 	agents := s.agentUsage[workspaceID]
 	s.agentUsageMu.Unlock()
@@ -27,7 +27,7 @@ func (s *Services) getAgentUsage(workspaceID string) []string {
 	return names
 }
 
-func (s *Services) clearAgentUsage(workspaceID string) {
+func (s *Service) clearAgentUsage(workspaceID string) {
 	s.agentUsageMu.Lock()
 	delete(s.agentUsage, workspaceID)
 	s.agentUsageMu.Unlock()

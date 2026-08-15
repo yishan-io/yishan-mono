@@ -25,7 +25,7 @@ func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 
 func TestWorkspaceCleanupStore_AddListRemove(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestWorkspaceCleanupStore_AddListRemove(t *testing.T) {
 
 func TestWorkspaceCleanupStore_AddPreservesRetryHistory(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestWorkspaceCleanupStore_AddPreservesRetryHistory(t *testing.T) {
 
 func TestWorkspaceCleanupStore_MarkFailureIncrementsAttempts(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestWorkspaceCleanupStore_MarkFailureIncrementsAttempts(t *testing.T) {
 
 func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	legacyPath := filepath.Join(t.TempDir(), cleanupFileName)
+	legacyPath := filepath.Join(t.TempDir(), CleanupFileName)
 	legacyContent := `{
   "items": [
     {"workspaceId": "ws-legacy-1", "path": "/tmp/legacy-1", "attempts": 3, "lastError": "retried", "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z"}
@@ -167,7 +167,7 @@ func TestWorkspaceCleanupStore_ImportsLegacyFileAndDeletesIt(t *testing.T) {
 
 func TestWorkspaceCleanupStore_MissingLegacyFileIsFine(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), cleanupFileName))
+	store, err := NewCleanupStore(database, filepath.Join(t.TempDir(), CleanupFileName))
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/relay"
 )
 
@@ -35,7 +36,7 @@ func relayVerdictTestServer(t *testing.T, result map[string]any) *httptest.Serve
 
 // wireRelayReader runs a real relay client against a verdict test server so
 // dispatch responses are resolved through the production read loop.
-func wireRelayReader(t *testing.T, s *Services, result map[string]any) {
+func wireRelayReader(t *testing.T, s *Service, result map[string]any) {
 	t.Helper()
 	server := relayVerdictTestServer(t, result)
 	client := relay.NewClient(relay.ClientConfig{
@@ -43,9 +44,9 @@ func wireRelayReader(t *testing.T, s *Services, result map[string]any) {
 		NodeID:      "node-1",
 		URL:         server.URL,
 		StaticToken: "test-token",
-		Server:      s.rpcServer,
+		Server:      rpc.NewServer(s),
 		Handler:     s,
-		Events:      s.events,
+		Events:      s.deps.Events,
 	})
 	s.relayClient = client
 	ctx, cancel := context.WithCancel(context.Background())

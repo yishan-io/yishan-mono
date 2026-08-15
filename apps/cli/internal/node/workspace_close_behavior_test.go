@@ -18,8 +18,8 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 	apiServer := newWorkspaceAPIStub(t, &recorder)
 	database := openMigratedTestDB(t)
 	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
-	subscriptionID, eventCh := s.events.Subscribe()
-	defer s.events.Unsubscribe(subscriptionID)
+	subscriptionID, eventCh := s.deps.Events.Subscribe()
+	defer s.deps.Events.Unsubscribe(subscriptionID)
 
 	path := t.TempDir() // plain dir: no git teardown needed, close succeeds fast
 	openLocalWorkspace(t, s, "ws-close-1", path)
@@ -64,7 +64,7 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 	if row.Status != "closed" {
 		t.Fatalf("persisted status = %q, want closed", row.Status)
 	}
-	if _, ok := s.registry.Get("ws-close-1"); ok {
+	if _, ok := s.deps.Registry.Get("ws-close-1"); ok {
 		t.Fatal("expected workspace removed from manager after close")
 	}
 
@@ -129,7 +129,7 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 	if row.Status != "active" {
 		t.Fatalf("persisted status = %q, want active (origin does not close remote rows)", row.Status)
 	}
-	if len(s.registry.List()) != 0 {
-		t.Fatalf("expected no manager runtime records, got %v", s.registry.List())
+	if len(s.deps.Registry.List()) != 0 {
+		t.Fatalf("expected no manager runtime records, got %v", s.deps.Registry.List())
 	}
 }

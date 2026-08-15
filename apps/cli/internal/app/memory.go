@@ -1,10 +1,11 @@
-package node
+package app
 
 import (
 	"os"
 	"path/filepath"
 
 	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/node"
 
 	"github.com/rs/zerolog/log"
 )
@@ -12,7 +13,7 @@ import (
 // initMemory migrates a legacy memory.db into memory/memory.db and opens the
 // memory service. A failed init is non-fatal: memory features are disabled but
 // the daemon keeps running.
-func (a *App) initMemory(dataDir string, summarizer memory.SummarizerConfig) {
+func initMemoryService(dataDir string, summarizer memory.SummarizerConfig) *memory.Service {
 	oldPath := filepath.Join(dataDir, "memory.db")
 	newPath := filepath.Join(dataDir, "memory", "memory.db")
 
@@ -28,10 +29,10 @@ func (a *App) initMemory(dataDir string, summarizer memory.SummarizerConfig) {
 		}
 	}
 
-	memSvc, memErr := memory.NewService(newPath, summarizer, BuildRunAgentFunc())
+	memSvc, memErr := memory.NewService(newPath, summarizer, node.BuildRunAgentFunc())
 	if memErr != nil {
 		log.Warn().Err(memErr).Msg("memory service initialization failed, memory features disabled")
-		return
+		return nil
 	}
-	a.memory = memSvc
+	return memSvc
 }

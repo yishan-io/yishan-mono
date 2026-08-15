@@ -11,10 +11,10 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-func newProjectListPreferencesTestHandler(t *testing.T) *Services {
+func newProjectListPreferencesTestHandler(t *testing.T) *Service {
 	t.Helper()
 	root := t.TempDir()
-	handler := newTestServices(t, nil, "node-1")
+	handler := newTestService(t, nil, "node-1")
 
 	database, err := localdb.Open(filepath.Join(root, "db"))
 	if err != nil {
@@ -94,7 +94,7 @@ func TestHandleProjectGetListPreferences_RequiresOrganizationID(t *testing.T) {
 
 func TestHandleProjectGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
 	handler := newProjectListPreferencesTestHandler(t)
-	database := localdb.NewWorkspaceStore(handler.localDatabase)
+	database := localdb.NewWorkspaceStore(handler.deps.Database)
 
 	if err := database.Create(context.Background(), &localdb.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",

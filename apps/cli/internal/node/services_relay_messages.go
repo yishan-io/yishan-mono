@@ -11,7 +11,7 @@ import (
 // publishWorkspaceSnapshotChanged republishes relay workspace snapshot changes
 // as frontend events and runs the relayed create/close workflows on this node
 // when this node is the target.
-func publishWorkspaceSnapshotChanged(handler *Services, params json.RawMessage) {
+func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
 	if payload, ok := decodeRelayWorkspaceCreateEnvelope(params); ok {
 		switch payload.Change {
 		case workspaceRelayChangeCreateRequest:
@@ -24,7 +24,7 @@ func publishWorkspaceSnapshotChanged(handler *Services, params json.RawMessage) 
 	}
 
 	if payload, ok := decodeRelayWorkspaceCloseEnvelope(params); ok {
-		if payload.Change == relayChangeWorkspaceCloseRequest && strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(handler.nodeID) {
+		if payload.Change == relayChangeWorkspaceCloseRequest && strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(handler.deps.NodeID) {
 			handler.handleRelayedWorkspaceClose(payload)
 		}
 		return
@@ -56,16 +56,16 @@ func publishWorkspaceSnapshotChanged(handler *Services, params json.RawMessage) 
 		Str("sourceNodeId", strings.TrimSpace(sourceNodeID)).
 		Msg("relay: workspace snapshot change received")
 
-	if sourceNodeID != "" && strings.TrimSpace(sourceNodeID) == strings.TrimSpace(handler.nodeID) {
+	if sourceNodeID != "" && strings.TrimSpace(sourceNodeID) == strings.TrimSpace(handler.deps.NodeID) {
 		return
 	}
 
-	handler.events.Publish(internalevents.Event{Topic: "workspaceSnapshotChanged", Payload: payload})
+	handler.deps.Events.Publish(internalevents.Event{Topic: "workspaceSnapshotChanged", Payload: payload})
 }
 
 // publishTerminalSessionChanged republishes relay terminal session changes as
 // frontend events.
-func publishTerminalSessionChanged(handler *Services, params json.RawMessage) {
+func publishTerminalSessionChanged(handler *Service, params json.RawMessage) {
 	var payload map[string]any
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &payload); err != nil {
@@ -86,5 +86,5 @@ func publishTerminalSessionChanged(handler *Services, params json.RawMessage) {
 		Str("action", strings.TrimSpace(action)).
 		Msg("relay: terminal session change received")
 
-	handler.events.Publish(internalevents.Event{Topic: "terminalSessionChanged", Payload: payload})
+	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalSessionChanged", Payload: payload})
 }

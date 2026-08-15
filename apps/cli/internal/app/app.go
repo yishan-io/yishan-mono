@@ -1,4 +1,10 @@
-package node
+// Package app is the CLI daemon's composition root: it owns dependency
+// composition, startup, and shutdown. app.App builds the full account-scoped
+// service graph (registry, stores, capabilities, domain owners, the local
+// node.Service, the rpc transport layer, and the relay client) and owns the
+// background tasks and the shutdown order. It contains no application
+// operations — those live in node.Service and the domain owners.
+package app
 
 import (
 	"context"
@@ -7,9 +13,6 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
-	"yishan/apps/cli/internal/files"
-	"yishan/apps/cli/internal/git"
-	"yishan/apps/cli/internal/terminal"
 
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
@@ -18,10 +21,14 @@ import (
 	"yishan/apps/cli/internal/config"
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -60,13 +67,11 @@ type Config struct {
 	RelayToken   string
 }
 
-// App is the daemon's service composition root. It owns every business
-// service, the background tasks, and the shutdown order (Close).
+// App is the daemon's composition root. It owns the composed service graph,
+// the background tasks (Start), and the shutdown order (Close). Application
+// operations live in node.Service; App only composes and coordinates
+// lifecycle.
 type App struct {
-	// Workspace runtime capabilities: the instance registry (single owner of
-	// the open workspace map), the durable SQLite-backed store, and the shared
-	// file/git/terminal services. These replace the historical
-	// workspace.Manager facade.
 	registry  *instance.Registry
 	store     workspace.WorkspaceStore
 	files     *files.FileService
@@ -82,8 +87,8 @@ type App struct {
 	events       *internalevents.Hub
 	watchers     *workspacewatchers.Watchers
 	prTracker    *workspaceprtracker.Tracker
-	cleanupStore *CleanupStore
-	contextStore *ContextStore
+	cleanupStore *node.CleanupStore
+	contextStore *node.ContextStore
 	database     *sql.DB
 	Runtime      *cliruntime.Runtime
 	NodeID       string
@@ -97,17 +102,15 @@ type App struct {
 	// work (memory searches, relayed creates).
 	serverCtx context.Context
 
-	// services is the concrete rpc service layer (workspace/file/git/…
-	// implementations). Built by Bootstrap; the daemon process layer serves
-	// its rpc server.
-	services *Services
-	// router is the namespace routing table (built with services).
+	// service is the local Node application boundary: the rpc service
+	// implementations and application operations.
+	service *node.Service
+	// router is the namespace routing table.
 	router *rpc.Router
 	// rpcServer is the JSON-RPC/WebSocket transport server.
 	rpcServer *rpc.Server
 	// relay is the relay client (connection state owned by internal/relay).
 	relay *relay.Client
-
 
 	cleanupCtx           context.Context
 	cancelCleanup        context.CancelFunc
@@ -118,7 +121,7 @@ type App struct {
 // Bootstrap composes the daemon's service graph for one account. It mirrors
 // the historical daemon startup order: workspace store → cleanup store →
 // context store → token usage → computer (+ settings) → memory → hydrate →
-// watch → background tasks.
+// watch → background tasks → rpc layer.
 func Bootstrap(cfg Config) (*App, error) {
 	filesService := files.NewFileService()
 	registry := instance.NewRegistry(filesService)
@@ -126,8 +129,8 @@ func Bootstrap(cfg Config) (*App, error) {
 	gitService := git.NewGitService()
 	terminals := terminal.NewManager()
 
-	legacyCleanupPath := filepath.Join(cfg.DataDir, cleanupFileName)
-	cleanupStore, err := NewCleanupStore(cfg.Database, legacyCleanupPath)
+	legacyCleanupPath := filepath.Join(cfg.DataDir, node.CleanupFileName)
+	cleanupStore, err := node.NewCleanupStore(cfg.Database, legacyCleanupPath)
 	if err != nil {
 		return nil, fmt.Errorf("create workspace cleanup store: %w", err)
 	}
@@ -139,21 +142,21 @@ func Bootstrap(cfg Config) (*App, error) {
 		Runtime:   cfg.Runtime,
 		PersistPR: func(ctx context.Context, workspaceID string, pr *workspace.WorkspacePullRequest) error {
 			return store.UpsertPR(ctx, &workspace.StoredPullRequest{
-				WorkspaceID: workspaceID, OrganizationID: prOrgID(registry, workspaceID), PRID: fmt.Sprintf("%d", pr.Number),
-				Title: optionalString(pr.Title), URL: optionalString(pr.URL), Branch: optionalString(pr.Branch),
-				BaseBranch: optionalString(pr.BaseBranch), State: persistedPullRequestState(pr),
-				Metadata: optionalString(marshalPRMetadata(pr)), DetectedAt: persistedPullRequestDetectedAt(pr),
-				ResolvedAt: persistedPullRequestResolvedAt(pr),
+				WorkspaceID: workspaceID, OrganizationID: node.PROrgID(registry, workspaceID), PRID: fmt.Sprintf("%d", pr.Number),
+				Title: node.OptionalString(pr.Title), URL: node.OptionalString(pr.URL), Branch: node.OptionalString(pr.Branch),
+				BaseBranch: node.OptionalString(pr.BaseBranch), State: node.PersistedPullRequestState(pr),
+				Metadata: node.OptionalString(node.MarshalPRMetadata(pr)), DetectedAt: node.PersistedPullRequestDetectedAt(pr),
+				ResolvedAt: node.PersistedPullRequestResolvedAt(pr),
 			})
 		},
 		ResolvePR: func(ctx context.Context, workspaceID string, prNumber int) error {
 			return store.ResolvePR(ctx, workspaceID, fmt.Sprintf("%d", prNumber))
 		},
 		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
-			publishWorkspacePullRequestUpdatedEvent(events, event)
+			node.PublishWorkspacePullRequestUpdatedEvent(events, event)
 		},
 	})
-	watchers := newWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath)
+	watchers := node.NewWatchers(events, prTracker.RefreshWorkspaceByPath)
 	// Watcher and PR-tracker cleanup follows instance removal (close, rollback,
 	// or same-path replacement in the registry).
 	registry.SetOnRemoved(func(workspaceID string, path string) {
@@ -171,28 +174,71 @@ func Bootstrap(cfg Config) (*App, error) {
 		)
 	}
 
+	agentLifecycleCtx, cancelAgentLifecycle := context.WithCancel(context.Background())
+	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
+
+	computerSvc := node.NewDefaultComputerService()
+	modelList := modellist.NewService()
+	agentMgr := agentmanager.NewManager()
+	piAuth := node.NewManagedPiAuthStore()
+	contextStore := node.NewContextStore(cfg.SettingsPath)
+	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer)
+
+	service := node.NewService(node.Dependencies{
+		Registry:          registry,
+		Store:             store,
+		Files:             filesService,
+		Git:               gitService,
+		Terminals:         terminals,
+		Memory:            memorySvc,
+		Computer:          computerSvc,
+		ModelList:         modelList,
+		AgentMgr:          agentMgr,
+		PIAuth:            piAuth,
+		TokenUsage:        tokenUsage,
+		Events:            events,
+		Watchers:          watchers,
+		PRTracker:         prTracker,
+		CleanupStore:      cleanupStore,
+		ContextStore:      contextStore,
+		Database:          cfg.Database,
+		Runtime:           cfg.Runtime,
+		NodeID:            cfg.NodeID,
+		LogFilePath:       cfg.LogFilePath,
+		SettingsPath:      cfg.SettingsPath,
+		AgentLifecycleCtx:    agentLifecycleCtx,
+		AgentLifecycleCancel: cancelAgentLifecycle,
+		ServerCtx:            context.Background(),
+	})
+
 	app := &App{
 		registry:     registry,
 		store:        store,
 		files:        filesService,
 		git:          gitService,
 		terminals:    terminals,
-		computer:     NewDefaultComputerService(),
-		modelList:    modellist.NewService(),
-		agentMgr:     agentmanager.NewManager(),
-		piAuth:       newManagedPiAuthStore(),
+		memory:       memorySvc,
+		computer:     computerSvc,
+		modelList:    modelList,
+		agentMgr:     agentMgr,
+		piAuth:       piAuth,
 		tokenUsage:   tokenUsage,
 		events:       events,
 		watchers:     watchers,
 		prTracker:    prTracker,
 		cleanupStore: cleanupStore,
-		contextStore: NewContextStore(cfg.SettingsPath),
+		contextStore: contextStore,
 		database:     cfg.Database,
 		Runtime:      cfg.Runtime,
 		NodeID:       cfg.NodeID,
 		logFilePath:  cfg.LogFilePath,
 		settingsPath: cfg.SettingsPath,
-		serverCtx:    context.Background(),
+		serverCtx:             context.Background(),
+		agentLifecycleCtx:     agentLifecycleCtx,
+		cancelAgentLifecycle:  cancelAgentLifecycle,
+		cleanupCtx:            cleanupCtx,
+		cancelCleanup:         cancelCleanup,
+		service:               service,
 	}
 
 	// Computer feature config comes from settings.yaml.
@@ -200,37 +246,31 @@ func Bootstrap(cfg Config) (*App, error) {
 		return nil, err
 	}
 
-	// Memory service initialization is non-fatal: memory features are disabled
-	// but the daemon keeps running.
-	app.initMemory(cfg.DataDir, cfg.MemorySummarizer)
-
 	// Restore persisted workspaces and register a filesystem watcher for every
 	// active one (see WatchActiveWorkspaces for why hydration is not enough).
-	if err := app.HydrateFromDB(context.Background()); err != nil {
+	if err := service.HydrateFromDB(context.Background()); err != nil {
 		return nil, fmt.Errorf("restore persisted workspaces: %w", err)
 	}
-	app.WatchActiveWorkspaces()
+	service.WatchActiveWorkspaces()
 
 	// Background tasks (and the lifecycle contexts that bound them).
 	app.Start()
 
 	// Build the rpc service layer and the transport server, then the relay
-	// client (it needs the rpc server and the services as its message
-	// handler).
-	app.services = NewServices(app)
-	app.services.BuildRPCLayer()
-	app.router = app.services.Router()
-	app.rpcServer = app.services.RPCServer()
+	// client (it needs the rpc server and the service as its message handler).
+	app.router = buildNamespaceRouter(service)
+	app.rpcServer = rpc.NewServer(service)
+	app.rpcServer.BinaryFrameHandler = service
 	app.relay = relay.NewClient(relay.ClientConfig{
 		Runtime:     cfg.Runtime,
 		NodeID:      cfg.NodeID,
 		URL:         cfg.RelayURL,
 		StaticToken: cfg.RelayToken,
 		Server:      app.rpcServer,
-		Handler:     app.services,
+		Handler:     service,
 		Events:      events,
 	})
-	app.services.SetRelayClient(app.relay)
+	service.SetRelayClient(app.relay)
 
 	return app, nil
 }
@@ -239,8 +279,6 @@ func Bootstrap(cfg Config) (*App, error) {
 // background tasks owned by the app: file-cache consumer, token-usage startup
 // scan, pending-cleanup retry, and the workspace health monitor.
 func (a *App) Start() {
-	a.cleanupCtx, a.cancelCleanup = context.WithCancel(context.Background())
-	a.agentLifecycleCtx, a.cancelAgentLifecycle = context.WithCancel(context.Background())
 	a.StartFileCacheConsumer()
 	if a.tokenUsage != nil {
 		a.tokenUsage.StartStartupScan()
@@ -293,11 +331,8 @@ func (a *App) Close() error {
 			log.Warn().Err(err).Msg("failed to close memory service")
 		}
 	}
-	if a.cancelAgentLifecycle != nil {
-		a.cancelAgentLifecycle()
-	}
-	if a.agentMgr != nil {
-		a.agentMgr.StopAll()
+	if a.service != nil {
+		a.service.Shutdown()
 	}
 	modellist.ShutdownShell()
 	if a.cancelCleanup != nil {
@@ -325,5 +360,11 @@ func (a *App) Relay() *relay.Client {
 
 // ServeAgentHook handles the agent hook HTTP ingress (pi notify bridge).
 func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
-	a.services.ServeAgentHook(w, r)
+	a.service.ServeAgentHook(w, r)
+}
+
+// NewRouter builds the namespace routing table for a node.Service (test and
+// composition helper; Bootstrap wires it into the app).
+func NewRouter(service *node.Service) *rpc.Router {
+	return buildNamespaceRouter(service)
 }

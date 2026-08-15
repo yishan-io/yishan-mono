@@ -8,9 +8,9 @@ import (
 
 func TestPublishWorkspaceSnapshotChanged_RepublishesCreateStartedForSourceNode(t *testing.T) {
 	handler := newTestHandler(t)
-	handler.nodeID = "node-source"
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler.deps.NodeID = "node-source"
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	params, err := json.Marshal(relayWorkspaceCreateEnvelope{
 		OrganizationID: "org-1",
@@ -59,9 +59,9 @@ func TestPublishWorkspaceSnapshotChanged_RepublishesCreateStartedForSourceNode(t
 
 func TestPublishWorkspaceSnapshotChanged_IgnoresGenericLoopbackFromSameNode(t *testing.T) {
 	handler := newTestHandler(t)
-	handler.nodeID = "node-local"
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler.deps.NodeID = "node-local"
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	params, err := json.Marshal(map[string]any{
 		"organizationId": "org-1",
@@ -81,9 +81,9 @@ func TestPublishWorkspaceSnapshotChanged_IgnoresGenericLoopbackFromSameNode(t *t
 
 func TestPublishWorkspaceSnapshotChanged_RepublishesGenericEventFromOtherNode(t *testing.T) {
 	handler := newTestHandler(t)
-	handler.nodeID = "node-local"
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	handler.deps.NodeID = "node-local"
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	params, err := json.Marshal(map[string]any{
 		"organizationId": "org-1",

@@ -9,14 +9,23 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
+func evalSymlinks(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resolved
+}
+
 func TestServices_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
 	root := evalSymlinks(t, t.TempDir())
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	handler := newTestServices(t, nil, "node-1")
-	if _, err := handler.nodeApp.OpenWorkspace(workspace.OpenRequest{
+	handler := newTestService(t, nil, "node-1")
+	if _, err := handler.OpenWorkspace(workspace.OpenRequest{
 		ID:        "workspace-1",
 		Path:      root,
 		ProjectID: "project-1",
@@ -43,7 +52,7 @@ func TestServices_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
 	// The desktop warmup skips already-open workspaces; the watcher must still
 	// be registered so file-change events flow (the Git Changes tab depends on
 	// them).
-	if !handler.nodeApp.watchers.IsWatching(root) {
+	if !handler.deps.Watchers.IsWatching(root) {
 		t.Fatal("expected watcher registered on openProject skip path")
 	}
 }

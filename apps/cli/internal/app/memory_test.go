@@ -1,4 +1,4 @@
-package node
+package app
 
 import (
 	"os"
@@ -19,8 +19,7 @@ func TestInitMemory_MigratesOldDB(t *testing.T) {
 	}
 	db.Close()
 
-	app := &App{}
-	app.initMemory(root, memory.SummarizerConfig{})
+	_ = initMemoryService(root, memory.SummarizerConfig{})
 
 	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
 		t.Fatal("expected old memory.db to be moved away")
@@ -35,8 +34,7 @@ func TestInitMemory_NewPathOnly(t *testing.T) {
 	oldPath := filepath.Join(root, "memory.db")
 	newPath := filepath.Join(root, "memory", "memory.db")
 
-	app := &App{}
-	app.initMemory(root, memory.SummarizerConfig{})
+	_ = initMemoryService(root, memory.SummarizerConfig{})
 
 	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
 		t.Fatal("expected old memory.db to not exist")
@@ -61,8 +59,7 @@ func TestInitMemory_BothExistKeepsOld(t *testing.T) {
 		t.Fatalf("WriteFile oldPath: %v", err)
 	}
 
-	app := &App{}
-	app.initMemory(root, memory.SummarizerConfig{})
+	_ = initMemoryService(root, memory.SummarizerConfig{})
 
 	data, err := os.ReadFile(oldPath)
 	if err != nil {

@@ -1,4 +1,4 @@
-package node
+package app
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/node"
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
@@ -17,6 +18,32 @@ import (
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
+
+func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopic string) internalevents.Event {
+	t.Helper()
+	deadline := time.After(3 * time.Second)
+
+	for {
+		select {
+		case event := <-events:
+			if event.Topic == wantTopic {
+				return event
+			}
+		case <-deadline:
+			t.Fatalf("timed out waiting for %s event", wantTopic)
+		}
+	}
+}
+
+func expectNoEvent(t *testing.T, events <-chan internalevents.Event, wait time.Duration) {
+	t.Helper()
+
+	select {
+	case event := <-events:
+		t.Fatalf("expected no event, got topic %q", event.Topic)
+	case <-time.After(wait):
+	}
+}
 
 func evalSymlinks(t *testing.T, path string) string {
 	t.Helper()
@@ -29,7 +56,7 @@ func evalSymlinks(t *testing.T, path string) string {
 
 func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *testing.T) {
 	hub := internalevents.NewHub()
-	sink := newEventHubWorkspaceWatcherSink(hub)
+	sink := node.NewEventHubWatcherSink(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
 
@@ -55,7 +82,7 @@ func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *t
 
 func TestEventHubWorkspaceWatcherSink_PublishesGitChangedPayload(t *testing.T) {
 	hub := internalevents.NewHub()
-	sink := newEventHubWorkspaceWatcherSink(hub)
+	sink := node.NewEventHubWatcherSink(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
 
@@ -81,7 +108,7 @@ func TestPublishWorkspacePullRequestUpdatedEvent(t *testing.T) {
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
 
-	publishWorkspacePullRequestUpdatedEvent(hub, workspaceprtracker.PullRequestUpdatedEvent{
+	node.PublishWorkspacePullRequestUpdatedEvent(hub, workspaceprtracker.PullRequestUpdatedEvent{
 		WorkspaceID:           "ws-1",
 		WorkspaceWorktreePath: "/tmp/ws-1",
 		PullRequest:           &workspace.WorkspacePullRequest{Number: 42, Status: "open"},
@@ -110,8 +137,8 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app := newWatchTestApp(t)
-	openedWorkspace, err := app.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: root})
+	app := newWatchTestApp(t, nil)
+	openedWorkspace, err := app.service.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: root})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
@@ -183,8 +210,7 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	app := newWatchTestApp(t)
-	app.store = localdb.NewStore(workspaceStore)
+	app := newWatchTestApp(t, localdb.NewStore(workspaceStore))
 
 	// Hydration alone must not register watchers (the regression this guards):
 	// without the explicit watch step, file-change events stop flowing after a
@@ -195,10 +221,10 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 
 	// Drive the same sequence Bootstrap uses at boot so removing the watch
 	// step from the bootstrap sequence fails this test.
-	if err := app.HydrateFromDB(context.Background()); err != nil {
+	if err := app.service.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("hydrate workspaces: %v", err)
 	}
-	app.WatchActiveWorkspaces()
+	app.service.WatchActiveWorkspaces()
 
 	hydratedWorkspace, ok := app.registry.Get("workspace-1")
 	if !ok {
@@ -215,12 +241,12 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app := newWatchTestApp(t)
-	if _, err := app.OpenWorkspace(workspace.OpenRequest{ID: "workspace-1", Path: root}); err != nil {
+	app := newWatchTestApp(t, nil)
+	if _, err := app.service.OpenWorkspace(workspace.OpenRequest{ID: "workspace-1", Path: root}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 
-	app.WatchActiveWorkspaces()
+	app.service.WatchActiveWorkspaces()
 	if !app.watchers.IsWatching(root) {
 		t.Fatal("expected watcher registered for active workspace")
 	}
@@ -230,7 +256,7 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	if err := os.Rename(root, movedPath); err != nil {
 		t.Fatalf("move workspace path: %v", err)
 	}
-	if _, _, _, err := app.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
+	if _, _, _, err := app.service.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
 		t.Fatalf("refresh health (error transition): %v", err)
 	}
 	if app.watchers.IsWatching(root) {
@@ -242,7 +268,7 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 	if err := os.Rename(movedPath, root); err != nil {
 		t.Fatalf("restore workspace path: %v", err)
 	}
-	if _, _, _, err := app.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
+	if _, _, _, err := app.service.RefreshWorkspaceHealth(context.Background(), "workspace-1"); err != nil {
 		t.Fatalf("refresh health (recovery): %v", err)
 	}
 	if !app.watchers.IsWatching(root) {
@@ -251,7 +277,7 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 }
 
 // newWatchTestApp builds a minimal app for watcher/file-cache behavior tests.
-func newWatchTestApp(t *testing.T) *App {
+func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 	t.Helper()
 	events := internalevents.NewHub()
 	filesService := files.NewFileService()
@@ -263,13 +289,25 @@ func newWatchTestApp(t *testing.T) *App {
 		Gits:      gitService,
 		Runtime:   nil,
 		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
-			PublishPullRequestUpdated(events, event)
+			node.PublishPullRequestUpdated(events, event)
 		},
 	})
-	watchers := NewWatchers(events, prTracker.RefreshWorkspaceByPath)
+	watchers := node.NewWatchers(events, prTracker.RefreshWorkspaceByPath)
 	registry.SetOnRemoved(func(workspaceID string, path string) {
 		watchers.Unwatch(path)
 		prTracker.StopTracking(workspaceID)
+	})
+	service := node.NewService(node.Dependencies{
+		Registry:     registry,
+		Store:        store,
+		Files:        filesService,
+		Git:          gitService,
+		Terminals:    terminals,
+		Events:       events,
+		Watchers:     watchers,
+		PRTracker:    prTracker,
+		ContextStore: node.NewContextStore(""),
+		NodeID:       "node-1",
 	})
 	app := &App{
 		registry:     registry,
@@ -279,7 +317,8 @@ func newWatchTestApp(t *testing.T) *App {
 		events:       events,
 		watchers:     watchers,
 		prTracker:    prTracker,
-		contextStore: NewContextStore(""),
+		contextStore: node.NewContextStore(""),
+		service:      service,
 		Runtime:      nil,
 		NodeID:       "node-1",
 		logFilePath:  filepath.Join(t.TempDir(), "daemon.log"),

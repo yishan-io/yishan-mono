@@ -30,14 +30,14 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	app := &App{store: localdb.NewStore(store), registry: instance.NewRegistry(files.NewFileService())}
-	if err := app.HydrateFromDB(context.Background()); err != nil {
+	svc := NewService(Dependencies{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
+	if err := svc.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 	// A closing row is a tombstone-for-listing: it must not be restored, and
 	// it must not be promoted to error (which would resurrect it as closable).
-	if len(app.registry.List()) != 0 {
-		t.Fatalf("expected closing row skipped, got %v", app.registry.List())
+	if len(svc.deps.Registry.List()) != 0 {
+		t.Fatalf("expected closing row skipped, got %v", svc.deps.Registry.List())
 	}
 }
 
@@ -54,12 +54,12 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	app := &App{store: localdb.NewStore(store), registry: instance.NewRegistry(files.NewFileService())}
-	if err := app.HydrateFromDB(context.Background()); err != nil {
+	svc := NewService(Dependencies{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
+	if err := svc.HydrateFromDB(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 
-	ws, ok := app.registry.Get("ws-recovered")
+	ws, ok := svc.deps.Registry.Get("ws-recovered")
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
@@ -80,8 +80,8 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 func TestHealthTransition_NotWorktree(t *testing.T) {
 	database := openMigratedTestDB(t)
 	s := newBehaviorHandler(t, nil, "node-1", database)
-	subscriptionID, eventCh := s.events.Subscribe()
-	defer s.events.Unsubscribe(subscriptionID)
+	subscriptionID, eventCh := s.deps.Events.Subscribe()
+	defer s.deps.Events.Unsubscribe(subscriptionID)
 
 	// A path whose .git entry is a regular file is not a worktree: the health
 	// check must mark it error/not-worktree (not path-missing).
@@ -152,7 +152,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	state, health, healthErr, err := s.nodeApp.RefreshWorkspaceHealth(context.Background(), "ws-folder")
+	state, health, healthErr, err := s.RefreshWorkspaceHealth(context.Background(), "ws-folder")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}
@@ -168,14 +168,14 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 
 	s := newBehaviorHandler(t, nil, "node-1", nil)
 	openLocalWorkspace(t, s, "ws-recover", gitRepo)
-	if err := s.registry.SetState("ws-recover", instance.StateError, instance.HealthPathMissing); err != nil {
+	if err := s.deps.Registry.SetState("ws-recover", instance.StateError, instance.HealthPathMissing); err != nil {
 		t.Fatalf("SetState: %v", err)
 	}
-	if s.watchers.IsWatching(gitRepo) {
+	if s.deps.Watchers.IsWatching(gitRepo) {
 		t.Fatal("watcher must not be registered before health recovery")
 	}
 
-	state, health, _, err := s.nodeApp.RefreshWorkspaceHealth(context.Background(), "ws-recover")
+	state, health, _, err := s.RefreshWorkspaceHealth(context.Background(), "ws-recover")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}
@@ -185,11 +185,11 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 	// The watcher is registered under the canonicalized path (EvalSymlinks
 	// resolves /var → /private/var on macOS), so assert against the manager's
 	// resolved path, not the raw test path.
-	ws, ok := s.registry.Get("ws-recover")
+	ws, ok := s.deps.Registry.Get("ws-recover")
 	if !ok {
 		t.Fatal("get workspace: not found")
 	}
-	if !s.watchers.IsWatching(ws.Path) {
+	if !s.deps.Watchers.IsWatching(ws.Path) {
 		t.Fatal("watcher must be re-registered after recovery from error")
 	}
 }

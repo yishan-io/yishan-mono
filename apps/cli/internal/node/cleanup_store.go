@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const cleanupFileName = "pending-workspace-cleanups.json"
+const CleanupFileName = "pending-workspace-cleanups.json"
 
 // PendingWorkspaceCleanup is one entry in the pending workspace cleanup retry
 // queue: a workspace whose close/removal was interrupted and will be retried

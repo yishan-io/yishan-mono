@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/node"
+	"yishan/apps/cli/internal/app"
 	"yishan/apps/cli/internal/relay"
 	cliruntime "yishan/apps/cli/internal/runtime"
 
@@ -44,7 +44,7 @@ type daemonRuntime struct {
 	listener    net.Listener
 	actualAddr  string
 	daemonID    string
-	app         *node.App
+	app         *app.App
 	relayStatus *relay.Status
 	server      *http.Server
 	statePath   string

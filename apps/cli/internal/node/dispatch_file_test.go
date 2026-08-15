@@ -20,8 +20,8 @@ func TestDispatchFile_Search(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	handler := newTestServices(t, nil, "node-1")
-	openedWorkspace, err := handler.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: root})
+	handler := newTestService(t, nil, "node-1")
+	openedWorkspace, err := handler.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: root})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}

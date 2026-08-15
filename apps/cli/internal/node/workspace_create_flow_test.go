@@ -17,8 +17,8 @@ import (
 // Service.Create, which prepares before emitting created events).
 func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *testing.T) {
 	handler := newWorkspaceCreateFlowTestHandler(t, "http://unused")
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
 	params, err := json.Marshal(workspaceCreateParams{
 		OrganizationID: "org-1",
@@ -40,9 +40,9 @@ func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *tes
 	expectNoEvent(t, events, 100*time.Millisecond)
 }
 
-func newWorkspaceCreateFlowTestHandler(t *testing.T, baseURL string) *Services {
+func newWorkspaceCreateFlowTestHandler(t *testing.T, baseURL string) *Service {
 	t.Helper()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: baseURL, Token: "test-token"}})
-	handler := newTestServices(t, runtime, "node-local")
+	handler := newTestService(t, runtime, "node-local")
 	return handler
 }

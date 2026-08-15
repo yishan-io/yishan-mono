@@ -16,11 +16,11 @@ import (
 // application operation. Create/close route through application.Service;
 // the rest operate on the instance registry / manager.
 
-func (s *Services) ListWorkspaces() (any, error) {
-	return s.registry.List(), nil
+func (s *Service) ListWorkspaces() (any, error) {
+	return s.deps.Registry.List(), nil
 }
 
-func (s *Services) WorkspaceCreate(ctx context.Context, req rpc.WorkspaceCreateParams) (any, error) {
+func (s *Service) WorkspaceCreate(ctx context.Context, req rpc.WorkspaceCreateParams) (any, error) {
 	result, err := s.app.Create(ctx, application.CreateCommand(req))
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (s *Services) WorkspaceCreate(ctx context.Context, req rpc.WorkspaceCreateP
 	return map[string]any{"id": result.ID, "status": result.Status}, nil
 }
 
-func (s *Services) WorkspaceClose(ctx context.Context, req rpc.WorkspaceCloseParams) (any, error) {
+func (s *Service) WorkspaceClose(ctx context.Context, req rpc.WorkspaceCloseParams) (any, error) {
 	result, err := s.app.Close(ctx, application.CloseCommand(req))
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (s *Services) WorkspaceClose(ctx context.Context, req rpc.WorkspaceClosePar
 	}, nil
 }
 
-func (s *Services) WorkspaceRefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error) {
+func (s *Service) WorkspaceRefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error) {
 	workspaceID := strings.TrimSpace(req.WorkspaceID)
 	workspacePath := strings.TrimSpace(req.Path)
 	if workspaceID == "" && workspacePath == "" {
@@ -53,7 +53,7 @@ func (s *Services) WorkspaceRefreshPullRequest(ctx context.Context, req workspac
 		if workspaceID != "" {
 			return s.getWorkspace(workspaceID)
 		}
-		resolvedWorkspace, ok := s.registry.GetByPath(workspacePath)
+		resolvedWorkspace, ok := s.deps.Registry.GetByPath(workspacePath)
 		if !ok {
 			return workspace.Workspace{}, workspace.NewRPCError(rpcerror.CodeNotFound, "workspace not found")
 		}
@@ -63,8 +63,8 @@ func (s *Services) WorkspaceRefreshPullRequest(ctx context.Context, req workspac
 		return nil, err
 	}
 
-	s.prTracker.EnsureTracked(ws.Path, false)
-	s.prTracker.RefreshWorkspaceByPath(ws.Path)
+	s.deps.PRTracker.EnsureTracked(ws.Path, false)
+	s.deps.PRTracker.RefreshWorkspaceByPath(ws.Path)
 
 	refreshedWorkspace, err := s.getWorkspace(ws.ID)
 	if err != nil {
@@ -73,21 +73,21 @@ func (s *Services) WorkspaceRefreshPullRequest(ctx context.Context, req workspac
 	return refreshedWorkspace, nil
 }
 
-func (s *Services) WorkspaceSetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error) {
-	return s.terminals.SetActiveWorkspace(req)
+func (s *Service) WorkspaceSetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error) {
+	return s.deps.Terminals.SetActiveWorkspace(req)
 }
 
-func (s *Services) WorkspaceSyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error) {
+func (s *Service) WorkspaceSyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error) {
 	return workspace.SyncContextLink(req)
 }
 
-func (s *Services) WorkspaceHealth(ctx context.Context, req rpc.WorkspaceHealthParams) (any, error) {
+func (s *Service) WorkspaceHealth(ctx context.Context, req rpc.WorkspaceHealthParams) (any, error) {
 	ws, err := s.getWorkspace(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
 
-	state, health, healthErr, err := s.nodeApp.RefreshWorkspaceHealth(ctx, req.WorkspaceID)
+	state, health, healthErr, err := s.RefreshWorkspaceHealth(ctx, req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (s *Services) WorkspaceHealth(ctx context.Context, req rpc.WorkspaceHealthP
 	}, nil
 }
 
-func (s *Services) WorkspaceOpenProject(ctx context.Context, req rpc.WorkspaceOpenProjectParams) (any, error) {
+func (s *Service) WorkspaceOpenProject(ctx context.Context, req rpc.WorkspaceOpenProjectParams) (any, error) {
 	opened, skipped, openErrors := []string{}, []string{}, []string{}
 	for _, entry := range req.Workspaces {
 		workspaceID, didOpenWorkspace, err := s.openProjectWorkspace(entry)
@@ -121,8 +121,8 @@ func (s *Services) WorkspaceOpenProject(ctx context.Context, req rpc.WorkspaceOp
 		}
 		skipped = append(skipped, workspaceID)
 	}
-	if len(opened) > 0 && s.tokenUsage != nil {
-		s.tokenUsage.RequestRecentRecoveryScan("workspace.openProject")
+	if len(opened) > 0 && s.deps.TokenUsage != nil {
+		s.deps.TokenUsage.RequestRecentRecoveryScan("workspace.openProject")
 	}
 
 	return rpc.WorkspaceOpenProjectResult{
@@ -132,14 +132,14 @@ func (s *Services) WorkspaceOpenProject(ctx context.Context, req rpc.WorkspaceOp
 	}, nil
 }
 
-func (s *Services) WorkspaceCloseProject(ctx context.Context, req rpc.WorkspaceCloseProjectParams) (any, error) {
+func (s *Service) WorkspaceCloseProject(ctx context.Context, req rpc.WorkspaceCloseProjectParams) (any, error) {
 	stopped := []string{}
 	for _, wsID := range req.WorkspaceIDs {
 		wsID = strings.TrimSpace(wsID)
 		if wsID == "" {
 			continue
 		}
-		s.terminals.StopAllForWorkspace(wsID)
+		s.deps.Terminals.StopAllForWorkspace(wsID)
 		stopped = append(stopped, wsID)
 	}
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	agentsetup "yishan/apps/cli/internal/agent/setup"
+	"yishan/apps/cli/internal/app"
 	"yishan/apps/cli/internal/node"
 	cliruntime "yishan/apps/cli/internal/runtime"
 
@@ -69,7 +70,7 @@ func startServing(cfg RunConfig, dr *daemonRuntime) (*shutdownContext, error) {
 	return &shutdownContext{ctx: shutdownCtx, cancel: cancelShutdown, stop: stop, serverErr: serverErr}, nil
 }
 
-func handleShutdownSignal(stop chan os.Signal, cancelShutdown context.CancelFunc, app *node.App, server *http.Server) {
+func handleShutdownSignal(stop chan os.Signal, cancelShutdown context.CancelFunc, app *app.App, server *http.Server) {
 	<-stop
 	cancelShutdown()
 	app.Close()

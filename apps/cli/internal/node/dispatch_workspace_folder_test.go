@@ -13,9 +13,9 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// newFolderHandler builds a Services wired to an in-memory(disk-backed)
+// newFolderHandler builds a Service wired to an in-memory(disk-backed)
 // migrated database so folder RPC handlers can persist rows.
-func newFolderHandler(t *testing.T) (*Services, *localdb.WorkspaceStore) {
+func newFolderHandler(t *testing.T) (*Service, *localdb.WorkspaceStore) {
 	t.Helper()
 	s := newTestHandler(t)
 	database, err := localdb.Open(t.TempDir())
@@ -206,7 +206,7 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	// is exercised. Folders are strictly non-git so no real watcher is ever
 	// registered, but the manager entry means the delete path must still run
 	// the same teardown calls the workspace-close flow uses without panic.
-	if _, err := s.nodeApp.OpenWorkspace(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
+	if _, err := s.OpenWorkspace(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
 		t.Fatalf("open folder in manager: %v", err)
 	}
 	if _, err := s.getWorkspace(created.ID); err != nil {

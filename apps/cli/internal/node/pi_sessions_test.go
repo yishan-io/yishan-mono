@@ -323,7 +323,7 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 	cancelConnection()
 	time.Sleep(100 * time.Millisecond)
 
-	session, exists := s.agentMgr.Session("session-survives-disconnect")
+	session, exists := s.deps.AgentMgr.Session("session-survives-disconnect")
 	if !exists {
 		t.Fatal("expected pi session to remain active after its WebSocket context was cancelled")
 	}
@@ -337,8 +337,8 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 		t.Fatalf("dispatchPi attach after reconnect: %v", err)
 	}
 
-	s.nodeApp.Close()
-	if _, exists := s.agentMgr.Session(session.ID()); exists {
+	s.Shutdown()
+	if _, exists := s.deps.AgentMgr.Session(session.ID()); exists {
 		t.Fatal("pi session remained active after daemon shutdown")
 	}
 	if _, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
@@ -535,7 +535,7 @@ func installSlowExitFakePiBinary(t *testing.T) {
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
-func waitForStoppingMarker(t *testing.T, services *Services, sessionID string) {
+func waitForStoppingMarker(t *testing.T, services *Service, sessionID string) {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
 	for {
@@ -549,11 +549,11 @@ func waitForStoppingMarker(t *testing.T, services *Services, sessionID string) {
 	}
 }
 
-func waitForStartingReservation(t *testing.T, services *Services, sessionID string) {
+func waitForStartingReservation(t *testing.T, services *Service, sessionID string) {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
 	for {
-		if services.agentMgr.Starting(sessionID) {
+		if services.deps.AgentMgr.Starting(sessionID) {
 			return
 		}
 		if time.Now().After(deadline) {
@@ -681,7 +681,7 @@ func TestHandlePiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
 	}
 	<-stopDone
 
-	if _, exists := s.agentMgr.Session("session-race"); !exists {
+	if _, exists := s.deps.AgentMgr.Session("session-race"); !exists {
 		t.Fatal("expected a fresh session after the reopen")
 	}
 	state, exists := s.piSessions.Get("session-race")
@@ -734,7 +734,7 @@ func TestHandlePiStart_RetriesWhenStopMarkerArrivesLate(t *testing.T) {
 	}
 	<-stopDone
 
-	if _, exists := s.agentMgr.Session("session-race-late"); !exists {
+	if _, exists := s.deps.AgentMgr.Session("session-race-late"); !exists {
 		t.Fatal("expected a fresh session after the retried reopen")
 	}
 	state, exists := s.piSessions.Get("session-race-late")
@@ -926,11 +926,11 @@ func TestHandlePiSessionExit_SkipsSessionSupersededByNewerProcess(t *testing.T) 
 		}
 	}
 
-	oldSession, ok := s.agentMgr.Session("session-1")
+	oldSession, ok := s.deps.AgentMgr.Session("session-1")
 	if !ok {
 		t.Fatal("expected session-1 to be registered")
 	}
-	newSession, ok := s.agentMgr.Session("session-2")
+	newSession, ok := s.deps.AgentMgr.Session("session-2")
 	if !ok {
 		t.Fatal("expected session-2 to be registered")
 	}

@@ -21,7 +21,7 @@ import (
 // operation; session state coordination lives in internal/agent/session (the
 // registry owns the maps and mutexes).
 
-func (s *Services) PiStart(ctx context.Context, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
+func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
 	}
@@ -35,7 +35,7 @@ func (s *Services) PiStart(ctx context.Context, connState *rpc.Connection, req r
 	// reporting ErrSessionExists or attaching to a process being killed. The
 	// wait runs again after ErrSessionExists below because the stop's marker
 	// may be set after this first check.
-	s.piSessions.WaitForStopping(ctx, s.agentMgr, req.SessionID)
+	s.piSessions.WaitForStopping(ctx, s.deps.AgentMgr, req.SessionID)
 
 	// A task-run session whose pi process exited before any client attached
 	// leaves a stale registry entry (readStdout only unregisters the process
@@ -44,7 +44,7 @@ func (s *Services) PiStart(ctx context.Context, connState *rpc.Connection, req r
 	// silent idle tab that never ran the task. Fail closed instead.
 	taskRunState, exists := s.piSessions.Get(req.SessionID)
 	if exists && taskRunState.TaskRun {
-		if _, alive := s.agentMgr.Session(req.SessionID); !alive {
+		if _, alive := s.deps.AgentMgr.Session(req.SessionID); !alive {
 			s.piSessions.Delete(req.SessionID)
 			log.Warn().Str("sessionId", req.SessionID).Msg("pi.start: task run session ended before attach")
 			return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "task run session ended before it could be attached: "+req.SessionID)
@@ -78,18 +78,18 @@ func (s *Services) PiStart(ctx context.Context, connState *rpc.Connection, req r
 	// Pi sessions are owned by the daemon, not the desktop WebSocket. A laptop
 	// sleep can close the WebSocket temporarily; app.Close cancels the agent
 	// lifecycle context and stops all sessions on daemon shutdown.
-	if err := s.agentLifecycleCtx.Err(); err != nil {
+	if err := s.deps.AgentLifecycleCtx.Err(); err != nil {
 		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "daemon is shutting down")
 	}
-	proc, err := s.agentMgr.Start(s.agentLifecycleCtx, opts)
+	proc, err := s.deps.AgentMgr.Start(s.deps.AgentLifecycleCtx, opts)
 	if err != nil {
 		if errors.Is(err, process.ErrSessionExists) {
 			// The existing session may be mid-teardown (its pi.stop began after
 			// our first wait above). Wait for the teardown to release the id,
 			// then start a fresh process so a fast reopen works regardless of
 			// RPC ordering.
-			if s.piSessions.WaitForStopping(ctx, s.agentMgr, req.SessionID) {
-				proc, err = s.agentMgr.Start(s.agentLifecycleCtx, opts)
+			if s.piSessions.WaitForStopping(ctx, s.deps.AgentMgr, req.SessionID) {
+				proc, err = s.deps.AgentMgr.Start(s.deps.AgentLifecycleCtx, opts)
 			}
 		}
 		if err != nil {
@@ -105,14 +105,14 @@ func (s *Services) PiStart(ctx context.Context, connState *rpc.Connection, req r
 	// A process that exited before the registry insert (instant crash) would
 	// otherwise lose its session_end notification: its OnExit ran before the
 	// entry existed. Fire the exit handler now that the entry is in place.
-	if _, alive := s.agentMgr.Session(req.SessionID); !alive {
+	if _, alive := s.deps.AgentMgr.Session(req.SessionID); !alive {
 		s.handlePiSessionExit(proc)
 	}
 
 	return map[string]any{"sessionId": req.SessionID}, nil
 }
 
-func (s *Services) PiAttach(ctx context.Context, connState *rpc.Connection, req rpc.PiAttachParams) (any, error) {
+func (s *Service) PiAttach(ctx context.Context, connState *rpc.Connection, req rpc.PiAttachParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
 	}
@@ -128,8 +128,8 @@ func (s *Services) PiAttach(ctx context.Context, connState *rpc.Connection, req 
 	// manager but the session is not registered yet. Wait for it so the second
 	// opener attaches to the winning process instead of failing with
 	// "pi session not found".
-	if _, exists := s.agentMgr.Session(req.SessionID); !exists {
-		if !s.piSessions.WaitForStart(ctx, s.agentMgr, req.SessionID) {
+	if _, exists := s.deps.AgentMgr.Session(req.SessionID); !exists {
+		if !s.piSessions.WaitForStart(ctx, s.deps.AgentMgr, req.SessionID) {
 			s.piSessions.Delete(req.SessionID)
 			return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session not found: "+req.SessionID)
 		}
@@ -175,7 +175,7 @@ func resolvePiStartPaneID(tabID string, paneID string) string {
 	return "pane-" + tabID
 }
 
-func (s *Services) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error) {
+func (s *Service) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
 	}
@@ -187,7 +187,7 @@ func (s *Services) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error
 		return map[string]bool{"ok": true}, nil
 	}
 
-	if err := s.agentMgr.Stop(req.SessionID); err != nil {
+	if err := s.deps.AgentMgr.Stop(req.SessionID); err != nil {
 		s.piSessions.UnmarkStopping(req.SessionID)
 		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
 	}
@@ -196,7 +196,7 @@ func (s *Services) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Services) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error) {
+func (s *Service) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
 	}
@@ -222,7 +222,7 @@ func (s *Services) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Services) PiListSessions(ctx context.Context, req rpc.PiListSessionsParams) (any, error) {
+func (s *Service) PiListSessions(ctx context.Context, req rpc.PiListSessionsParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "cwd is required")
 	}
@@ -235,7 +235,7 @@ func (s *Services) PiListSessions(ctx context.Context, req rpc.PiListSessionsPar
 	return summaries, nil
 }
 
-func (s *Services) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFileParams) (any, error) {
+func (s *Service) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFileParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "cwd is required")
 	}
@@ -251,7 +251,7 @@ func (s *Services) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFil
 	return map[string]string{"filePath": filePath}, nil
 }
 
-func (s *Services) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, error) {
+func (s *Service) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
 	}
@@ -285,8 +285,8 @@ func (s *Services) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, e
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Services) PiListActiveSessions(ctx context.Context) (any, error) {
-	activeSessions := s.agentMgr.Sessions()
+func (s *Service) PiListActiveSessions(ctx context.Context) (any, error) {
+	activeSessions := s.deps.AgentMgr.Sessions()
 	if len(activeSessions) == 0 {
 		return []rpc.PiActiveSessionSummary{}, nil
 	}
@@ -313,7 +313,7 @@ func (s *Services) PiListActiveSessions(ctx context.Context) (any, error) {
 
 // makePiEventCallback returns an OnEvent callback that forwards pi stdout events
 // to the desktop WebSocket connection.
-func (s *Services) makePiEventCallback(sessionID string) func(string, string, string, []byte) {
+func (s *Service) makePiEventCallback(sessionID string) func(string, string, string, []byte) {
 	return func(_ string, tabID string, workspaceID string, event []byte) {
 		state, exists := s.piSessions.Get(sessionID)
 		if !exists || state.Conn == nil {
@@ -350,7 +350,7 @@ func (s *Services) makePiEventCallback(sessionID string) func(string, string, st
 // intentionally kept so the task-run fail-closed guard in PiStart can still
 // detect a session that died before attach; pi.start overwrites it and
 // pi.attach self-heals.
-func (s *Services) handlePiSessionExit(exited *process.Session) {
+func (s *Service) handlePiSessionExit(exited *process.Session) {
 	state, exists := s.piSessions.Lookup(exited)
 	if !exists {
 		return

@@ -6,7 +6,7 @@ import (
 
 // handleRelayedWorkspaceClose tears down the workspace on the executor node via
 // the application close pipeline (no routing — the executor IS the owner node).
-func (s *Services) handleRelayedWorkspaceClose(payload relayWorkspaceCloseEnvelope) {
+func (s *Service) handleRelayedWorkspaceClose(payload relayWorkspaceCloseEnvelope) {
 	req := workspaceCloseParams{
 		WorkspaceID:    payload.WorkspaceID,
 		OrganizationID: payload.OrganizationID,
