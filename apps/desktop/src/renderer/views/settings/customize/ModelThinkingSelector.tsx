@@ -10,7 +10,7 @@ import {
   isThinkingLevelSupported,
 } from "../../../helpers/agentThinkingLevels";
 import { getPiProviderDisplayName } from "../../../helpers/piProviders";
-import type { AgentModel } from "../../../store/agentChatTypes";
+import type { AgentModel } from "../../../features/agent/model/agentChatTypes";
 
 type ModelThinkingSelectorProps = {
   model: string;

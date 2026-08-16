@@ -1,4 +1,4 @@
-import type { AgentContentBlock, AgentMessage, AgentModel, AgentSessionStats } from "../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage, AgentModel, AgentSessionStats } from "../../features/agent/model/agentChatTypes";
 
 const CHARS_PER_TOKEN = 4;
 const tokenCountFormatter = new Intl.NumberFormat("en-US");

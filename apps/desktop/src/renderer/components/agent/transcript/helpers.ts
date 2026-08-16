@@ -1,4 +1,4 @@
-import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage } from "../../../features/agent/model/agentChatTypes";
 
 /** Tool-call result messages merged into assistant tool-call cards by tool call id. */
 export type AgentToolResultMap = Record<string, AgentMessage | undefined>;

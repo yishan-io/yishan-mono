@@ -5,7 +5,7 @@ import {
   PER_MESSAGE_UTF8_BYTES,
 } from "../../../helpers/agentChatBudget";
 import { generateId } from "../../../helpers/generateId";
-import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "../../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "../model/agentChatTypes";
 
 // Re-export for callers that import budget constants from this module.
 export {

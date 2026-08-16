@@ -1,4 +1,4 @@
-import type { AgentMessage } from "../../../store/agentChatTypes";
+import type { AgentMessage } from "../model/agentChatTypes";
 
 const HIDDEN_FLUSH_INTERVAL_MS = 500;
 

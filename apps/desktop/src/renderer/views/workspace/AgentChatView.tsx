@@ -3,7 +3,7 @@ import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest, setAgentChatStreamTabVisible } from "../../commands/agentChatCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { agentChatStore } from "../../store/agentChatStore";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
 import { tabStore } from "../../store/tabStore";
 import type { AgentChatSessionView } from "../../store/types";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";

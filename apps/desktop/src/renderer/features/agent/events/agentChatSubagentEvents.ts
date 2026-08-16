@@ -1,6 +1,6 @@
 import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../../../helpers/agentChatBudget";
-import { agentChatStore } from "../../../store/agentChatStore";
-import type { AgentMessage, AgentModel } from "../../../store/agentChatTypes";
+import { agentChatStore } from "../model/agentChatStore";
+import type { AgentMessage, AgentModel } from "../model/agentChatTypes";
 import { tabStore } from "../../../store/tabStore";
 import { isRecord, normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
 

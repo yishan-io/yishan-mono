@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../store/agentChatStore";
+import { agentChatStore } from "../features/agent/model/agentChatStore";
 import { splitPaneStore } from "../store/splitPaneStore";
 import { tabStore } from "../store/tabStore";
 import {

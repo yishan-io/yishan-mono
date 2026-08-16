@@ -5,8 +5,8 @@ import { openSubagentSessionInRightSplitPane } from "../../commands/agentChatSub
 import { THINKING_LEVEL_LABELS } from "../../components/agent/session/ThinkingLevelControl";
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { formatSupportedThinkingLevels } from "../../helpers/agentThinkingLevels";
-import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentMessage, AgentModel, AgentQueueState } from "../../store/agentChatTypes";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
+import type { AgentMessage, AgentModel, AgentQueueState } from "../../features/agent/model/agentChatTypes";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const EMPTY_QUEUE: AgentQueueState = { steering: [], followUp: [] };

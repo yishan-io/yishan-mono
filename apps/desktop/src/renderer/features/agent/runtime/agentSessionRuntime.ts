@@ -19,7 +19,7 @@ import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { delay } from "../../../helpers/delay";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../../../store/agentChatStore";
+import { agentChatStore } from "../model/agentChatStore";
 import { tabStore } from "../../../store/tabStore";
 import type { AgentChatSessionView } from "../../../store/types";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";

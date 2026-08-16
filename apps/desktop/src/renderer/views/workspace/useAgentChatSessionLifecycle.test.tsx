@@ -2,7 +2,7 @@
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../../store/agentChatStore";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
 import { useAgentChatSessionLifecycle } from "./useAgentChatSessionLifecycle";
 
 type ConnectionStatus = "connected" | "disconnected";

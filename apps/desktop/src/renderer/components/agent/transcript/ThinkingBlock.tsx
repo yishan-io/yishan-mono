@@ -1,7 +1,7 @@
 import { Box, Collapse, IconButton, Typography } from "@mui/material";
 import { useState } from "react";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
-import type { AgentThinkingSignature } from "../../../store/agentChatTypes";
+import type { AgentThinkingSignature } from "../../../features/agent/model/agentChatTypes";
 
 type ThinkingBlockProps = {
   thinking: string;

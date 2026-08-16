@@ -3,8 +3,8 @@ import {
   fetchAgentModels,
   restartAgentSessionForProvider,
 } from "../../features/agent/commands/agentChatCommands";
-import { isAgentSessionBusy } from "../../store/agentChatTypes";
-import type { AgentSessionState } from "../../store/agentChatTypes";
+import { isAgentSessionBusy } from "../../features/agent/model/agentChatTypes";
+import type { AgentSessionState } from "../../features/agent/model/agentChatTypes";
 
 type UseAgentChatProviderAddParams = {
   tabId: string;

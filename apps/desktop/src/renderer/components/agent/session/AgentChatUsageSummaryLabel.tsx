@@ -3,8 +3,8 @@ import { useTheme } from "@mui/material/styles";
 import { COLOR_PRIMITIVES, type DesignTokenThemeMode } from "@yishan-io/design-tokens/v1";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { agentChatStore } from "../../../store/agentChatStore";
-import type { AgentMessage } from "../../../store/agentChatTypes";
+import { agentChatStore } from "../../../features/agent/model/agentChatStore";
+import type { AgentMessage } from "../../../features/agent/model/agentChatTypes";
 import {
   buildAgentChatUsageSummary,
   formatDetailedTokenCount,

@@ -3,7 +3,7 @@
 import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage } from "../../../features/agent/model/agentChatTypes";
 import { AgentToolCallCard } from "./AgentToolCallCard";
 
 const { openTabMock } = vi.hoisted(() => ({

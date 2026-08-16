@@ -1,6 +1,6 @@
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../../../store/agentChatStore";
-import { isAgentSessionBusy } from "../../../store/agentChatTypes";
+import { agentChatStore } from "../model/agentChatStore";
+import { isAgentSessionBusy } from "../model/agentChatTypes";
 import { findOppositePaneId } from "../../../store/split-pane";
 import { splitPaneStore } from "../../../store/splitPaneStore";
 import { tabStore } from "../../../store/tabStore";

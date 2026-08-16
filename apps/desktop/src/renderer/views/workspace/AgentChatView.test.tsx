@@ -3,8 +3,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requestAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
-import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
+import type { AgentMessage, AgentModel } from "../../features/agent/model/agentChatTypes";
 import { AgentChatView } from "./AgentChatView";
 
 const mocked = vi.hoisted(() => {

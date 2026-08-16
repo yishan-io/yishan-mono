@@ -1,8 +1,8 @@
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../../../store/agentChatStore";
-import { isAgentSessionBusy } from "../../../store/agentChatTypes";
+import { agentChatStore } from "../model/agentChatStore";
+import { isAgentSessionBusy } from "../model/agentChatTypes";
 import { tabStore } from "../../../store/tabStore";
 import type { AgentChatSessionView } from "../../../store/types";
 import { delay } from "../../../helpers/delay";

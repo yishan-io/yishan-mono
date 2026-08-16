@@ -1,13 +1,13 @@
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../../../store/agentChatStore";
+import { agentChatStore } from "../model/agentChatStore";
 import type {
   AgentMessage,
   AgentModel,
   AgentQueueState,
   AgentSessionStats,
   AgentStreamEvent,
-} from "../../../store/agentChatTypes";
+} from "../model/agentChatTypes";
 import {
   PER_MESSAGE_UTF8_BYTES,
   isRecord,

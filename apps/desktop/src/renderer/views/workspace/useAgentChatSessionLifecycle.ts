@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { recoverAgentSessionAfterReconnect, startAgentChatSession } from "../../features/agent/commands/agentChatCommands";
 import { subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
-import { agentChatStore } from "../../store/agentChatStore";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
 import type { AgentChatSessionView } from "../../store/types";
 
 type UseAgentChatSessionLifecycleOptions = {
