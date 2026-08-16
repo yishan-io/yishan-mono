@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../store/chatStore";
+import { chatStore } from "../../../store/chatStore";
 import {
   appendChatMessages,
   closeAgentSession,
@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   runChatPrompt: vi.fn(),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     chat: {
       closeAgentSession: mocks.closeAgentSession,

@@ -1,5 +1,5 @@
-import type * as Rpc from "../rpc/daemonTypes";
-import { getDaemonClient } from "../rpc/rpcTransport";
+import type * as Rpc from "../../../rpc/daemonTypes";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
 
 /** Fetches past session summaries for the current working directory. */
 export async function fetchSessionHistory(cwd: string): Promise<Rpc.PiSessionSummary[]> {

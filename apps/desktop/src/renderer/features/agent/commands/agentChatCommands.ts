@@ -1,20 +1,13 @@
+import { delay } from "../../../helpers/delay";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../model/agentChatStore";
-import { isAgentSessionBusy } from "../model/agentChatTypes";
 import { tabStore } from "../../../store/tabStore";
 import type { AgentChatSessionView } from "../../../store/types";
-import { delay } from "../../../helpers/delay";
-import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
-import {
-  clearAgentChatSessionStatsSequence,
-  refreshAgentSessionStats,
-  registerAgentSession,
-  setAgentChatStreamTabVisible,
-  setAgentModel,
-  setAgentThinkingLevel,
-} from "../events/agentChatPiEventShared";
+import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
+import { agentChatStore } from "../model/agentChatStore";
+import { isAgentSessionBusy } from "../model/agentChatTypes";
+import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import {
   clearPiSessionHandle,
   ensurePiSession,
@@ -26,19 +19,6 @@ import {
   recoverAgentSessionAfterReconnect,
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
-import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
-
-// Re-export moved public APIs so existing callers need no import changes
-// (removed in Phase 5 task 6 once callers migrate to the canonical paths).
-export { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
-export {
-  clearAgentChatSessionStatsSequence,
-  refreshAgentSessionStats,
-  registerAgentSession,
-  setAgentChatStreamTabVisible,
-  setAgentModel,
-  setAgentThinkingLevel,
-} from "../events/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the
@@ -66,9 +46,7 @@ export async function startAgentChatSession(opts: {
 
   if (isReadOnlySubagentDetail) {
     const childSessionId = opts.sessionId?.trim() || opts.tabId;
-    const parentTabId = opts.subagentParentSessionId
-      ? findTabWithSession(opts.subagentParentSessionId)
-      : undefined;
+    const parentTabId = opts.subagentParentSessionId ? findTabWithSession(opts.subagentParentSessionId) : undefined;
     const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
     const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
     const isChildFinished = parentSession?.finishedSubagents.some(
@@ -246,9 +224,9 @@ export async function restartAgentSessionForProvider(opts: {
     // never restart a session that is no longer the one the provider was saved
     // into.
     const liveSession = agentChatStore.getState().sessionsByTabId[tabId];
-    const tabStillOpen = tabStore.getState().tabs.some(
-      (candidate) => candidate.id === tabId && candidate.kind === "agent-chat",
-    );
+    const tabStillOpen = tabStore
+      .getState()
+      .tabs.some((candidate) => candidate.id === tabId && candidate.kind === "agent-chat");
     if (!tabStillOpen || liveSession?.sessionId !== previousSessionId || isAgentSessionBusy(liveSession?.state)) {
       return;
     }
@@ -281,4 +259,4 @@ export async function restartAgentSessionForProvider(opts: {
 
 // ─── Session history ─────────────────────────────────────────────────────────
 // Moved to agentChatSessionHistory.ts; re-exported to preserve the public API.
-export { fetchAgentSessionFilePath, fetchSessionHistory, listActivePiSessions } from "../../../commands/agentChatSessionHistory";
+export { fetchAgentSessionFilePath, fetchSessionHistory, listActivePiSessions } from "./agentChatSessionHistory";

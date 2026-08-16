@@ -1,5 +1,4 @@
 import { Box, Button, Stack, TextField, Typography } from "@mui/material";
-import type { AgentModelInfo } from "@renderer/commands/agentCommands";
 import { ModelPickerMenu } from "@renderer/components/ModelPickerMenu";
 import { ProviderMark } from "@renderer/components/ProviderMark";
 import {
@@ -7,6 +6,7 @@ import {
   groupModelPickerOptionsByProvider,
   stripProviderPrefix,
 } from "@renderer/components/modelPicker";
+import type { AgentModelInfo } from "@renderer/features/agent/commands/agentCommands";
 import type { DesktopAgentKind } from "@renderer/helpers/agentSettings";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown, LuSparkles } from "react-icons/lu";

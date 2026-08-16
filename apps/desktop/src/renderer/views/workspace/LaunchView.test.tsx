@@ -34,7 +34,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../commands/agentChatCommands", () => ({
+vi.mock("../../features/agent/commands/agentChatSessionHistory", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 

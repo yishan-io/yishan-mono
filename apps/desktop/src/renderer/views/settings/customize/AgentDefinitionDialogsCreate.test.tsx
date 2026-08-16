@@ -25,7 +25,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../commands/agentCommands", () => ({
+vi.mock("../../../features/agent/commands/agentCommands", () => ({
   listAgentModels: () => mocked.listAgentModels(),
 }));
 

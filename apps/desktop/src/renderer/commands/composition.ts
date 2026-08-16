@@ -1,3 +1,19 @@
+import { listActivePiSessions as listActivePiSessionsCommand } from "../features/agent/commands/agentChatSessionHistory";
+import {
+  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
+  listAgentModels as listAgentModelsCommand,
+} from "../features/agent/commands/agentCommands";
+import {
+  appendChatMessages as appendChatMessagesCommand,
+  closeAgentSession as closeAgentSessionCommand,
+  createWorkspaceChatEventHandler as createWorkspaceChatEventHandlerCommand,
+  ensureChatSession as ensureChatSessionCommand,
+  getChatMessages as getChatMessagesCommand,
+  runChatPrompt as runChatPromptCommand,
+  setChatAvailableModels as setChatAvailableModelsCommand,
+  setChatCurrentModel as setChatCurrentModelCommand,
+  updateChatMessage as updateChatMessageCommand,
+} from "../features/agent/commands/chatCommands";
 import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
@@ -29,11 +45,6 @@ import {
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "../features/workspace/commands/workspaceCommands";
 import type { WorkspaceProjectRecord } from "../store/types";
-import { listActivePiSessions as listActivePiSessionsCommand } from "../features/agent/commands/agentChatCommands";
-import {
-  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
-  listAgentModels as listAgentModelsCommand,
-} from "../features/agent/commands/agentCommands";
 import {
   appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -45,17 +56,6 @@ import {
   openLocalFolderDialog as openLocalFolderDialogCommand,
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "./appCommands";
-import {
-  appendChatMessages as appendChatMessagesCommand,
-  closeAgentSession as closeAgentSessionCommand,
-  createWorkspaceChatEventHandler as createWorkspaceChatEventHandlerCommand,
-  ensureChatSession as ensureChatSessionCommand,
-  getChatMessages as getChatMessagesCommand,
-  runChatPrompt as runChatPromptCommand,
-  setChatAvailableModels as setChatAvailableModelsCommand,
-  setChatCurrentModel as setChatCurrentModelCommand,
-  updateChatMessage as updateChatMessageCommand,
-} from "../features/agent/commands/chatCommands";
 import { listCLIToolStatuses as listCLIToolStatusesCommand } from "./cliToolCommands";
 import {
   createFile as createFileCommand,

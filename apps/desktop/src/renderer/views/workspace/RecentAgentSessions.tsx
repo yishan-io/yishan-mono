@@ -2,7 +2,7 @@ import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
-import { fetchSessionHistory } from "../../commands/agentChatCommands";
+import { fetchSessionHistory } from "../../features/agent/commands/agentChatSessionHistory";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";

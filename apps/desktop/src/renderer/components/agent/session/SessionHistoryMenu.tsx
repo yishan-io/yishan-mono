@@ -1,6 +1,6 @@
 import { Box, Menu, MenuItem, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchSessionHistory } from "../../../commands/agentChatCommands";
+import { fetchSessionHistory } from "../../../features/agent/commands/agentChatSessionHistory";
 import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type * as Rpc from "../../../rpc/daemonTypes";

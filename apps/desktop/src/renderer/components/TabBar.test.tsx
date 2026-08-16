@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchAgentSessionFilePath } from "../commands/agentChatCommands";
+import { fetchAgentSessionFilePath } from "../features/agent/commands/agentChatSessionHistory";
 import { copyToClipboard } from "../helpers/clipboard";
 import { TabBar } from "./TabBar";
 
@@ -48,7 +48,7 @@ vi.mock("../helpers/clipboard", () => ({
   copyToClipboard: vi.fn(),
 }));
 
-vi.mock("../commands/agentChatCommands", () => ({
+vi.mock("../features/agent/commands/agentChatSessionHistory", () => ({
   fetchAgentSessionFilePath: vi.fn(() => Promise.resolve("")),
 }));
 

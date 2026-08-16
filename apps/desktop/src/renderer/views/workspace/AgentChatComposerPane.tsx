@@ -2,13 +2,6 @@ import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
-import {
-  abortAgent,
-  compactAgent,
-  sendAgentPrompt,
-  setAgentModel,
-  setAgentThinkingLevel,
-} from "../../commands/agentChatCommands";
 import { searchFiles } from "../../commands/fileCommands";
 import { renameTab } from "../../commands/tabCommands";
 import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
@@ -22,12 +15,14 @@ import {
   consumeAgentChatComposerFocus,
   getAgentChatComposerFocusRequest,
 } from "../../events/agentChatComposerFocus";
+import { abortAgent, compactAgent, sendAgentPrompt } from "../../features/agent/commands/agentChatCommands";
+import { setAgentModel, setAgentThinkingLevel } from "../../features/agent/events/agentChatPiEventShared";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
+import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../features/agent/model/agentChatTypes";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../shortcuts/keybindings";
-import { agentChatStore } from "../../features/agent/model/agentChatStore";
-import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../features/agent/model/agentChatTypes";
 import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
 import { tabStore } from "../../store/tabStore";
 import { ProviderCredentialDialog } from "../settings/ProviderCredentialDialog";

@@ -40,7 +40,7 @@ const rpcMocks = vi.hoisted(() => ({
   resolveChatFilePath: vi.fn(),
 }));
 
-vi.mock("./agentChatCommands", () => ({
+vi.mock("../features/agent/commands/agentChatCommands", () => ({
   stopPiSession: rpcMocks.stopPiSession,
 }));
 

@@ -1,4 +1,5 @@
 import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../events/agentChatComposerFocus";
+import { stopPiSession } from "../features/agent/commands/agentChatCommands";
 import { clearTerminalAgentStatus } from "../features/agent/events/agentEventHandlers";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
@@ -13,7 +14,6 @@ import { terminalFocusStore } from "../store/terminalFocusStore";
 import type { OpenWorkspaceTabInput } from "../store/types";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { stopPiSession } from "./agentChatCommands";
 import { resolveChatFilePath } from "./fileCommands";
 
 type TabStoreFacade = typeof tabStore & {

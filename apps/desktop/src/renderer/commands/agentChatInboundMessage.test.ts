@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  MAX_DETAILS_ITEMS,
+  MAX_DETAILS_STRING_UTF8_BYTES,
+  PER_MESSAGE_UTF8_BYTES,
+} from "../features/agent/events/agentChatInboundMessage";
+import { handleAgentPiEvent } from "../features/agent/events/agentChatPiEventHandler";
 import { agentChatStore } from "../features/agent/model/agentChatStore";
 import type { AgentMessage } from "../features/agent/model/agentChatTypes";
-import { handleAgentPiEvent } from "./agentChatCommands";
-import { MAX_DETAILS_ITEMS, MAX_DETAILS_STRING_UTF8_BYTES, PER_MESSAGE_UTF8_BYTES } from "../features/agent/events/agentChatInboundMessage";
-import { flushAgentChatStreamBuffer, setAgentChatStreamTabVisible } from "../features/agent/runtime/agentChatStreamBuffer";
+import {
+  flushAgentChatStreamBuffer,
+  setAgentChatStreamTabVisible,
+} from "../features/agent/runtime/agentChatStreamBuffer";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 

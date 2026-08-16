@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   listDetectionStatuses: vi.fn(),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     agent: {
       listDetectionStatuses: mocks.listDetectionStatuses,
