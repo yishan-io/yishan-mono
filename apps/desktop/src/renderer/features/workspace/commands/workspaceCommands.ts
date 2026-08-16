@@ -31,6 +31,30 @@ type OpenCreateWorkspaceDialogDetail = {
 };
 
 /**
+ * Subscribes one listener to create-workspace dialog open requests. Returns
+ * a teardown. The event is dispatched by `openCreateWorkspaceDialog` (the
+ * application command) and consumed by the LeftPane view; keeping the
+ * request/subscribe pair on the command surface avoids a raw window-event
+ * contract between features.
+ */
+export function subscribeOpenCreateWorkspaceDialog(
+  listener: (detail: OpenCreateWorkspaceDialogDetail) => void,
+): () => void {
+  const handleEvent = (event: Event) => {
+    const customEvent = event as CustomEvent<OpenCreateWorkspaceDialogDetail>;
+    const projectId = customEvent.detail?.projectId?.trim() ?? customEvent.detail?.repoId?.trim();
+    if (!projectId) {
+      return;
+    }
+    listener({ projectId, repoId: projectId });
+  };
+  window.addEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, handleEvent);
+  return () => {
+    window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, handleEvent);
+  };
+}
+
+/**
  * Resolves the normalized target branch (origin-prefixed) for a workspace,
  * matching the convention used by the Changes tab comparison.
  */

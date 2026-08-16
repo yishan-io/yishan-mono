@@ -11,7 +11,7 @@ import {
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
 } from "../../../../shared/contracts/externalApps";
-import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../features/workspace/commands/workspaceCommands";
+import { subscribeOpenCreateWorkspaceDialog } from "../../../features/workspace/commands/workspaceCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
 import { WorkspaceTree } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
@@ -254,20 +254,9 @@ export function ProjectListView() {
   });
 
   useEffect(() => {
-    const handleOpenCreateWorkspaceDialog = (event: Event) => {
-      const customEvent = event as CustomEvent<{ repoId?: string }>;
-      const requestedProjectId = customEvent.detail?.repoId?.trim();
-      if (!requestedProjectId) {
-        return;
-      }
-
-      handleOpenCreateWorkspace(requestedProjectId);
-    };
-
-    window.addEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, handleOpenCreateWorkspaceDialog as EventListener);
-    return () => {
-      window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, handleOpenCreateWorkspaceDialog as EventListener);
-    };
+    return subscribeOpenCreateWorkspaceDialog(({ projectId }) => {
+      handleOpenCreateWorkspace(projectId);
+    });
   }, [handleOpenCreateWorkspace]);
 
   useSuppressNativeContextMenuWhileOpen(isProjectContextMenuOpen || isWorkspaceContextMenuOpen);
