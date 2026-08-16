@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../features/project/model/projectStore";
-import { workspaceStore } from "../store/workspaceStore";
+import { projectStore } from "../../../features/project/model/projectStore";
+import { workspaceStore } from "../../../store/workspaceStore";
 import {
   commitGitChanges,
   getGitAuthorName,
@@ -39,7 +39,7 @@ const mocks = vi.hoisted(() => ({
   unstageGitChanges: vi.fn(),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     file: {
       readDiff: mocks.readDiff,

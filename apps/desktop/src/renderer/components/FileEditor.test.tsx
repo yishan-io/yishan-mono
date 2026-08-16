@@ -128,7 +128,7 @@ vi.mock("../helpers/monacoSetup", () => ({
 }));
 
 // Mock the git commands used by useGitGutterDecorations
-vi.mock("../commands/gitCommands", () => ({
+vi.mock("../features/git/commands/gitCommands", () => ({
   readDiff: vi.fn(() => Promise.resolve({ oldContent: "", newContent: "" })),
 }));
 

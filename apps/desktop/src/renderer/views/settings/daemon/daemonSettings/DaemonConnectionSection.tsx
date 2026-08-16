@@ -1,4 +1,4 @@
-import type { DaemonInfoResult } from "@renderer/commands/appCommands";
+import type { DaemonInfoResult } from "@renderer/app/commands/appCommands";
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import { CenteredSpinner } from "@renderer/components/CenteredSpinner";
 import { StatusIndicator } from "@renderer/components/StatusIndicator";

@@ -1,7 +1,7 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { PiProviderStatus } from "../../commands/piProviderCommands";
+import type { PiProviderStatus } from "../../features/agent/commands/piProviderCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getPiProviderDisplayName } from "../../helpers/piProviders";
 import { useCommands } from "../../hooks/useCommands";

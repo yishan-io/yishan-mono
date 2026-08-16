@@ -20,7 +20,7 @@ import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
 import type { OrganizationMemberRecord } from "../../api/types";
-import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
+import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../features/organization/commands/orgCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";

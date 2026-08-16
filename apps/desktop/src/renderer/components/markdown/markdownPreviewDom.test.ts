@@ -9,7 +9,7 @@ const buildWorkspaceFileUrlMock = vi.fn();
 const openLinkMock = vi.fn();
 const enqueueWorkspaceErrorNoticeMock = vi.fn();
 
-vi.mock("@renderer/commands/appCommands", () => ({
+vi.mock("@renderer/app/commands/appCommands", () => ({
   openLink: (options: { url: string }) => openLinkMock(options),
 }));
 

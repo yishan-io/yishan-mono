@@ -1,6 +1,6 @@
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { useEffect, useRef, useState } from "react";
-import { readDiff } from "../commands/gitCommands";
+import { readDiff } from "../features/git/commands/gitCommands";
 import {
   type GitLineChange,
   type GitLineChangeKind,

@@ -1,4 +1,4 @@
-import type { DaemonLogResult } from "@renderer/commands/appCommands";
+import type { DaemonLogResult } from "@renderer/app/commands/appCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import { getDaemonLog } from "@renderer/features/settings/commands/settingsCommands";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";

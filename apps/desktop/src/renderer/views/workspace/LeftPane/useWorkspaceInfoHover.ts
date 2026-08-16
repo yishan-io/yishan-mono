@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { inspectGitRepository } from "../../../commands/gitCommands";
+import { inspectGitRepository } from "../../../features/git/commands/gitCommands";
 import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { WorkspaceItem } from "../../../store/types";

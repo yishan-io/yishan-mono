@@ -1,6 +1,6 @@
 import { Box, Chip, Link, Stack, Typography } from "@mui/material";
 import type { WorkspacePullRequestRecord } from "@renderer/api/types";
-import { openLink } from "@renderer/commands/appCommands";
+import { openLink } from "@renderer/app/commands/appCommands";
 import { BranchBadge } from "@renderer/components/BranchBadge";
 import { PullRequestIcon } from "@renderer/components/PullRequestIcon";
 import { useTranslation } from "react-i18next";

@@ -115,7 +115,7 @@ vi.mock("../../../features/files/commands/fileCommands", () => ({
   writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
 }));
 
-vi.mock("../../../commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   readDiff: (...args: unknown[]) => readWorkspaceDiff(...args),
   readCommitDiff: vi.fn(),
   readBranchComparisonDiff: vi.fn(),

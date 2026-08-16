@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import recordStartSound from "../../assets/record-start.mp3";
-import { transcribeVoiceForOrganization } from "../commands/voiceTranscriptionCommands";
+import { transcribeVoiceForOrganization } from "../features/agent/commands/voiceTranscriptionCommands";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { sessionStore } from "../features/session/model/sessionStore";
 

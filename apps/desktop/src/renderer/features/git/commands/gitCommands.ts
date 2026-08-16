@@ -1,9 +1,9 @@
-import { projectStore } from "../features/project/model/projectStore";
-import { isFolderWorkspace } from "../helpers/localFolder";
-import { supportsGitFeatures } from "../helpers/projectGitCapability";
-import type { GitChangesBySection } from "../rpc/daemonTypes";
-import { getDaemonClient } from "../rpc/rpcTransport";
-import { workspaceStore } from "../store/workspaceStore";
+import { projectStore } from "../../../features/project/model/projectStore";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
+import type { GitChangesBySection } from "../../../rpc/daemonTypes";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { workspaceStore } from "../../../store/workspaceStore";
 
 const inFlightListGitChangesByWorkspaceId = new Map<string, Promise<GitChangesBySection>>();
 const inFlightGitAuthorNameByWorkspaceId = new Map<string, Promise<string | null>>();

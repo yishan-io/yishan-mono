@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
-import { listOrgNodes } from "../../commands/nodeCommands";
+import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
+import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import { getSessionBootstrapData, isAuthExpiredError } from "../../features/session/commands/sessionCommands";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { setAppLanguage } from "../../i18n";

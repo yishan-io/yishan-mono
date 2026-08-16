@@ -7,7 +7,7 @@ import { useGitGutterDecorations } from "./useGitGutterDecorations";
 
 // Mock the readDiff command
 const mockReadDiff = vi.fn();
-vi.mock("../commands/gitCommands", () => ({
+vi.mock("../features/git/commands/gitCommands", () => ({
   readDiff: (...args: unknown[]) => mockReadDiff(...args),
 }));
 

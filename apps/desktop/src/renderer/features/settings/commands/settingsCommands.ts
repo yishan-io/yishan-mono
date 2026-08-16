@@ -16,7 +16,7 @@ import { getVoiceTranscriptionUsage } from "../../../api/voiceTranscriptionApi";
 import type { MemoryConfig } from "../../../rpc/daemonTypes";
 import { getDaemonClient, getDesktopHostBridge } from "../../../rpc/rpcTransport";
 import type { DaemonLogResult } from "../../../../main/ipc";
-import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../commands/appCommands";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../app/commands/appCommands";
 import {
   addSkill,
   getSkillDetail,

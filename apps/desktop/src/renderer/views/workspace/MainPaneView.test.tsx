@@ -136,7 +136,7 @@ vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../commands/appCommands", () => ({
+vi.mock("../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => mocked.getMainWindowFullscreenState(),
 }));
 

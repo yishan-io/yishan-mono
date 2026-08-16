@@ -138,7 +138,7 @@ vi.mock("../../hooks/useCommands", () => ({
   }),
 }));
 
-vi.mock("../../commands/appCommands", () => ({
+vi.mock("../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => Promise.resolve({ isFullscreen: false }),
 }));
 

@@ -6,10 +6,10 @@ import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api";
 import { RestApiError } from "../../api/restClient";
-import { createOrganization } from "../../commands/orgCommands";
+import { createOrganization } from "../../features/organization/commands/orgCommands";
 import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
-import { listOrgNodes } from "../../commands/nodeCommands";
-import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
+import { listOrgNodes } from "../../features/node/commands/nodeCommands";
+import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
@@ -24,7 +24,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../commands/appCommands", () => ({
+vi.mock("../../app/commands/appCommands", () => ({
   getAuthStatus: vi.fn(async () => ({ authenticated: false })),
   getDaemonInfo: vi.fn(async () => ({ daemonId: "daemon-1", version: "0.0.0", wsUrl: "ws://127.0.0.1:0" })),
   getDesktopAppVersion: vi.fn(async () => "0.0.0"),
@@ -67,11 +67,11 @@ vi.mock("../../features/session/commands/sessionCommands", () => ({
   })),
 }));
 
-vi.mock("../../commands/nodeCommands", () => ({
+vi.mock("../../features/node/commands/nodeCommands", () => ({
   listOrgNodes: vi.fn(async () => []),
 }));
 
-vi.mock("../../commands/orgCommands", () => ({
+vi.mock("../../features/organization/commands/orgCommands", () => ({
   createOrganization: vi.fn(async () => ({ id: "org-2", name: "New Organization" })),
 }));
 

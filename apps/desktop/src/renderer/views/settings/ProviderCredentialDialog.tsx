@@ -15,7 +15,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuLogIn } from "react-icons/lu";
-import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../commands/piProviderCommands";
+import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../features/agent/commands/piProviderCommands";
 import { ProviderMark } from "../../components/ProviderMark";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import {

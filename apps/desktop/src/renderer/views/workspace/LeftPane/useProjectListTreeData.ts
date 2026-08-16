@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { listOrgNodes } from "../../../commands/nodeCommands";
+import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
 import { projectStore } from "../../../features/project/model/projectStore";

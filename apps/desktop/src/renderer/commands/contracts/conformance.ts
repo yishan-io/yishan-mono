@@ -18,6 +18,10 @@ import type { SessionCommands } from "../../features/session/commands/contract";
 import type { ScheduledJobCommands } from "../../features/scheduled-job/commands/contract";
 import type { OverviewCommands } from "../../features/overview/commands/contract";
 import type { SettingsCommands } from "../../features/settings/commands/contract";
+import type { GitCommands } from "../../features/git/commands/contract";
+import type { NodeCommands } from "../../features/node/commands/contract";
+import type { OrganizationCommands } from "../../features/organization/commands/contract";
+import type { NotificationCommands } from "../../features/notification/commands/contract";
 
 import type * as projectCommands from "../../features/project/commands/projectCommands";
 import type * as localFolderCommands from "../../features/workspace/commands/localFolderCommands";
@@ -35,6 +39,10 @@ import type * as sessionCommands from "../../features/session/commands/sessionCo
 import type * as scheduledJobCommands from "../../features/scheduled-job/commands/scheduledJobCommands";
 import type * as overviewCommands from "../../features/overview/commands/overviewCommands";
 import type * as settingsCommands from "../../features/settings/commands/settingsCommands";
+import type * as gitCommands from "../../features/git/commands/gitCommands";
+import type * as nodeCommands from "../../features/node/commands/nodeCommands";
+import type * as orgCommands from "../../features/organization/commands/orgCommands";
+import type * as notificationCommands from "../../features/notification/commands/notificationCommands";
 import type * as whiteboardCommands from "../../features/workbench/commands/whiteboardCommands";
 import type * as workspaceTabSync from "../../features/workbench/commands/workspaceTabSync";
 
@@ -152,6 +160,20 @@ type _OverviewCommandsConforms = Expect<typeof overviewCommands extends Overview
 
 // Settings: single owning module.
 type _SettingsCommandsConforms = Expect<typeof settingsCommands extends SettingsCommands ? true : false>;
+
+// Git: single owning module.
+type _GitCommandsConforms = Expect<typeof gitCommands extends GitCommands ? true : false>;
+
+// Node: single owning module.
+type _NodeCommandsConforms = Expect<typeof nodeCommands extends NodeCommands ? true : false>;
+
+// Organization: single owning module.
+type _OrganizationCommandsConforms = Expect<typeof orgCommands extends OrganizationCommands ? true : false>;
+
+// Notification: single owning module.
+type _NotificationCommandsConforms = Expect<
+  typeof notificationCommands extends NotificationCommands ? true : false
+>;
 
 // Workbench: three owning modules.
 type _TabCommandsConforms = Expect<

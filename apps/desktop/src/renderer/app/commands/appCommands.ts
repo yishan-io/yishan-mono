@@ -6,15 +6,15 @@ import type {
   DaemonLogResult,
   DaemonRestartResult,
   DesktopUpdateEventPayload,
-} from "../../main/ipc";
-import { resetAuthExpiredState } from "../api/restClient";
-import type { DesktopAgentKind } from "../helpers/agentSettings";
-import { rendererQueryClient } from "../queryClient";
-import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../rpc/rpcTransport";
-import { sessionStore } from "../features/session/model/sessionStore";
-import { type LinkTarget, layoutStore } from "../store/settings/layoutStore";
-import { tabStore } from "../store/tabStore";
-import { workspaceStore } from "../store/workspaceStore";
+} from "../../../main/ipc";
+import { resetAuthExpiredState } from "../../api/restClient";
+import type { DesktopAgentKind } from "../../helpers/agentSettings";
+import { rendererQueryClient } from "../../queryClient";
+import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
+import { sessionStore } from "../../features/session/model/sessionStore";
+import { type LinkTarget, layoutStore } from "../../store/settings/layoutStore";
+import { tabStore } from "../../store/tabStore";
+import { workspaceStore } from "../../store/workspaceStore";
 
 /** Opens one native folder picker and returns a selected directory path when available. */
 export async function openLocalFolderDialog(startingFolder?: string) {
@@ -223,9 +223,9 @@ export function installDesktopUpdate() {
 }
 
 
-export type { DesktopUpdateEventPayload } from "../../main/ipc";
+export type { DesktopUpdateEventPayload } from "../../../main/ipc";
 
-export type { BrowserHistoryGroup, DaemonInfoResult, DaemonLogResult } from "../../main/ipc";
+export type { BrowserHistoryGroup, DaemonInfoResult, DaemonLogResult } from "../../../main/ipc";
 
 /** Reads the daemon log from the Electron host. */
 export async function getDaemonLog(): Promise<DaemonLogResult> {

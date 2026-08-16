@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { listOrgNodes } from "../../../commands/nodeCommands";
+import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   type ScheduleType,

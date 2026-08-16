@@ -1,4 +1,4 @@
-import { getDaemonClient, invokeDaemonProcedure } from "../rpc/rpcTransport";
+import { getDaemonClient, invokeDaemonProcedure } from "../../../rpc/rpcTransport";
 
 export type CLIToolStatus = {
   toolId: string;

@@ -1,6 +1,6 @@
-import { api } from "../api";
-import { getErrorMessage } from "../helpers/errorHelpers";
-import { sessionStore } from "../features/session/model/sessionStore";
+import { api } from "../../../api";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 
 const errNoOrgSelected = "No organization selected.";
 

@@ -27,11 +27,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../commands/appCommands", () => ({
+vi.mock("../../../app/commands/appCommands", () => ({
   openLink: (options: { url: string }) => mocked.openLink(options),
 }));
 
-vi.mock("../../../commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   mergePullRequest: (options: {
     workspaceId: string;
     prNumber: number;

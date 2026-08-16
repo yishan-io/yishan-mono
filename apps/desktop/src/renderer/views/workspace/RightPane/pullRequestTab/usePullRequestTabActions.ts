@@ -1,4 +1,4 @@
-import { closePullRequest, mergePullRequest } from "@renderer/commands/gitCommands";
+import { closePullRequest, mergePullRequest } from "@renderer/features/git/commands/gitCommands";
 import { workspaceProjectionStore } from "@renderer/features/workspace/model/workspaceProjectionStore";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import type { DaemonWorkspacePullRequest } from "@renderer/rpc/daemonTypes";

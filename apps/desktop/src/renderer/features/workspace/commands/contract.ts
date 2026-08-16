@@ -8,7 +8,7 @@ import type * as workspaceCloseCommand from "./workspaceCloseCommand";
  * workspaceCloseCommand, localFolderCommands) satisfy this contract today;
  * `contracts/conformance.ts` enforces that at typecheck time.
  *
- * The legacy composition hub (`commands/composition.ts`) exposes a subset of
+ * The legacy composition hub (`app/commands/composition.ts`) exposes a subset of
  * this surface; direct consumers import from the owning modules. This contract
  * is the feature's public entry and will move to `features/workspace/commands/`
  * when the feature directory forms (Phases 4+).

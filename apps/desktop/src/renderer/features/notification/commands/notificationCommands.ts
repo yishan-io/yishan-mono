@@ -1,16 +1,16 @@
-import { NOTIFICATION_PREFERENCES_STORAGE_KEY } from "../../shared/notifications/notificationConstants";
+import { NOTIFICATION_PREFERENCES_STORAGE_KEY } from "../../../../shared/notifications/notificationConstants";
 import type {
   NotificationEventType,
   NotificationPreferences,
   NotificationSoundId,
-} from "../../shared/notifications/notificationPreferences";
+} from "../../../../shared/notifications/notificationPreferences";
 import {
   CURRENT_NOTIFICATION_PREFERENCES_SCHEMA_VERSION,
   DEFAULT_NOTIFICATION_PREFERENCES,
-} from "../../shared/notifications/notificationPreferences";
-import { requestJson } from "../api/restClient";
-import { getDesktopHostBridge } from "../rpc/rpcTransport";
-import { sessionStore } from "../features/session/model/sessionStore";
+} from "../../../../shared/notifications/notificationPreferences";
+import { requestJson } from "../../../api/restClient";
+import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 
 /** Loads notification preferences from current session user, then falls back to local cache. */
 export async function getNotificationPreferences() {

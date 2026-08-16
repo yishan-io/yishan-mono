@@ -9,7 +9,7 @@ import {
   installCliTool,
   listCLIToolStatuses,
   uninstallCliTool,
-} from "../../commands/cliToolCommands";
+} from "../../features/settings/commands/cliToolCommands";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { MONOSPACE_SX } from "../../helpers/styles";

@@ -1,8 +1,8 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createOrganization, listOrganizations } from "../../commands/orgCommands";
-import { switchOrganization } from "../../commands/orgCommands";
+import { createOrganization, listOrganizations } from "../../features/organization/commands/orgCommands";
+import { switchOrganization } from "../../features/organization/commands/orgCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { sessionStore } from "../../features/session/model/sessionStore";
 

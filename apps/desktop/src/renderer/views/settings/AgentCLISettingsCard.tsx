@@ -1,7 +1,7 @@
 import { Alert, Box, Stack, Switch, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { CLIToolStatus } from "../../commands/cliToolCommands";
+import type { CLIToolStatus } from "../../features/settings/commands/cliToolCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import {

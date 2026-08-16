@@ -3,14 +3,14 @@
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RestApiError } from "../../api/restClient";
-import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
-import { listOrgNodes } from "../../commands/nodeCommands";
+import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
+import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { rendererQueryClient } from "../../queryClient";
 import { useSessionBootstrap } from "./sessionBootstrap";
 
-vi.mock("../../commands/appCommands", () => ({
+vi.mock("../../app/commands/appCommands", () => ({
   getAuthStatus: vi.fn(async () => ({ authenticated: false })),
   getDaemonInfo: vi.fn(async () => ({ daemonId: "daemon-1", version: "0.0.0", wsUrl: "ws://127.0.0.1:0" })),
   getDesktopAppVersion: vi.fn(async () => "0.0.0"),
@@ -53,7 +53,7 @@ vi.mock("../../features/session/commands/sessionCommands", () => ({
   })),
 }));
 
-vi.mock("../../commands/nodeCommands", () => ({
+vi.mock("../../features/node/commands/nodeCommands", () => ({
   listOrgNodes: vi.fn(async () => []),
 }));
 

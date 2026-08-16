@@ -1,7 +1,7 @@
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { listOrgNodes } from "../../commands/nodeCommands";
+import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { projectStore } from "../../features/project/model/projectStore";

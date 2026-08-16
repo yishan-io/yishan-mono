@@ -1,6 +1,6 @@
-import type { DaemonInfoResult } from "@renderer/commands/appCommands";
+import type { DaemonInfoResult } from "@renderer/app/commands/appCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import { getDaemonInfo, restartDaemon as restartDaemonCommand } from "@renderer/commands/appCommands";
+import { getDaemonInfo, restartDaemon as restartDaemonCommand } from "@renderer/app/commands/appCommands";
 import { subscribeDaemonInfoRefreshed } from "@renderer/features/session/commands/sessionCommands";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

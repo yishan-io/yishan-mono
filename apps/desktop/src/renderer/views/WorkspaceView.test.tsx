@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { switchOrganization } from "../commands/orgCommands";
+import { switchOrganization } from "../features/organization/commands/orgCommands";
 import { projectStore } from "../features/project/model/projectStore";
 import { sessionStore } from "../features/session/model/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";

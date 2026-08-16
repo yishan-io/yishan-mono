@@ -17,7 +17,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("@renderer/commands/notificationCommands", () => ({
+vi.mock("@renderer/features/notification/commands/notificationCommands", () => ({
   getNotificationPreferences: mocked.getNotificationPreferencesMock,
   updateNotificationPreferences: mocked.updateNotificationPreferencesMock,
   previewNotification: mocked.previewNotificationMock,

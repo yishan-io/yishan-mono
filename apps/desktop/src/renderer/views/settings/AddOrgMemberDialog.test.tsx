@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addOrgMember } from "../../commands/orgCommands";
+import { addOrgMember } from "../../features/organization/commands/orgCommands";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 
 vi.mock("react-i18next", () => ({
@@ -10,7 +10,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../commands/orgCommands", () => ({
+vi.mock("../../features/organization/commands/orgCommands", () => ({
   addOrgMember: vi.fn(),
 }));
 describe("AddOrgMemberDialog", () => {

@@ -2,7 +2,7 @@ import { Box, Button, Tooltip, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
-import { getMainWindowFullscreenState } from "../../commands/appCommands";
+import { getMainWindowFullscreenState } from "../../app/commands/appCommands";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../components/projectIcons";

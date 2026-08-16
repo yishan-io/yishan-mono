@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { listOrgNodes } from "../../../commands/nodeCommands";
+import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
 import type { BranchDropdownGroups } from "../../../components/BranchDropdown";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {

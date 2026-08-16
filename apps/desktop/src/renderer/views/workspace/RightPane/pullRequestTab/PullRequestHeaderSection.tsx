@@ -14,7 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { openLink } from "@renderer/commands/appCommands";
+import { openLink } from "@renderer/app/commands/appCommands";
 import { BranchBadge } from "@renderer/components/BranchBadge";
 import { PullRequestIcon } from "@renderer/components/PullRequestIcon";
 import type { MergeMethod } from "@renderer/views/workspace/RightPane/pullRequestTab/pullRequestTabHelpers";

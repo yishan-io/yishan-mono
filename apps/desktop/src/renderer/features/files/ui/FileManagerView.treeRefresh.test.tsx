@@ -174,7 +174,7 @@ vi.mock("@renderer/features/files/commands/fileCommands", () => ({
   writeClipboardText: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@renderer/commands/gitCommands", () => ({
+vi.mock("@renderer/features/git/commands/gitCommands", () => ({
   readDiff: vi.fn(),
   readCommitDiff: vi.fn(),
   readBranchComparisonDiff: vi.fn(),

@@ -18,7 +18,7 @@ import {
   dispatchNotification,
   getNotificationPreferences,
   playNotificationSound,
-} from "../../../commands/notificationCommands";
+} from "../../../features/notification/commands/notificationCommands";
 import { projectStore } from "../../../features/project/model/projectStore";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../../../store/chatStore";
 import { tabStore } from "../../../store/tabStore";

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionUser } from "../features/session/model/sessionStore";
+import type { SessionUser } from "../../../features/session/model/sessionStore";
 import {
   dispatchNotification,
   getNotificationPreferences,
@@ -41,18 +41,18 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../api/restClient", () => ({
+vi.mock("../../../api/restClient", () => ({
   requestJson: (...args: unknown[]) => mocks.requestJson(...args),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDesktopHostBridge: vi.fn(() => ({
     dispatchNotification: mocks.dispatchNotification,
     playNotificationSound: mocks.playNotificationSoundBridge,
   })),
 }));
 
-vi.mock("../features/session/model/sessionStore", () => ({
+vi.mock("../../../features/session/model/sessionStore", () => ({
   sessionStore: {
     getState: () => ({
       ...mocks.sessionState,

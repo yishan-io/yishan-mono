@@ -36,7 +36,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../../commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   listGitChanges: (...args: unknown[]) => mocks.listGitChanges(...args),
   readBranchComparisonDiff: (...args: unknown[]) => mocks.readBranchComparisonDiff(...args),
   readDiff: (...args: unknown[]) => mocks.readDiff(...args),

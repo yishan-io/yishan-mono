@@ -1,8 +1,8 @@
-import { listActivePiSessions as listActivePiSessionsCommand } from "../features/agent/commands/agentChatSessionHistory";
+import { listActivePiSessions as listActivePiSessionsCommand } from "../../features/agent/commands/agentChatSessionHistory";
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
   listAgentModels as listAgentModelsCommand,
-} from "../features/agent/commands/agentCommands";
+} from "../../features/agent/commands/agentCommands";
 import {
   appendChatMessages as appendChatMessagesCommand,
   closeAgentSession as closeAgentSessionCommand,
@@ -13,15 +13,15 @@ import {
   setChatAvailableModels as setChatAvailableModelsCommand,
   setChatCurrentModel as setChatCurrentModelCommand,
   updateChatMessage as updateChatMessageCommand,
-} from "../features/agent/commands/chatCommands";
+} from "../../features/agent/commands/chatCommands";
 import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
   loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
   updateProjectConfig as updateProjectConfigCommand,
-} from "../features/project/commands/projectCommands";
-import { setSelectedRepo, setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
+} from "../../features/project/commands/projectCommands";
+import { setSelectedRepo, setSelectedWorkspace } from "../../features/workspace/commands/selectionCommands";
 import {
   activateWorkspacePane as activateWorkspacePaneCommand,
   closeWorkspace as closeWorkspaceCommand,
@@ -43,8 +43,8 @@ import {
   toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "../features/workspace/commands/workspaceCommands";
-import type { WorkspaceProjectRecord } from "../store/types";
+} from "../../features/workspace/commands/workspaceCommands";
+import type { WorkspaceProjectRecord } from "../../store/types";
 import {
   appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -56,7 +56,7 @@ import {
   openLocalFolderDialog as openLocalFolderDialogCommand,
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "./appCommands";
-import { listCLIToolStatuses as listCLIToolStatusesCommand } from "./cliToolCommands";
+import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../features/settings/commands/cliToolCommands";
 import {
   createFile as createFileCommand,
   createFolder as createFolderCommand,
@@ -68,7 +68,7 @@ import {
   readFile as readFileCommand,
   renameEntry as renameEntryCommand,
   writeFile as writeFileCommand,
-} from "../features/files/commands/fileCommands";
+} from "../../features/files/commands/fileCommands";
 import {
   commitGitChanges as commitGitChangesCommand,
   getGitAuthorName as getGitAuthorNameCommand,
@@ -84,31 +84,31 @@ import {
   revertGitChanges as revertGitChangesCommand,
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
-} from "./gitCommands";
-import { listOrgNodes as listOrgNodesCommand } from "./nodeCommands";
+} from "../../features/git/commands/gitCommands";
+import { listOrgNodes as listOrgNodesCommand } from "../../features/node/commands/nodeCommands";
 import {
   getRemoteHealthStatus as getRemoteHealthStatusCommand,
   getSessionBootstrapData as getSessionBootstrapDataCommand,
   resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../features/session/commands/sessionCommands";
+} from "../../features/session/commands/sessionCommands";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
   previewNotification as previewNotificationCommand,
   updateNotificationPreferences as updateNotificationPreferencesCommand,
-} from "./notificationCommands";
-import { switchOrganization as switchOrganizationCommand } from "./orgCommands";
+} from "../../features/notification/commands/notificationCommands";
+import { switchOrganization as switchOrganizationCommand } from "../../features/organization/commands/orgCommands";
 import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,
   setOverviewTimeRange as setOverviewTimeRangeCommand,
-} from "../features/overview/commands/overviewCommands";
+} from "../../features/overview/commands/overviewCommands";
 import {
   listPiProviders as listPiProvidersCommand,
   openPiProviderLogin as openPiProviderLoginCommand,
   removePiProvider as removePiProviderCommand,
   savePiProvider as savePiProviderCommand,
-} from "./piProviderCommands";
+} from "../../features/agent/commands/piProviderCommands";
 import {
   createScheduledJob as createScheduledJobCommand,
   deleteScheduledJob as deleteScheduledJobCommand,
@@ -117,7 +117,7 @@ import {
   resumeScheduledJob as resumeScheduledJobCommand,
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
-} from "../features/scheduled-job/commands/scheduledJobCommands";
+} from "../../features/scheduled-job/commands/scheduledJobCommands";
 import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
@@ -137,7 +137,7 @@ import {
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
   updateFileTabContent as updateFileTabContentCommand,
-} from "../features/workbench/commands/tabCommands";
+} from "../../features/workbench/commands/tabCommands";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -154,7 +154,7 @@ import {
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
-} from "../features/terminal/commands/terminalCommands";
+} from "../../features/terminal/commands/terminalCommands";
 
 export type Commands = {
   setSelectedRepoId: (repoId: string) => void;

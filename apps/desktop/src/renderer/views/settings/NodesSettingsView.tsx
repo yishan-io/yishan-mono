@@ -15,9 +15,9 @@ import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 
 import type { NodeRecord, OrganizationMemberRecord } from "../../api/types";
-import { listOrgNodes } from "../../commands/nodeCommands";
-import { listOrganizationMembers } from "../../commands/orgCommands";
-import { unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
+import { listOrgNodes } from "../../features/node/commands/nodeCommands";
+import { listOrganizationMembers } from "../../features/organization/commands/orgCommands";
+import { unregisterNode, updateNodeScope } from "../../features/node/commands/nodeCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { StatusIndicator } from "../../components/StatusIndicator";

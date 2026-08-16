@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => ({
   login: vi.fn(),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     app: {
       checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,

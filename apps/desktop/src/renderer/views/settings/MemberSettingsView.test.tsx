@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api/client";
-import { listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
+import { listOrganizationMembers, removeOrgMember } from "../../features/organization/commands/orgCommands";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { MemberSettingsView } from "./MemberSettingsView";
 
@@ -23,7 +23,7 @@ vi.mock("../../api/client", () => ({
   },
 }));
 
-vi.mock("../../commands/orgCommands", () => ({
+vi.mock("../../features/organization/commands/orgCommands", () => ({
   addOrgMember: vi.fn(),
   listOrganizationMembers: vi.fn(),
   removeOrgMember: vi.fn(),

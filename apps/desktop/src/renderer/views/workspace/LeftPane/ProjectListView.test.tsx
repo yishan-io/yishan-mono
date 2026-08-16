@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { inspectGitRepository } from "../../../commands/gitCommands";
+import { inspectGitRepository } from "../../../features/git/commands/gitCommands";
 import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../features/workspace/commands/workspaceCommands";
 import { ProjectListView } from "./ProjectListView";
 
@@ -281,7 +281,7 @@ vi.mock("../../../features/files/commands/fileCommands", () => ({
   listDetectedExternalAppIds: (...args: unknown[]) => mocked.listDetectedExternalAppIds(...args),
 }));
 
-vi.mock("../../../commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
 }));
 
