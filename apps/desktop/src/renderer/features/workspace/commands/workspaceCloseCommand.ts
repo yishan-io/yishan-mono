@@ -1,13 +1,13 @@
-import { projectStore } from "../../project/model/projectStore";
+import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../store/sessionStore";
 import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { projectStore } from "../../project/model/projectStore";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
 
 type CloseWorkspaceResponse = {
   workspace: { id: string; status: string };

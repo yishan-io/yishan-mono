@@ -38,6 +38,7 @@ const mocked = vi.hoisted(() => {
       collectedAt: 0,
       processes: [],
     }),
+    subscribeDetectedPorts: vi.fn(() => () => {}),
   };
 });
 
@@ -105,6 +106,7 @@ vi.mock("../../hooks/useCommands", () => ({
     const state = mocked.stateRef.current as Record<string, unknown>;
     return {
       listDetectedPorts: state.listDetectedPorts,
+      subscribeDetectedPorts: state.subscribeDetectedPorts ?? mocked.subscribeDetectedPorts,
       getTerminalResourceUsage: state.getTerminalResourceUsage ?? mocked.getTerminalResourceUsage,
       retainOpenTerminalTabFocus: state.retainOpenTerminalTabFocus ?? vi.fn(),
       setSelectedRepoId: state.setSelectedRepoId,

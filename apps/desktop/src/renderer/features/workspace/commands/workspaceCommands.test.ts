@@ -1,8 +1,6 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../project/model/projectStore";
-import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
 import { chatStore } from "../../../store/chatStore";
 import { sessionStore } from "../../../store/sessionStore";
 import { layoutStore } from "../../../store/settings/layoutStore";
@@ -10,6 +8,8 @@ import { tabStore } from "../../../store/tabStore";
 import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { projectStore } from "../../project/model/projectStore";
+import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
 import {
   OPEN_CREATE_WORKSPACE_DIALOG_EVENT,
   closeWorkspace,

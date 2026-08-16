@@ -1,4 +1,4 @@
-import { projectStore } from "../../project/model/projectStore";
+import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../store/sessionStore";
@@ -10,8 +10,8 @@ import {
   enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../store/workspaceLifecycleNoticeStore";
-import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { workspaceStore } from "../../../store/workspaceStore";
+import { projectStore } from "../../project/model/projectStore";
 
 type CreateWorkspaceInput = {
   projectId: string;

@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
-import { getProjectListPreferences, setProjectListPreferences } from "../../../features/project/commands/projectCommands";
+import {
+  getProjectListPreferences,
+  setProjectListPreferences,
+} from "../../../features/project/commands/projectCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import {

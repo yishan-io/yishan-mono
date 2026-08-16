@@ -104,7 +104,13 @@ export function WorkspacePortsMenuControl() {
       cancelled = true;
       unsubscribePortsChanged();
     };
-  }, [closePortsMenu, hasTerminalTabInSelectedWorkspace, listDetectedPorts, selectedWorkspaceId, subscribeDetectedPorts]);
+  }, [
+    closePortsMenu,
+    hasTerminalTabInSelectedWorkspace,
+    listDetectedPorts,
+    selectedWorkspaceId,
+    subscribeDetectedPorts,
+  ]);
 
   if (workspacePorts.length === 0) {
     return null;

@@ -92,17 +92,12 @@ type ProjectIconOption = {
   Icon: IconType;
 };
 
-export const PROJECT_ICON_OPTIONS: ProjectIconOption[] = PROJECT_ICON_IDS.map((id) => ({
-  id,
-  Icon: PROJECT_ICON_BY_ID[id]!,
-}));
+export const PROJECT_ICON_OPTIONS: ProjectIconOption[] = PROJECT_ICON_IDS.map((id) => {
+  const Icon = PROJECT_ICON_BY_ID[id];
+  return { id, Icon: Icon ?? LuFolder };
+});
 
-export {
-  DEFAULT_PROJECT_ICON_ID,
-  PROJECT_COLOR_PRESETS,
-  pickRandomProjectColor,
-  pickRandomProjectIcon,
-};
+export { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, pickRandomProjectColor, pickRandomProjectIcon };
 
 /** Finds a configured icon option by its persisted id. */
 export function findProjectIconOption(iconId?: string): ProjectIconOption | undefined {

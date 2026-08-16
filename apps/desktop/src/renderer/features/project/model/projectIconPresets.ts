@@ -53,24 +53,23 @@ export const PROJECT_ICON_IDS = [
 export const DEFAULT_PROJECT_ICON_ID = "folder";
 
 /** Curated palette of background colors for project avatars. */
-export const PROJECT_COLOR_PRESETS = [
-  "#1E66F5",
-  "#0F766E",
-  "#CA8A04",
-  "#DC2626",
-  "#7C3AED",
-  "#DB2777",
-  "#0891B2",
-];
+export const PROJECT_COLOR_PRESETS = ["#1E66F5", "#0F766E", "#CA8A04", "#DC2626", "#7C3AED", "#DB2777", "#0891B2"];
 
 /** Picks a random icon id from the available project icon options. */
 export function pickRandomProjectIcon(): string {
-  const index = Math.floor(Math.random() * PROJECT_ICON_IDS.length);
-  return PROJECT_ICON_IDS[index]!;
+  const iconId = PROJECT_ICON_IDS[indexFor(PROJECT_ICON_IDS.length)];
+  return iconId ?? DEFAULT_PROJECT_ICON_ID;
 }
 
 /** Picks a random color from the curated project color palette. */
 export function pickRandomProjectColor(): string {
-  const index = Math.floor(Math.random() * PROJECT_COLOR_PRESETS.length);
-  return PROJECT_COLOR_PRESETS[index]!;
+  const preset = PROJECT_COLOR_PRESETS[indexFor(PROJECT_COLOR_PRESETS.length)];
+  if (preset) {
+    return preset;
+  }
+  return "#1E66F5";
+}
+
+function indexFor(length: number): number {
+  return Math.floor(Math.random() * Math.max(length, 1));
 }

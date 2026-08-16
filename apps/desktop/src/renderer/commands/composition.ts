@@ -1,6 +1,35 @@
+import {
+  createProject as createProjectCommand,
+  deleteProject as deleteProjectCommand,
+  inspectLocalProjectSource as inspectLocalProjectSourceCommand,
+  loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
+  updateProjectConfig as updateProjectConfigCommand,
+} from "../features/project/commands/projectCommands";
+import { setSelectedRepo, setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
+import {
+  activateWorkspacePane as activateWorkspacePaneCommand,
+  closeWorkspace as closeWorkspaceCommand,
+  createWorkspace as createWorkspaceCommand,
+  deleteLocalFolder as deleteLocalFolderCommand,
+  deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
+  focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
+  openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
+  openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
+  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
+  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
+  renameWorkspaceBranch as renameWorkspaceBranchCommand,
+  renameWorkspace as renameWorkspaceCommand,
+  reorderWorkspace as reorderWorkspaceCommand,
+  setDisplayRepoIds as setDisplayRepoIdsCommand,
+  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
+  setLeftPaneWidth as setLeftPaneWidthCommand,
+  setRightPaneWidth as setRightPaneWidthCommand,
+  toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
+  toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
+  undoFileTreeOperation as undoFileTreeOperationCommand,
+} from "../features/workspace/commands/workspaceCommands";
 import type { WorkspaceProjectRecord } from "../store/types";
 import { listActivePiSessions as listActivePiSessionsCommand } from "./agentChatCommands";
-import { listOrgNodes as listOrgNodesCommand } from "./nodeCommands";
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
   listAgentModels as listAgentModelsCommand,
@@ -56,6 +85,7 @@ import {
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
 } from "./gitCommands";
+import { listOrgNodes as listOrgNodesCommand } from "./nodeCommands";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
@@ -75,13 +105,6 @@ import {
   savePiProvider as savePiProviderCommand,
 } from "./piProviderCommands";
 import {
-  createProject as createProjectCommand,
-  deleteProject as deleteProjectCommand,
-  inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
-  updateProjectConfig as updateProjectConfigCommand,
-} from "../features/project/commands/projectCommands";
-import {
   createScheduledJob as createScheduledJobCommand,
   deleteScheduledJob as deleteScheduledJobCommand,
   loadScheduledJobs as loadScheduledJobsCommand,
@@ -90,7 +113,6 @@ import {
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
 } from "./scheduledJobCommands";
-import { setSelectedRepo, setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
 import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
@@ -128,28 +150,6 @@ import {
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
 } from "./terminalCommands";
-import {
-  activateWorkspacePane as activateWorkspacePaneCommand,
-  closeWorkspace as closeWorkspaceCommand,
-  createWorkspace as createWorkspaceCommand,
-  deleteLocalFolder as deleteLocalFolderCommand,
-  deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
-  focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
-  openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
-  openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
-  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
-  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
-  renameWorkspaceBranch as renameWorkspaceBranchCommand,
-  renameWorkspace as renameWorkspaceCommand,
-  reorderWorkspace as reorderWorkspaceCommand,
-  setDisplayRepoIds as setDisplayRepoIdsCommand,
-  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
-  setLeftPaneWidth as setLeftPaneWidthCommand,
-  setRightPaneWidth as setRightPaneWidthCommand,
-  toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
-  toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
-  undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "../features/workspace/commands/workspaceCommands";
 
 export type Commands = {
   setSelectedRepoId: (repoId: string) => void;

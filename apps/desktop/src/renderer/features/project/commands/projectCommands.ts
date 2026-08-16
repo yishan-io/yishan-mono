@@ -1,11 +1,10 @@
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
-import { projectStore } from "../model/projectStore";
-import { workspaceProjectionStore } from "../../workspace/model/workspaceProjectionStore";
+import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
+import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../store/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
@@ -13,12 +12,13 @@ import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { createLocalFolderImport } from "../../workspace/commands/localFolderCommands";
-import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
-import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
 import {
   buildWorkspaceOpenProjectEntries,
   openWorkspaceEntries,
 } from "../../workspace/commands/workspaceWarmupCommand";
+import { workspaceProjectionStore } from "../../workspace/model/workspaceProjectionStore";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
+import { projectStore } from "../model/projectStore";
 
 /** Loads the latest workspace snapshot (shared Flow owned by Events + Commands). */
 export function loadWorkspaceSnapshot(): Promise<void> {

@@ -12,7 +12,6 @@ import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpc
 
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
-import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../store/sessionStore";
@@ -21,6 +20,7 @@ import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProg
 import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
 import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;

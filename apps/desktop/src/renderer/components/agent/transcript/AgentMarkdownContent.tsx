@@ -12,8 +12,8 @@ import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
 import { openChatFileTab, openTab, openTabInOppositePane } from "../../../commands/tabCommands";
 import { selectFolderInFileTree } from "../../../features/workspace/commands/workspaceCommands";
-import { workspaceStore } from "../../../store/workspaceStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { workspaceStore } from "../../../store/workspaceStore";
 
 type AgentMarkdownContentProps = {
   content: string;

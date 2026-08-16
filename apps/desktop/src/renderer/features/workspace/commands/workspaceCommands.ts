@@ -1,6 +1,5 @@
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import { projectStore } from "../../project/model/projectStore";
-import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
+import { api } from "../../../api";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -12,11 +11,12 @@ import {
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { api } from "../../../api";
 import { sessionStore } from "../../../store/sessionStore";
 import { layoutStore } from "../../../store/settings/layoutStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../../../store/workspaceUiStore";
+import { projectStore } from "../../project/model/projectStore";
+import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 export { createWorkspace } from "./workspaceCreateCommand";
@@ -183,11 +183,7 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
 }
 
 /** Lists historical pull request records for one workspace from the API service. */
-export async function listPullRequestHistory(
-  orgId: string,
-  projectId: string,
-  workspaceId: string,
-) {
+export async function listPullRequestHistory(orgId: string, projectId: string, workspaceId: string) {
   return api.workspacePullRequest.list(orgId, projectId, workspaceId);
 }
 

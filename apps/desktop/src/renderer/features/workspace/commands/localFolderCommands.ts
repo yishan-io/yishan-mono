@@ -1,3 +1,4 @@
+import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
@@ -6,7 +7,6 @@ import { tabStore } from "../../../store/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
 /**

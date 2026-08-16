@@ -1,9 +1,9 @@
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
-import { setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
 import { createNewWhiteboard } from "../commands/whiteboardCommands";
 import { requestAgentChatComposerFocus } from "../events/agentChatComposerFocus";
 import { projectStore } from "../features/project/model/projectStore";
+import { setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
 import { reloadWebview } from "../views/workspace/browser/webviewRegistry";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";

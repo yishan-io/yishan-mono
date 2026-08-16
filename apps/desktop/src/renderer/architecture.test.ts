@@ -158,8 +158,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       const relS = target ? relative(SHARED_ROOT, target).replace(/\\/g, "/") : "";
       // Dir-spec imports ("from \"../../api\"") resolve to the dir without a trailing
       // slash; treat the bare dir as transport too (Phase 4 gap closure).
-      const isTransport =
-        relT.startsWith("api/") || relT.startsWith("rpc/") || relT === "api" || relT === "rpc";
+      const isTransport = relT.startsWith("api/") || relT.startsWith("rpc/") || relT === "api" || relT === "rpc";
       const isCommands = relT.startsWith("commands/");
       const isViews = relT.startsWith("views/") || relT.startsWith("components/");
       const isMain = relT.startsWith("../main/") || relT.startsWith("main/");
