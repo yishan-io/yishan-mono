@@ -14,23 +14,26 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/events"
 	release "yishan/apps/cli/internal/platform/release"
 	"yishan/apps/cli/internal/rpc"
 )
 
-// Relay protocol method names. These strings are the wire protocol between
-// daemon nodes and the relay server.
+// Relay protocol method names are defined by the shared relay protocol module
+// and re-exported here so CLI consumers keep the relay.Method* names.
 const (
-	MethodPing                     = "relay.ping"
-	MethodPong                     = "relay.pong"
-	MethodJobRun                   = "job.run"
-	MethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
-	MethodTerminalSessionChanged   = "terminal.session.changed"
-	MethodTerminalStreamRequest    = "terminal.stream.request"
-	MethodTerminalStreamAccept     = "terminal.stream.accept"
-	MethodTerminalStreamCancel     = "terminal.stream.cancel"
+	MethodPing                     = relayprotocol.MethodPing
+	MethodPong                     = relayprotocol.MethodPong
+	MethodJobRun                   = relayprotocol.MethodJobRun
+	MethodWorkspaceSnapshotChanged = relayprotocol.MethodWorkspaceSnapshotChanged
+	MethodTerminalSessionChanged   = relayprotocol.MethodTerminalSessionChanged
+	MethodTerminalStreamRequest    = relayprotocol.MethodTerminalStreamRequest
+	MethodTerminalStreamAccept     = relayprotocol.MethodTerminalStreamAccept
+	MethodTerminalStreamCancel     = relayprotocol.MethodTerminalStreamCancel
 )
 
 const (

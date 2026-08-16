@@ -1,132 +1,49 @@
 package relay
 
-import "encoding/json"
+// The wire protocol types and constants live in the shared relay protocol
+// module (yishan/packages/relay-protocol-go). This file keeps the short local
+// names server code uses; the JSON shapes are owned by the shared module and
+// protected by its compatibility tests.
 
-// ---------------------------------------------------------------------------
-// JSON-RPC 2.0 wire types
-// ---------------------------------------------------------------------------
+import relayprotocol "yishan/packages/relay-protocol-go"
 
-type request struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
-}
+type request = relayprotocol.Request
+type response = relayprotocol.Response
+type notification = relayprotocol.Notification
+type rpcError = relayprotocol.RPCError
 
-type response struct {
-	JSONRPC string    `json:"jsonrpc"`
-	ID      any       `json:"id"`
-	Result  any       `json:"result,omitempty"`
-	Error   *rpcError `json:"error,omitempty"`
-}
-
-type notification struct {
-	JSONRPC string `json:"jsonrpc"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
-
-type rpcError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
-// ---------------------------------------------------------------------------
-// Relay protocol methods
-// ---------------------------------------------------------------------------
-
+// Relay protocol methods.
 const (
-	// Server -> Node
-	MethodPing                     = "relay.ping"
-	MethodJobRun                   = "job.run"
-	MethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
-
-	// Node -> Server
-	MethodPong                     = "relay.pong"
-	MethodJobAck                   = "job.ack"
-	MethodJobResult                = "job.result"
-	MethodTerminalSessionChanged   = "terminal.session.changed"
-	MethodTerminalStreamRequest    = "terminal.stream.request"
-	MethodTerminalStreamAccept     = "terminal.stream.accept"
-	MethodTerminalStreamCancel     = "terminal.stream.cancel"
+	MethodPing                     = relayprotocol.MethodPing
+	MethodPong                     = relayprotocol.MethodPong
+	MethodJobRun                   = relayprotocol.MethodJobRun
+	MethodJobAck                   = relayprotocol.MethodJobAck
+	MethodJobResult                = relayprotocol.MethodJobResult
+	MethodWorkspaceSnapshotChanged = relayprotocol.MethodWorkspaceSnapshotChanged
+	MethodTerminalSessionChanged   = relayprotocol.MethodTerminalSessionChanged
+	MethodTerminalStreamRequest    = relayprotocol.MethodTerminalStreamRequest
+	MethodTerminalStreamAccept     = relayprotocol.MethodTerminalStreamAccept
+	MethodTerminalStreamCancel     = relayprotocol.MethodTerminalStreamCancel
 )
 
-// ---------------------------------------------------------------------------
-// JSON-RPC error codes
-// ---------------------------------------------------------------------------
-
+// JSON-RPC error codes.
 const (
-	CodeParseError     = -32700
-	CodeInvalidRequest = -32600
-	CodeMethodNotFound = -32601
-	CodeInvalidParams  = -32602
-	CodeInternalError  = -32603
+	CodeParseError     = relayprotocol.CodeParseError
+	CodeInvalidRequest = relayprotocol.CodeInvalidRequest
+	CodeMethodNotFound = relayprotocol.CodeMethodNotFound
+	CodeInvalidParams  = relayprotocol.CodeInvalidParams
+	CodeInternalError  = relayprotocol.CodeInternalError
 
-	CodeAuthFailed       = -32001
-	CodeNodeOffline      = -32002
-	CodeDispatchRejected = -32003
+	CodeAuthFailed       = relayprotocol.CodeAuthFailed
+	CodeNodeOffline      = relayprotocol.CodeNodeOffline
+	CodeDispatchRejected = relayprotocol.CodeDispatchRejected
 )
 
-// ---------------------------------------------------------------------------
-// job.run params (server -> node)
-// ---------------------------------------------------------------------------
+type jobRunParams = relayprotocol.JobRunParams
+type jobAckParams = relayprotocol.JobAckParams
+type jobResultParams = relayprotocol.JobResultParams
+type jobError = relayprotocol.JobError
 
-type jobRunParams struct {
-	RunID          string         `json:"runId"`
-	JobID          string         `json:"jobId"`
-	ScheduledFor   string         `json:"scheduledFor"`
-	IdempotencyKey string         `json:"idempotencyKey"`
-	Payload        map[string]any `json:"payload"`
-}
-
-// ---------------------------------------------------------------------------
-// job.ack params (node -> server)
-// ---------------------------------------------------------------------------
-
-type jobAckParams struct {
-	RunID  string `json:"runId"`
-	Status string `json:"status"` // "accepted" | "rejected"
-	Reason string `json:"reason,omitempty"`
-}
-
-// ---------------------------------------------------------------------------
-// job.result params (node -> server)
-// ---------------------------------------------------------------------------
-
-type jobResultParams struct {
-	RunID      string         `json:"runId"`
-	Status     string         `json:"status"` // "completed" | "failed" | "cancelled"
-	Output     map[string]any `json:"output,omitempty"`
-	Error      *jobError      `json:"error,omitempty"`
-	DurationMs int64          `json:"durationMs,omitempty"`
-}
-
-type jobError struct {
-	Code    string `json:"code,omitempty"`
-	Message string `json:"message"`
-	Details any    `json:"details,omitempty"`
-}
-
-// ---------------------------------------------------------------------------
-// terminal.stream.* params (node <-> server)
-// ---------------------------------------------------------------------------
-
-// terminalStreamRequestParams is sent by a subscribing node to request PTY
-// streaming for a session owned by another node.
-type terminalStreamRequestParams struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-	FromNode  string `json:"fromNode"`
-}
-
-// terminalStreamAcceptParams is sent by the owning node to confirm the stream.
-type terminalStreamAcceptParams struct {
-	SessionID string `json:"sessionId"`
-}
-
-// terminalStreamCancelParams is sent by either side to tear down a stream.
-type terminalStreamCancelParams struct {
-	SessionID string `json:"sessionId"`
-	FromNode  string `json:"fromNode"`
-}
+type terminalStreamRequestParams = relayprotocol.TerminalStreamRequestParams
+type terminalStreamAcceptParams = relayprotocol.TerminalStreamAcceptParams
+type terminalStreamCancelParams = relayprotocol.TerminalStreamCancelParams

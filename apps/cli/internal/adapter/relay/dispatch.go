@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/cli/internal/rpc"
 )
 
@@ -89,18 +92,11 @@ func (c *Client) handleDispatchResponse(id json.RawMessage, result json.RawMessa
 	if err := json.Unmarshal(id, &idStr); err != nil || !strings.HasPrefix(idStr, "dispatch-") {
 		return false
 	}
-	var res struct {
-		Accepted *bool  `json:"accepted"`
-		Reason   string `json:"reason"`
+	var verdict relayprotocol.DispatchVerdict
+	if err := json.Unmarshal(result, &verdict); err != nil {
+		verdict = relayprotocol.DispatchVerdict{}
 	}
-	if err := json.Unmarshal(result, &res); err != nil {
-		res = struct {
-			Accepted *bool  `json:"accepted"`
-			Reason   string `json:"reason"`
-		}{}
-	}
-	accepted := res.Accepted != nil && *res.Accepted
-	c.resolveRequest(idStr, dispatchVerdict{accepted: accepted, reason: res.Reason})
+	c.resolveRequest(idStr, dispatchVerdict{accepted: verdict.Accepted, reason: verdict.Reason})
 	return true
 }
 

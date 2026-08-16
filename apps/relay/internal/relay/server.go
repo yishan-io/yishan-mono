@@ -10,6 +10,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/relay/internal/auth"
 	"yishan/apps/relay/internal/jobqueue"
 )
@@ -373,11 +375,7 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		// Broadcast to every other node in the org; the source node is excluded
 		// so it never receives its own message back. Each node self-selects on
 		// the envelope's targetNodeId.
-		var params struct {
-			OrganizationID string `json:"organizationId"`
-			SourceNodeID   string `json:"sourceNodeId"`
-			TargetNodeID   string `json:"targetNodeId"`
-		}
+		var params relayprotocol.WorkspaceSnapshotChangedParams
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid workspace.snapshot.changed params")
 			return true
@@ -403,13 +401,13 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 				_ = s.sessions.SendResponse(nodeID, response{
 					JSONRPC: "2.0",
 					ID:      req.ID,
-					Result:  map[string]any{"accepted": true, "targetOnline": true},
+					Result:  relayprotocol.DispatchVerdict{Accepted: true, TargetOnline: true},
 				})
 			} else {
 				_ = s.sessions.SendResponse(nodeID, response{
 					JSONRPC: "2.0",
 					ID:      req.ID,
-					Result:  map[string]any{"accepted": false, "reason": "target node offline"},
+					Result:  relayprotocol.DispatchVerdict{Accepted: false, Reason: "target node offline"},
 				})
 			}
 			return true

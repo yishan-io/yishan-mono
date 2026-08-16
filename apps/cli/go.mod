@@ -19,6 +19,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.52.0
 	resty.dev/v3 v3.0.0-beta.6
+	yishan/packages/relay-protocol-go v0.0.0
 )
 
 require (
@@ -57,3 +58,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+replace yishan/packages/relay-protocol-go => ../../packages/relay-protocol-go

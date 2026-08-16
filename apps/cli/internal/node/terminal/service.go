@@ -16,11 +16,8 @@ import (
 	term "yishan/apps/cli/internal/terminal"
 )
 
-// Binary frame opcodes for terminal I/O fast-path.
-const (
-	binOpcodeTerminalInput  byte = 0x01
-	binOpcodeTerminalOutput byte = 0x02
-)
+// Binary frame opcodes for terminal I/O live in the shared relay protocol
+// module (relayprotocol.BinaryFrameOpcodeInput / BinaryFrameOpcodeOutput).
 
 // Deps are the explicit dependencies of the terminal application service.
 type Deps struct {

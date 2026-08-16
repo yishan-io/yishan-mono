@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
 )
 
 // NodeTransport is the interface the job queue uses to communicate with nodes.
@@ -44,8 +46,9 @@ const (
 	StatusRetrying       RunStatus = "retrying"
 )
 
-// jobRunMethod is the JSON-RPC method name for job dispatch notifications.
-const jobRunMethod = "job.run"
+// jobRunMethod is the JSON-RPC method name for job dispatch notifications;
+// the wire string is owned by the shared relay protocol module.
+const jobRunMethod = relayprotocol.MethodJobRun
 
 // PendingRun represents a single dispatched job run.
 type PendingRun struct {
@@ -89,21 +92,13 @@ type AckParams struct {
 	Reason string
 }
 
-// ResultParams holds the fields from a job.result message.
-type ResultParams struct {
-	RunID      string         `json:"runId"`
-	Status     string         `json:"status"` // "completed" | "failed" | "cancelled"
-	Output     map[string]any `json:"output,omitempty"`
-	Error      *ResultError   `json:"error,omitempty"`
-	DurationMs int64          `json:"durationMs,omitempty"`
-}
+// ResultParams holds the fields from a job.result message; the wire type is
+// owned by the shared relay protocol module.
+type ResultParams = relayprotocol.JobResultParams
 
-// ResultError is the error payload within a job.result.
-type ResultError struct {
-	Code    string `json:"code,omitempty"`
-	Message string `json:"message"`
-	Details any    `json:"details,omitempty"`
-}
+// ResultError is the error payload within a job.result; the wire type is
+// owned by the shared relay protocol module.
+type ResultError = relayprotocol.JobError
 
 // Metrics exposes observable queue state.
 type Metrics struct {
@@ -117,15 +112,9 @@ type Metrics struct {
 	TotalSkippedOffline int `json:"totalSkippedOffline"`
 }
 
-// jobRunParams is the structured params sent in job.run notifications.
-// Using a typed struct avoids a heap map[string]any allocation per dispatch.
-type jobRunParams struct {
-	RunID          string         `json:"runId"`
-	JobID          string         `json:"jobId"`
-	ScheduledFor   string         `json:"scheduledFor"`
-	IdempotencyKey string         `json:"idempotencyKey"`
-	Payload        map[string]any `json:"payload"`
-}
+// jobRunParams is the structured params sent in job.run notifications; the
+// wire type is owned by the shared relay protocol module.
+type jobRunParams = relayprotocol.JobRunParams
 
 // ---------------------------------------------------------------------------
 // Manager

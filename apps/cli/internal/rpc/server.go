@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -9,6 +8,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
 )
 
 const maxInFlightPerConnection = 16
@@ -158,16 +159,12 @@ func (s *Server) HandleBinaryFrame(conn *Connection, payload []byte) {
 	if s.BinaryFrameHandler == nil {
 		return
 	}
-	if len(payload) < 3 { // minimum: opcode + at least 1 char session ID + null terminator
-		return
-	}
 
-	opcode := payload[0]
-	rest := payload[1:]
-	nullIdx := bytes.IndexByte(rest, 0)
-	if nullIdx < 0 {
+	opcode, sessionID, _, ok := relayprotocol.DecodeBinaryFrame(payload)
+	if !ok {
 		return
 	}
-	sessionID := conn.TerminalInputSessionID(rest[:nullIdx])
-	s.BinaryFrameHandler.HandleBinaryFrame(conn, opcode, sessionID, payload)
+	// Resolve the session id through the connection cache so high-frequency
+	// input frames do not reallocate the session id string per frame.
+	s.BinaryFrameHandler.HandleBinaryFrame(conn, opcode, conn.TerminalInputSessionID(sessionID), payload)
 }
