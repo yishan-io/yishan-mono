@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import { FileManagerView } from "../../../features/files/ui/FileManagerView";
 import { projectStore } from "../../../features/project/model/projectStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -7,7 +8,6 @@ import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../store/workspaceUiStore";
 import { ChangesTabView } from "./ChangesTabView";
 import { PullRequestTabView } from "./PullRequestTabView";
-import { FileManagerView } from "./fileTree/FileManagerView";
 
 export type RightPaneViewProps = {
   onToggleRightPane?: () => void;

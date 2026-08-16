@@ -1,9 +1,9 @@
 import { useCallback } from "react";
-import { writeClipboardText } from "../../../features/files/commands/fileCommands";
 import type { ProjectGitChangeItem } from "../../../components/ProjectGitChangesList";
+import { writeClipboardText } from "../../../features/files/commands/fileCommands";
+import { resolveWorkspaceAbsolutePath } from "../../../features/files/ui/fileTreeHelpers";
 import { useCommands } from "../../../hooks/useCommands";
 import type { DiffFileChangeKind, FileDiffEntry } from "../../../store/types";
-import { resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 
 type UseChangesTabActionsInput = {

@@ -6,9 +6,9 @@ import {
   DEFAULT_CLIPBOARD_SOURCE_RESOLVERS,
   type FileTreeClipboardState,
   resolveClipboardSource,
-} from "../clipboardSourceResolvers";
-import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "../fileTreeHelpers";
-import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "../fileTreePathHelpers";
+} from "./clipboardSourceResolvers";
+import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeHelpers";
+import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePathHelpers";
 import {
   captureNativeExternalClipboardSourcePathsSnapshot,
   resolveExternalClipboardSourcePaths,

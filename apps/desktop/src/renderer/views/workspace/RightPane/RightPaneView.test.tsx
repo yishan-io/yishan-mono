@@ -137,8 +137,10 @@ vi.mock("../../../mod/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("./fileTree/FileManagerView", async () => {
-  const actual = await vi.importActual<typeof import("./fileTree/FileManagerView")>("./fileTree/FileManagerView");
+vi.mock("../../../features/files/ui/FileManagerView", async () => {
+  const actual = await vi.importActual<typeof import("../../../features/files/ui/FileManagerView")>(
+    "../../../features/files/ui/FileManagerView",
+  );
 
   function TrackedFileManagerView(props: Parameters<typeof actual.FileManagerView>[0]) {
     useEffect(() => {

@@ -7,13 +7,13 @@ import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
 import type { ExternalAppId } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FileTreeClipboardState } from "../clipboardSourceResolvers";
+import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
 import {
   getFileOperationErrorMessage,
   mapIgnoredWorkspaceEntryPaths,
   mapWorkspaceEntryPaths,
-} from "../fileTreeHelpers";
-import { getParentRelativePath, normalizeRelativePath } from "../fileTreePathHelpers";
+} from "./fileTreeHelpers";
+import { getParentRelativePath, normalizeRelativePath } from "./fileTreePathHelpers";
 import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";
 import { type FileOperationState, useFileOperationState } from "./useFileOperationState";
 import { useFileTreeClipboard } from "./useFileTreeClipboard";

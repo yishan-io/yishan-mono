@@ -21,8 +21,8 @@ import {
 } from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { projectStore } from "../../../../features/project/model/projectStore";
-import { useFileDeletionConfirmation } from "../useFileDeletionConfirmation";
+import { projectStore } from "../../../features/project/model/projectStore";
+import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
 import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";

@@ -3,7 +3,7 @@ import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/t
 import type { ExternalAppId, ExternalAppMenuEntry } from "@shared/contracts/externalApps";
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
-import { buildWorkspaceFileTreeContextMenuItems } from "../buildWorkspaceFileTreeContextMenuItems";
+import { buildWorkspaceFileTreeContextMenuItems } from "./buildWorkspaceFileTreeContextMenuItems";
 
 type ExternalAppPresetLike = {
   id: ExternalAppId;

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildMoveUndoEntries, normalizeRelativePath, resolvePreferredImportedPath } from "./fileTreePathHelpers";
+import {
+  buildMoveUndoEntries,
+  normalizeRelativePath,
+  resolvePreferredImportedPath,
+} from "../../../features/files/ui/fileTreePathHelpers";
 
 describe("normalizeRelativePath", () => {
   it("normalizes separators and surrounding slashes", () => {
