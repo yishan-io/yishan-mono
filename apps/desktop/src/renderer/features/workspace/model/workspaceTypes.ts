@@ -1,8 +1,10 @@
+/** Feature-owned workspace lifecycle status (replaces api WorkspaceRecord["status"] refs in stores). */
+export type WorkspaceStatus = "active" | "closed" | "provisioning";
+
 /**
  * Workspace feature vocabulary (Phase 3 split of store/types.ts).
  * Feature-owned status unions replace transport DTO references.
  */
-import type { WorkspaceStatus } from "./workspaceViewModel";
 
 export type WorkspaceLifecycleState = "active" | "error" | "closing";
 

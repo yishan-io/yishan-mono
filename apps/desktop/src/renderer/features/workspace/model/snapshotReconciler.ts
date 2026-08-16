@@ -19,7 +19,7 @@ import type { WorkspaceItem, WorkspaceStoreOrganizationPreference, WorkspaceStor
 import { buildWorkspaceStateFromData } from "../../../store/workspace/state";
 import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { WorkspaceGitChangeTotals } from "./workspaceTypes";
-import type { WorkspaceStatus } from "./workspaceViewModel";
+import type { WorkspaceStatus } from "./workspaceTypes";
 
 type ProjectStoreSlice = {
   projects: WorkspaceProjectRecord[];

@@ -345,7 +345,6 @@ export async function setAgentThinkingLevel(opts: {
 // ─── Handler-facing re-exports ─────────────────────────────────────────────────
 // agentChatPiEventHandler.ts imports exclusively from this module so the
 // dependency graph stays one-way: handler → shared → (underlying modules).
-// agentChatPiEventHelpers.ts re-exports both for existing callers.
 export {
   PER_MESSAGE_UTF8_BYTES,
   applyStreamDelta,

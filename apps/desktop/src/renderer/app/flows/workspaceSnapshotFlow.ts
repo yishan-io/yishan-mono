@@ -12,12 +12,9 @@
  * backend event handler (`workspaceEventHandlers`, invoked on snapshot
  * invalidation and daemon reconnect recovery).
  *
- * Dependency-direction note: the Flow calls a few command wrappers
- * (`syncTabStoreWithWorkspace` — WorkbenchCommands member still under
- * `commands/` until P6; `workspaceWarmupCommand` + `localFolderCommands` —
- * workspace feature commands). The heavy coordination itself is pure
- * (`snapshotReconciler`/`applySnapshot`); the wrappers move to their feature
- * command dirs by P6/P7 (tracked in the phase-4 notes).
+ * The Flow calls a few command wrappers (`syncTabStoreWithWorkspace`,
+ * `workspaceWarmupCommand`, `localFolderCommands`) for shared coordination;
+ * the heavy coordination itself is pure (`snapshotReconciler`/`applySnapshot`).
  */
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
