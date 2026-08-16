@@ -14,6 +14,7 @@ import (
 	"yishan/apps/cli/internal/tokenusage/collection"
 	"yishan/apps/cli/internal/tokenusage/pricing"
 	"yishan/apps/cli/internal/tokenusage/repository"
+	"yishan/apps/cli/internal/tokenusage/scanner"
 	"yishan/apps/cli/internal/workspace/instance"
 )
 
@@ -46,5 +47,5 @@ func NewCollectorWithRepository(
 		cachePath = filepath.Join(profileDir, modelPricingCacheFileName)
 	}
 	catalog := pricing.NewCatalog(cachePath, pricing.FetchPublicModelPrices)
-	return collection.NewCollector(registry, runtime, repo, catalog)
+	return collection.NewCollector(registry, runtime, repo, catalog, scanner.DefaultRegistry())
 }

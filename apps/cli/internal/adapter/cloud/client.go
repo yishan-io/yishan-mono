@@ -23,6 +23,34 @@ type TokenUpdate struct {
 	UserID string `json:"userId,omitempty"`
 }
 
+// OKResponse is the generic success envelope most mutation endpoints return.
+type OKResponse struct {
+	OK bool `json:"ok"`
+}
+
+type HealthResponse struct {
+	OK bool `json:"ok"`
+}
+
+type MeResponse struct {
+	User User `json:"user"`
+}
+
+type User struct {
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatarUrl"`
+}
+
+type RefreshTokenResponse struct {
+	TokenType             string `json:"tokenType"`
+	AccessToken           string `json:"accessToken"`
+	RefreshToken          string `json:"refreshToken"`
+	AccessTokenExpiresAt  string `json:"accessTokenExpiresAt"`
+	RefreshTokenExpiresAt string `json:"refreshTokenExpiresAt"`
+}
+
 type APIError struct {
 	Method     string
 	Path       string
@@ -273,4 +301,36 @@ func (c *Client) refreshAccessToken() error {
 	c.refreshTokenExpiresAt = strings.TrimSpace(update.RefreshTokenExpiresAt)
 
 	return nil
+}
+
+// Health reports API availability.
+func (c *Client) Health() (HealthResponse, error) {
+	var response HealthResponse
+	err := c.DoDecode("GET", "/health", nil, &response)
+	return response, err
+}
+
+// WhoAmI returns the authenticated user's identity.
+func (c *Client) WhoAmI() (MeResponse, error) {
+	var response MeResponse
+	err := c.DoDecode("GET", "/me", nil, &response)
+	return response, err
+}
+
+// RefreshToken exchanges a refresh token for a fresh token pair.
+func (c *Client) RefreshToken(refreshToken string) (RefreshTokenResponse, error) {
+	var response RefreshTokenResponse
+	err := c.DoDecode("POST", "/auth/refresh", map[string]string{
+		"refreshToken": refreshToken,
+	}, &response)
+	return response, err
+}
+
+// RevokeToken invalidates a refresh token server-side.
+func (c *Client) RevokeToken(refreshToken string) (OKResponse, error) {
+	var response OKResponse
+	err := c.DoDecode("POST", "/auth/revoke", map[string]string{
+		"refreshToken": refreshToken,
+	}, &response)
+	return response, err
 }
