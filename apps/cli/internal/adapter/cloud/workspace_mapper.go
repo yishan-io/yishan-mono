@@ -1,7 +1,7 @@
-// Package cloud owns conversion between the cloud API workspace DTO and
-// the workspace domain record. Created in Phase 1 of the CLI/daemon refactor
-// as the named mapper boundary; Phase 5 moves all remaining API DTO
-// conversion (request building, cache sync) into this package.
+// Package cloud owns access to the Yishan cloud HTTP API: the Client handles
+// transport, token refresh, and response decoding, resource files hold the
+// endpoint methods, and mapper files convert between cloud DTOs and domain
+// records. Domain policy stays outside this package.
 package cloud
 
 import (
