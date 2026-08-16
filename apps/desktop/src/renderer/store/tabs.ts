@@ -18,5 +18,3 @@ export function resolveSelectedTabIdForWorkspace(input: {
   return workspaceTabs[0]?.id ?? "";
 }
 
-/** @deprecated Import `buildTabDataByInput` from `./tabs/open` instead. */
-export { buildTabDataByInput } from "./tabs/open";

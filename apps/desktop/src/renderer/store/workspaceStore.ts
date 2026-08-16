@@ -6,10 +6,8 @@ import { createWorkspaceStoreActions } from "./workspace/actions";
 import { initialWorkspaceState, partializeWorkspaceState } from "./workspace/state";
 
 export type {
-  AvailableCommand,
   AvailableModel,
   ChatMessage,
-  OpenWorkspaceTabInput,
   WorkspaceStoreState,
   WorkspaceTab,
 } from "./types";

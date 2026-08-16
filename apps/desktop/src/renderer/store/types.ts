@@ -6,8 +6,6 @@ import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../features/worksp
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import type { DaemonLocalFolder, DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
 
-// Re-export chat-domain types from their canonical location.
-export type { AvailableCommand, AvailableModel, ChatMessage } from "./chatTypes";
 
 /**
  * Synthetic project id used for local (non-git) folder workspaces. Folder
@@ -320,3 +318,5 @@ export type WorkspaceStoreCreator = StateCreator<
 
 export type WorkspaceStoreSetState = Parameters<WorkspaceStoreCreator>[0];
 export type WorkspaceStoreGetState = Parameters<WorkspaceStoreCreator>[1];
+
+export type { AvailableModel, ChatMessage } from "./chatTypes";
