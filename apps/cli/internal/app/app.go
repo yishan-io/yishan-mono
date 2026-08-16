@@ -26,6 +26,9 @@ import (
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/node"
+	nodeproject "yishan/apps/cli/internal/node/project"
+	nodesystem "yishan/apps/cli/internal/node/system"
+	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -178,7 +181,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	agentLifecycleCtx, cancelAgentLifecycle := context.WithCancel(context.Background())
 	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
 
-	computerSvc := node.NewDefaultComputerService()
+	computerSvc := nodesystem.NewDefaultComputerService()
 	modelList := modellist.NewService()
 	agentMgr := agentmanager.NewManager()
 	piAuth := node.NewManagedPiAuthStore()
@@ -259,7 +262,29 @@ func Bootstrap(cfg Config) (*App, error) {
 
 	// Build the rpc service layer and the transport server, then the relay
 	// client (it needs the rpc server and the service as its message handler).
-	app.router = buildNamespaceRouter(service)
+	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
+		Registry:  registry,
+		Files:     filesService,
+		Git:       gitService,
+		Terminals: terminals,
+	})
+	projectSvc := nodeproject.NewService(nodeproject.Deps{
+		Runtime:  cfg.Runtime,
+		Database: cfg.Database,
+	})
+	systemSvc := nodesystem.NewService(nodesystem.Deps{
+		Runtime:      cfg.Runtime,
+		Events:       events,
+		ModelList:    modelList,
+		TokenUsage:   tokenUsage,
+		Memory:       memorySvc,
+		Registry:     registry,
+		Computer:     computerSvc,
+		ContextStore: contextStore,
+		SettingsPath: cfg.SettingsPath,
+		ServerCtx:    context.Background(),
+	})
+	app.router = buildNamespaceRouter(service, workspaceSvc, projectSvc, systemSvc)
 	app.rpcServer = rpc.NewServer(service)
 	app.rpcServer.BinaryFrameHandler = service
 	app.relay = relay.NewClient(relay.ClientConfig{
@@ -364,8 +389,8 @@ func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 	a.service.ServeAgentHook(w, r)
 }
 
-// NewRouter builds the namespace routing table for a node.Service (test and
-// composition helper; Bootstrap wires it into the app).
-func NewRouter(service *node.Service) *rpc.Router {
-	return buildNamespaceRouter(service)
+// NewRouter builds the namespace routing table for the node services (test
+// and composition helper; Bootstrap wires it into the app).
+func NewRouter(service *node.Service, workspaceSvc *nodeworkspace.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
+	return buildNamespaceRouter(service, workspaceSvc, projectSvc, systemSvc)
 }

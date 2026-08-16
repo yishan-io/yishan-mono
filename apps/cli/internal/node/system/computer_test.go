@@ -1,4 +1,4 @@
-package node
+package system
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestDispatchComputerPermissions(t *testing.T) {
 	s := newTestHandler(t)
 	s.SetComputerService(computer.NewService(computermock.Runtime{}))
 
-	result, err := s.callRPCForTest(context.Background(), MethodComputerPermissions, nil)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodComputerPermissions, nil)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestDispatchComputerListDisplays(t *testing.T) {
 		},
 	}))
 
-	result, err := s.callRPCForTest(context.Background(), MethodComputerListDisplays, nil)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodComputerListDisplays, nil)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestDispatchComputerListWindowsUsesFilter(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := s.callRPCForTest(context.Background(), MethodComputerListWindows, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodComputerListWindows, params)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestDispatchComputerCaptureDisplay(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := s.callRPCForTest(context.Background(), MethodComputerCaptureDisplay, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodComputerCaptureDisplay, params)
 	if err != nil {
 		t.Fatalf("dispatchComputer returned error: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestDispatchComputerCaptureWindowRequiresWindowID(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	_, err = s.callRPCForTest(context.Background(), MethodComputerCaptureWindow, params)
+	_, err = s.callRPCForTest(context.Background(), rpc.MethodComputerCaptureWindow, params)
 	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)
@@ -159,7 +159,7 @@ func TestDispatchComputerOpenPermissionSettingsRequiresPermission(t *testing.T) 
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	_, err = s.callRPCForTest(context.Background(), MethodComputerOpenPermissionSettings, params)
+	_, err = s.callRPCForTest(context.Background(), rpc.MethodComputerOpenPermissionSettings, params)
 	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)
@@ -172,7 +172,7 @@ func TestDispatchComputerOpenPermissionSettingsRequiresPermission(t *testing.T) 
 func TestMapRPCErrorIncludesComputerMetadata(t *testing.T) {
 	t.Parallel()
 
-	rpcErr := mapRPCError(computer.NewErrorWithDetails(
+	rpcErr := rpc.MapRPCError(computer.NewErrorWithDetails(
 		computer.ErrorCodePermissionMissing,
 		"Accessibility permission is required",
 		map[string]any{"permission": "accessibility"},

@@ -1,4 +1,4 @@
-package node
+package project
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsStale(t *testing.T) {
+func TestListWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsStale(t *testing.T) {
 	// The remote record is stale: it was created as provisioning and the daemon's
 	// PATCH (updateRemoteWorkspaceRecord) never landed, so the API still reports
 	// `provisioning` with an empty path even though the local create finalized.
@@ -26,7 +26,7 @@ func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsS
 	defer server.Close()
 
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := newTestService(t, runtime, "node-1")
+	handler := newTestService(t, runtime)
 
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -56,9 +56,9 @@ func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsS
 		t.Fatalf("create local workspace: %v", err)
 	}
 
-	results, err := handler.listRemoteProjectsWithWorkspaces(context.Background(), "org-1")
+	results, err := handler.listRemoteWithWorkspaces(context.Background(), "org-1")
 	if err != nil {
-		t.Fatalf("listRemoteProjectsWithWorkspaces: %v", err)
+		t.Fatalf("listRemoteWithWorkspaces: %v", err)
 	}
 	if len(results) != 1 {
 		t.Fatalf("expected 1 project, got %d", len(results))
@@ -76,14 +76,14 @@ func TestListRemoteProjectsWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsS
 	}
 }
 
-func TestListRemoteProjectsWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t *testing.T) {
+func TestListWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"projects":[{"id":"project-1","organizationId":"org-1","name":"repo-1","sourceType":"git","repoProvider":"github","repoUrl":"https://example.com/repo-1.git","repoKey":"owner/repo-1","icon":"folder","color":"#1E66F5","contextEnabled":true,"createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z","workspaces":[{"id":"workspace-remote","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-2","kind":"worktree","status":"provisioning","branch":"feature-b","sourceBranch":"main","localPath":"","createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z"}]}]}`))
 	}))
 	defer server.Close()
 
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	handler := newTestService(t, runtime, "node-1")
+	handler := newTestService(t, runtime)
 
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
@@ -95,9 +95,9 @@ func TestListRemoteProjectsWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t
 	}
 	handler.setTestDatabase(database)
 
-	results, err := handler.listRemoteProjectsWithWorkspaces(context.Background(), "org-1")
+	results, err := handler.listRemoteWithWorkspaces(context.Background(), "org-1")
 	if err != nil {
-		t.Fatalf("listRemoteProjectsWithWorkspaces: %v", err)
+		t.Fatalf("listRemoteWithWorkspaces: %v", err)
 	}
 	workspaces := results[0].Workspaces
 	if len(workspaces) != 1 {
@@ -106,8 +106,4 @@ func TestListRemoteProjectsWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t
 	if workspaces[0].Status != "provisioning" {
 		t.Errorf("expected remote status %q to pass through, got %q", "provisioning", workspaces[0].Status)
 	}
-}
-
-func strPtr(value string) *string {
-	return &value
 }

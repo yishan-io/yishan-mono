@@ -18,25 +18,25 @@ func (h *ProjectHandler) Call(ctx context.Context, connection *Connection, metho
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ProjectList(ctx, req)
+		return h.Services.List(ctx, req)
 	case MethodProjectListWithWkspaces:
 		var req ProjectListWithWorkspacesParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ProjectListWithWorkspaces(ctx, req)
+		return h.Services.ListWithWorkspaces(ctx, req)
 	case MethodProjectGetListPreferences:
 		var req ProjectGetListPreferencesParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ProjectGetListPreferences(ctx, req)
+		return h.Services.GetListPreferences(ctx, req)
 	case MethodProjectSetListPreferences:
 		var req ProjectSetListPreferencesParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ProjectSetListPreferences(ctx, req)
+		return h.Services.SetListPreferences(ctx, req)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown project method: "+method)
 	}

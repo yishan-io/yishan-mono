@@ -1,4 +1,4 @@
-package node
+package system
 
 import (
 	"context"
@@ -13,15 +13,15 @@ import (
 // MemoryService implementation: each method performs one memory operation.
 // A missing memory service is a server error for every memory method.
 
-func (s *Service) memoryServiceOrError() (*memory.Service, error) {
+func (s *Service) memoryService() (*memory.Service, error) {
 	if s.deps.Memory == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "memory service not available")
 	}
 	return s.deps.Memory, nil
 }
 
-func (s *Service) MemorySearch(ctx context.Context, req rpc.MemorySearchParams) (any, error) {
-	memSvc, err := s.memoryServiceOrError()
+func (s *Service) Search(ctx context.Context, req rpc.MemorySearchParams) (any, error) {
+	memSvc, err := s.memoryService()
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +30,8 @@ func (s *Service) MemorySearch(ctx context.Context, req rpc.MemorySearchParams) 
 	}
 	projectID := ""
 	if req.WorkspaceID != "" {
-		if handle, err := s.workspaceHandle(req.WorkspaceID); err == nil {
-			projectID = handle.Instance().ProjectID
+		if ws, ok := s.deps.Registry.Get(req.WorkspaceID); ok {
+			projectID = ws.ProjectID
 		}
 	}
 	log.Debug().
@@ -44,8 +44,8 @@ func (s *Service) MemorySearch(ctx context.Context, req rpc.MemorySearchParams) 
 	return memSvc.Search(s.deps.ServerCtx, req.Query, projectID, req.Scope, req.Limit)
 }
 
-func (s *Service) MemoryReconcile(ctx context.Context) (any, error) {
-	memSvc, err := s.memoryServiceOrError()
+func (s *Service) Reconcile(ctx context.Context) (any, error) {
+	memSvc, err := s.memoryService()
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func (s *Service) MemoryReconcile(ctx context.Context) (any, error) {
 	return memSvc.ReconcileNow(refs)
 }
 
-func (s *Service) MemoryStatus(ctx context.Context) (any, error) {
-	memSvc, err := s.memoryServiceOrError()
+func (s *Service) Status(ctx context.Context) (any, error) {
+	memSvc, err := s.memoryService()
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +77,8 @@ func (s *Service) MemoryStatus(ctx context.Context) (any, error) {
 	}, nil
 }
 
-func (s *Service) MemoryGetConfig(ctx context.Context) (any, error) {
-	memSvc, err := s.memoryServiceOrError()
+func (s *Service) Config(ctx context.Context) (any, error) {
+	memSvc, err := s.memoryService()
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +100,8 @@ func (s *Service) MemoryGetConfig(ctx context.Context) (any, error) {
 	}, nil
 }
 
-func (s *Service) MemoryUpdateConfig(ctx context.Context, req rpc.MemoryUpdateConfigParams) (any, error) {
-	memSvc, err := s.memoryServiceOrError()
+func (s *Service) SetConfig(ctx context.Context, req rpc.MemoryUpdateConfigParams) (any, error) {
+	memSvc, err := s.memoryService()
 	if err != nil {
 		return nil, err
 	}

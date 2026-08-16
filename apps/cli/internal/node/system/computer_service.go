@@ -1,4 +1,4 @@
-package node
+package system
 
 import "yishan/apps/cli/internal/computer"
 

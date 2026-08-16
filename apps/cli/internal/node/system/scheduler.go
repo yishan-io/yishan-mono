@@ -1,4 +1,4 @@
-package node
+package system
 
 import (
 	"bytes"
@@ -32,9 +32,10 @@ type jobRunParams struct {
 	Payload        map[string]any `json:"payload"`
 }
 
-// handleJobRun processes a job.run notification received from the relay.
-// It sends job.ack / job.result back over the relay WS connection.
-func handleJobRun(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
+// HandleJobRun processes a job.run notification received from the relay: it
+// validates the payload, sends job.ack, and runs the scheduled agent
+// asynchronously.
+func HandleJobRun(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
 	var params jobRunParams
 	if err := json.Unmarshal(raw, &params); err != nil {
 		log.Warn().Err(err).Msg("scheduler: invalid job.run params")

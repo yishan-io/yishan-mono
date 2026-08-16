@@ -1,4 +1,4 @@
-package node
+package system
 
 import (
 	"context"
@@ -13,39 +13,39 @@ import (
 // ComputerService implementation: each method performs one computer-use
 // operation. A missing service is a server error.
 
-func (s *Service) computerServiceOrError() (*computer.Service, error) {
+func (s *Service) computerService() (*computer.Service, error) {
 	if s.deps.Computer == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "computer service not available")
 	}
 	return s.deps.Computer, nil
 }
 
-func (s *Service) ComputerHealth(ctx context.Context) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) Health(ctx context.Context) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.Health(ctx)
 }
 
-func (s *Service) ComputerPermissions(ctx context.Context) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) Permissions(ctx context.Context) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.Permissions(ctx)
 }
 
-func (s *Service) ComputerGetConfig(ctx context.Context) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) GetConfig(ctx context.Context) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.Config(), nil
 }
 
-func (s *Service) ComputerUpdateConfig(ctx context.Context, req computer.FeatureConfig) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) UpdateConfig(ctx context.Context, req computer.FeatureConfig) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -69,32 +69,32 @@ func (s *Service) ComputerUpdateConfig(ctx context.Context, req computer.Feature
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerListDisplays(ctx context.Context) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) ListDisplays(ctx context.Context) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.ListDisplays(ctx)
 }
 
-func (s *Service) ComputerListApplications(ctx context.Context) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) ListApplications(ctx context.Context) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.ListApplications(ctx)
 }
 
-func (s *Service) ComputerListWindows(ctx context.Context, req rpc.ComputerListWindowsParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) ListWindows(ctx context.Context, req rpc.ComputerListWindowsParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.ListWindows(ctx, req.Filter)
 }
 
-func (s *Service) ComputerCaptureDisplay(ctx context.Context, req rpc.ComputerCaptureDisplayParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) CaptureDisplay(ctx context.Context, req rpc.ComputerCaptureDisplayParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -104,8 +104,8 @@ func (s *Service) ComputerCaptureDisplay(ctx context.Context, req rpc.ComputerCa
 	return svc.CaptureDisplay(ctx, strings.TrimSpace(req.DisplayID), req.Options)
 }
 
-func (s *Service) ComputerCaptureWindow(ctx context.Context, req rpc.ComputerCaptureWindowParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) CaptureWindow(ctx context.Context, req rpc.ComputerCaptureWindowParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -115,16 +115,16 @@ func (s *Service) ComputerCaptureWindow(ctx context.Context, req rpc.ComputerCap
 	return svc.CaptureWindow(ctx, strings.TrimSpace(req.WindowID), req.Options)
 }
 
-func (s *Service) ComputerGetUITree(ctx context.Context, req rpc.ComputerGetUITreeParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) GetUITree(ctx context.Context, req rpc.ComputerGetUITreeParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.GetAccessibilityTree(ctx, req.Target, req.Options)
 }
 
-func (s *Service) ComputerPerformAction(ctx context.Context, req computer.AccessibilityActionRequest) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) PerformAction(ctx context.Context, req computer.AccessibilityActionRequest) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +140,8 @@ func (s *Service) ComputerPerformAction(ctx context.Context, req computer.Access
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerFocusWindow(ctx context.Context, req rpc.ComputerFocusWindowParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) FocusWindow(ctx context.Context, req rpc.ComputerFocusWindowParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +154,8 @@ func (s *Service) ComputerFocusWindow(ctx context.Context, req rpc.ComputerFocus
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerLaunchApplication(ctx context.Context, req rpc.ComputerLaunchApplicationParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) LaunchApplication(ctx context.Context, req rpc.ComputerLaunchApplicationParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -168,8 +168,8 @@ func (s *Service) ComputerLaunchApplication(ctx context.Context, req rpc.Compute
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerMovePointer(ctx context.Context, req rpc.ComputerMovePointerParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) MovePointer(ctx context.Context, req rpc.ComputerMovePointerParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -179,8 +179,8 @@ func (s *Service) ComputerMovePointer(ctx context.Context, req rpc.ComputerMoveP
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerClick(ctx context.Context, req computer.ClickRequest) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) Click(ctx context.Context, req computer.ClickRequest) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +190,8 @@ func (s *Service) ComputerClick(ctx context.Context, req computer.ClickRequest) 
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerDrag(ctx context.Context, req computer.DragRequest) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) Drag(ctx context.Context, req computer.DragRequest) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +201,8 @@ func (s *Service) ComputerDrag(ctx context.Context, req computer.DragRequest) (a
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerScroll(ctx context.Context, req computer.ScrollRequest) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) Scroll(ctx context.Context, req computer.ScrollRequest) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -212,8 +212,8 @@ func (s *Service) ComputerScroll(ctx context.Context, req computer.ScrollRequest
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerTypeText(ctx context.Context, req rpc.ComputerTypeTextParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) TypeText(ctx context.Context, req rpc.ComputerTypeTextParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -226,8 +226,8 @@ func (s *Service) ComputerTypeText(ctx context.Context, req rpc.ComputerTypeText
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerSendKey(ctx context.Context, req computer.KeyRequest) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) SendKey(ctx context.Context, req computer.KeyRequest) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -240,16 +240,16 @@ func (s *Service) ComputerSendKey(ctx context.Context, req computer.KeyRequest) 
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerReadClipboard(ctx context.Context) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) ReadClipboard(ctx context.Context) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
 	return svc.ReadClipboard(ctx)
 }
 
-func (s *Service) ComputerWriteClipboard(ctx context.Context, req computer.ClipboardContent) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) WriteClipboard(ctx context.Context, req computer.ClipboardContent) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}
@@ -259,8 +259,8 @@ func (s *Service) ComputerWriteClipboard(ctx context.Context, req computer.Clipb
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) ComputerOpenPermissionSettings(ctx context.Context, req rpc.ComputerOpenPermissionSettingsParams) (any, error) {
-	svc, err := s.computerServiceOrError()
+func (s *Service) OpenPermissionSettings(ctx context.Context, req rpc.ComputerOpenPermissionSettingsParams) (any, error) {
+	svc, err := s.computerService()
 	if err != nil {
 		return nil, err
 	}

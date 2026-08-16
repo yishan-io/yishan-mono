@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	internalevents "yishan/apps/cli/internal/events"
+	nodesystem "yishan/apps/cli/internal/node/system"
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/relay"
@@ -140,7 +141,7 @@ func (s *Service) forwardRemoteTerminalInput(sessionID string, payload []byte) b
 func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
 	switch method {
 	case relay.MethodJobRun:
-		handleJobRun(s.deps.Runtime, connState, nodeID, params)
+		nodesystem.HandleJobRun(s.deps.Runtime, connState, nodeID, params)
 		return true
 	case relay.MethodWorkspaceSnapshotChanged:
 		publishWorkspaceSnapshotChanged(s, params)

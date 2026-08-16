@@ -18,19 +18,19 @@ func (h *MemoryHandler) Call(ctx context.Context, connection *Connection, method
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.MemorySearch(ctx, req)
+		return h.Services.Search(ctx, req)
 	case MethodMemoryReconcile:
-		return h.Services.MemoryReconcile(ctx)
+		return h.Services.Reconcile(ctx)
 	case MethodMemoryStatus:
-		return h.Services.MemoryStatus(ctx)
+		return h.Services.Status(ctx)
 	case MethodMemoryGetConfig:
-		return h.Services.MemoryGetConfig(ctx)
+		return h.Services.Config(ctx)
 	case MethodMemoryUpdateConfig:
 		var req MemoryUpdateConfigParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.MemoryUpdateConfig(ctx, req)
+		return h.Services.SetConfig(ctx, req)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown memory method: "+method)
 	}

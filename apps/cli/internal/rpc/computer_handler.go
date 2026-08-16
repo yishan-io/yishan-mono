@@ -20,116 +20,116 @@ func (h *ComputerHandler) Call(ctx context.Context, connection *Connection, meth
 
 	switch method {
 	case MethodComputerHealth:
-		return h.Services.ComputerHealth(ctx)
+		return h.Services.Health(ctx)
 	case MethodComputerPermissions:
-		return h.Services.ComputerPermissions(ctx)
+		return h.Services.Permissions(ctx)
 	case MethodComputerGetConfig:
-		return h.Services.ComputerGetConfig(ctx)
+		return h.Services.GetConfig(ctx)
 	case MethodComputerUpdateConfig:
 		var req computer.FeatureConfig
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerUpdateConfig(ctx, req)
+		return h.Services.UpdateConfig(ctx, req)
 	case MethodComputerListDisplays:
-		return h.Services.ComputerListDisplays(ctx)
+		return h.Services.ListDisplays(ctx)
 	case MethodComputerListApplications:
-		return h.Services.ComputerListApplications(ctx)
+		return h.Services.ListApplications(ctx)
 	case MethodComputerListWindows:
 		var req ComputerListWindowsParams
 		if len(params) == 0 {
-			return h.Services.ComputerListWindows(ctx, ComputerListWindowsParams{})
+			return h.Services.ListWindows(ctx, ComputerListWindowsParams{})
 		}
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerListWindows(ctx, req)
+		return h.Services.ListWindows(ctx, req)
 	case MethodComputerCaptureDisplay:
 		var req ComputerCaptureDisplayParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerCaptureDisplay(ctx, req)
+		return h.Services.CaptureDisplay(ctx, req)
 	case MethodComputerCaptureWindow:
 		var req ComputerCaptureWindowParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerCaptureWindow(ctx, req)
+		return h.Services.CaptureWindow(ctx, req)
 	case MethodComputerGetUITree:
 		var req ComputerGetUITreeParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerGetUITree(ctx, req)
+		return h.Services.GetUITree(ctx, req)
 	case MethodComputerPerformAction:
 		var req computer.AccessibilityActionRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerPerformAction(ctx, req)
+		return h.Services.PerformAction(ctx, req)
 	case MethodComputerFocusWindow:
 		var req ComputerFocusWindowParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerFocusWindow(ctx, req)
+		return h.Services.FocusWindow(ctx, req)
 	case MethodComputerLaunchApplication:
 		var req ComputerLaunchApplicationParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerLaunchApplication(ctx, req)
+		return h.Services.LaunchApplication(ctx, req)
 	case MethodComputerMovePointer:
 		var req ComputerMovePointerParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerMovePointer(ctx, req)
+		return h.Services.MovePointer(ctx, req)
 	case MethodComputerClick:
 		var req computer.ClickRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerClick(ctx, req)
+		return h.Services.Click(ctx, req)
 	case MethodComputerDrag:
 		var req computer.DragRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerDrag(ctx, req)
+		return h.Services.Drag(ctx, req)
 	case MethodComputerScroll:
 		var req computer.ScrollRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerScroll(ctx, req)
+		return h.Services.Scroll(ctx, req)
 	case MethodComputerTypeText:
 		var req ComputerTypeTextParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerTypeText(ctx, req)
+		return h.Services.TypeText(ctx, req)
 	case MethodComputerSendKey:
 		var req computer.KeyRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerSendKey(ctx, req)
+		return h.Services.SendKey(ctx, req)
 	case MethodComputerReadClipboard:
-		return h.Services.ComputerReadClipboard(ctx)
+		return h.Services.ReadClipboard(ctx)
 	case MethodComputerWriteClipboard:
 		var req computer.ClipboardContent
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerWriteClipboard(ctx, req)
+		return h.Services.WriteClipboard(ctx, req)
 	case MethodComputerOpenPermissionSettings:
 		var req ComputerOpenPermissionSettingsParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.ComputerOpenPermissionSettings(ctx, req)
+		return h.Services.OpenPermissionSettings(ctx, req)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown computer method: "+method)
 	}

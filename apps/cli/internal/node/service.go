@@ -256,14 +256,6 @@ func terminalInputData(payload []byte) []byte {
 	return payload[1+nullIdx+1:]
 }
 
-// SetComputerService replaces the computer-use service (test injection).
-func (s *Service) SetComputerService(svc *computer.Service) {
-	if svc == nil {
-		return
-	}
-	s.deps.Computer = svc
-}
-
 // Shutdown stops the application-owned runtime: it cancels the pi agent
 // lifecycle context and stops the agent manager. The composition root calls
 // this as part of App.Close; tests use it to simulate daemon shutdown.

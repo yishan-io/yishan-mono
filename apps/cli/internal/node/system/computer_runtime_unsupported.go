@@ -1,6 +1,6 @@
 //go:build !darwin
 
-package node
+package system
 
 import (
 	stdruntime "runtime"
