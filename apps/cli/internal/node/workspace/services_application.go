@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/adapter/sqlite"
@@ -14,6 +15,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 )
+
+// nowRFC3339Nano formats the current UTC time in the wire protocol's timestamp
+// shape. It is the Now dependency for the application Service.
+func nowRFC3339Nano() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
+}
 
 // appDeps implements the application port interfaces (Environment,
 // WorkspaceRecords, Instances, Relay, Events) with the services layer's

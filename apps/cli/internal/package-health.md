@@ -337,3 +337,131 @@ detailResolver is used by refreshWorkspace).
 Phase 24 changed no production behavior: only package comments and this
 document. `go build ./...`, `go vet ./...`, `go test ./...` in `apps/cli`
 must pass at the end of the phase (checked at phase close).
+
+---
+
+# Phase 30 Close-Out (2026-08-16, cli-refactor-6, commit pending)
+
+Re-inventory of the whole `apps/cli/internal` tree after Phases 24–29. This
+review closes the package-health program per cli4.md: it records what remains,
+proves the exit criteria, and stops the refactor.
+
+## Files over 300 lines — all cohesive
+
+| File | Lines | Responsibility | Verdict |
+|---|---:|---|---|
+| `files/listing_test.go` | 450 | File-list behavior tests | cohesive test suite, keep |
+| `memory/summarizer_test.go` | 443 | Session-summary pipeline tests | cohesive, keep |
+| `app/app.go` | 426 | Composition root: bootstrap/start/close, server wiring | one owner (composition), keep |
+| `terminal/session_test.go` | 412 | Terminal session tests | cohesive, keep |
+| `memory/summarizer.go` | 398 | Session summarization pipeline (own types) | one cohesive pipeline, keep |
+| `files/file_list.go` | 395 | File listing + ignore rules | one cohesive behavior, keep |
+| `git/git_pr.go` | 384 | PR queries (branch PR, details, checks) | one cohesive behavior, keep |
+| `workspace/hooks_test.go` | 373 | Hook execution tests | cohesive, keep |
+| `daemon/process_mgmt.go` | 366 | Start/stop process planning | one cohesive behavior, keep |
+| `terminal/port_scan.go` | 354 | Port detection loop | one cohesive behavior, keep |
+| `memory/agent_reader.go` | 354 | Session transcript readers | one cohesive behavior, keep |
+| `workspace/sync_test.go` | 340 | Context-link sync tests | cohesive, keep |
+| `memory/service_test.go` | 339 | Facade tests | cohesive, keep |
+| `daemon/account_migration_test.go` | 338 | Account-layout migration tests | cohesive, keep |
+| `app/watchers_test.go` | 331 | Event-hub watcher tests | cohesive, keep |
+| `git/git_branch.go` | 328 | Branch status/current-branch queries | one cohesive behavior, keep |
+| `computer/service.go` | 325 | Computer capability service | one cohesive behavior, keep |
+| `workspace/workspace_context.go` | 323 | Context-link ensure/remove/sync | one cohesive behavior, keep |
+| `memory/agent_reader_test.go` | 319 | Reader tests | cohesive, keep |
+
+The plan's ">300 must be one cohesive responsibility" rule is satisfied by
+every remaining long file. No further file splits are warranted by line count
+alone.
+
+## Generic file names
+
+- `agent/setup/hooks/common.go` (8 funcs: hook JSON read/write, home/config
+  dir resolution, shell quoting) — one cohesive vocabulary (hook-config I/O +
+  quoting), used by claude/codex/gemini/setup hook files. Not a random bucket.
+  Backlog: rename to `hooks/config_io.go` for precision (low value; the file
+  is inside the resource-scoped `hooks/` subpackage already).
+- `node/workspace/helpers.go` — **removed in Phase 30**: `mapRPCError` was
+  dead (zero callers) and `nowRFC3339Nano` moved to its only consumer
+  (services_application.go). No generic bucket remains in the target packages.
+
+No `helpers.go` / `utils.go` / `common.go` buckets remain outside the
+`hooks/common.go` vocabulary noted above.
+
+## Exported symbols without production importers
+
+Phase 23 already privatized 43 symbols and documented 4 kept exceptions. The
+remaining zero-importer exports (measured again in Phase 30) fall into three
+classes, none dead:
+
+1. **Wire/response contract types consumed structurally** — adapter/cloud
+   response DTOs (HealthResponse, CreateWorkspaceResponse, ...), adapter/sqlite
+   row/overview types, setup return types (PiAgentInfo, SkillInfo,
+   DiscoveredSkill, AssetState, ShellState). Callers use them through the
+   exported function/method return values; no caller names the type directly.
+2. **In-package orchestration entries** — e.g. `EnumeratePiSkills` (consumed by
+   ListSkills), `scanner.Scan*HourlyUsage` (wrapped by
+   `scanner.DefaultRegistry`). These are the package's own dispatch points.
+3. **Documented contract exceptions** (Phase 23): daemon.RuntimeState/StateFileName,
+   rpc.HandlerFunc, pricing.NewStaticCatalog/Price.
+
+Verdict: no exported symbol is dead. The setup package still exports more than
+it needs for its four consumers (cmd/setup, daemon/process_server,
+node/agent/customize, node/agent/skill); privatizing the remaining zero-importer
+types would be cosmetic and is recorded as a future cleanup, not a defect.
+
+## Production files without a matching test location
+
+Every production behavior in the five target packages has a named test file
+after Phases 25–29:
+
+- tokenusage/collection: scan_test / sync_test / backfill_test / schedule_test /
+  debug_test / recovery_test / collector_test (lifecycle)
+- agent/setup: create/lifecycle/list/install/updates/sync/pi_agent_setup +
+  skill_discovery/skill_cli/skill_service tests; helpers in test_support_test.go
+- adapter/cloud: client_test / workspaces_test (payload+builders) / token_test /
+  workspace_mapper_test; resource endpoint methods carry wire-compatibility
+  coverage through client_test's refresh/raw paths (recorded gap: no per-method
+  httptest for every resource endpoint — see backlog)
+- memory: summarizer_session/summarizer/queue/persona_batch/db/search/reconcile/
+  agent_reader tests
+- workspace/pr: tracker_test (poll/eligibility/shutdown/overlap) +
+  compare_test (pure unit)
+
+## Architecture tests
+
+`internal/archtest` protects dependency direction (forbidden import edges)
+and error ownership. It was NOT extended with file-size or file-name rules —
+per cli4.md, architecture tests never assert layout preferences. Verified
+passing after every phase.
+
+## Backlog (separate items, not part of this program)
+
+1. `agent/setup` zero-importer exports: privatize the types with no named
+   external consumer (PiAgentInfo, SkillInfo, AssetState, ShellState,
+   DiscoveredSkill, EnumeratePiSkills if callers can use a private entry) —
+   cosmetic API reduction, low risk.
+2. `adapter/cloud` per-resource endpoint tests: add httptest coverage for the
+   org/node/project/usage/jobs/token/PR methods that today rely on client_test's
+   generic raw/refresh paths. Phases 25–29 added collection/queue/batch/pr
+   behavior tests; cloud resource methods remain the least-directly-tested
+   surface.
+3. `hooks/common.go` rename to `hooks/config_io.go` (vocabulary precision).
+4. Large cohesive files (app/app.go 426, files/file_list.go 395, git/git_pr.go
+   384) are single-responsibility but long; split only if a future change
+   makes them multi-responsibility — no defect today.
+
+## Program outcome
+
+- Five target packages each have one clear responsibility (owner statements,
+  Phase 24).
+- Every background process has one lifecycle owner (collection timers,
+  pr poll loop, memory queue + persona batch).
+- File names expose package behaviors (agents/extensions/skills/hooks/shell in
+  setup; resource files in cloud; queue/summarizer/persona in memory;
+  compare/resolve/persist/events in pr).
+- Tests map directly to production behavior; added coverage for shutdown,
+  concurrency, retry, and partial-failure paths.
+- Common type suffixes use the cli4.md meanings.
+- Remaining refactors are the four backlog items above with measured, specific
+  defects — none block the current architecture.
