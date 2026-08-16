@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
@@ -21,15 +22,6 @@ import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./upd
 type DispatchActionOptions = {
   focusApp?: boolean;
 };
-
-const WORKSPACE_FILE_PROTOCOL = "yishan-file";
-const WORKSPACE_FILE_PROTOCOL_HOST = "workspace-file";
-
-function isPathWithinOrEqual(rootPath: string, candidatePath: string): boolean {
-  const normalizedRootPath = resolve(rootPath);
-  const normalizedCandidatePath = resolve(candidatePath);
-  return normalizedCandidatePath === normalizedRootPath || normalizedCandidatePath.startsWith(`${normalizedRootPath}/`);
-}
 
 const ALLOWED_PERMISSIONS = new Set(["media", "clipboard-read", "clipboard-write", "clipboard-sanitized-write"]);
 
@@ -88,7 +80,7 @@ export class DesktopApplication {
    */
   private async start(): Promise<void> {
     await app.whenReady();
-    this.registerWorkspaceFileProtocol();
+    registerWorkspaceFileProtocol();
     this.registerPermissionHandlers();
 
     const defaultAppEntry = process.argv[1];
@@ -179,81 +171,6 @@ export class DesktopApplication {
       this.pendingProtocolUrl = null;
       this.handleProtocolCallbackUrl(callbackUrl);
     }
-  }
-
-  private registerWorkspaceFileProtocol(): void {
-    protocol.handle(WORKSPACE_FILE_PROTOCOL, async (request) => {
-      try {
-        const parsedUrl = new URL(request.url);
-        if (parsedUrl.hostname !== WORKSPACE_FILE_PROTOCOL_HOST) {
-          return new Response("Not found", { status: 404 });
-        }
-
-        const workspaceWorktreePath = parsedUrl.searchParams.get("workspaceWorktreePath")?.trim() ?? "";
-        const relativePath = parsedUrl.searchParams.get("relativePath")?.trim() ?? "";
-        if (!workspaceWorktreePath || !relativePath) {
-          return new Response("Missing workspaceWorktreePath or relativePath", { status: 400 });
-        }
-
-        const resolvedWorktreePath = resolve(workspaceWorktreePath);
-        const resolvedFilePath = resolve(resolvedWorktreePath, relativePath);
-        if (!isPathWithinOrEqual(resolvedWorktreePath, resolvedFilePath)) {
-          return new Response("Path escapes workspace root", { status: 403 });
-        }
-
-        const fileUrl = pathToFileURL(resolvedFilePath).toString();
-
-        // Handle Range requests (required for <audio>/<video> seeking)
-        const rangeHeader = request.headers.get("Range");
-        if (rangeHeader) {
-          const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
-          if (match) {
-            const fileStat = await stat(resolvedFilePath);
-            const fileSize = fileStat.size;
-            const start = match[1] ? Number.parseInt(match[1], 10) : 0;
-            const end = match[2] ? Number.parseInt(match[2], 10) : fileSize - 1;
-            const chunkSize = end - start + 1;
-
-            // Use net.fetch for the file:// URL — it handles byte serving natively
-            const fileResponse = await net.fetch(fileUrl, {
-              headers: { Range: rangeHeader },
-            });
-
-            if (fileResponse.status === 206) {
-              return fileResponse;
-            }
-
-            // Fallback: read the chunk ourselves
-            const buffer = Buffer.alloc(chunkSize);
-            const fd = await import("node:fs/promises").then((m) => m.open(resolvedFilePath, "r"));
-            await fd.read(buffer, 0, chunkSize, start);
-            await fd.close();
-
-            const mimeType = fileResponse.headers.get("Content-Type") ?? "application/octet-stream";
-            return new Response(buffer, {
-              status: 206,
-              headers: {
-                "Content-Type": mimeType,
-                "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-                "Content-Length": `${chunkSize}`,
-                "Accept-Ranges": "bytes",
-              },
-            });
-          }
-        }
-
-        // No Range header — return the full file (no stat() needed)
-        const fileResponse = await net.fetch(fileUrl);
-        const headers = new Headers(fileResponse.headers);
-        headers.set("Accept-Ranges", "bytes");
-        return new Response(fileResponse.body, {
-          status: fileResponse.status,
-          headers,
-        });
-      } catch {
-        return new Response("Failed to read workspace file", { status: 500 });
-      }
-    });
   }
 
   private extractAuthCallbackUrlFromArgv(argv: string[]): string | null {
