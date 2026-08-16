@@ -28,10 +28,6 @@ type Service interface {
 	Close()
 }
 
-// CollectorDebugState is the debug snapshot of the collector, exposed over
-// tokenUsage.debugState.
-type CollectorDebugState = collection.DebugState
-
 // modelPricingCacheFileName is the disk cache file for the remote model
 // pricing catalog (profile-scoped).
 const modelPricingCacheFileName = "token-usage-model-pricing.json"

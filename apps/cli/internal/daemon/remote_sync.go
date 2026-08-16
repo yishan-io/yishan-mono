@@ -35,7 +35,7 @@ func formatReauthRequiredMessage(operation string) string {
 	return fmt.Sprintf("%s requires an authenticated API session; your refresh token may be expired. Run `yishan login` and retry", operation)
 }
 
-func registerRemoteNode(runtime *session.Session, registration NodeRegistration) error {
+func registerRemoteNode(runtime *session.Session, registration nodeRegistration) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}

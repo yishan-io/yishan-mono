@@ -25,19 +25,18 @@ func PersonaFilePath() (string, error) {
 	return personaFilePath()
 }
 
-// AgentDBReader is the exported reader type for use by CLI commands.
-// It wraps agentDBReader with exported method signatures.
-type AgentDBReader struct {
+// cliAgentDBReader wraps the package agentDBReader for use by CLI commands;
+// NewAgentDBReaderForCLI is the only way to construct it.
+type cliAgentDBReader struct {
 	r *agentDBReader
 }
 
-// NewAgentDBReaderForCLI creates an AgentDBReader for use in CLI commands.
-func NewAgentDBReaderForCLI() *AgentDBReader {
-	return &AgentDBReader{r: newAgentDBReader()}
+// NewAgentDBReaderForCLI creates a cliAgentDBReader for use in CLI commands.
+func NewAgentDBReaderForCLI() *cliAgentDBReader {
+	return &cliAgentDBReader{r: newAgentDBReader()}
 }
 
-// ReadSessionsForDate returns all sessions from the given UTC date for the agent.
-func (a *AgentDBReader) ReadSessionsForDate(agent string, date time.Time) ([]*sessionMessages, error) {
+func (a *cliAgentDBReader) ReadSessionsForDate(agent string, date time.Time) ([]*sessionMessages, error) {
 	return a.r.ReadSessionsForDate(agent, date)
 }
 
@@ -56,18 +55,18 @@ type personaSections struct {
 	CommunicationStyle []string
 }
 
-// PersonaSummarizer extracts and merges developer persona from session transcripts.
-type PersonaSummarizer struct {
+// personaSummarizer extracts and merges developer persona from session transcripts.
+type personaSummarizer struct {
 	enabled   bool
 	agentKind string
 	model     string
 	runAgent  RunAgentFunc
 }
 
-// NewPersonaSummarizer creates a PersonaSummarizer with the given config.
-func NewPersonaSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *PersonaSummarizer {
-	normalizedCfg := NormalizeSummarizerConfig(cfg)
-	return &PersonaSummarizer{
+// NewPersonaSummarizer creates a personaSummarizer with the given config.
+func NewPersonaSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *personaSummarizer {
+	normalizedCfg := normalizeSummarizerConfig(cfg)
+	return &personaSummarizer{
 		enabled:   normalizedCfg.Enabled,
 		agentKind: normalizedCfg.AgentKind,
 		model:     normalizedCfg.Model,
@@ -76,13 +75,13 @@ func NewPersonaSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *PersonaS
 }
 
 // Enabled reports whether the summarizer is configured and ready to run.
-func (p *PersonaSummarizer) Enabled() bool {
+func (p *personaSummarizer) Enabled() bool {
 	return p.enabled && p.runAgent != nil
 }
 
 // UpdateConfig refreshes the summarizer's config at runtime.
-func (p *PersonaSummarizer) UpdateConfig(cfg SummarizerConfig) {
-	normalizedCfg := NormalizeSummarizerConfig(cfg)
+func (p *personaSummarizer) UpdateConfig(cfg SummarizerConfig) {
+	normalizedCfg := normalizeSummarizerConfig(cfg)
 	p.enabled = normalizedCfg.Enabled
 	p.agentKind = normalizedCfg.AgentKind
 	p.model = normalizedCfg.Model
@@ -98,12 +97,12 @@ const maxPersonaSessions = 10
 // agent and set of session transcripts (typically all sessions from the previous day).
 // It reads the existing PERSONA.md, extracts signals via the built-in Pi agent,
 // merges them using replace-on-contradiction semantics, and writes the result back.
-func (p *PersonaSummarizer) SummarizeForPersona(sourceAgent string, sessions []*sessionMessages) (PersonaSummarizeResult, error) {
+func (p *personaSummarizer) SummarizeForPersona(sourceAgent string, sessions []*sessionMessages) (personaSummarizeResult, error) {
 	if !p.Enabled() {
-		return PersonaSummarizeResult{Skipped: true}, nil
+		return personaSummarizeResult{Skipped: true}, nil
 	}
 	if len(sessions) == 0 {
-		return PersonaSummarizeResult{Skipped: true}, nil
+		return personaSummarizeResult{Skipped: true}, nil
 	}
 
 	// Cap to the most recent sessions — use the tail since ReadSessionsForDate
@@ -114,12 +113,12 @@ func (p *PersonaSummarizer) SummarizeForPersona(sourceAgent string, sessions []*
 
 	conversation := buildCombinedTranscript(sessions)
 	if conversation == "" {
-		return PersonaSummarizeResult{Skipped: true}, nil
+		return personaSummarizeResult{Skipped: true}, nil
 	}
 
 	targetPath, err := personaFilePath()
 	if err != nil {
-		return PersonaSummarizeResult{}, fmt.Errorf("resolve persona path: %w", err)
+		return personaSummarizeResult{}, fmt.Errorf("resolve persona path: %w", err)
 	}
 
 	existingContent := ""
@@ -140,12 +139,12 @@ func (p *PersonaSummarizer) SummarizeForPersona(sourceAgent string, sessions []*
 
 	output, err := p.runAgent(ctx, p.agentKind, p.model, prompt, "")
 	if err != nil {
-		return PersonaSummarizeResult{}, fmt.Errorf("llm persona extraction via %s: %w", p.agentKind, err)
+		return personaSummarizeResult{}, fmt.Errorf("llm persona extraction via %s: %w", p.agentKind, err)
 	}
 
 	extracted, err := parseExtractedPersona(output)
 	if err != nil {
-		return PersonaSummarizeResult{}, fmt.Errorf("parse persona extraction output: %w", err)
+		return personaSummarizeResult{}, fmt.Errorf("parse persona extraction output: %w", err)
 	}
 
 	existing := parsePersonaSections(existingContent)
@@ -158,14 +157,14 @@ func (p *PersonaSummarizer) SummarizeForPersona(sourceAgent string, sessions []*
 	}
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
-		return PersonaSummarizeResult{}, fmt.Errorf("create persona dir: %w", err)
+		return personaSummarizeResult{}, fmt.Errorf("create persona dir: %w", err)
 	}
 	if err := os.WriteFile(targetPath, []byte(newContent), 0o644); err != nil {
-		return PersonaSummarizeResult{}, fmt.Errorf("write persona file: %w", err)
+		return personaSummarizeResult{}, fmt.Errorf("write persona file: %w", err)
 	}
 
 	log.Info().Str("path", targetPath).Msg("persona updated")
-	return PersonaSummarizeResult{WrittenPath: targetPath}, nil
+	return personaSummarizeResult{WrittenPath: targetPath}, nil
 }
 
 // buildCombinedTranscript concatenates messages from multiple sessions.

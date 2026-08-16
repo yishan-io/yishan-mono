@@ -13,7 +13,7 @@ type sensitiveTargetRuntime interface {
 
 type Service struct {
 	runtime            Runtime
-	audit              *AuditLog
+	audit              *auditLog
 	maxTypedCharacters int
 	configMu           sync.RWMutex
 	config             FeatureConfig
@@ -22,7 +22,7 @@ type Service struct {
 func NewService(runtime Runtime) *Service {
 	return &Service{
 		runtime:            runtime,
-		audit:              &AuditLog{},
+		audit:              &auditLog{},
 		maxTypedCharacters: 10000,
 		config: FeatureConfig{
 			Enabled:            true,
@@ -39,7 +39,7 @@ func NewService(runtime Runtime) *Service {
 	}
 }
 
-func (s *Service) AuditEvents() []AuditEvent {
+func (s *Service) AuditEvents() []auditEvent {
 	return s.audit.Snapshot()
 }
 
@@ -105,7 +105,7 @@ func (s *Service) PerformAccessibilityAction(ctx context.Context, request Access
 		return NewError(ErrorCodeApprovalDenied, "computer accessibility actions are disabled")
 	}
 	if strings.TrimSpace(bundleID) == "" {
-		s.audit.Add(AuditEvent{Operation: "accessibility.action", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeTargetNotFound)})
+		s.audit.Add(auditEvent{Operation: "accessibility.action", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeTargetNotFound)})
 		return NewErrorWithDetails(ErrorCodeTargetNotFound, "target element was not found", map[string]any{"elementId": request.ElementID}, false)
 	}
 	return s.runMutation(ctx, "accessibility.action", bundleID, "", func() error {
@@ -119,7 +119,7 @@ func (s *Service) FocusWindow(ctx context.Context, windowID string) error {
 	}
 	bundleID, title := s.bundleIDForWindowID(ctx, windowID)
 	if strings.TrimSpace(bundleID) == "" {
-		s.audit.Add(AuditEvent{Operation: "window.focus", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeTargetNotFound)})
+		s.audit.Add(auditEvent{Operation: "window.focus", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeTargetNotFound)})
 		return NewErrorWithDetails(ErrorCodeTargetNotFound, "target window was not found", map[string]any{"windowId": windowID}, false)
 	}
 	return s.runMutation(ctx, "window.focus", bundleID, title, func() error {
@@ -181,11 +181,11 @@ func (s *Service) TypeText(ctx context.Context, text string) error {
 		return NewError(ErrorCodeApprovalDenied, "computer keyboard input is disabled")
 	}
 	if len(text) > s.maxTypedCharacters {
-		s.audit.Add(AuditEvent{Operation: "keyboard.type", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeRateLimited)})
+		s.audit.Add(auditEvent{Operation: "keyboard.type", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeRateLimited)})
 		return NewErrorWithDetails(ErrorCodeRateLimited, "typed text exceeds limit", map[string]any{"limit": s.maxTypedCharacters}, false)
 	}
 	if s.focusedElementIsSensitive(ctx) {
-		s.audit.Add(AuditEvent{Operation: "keyboard.type", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeSensitiveTarget)})
+		s.audit.Add(auditEvent{Operation: "keyboard.type", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeSensitiveTarget)})
 		return NewError(ErrorCodeSensitiveTarget, "typing into a secure text field is blocked")
 	}
 	bundleID := s.frontmostBundleID(ctx)
@@ -199,7 +199,7 @@ func (s *Service) SendKey(ctx context.Context, request KeyRequest) error {
 		return NewError(ErrorCodeApprovalDenied, "computer keyboard input is disabled")
 	}
 	if s.focusedElementIsSensitive(ctx) {
-		s.audit.Add(AuditEvent{Operation: "keyboard.key", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeSensitiveTarget)})
+		s.audit.Add(auditEvent{Operation: "keyboard.key", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeSensitiveTarget)})
 		return NewError(ErrorCodeSensitiveTarget, "keyboard input into a secure text field is blocked")
 	}
 	bundleID := s.frontmostBundleID(ctx)
@@ -212,16 +212,16 @@ func (s *Service) ReadClipboard(ctx context.Context) (ClipboardContent, error) {
 	if !s.Config().Enabled || !s.Config().ClipboardRead {
 		return ClipboardContent{}, NewError(ErrorCodeApprovalDenied, "computer clipboard read is disabled")
 	}
-	if !ApprovalFromContext(ctx) {
-		s.audit.Add(AuditEvent{Operation: "clipboard.read", Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
+	if !approvalFromContext(ctx) {
+		s.audit.Add(auditEvent{Operation: "clipboard.read", Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
 		return ClipboardContent{}, NewError(ErrorCodeApprovalRequired, "clipboard read requires approval")
 	}
 	content, err := s.runtime.ReadClipboard(ctx)
 	if err != nil {
-		s.audit.Add(AuditEvent{Operation: "clipboard.read", Decision: "approved", Result: "error", ErrorCode: errorCodeString(err)})
+		s.audit.Add(auditEvent{Operation: "clipboard.read", Decision: "approved", Result: "error", ErrorCode: errorCodeString(err)})
 		return ClipboardContent{}, err
 	}
-	s.audit.Add(AuditEvent{Operation: "clipboard.read", Decision: "approved", Result: "success"})
+	s.audit.Add(auditEvent{Operation: "clipboard.read", Decision: "approved", Result: "success"})
 	return content, nil
 }
 
@@ -229,39 +229,39 @@ func (s *Service) WriteClipboard(ctx context.Context, content ClipboardContent) 
 	if !s.Config().Enabled || !s.Config().ClipboardWrite {
 		return NewError(ErrorCodeApprovalDenied, "computer clipboard write is disabled")
 	}
-	if !ApprovalFromContext(ctx) {
-		s.audit.Add(AuditEvent{Operation: "clipboard.write", Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
+	if !approvalFromContext(ctx) {
+		s.audit.Add(auditEvent{Operation: "clipboard.write", Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
 		return NewError(ErrorCodeApprovalRequired, "clipboard write requires approval")
 	}
 	err := s.runtime.WriteClipboard(ctx, content)
 	if err != nil {
-		s.audit.Add(AuditEvent{Operation: "clipboard.write", Decision: "approved", Result: "error", ErrorCode: errorCodeString(err)})
+		s.audit.Add(auditEvent{Operation: "clipboard.write", Decision: "approved", Result: "error", ErrorCode: errorCodeString(err)})
 		return err
 	}
-	s.audit.Add(AuditEvent{Operation: "clipboard.write", Decision: "approved", Result: "success"})
+	s.audit.Add(auditEvent{Operation: "clipboard.write", Decision: "approved", Result: "success"})
 	return nil
 }
 
 func (s *Service) runMutation(ctx context.Context, operation string, bundleID string, targetWindow string, fn func() error) error {
 	bundleID = strings.TrimSpace(bundleID)
 	if bundleID == "" {
-		s.audit.Add(AuditEvent{Operation: operation, Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeApplicationBlocked)})
+		s.audit.Add(auditEvent{Operation: operation, Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeApplicationBlocked)})
 		return NewError(ErrorCodeApplicationBlocked, "target application is not allowed")
 	}
 	if isBlockedBundleID(bundleID) {
-		s.audit.Add(AuditEvent{Operation: operation, TargetApplication: bundleID, Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeApplicationBlocked)})
+		s.audit.Add(auditEvent{Operation: operation, TargetApplication: bundleID, Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeApplicationBlocked)})
 		return NewErrorWithDetails(ErrorCodeApplicationBlocked, "target application is blocked", map[string]any{"bundleId": bundleID}, false)
 	}
-	if !ApprovalFromContext(ctx) {
-		s.audit.Add(AuditEvent{Operation: operation, TargetApplication: bundleID, TargetWindow: targetWindow, Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
+	if !approvalFromContext(ctx) {
+		s.audit.Add(auditEvent{Operation: operation, TargetApplication: bundleID, TargetWindow: targetWindow, Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
 		return NewError(ErrorCodeApprovalRequired, fmt.Sprintf("%s requires approval", operation))
 	}
 	err := fn()
 	if err != nil {
-		s.audit.Add(AuditEvent{Operation: operation, TargetApplication: bundleID, TargetWindow: targetWindow, Decision: "approved", Result: "error", ErrorCode: errorCodeString(err)})
+		s.audit.Add(auditEvent{Operation: operation, TargetApplication: bundleID, TargetWindow: targetWindow, Decision: "approved", Result: "error", ErrorCode: errorCodeString(err)})
 		return err
 	}
-	s.audit.Add(AuditEvent{Operation: operation, TargetApplication: bundleID, TargetWindow: targetWindow, Decision: "approved", Result: "success"})
+	s.audit.Add(auditEvent{Operation: operation, TargetApplication: bundleID, TargetWindow: targetWindow, Decision: "approved", Result: "success"})
 	return nil
 }
 

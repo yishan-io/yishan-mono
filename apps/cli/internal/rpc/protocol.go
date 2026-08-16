@@ -27,7 +27,7 @@ import (
 type Request = relayprotocol.Request
 
 // Response is a JSON-RPC 2.0 response envelope.
-type Response = relayprotocol.Response
+type response = relayprotocol.Response
 
 // Notification is a server-initiated JSON-RPC 2.0 notification (no id).
 type Notification = relayprotocol.Notification
@@ -47,8 +47,8 @@ func DecodeParams(raw json.RawMessage, out any) error {
 	return nil
 }
 
-// AsJSONID decodes a raw JSON id into a JSON-encodable value.
-func AsJSONID(raw json.RawMessage) any {
+// asJSONID decodes a raw JSON id into a JSON-encodable value.
+func asJSONID(raw json.RawMessage) any {
 	if len(raw) == 0 {
 		return nil
 	}

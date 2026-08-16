@@ -57,5 +57,5 @@ type CreateProgressEvent struct {
 // CreateProgressReporter receives step progress events.
 type CreateProgressReporter func(CreateProgressEvent)
 
-// CreateStepTimeouts maps step IDs to their timeout durations.
-type CreateStepTimeouts map[string]time.Duration
+// createStepTimeouts maps step IDs to their timeout durations.
+type createStepTimeouts map[string]time.Duration

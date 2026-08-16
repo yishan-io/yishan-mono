@@ -19,7 +19,7 @@ import (
 )
 
 func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
-	if err := SaveState(dr.statePath, RuntimeState{
+	if err := saveState(dr.statePath, RuntimeState{
 		PID:       os.Getpid(),
 		Host:      cfg.Host,
 		Port:      dr.actualPort,
@@ -87,7 +87,7 @@ func registerNode(dr *daemonRuntime, runtime *session.Session) error {
 		return nil
 	}
 	agentDetectionStatus := nodesystem.ListAgentDetectionStatuses(false)
-	if err := registerRemoteNode(runtime, NodeRegistration{
+	if err := registerRemoteNode(runtime, nodeRegistration{
 		ID:                   dr.daemonID,
 		Endpoint:             "http://" + dr.actualAddr,
 		AgentDetectionStatus: agentDetectionStatus,

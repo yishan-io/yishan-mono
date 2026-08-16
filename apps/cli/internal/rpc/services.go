@@ -140,9 +140,9 @@ type ContextService interface {
 	SetActiveFile(ctx context.Context, req ContextSetActiveFileParams) (any, error)
 }
 
-// ProjectService backs the project.* RPC methods. Each method is named after
+// projectService backs the project.* RPC methods. Each method is named after
 // the wire method tail: the service type already carries the namespace.
-type ProjectService interface {
+type projectService interface {
 	List(ctx context.Context, req ProjectListParams) (any, error)
 	ListWithWorkspaces(ctx context.Context, req ProjectListWithWorkspacesParams) (any, error)
 	GetListPreferences(ctx context.Context, req ProjectGetListPreferencesParams) (any, error)

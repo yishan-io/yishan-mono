@@ -9,12 +9,12 @@ import (
 	"strings"
 )
 
-// ErrDaemonLocked is returned when another live daemon already holds the
+// errDaemonLocked is returned when another live daemon already holds the
 // exclusive per-profile lock.
-var ErrDaemonLocked = errors.New("daemon already running for this profile")
+var errDaemonLocked = errors.New("daemon already running for this profile")
 
-// LockFileName is the per-profile lock file, stored next to daemon.state.json.
-const LockFileName = "daemon.lock"
+// lockFileName is the per-profile lock file, stored next to daemon.state.json.
+const lockFileName = "daemon.lock"
 
 // ResolveLockFilePath returns the profile lock file path for a config path.
 func ResolveLockFilePath(configPath string) (string, error) {
@@ -27,30 +27,30 @@ func ResolveLockFilePath(configPath string) (string, error) {
 
 // lockFilePathForState returns the lock file path next to a daemon state file.
 func lockFilePathForState(statePath string) string {
-	return filepath.Join(filepath.Dir(statePath), LockFileName)
+	return filepath.Join(filepath.Dir(statePath), lockFileName)
 }
 
-// DaemonLock is an exclusive advisory lock scoped to one daemon profile.
+// daemonLock is an exclusive advisory lock scoped to one daemon profile.
 // The lock is released when Release is called or when the owning process
 // exits, even on SIGKILL, so stale locks never accumulate.
-type DaemonLock struct {
+type daemonLock struct {
 	file *os.File
 }
 
-// AcquireDaemonLock takes the profile lock, returning ErrDaemonLocked when
+// acquireDaemonLock takes the profile lock, returning errDaemonLocked when
 // another live daemon holds it. The holder PID is written to the lock file
 // for diagnostics; it is best-effort and never relied on for correctness.
-func AcquireDaemonLock(path string) (*DaemonLock, error) {
+func acquireDaemonLock(path string) (*daemonLock, error) {
 	file, err := tryAcquireDaemonLock(path)
 	if err != nil {
 		return nil, err
 	}
 	_ = writeLockHolderPID(file, os.Getpid())
-	return &DaemonLock{file: file}, nil
+	return &daemonLock{file: file}, nil
 }
 
 // Release drops the lock. It is safe to call multiple times or on a nil lock.
-func (l *DaemonLock) Release() {
+func (l *daemonLock) Release() {
 	if l == nil || l.file == nil {
 		return
 	}
@@ -58,11 +58,11 @@ func (l *DaemonLock) Release() {
 	l.file = nil
 }
 
-// IsLockHeld reports whether another live daemon currently holds the lock.
-func IsLockHeld(path string) bool {
+// isLockHeld reports whether another live daemon currently holds the lock.
+func isLockHeld(path string) bool {
 	file, err := tryAcquireDaemonLock(path)
 	if err != nil {
-		return errors.Is(err, ErrDaemonLocked)
+		return errors.Is(err, errDaemonLocked)
 	}
 	_ = file.Close()
 	return false

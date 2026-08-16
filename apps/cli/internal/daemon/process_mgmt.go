@@ -94,7 +94,7 @@ func planStart(lockHeld bool, holderPID int, holderAlive bool, state *RuntimeSta
 // what StartDaemon must do before spawning, plus the pid to stop when the
 // decision is startReplace.
 func resolveStartAction(lockPath, statePath string, probeTimeout time.Duration) (startDecision, int, RuntimeState) {
-	lockHeld := IsLockHeld(lockPath)
+	lockHeld := isLockHeld(lockPath)
 	holderPID := LockHolderPID(lockPath)
 
 	loaded, err := LoadState(statePath)
@@ -127,7 +127,7 @@ func StartDaemon(cfg StartConfig, statePath string) (RuntimeState, error) {
 		return existing, nil
 	case startReplace:
 		log.Warn().Int("pid", pid).Msg("stopping existing daemon before start")
-		if err := StopPID(pid, daemonStartStopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
+		if err := stopPID(pid, daemonStartStopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
 			return RuntimeState{}, err
 		}
 	case startRefuse:
@@ -139,7 +139,7 @@ func StartDaemon(cfg StartConfig, statePath string) (RuntimeState, error) {
 			return RuntimeState{}, err
 		}
 
-		state, err := WaitForReady(statePath, daemonStartReadyTimeout)
+		state, err := waitForReady(statePath, daemonStartReadyTimeout)
 		if err == nil {
 			log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon started")
 			return state, nil
@@ -154,7 +154,7 @@ func StartDaemon(cfg StartConfig, statePath string) (RuntimeState, error) {
 			log.Info().Int("pid", existing.PID).Msg("daemon already running")
 			return existing, nil
 		case startReplace:
-			if stopErr := StopPID(pid, daemonStartStopTimeout); stopErr != nil && !errors.Is(stopErr, ErrNotRunning) {
+			if stopErr := stopPID(pid, daemonStartStopTimeout); stopErr != nil && !errors.Is(stopErr, ErrNotRunning) {
 				return RuntimeState{}, stopErr
 			}
 			continue
@@ -169,7 +169,7 @@ func StartDaemon(cfg StartConfig, statePath string) (RuntimeState, error) {
 }
 
 // stopProcess sends SIGTERM to pid and waits up to timeout for the process
-// to exit. It is the shared signal+wait path for Stop and StopPID.
+// to exit. It is the shared signal+wait path for Stop and stopPID.
 func stopProcess(pid int, timeout time.Duration) error {
 	process, err := os.FindProcess(pid)
 	if err != nil {
@@ -210,12 +210,12 @@ func Stop(statePath string, timeout time.Duration) (RuntimeState, error) {
 	return state, nil
 }
 
-// StopPID stops the daemon process with the given pid — typically the live
+// stopPID stops the daemon process with the given pid — typically the live
 // lock holder resolved from the profile lock file — and waits for it to
 // exit. It returns ErrNotRunning when the pid is not a live process. It is
 // used when the state file is missing or stale and a state-based Stop cannot
 // resolve the daemon.
-func StopPID(pid int, timeout time.Duration) error {
+func stopPID(pid int, timeout time.Duration) error {
 	if pid <= 0 {
 		return ErrNotRunning
 	}
@@ -314,7 +314,7 @@ func ProbeHealth(state RuntimeState, timeout time.Duration) bool {
 	return resp.StatusCode == http.StatusOK
 }
 
-func WaitForReady(statePath string, timeout time.Duration) (RuntimeState, error) {
+func waitForReady(statePath string, timeout time.Duration) (RuntimeState, error) {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		state, err := LoadState(statePath)
@@ -332,7 +332,7 @@ func WaitForReady(statePath string, timeout time.Duration) (RuntimeState, error)
 // can be identified from the lock file, otherwise the state-recorded legacy
 // daemon. It returns 0 when no live daemon owns the profile.
 func resolveStopPID(lockPath, statePath string) int {
-	lockHeld := IsLockHeld(lockPath)
+	lockHeld := isLockHeld(lockPath)
 	holderPID := LockHolderPID(lockPath)
 	if lockHeld && holderPID > 0 && IsProcessRunning(holderPID) {
 		return holderPID
@@ -353,7 +353,7 @@ func Restart(cfg StartConfig, statePath string, stopTimeout time.Duration, ready
 	lockPath := lockFilePathForState(statePath)
 
 	if pid := resolveStopPID(lockPath, statePath); pid > 0 {
-		if err := StopPID(pid, stopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
+		if err := stopPID(pid, stopTimeout); err != nil && !errors.Is(err, ErrNotRunning) {
 			return RuntimeState{}, err
 		}
 	}
@@ -362,5 +362,5 @@ func Restart(cfg StartConfig, statePath string, stopTimeout time.Duration, ready
 		return RuntimeState{}, err
 	}
 
-	return WaitForReady(statePath, readyTimeout)
+	return waitForReady(statePath, readyTimeout)
 }

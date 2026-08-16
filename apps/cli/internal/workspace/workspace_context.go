@@ -25,9 +25,9 @@ type SyncContextLinkRequest struct {
 	WorktreePaths []string `json:"worktreePaths"`
 }
 
-// SyncContextLinkResult reports per-path outcomes so the caller can surface
+// syncContextLinkResult reports per-path outcomes so the caller can surface
 // any non-fatal failures without aborting the whole batch.
-type SyncContextLinkResult struct {
+type syncContextLinkResult struct {
 	Updated []string          `json:"updated"`
 	Skipped []string          `json:"skipped"`
 	Errors  map[string]string `json:"errors"`
@@ -37,19 +37,19 @@ type SyncContextLinkResult struct {
 // the requested context state. Failures on individual paths are recorded in
 // the result rather than aborting, which matches the UI semantics: the user
 // flipped a single toggle and expects best-effort propagation.
-func SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkResult, error) {
+func SyncContextLink(req SyncContextLinkRequest) (syncContextLinkResult, error) {
 	var contextPath string
 	if !req.NonGit {
 		repoKey, err := worktree.SafeRelativePath(req.RepoKey, "repoKey")
 		if err != nil {
-			return SyncContextLinkResult{}, err
+			return syncContextLinkResult{}, err
 		}
 		contextPath, err = DefaultContextPath(repoKey)
 		if err != nil {
-			return SyncContextLinkResult{}, err
+			return syncContextLinkResult{}, err
 		}
 	}
-	result := SyncContextLinkResult{
+	result := syncContextLinkResult{
 		Updated: make([]string, 0, len(req.WorktreePaths)),
 		Skipped: make([]string, 0),
 		Errors:  make(map[string]string),
@@ -132,7 +132,7 @@ func ensureNonGitContextDir(worktreePath string) error {
 			return nil
 		}
 		if info.IsDir() {
-			marker := filepath.Join(dir, ContextMarkerName)
+			marker := filepath.Join(dir, contextMarkerName)
 			if _, err := os.Stat(marker); err == nil {
 				return nil
 			} else if !os.IsNotExist(err) {
@@ -149,7 +149,7 @@ func ensureNonGitContextDir(worktreePath string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("ensure context dir: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ContextMarkerName), []byte("yishan context root\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, contextMarkerName), []byte("yishan context root\n"), 0o644); err != nil {
 		return fmt.Errorf("write context marker: %w", err)
 	}
 	return nil
@@ -172,7 +172,7 @@ func removeNonGitContextDir(worktreePath string) error {
 		// Symlink owned by the git-project path; leave alone.
 		return nil
 	}
-	marker := filepath.Join(dir, ContextMarkerName)
+	marker := filepath.Join(dir, contextMarkerName)
 	if _, err := os.Stat(marker); err != nil {
 		if os.IsNotExist(err) {
 			// User-created folder without the marker; leave alone.

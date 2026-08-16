@@ -22,7 +22,7 @@ type SendRequest struct {
 	Input     string `json:"input"`
 }
 
-type SendResponse struct {
+type sendResponse struct {
 	Written int `json:"written"`
 }
 
@@ -30,7 +30,7 @@ type ReadRequest struct {
 	SessionID string `json:"sessionId"`
 }
 
-type ReadResponse struct {
+type readResponse struct {
 	Output   string `json:"output"`
 	ExitCode *int   `json:"exitCode,omitempty"`
 	Running  bool   `json:"running"`
@@ -48,7 +48,7 @@ type KillProcessRequest struct {
 	PID int `json:"pid"`
 }
 
-type KillProcessResponse struct {
+type killProcessResponse struct {
 	Killed bool `json:"killed"`
 }
 
@@ -78,7 +78,7 @@ type SetActiveWorkspaceRequest struct {
 	WorkspaceID string `json:"workspaceId,omitempty"`
 }
 
-type SetActiveWorkspaceResponse struct {
+type setActiveWorkspaceResponse struct {
 	Updated bool `json:"updated"`
 }
 
@@ -88,7 +88,7 @@ type ResizeRequest struct {
 	Rows      uint16 `json:"rows"`
 }
 
-type ResizeResponse struct {
+type resizeResponse struct {
 	Resized bool `json:"resized"`
 }
 
@@ -119,7 +119,7 @@ type Event struct {
 	RawChunk []byte `json:"-"`
 }
 
-type Subscription struct {
+type subscription struct {
 	ID     uint64
 	Events <-chan Event
 }
@@ -137,4 +137,4 @@ type SessionLifecycleEvent struct {
 	StartedAt   string `json:"startedAt,omitempty"`
 }
 
-type SessionLifecycleListener func(SessionLifecycleEvent)
+type sessionLifecycleListener func(SessionLifecycleEvent)

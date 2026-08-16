@@ -16,13 +16,11 @@ const (
 	CLIToolCategoryManaged     = "managed"
 )
 
-type CLIToolDetectionStatus = clidetector.Status
-
 var cliToolRegistry = clidetector.NewRegistry(agentCLIToolDetector{}, gitHubCLIToolDetector{}, yishanCLIToolDetector{})
 
 var cliToolInstallerRegistry = clitoolinstall.NewRegistry(clitoolinstall.PiInstaller{}, clitoolinstall.YishanInstaller{})
 
-func ListCLIToolDetectionStatusesWithRefresh(forceRefresh bool) []CLIToolDetectionStatus {
+func listCLIToolDetectionStatusesWithRefresh(forceRefresh bool) []clidetector.Status {
 	return cliToolRegistry.List(forceRefresh)
 }
 
@@ -158,7 +156,7 @@ func uninstallCLITool(ctx context.Context, toolID string) (clidetector.Status, e
 
 // findCLIToolStatus returns one tool's status with a force-refreshed detection.
 func findCLIToolStatus(toolID string) (clidetector.Status, error) {
-	for _, status := range ListCLIToolDetectionStatusesWithRefresh(true) {
+	for _, status := range listCLIToolDetectionStatusesWithRefresh(true) {
 		if status.ToolID == toolID {
 			return status, nil
 		}

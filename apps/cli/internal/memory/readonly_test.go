@@ -13,7 +13,7 @@ func TestOpenReadOnly_SearchWorks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenDB: %v", err)
 	}
-	db.UpsertFile(MemoryFile{
+	db.UpsertFile(memoryFile{
 		Path:        "/ctx/MEMORY.md",
 		ProjectPath: "/ctx",
 		ProjectID:   "proj-1",
@@ -58,7 +58,7 @@ func TestOpenReadOnly_RejectsWrites(t *testing.T) {
 	}
 	defer ro.Close()
 
-	err = ro.UpsertFile(MemoryFile{
+	err = ro.UpsertFile(memoryFile{
 		Path:        "/ctx/test.md",
 		ProjectPath: "/ctx",
 		Type:        FileTypeMemory,

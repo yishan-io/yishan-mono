@@ -9,7 +9,7 @@ import (
 
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/tokenusage"
+	"yishan/apps/cli/internal/tokenusage/collection"
 )
 
 // recordingTokenUsage is a tokenusage.Service fake that records startup/shutdown
@@ -43,8 +43,8 @@ func (r *recordingTokenUsage) Close() {
 func (r *recordingTokenUsage) SyncNow(string)                   {}
 func (r *recordingTokenUsage) Trigger(string, string)           {}
 func (r *recordingTokenUsage) RequestRecentRecoveryScan(string) {}
-func (r *recordingTokenUsage) DebugState() tokenusage.CollectorDebugState {
-	return tokenusage.CollectorDebugState{}
+func (r *recordingTokenUsage) DebugState() collection.DebugState {
+	return collection.DebugState{}
 }
 
 func openTestDB(t *testing.T) *sql.DB {

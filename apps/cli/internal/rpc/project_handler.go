@@ -7,7 +7,7 @@ import (
 
 // ProjectHandler owns the project.* RPC namespace decoding.
 type ProjectHandler struct {
-	Services ProjectService
+	Services projectService
 }
 
 // Call implements Handler.

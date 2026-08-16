@@ -15,7 +15,7 @@ import (
 
 type Service struct {
 	db         *DB
-	summarizer *Summarizer
+	summarizer *summarizer
 	config     SummarizerConfig
 
 	// summarizeQ serializes summarization per context root.
@@ -78,12 +78,12 @@ func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAg
 		return nil, fmt.Errorf("open memory db: %w", err)
 	}
 
-	normalizedConfig := NormalizeSummarizerConfig(summarizerConfig)
+	normalizedConfig := normalizeSummarizerConfig(summarizerConfig)
 	svc := &Service{
 		db:     db,
 		config: normalizedConfig,
 	}
-	svc.summarizer = NewSummarizer(normalizedConfig, runAgent)
+	svc.summarizer = newSummarizer(normalizedConfig, runAgent)
 	svc.persona = newPersonaService(normalizedConfig, runAgent)
 	return svc, nil
 }
@@ -109,7 +109,7 @@ func (s *Service) GetConfig() SummarizerConfig {
 }
 
 func (s *Service) UpdateSummarizerConfig(cfg SummarizerConfig) {
-	normalizedConfig := NormalizeSummarizerConfig(cfg)
+	normalizedConfig := normalizeSummarizerConfig(cfg)
 	s.config = normalizedConfig
 	if s.summarizer != nil {
 		s.summarizer.UpdateConfig(normalizedConfig)
@@ -119,14 +119,14 @@ func (s *Service) UpdateSummarizerConfig(cfg SummarizerConfig) {
 	}
 }
 
-func (s *Service) ReconcileNow(refs []WorkspaceRef) (ReconcileResult, error) {
+func (s *Service) ReconcileNow(refs []WorkspaceRef) (reconcileResult, error) {
 	globalDir, err := globalMemoryDir()
 	if err != nil {
 		globalDir = ""
 	}
 	result, err := s.db.Reconcile(refs, globalDir)
 	if err != nil {
-		return ReconcileResult{}, err
+		return reconcileResult{}, err
 	}
 	log.Debug().
 		Int("inserted", result.Inserted).
@@ -185,7 +185,7 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 func (s *Service) runSummarize(req summarizeRequest) {
 	result, err := s.summarizer.SummarizeSession(req.agent, req.worktreePath)
 	if err != nil {
-		var summarizeErr *SummarizeSessionError
+		var summarizeErr *summarizeSessionError
 		sourceAgent := ""
 		summarizerAgent := ""
 		if errors.As(err, &summarizeErr) {
@@ -210,7 +210,7 @@ func (s *Service) runSummarize(req summarizeRequest) {
 	s.handleSummarizeResult(req, result)
 }
 
-func (s *Service) handleSummarizeResult(req summarizeRequest, result SummarizeResult) {
+func (s *Service) handleSummarizeResult(req summarizeRequest, result summarizeResult) {
 	sourceAgent, summarizerAgent := normalizeSummarizeAgents(req.agent, result.SourceAgent, result.SummarizerAgent)
 	if result.Skipped {
 		log.Debug().
@@ -272,7 +272,7 @@ func (s *Service) MaybeRunDailyPersonaBatch(agent string) {
 
 // personaService manages the daily persona batch extraction state.
 type personaService struct {
-	summarizer         *PersonaSummarizer
+	summarizer         *personaSummarizer
 	dbReader           *agentDBReader
 	mu                 sync.Mutex
 	lastExtractionDate string // "YYYY-MM-DD" UTC, empty = never run

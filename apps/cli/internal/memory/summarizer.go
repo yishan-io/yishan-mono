@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Summarizer struct {
+type summarizer struct {
 	enabled   bool
 	agentKind string // fixed built-in summarizer agent (Pi)
 	model     string // optional model override
@@ -20,9 +20,9 @@ type Summarizer struct {
 	dbReader  sessionReader
 }
 
-func NewSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *Summarizer {
-	normalizedCfg := NormalizeSummarizerConfig(cfg)
-	return &Summarizer{
+func newSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *summarizer {
+	normalizedCfg := normalizeSummarizerConfig(cfg)
+	return &summarizer{
 		enabled:   normalizedCfg.Enabled,
 		agentKind: normalizedCfg.AgentKind,
 		model:     normalizedCfg.Model,
@@ -31,27 +31,27 @@ func NewSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *Summarizer {
 	}
 }
 
-func (s *Summarizer) Enabled() bool {
+func (s *summarizer) Enabled() bool {
 	return s.enabled && s.runAgent != nil
 }
 
-func (s *Summarizer) UpdateConfig(cfg SummarizerConfig) {
-	normalizedCfg := NormalizeSummarizerConfig(cfg)
+func (s *summarizer) UpdateConfig(cfg SummarizerConfig) {
+	normalizedCfg := normalizeSummarizerConfig(cfg)
 	s.enabled = normalizedCfg.Enabled
 	s.agentKind = normalizedCfg.AgentKind
 	s.model = normalizedCfg.Model
 }
 
-func (s *Summarizer) resolveSummarizeAgent() string {
+func (s *summarizer) resolveSummarizeAgent() string {
 	return s.agentKind
 }
 
 // SummarizeSession runs the full summarize pipeline for the given workspace.
 // Skipped sessions are returned explicitly so callers can distinguish them
 // from real summarize runs that wrote no files.
-func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) (SummarizeResult, error) {
+func (s *summarizer) SummarizeSession(sessionAgent string, workspacePath string) (summarizeResult, error) {
 	summarizeAgent := s.resolveSummarizeAgent()
-	result := SummarizeResult{
+	result := summarizeResult{
 		Skipped:         true,
 		SourceAgent:     sessionAgent,
 		SummarizerAgent: summarizeAgent,
@@ -109,7 +109,7 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt, agentWorkDir)
 	if err != nil {
-		return SummarizeResult{}, &SummarizeSessionError{
+		return summarizeResult{}, &summarizeSessionError{
 			SourceAgent:     sessionAgent,
 			SummarizerAgent: summarizeAgent,
 			Err:             fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err),
@@ -118,7 +118,7 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	extracted, err := parseExtractedJSON(output)
 	if err != nil {
-		return SummarizeResult{}, &SummarizeSessionError{
+		return summarizeResult{}, &summarizeSessionError{
 			SourceAgent:     sessionAgent,
 			SummarizerAgent: summarizeAgent,
 			Err:             fmt.Errorf("parse summarization output: %w", err),
@@ -127,7 +127,7 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	writtenPaths, err := mergeAndWrite(memoryPath, existingContent, extracted, contextRoot)
 	if err != nil {
-		return SummarizeResult{}, &SummarizeSessionError{
+		return summarizeResult{}, &summarizeSessionError{
 			SourceAgent:     sessionAgent,
 			SummarizerAgent: summarizeAgent,
 			Err:             err,
@@ -173,7 +173,7 @@ Existing memory content:
 Conversation:
 %s`
 
-func parseExtractedJSON(text string) (ExtractedKnowledge, error) {
+func parseExtractedJSON(text string) (extractedKnowledge, error) {
 	text = strings.TrimSpace(text)
 
 	if idx := strings.Index(text, "{"); idx >= 0 {
@@ -192,10 +192,10 @@ func parseExtractedJSON(text string) (ExtractedKnowledge, error) {
 		Errors    []string `json:"errors"`
 	}
 	if err := json.Unmarshal([]byte(text), &raw); err != nil {
-		return ExtractedKnowledge{}, fmt.Errorf("parse extracted json: %w (%s)", err, truncate(text, 200))
+		return extractedKnowledge{}, fmt.Errorf("parse extracted json: %w (%s)", err, truncate(text, 200))
 	}
 
-	return ExtractedKnowledge{
+	return extractedKnowledge{
 		LockedDecisions:    firstNonEmptySlice(raw.LockedDecisions, raw.Decisions),
 		DurableDiscoveries: firstNonEmptySlice(raw.DurableDiscoveries, append(raw.Learned, raw.Errors...)),
 	}, nil
@@ -215,7 +215,7 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func mergeAndWrite(memoryPath string, existingContent string, extracted ExtractedKnowledge, contextRoot string) ([]string, error) {
+func mergeAndWrite(memoryPath string, existingContent string, extracted extractedKnowledge, contextRoot string) ([]string, error) {
 	existing := parseMemorySections(existingContent)
 
 	for _, d := range extracted.LockedDecisions {

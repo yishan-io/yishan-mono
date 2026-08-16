@@ -14,7 +14,7 @@ import (
 const stopProcessHelperEnv = "YISHAN_DAEMON_STOP_PROCESS_HELPER"
 
 // TestStopProcessSignalsAndWaitsForExit verifies the shared signal+wait path
-// behind Stop and StopPID against a real child process.
+// behind Stop and stopPID against a real child process.
 func TestStopProcessSignalsAndWaitsForExit(t *testing.T) {
 	exe, err := os.Executable()
 	if err != nil {

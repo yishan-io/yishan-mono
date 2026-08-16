@@ -40,7 +40,7 @@ func (s *Service) CLIToolListStatuses(ctx context.Context, params json.RawMessag
 	if err != nil {
 		return nil, err
 	}
-	return ListCLIToolDetectionStatusesWithRefresh(refresh), nil
+	return listCLIToolDetectionStatusesWithRefresh(refresh), nil
 }
 
 func (s *Service) CLIToolInstall(ctx context.Context, req rpc.SystemCLIToolInstallParams) (any, error) {

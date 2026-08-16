@@ -20,7 +20,7 @@ func TestPersonaSummarizeForPersona_UsesBuiltInPiAgent(t *testing.T) {
 	var gotAgentKind string
 	var gotModel string
 	ps := NewPersonaSummarizer(
-		SummarizerConfig{Enabled: true, AgentKind: BuiltInSummarizerAgentKind, Model: "openai/gpt-5"},
+		SummarizerConfig{Enabled: true, AgentKind: builtInSummarizerAgentKind, Model: "openai/gpt-5"},
 		func(_ context.Context, agentKind, model, prompt, workDir string) (string, error) {
 			gotAgentKind = agentKind
 			gotModel = model
@@ -38,8 +38,8 @@ func TestPersonaSummarizeForPersona_UsesBuiltInPiAgent(t *testing.T) {
 	if result.Skipped {
 		t.Fatal("expected persona summarize run, got skipped")
 	}
-	if gotAgentKind != BuiltInSummarizerAgentKind {
-		t.Fatalf("agentKind = %q, want %q", gotAgentKind, BuiltInSummarizerAgentKind)
+	if gotAgentKind != builtInSummarizerAgentKind {
+		t.Fatalf("agentKind = %q, want %q", gotAgentKind, builtInSummarizerAgentKind)
 	}
 	if gotModel != "openai/gpt-5" {
 		t.Fatalf("model = %q, want %q", gotModel, "openai/gpt-5")

@@ -20,7 +20,7 @@ func TestHandleSummarizeResult_UsesDistinctLogsForSkippedAndNoOutput(t *testing.
 	req := summarizeRequest{agent: "pi", worktreePath: "/tmp/workspace"}
 
 	skippedLogs := captureMemoryLogs(t, func() {
-		service.handleSummarizeResult(req, SummarizeResult{Skipped: true, SourceAgent: "pi", SummarizerAgent: "opencode"})
+		service.handleSummarizeResult(req, summarizeResult{Skipped: true, SourceAgent: "pi", SummarizerAgent: "opencode"})
 	})
 	if strings.Contains(skippedLogs, "session summarization produced no output") {
 		t.Fatal("skipped summarization should not log produced no output")
@@ -33,7 +33,7 @@ func TestHandleSummarizeResult_UsesDistinctLogsForSkippedAndNoOutput(t *testing.
 	}
 
 	noOutputLogs := captureMemoryLogs(t, func() {
-		service.handleSummarizeResult(req, SummarizeResult{SourceAgent: "pi", SummarizerAgent: "opencode"})
+		service.handleSummarizeResult(req, summarizeResult{SourceAgent: "pi", SummarizerAgent: "opencode"})
 	})
 	if !strings.Contains(noOutputLogs, "session summarization produced no output") {
 		t.Fatal("expected no-output log")
@@ -57,7 +57,7 @@ func TestHandleSummarizeResult_SuccessLogIncludesSourceAndSummarizerAgents(t *te
 	service := &Service{db: openTestDB(t)}
 	req := summarizeRequest{agent: "pi", worktreePath: worktreePath, projectID: "proj-1"}
 	logs := captureMemoryLogs(t, func() {
-		service.handleSummarizeResult(req, SummarizeResult{
+		service.handleSummarizeResult(req, summarizeResult{
 			WrittenPaths:    []string{memoryPath},
 			SourceAgent:     "pi",
 			SummarizerAgent: "opencode",
@@ -76,11 +76,11 @@ func TestSummarizeSession_BinaryNotFoundLogsDebugNotWarn(t *testing.T) {
 	// RunAgentFunc that returns ErrAgentNotFound (as buildRunAgentFunc does when
 	// ResolveCommand cannot locate the binary).
 	runAgent := RunAgentFunc(func(_ context.Context, _, _, _, _ string) (string, error) {
-		return "", fmt.Errorf("%w: %s", ErrAgentNotFound, BuiltInSummarizerAgentKind)
+		return "", fmt.Errorf("%w: %s", ErrAgentNotFound, builtInSummarizerAgentKind)
 	})
 
 	svc := &Service{
-		summarizer: NewSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, runAgent),
+		summarizer: newSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, runAgent),
 	}
 	// Inject a fake reader that returns a real session so runAgent is reached.
 	svc.summarizer.dbReader = fakeSessionReader2{
@@ -113,7 +113,7 @@ func TestRunSummarize_FailureLogIncludesSourceAndSummarizerAgents(t *testing.T) 
 	})
 
 	svc := &Service{
-		summarizer: NewSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, runAgent),
+		summarizer: newSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, runAgent),
 	}
 	svc.summarizer.dbReader = fakeSessionReader2{
 		session: &sessionMessages{
@@ -200,7 +200,7 @@ func TestPersonaService_MaybeRunBatch_DateGate(t *testing.T) {
 	// personaService should only trigger extraction once per calendar day.
 	// Verify the date-gate: after advancing past today's date, lastExtractionDate updates.
 	ps := &personaService{
-		summarizer:         &PersonaSummarizer{enabled: false}, // disabled — no LLM calls
+		summarizer:         &personaSummarizer{enabled: false}, // disabled — no LLM calls
 		dbReader:           newAgentDBReader(),
 		lastExtractionDate: "2026-06-18", // simulate last run was yesterday
 	}
@@ -222,7 +222,7 @@ func TestPersonaService_MaybeRunBatch_DateGate(t *testing.T) {
 
 func TestPersonaService_MaybeRunBatch_NoPanicWhenDisabled(t *testing.T) {
 	ps := &personaService{
-		summarizer: &PersonaSummarizer{enabled: false, runAgent: nil},
+		summarizer: &personaSummarizer{enabled: false, runAgent: nil},
 		dbReader:   newAgentDBReader(),
 	}
 	// Should not panic even with nil runAgent.
@@ -238,7 +238,7 @@ func TestService_MaybeRunDailyPersonaBatch_NilPersona(t *testing.T) {
 func TestService_ProjectMemoryEnabledFalseWhenDisabledByPolicy(t *testing.T) {
 	svc := &Service{
 		config:     SummarizerConfig{Enabled: true, DisableProjectMemory: true},
-		summarizer: NewSummarizer(SummarizerConfig{Enabled: true}, nil),
+		summarizer: newSummarizer(SummarizerConfig{Enabled: true}, nil),
 	}
 
 	if svc.ProjectMemoryEnabled() {
@@ -253,7 +253,7 @@ func TestService_PersonaEnabledFalseWhenDisabledByPolicy(t *testing.T) {
 	svc := &Service{
 		config: SummarizerConfig{Enabled: true, DisablePersona: true},
 		persona: &personaService{
-			summarizer: &PersonaSummarizer{enabled: true, runAgent: RunAgentFunc(func(_ context.Context, _, _, _, _ string) (string, error) {
+			summarizer: &personaSummarizer{enabled: true, runAgent: RunAgentFunc(func(_ context.Context, _, _, _, _ string) (string, error) {
 				return "", nil
 			})},
 		},
@@ -276,8 +276,8 @@ func TestService_UpdateSummarizerConfigForcesPiAgent(t *testing.T) {
 	})
 
 	cfg := svc.GetConfig()
-	if cfg.AgentKind != BuiltInSummarizerAgentKind {
-		t.Fatalf("AgentKind = %q, want %q", cfg.AgentKind, BuiltInSummarizerAgentKind)
+	if cfg.AgentKind != builtInSummarizerAgentKind {
+		t.Fatalf("AgentKind = %q, want %q", cfg.AgentKind, builtInSummarizerAgentKind)
 	}
 	if cfg.Model != "" {
 		t.Fatalf("Model = %q, want empty model after legacy non-Pi normalization", cfg.Model)
@@ -285,7 +285,7 @@ func TestService_UpdateSummarizerConfigForcesPiAgent(t *testing.T) {
 
 	svc.UpdateSummarizerConfig(SummarizerConfig{
 		Enabled:   true,
-		AgentKind: BuiltInSummarizerAgentKind,
+		AgentKind: builtInSummarizerAgentKind,
 		Model:     "openai/gpt-5",
 	})
 

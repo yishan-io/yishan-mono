@@ -690,7 +690,7 @@ go vet ./...
   scanner returns `[]record.UsageRecord` (never the db row type). Provider
   scanners do not access the database; attribution and pricing each have one
   owner. The `tokenusage` root package is a facade: `Service`,
-  `NewCollectorWithRepository`, `CollectorDebugState`.
+  `NewCollectorWithRepository`.
 - archtest enforces the sub-package boundaries (record/pricing/attribution are
   leaves; scanner must not import collection/ingestion/repository; the
   collector never imports provider parse code).

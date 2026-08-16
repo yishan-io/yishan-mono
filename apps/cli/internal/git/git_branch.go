@@ -171,8 +171,8 @@ func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targe
 		return GitCommitComparison{
 			CurrentBranch:   strings.TrimSpace(currentBranch),
 			TargetBranch:    resolvedTargetBranch,
-			AllChangedFiles: []GitCommitFile{},
-			Commits:         []GitCommit{},
+			AllChangedFiles: []gitCommitFile{},
+			Commits:         []gitCommit{},
 		}, nil
 	}
 	logOut, err := gitCommand(ctx, root, "log", "--no-decorate", "--date=iso-strict", "--name-status", "--pretty=format:%x1e%H%x1f%h%x1f%an%x1f%aI%x1f%s", fmt.Sprintf("%s..HEAD", resolvedTargetBranch))
@@ -184,7 +184,7 @@ func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targe
 		return GitCommitComparison{}, err
 	}
 
-	commits := make([]GitCommit, 0)
+	commits := make([]gitCommit, 0)
 	for record := range strings.SplitSeq(logOut, "\x1e") {
 		record = strings.TrimSpace(record)
 		if record == "" {
@@ -199,7 +199,7 @@ func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targe
 			continue
 		}
 		fileLines := strings.Join(lines[1:], "\n")
-		commits = append(commits, GitCommit{
+		commits = append(commits, gitCommit{
 			Hash:         meta[0],
 			ShortHash:    meta[1],
 			AuthorName:   meta[2],
@@ -217,11 +217,11 @@ func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targe
 	}, nil
 }
 
-// parseNameStatusLines parses output from git --name-status into GitCommitFile
+// parseNameStatusLines parses output from git --name-status into gitCommitFile
 // entries. Rename/copy lines have three tab-separated fields: status, old path,
 // new path. All other lines have two fields: status, path.
-func parseNameStatusLines(output string) []GitCommitFile {
-	files := make([]GitCommitFile, 0)
+func parseNameStatusLines(output string) []gitCommitFile {
+	files := make([]gitCommitFile, 0)
 	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -236,7 +236,7 @@ func parseNameStatusLines(output string) []GitCommitFile {
 		if len(status) > 1 && (status[0] == 'R' || status[0] == 'C') {
 			status = string(status[0])
 		}
-		f := GitCommitFile{Path: parts[1], Status: status}
+		f := gitCommitFile{Path: parts[1], Status: status}
 		if (status == "R" || status == "C") && len(parts) >= 3 {
 			f.OldPath = parts[1]
 			f.Path = parts[2]

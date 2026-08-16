@@ -177,7 +177,7 @@ func TestMergeAndWrite_AppendsNewEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	extracted := ExtractedKnowledge{
+	extracted := extractedKnowledge{
 		LockedDecisions:    []string{"2026-06-14 — New decision. Why: important."},
 		DurableDiscoveries: []string{"[Workflow Trap] 2026-06-14 — New learning"},
 	}
@@ -218,7 +218,7 @@ func TestMergeAndWrite_Deduplicates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	extracted := ExtractedKnowledge{
+	extracted := extractedKnowledge{
 		DurableDiscoveries: []string{"duplicate tabs came from stale session ids"},
 	}
 
@@ -240,7 +240,7 @@ func TestMergeAndWrite_CreatesFile(t *testing.T) {
 	ctxDir := t.TempDir()
 	memPath := filepath.Join(ctxDir, "MEMORY.md")
 
-	extracted := ExtractedKnowledge{
+	extracted := extractedKnowledge{
 		LockedDecisions: []string{"2026-06-14 — First decision. Why: bootstrap."},
 	}
 
@@ -417,8 +417,8 @@ func TestOverflowEntries_EmptyEntries(t *testing.T) {
 func TestSearchMemory_ScopeGlobal(t *testing.T) {
 	db := openTestDB(t)
 
-	db.UpsertFile(MemoryFile{Path: "/ctx/MEMORY.md", ProjectPath: "/ctx", ProjectID: "p1", Type: FileTypeMemory, Body: "authentication flow", Fingerprint: "fp1", IndexedAt: 1})
-	db.UpsertFile(MemoryFile{Path: "/global/MEMORY.md", ProjectPath: "/global", ProjectID: "", Type: FileTypeGlobal, Body: "authentication preference", Fingerprint: "fp2", IndexedAt: 1})
+	db.UpsertFile(memoryFile{Path: "/ctx/MEMORY.md", ProjectPath: "/ctx", ProjectID: "p1", Type: FileTypeMemory, Body: "authentication flow", Fingerprint: "fp1", IndexedAt: 1})
+	db.UpsertFile(memoryFile{Path: "/global/MEMORY.md", ProjectPath: "/global", ProjectID: "", Type: FileTypeGlobal, Body: "authentication preference", Fingerprint: "fp2", IndexedAt: 1})
 
 	results, err := db.SearchMemory(SearchInput{Query: "authentication", Scope: "global", Limit: 10})
 	if err != nil {
@@ -431,7 +431,7 @@ func TestSearchMemory_ScopeGlobal(t *testing.T) {
 
 func TestSearchMemory_DefaultLimit(t *testing.T) {
 	db := openTestDB(t)
-	db.UpsertFile(MemoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "test content", Fingerprint: "fp", IndexedAt: 1})
+	db.UpsertFile(memoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "test content", Fingerprint: "fp", IndexedAt: 1})
 
 	results, err := db.SearchMemory(SearchInput{Query: "test", Limit: 0})
 	if err != nil {

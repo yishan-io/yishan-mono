@@ -23,9 +23,9 @@ func (s *GitService) ListChanges(ctx context.Context, root string) (GitChangesBy
 	stagedStats := parseNumstat(stagedNumstat)
 
 	sections := GitChangesBySection{
-		Unstaged:  []GitChange{},
-		Staged:    []GitChange{},
-		Untracked: []GitChange{},
+		Unstaged:  []gitChange{},
+		Staged:    []gitChange{},
+		Untracked: []gitChange{},
 	}
 
 	for line := range strings.SplitSeq(porcelain, "\n") {
@@ -43,17 +43,17 @@ func (s *GitService) ListChanges(ctx context.Context, root string) (GitChangesBy
 		}
 
 		if indexStatus == '?' && worktreeStatus == '?' {
-			sections.Untracked = append(sections.Untracked, GitChange{Path: path, Kind: "added"})
+			sections.Untracked = append(sections.Untracked, gitChange{Path: path, Kind: "added"})
 			continue
 		}
 
 		if indexStatus != ' ' && indexStatus != '?' {
 			add, del := statValue(stagedStats[path])
-			sections.Staged = append(sections.Staged, GitChange{Path: path, Kind: mapStatusToKind(indexStatus), Additions: add, Deletions: del})
+			sections.Staged = append(sections.Staged, gitChange{Path: path, Kind: mapStatusToKind(indexStatus), Additions: add, Deletions: del})
 		}
 		if worktreeStatus != ' ' && worktreeStatus != '?' {
 			add, del := statValue(unstagedStats[path])
-			sections.Unstaged = append(sections.Unstaged, GitChange{Path: path, Kind: mapStatusToKind(worktreeStatus), Additions: add, Deletions: del})
+			sections.Unstaged = append(sections.Unstaged, gitChange{Path: path, Kind: mapStatusToKind(worktreeStatus), Additions: add, Deletions: del})
 		}
 	}
 
@@ -63,8 +63,8 @@ func (s *GitService) ListChanges(ctx context.Context, root string) (GitChangesBy
 }
 
 func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChangesBySection {
-	deletedUnstaged := make([]GitChange, 0)
-	addedUntracked := make([]GitChange, 0)
+	deletedUnstaged := make([]gitChange, 0)
+	addedUntracked := make([]gitChange, 0)
 	for _, file := range input.Unstaged {
 		if file.Kind == "deleted" {
 			deletedUnstaged = append(deletedUnstaged, file)
@@ -79,7 +79,7 @@ func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChan
 		return input
 	}
 
-	renamesByNewPath := map[string]GitChange{}
+	renamesByNewPath := map[string]gitChange{}
 	consumedDeletedPaths := map[string]bool{}
 	consumedAddedPaths := map[string]bool{}
 
@@ -87,7 +87,7 @@ func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChan
 		deletedExt := fileExtension(deletedFile.Path)
 		deletedParent := parentPath(deletedFile.Path)
 
-		var sameDirectoryCandidate *GitChange
+		var sameDirectoryCandidate *gitChange
 		for i := range addedUntracked {
 			candidate := addedUntracked[i]
 			if consumedAddedPaths[candidate.Path] {
@@ -131,7 +131,7 @@ func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChan
 			continue
 		}
 
-		renamesByNewPath[fallbackCandidate.Path] = GitChange{
+		renamesByNewPath[fallbackCandidate.Path] = gitChange{
 			Path:      fallbackCandidate.Path,
 			Kind:      "renamed",
 			Additions: maxInt(0, fallbackCandidate.Additions),
@@ -143,7 +143,7 @@ func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChan
 		return input
 	}
 
-	nextUnstaged := make([]GitChange, 0, len(input.Unstaged)+len(renamesByNewPath))
+	nextUnstaged := make([]gitChange, 0, len(input.Unstaged)+len(renamesByNewPath))
 	for _, file := range input.Unstaged {
 		if consumedDeletedPaths[file.Path] {
 			continue
@@ -154,7 +154,7 @@ func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChan
 		nextUnstaged = append(nextUnstaged, renamed)
 	}
 
-	nextUntracked := make([]GitChange, 0, len(input.Untracked))
+	nextUntracked := make([]gitChange, 0, len(input.Untracked))
 	for _, file := range input.Untracked {
 		if consumedAddedPaths[file.Path] {
 			continue

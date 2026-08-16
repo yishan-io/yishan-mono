@@ -7,7 +7,7 @@ import (
 func TestDB_Search_BasicMatch(t *testing.T) {
 	db := openTestDB(t)
 
-	if err := db.UpsertFile(MemoryFile{
+	if err := db.UpsertFile(memoryFile{
 		Path:        "/ctx/MEMORY.md",
 		ProjectPath: "/ctx",
 		ProjectID:   "proj-1",
@@ -18,7 +18,7 @@ func TestDB_Search_BasicMatch(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.UpsertFile(MemoryFile{
+	if err := db.UpsertFile(memoryFile{
 		Path:        "/ctx/architecture/db.md",
 		ProjectPath: "/ctx",
 		ProjectID:   "proj-1",
@@ -44,7 +44,7 @@ func TestDB_Search_BasicMatch(t *testing.T) {
 
 func TestDB_Search_NoMatch(t *testing.T) {
 	db := openTestDB(t)
-	if err := db.UpsertFile(MemoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", ProjectID: "p1", Type: FileTypeMemory, Body: "hello world", Fingerprint: "fp", IndexedAt: 1}); err != nil {
+	if err := db.UpsertFile(memoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", ProjectID: "p1", Type: FileTypeMemory, Body: "hello world", Fingerprint: "fp", IndexedAt: 1}); err != nil {
 		t.Fatal(err)
 	}
 	results, err := db.Search("caveman", "p1", "", 10)
@@ -60,7 +60,7 @@ func TestDB_Search_ProjectIDFilter(t *testing.T) {
 	db := openTestDB(t)
 
 	for _, pid := range []string{"proj-a", "proj-b"} {
-		if err := db.UpsertFile(MemoryFile{
+		if err := db.UpsertFile(memoryFile{
 			Path:        "/ctx/" + pid + "/MEMORY.md",
 			ProjectPath: "/ctx/" + pid,
 			ProjectID:   pid,
@@ -85,9 +85,9 @@ func TestDB_Search_ProjectIDFilter(t *testing.T) {
 func TestDB_Search_TypeFilter(t *testing.T) {
 	db := openTestDB(t)
 
-	upsert := func(path string, ftype FileType, body string) {
+	upsert := func(path string, ftype fileType, body string) {
 		t.Helper()
-		if err := db.UpsertFile(MemoryFile{Path: path, ProjectPath: "/ctx", ProjectID: "p1", Type: ftype, Body: body, Fingerprint: "fp" + path, IndexedAt: 1}); err != nil {
+		if err := db.UpsertFile(memoryFile{Path: path, ProjectPath: "/ctx", ProjectID: "p1", Type: ftype, Body: body, Fingerprint: "fp" + path, IndexedAt: 1}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -107,11 +107,11 @@ func TestDB_Search_FTSTriggerSync(t *testing.T) {
 	// Verify that the FTS triggers keep the index in sync after UPDATE and DELETE.
 	db := openTestDB(t)
 
-	if err := db.UpsertFile(MemoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "original content here", Fingerprint: "fp1", IndexedAt: 1}); err != nil {
+	if err := db.UpsertFile(memoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "original content here", Fingerprint: "fp1", IndexedAt: 1}); err != nil {
 		t.Fatal(err)
 	}
 	// Update body — FTS should reflect new content.
-	if err := db.UpsertFile(MemoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "completely different text now", Fingerprint: "fp2", IndexedAt: 2}); err != nil {
+	if err := db.UpsertFile(memoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "completely different text now", Fingerprint: "fp2", IndexedAt: 2}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -180,7 +180,7 @@ func TestDB_Search_MultiWordORQuery(t *testing.T) {
 
 	upsert := func(path, body string) {
 		t.Helper()
-		if err := db.UpsertFile(MemoryFile{
+		if err := db.UpsertFile(memoryFile{
 			Path: path, ProjectPath: "/ctx", ProjectID: "p1",
 			Type: FileTypeMemory, Body: body, Fingerprint: path, IndexedAt: 1,
 		}); err != nil {

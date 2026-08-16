@@ -93,7 +93,7 @@ func Run(cfg RunConfig, statePath string, runtime *session.Session) error {
 	// Enforce a single daemon per profile: hold the exclusive profile lock for
 	// the lifetime of this process. If another live daemon holds it, refuse to
 	// start instead of stacking a duplicate on the same profile.
-	lock, err := AcquireDaemonLock(lockFilePathForState(statePath))
+	lock, err := acquireDaemonLock(lockFilePathForState(statePath))
 	if err != nil {
 		return err
 	}

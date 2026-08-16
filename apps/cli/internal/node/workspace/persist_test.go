@@ -6,6 +6,7 @@ import (
 	"time"
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/workspace"
+	application "yishan/apps/cli/internal/workspace/application"
 )
 
 func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
@@ -20,7 +21,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	}
 	handler.setTestDatabase(database)
 
-	prepared := preparedWorkspaceCreate{Registration: &WorkspaceCreation{
+	prepared := preparedWorkspaceCreate{Registration: &application.Registration{
 		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
 		Kind: workspace.KindWorktree, Branch: "feature/local-db", SourceBranch: "main",
 	}}

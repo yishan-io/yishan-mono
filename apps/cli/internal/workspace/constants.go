@@ -5,7 +5,7 @@ package workspace
 // silent divergence between the daemon and workspace packages.
 const ContextLinkName = ".my-context"
 
-// ContextMarkerName marks a real `.my-context` directory as daemon-owned for
+// contextMarkerName marks a real `.my-context` directory as daemon-owned for
 // non-git projects. The marker makes removal safe: a toggled-off non-git
 // project removes only a directory that carries this file.
-const ContextMarkerName = ".yishan-context"
+const contextMarkerName = ".yishan-context"

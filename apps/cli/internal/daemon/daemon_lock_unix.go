@@ -20,7 +20,7 @@ func tryAcquireDaemonLock(path string) (*os.File, error) {
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		_ = file.Close()
 		if errors.Is(err, syscall.EWOULDBLOCK) {
-			return nil, ErrDaemonLocked
+			return nil, errDaemonLocked
 		}
 		return nil, fmt.Errorf("lock daemon file %q: %w", path, err)
 	}

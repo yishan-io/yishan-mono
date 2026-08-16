@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 	"yishan/apps/cli/internal/adapter/sqlite"
-	"yishan/apps/cli/internal/tokenusage"
+	"yishan/apps/cli/internal/tokenusage/collection"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -16,8 +16,8 @@ func (p *tokenUsageRecoveryProbe) StartStartupScan()   {}
 func (p *tokenUsageRecoveryProbe) SyncNow(_ string)    {}
 func (p *tokenUsageRecoveryProbe) Trigger(_, _ string) {}
 func (p *tokenUsageRecoveryProbe) Close()              {}
-func (p *tokenUsageRecoveryProbe) DebugState() tokenusage.CollectorDebugState {
-	return tokenusage.CollectorDebugState{}
+func (p *tokenUsageRecoveryProbe) DebugState() collection.DebugState {
+	return collection.DebugState{}
 }
 func (p *tokenUsageRecoveryProbe) RequestRecentRecoveryScan(_ string) {
 	now := time.Now().UTC().UnixMilli()

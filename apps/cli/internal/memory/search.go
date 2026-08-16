@@ -15,7 +15,7 @@ func (db *DB) SearchMemory(input SearchInput) ([]MemorySearchResult, error) {
 		limit = defaultSearchLimit
 	}
 
-	var fileType FileType
+	var fileType fileType
 	if input.Scope == "global" {
 		fileType = FileTypeGlobal
 	}

@@ -22,8 +22,6 @@ type workspaceCreateParams = application.CreateCommand
 // vocabulary (and existing handler code stays stable during the migration).
 type preparedWorkspaceCreate = application.CreatePlan
 
-type WorkspaceCreation = application.Registration
-
 type workspaceCloseParams = application.CloseCommand
 
 type workspaceCreateStartedEvent = application.StartedEvent

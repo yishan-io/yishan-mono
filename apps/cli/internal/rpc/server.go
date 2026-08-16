@@ -19,7 +19,9 @@ type Handler interface {
 	Call(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error)
 }
 
-// HandlerFunc adapts a plain function to Handler.
+// HandlerFunc adapts a plain function to Handler. It exists so tests and
+// light-weight harnesses can construct an rpc.Server without implementing
+// the Handler interface; production services use typed handlers instead.
 type HandlerFunc func(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error)
 
 // Call implements Handler.
@@ -131,26 +133,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // HandleMessage decodes one JSON-RPC request, calls the handler, and builds
 // the response. Returns nil for notifications (no id).
-func (s *Server) HandleMessage(ctx context.Context, conn *Connection, payload []byte) *Response {
+func (s *Server) HandleMessage(ctx context.Context, conn *Connection, payload []byte) *response {
 	var req Request
 	if err := json.Unmarshal(payload, &req); err != nil {
-		return &Response{JSONRPC: "2.0", Error: &RPCError{Code: CodeParseError, Message: "parse error"}}
+		return &response{JSONRPC: "2.0", Error: &RPCError{Code: CodeParseError, Message: "parse error"}}
 	}
 
 	if req.JSONRPC != "2.0" {
-		return &Response{JSONRPC: "2.0", ID: AsJSONID(req.ID), Error: &RPCError{Code: CodeInvalidRequest, Message: "invalid request"}}
+		return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Error: &RPCError{Code: CodeInvalidRequest, Message: "invalid request"}}
 	}
 
 	result, err := s.Handler.Call(ctx, conn, req.Method, req.Params)
 	if err != nil {
-		return &Response{JSONRPC: "2.0", ID: AsJSONID(req.ID), Error: MapRPCError(err)}
+		return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Error: MapRPCError(err)}
 	}
 
 	if len(req.ID) == 0 {
 		return nil
 	}
 
-	return &Response{JSONRPC: "2.0", ID: AsJSONID(req.ID), Result: result}
+	return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Result: result}
 }
 
 // HandleBinaryFrame parses a binary WebSocket frame for terminal I/O.
