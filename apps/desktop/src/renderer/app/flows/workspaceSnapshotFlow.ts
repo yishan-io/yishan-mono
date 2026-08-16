@@ -21,7 +21,7 @@
  */
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
-import { syncTabStoreWithWorkspace } from "../../commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../features/workbench/commands/workspaceTabSync";
 import { projectStore } from "../../features/project/model/projectStore";
 import {
   openFoldersForSnapshot,

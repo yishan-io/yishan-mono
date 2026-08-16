@@ -12,7 +12,7 @@ import type { WorkspaceCommands } from "../../features/workspace/commands/contra
 import type { SelectionCommands } from "../../features/workspace/commands/selectionContract";
 import type { AgentCommands } from "../../features/agent/commands/contract";
 import type { TerminalCommands } from "./terminal";
-import type { WorkbenchCommands } from "./workbench";
+import type { WorkbenchCommands } from "../../features/workbench/commands/contract";
 
 import type * as projectCommands from "../../features/project/commands/projectCommands";
 import type * as localFolderCommands from "../../features/workspace/commands/localFolderCommands";
@@ -23,10 +23,10 @@ import type * as workspaceCreateCommand from "../../features/workspace/commands/
 import type * as agentChatCommands from "../../features/agent/commands/agentChatCommands";
 import type * as agentCommands from "../../features/agent/commands/agentCommands";
 import type * as chatCommands from "../../features/agent/commands/chatCommands";
-import type * as tabCommands from "../tabCommands";
+import type * as tabCommands from "../../features/workbench/commands/tabCommands";
 import type * as terminalCommands from "../terminalCommands";
-import type * as whiteboardCommands from "../whiteboardCommands";
-import type * as workspaceTabSync from "../workspaceTabSync";
+import type * as whiteboardCommands from "../../features/workbench/commands/whiteboardCommands";
+import type * as workspaceTabSync from "../../features/workbench/commands/workspaceTabSync";
 
 /** Assert a type-level boolean condition; fails typecheck when not true. */
 export type Expect<T extends true> = T;

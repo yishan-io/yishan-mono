@@ -1,7 +1,7 @@
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
-import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";

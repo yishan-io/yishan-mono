@@ -132,7 +132,7 @@ import {
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
   updateFileTabContent as updateFileTabContentCommand,
-} from "./tabCommands";
+} from "../features/workbench/commands/tabCommands";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,

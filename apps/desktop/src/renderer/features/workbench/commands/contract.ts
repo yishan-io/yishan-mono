@@ -6,9 +6,9 @@
  * `workspaceTabSync` today; moves to `features/workbench/commands/` in
  * Phase 6.
  */
-import type * as tabCommands from "../tabCommands";
-import type * as whiteboardCommands from "../whiteboardCommands";
-import type * as workspaceTabSync from "../workspaceTabSync";
+import type * as tabCommands from "./tabCommands";
+import type * as whiteboardCommands from "./whiteboardCommands";
+import type * as workspaceTabSync from "./workspaceTabSync";
 
 export type WorkbenchCommands = {
   createTab: typeof tabCommands.createTab;

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../store/chatStore";
-import { tabStore } from "../store/tabStore";
-import { workspaceStore } from "../store/workspaceStore";
+import { chatStore } from "../../../store/chatStore";
+import { tabStore } from "../../../store/tabStore";
+import { workspaceStore } from "../../../store/workspaceStore";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 
 const initialWorkspaceStoreState = workspaceStore.getState();

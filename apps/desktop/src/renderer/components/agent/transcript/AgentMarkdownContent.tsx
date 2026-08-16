@@ -10,7 +10,7 @@ import { useCodeTheme } from "@renderer/hooks/useCodeTheme";
 import { editorSettingsStore } from "@renderer/store/settings/editorSettingsStore";
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
-import { openChatFileTab, openTab, openTabInOppositePane } from "../../../commands/tabCommands";
+import { openChatFileTab, openTab, openTabInOppositePane } from "../../../features/workbench/commands/tabCommands";
 import { selectFolderInFileTree } from "../../../features/workspace/commands/workspaceCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { workspaceStore } from "../../../store/workspaceStore";

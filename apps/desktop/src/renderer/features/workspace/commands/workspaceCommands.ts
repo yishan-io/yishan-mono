@@ -21,7 +21,7 @@ import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./works
 
 export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
-import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 export { deleteLocalFolder } from "./localFolderCommands";
 
 export const OPEN_CREATE_WORKSPACE_DIALOG_EVENT = "workspace:open-create-workspace-dialog";

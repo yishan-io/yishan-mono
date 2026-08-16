@@ -1,4 +1,4 @@
-import { closeTab, renameTab } from "../../../commands/tabCommands";
+import { closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
 import {
   closeTerminalSession,
   createTerminalSession,

@@ -4,12 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
-} from "../helpers/terminalCloseTombstones";
-import { chatStore } from "../store/chatStore";
-import { createLeaf } from "../store/split-pane";
-import { splitPaneStore } from "../store/splitPaneStore";
-import { tabStore } from "../store/tabStore";
-import { terminalFocusStore } from "../store/terminalFocusStore";
+} from "../../../helpers/terminalCloseTombstones";
+import { chatStore } from "../../../store/chatStore";
+import { createLeaf } from "../../../store/split-pane";
+import { splitPaneStore } from "../../../store/splitPaneStore";
+import { tabStore } from "../../../store/tabStore";
+import { terminalFocusStore } from "../../../store/terminalFocusStore";
 import {
   closeAllTabs,
   closeOtherTabs,
@@ -40,33 +40,33 @@ const rpcMocks = vi.hoisted(() => ({
   resolveChatFilePath: vi.fn(),
 }));
 
-vi.mock("../features/agent/commands/agentChatCommands", () => ({
+vi.mock("../../../features/agent/commands/agentChatCommands", () => ({
   stopPiSession: rpcMocks.stopPiSession,
 }));
 
-vi.mock("./fileCommands", () => ({
+vi.mock("../../../commands/fileCommands", () => ({
   resolveChatFilePath: rpcMocks.resolveChatFilePath,
 }));
 
-vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
 
-vi.mock("../events/backendEventStoreBindings", () => ({
+vi.mock("../../../events/backendEventStoreBindings", () => ({
   clearTerminalAgentStatus: vi.fn(),
 }));
 
-vi.mock("../events/agentChatComposerFocus", () => ({
+vi.mock("../../../events/agentChatComposerFocus", () => ({
   clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
   requestNewAgentChatComposerFocus: rpcMocks.requestNewAgentChatComposerFocus,
 }));
 
-vi.mock("../views/workspace/terminal/terminalRuntimeRegistry", () => ({
+vi.mock("../../../views/workspace/terminal/terminalRuntimeRegistry", () => ({
   clearTerminalRuntimeFocus: rpcMocks.clearTerminalRuntimeFocus,
   requestTerminalRuntimeFocus: rpcMocks.requestTerminalRuntimeFocus,
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     chat: {
       ensureWorkspaceChatSession: rpcMocks.ensureWorkspaceChatSession,

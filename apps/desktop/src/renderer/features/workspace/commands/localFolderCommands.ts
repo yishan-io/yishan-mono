@@ -1,4 +1,4 @@
-import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";

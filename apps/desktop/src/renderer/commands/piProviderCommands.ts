@@ -3,7 +3,7 @@ import { delay } from "../helpers/delay";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { type TabStoreState, tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { openTab } from "./tabCommands";
+import { openTab } from "../features/workbench/commands/tabCommands";
 import { writeTerminalInput } from "./terminalCommands";
 
 /** How long to wait after the Pi TUI boots before typing /login. */

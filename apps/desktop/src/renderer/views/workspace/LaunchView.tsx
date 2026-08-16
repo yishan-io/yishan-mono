@@ -12,7 +12,7 @@ import {
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
-import { createNewWhiteboard } from "../../commands/whiteboardCommands";
+import { createNewWhiteboard } from "../../features/workbench/commands/whiteboardCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,

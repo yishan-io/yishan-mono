@@ -1,4 +1,4 @@
-import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../store/sessionStore";
