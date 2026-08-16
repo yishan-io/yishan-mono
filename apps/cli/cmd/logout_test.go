@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 func TestExecuteLogoutClearsCredentialsAndRevokes(t *testing.T) {

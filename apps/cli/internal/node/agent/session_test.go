@@ -14,7 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 )
 

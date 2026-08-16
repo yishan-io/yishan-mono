@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/spf13/cobra"

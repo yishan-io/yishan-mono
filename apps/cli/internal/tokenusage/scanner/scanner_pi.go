@@ -13,7 +13,7 @@ import (
 	"time"
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/tokenusage/record"
 	"yishan/apps/cli/internal/tokenusage/pricing"
 	"yishan/apps/cli/internal/tokenusage/attribution"

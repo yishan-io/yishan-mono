@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/cmd/output"
 )
 
 var refreshCmd = &cobra.Command{

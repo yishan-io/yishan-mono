@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	hooksetup "yishan/apps/cli/internal/agent/setup/hooks"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 const RemoteHostPolicyEnvKey = "YISHAN_REMOTE_HOST_POLICY"

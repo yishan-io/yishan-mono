@@ -9,10 +9,10 @@ import (
 	"database/sql"
 	"strings"
 
-	"yishan/apps/cli/internal/api"
-	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/adapter/cloud"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 
 	"github.com/rs/zerolog/log"
 )

@@ -13,7 +13,7 @@ import (
 	"yishan/apps/cli/internal/app"
 	hook "yishan/apps/cli/internal/node/hook"
 	nodesystem "yishan/apps/cli/internal/node/system"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 
 	"github.com/rs/zerolog/log"
 )

@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 func TestPersistAuthTokensWritesUserIDWhenProvided(t *testing.T) {

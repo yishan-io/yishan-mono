@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/internal/platform/config"
 
 	"github.com/spf13/viper"
 )

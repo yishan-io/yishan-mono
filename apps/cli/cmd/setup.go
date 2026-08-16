@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 
 	setup "yishan/apps/cli/internal/agent/setup"
-	"yishan/apps/cli/internal/output"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/cmd/output"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 var setupCmd = &cobra.Command{

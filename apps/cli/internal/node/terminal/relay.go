@@ -9,7 +9,7 @@ import (
 	internalevents "yishan/apps/cli/internal/events"
 
 	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
 	term "yishan/apps/cli/internal/terminal"
 )

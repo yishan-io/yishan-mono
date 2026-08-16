@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/platform/config"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )

@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	release "yishan/apps/cli/internal/release"
-	"yishan/apps/cli/internal/output"
+	release "yishan/apps/cli/internal/platform/release"
+	"yishan/apps/cli/cmd/output"
 )
 
 var versionCmd = &cobra.Command{

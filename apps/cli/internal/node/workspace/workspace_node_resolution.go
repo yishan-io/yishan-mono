@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	gitexec "yishan/apps/cli/internal/git/exec"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 func ensureNodeUsableForWorkspace(runtime *cliruntime.Runtime, organizationID string, nodeID string) error {

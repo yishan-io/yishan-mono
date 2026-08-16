@@ -3,12 +3,12 @@ package cmd
 import (
 	"os"
 	"strings"
-	"yishan/apps/cli/internal/api"
-	release "yishan/apps/cli/internal/release"
-	"yishan/apps/cli/internal/config"
-	"yishan/apps/cli/internal/logx"
-	"yishan/apps/cli/internal/output"
-	runtime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/adapter/cloud"
+	release "yishan/apps/cli/internal/platform/release"
+	"yishan/apps/cli/internal/platform/config"
+	"yishan/apps/cli/internal/platform/logging"
+	"yishan/apps/cli/cmd/output"
+	runtime "yishan/apps/cli/internal/adapter/cloud/session"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"

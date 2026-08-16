@@ -9,8 +9,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	"yishan/apps/cli/internal/config"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/platform/config"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 // accountDataItemNames are the env-root entries that move under

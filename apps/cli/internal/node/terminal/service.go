@@ -10,9 +10,9 @@ import (
 
 	internalevents "yishan/apps/cli/internal/events"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
-	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	term "yishan/apps/cli/internal/terminal"
 )
 

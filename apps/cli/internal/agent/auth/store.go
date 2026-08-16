@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // Sentinel errors returned by Store operations. Callers should use errors.Is

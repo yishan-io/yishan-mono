@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/contextstore"
-	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/node/context"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"

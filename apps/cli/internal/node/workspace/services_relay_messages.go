@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	internalevents "yishan/apps/cli/internal/events"
-	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
 
 	"github.com/rs/zerolog/log"

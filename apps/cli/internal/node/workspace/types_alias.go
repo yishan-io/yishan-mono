@@ -1,7 +1,7 @@
 package workspace
 
 import (
-	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/adapter/relay"
 	application "yishan/apps/cli/internal/workspace/application"
 )
 

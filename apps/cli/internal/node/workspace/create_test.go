@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/relay"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/platform/config"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/relay"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 // ============================= create, local node =============================

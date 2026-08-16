@@ -15,7 +15,7 @@ import (
 
 	"yishan/apps/cli/internal/daemon"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/cmd/output"
 )
 
 var mcpCmd = &cobra.Command{

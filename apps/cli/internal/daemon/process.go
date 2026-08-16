@@ -12,8 +12,8 @@ import (
 
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/app"
-	"yishan/apps/cli/internal/relay"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/adapter/relay"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 
 	"github.com/rs/zerolog/log"
 )

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"syscall"
 
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 // enrichedEnv is the full subprocess environment with an enriched PATH,

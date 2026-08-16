@@ -8,7 +8,7 @@ import (
 	"time"
 	"yishan/apps/cli/internal/git"
 
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 

@@ -9,10 +9,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/platform/config"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/cmd/output"
 )
 
 var memoryCmd = &cobra.Command{

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/adapter/relay"
 )
 
 // relayVerdictTestServer upgrades to a WebSocket, reads one request, and replies

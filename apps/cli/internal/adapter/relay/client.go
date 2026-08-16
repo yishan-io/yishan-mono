@@ -14,10 +14,10 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	release "yishan/apps/cli/internal/release"
+	release "yishan/apps/cli/internal/platform/release"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 // Relay protocol method names. These strings are the wire protocol between

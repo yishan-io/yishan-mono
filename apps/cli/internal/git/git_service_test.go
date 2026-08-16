@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 func TestGitServiceStatusTrackUnstageRevert(t *testing.T) {

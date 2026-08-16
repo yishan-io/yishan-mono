@@ -5,7 +5,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/cmd"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/cmd/output"
 )
 
 func main() {

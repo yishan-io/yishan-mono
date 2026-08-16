@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/spf13/viper"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // ContextStore holds renderer-pushed context about the user's current

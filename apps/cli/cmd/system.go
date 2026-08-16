@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/cmd/output"
 )
 
 var healthCmd = &cobra.Command{

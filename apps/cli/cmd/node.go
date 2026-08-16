@@ -5,7 +5,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/cmd/output"
 )
 
 var nodeCmd = &cobra.Command{

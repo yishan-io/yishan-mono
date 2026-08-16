@@ -11,9 +11,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	"yishan/apps/cli/internal/api"
-	localdb "yishan/apps/cli/internal/db"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/adapter/cloud"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/tokenusage/attribution"
 	"yishan/apps/cli/internal/tokenusage/ingestion"
 	"yishan/apps/cli/internal/tokenusage/pricing"

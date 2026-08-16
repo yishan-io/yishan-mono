@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/rpc"
 
 	"github.com/rs/zerolog/log"

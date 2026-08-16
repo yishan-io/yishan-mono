@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 func TestDoRawRefreshFailureReturnsRefreshError(t *testing.T) {

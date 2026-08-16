@@ -7,7 +7,7 @@ import (
 
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 // CloseWorkspace closes a workspace: it stops its terminals, tears down the

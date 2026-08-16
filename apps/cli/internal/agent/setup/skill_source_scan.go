@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // enumeratePackageSkills scans the skills/ dirs of every package listed in

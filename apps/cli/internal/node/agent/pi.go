@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	terminalruntime "yishan/apps/cli/internal/terminal"
 

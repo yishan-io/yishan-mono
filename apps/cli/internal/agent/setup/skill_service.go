@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 type SkillInfo struct {

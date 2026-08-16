@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 func TestListPiExtensions_ClassifiesOfficialAndUser(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 // SyncContextLinkRequest applies the project-level `contextEnabled` flag to a

@@ -11,12 +11,12 @@ import (
 
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/config"
-	"yishan/apps/cli/internal/contextstore"
+	"yishan/apps/cli/internal/platform/config"
+	"yishan/apps/cli/internal/node/context"
 	internalevents "yishan/apps/cli/internal/events"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	term "yishan/apps/cli/internal/terminal"
 )
 

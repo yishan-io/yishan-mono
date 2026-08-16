@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 func TestEnsureManagedHookAssetsWritesNotifyScripts(t *testing.T) {

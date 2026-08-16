@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"

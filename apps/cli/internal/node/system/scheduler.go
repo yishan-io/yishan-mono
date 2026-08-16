@@ -11,9 +11,9 @@ import (
 	"github.com/rs/zerolog/log"
 
 	agentcmd "yishan/apps/cli/internal/agent/command"
-	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 const (

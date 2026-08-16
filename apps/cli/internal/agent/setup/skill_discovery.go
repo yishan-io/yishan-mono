@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // SkillSourceKind classifies where a skill lives. Skills are read-only from

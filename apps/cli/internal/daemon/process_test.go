@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"yishan/apps/cli/internal/config"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/platform/config"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {

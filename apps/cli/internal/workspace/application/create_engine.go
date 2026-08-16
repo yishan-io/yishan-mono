@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/workspace/worktree"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 )

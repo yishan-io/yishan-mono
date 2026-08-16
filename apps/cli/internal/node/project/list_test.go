@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/platform/config"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/workspace"
 )
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	agentcmd "yishan/apps/cli/internal/agent/command"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/memory"
 )
 

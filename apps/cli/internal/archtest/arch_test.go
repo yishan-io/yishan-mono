@@ -56,7 +56,7 @@ var forbiddenEdges = []struct {
 		reason:       "terminal services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{
-		sourcePrefix: "worktree",
+		sourcePrefix: "workspace/worktree",
 		targets:      []string{"daemon", "rpc", "agent", "node"},
 		reason:       "worktree provisioning is standalone infrastructure and returns domain errors, not RPC errors",
 	},
@@ -71,17 +71,17 @@ var forbiddenEdges = []struct {
 		reason:       "the agent domain does not depend on the daemon transport, the composition root, or the rpc wire types",
 	},
 	{
-		sourcePrefix: "api",
+		sourcePrefix: "adapter/cloud",
 		targets:      []string{"daemon", "rpc", "node", "agent"},
 		reason:       "the cloud client is infrastructure",
 	},
 	{
-		sourcePrefix: "db",
+		sourcePrefix: "adapter/sqlite",
 		targets:      []string{"daemon", "rpc", "node", "agent"},
 		reason:       "the SQLite layer is infrastructure",
 	},
 	{
-		sourcePrefix: "relay",
+		sourcePrefix: "adapter/relay",
 		targets:      []string{"daemon", "node", "agent"},
 		reason:       "relay envelopes and the relay client are infrastructure; the client may use the rpc transport types",
 	},

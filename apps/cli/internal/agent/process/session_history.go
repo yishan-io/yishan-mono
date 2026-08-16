@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 const maxSessionSummaryScanLineBytes = 1024 * 1024

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // agentHomeDirForRealInstall resolves the real pi agent dir, used by the

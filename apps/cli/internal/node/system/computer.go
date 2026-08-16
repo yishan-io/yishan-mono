@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 )
 

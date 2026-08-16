@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	localdb "yishan/apps/cli/internal/db"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/workspace/instance"
 )

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	selfupdate "yishan/apps/cli/internal/release"
+	selfupdate "yishan/apps/cli/internal/platform/release"
 )
 
 var selfUpdateCmd = &cobra.Command{

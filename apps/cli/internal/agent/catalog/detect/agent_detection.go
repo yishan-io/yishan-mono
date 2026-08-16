@@ -14,7 +14,7 @@ import (
 	"time"
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 const managedBinDirEnvKey = "MANAGED_BIN_DIR"

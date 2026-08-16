@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/config"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/platform/config"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )

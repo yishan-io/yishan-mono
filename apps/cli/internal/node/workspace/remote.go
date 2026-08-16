@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"yishan/apps/cli/internal/api"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/adapter/cloud"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 

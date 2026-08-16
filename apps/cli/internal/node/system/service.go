@@ -10,11 +10,11 @@ import (
 
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/contextstore"
+	"yishan/apps/cli/internal/node/context"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace/instance"
 )

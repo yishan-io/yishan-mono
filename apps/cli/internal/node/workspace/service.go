@@ -14,9 +14,9 @@ import (
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/node/hook"
-	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	term "yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
@@ -25,7 +25,7 @@ import (
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 
-	localdb "yishan/apps/cli/internal/db"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 )
 
 // Deps are the explicit dependencies of the workspace application service.

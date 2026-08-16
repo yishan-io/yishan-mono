@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"yishan/apps/cli/internal/computer"
-	localdb "yishan/apps/cli/internal/db"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/workspace/application"
 )
 

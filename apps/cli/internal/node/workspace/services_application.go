@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	api "yishan/apps/cli/internal/api"
-	localdb "yishan/apps/cli/internal/db"
+	api "yishan/apps/cli/internal/adapter/cloud"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"

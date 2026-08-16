@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	localdb "yishan/apps/cli/internal/db"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 )
 

@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 // resolveCLIBinary resolves one agent CLI binary to an absolute path using the

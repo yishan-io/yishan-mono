@@ -15,7 +15,7 @@ import (
 	"runtime"
 	"strings"
 
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 const (
