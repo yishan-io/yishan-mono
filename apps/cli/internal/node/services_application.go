@@ -8,6 +8,7 @@ import (
 	api "yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -270,7 +271,7 @@ func (d *appDeps) CreateCompleted(plan application.CreatePlan, created workspace
 func (s *Service) workspaceHandle(workspaceID string) (instance.Handle, error) {
 	ws, ok := s.deps.Registry.Get(workspaceID)
 	if !ok {
-		return instance.Handle{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+		return instance.Handle{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
 	}
 	return s.handleForInstance(ws), nil
 }
@@ -280,7 +281,7 @@ func (s *Service) workspaceHandle(workspaceID string) (instance.Handle, error) {
 func (s *Service) workspaceHandleByPath(path string) (instance.Handle, error) {
 	ws, ok := s.deps.Registry.GetByPath(path)
 	if !ok {
-		return instance.Handle{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+		return instance.Handle{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
 	}
 	return s.handleForInstance(ws), nil
 }
@@ -302,7 +303,7 @@ func (s *Service) closeWorkspacePath(ctx context.Context, req workspace.ClosePat
 func (s *Service) getWorkspace(workspaceID string) (workspace.Workspace, error) {
 	ws, ok := s.deps.Registry.Get(workspaceID)
 	if !ok {
-		return workspace.Workspace{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
 	}
 	return ws, nil
 }

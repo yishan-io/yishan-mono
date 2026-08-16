@@ -8,8 +8,6 @@ import (
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 // MemoryService implementation: each method performs one memory operation.
@@ -17,7 +15,7 @@ import (
 
 func (s *Service) memoryServiceOrError() (*memory.Service, error) {
 	if s.deps.Memory == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "memory service not available")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "memory service not available")
 	}
 	return s.deps.Memory, nil
 }
@@ -28,7 +26,7 @@ func (s *Service) MemorySearch(ctx context.Context, req rpc.MemorySearchParams) 
 		return nil, err
 	}
 	if req.Query == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "query is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "query is required")
 	}
 	projectID := ""
 	if req.WorkspaceID != "" {
@@ -117,7 +115,7 @@ func (s *Service) MemoryUpdateConfig(ctx context.Context, req rpc.MemoryUpdateCo
 			v.Set("memory.summarizer.agent_kind", cfg.AgentKind)
 			v.Set("memory.summarizer.model", cfg.Model)
 		}); err != nil {
-			return nil, workspace.NewRPCError(rpcerror.CodeServerError, "persist memory config: "+err.Error())
+			return nil, rpc.NewRPCError(rpc.CodeServerError, "persist memory config: "+err.Error())
 		}
 	}
 	memSvc.UpdateSummarizerConfig(cfg)

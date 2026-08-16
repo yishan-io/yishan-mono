@@ -8,8 +8,6 @@ import (
 
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
@@ -48,7 +46,7 @@ func (s *Service) SystemCLIToolListStatuses(ctx context.Context, params json.Raw
 func (s *Service) SystemCLIToolInstall(ctx context.Context, req rpc.SystemCLIToolInstallParams) (any, error) {
 	toolID := strings.TrimSpace(req.ToolID)
 	if toolID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "toolId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "toolId is required")
 	}
 	status, err := installCLITool(ctx, toolID)
 	if err != nil {
@@ -60,7 +58,7 @@ func (s *Service) SystemCLIToolInstall(ctx context.Context, req rpc.SystemCLIToo
 func (s *Service) SystemCLIToolUninstall(ctx context.Context, req rpc.SystemCLIToolUninstallParams) (any, error) {
 	toolID := strings.TrimSpace(req.ToolID)
 	if toolID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "toolId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "toolId is required")
 	}
 	status, err := uninstallCLITool(ctx, toolID)
 	if err != nil {
@@ -85,7 +83,7 @@ func (s *Service) SystemAppPersistAuthTokens(ctx context.Context, params json.Ra
 	req.AccessToken = strings.TrimSpace(req.AccessToken)
 	req.RefreshToken = strings.TrimSpace(req.RefreshToken)
 	if req.AccessToken == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "accessToken is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "accessToken is required")
 	}
 	if err := s.deps.Runtime.PersistAuthTokens(req); err != nil {
 		return nil, err
@@ -153,7 +151,7 @@ func (s *Service) SystemTokenUsageDebugState(ctx context.Context) (any, error) {
 func (s *Service) SystemProjectList(ctx context.Context, req rpc.SystemProjectListParams) (any, error) {
 	orgID := strings.TrimSpace(req.OrgID)
 	if orgID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "orgId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "orgId is required")
 	}
 	client := s.deps.Runtime.APIClient()
 	resp, err := client.ListProjects(orgID)
@@ -166,7 +164,7 @@ func (s *Service) SystemProjectList(ctx context.Context, req rpc.SystemProjectLi
 func (s *Service) SystemNodeList(ctx context.Context, req rpc.SystemNodeListParams) (any, error) {
 	orgID := strings.TrimSpace(req.OrgID)
 	if orgID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "orgId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "orgId is required")
 	}
 	client := s.deps.Runtime.APIClient()
 	resp, err := client.ListNodes(orgID)

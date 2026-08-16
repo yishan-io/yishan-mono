@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/terminal"
 )
 
@@ -87,6 +86,6 @@ func (h *TerminalHandler) Call(ctx context.Context, connection *Connection, meth
 		}
 		return h.Services.TerminalRemoteUnsubscribe(ctx, connection, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown terminal method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown terminal method: "+method)
 	}
 }

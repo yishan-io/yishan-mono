@@ -7,8 +7,6 @@ import (
 
 	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 func TestDispatchCustomizeExtensionsList_OnCleanHome(t *testing.T) {
@@ -40,25 +38,25 @@ func TestDispatchCustomizeExtensionsList_OnCleanHome(t *testing.T) {
 func TestDispatchCustomize_UnknownNamespace(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.callRPCForTest(context.Background(), "customize.themes.list", nil)
-	assertRPCErrorCode(t, err, rpcerror.CodeMethodNotFound)
+	assertRPCErrorCode(t, err, rpc.CodeMethodNotFound)
 }
 
 func TestDispatchCustomizeExtensions_UnknownMethod(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.callRPCForTest(context.Background(), "customize.extensions.frobnicate", nil)
-	assertRPCErrorCode(t, err, rpcerror.CodeMethodNotFound)
+	assertRPCErrorCode(t, err, rpc.CodeMethodNotFound)
 }
 
 func TestHandleCustomizeExtensionsInstall_MissingSource(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeExtensionsInstall(context.Background(), rpc.CustomizeExtensionSourceParams{})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeExtensionsRemove_MissingSource(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeExtensionsRemove(context.Background(), rpc.CustomizeExtensionSourceParams{})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeExtensionsRemove_OfficialRejected(t *testing.T) {
@@ -67,7 +65,7 @@ func TestHandleCustomizeExtensionsRemove_OfficialRejected(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeExtensionsRemove(context.Background(), rpc.CustomizeExtensionSourceParams{Source: "npm:@yishan-io/pi-notify"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestDispatchCustomize_RoutesExtensionsMethods(t *testing.T) {
@@ -84,7 +82,7 @@ func TestDispatchCustomize_RoutesExtensionsMethods(t *testing.T) {
 		if err == nil {
 			continue // list succeeds on clean home; mutations fail on missing params
 		}
-		assertNotRPCErrorCode(t, err, rpcerror.CodeMethodNotFound, method)
+		assertNotRPCErrorCode(t, err, rpc.CodeMethodNotFound, method)
 	}
 }
 
@@ -93,7 +91,7 @@ func TestDispatchCustomize_RoutesExtensionsMethods(t *testing.T) {
 // through to the unknown-method branch.
 func assertNotRPCErrorCode(t *testing.T, err error, notWantCode int, method string) {
 	t.Helper()
-	var rpcErr *workspace.RPCError
+	var rpcErr *rpc.Error
 	if errors.As(err, &rpcErr) && rpcErr.Code == notWantCode {
 		t.Fatalf("%s: expected routing into customize namespace, got method-not-found", method)
 	}
@@ -123,19 +121,19 @@ func TestDispatchCustomizeAgentsList_OnCleanHome(t *testing.T) {
 func TestHandleCustomizeAgentsCreate_MissingContent(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeAgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "helper", Description: "d"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsCreate_InvalidName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeAgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "My Agent", Description: "d", Content: "body"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsCreate_ManagedNameRejected(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeAgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "general", Description: "d", Content: "body"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsCreate_WritesToolsFrontmatter(t *testing.T) {
@@ -166,21 +164,21 @@ func TestHandleCustomizeAgentsRemove_OfficialRejected(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeAgentsRemove(context.Background(), rpc.CustomizeAgentNameParams{Name: "general"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsRestore_UserAgentNotManaged(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeAgentsRestore(context.Background(), rpc.CustomizeAgentNameParams{Name: "custom-helper"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsDetail_UnknownName(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 	_, err := handler.CustomizeAgentsDetail(context.Background(), rpc.CustomizeAgentNameParams{Name: "missing-agent"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestDispatchCustomize_RoutesAgentsMethods(t *testing.T) {
@@ -198,6 +196,6 @@ func TestDispatchCustomize_RoutesAgentsMethods(t *testing.T) {
 		if err == nil {
 			continue
 		}
-		assertNotRPCErrorCode(t, err, rpcerror.CodeMethodNotFound, method)
+		assertNotRPCErrorCode(t, err, rpc.CodeMethodNotFound, method)
 	}
 }

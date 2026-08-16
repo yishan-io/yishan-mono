@@ -10,9 +10,7 @@ import (
 	"yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
 	terminalruntime "yishan/apps/cli/internal/terminal"
-	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
@@ -23,10 +21,10 @@ import (
 
 func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
 	if req.SessionID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
 	if req.CWD == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "cwd is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "cwd is required")
 	}
 
 	// A fast reopen of the same session id can race an in-flight pi.stop for
@@ -47,7 +45,7 @@ func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rp
 		if _, alive := s.deps.AgentMgr.Session(req.SessionID); !alive {
 			s.piSessions.Delete(req.SessionID)
 			log.Warn().Str("sessionId", req.SessionID).Msg("pi.start: task run session ended before attach")
-			return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "task run session ended before it could be attached: "+req.SessionID)
+			return nil, rpc.NewRPCError(rpc.CodeNotFound, "task run session ended before it could be attached: "+req.SessionID)
 		}
 	}
 
@@ -60,7 +58,7 @@ func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rp
 
 	extraEnv, err := buildPiStartExtraEnv(req)
 	if err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 
 	opts := process.StartOptions{
@@ -79,7 +77,7 @@ func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rp
 	// sleep can close the WebSocket temporarily; app.Close cancels the agent
 	// lifecycle context and stops all sessions on daemon shutdown.
 	if err := s.deps.AgentLifecycleCtx.Err(); err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "daemon is shutting down")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "daemon is shutting down")
 	}
 	proc, err := s.deps.AgentMgr.Start(s.deps.AgentLifecycleCtx, opts)
 	if err != nil {
@@ -94,9 +92,9 @@ func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rp
 		}
 		if err != nil {
 			if errors.Is(err, process.ErrSessionExists) {
-				return nil, workspace.NewRPCError(rpcerror.CodeSessionExists, err.Error())
+				return nil, rpc.NewRPCError(rpc.CodeSessionExists, err.Error())
 			}
-			return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+			return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 		}
 	}
 
@@ -114,13 +112,13 @@ func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rp
 
 func (s *Service) PiAttach(ctx context.Context, connState *rpc.Connection, req rpc.PiAttachParams) (any, error) {
 	if req.SessionID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
 
 	// Never rebind to a session that is mid-teardown: the pi.stop that follows
 	// would delete the registry entry under the newly attached tab.
 	if s.piSessions.IsStopping(req.SessionID) {
-		return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session is stopping: "+req.SessionID)
+		return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session is stopping: "+req.SessionID)
 	}
 
 	// A concurrent pi.start for the same id (e.g. two tabs opening the same
@@ -131,7 +129,7 @@ func (s *Service) PiAttach(ctx context.Context, connState *rpc.Connection, req r
 	if _, exists := s.deps.AgentMgr.Session(req.SessionID); !exists {
 		if !s.piSessions.WaitForStart(ctx, s.deps.AgentMgr, req.SessionID) {
 			s.piSessions.Delete(req.SessionID)
-			return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session not found: "+req.SessionID)
+			return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session not found: "+req.SessionID)
 		}
 	}
 
@@ -139,11 +137,11 @@ func (s *Service) PiAttach(ctx context.Context, connState *rpc.Connection, req r
 	// for the concurrent start, and its teardown would delete the entry under a
 	// newly attached tab.
 	if s.piSessions.IsStopping(req.SessionID) {
-		return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session is stopping: "+req.SessionID)
+		return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session is stopping: "+req.SessionID)
 	}
 
 	if _, exists := s.piSessions.Attach(req.SessionID, connState, req.TabID, req.WorkspaceID, req.CWD); !exists {
-		return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session not found: "+req.SessionID)
+		return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session not found: "+req.SessionID)
 	}
 
 	return map[string]bool{"ok": true}, nil
@@ -177,7 +175,7 @@ func resolvePiStartPaneID(tabID string, paneID string) string {
 
 func (s *Service) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error) {
 	if req.SessionID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
 
 	// Mark the session as stopping before the (potentially slow) process
@@ -189,7 +187,7 @@ func (s *Service) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error)
 
 	if err := s.deps.AgentMgr.Stop(req.SessionID); err != nil {
 		s.piSessions.UnmarkStopping(req.SessionID)
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 
 	s.piSessions.Delete(req.SessionID)
@@ -198,15 +196,15 @@ func (s *Service) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error)
 
 func (s *Service) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error) {
 	if req.SessionID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
 	if len(req.Command) == 0 {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "command is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "command is required")
 	}
 
 	state, exists := s.piSessions.Get(req.SessionID)
 	if !exists {
-		return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session not found: "+req.SessionID)
+		return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session not found: "+req.SessionID)
 	}
 
 	if err := state.Process.Send(req.Command); err != nil {
@@ -214,9 +212,9 @@ func (s *Service) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error)
 		// stop/attach; report it as not-found so clients recover by re-starting
 		// instead of surfacing a raw pipe error.
 		if errors.Is(err, process.ErrStdinClosed) {
-			return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session not found: "+req.SessionID)
+			return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session not found: "+req.SessionID)
 		}
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 
 	return map[string]bool{"ok": true}, nil
@@ -224,12 +222,12 @@ func (s *Service) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error)
 
 func (s *Service) PiListSessions(ctx context.Context, req rpc.PiListSessionsParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "cwd is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "cwd is required")
 	}
 
 	summaries, err := process.ListSessionSummaries(ctx, req.CWD)
 	if err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 
 	return summaries, nil
@@ -237,15 +235,15 @@ func (s *Service) PiListSessions(ctx context.Context, req rpc.PiListSessionsPara
 
 func (s *Service) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFileParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "cwd is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "cwd is required")
 	}
 	if strings.TrimSpace(req.SessionID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
 
 	filePath, err := process.FindSessionFile(ctx, req.CWD, req.SessionID)
 	if err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 
 	return map[string]string{"filePath": filePath}, nil
@@ -253,15 +251,15 @@ func (s *Service) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFile
 
 func (s *Service) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, error) {
 	if req.SessionID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "sessionId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
 	if req.Title == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "title is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "title is required")
 	}
 
 	state, exists := s.piSessions.Get(req.SessionID)
 	if !exists {
-		return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session not found: "+req.SessionID)
+		return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session not found: "+req.SessionID)
 	}
 
 	renameCmd, err := json.Marshal(map[string]string{
@@ -269,7 +267,7 @@ func (s *Service) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, er
 		"name": req.Title,
 	})
 	if err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 
 	if err := state.Process.Send(renameCmd); err != nil {
@@ -277,9 +275,9 @@ func (s *Service) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, er
 		// stop/attach; report it as not-found so clients recover by re-starting
 		// instead of surfacing a raw pipe error.
 		if errors.Is(err, process.ErrStdinClosed) {
-			return nil, workspace.NewRPCError(rpcerror.CodeNotFound, "pi session not found: "+req.SessionID)
+			return nil, rpc.NewRPCError(rpc.CodeNotFound, "pi session not found: "+req.SessionID)
 		}
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 
 	return map[string]bool{"ok": true}, nil

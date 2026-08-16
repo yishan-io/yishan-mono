@@ -9,7 +9,6 @@ import (
 
 	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 func newSkillTestHandler(t *testing.T) *Service {
@@ -52,33 +51,33 @@ func mustMarshalSkillParams(t *testing.T, payload map[string]any) json.RawMessag
 func TestHandleSkillAdd_MissingSource(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.SkillAdd(context.Background(), rpc.SkillSourceParams{})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillUpdate_MissingName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.SkillUpdate(context.Background(), rpc.SkillNameParams{})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillRemove_InvalidName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.SkillRemove(context.Background(), rpc.SkillNameParams{Name: "../evil"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillRemove_OfficialSkillRejected(t *testing.T) {
 	withOfficialPackageSkillHome(t)
 	handler := newSkillTestHandler(t)
 	_, err := handler.SkillRemove(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillUpdate_OfficialSkillRejected(t *testing.T) {
 	withOfficialPackageSkillHome(t)
 	handler := newSkillTestHandler(t)
 	_, err := handler.SkillUpdate(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 // withOfficialPackageSkillHome lays out a temp pi home with an official
@@ -107,13 +106,13 @@ func withOfficialPackageSkillHome(t *testing.T) {
 func TestHandleSkillRemove_MissingName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.SkillRemove(context.Background(), rpc.SkillNameParams{})
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestDispatchSkill_RoutesMutationMethods(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	for _, method := range []string{MethodSkillAdd, MethodSkillRemove, MethodSkillUpdate, MethodSkillUpdateAll} {
 		_, err := handler.callRPCForTest(context.Background(), method, mustMarshalSkillParams(t, map[string]any{}))
-		assertNotRPCErrorCode(t, err, rpcerror.CodeMethodNotFound, method)
+		assertNotRPCErrorCode(t, err, rpc.CodeMethodNotFound, method)
 	}
 }

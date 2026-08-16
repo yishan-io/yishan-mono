@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 // ContextService implementation: each method reads or updates the renderer
@@ -19,7 +17,7 @@ func (s *Service) ContextGetState() (any, error) {
 func (s *Service) ContextSetCurrentOrg(ctx context.Context, req rpc.ContextSetCurrentOrgParams) (any, error) {
 	orgID := strings.TrimSpace(req.OrgID)
 	if orgID == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "orgId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "orgId is required")
 	}
 	if err := s.deps.ContextStore.SetCurrentOrg(orgID); err != nil {
 		return nil, err

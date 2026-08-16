@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // GitHandler owns the git.* RPC namespace decoding.
@@ -160,6 +158,6 @@ func (h *GitHandler) Call(ctx context.Context, connection *Connection, method st
 		}
 		return h.Services.GitAuthorName(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown git method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown git method: "+method)
 	}
 }

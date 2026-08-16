@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // ComputerHandler owns the computer.* RPC namespace decoding. Every method
@@ -132,7 +131,7 @@ func (h *ComputerHandler) Call(ctx context.Context, connection *Connection, meth
 		}
 		return h.Services.ComputerOpenPermissionSettings(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown computer method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown computer method: "+method)
 	}
 }
 

@@ -52,12 +52,12 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "terminal",
-		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		targets:      []string{"daemon", "rpc", "agent", "node"},
 		reason:       "terminal services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "worktree",
-		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		targets:      []string{"daemon", "rpc", "agent", "node"},
 		reason:       "worktree provisioning is standalone infrastructure and returns domain errors, not RPC errors",
 	},
 	{
@@ -107,12 +107,12 @@ var forbiddenEdges = []struct {
 	},
 	{
 		sourcePrefix: "files",
-		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		targets:      []string{"daemon", "rpc", "agent", "node"},
 		reason:       "file services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "git",
-		targets:      []string{"daemon", "rpc", "agent", "node", "rpcerror"},
+		targets:      []string{"daemon", "rpc", "agent", "node"},
 		reason:       "git services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{

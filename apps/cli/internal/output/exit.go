@@ -21,3 +21,24 @@ const (
 	ExitDaemonNotRun    = 6
 	ExitServerError     = 7
 )
+
+// CodeToExitCode maps stable string error codes to CLI exit codes. The codes
+// come from cmd.ClassifyError; unknown codes fall back to the general error.
+func CodeToExitCode(code string) int {
+	switch code {
+	case "unauthenticated":
+		return ExitUnauthenticated
+	case "not_found":
+		return ExitNotFound
+	case "permission_denied":
+		return ExitForbidden
+	case "daemon_not_running":
+		return ExitDaemonNotRun
+	case "server_error":
+		return ExitServerError
+	case "validation_error":
+		return ExitUsageError
+	default:
+		return ExitError
+	}
+}

@@ -16,8 +16,6 @@ import (
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 func TestHandlePiListSessions_ReturnsSummaries(t *testing.T) {
@@ -189,13 +187,13 @@ func TestHandlePiGetSessionFile_RequiresCWDAndSessionID(t *testing.T) {
 	s := newTestHandler(t)
 
 	_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, json.RawMessage(`{}`))
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 
 	_, err = s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"sessionId": "session-abc"}))
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 
 	_, err = s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"cwd": "/tmp"}))
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandlePiListActiveSessions_ReturnsLiveSessions(t *testing.T) {
@@ -387,12 +385,12 @@ func TestHandlePiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected duplicate session error")
 	}
-	var rpcErr *workspace.RPCError
+	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)
 	}
-	if rpcErr.Code != rpcerror.CodeSessionExists {
-		t.Fatalf("expected rpc code %d, got %d", rpcerror.CodeSessionExists, rpcErr.Code)
+	if rpcErr.Code != rpc.CodeSessionExists {
+		t.Fatalf("expected rpc code %d, got %d", rpc.CodeSessionExists, rpcErr.Code)
 	}
 }
 
@@ -785,12 +783,12 @@ func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected attach to be rejected while the session is stopping")
 	}
-	var rpcErr *workspace.RPCError
+	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)
 	}
-	if rpcErr.Code != rpcerror.CodeNotFound {
-		t.Fatalf("expected rpc code %d, got %d", rpcerror.CodeNotFound, rpcErr.Code)
+	if rpcErr.Code != rpc.CodeNotFound {
+		t.Fatalf("expected rpc code %d, got %d", rpc.CodeNotFound, rpcErr.Code)
 	}
 
 	// The rejected attach must not have rebound the connection or routing

@@ -9,8 +9,6 @@ import (
 
 	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 // CustomizeService implementation. Each method performs one extension or agent
@@ -37,7 +35,7 @@ func (s *Service) CustomizeExtensionsInstall(ctx context.Context, req rpc.Custom
 	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
 	defer cancel()
 	if err := setup.InstallPiExtension(commandCtx, source); err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "install pi extension: "+err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "install pi extension: "+err.Error())
 	}
 	return map[string]any{"installed": true}, nil
 }
@@ -57,7 +55,7 @@ func (s *Service) CustomizeExtensionsRemove(ctx context.Context, req rpc.Customi
 	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
 	defer cancel()
 	if err := setup.RemovePiExtension(commandCtx, source); err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "remove pi extension: "+err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "remove pi extension: "+err.Error())
 	}
 	return map[string]any{"removed": true}, nil
 }
@@ -70,7 +68,7 @@ func (s *Service) CustomizeExtensionsUpdate(ctx context.Context, req rpc.Customi
 	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
 	defer cancel()
 	if err := setup.UpdatePiExtension(commandCtx, source); err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "update pi extension: "+err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "update pi extension: "+err.Error())
 	}
 	return map[string]any{"updated": true}, nil
 }
@@ -78,7 +76,7 @@ func (s *Service) CustomizeExtensionsUpdate(ctx context.Context, req rpc.Customi
 func requireExtensionSource(source string) (string, error) {
 	value := strings.TrimSpace(source)
 	if value == "" {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "source is required")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "source is required")
 	}
 	return value, nil
 }
@@ -93,7 +91,7 @@ func extensionRemoveTargetError(source string) error {
 	}
 	for _, ext := range extensions {
 		if ext.Source == source && ext.Official {
-			return workspace.NewRPCError(rpcerror.CodeInvalidParams, "official extensions are managed by yishan setup and cannot be removed")
+			return rpc.NewRPCError(rpc.CodeInvalidParams, "official extensions are managed by yishan setup and cannot be removed")
 		}
 	}
 	return nil
@@ -121,7 +119,7 @@ func (s *Service) CustomizeAgentsDetail(ctx context.Context, req rpc.CustomizeAg
 
 func (s *Service) CustomizeAgentsCreate(ctx context.Context, req rpc.CustomizeAgentCreateParams) (any, error) {
 	if strings.TrimSpace(req.Content) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "content is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "content is required")
 	}
 	if err := setup.CreatePiAgent(req.Name, req.Description, req.Content, req.Model, req.Thinking, req.Tools); err != nil {
 		return nil, agentOperationError(err)
@@ -131,7 +129,7 @@ func (s *Service) CustomizeAgentsCreate(ctx context.Context, req rpc.CustomizeAg
 
 func (s *Service) CustomizeAgentsUpdate(ctx context.Context, req rpc.CustomizeAgentUpdateParams) (any, error) {
 	if strings.TrimSpace(req.Content) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "content is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "content is required")
 	}
 	if err := setup.UpdatePiAgent(req.Name, req.Content); err != nil {
 		return nil, agentOperationError(err)
@@ -164,7 +162,7 @@ func (s *Service) CustomizeAgentsRestore(ctx context.Context, req rpc.CustomizeA
 func requireAgentName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "name is required")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "name is required")
 	}
 	return name, nil
 }
@@ -179,7 +177,7 @@ func agentOperationError(err error) error {
 		errors.Is(err, setup.ErrOfficialAgentCannotBeRemoved) ||
 		errors.Is(err, setup.ErrAgentNotManaged) ||
 		errors.Is(err, setup.ErrInvalidAgentThinking) {
-		return workspace.NewRPCError(rpcerror.CodeInvalidParams, err.Error())
+		return rpc.NewRPCError(rpc.CodeInvalidParams, err.Error())
 	}
-	return workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+	return rpc.NewRPCError(rpc.CodeServerError, err.Error())
 }

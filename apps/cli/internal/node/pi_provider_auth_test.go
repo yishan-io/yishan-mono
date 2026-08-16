@@ -10,8 +10,7 @@ import (
 	"time"
 
 	piauth "yishan/apps/cli/internal/agent/auth"
-	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/rpcerror"
+	"yishan/apps/cli/internal/rpc"
 )
 
 func newPiAuthTestHandler(t *testing.T) *Service {
@@ -36,9 +35,9 @@ func mustJSON(t *testing.T, value any) json.RawMessage {
 
 func assertRPCErrorCode(t *testing.T, err error, wantCode int) {
 	t.Helper()
-	var rpcErr *workspace.RPCError
+	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) {
-		t.Fatalf("error = %v, want *workspace.RPCError", err)
+		t.Fatalf("error = %v, want *rpc.Error", err)
 	}
 	if rpcErr.Code != wantCode {
 		t.Fatalf("RPC error code = %d (%s), want %d", rpcErr.Code, rpcErr.Message, wantCode)
@@ -110,18 +109,18 @@ func TestPiProviderDispatch_InvalidParams(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiSaveProvider, mustJSON(t, tc.body))
-			assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+			assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 		})
 	}
 
 	_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiRemoveProvider, mustJSON(t, map[string]any{"provider": "  "}))
-	assertRPCErrorCode(t, err, rpcerror.CodeInvalidParams)
+	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestPiProviderDispatch_UnknownMethodStaysNotFound(t *testing.T) {
 	s := newPiAuthTestHandler(t)
 	_, err := s.callAgentRPCForTest(context.Background(), nil, "pi.unknownMethod", nil)
-	assertRPCErrorCode(t, err, rpcerror.CodeMethodNotFound)
+	assertRPCErrorCode(t, err, rpc.CodeMethodNotFound)
 }
 
 func TestPiProviderDispatch_CorruptAuthFileIsServerError(t *testing.T) {
@@ -133,12 +132,12 @@ func TestPiProviderDispatch_CorruptAuthFileIsServerError(t *testing.T) {
 	))
 
 	_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListProviders, nil)
-	assertRPCErrorCode(t, err, rpcerror.CodeServerError)
+	assertRPCErrorCode(t, err, rpc.CodeServerError)
 }
 
 func TestPiProviderDispatch_NilStoreIsServerError(t *testing.T) {
 	s := newTestHandler(t)
 	s.deps.PIAuth = nil
 	_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListProviders, nil)
-	assertRPCErrorCode(t, err, rpcerror.CodeServerError)
+	assertRPCErrorCode(t, err, rpc.CodeServerError)
 }

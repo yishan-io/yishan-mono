@@ -6,9 +6,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
 
@@ -46,7 +45,7 @@ func (s *Service) WorkspaceRefreshPullRequest(ctx context.Context, req workspace
 	workspaceID := strings.TrimSpace(req.WorkspaceID)
 	workspacePath := strings.TrimSpace(req.Path)
 	if workspaceID == "" && workspacePath == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "workspaceId or path is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "workspaceId or path is required")
 	}
 
 	ws, err := func() (workspace.Workspace, error) {
@@ -55,7 +54,7 @@ func (s *Service) WorkspaceRefreshPullRequest(ctx context.Context, req workspace
 		}
 		resolvedWorkspace, ok := s.deps.Registry.GetByPath(workspacePath)
 		if !ok {
-			return workspace.Workspace{}, workspace.NewRPCError(rpcerror.CodeNotFound, "workspace not found")
+			return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
 		}
 		return resolvedWorkspace, nil
 	}()

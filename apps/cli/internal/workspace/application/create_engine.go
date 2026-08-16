@@ -83,7 +83,7 @@ func validateCreateRequest(req workspace.CreateRequest) error {
 		{name: "sourceBranch", value: req.SourceBranch},
 	} {
 		if strings.TrimSpace(field.value) == "" {
-			return workspace.NewRPCError(workspace.RPCErrorCodeInvalidParams, field.name+" is required")
+			return workspace.NewError(workspace.ErrCodeInvalidParams, field.name+" is required")
 		}
 	}
 	return nil

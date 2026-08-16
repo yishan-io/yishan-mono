@@ -8,8 +8,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/terminal"
 )
 
@@ -94,7 +92,7 @@ func (s *Service) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRem
 		"fromNode":  s.deps.NodeID,
 	}); err != nil {
 		s.removeRemoteStreamSub(req.SessionID, connState)
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
 	return map[string]bool{"ok": true}, nil
 }

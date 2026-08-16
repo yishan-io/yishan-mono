@@ -7,8 +7,6 @@ import (
 	"yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
@@ -167,14 +165,14 @@ func (s *Service) ProjectListWithWorkspaces(ctx context.Context, req rpc.Project
 
 func (s *Service) ProjectGetListPreferences(ctx context.Context, req rpc.ProjectGetListPreferencesParams) (any, error) {
 	if strings.TrimSpace(req.OrganizationID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "organizationId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "organizationId is required")
 	}
 	return s.projectListPreferenceStore().Get(ctx, req.OrganizationID)
 }
 
 func (s *Service) ProjectSetListPreferences(ctx context.Context, req rpc.ProjectSetListPreferencesParams) (any, error) {
 	if strings.TrimSpace(req.OrganizationID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "organizationId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "organizationId is required")
 	}
 	req.Preferences.Version = localdb.ProjectListPreferencesVersion
 	if err := s.projectListPreferenceStore().Set(ctx, req.OrganizationID, req.Preferences); err != nil {

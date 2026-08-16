@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // MemoryHandler owns the memory.* RPC namespace decoding.
@@ -34,6 +32,6 @@ func (h *MemoryHandler) Call(ctx context.Context, connection *Connection, method
 		}
 		return h.Services.MemoryUpdateConfig(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown memory method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown memory method: "+method)
 	}
 }

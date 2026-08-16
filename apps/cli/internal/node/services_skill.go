@@ -8,8 +8,6 @@ import (
 
 	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 // SkillService implementation. Each method performs one skill operation via
@@ -30,7 +28,7 @@ func (s *Service) SkillInfo(ctx context.Context, req rpc.SkillNameParams) (any, 
 	}
 	info, err := setup.GetSkillInfo(name, s.activeWorkspaceRoot())
 	if err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, err.Error())
 	}
 	return info, nil
 }
@@ -42,7 +40,7 @@ func (s *Service) SkillDetail(ctx context.Context, req rpc.SkillNameParams) (any
 	}
 	detail, err := setup.GetSkillDetail(name, s.activeWorkspaceRoot())
 	if err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, err.Error())
 	}
 	return detail, nil
 }
@@ -55,7 +53,7 @@ func (s *Service) SkillAdd(ctx context.Context, req rpc.SkillSourceParams) (any,
 	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
 	defer cancel()
 	if err := setup.AddSkill(commandCtx, source); err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "add skill: "+err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "add skill: "+err.Error())
 	}
 	return map[string]any{"added": true}, nil
 }
@@ -74,9 +72,9 @@ func (s *Service) SkillRemove(ctx context.Context, req rpc.SkillNameParams) (any
 	defer cancel()
 	if err := setup.RemoveSkill(commandCtx, name); err != nil {
 		if errors.Is(err, setup.ErrInvalidSkillName) {
-			return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, err.Error())
+			return nil, rpc.NewRPCError(rpc.CodeInvalidParams, err.Error())
 		}
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "remove skill: "+err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "remove skill: "+err.Error())
 	}
 	return map[string]any{"removed": true}, nil
 }
@@ -92,7 +90,7 @@ func (s *Service) SkillUpdate(ctx context.Context, req rpc.SkillNameParams) (any
 	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
 	defer cancel()
 	if err := setup.UpdateSkill(commandCtx, name); err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "update skill: "+err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "update skill: "+err.Error())
 	}
 	return map[string]any{"updated": true}, nil
 }
@@ -101,7 +99,7 @@ func (s *Service) SkillUpdateAll(ctx context.Context) (any, error) {
 	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
 	defer cancel()
 	if err := setup.UpdateAllSkills(commandCtx); err != nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "update all skills: "+err.Error())
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "update all skills: "+err.Error())
 	}
 	return map[string]any{"updated": true}, nil
 }
@@ -109,7 +107,7 @@ func (s *Service) SkillUpdateAll(ctx context.Context) (any, error) {
 func requireSkillName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "name is required")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "name is required")
 	}
 	return name, nil
 }
@@ -117,7 +115,7 @@ func requireSkillName(name string) (string, error) {
 func requireSkillSource(source string) (string, error) {
 	source = strings.TrimSpace(source)
 	if source == "" {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "source is required")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "source is required")
 	}
 	return source, nil
 }
@@ -133,10 +131,10 @@ func (s *Service) skillLifecycleTargetError(name string) error {
 		return nil
 	}
 	if info.Official {
-		return workspace.NewRPCError(rpcerror.CodeInvalidParams, "official skills ship inside Yishan packages and are updated via the extensions panel")
+		return rpc.NewRPCError(rpc.CodeInvalidParams, "official skills ship inside Yishan packages and are updated via the extensions panel")
 	}
 	if info.SourceKind != setup.SkillSourceGlobal {
-		return workspace.NewRPCError(rpcerror.CodeInvalidParams, fmt.Sprintf("%s skills are managed by their source and cannot be updated or removed here", info.SourceKind))
+		return rpc.NewRPCError(rpc.CodeInvalidParams, fmt.Sprintf("%s skills are managed by their source and cannot be updated or removed here", info.SourceKind))
 	}
 	return nil
 }

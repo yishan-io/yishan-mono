@@ -8,6 +8,7 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 
@@ -40,7 +41,7 @@ func (s *Service) CheckWorkspaceHealth(ctx context.Context) {
 func (s *Service) RefreshWorkspaceHealth(ctx context.Context, workspaceID string) (string, string, string, error) {
 	ws, ok := s.deps.Registry.Get(workspaceID)
 	if !ok {
-		return "", "", "", workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+		return "", "", "", rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
 	}
 
 	state := instance.StateActive

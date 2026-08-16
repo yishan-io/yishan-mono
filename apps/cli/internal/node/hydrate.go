@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 )
@@ -172,7 +173,7 @@ func isLiveWorkspaceStatus(status string) bool {
 // the registry preserve runtime fields and replace same-path instances.
 func (s *Service) OpenWorkspace(req workspace.OpenRequest) (workspace.Workspace, error) {
 	if req.ID == "" || req.Path == "" {
-		return workspace.Workspace{}, workspace.NewRPCError(workspace.RPCErrorCodeInvalidParams, "id and path are required")
+		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeInvalidParams, "id and path are required")
 	}
 
 	absPath := canonicalizeWorkspacePath(req.Path)
@@ -182,7 +183,7 @@ func (s *Service) OpenWorkspace(req workspace.OpenRequest) (workspace.Workspace,
 		return workspace.Workspace{}, err
 	}
 	if !info.IsDir() {
-		return workspace.Workspace{}, workspace.NewRPCError(workspace.RPCErrorCodeInvalidParams, "workspace path must be a directory")
+		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeInvalidParams, "workspace path must be a directory")
 	}
 
 	workspace.EnsureGitExclude(absPath, workspace.ContextLinkName)

@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 	"sync"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // Router dispatches JSON-RPC methods to namespace handlers. A dotted method
@@ -37,7 +35,7 @@ func (r *Router) Call(ctx context.Context, connection *Connection, method string
 	handler := r.route(method)
 	r.mu.RUnlock()
 	if handler == nil {
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "method not found: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "method not found: "+method)
 	}
 	return handler.Call(ctx, connection, method, params)
 }

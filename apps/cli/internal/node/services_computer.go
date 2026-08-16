@@ -8,8 +8,6 @@ import (
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 // ComputerService implementation: each method performs one computer-use
@@ -17,7 +15,7 @@ import (
 
 func (s *Service) computerServiceOrError() (*computer.Service, error) {
 	if s.deps.Computer == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "computer service not available")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "computer service not available")
 	}
 	return s.deps.Computer, nil
 }
@@ -65,7 +63,7 @@ func (s *Service) ComputerUpdateConfig(ctx context.Context, req computer.Feature
 			v.Set("computer_use.clipboard_write", req.ClipboardWrite)
 			v.Set("computer_use.application_control", req.ApplicationControl)
 		}); err != nil {
-			return nil, workspace.NewRPCError(rpcerror.CodeServerError, "persist computer config: "+err.Error())
+			return nil, rpc.NewRPCError(rpc.CodeServerError, "persist computer config: "+err.Error())
 		}
 	}
 	return map[string]bool{"ok": true}, nil
@@ -101,7 +99,7 @@ func (s *Service) ComputerCaptureDisplay(ctx context.Context, req rpc.ComputerCa
 		return nil, err
 	}
 	if strings.TrimSpace(req.DisplayID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "displayId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "displayId is required")
 	}
 	return svc.CaptureDisplay(ctx, strings.TrimSpace(req.DisplayID), req.Options)
 }
@@ -112,7 +110,7 @@ func (s *Service) ComputerCaptureWindow(ctx context.Context, req rpc.ComputerCap
 		return nil, err
 	}
 	if strings.TrimSpace(req.WindowID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "windowId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "windowId is required")
 	}
 	return svc.CaptureWindow(ctx, strings.TrimSpace(req.WindowID), req.Options)
 }
@@ -131,10 +129,10 @@ func (s *Service) ComputerPerformAction(ctx context.Context, req computer.Access
 		return nil, err
 	}
 	if strings.TrimSpace(req.ElementID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "elementId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "elementId is required")
 	}
 	if strings.TrimSpace(req.Action) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "action is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "action is required")
 	}
 	if err := svc.PerformAccessibilityAction(ctx, req); err != nil {
 		return nil, err
@@ -148,7 +146,7 @@ func (s *Service) ComputerFocusWindow(ctx context.Context, req rpc.ComputerFocus
 		return nil, err
 	}
 	if strings.TrimSpace(req.WindowID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "windowId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "windowId is required")
 	}
 	if err := svc.FocusWindow(ctx, strings.TrimSpace(req.WindowID)); err != nil {
 		return nil, err
@@ -162,7 +160,7 @@ func (s *Service) ComputerLaunchApplication(ctx context.Context, req rpc.Compute
 		return nil, err
 	}
 	if strings.TrimSpace(req.BundleID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "bundleId is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "bundleId is required")
 	}
 	if err := svc.LaunchApplication(ctx, strings.TrimSpace(req.BundleID)); err != nil {
 		return nil, err
@@ -220,7 +218,7 @@ func (s *Service) ComputerTypeText(ctx context.Context, req rpc.ComputerTypeText
 		return nil, err
 	}
 	if strings.TrimSpace(req.Text) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "text is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "text is required")
 	}
 	if err := svc.TypeText(ctx, req.Text); err != nil {
 		return nil, err
@@ -234,7 +232,7 @@ func (s *Service) ComputerSendKey(ctx context.Context, req computer.KeyRequest) 
 		return nil, err
 	}
 	if strings.TrimSpace(req.Key) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "key is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "key is required")
 	}
 	if err := svc.SendKey(ctx, req); err != nil {
 		return nil, err
@@ -268,7 +266,7 @@ func (s *Service) ComputerOpenPermissionSettings(ctx context.Context, req rpc.Co
 	}
 	permission := strings.TrimSpace(req.Permission)
 	if permission == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "permission is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "permission is required")
 	}
 	if err := svc.OpenPermissionSettings(ctx, permission); err != nil {
 		return nil, err

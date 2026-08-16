@@ -7,8 +7,6 @@ import (
 
 	piauth "yishan/apps/cli/internal/agent/auth"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 )
 
 // Pi provider credential handlers: adapters for the piauth store. The store
@@ -17,7 +15,7 @@ import (
 
 func (s *Service) PiListProviders(ctx context.Context) (any, error) {
 	if s.deps.PIAuth == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "pi agent auth store is unavailable")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "pi agent auth store is unavailable")
 	}
 	entries, err := s.deps.PIAuth.List()
 	if err != nil {
@@ -28,7 +26,7 @@ func (s *Service) PiListProviders(ctx context.Context) (any, error) {
 
 func (s *Service) PiSaveProvider(ctx context.Context, req rpc.PiSaveProviderParams) (any, error) {
 	if s.deps.PIAuth == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "pi agent auth store is unavailable")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "pi agent auth store is unavailable")
 	}
 	if err := s.deps.PIAuth.Save(req.Provider, piauth.CredentialInput{Key: req.Key, Env: req.Env}); err != nil {
 		return nil, mapPiAuthError(err)
@@ -38,7 +36,7 @@ func (s *Service) PiSaveProvider(ctx context.Context, req rpc.PiSaveProviderPara
 
 func (s *Service) PiRemoveProvider(ctx context.Context, req rpc.PiRemoveProviderParams) (any, error) {
 	if s.deps.PIAuth == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "pi agent auth store is unavailable")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "pi agent auth store is unavailable")
 	}
 	if err := s.deps.PIAuth.Remove(req.Provider); err != nil {
 		return nil, mapPiAuthError(err)
@@ -51,12 +49,12 @@ func (s *Service) PiRemoveProvider(ctx context.Context, req rpc.PiRemoveProvider
 // server errors with actionable messages.
 func mapPiAuthError(err error) error {
 	if errors.Is(err, piauth.ErrLocked) {
-		return workspace.NewRPCError(rpcerror.CodeServerError, "pi is updating provider credentials; try again")
+		return rpc.NewRPCError(rpc.CodeServerError, "pi is updating provider credentials; try again")
 	}
 	if errors.Is(err, piauth.ErrCorrupt) {
-		return workspace.NewRPCError(rpcerror.CodeServerError, "pi auth file is corrupt; check ~/.yishan/pi/agent/auth.json")
+		return rpc.NewRPCError(rpc.CodeServerError, "pi auth file is corrupt; check ~/.yishan/pi/agent/auth.json")
 	}
-	var rpcErr *workspace.RPCError
+	var rpcErr *rpc.Error
 	if errors.As(err, &rpcErr) {
 		return err
 	}
@@ -64,7 +62,7 @@ func mapPiAuthError(err error) error {
 	// not client parameter errors.
 	var pathErr *os.PathError
 	if errors.As(err, &pathErr) {
-		return workspace.NewRPCError(rpcerror.CodeServerError, err.Error())
+		return rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
-	return workspace.NewRPCError(rpcerror.CodeInvalidParams, err.Error())
+	return rpc.NewRPCError(rpc.CodeInvalidParams, err.Error())
 }

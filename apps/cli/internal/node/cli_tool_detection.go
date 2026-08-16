@@ -7,8 +7,7 @@ import (
 	clidetector "yishan/apps/cli/internal/agent/catalog/detect"
 	clitoolinstall "yishan/apps/cli/internal/agent/catalog/install"
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/rpc"
 )
 
 const (
@@ -134,7 +133,7 @@ func (yishanCLIToolDetector) Detect(forceRefresh bool) []clidetector.Status {
 func installCLITool(ctx context.Context, toolID string) (clidetector.Status, error) {
 	installer, ok := cliToolInstallerRegistry.Get(toolID)
 	if !ok {
-		return clidetector.Status{}, workspace.NewRPCError(rpcerror.CodeInvalidParams, fmt.Sprintf("unknown CLI tool: %s", toolID))
+		return clidetector.Status{}, rpc.NewRPCError(rpc.CodeInvalidParams, fmt.Sprintf("unknown CLI tool: %s", toolID))
 	}
 	if err := installer.Install(ctx); err != nil {
 		return clidetector.Status{}, err
@@ -146,10 +145,10 @@ func installCLITool(ctx context.Context, toolID string) (clidetector.Status, err
 func uninstallCLITool(ctx context.Context, toolID string) (clidetector.Status, error) {
 	installer, ok := cliToolInstallerRegistry.Get(toolID)
 	if !ok {
-		return clidetector.Status{}, workspace.NewRPCError(rpcerror.CodeInvalidParams, fmt.Sprintf("unknown CLI tool: %s", toolID))
+		return clidetector.Status{}, rpc.NewRPCError(rpc.CodeInvalidParams, fmt.Sprintf("unknown CLI tool: %s", toolID))
 	}
 	if !installer.SupportsUninstall() {
-		return clidetector.Status{}, workspace.NewRPCError(rpcerror.CodeInvalidParams, fmt.Sprintf("uninstall is not supported for %s", toolID))
+		return clidetector.Status{}, rpc.NewRPCError(rpc.CodeInvalidParams, fmt.Sprintf("uninstall is not supported for %s", toolID))
 	}
 	if err := installer.Uninstall(ctx); err != nil {
 		return clidetector.Status{}, err
@@ -164,5 +163,5 @@ func findCLIToolStatus(toolID string) (clidetector.Status, error) {
 			return status, nil
 		}
 	}
-	return clidetector.Status{}, workspace.NewRPCError(rpcerror.CodeNotFound, fmt.Sprintf("CLI tool %s not found", toolID))
+	return clidetector.Status{}, rpc.NewRPCError(rpc.CodeNotFound, fmt.Sprintf("CLI tool %s not found", toolID))
 }

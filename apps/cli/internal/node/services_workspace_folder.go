@@ -8,7 +8,6 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -18,11 +17,11 @@ import (
 // workspaces are strictly non-git), and must not already be tracked.
 func (s *Service) WorkspaceCreateLocalFolder(ctx context.Context, req rpc.WorkspaceCreateLocalFolderParams) (any, error) {
 	if s.deps.Database == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "local database is not configured")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
 	rawPath := strings.TrimSpace(req.Path)
 	if rawPath == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "path is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "path is required")
 	}
 	resolvedPath, err := s.validateFolderWorkspacePath(ctx, rawPath)
 	if err != nil {
@@ -38,7 +37,7 @@ func (s *Service) WorkspaceCreateLocalFolder(ctx context.Context, req rpc.Worksp
 		// A concurrent create may have raced the GetByPath check below; surface
 		// the same "already exists" message the check would have produced.
 		if isFolderPathUniqueViolation(err) {
-			return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
+			return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
 		}
 		return nil, err
 	}
@@ -55,25 +54,25 @@ func (s *Service) WorkspaceCreateLocalFolder(ctx context.Context, req rpc.Worksp
 func (s *Service) validateFolderWorkspacePath(ctx context.Context, rawPath string) (string, error) {
 	resolvedPath := normalizeWorkspaceOpenProjectPath(rawPath)
 	if resolvedPath == "" {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "path is required")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is required")
 	}
 	info, err := os.Stat(resolvedPath)
 	if err != nil {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "path does not exist: "+resolvedPath)
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path does not exist: "+resolvedPath)
 	}
 	if !info.IsDir() {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "path is not a directory: "+resolvedPath)
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is not a directory: "+resolvedPath)
 	}
 	inspect, err := s.deps.Git.Inspect(ctx, resolvedPath)
 	if err != nil {
 		return "", err
 	}
 	if inspect.IsGitRepository {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "path is a git repository; folder workspaces must be non-git")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is a git repository; folder workspaces must be non-git")
 	}
 	store := localdb.NewWorkspaceStore(s.deps.Database)
 	if _, err := store.GetByPath(ctx, resolvedPath); err == nil {
-		return "", workspace.NewRPCError(rpcerror.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
 	} else if !errors.Is(err, localdb.ErrWorkspaceNotFound) {
 		return "", err
 	}
@@ -98,7 +97,7 @@ func isFolderPathUniqueViolation(err error) bool {
 // manager; the desktop opens them on demand.
 func (s *Service) WorkspaceListLocalFolders(ctx context.Context) (any, error) {
 	if s.deps.Database == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "local database is not configured")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
 	return localdb.NewWorkspaceStore(s.deps.Database).ListFolders(ctx)
 }
@@ -109,10 +108,10 @@ func (s *Service) WorkspaceListLocalFolders(ctx context.Context) (any, error) {
 // performed: folder workspaces are plain directories, not worktrees.
 func (s *Service) WorkspaceDeleteLocalFolder(ctx context.Context, req rpc.WorkspaceDeleteLocalFolderParams) (any, error) {
 	if s.deps.Database == nil {
-		return nil, workspace.NewRPCError(rpcerror.CodeServerError, "local database is not configured")
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
 	if strings.TrimSpace(req.ID) == "" {
-		return nil, workspace.NewRPCError(rpcerror.CodeInvalidParams, "id is required")
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "id is required")
 	}
 	// If the folder is currently open, stop its terminals and drop it from the
 	// manager so no live handle survives deletion. Mirror the workspace-close

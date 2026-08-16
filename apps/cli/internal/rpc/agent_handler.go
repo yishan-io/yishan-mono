@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // The agent namespace interfaces back the pi.*, skill.*, and customize.* RPC
@@ -74,7 +72,7 @@ func (h *AgentHandler) Call(ctx context.Context, connection *Connection, method 
 	case strings.HasPrefix(method, "customize."):
 		return h.callCustomize(ctx, method, params)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown agent method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown agent method: "+method)
 	}
 }
 
@@ -139,7 +137,7 @@ func (h *AgentHandler) callPi(ctx context.Context, connection *Connection, metho
 		}
 		return h.Pi.PiRemoveProvider(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown pi method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown pi method: "+method)
 	}
 }
 
@@ -180,14 +178,14 @@ func (h *AgentHandler) callSkill(ctx context.Context, method string, params json
 	case MethodSkillUpdateAll:
 		return h.Skill.SkillUpdateAll(ctx)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown skill method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown skill method: "+method)
 	}
 }
 
 func (h *AgentHandler) callCustomize(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	sub, _, found := strings.Cut(strings.TrimPrefix(method, "customize."), ".")
 	if !found {
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 	switch sub {
 	case "extensions":
@@ -195,7 +193,7 @@ func (h *AgentHandler) callCustomize(ctx context.Context, method string, params 
 	case "agents":
 		return h.callCustomizeAgents(ctx, method, params)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 }
 
@@ -222,7 +220,7 @@ func (h *AgentHandler) callCustomizeExtensions(ctx context.Context, method strin
 		}
 		return h.Customize.CustomizeExtensionsUpdate(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 }
 
@@ -261,6 +259,6 @@ func (h *AgentHandler) callCustomizeAgents(ctx context.Context, method string, p
 		}
 		return h.Customize.CustomizeAgentsRestore(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 }

@@ -116,7 +116,7 @@ func (r *Registry) SetState(workspaceID string, state workspace.State, health wo
 	defer r.mu.Unlock()
 	ws, ok := r.instances[workspaceID]
 	if !ok {
-		return workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+		return workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 	}
 	ws.State = state
 	ws.Health = health
@@ -129,7 +129,7 @@ func (r *Registry) SetPullRequest(workspaceID string, pr *workspace.WorkspacePul
 	defer r.mu.Unlock()
 	ws, ok := r.instances[workspaceID]
 	if !ok {
-		return workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+		return workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 	}
 	ws.PullRequest = pr
 	r.instances[workspaceID] = ws

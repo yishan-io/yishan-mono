@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // SystemHandler owns the daemon./app./agent./tokenUsage./node./cliTools./
@@ -69,6 +67,6 @@ func (h *SystemHandler) Call(ctx context.Context, connection *Connection, method
 		}
 		return h.Services.SystemNodeList(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "method not found: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "method not found: "+method)
 	}
 }

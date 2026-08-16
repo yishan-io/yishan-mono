@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/worktree"
 )
 
 // CloseWorkspace closes a workspace: it stops its terminals, tears down the
@@ -49,7 +50,7 @@ func (s *Service) CloseWorkspace(ctx context.Context, req workspace.CloseRequest
 func (s *Service) registryWorkspace(id string) (workspace.Workspace, error) {
 	ws, ok := s.deps.Registry.Get(id)
 	if !ok {
-		return workspace.Workspace{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
 	}
 	return ws, nil
 }

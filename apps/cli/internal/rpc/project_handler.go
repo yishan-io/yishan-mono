@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // ProjectHandler owns the project.* RPC namespace decoding.
@@ -40,6 +38,6 @@ func (h *ProjectHandler) Call(ctx context.Context, connection *Connection, metho
 		}
 		return h.Services.ProjectSetListPreferences(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown project method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown project method: "+method)
 	}
 }

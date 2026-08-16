@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // ContextHandler owns the context.* RPC namespace decoding.
@@ -36,6 +34,6 @@ func (h *ContextHandler) Call(ctx context.Context, connection *Connection, metho
 		}
 		return h.Services.ContextSetActiveFile(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown context method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown context method: "+method)
 	}
 }

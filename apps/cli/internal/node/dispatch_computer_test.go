@@ -8,7 +8,7 @@ import (
 
 	"yishan/apps/cli/internal/computer"
 	computermock "yishan/apps/cli/internal/computer/mock"
-	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/rpc"
 )
 
 func TestDispatchComputerPermissions(t *testing.T) {
@@ -139,7 +139,7 @@ func TestDispatchComputerCaptureWindowRequiresWindowID(t *testing.T) {
 	}
 
 	_, err = s.callRPCForTest(context.Background(), MethodComputerCaptureWindow, params)
-	var rpcErr *workspace.RPCError
+	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)
 	}
@@ -160,7 +160,7 @@ func TestDispatchComputerOpenPermissionSettingsRequiresPermission(t *testing.T) 
 	}
 
 	_, err = s.callRPCForTest(context.Background(), MethodComputerOpenPermissionSettings, params)
-	var rpcErr *workspace.RPCError
+	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) {
 		t.Fatalf("expected rpc error, got %T", err)
 	}

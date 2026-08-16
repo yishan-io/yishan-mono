@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace"
 )
 
 // The Services interfaces are the application-facing contract the rpc

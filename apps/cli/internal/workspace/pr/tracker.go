@@ -72,7 +72,7 @@ func New(deps TrackerDeps) *Tracker {
 	}
 	tracker.branchResolver = func(ctx context.Context, root string) (string, error) {
 		if _, ok := tracker.instances.GetByPath(root); !ok {
-			return "", workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+			return "", workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 		}
 		return tracker.gits.CurrentBranch(ctx, root)
 	}
@@ -81,13 +81,13 @@ func New(deps TrackerDeps) *Tracker {
 	}
 	tracker.prResolver = func(ctx context.Context, root string, branch string) (git.GitBranchPullRequestStatus, error) {
 		if _, ok := tracker.instances.GetByPath(root); !ok {
-			return git.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+			return git.GitBranchPullRequestStatus{}, workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 		}
 		return tracker.gits.BranchPullRequestLite(ctx, root, branch)
 	}
 	tracker.detailResolver = func(ctx context.Context, root string, branch string) (git.GitBranchPullRequestStatus, error) {
 		if _, ok := tracker.instances.GetByPath(root); !ok {
-			return git.GitBranchPullRequestStatus{}, workspace.NewRPCError(workspace.RPCErrorCodeNotFound, "workspace not found")
+			return git.GitBranchPullRequestStatus{}, workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 		}
 		return tracker.gits.BranchPullRequestWithDetails(ctx, root, branch)
 	}

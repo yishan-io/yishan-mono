@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // FileHandler owns the file.* RPC namespace decoding.
@@ -70,6 +68,6 @@ func (h *FileHandler) Call(ctx context.Context, connection *Connection, method s
 		}
 		return h.Services.FileDiff(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown file method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown file method: "+method)
 	}
 }

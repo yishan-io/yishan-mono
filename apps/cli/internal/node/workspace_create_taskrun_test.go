@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -184,9 +183,9 @@ func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) 
 	if err == nil {
 		t.Fatal("expected pi.start to fail for a task run session that ended before attach")
 	}
-	var rpcErr *workspace.RPCError
-	if !errors.As(err, &rpcErr) || rpcErr.Code != rpcerror.CodeNotFound {
-		t.Fatalf("error = %v, want rpcerror.CodeNotFound", err)
+	var rpcErr *rpc.Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != rpc.CodeNotFound {
+		t.Fatalf("error = %v, want rpc.CodeNotFound", err)
 	}
 
 	if _, exists := s.piSessions.Get("task-ws-1"); exists {

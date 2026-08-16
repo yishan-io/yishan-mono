@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"yishan/apps/cli/internal/rpcerror"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 
@@ -26,7 +25,7 @@ type CloseResult struct {
 // node or closes locally. Routing and revert-on-failure policy live here.
 func (s *Service) Close(ctx context.Context, command CloseCommand) (CloseResult, error) {
 	if strings.TrimSpace(command.ProjectID) == "" {
-		return CloseResult{}, rpcerror.NewRPCError(rpcerror.CodeInvalidParams, "projectId is required")
+		return CloseResult{}, workspace.NewError(workspace.ErrCodeInvalidParams, "projectId is required")
 	}
 	nodeID := s.ownerNodeForClose(ctx, command)
 	if strings.TrimSpace(nodeID) != "" && strings.TrimSpace(nodeID) != strings.TrimSpace(s.deps.NodeID) {
