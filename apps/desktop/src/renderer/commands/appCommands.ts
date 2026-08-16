@@ -225,7 +225,7 @@ export function installDesktopUpdate() {
 
 export type { DesktopUpdateEventPayload } from "../../main/ipc";
 
-export type { DaemonInfoResult, DaemonLogResult } from "../../main/ipc";
+export type { BrowserHistoryGroup, DaemonInfoResult, DaemonLogResult } from "../../main/ipc";
 
 /** Reads the daemon log from the Electron host. */
 export async function getDaemonLog(): Promise<DaemonLogResult> {

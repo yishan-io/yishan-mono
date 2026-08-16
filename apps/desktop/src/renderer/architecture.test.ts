@@ -50,9 +50,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-value-api-rpc", file: "hooks/useOpenTabAutoRefresh.ts", phase: "P6" },
   { rule: "R1-value-api-rpc", file: "hooks/useShortcuts.ts", phase: "P6" },
   // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
-  { rule: "R1-main", file: "views/workspace/browser/BlankView.tsx", phase: "P5" },
-  { rule: "R1-main", file: "views/workspace/browser/UrlBar.tsx", phase: "P5" },
-  { rule: "R1-main", file: "views/workspace/browser/hooks/useBrowserHistory.ts", phase: "P5" },
   // ---- Rule 4: commands importing views/components (cross-layer index) ----
 ];
 
