@@ -6,7 +6,7 @@ import type {
   OverviewTimeRange,
   TokenUsageSeriesItem,
   WorkspaceInsightsResult,
-} from "../api/overviewApi.types";
+} from "../../../api/overviewApi.types";
 
 type LoadState = "idle" | "loading" | "loaded" | "error";
 

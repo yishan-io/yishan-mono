@@ -102,7 +102,7 @@ import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,
   setOverviewTimeRange as setOverviewTimeRangeCommand,
-} from "./overviewCommands";
+} from "../features/overview/commands/overviewCommands";
 import {
   listPiProviders as listPiProvidersCommand,
   openPiProviderLogin as openPiProviderLoginCommand,

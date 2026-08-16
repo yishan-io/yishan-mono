@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { formatTokens } from "../../helpers/formatters";
-import { overviewStore } from "../../store/overviewStore";
+import { overviewStore } from "../../features/overview/model/overviewStore";
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",

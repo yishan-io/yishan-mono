@@ -14,5 +14,6 @@ export type { TerminalCommands } from "../../features/terminal/commands/contract
 export type { FileCommands } from "../../features/files/commands/contract";
 export type { SessionCommands } from "../../features/session/commands/contract";
 export type { ScheduledJobCommands } from "../../features/scheduled-job/commands/contract";
+export type { OverviewCommands } from "../../features/overview/commands/contract";
 export type { WorkbenchCommands } from "../../features/workbench/commands/contract";
 export * from "./conformance";

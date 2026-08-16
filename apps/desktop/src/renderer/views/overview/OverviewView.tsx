@@ -9,7 +9,7 @@ import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { overviewStore } from "../../store/overviewStore";
+import { overviewStore } from "../../features/overview/model/overviewStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { AgentKindChartView } from "./AgentKindChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
