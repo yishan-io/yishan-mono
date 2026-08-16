@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-
 )
 
 func (m *Manager) ListDetectedPorts() []DetectedPort {

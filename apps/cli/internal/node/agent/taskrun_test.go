@@ -167,7 +167,7 @@ func registerTestDesktopConn(s *Service) {
 	s.desktopConnsMu.Unlock()
 }
 
-func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) {
+func TestPiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) {
 	s := newTestHandler(t)
 
 	// Simulate a task-run session whose pi process exited before any client

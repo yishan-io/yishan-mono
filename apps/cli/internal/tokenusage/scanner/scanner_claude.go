@@ -12,9 +12,9 @@ import (
 	"time"
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	"yishan/apps/cli/internal/tokenusage/record"
-	"yishan/apps/cli/internal/tokenusage/pricing"
 	"yishan/apps/cli/internal/tokenusage/attribution"
+	"yishan/apps/cli/internal/tokenusage/pricing"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 const claudeAgentKind = agentkind.Claude
@@ -165,7 +165,7 @@ func scanClaudeTranscriptFile(
 				ReasoningTokens:    0,
 				TotalTokens:        normalizedInputTokens + activity.OutputTokens,
 				TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
-                     CostSource:         activity.CostSource,
+				CostSource:         activity.CostSource,
 			}
 			if delta.TotalTokens <= 0 {
 				continue
@@ -284,7 +284,7 @@ func parseClaudeActivity(rawLine []byte, fallbackSessionID string, catalog prici
 				CacheReadTokens:    usageRecord.CacheReadTokens,
 				CacheWriteTokens:   usageRecord.CacheWriteTokens,
 				TotalCostMicrosUSD: estimatedCost,
-                     CostSource:         costSource,
+				CostSource:         costSource,
 				ToolCallCount:      toolCalls,
 			}, true
 		}

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 )
 
 // CreateRequest carries everything needed to resolve and provision a worktree.

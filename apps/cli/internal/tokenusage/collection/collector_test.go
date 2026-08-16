@@ -147,7 +147,7 @@ func (s *countingHourlyUsageRepository) ReplaceAgentHourlyRows(ctx context.Conte
 func TestRunScanReplacesRowsIdempotently(t *testing.T) {
 	repo := &countingHourlyUsageRepository{stubHourlyUsageRepository: stubHourlyUsageRepository{state: localdb.HourlyUsageSyncState{}}}
 	collector := &Collector{
-		registry:              instance.NewRegistry(files.NewFileService()),
+		registry:             instance.NewRegistry(files.NewFileService()),
 		repo:                 repo,
 		timers:               make(map[string]*time.Timer),
 		inFlight:             make(map[string]bool),

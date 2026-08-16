@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
 )
 
 func openCleanupStoreTestDB(t *testing.T) *sql.DB {

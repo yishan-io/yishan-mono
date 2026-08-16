@@ -3,7 +3,6 @@ package worktree
 import (
 	"context"
 	"strings"
-
 )
 
 // RemoveBranch deletes a branch in the repository at root.

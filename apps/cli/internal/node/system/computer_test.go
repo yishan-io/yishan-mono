@@ -11,7 +11,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 )
 
-func TestDispatchComputerPermissions(t *testing.T) {
+func TestComputerPermissions(t *testing.T) {
 	t.Parallel()
 
 	s := newTestHandler(t)
@@ -31,7 +31,7 @@ func TestDispatchComputerPermissions(t *testing.T) {
 	}
 }
 
-func TestDispatchComputerListDisplays(t *testing.T) {
+func TestComputerListDisplays(t *testing.T) {
 	t.Parallel()
 
 	s := newTestHandler(t)
@@ -55,7 +55,7 @@ func TestDispatchComputerListDisplays(t *testing.T) {
 	}
 }
 
-func TestDispatchComputerListWindowsUsesFilter(t *testing.T) {
+func TestComputerListWindowsUsesFilter(t *testing.T) {
 	t.Parallel()
 
 	s := newTestHandler(t)
@@ -89,7 +89,7 @@ func TestDispatchComputerListWindowsUsesFilter(t *testing.T) {
 	}
 }
 
-func TestDispatchComputerCaptureDisplay(t *testing.T) {
+func TestComputerCaptureDisplay(t *testing.T) {
 	t.Parallel()
 
 	s := newTestHandler(t)
@@ -127,7 +127,7 @@ func TestDispatchComputerCaptureDisplay(t *testing.T) {
 	}
 }
 
-func TestDispatchComputerCaptureWindowRequiresWindowID(t *testing.T) {
+func TestComputerCaptureWindowRequiresWindowID(t *testing.T) {
 	t.Parallel()
 
 	s := newTestHandler(t)
@@ -148,7 +148,7 @@ func TestDispatchComputerCaptureWindowRequiresWindowID(t *testing.T) {
 	}
 }
 
-func TestDispatchComputerOpenPermissionSettingsRequiresPermission(t *testing.T) {
+func TestComputerOpenPermissionSettingsRequiresPermission(t *testing.T) {
 	t.Parallel()
 
 	s := newTestHandler(t)

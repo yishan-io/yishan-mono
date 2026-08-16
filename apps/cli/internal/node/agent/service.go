@@ -13,11 +13,11 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/agent/session"
-	"yishan/apps/cli/internal/node/context"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/workspace"
 	term "yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
 

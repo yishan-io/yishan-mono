@@ -54,7 +54,7 @@ func writeAuthFile(t *testing.T, dir string, content string) {
 	}
 }
 
-func TestPiProviderDispatch_RoundTrip(t *testing.T) {
+func TestPiProvider_RoundTrip(t *testing.T) {
 	s := newPiAuthTestHandler(t)
 
 	saveResult, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiSaveProvider,
@@ -94,7 +94,7 @@ func TestPiProviderDispatch_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestPiProviderDispatch_InvalidParams(t *testing.T) {
+func TestPiProvider_InvalidParams(t *testing.T) {
 	s := newPiAuthTestHandler(t)
 
 	cases := []struct {
@@ -117,13 +117,13 @@ func TestPiProviderDispatch_InvalidParams(t *testing.T) {
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
-func TestPiProviderDispatch_UnknownMethodStaysNotFound(t *testing.T) {
+func TestPiProvider_UnknownMethodStaysNotFound(t *testing.T) {
 	s := newPiAuthTestHandler(t)
 	_, err := s.callAgentRPCForTest(context.Background(), nil, "pi.unknownMethod", nil)
 	assertRPCErrorCode(t, err, rpc.CodeMethodNotFound)
 }
 
-func TestPiProviderDispatch_CorruptAuthFileIsServerError(t *testing.T) {
+func TestPiProvider_CorruptAuthFileIsServerError(t *testing.T) {
 	s := newTestHandler(t)
 	dir := t.TempDir()
 	writeAuthFile(t, dir, "{ broken")
@@ -135,7 +135,7 @@ func TestPiProviderDispatch_CorruptAuthFileIsServerError(t *testing.T) {
 	assertRPCErrorCode(t, err, rpc.CodeServerError)
 }
 
-func TestPiProviderDispatch_NilStoreIsServerError(t *testing.T) {
+func TestPiProvider_NilStoreIsServerError(t *testing.T) {
 	s := newTestHandler(t)
 	s.deps.PIAuth = nil
 	_, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiListProviders, nil)

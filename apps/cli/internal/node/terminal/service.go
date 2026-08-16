@@ -8,11 +8,11 @@ package terminal
 import (
 	"sync"
 
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/relay"
 	internalevents "yishan/apps/cli/internal/events"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
-	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	term "yishan/apps/cli/internal/terminal"
 )
 

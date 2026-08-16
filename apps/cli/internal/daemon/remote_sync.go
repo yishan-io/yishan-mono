@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/cloud"
-	release "yishan/apps/cli/internal/platform/release"
 	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	release "yishan/apps/cli/internal/platform/release"
 )
 
 func isReauthRequiredError(err error) bool {

@@ -26,10 +26,10 @@ type PullRequestUpdatedEvent struct {
 }
 
 type Tracker struct {
-	mu      sync.Mutex
-	gits    *git.GitService
+	mu        sync.Mutex
+	gits      *git.GitService
 	instances *instance.Registry
-	runtime *cliruntime.Runtime
+	runtime   *cliruntime.Runtime
 	// active maps workspaceID → Workspace for all workspaces currently being
 	// tracked. Storing the full Workspace avoids calling registry.List() on
 	// every poll tick and filtering by active map membership.

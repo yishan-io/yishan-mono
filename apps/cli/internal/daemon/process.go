@@ -10,10 +10,10 @@ import (
 	"os/signal"
 	"time"
 
-	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/app"
-	"yishan/apps/cli/internal/adapter/relay"
 	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/relay"
+	"yishan/apps/cli/internal/app"
+	"yishan/apps/cli/internal/memory"
 
 	"github.com/rs/zerolog/log"
 )

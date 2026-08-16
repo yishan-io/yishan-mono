@@ -6,9 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"yishan/apps/cli/internal/platform/config"
 	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -16,7 +15,7 @@ import (
 // TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart verifies
 // that input validation runs before any event is published (the handler calls
 // Service.Create, which prepares before emitting created events).
-func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *testing.T) {
+func TestWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *testing.T) {
 	handler := newWorkspaceCreateFlowTestHandler(t, "http://unused")
 	subscriptionID, events := handler.deps.Events.Subscribe()
 	defer handler.deps.Events.Unsubscribe(subscriptionID)

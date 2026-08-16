@@ -5,15 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
 	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
-	"yishan/apps/cli/internal/terminal"
 )
 
-func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
+func TestHydrate_RestoresActiveWorkspace(t *testing.T) {
 	database, err := localdb.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -58,7 +57,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 	}
 }
 
-func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
+func TestOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 	realWorkspacePath, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatalf("eval symlinks: %v", err)
@@ -89,7 +88,7 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 	}
 }
 
-func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
+func TestOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 	root := t.TempDir()
 	svc := NewService(Deps{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
 
@@ -129,7 +128,7 @@ func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 	}
 }
 
-func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
+func TestCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 	svc := NewService(Deps{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
 	workspacePath := t.TempDir()
 	if _, err := svc.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
@@ -150,7 +149,7 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 	}
 }
 
-func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
+func TestCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
 	svc := NewService(Deps{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
 	workspacePath := t.TempDir()
 	if _, err := svc.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
@@ -182,7 +181,7 @@ func openTestManagerStore(t *testing.T) (*Service, *localdb.WorkspaceStore) {
 	return NewService(Deps{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}), store
 }
 
-func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
+func TestHydrate_MissingWorktreeMarkedError(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branchMissing := "feature/missing"
@@ -233,7 +232,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 	}
 }
 
-func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
+func TestHydrate_NonMissingOpenFailureMarkedError(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	filePath := filepath.Join(t.TempDir(), "not-a-directory")
 	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
@@ -266,7 +265,7 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 	}
 }
 
-func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
+func TestHydrate_SkipsClosedWorkspaces(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branch := "feature/closed"
@@ -285,7 +284,7 @@ func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
 	}
 }
 
-func TestManagerHydrateFromDB_SkipsFolderWorkspaces(t *testing.T) {
+func TestHydrate_SkipsFolderWorkspaces(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	folderPath := t.TempDir()
 	if _, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{
@@ -304,7 +303,7 @@ func TestManagerHydrateFromDB_SkipsFolderWorkspaces(t *testing.T) {
 	}
 }
 
-func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testing.T) {
+func TestHydrate_RestoresActiveWorkspaceAndRefreshesState(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	workspacePath := t.TempDir()
 	branch := "feature/restored"
@@ -336,7 +335,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 	}
 }
 
-func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
+func TestHydrate_PreservesNotWorktreeError(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	// Plain directory without .git: Open succeeds, but the persisted
 	// not-worktree error must survive rehydration.

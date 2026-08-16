@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
 	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -30,7 +29,7 @@ func newFolderHandler(t *testing.T) (*Service, *localdb.WorkspaceStore) {
 	return s, localdb.NewWorkspaceStore(database)
 }
 
-func TestHandleWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
 	s, store := newFolderHandler(t)
 	folderPath := t.TempDir()
 
@@ -69,7 +68,7 @@ func TestHandleWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreateLocalFolder_RejectsEmptyPath(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_RejectsEmptyPath(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: "   "})
 	if err != nil {
@@ -80,7 +79,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsEmptyPath(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreateLocalFolder_RejectsNonexistentPath(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_RejectsNonexistentPath(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: filepath.Join(t.TempDir(), "does-not-exist")})
 	if err != nil {
@@ -91,7 +90,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsNonexistentPath(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreateLocalFolder_RejectsFilePath(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_RejectsFilePath(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	filePath := filepath.Join(t.TempDir(), "file.txt")
 	if err := os.WriteFile(filePath, []byte("x"), 0o644); err != nil {
@@ -106,7 +105,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsFilePath(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
 	s, store := newFolderHandler(t)
 	repoPath := t.TempDir()
 	initDispatchWorkspaceTestGitRepoWithCommit(t, repoPath)
@@ -128,7 +127,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreateLocalFolder_RejectsDuplicatePath(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_RejectsDuplicatePath(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	folderPath := t.TempDir()
 	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: folderPath})
@@ -143,7 +142,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsDuplicatePath(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
+func TestWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
 	s, store := newFolderHandler(t)
 	if _, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{LocalPath: t.TempDir(), NodeID: "node-1"}); err != nil {
 		t.Fatalf("create folder: %v", err)
@@ -172,7 +171,7 @@ func TestHandleWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceDeleteLocalFolder_RemovesRow(t *testing.T) {
+func TestWorkspaceDeleteLocalFolder_RemovesRow(t *testing.T) {
 	s, store := newFolderHandler(t)
 	created, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{LocalPath: t.TempDir(), NodeID: "node-1"})
 	if err != nil {
@@ -194,7 +193,7 @@ func TestHandleWorkspaceDeleteLocalFolder_RemovesRow(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
+func TestWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	s, store := newFolderHandler(t)
 	folderPath := t.TempDir()
 	created, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{LocalPath: folderPath, NodeID: "node-1"})
@@ -229,7 +228,7 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceDeleteLocalFolder_UnknownID(t *testing.T) {
+func TestWorkspaceDeleteLocalFolder_UnknownID(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	params, err := json.Marshal(rpc.WorkspaceDeleteLocalFolderParams{ID: "does-not-exist"})
 	if err != nil {
@@ -241,7 +240,7 @@ func TestHandleWorkspaceDeleteLocalFolder_UnknownID(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceDeleteLocalFolder_RejectsEmptyID(t *testing.T) {
+func TestWorkspaceDeleteLocalFolder_RejectsEmptyID(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	params, err := json.Marshal(rpc.WorkspaceDeleteLocalFolderParams{ID: ""})
 	if err != nil {
@@ -252,7 +251,7 @@ func TestHandleWorkspaceDeleteLocalFolder_RejectsEmptyID(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
 	s, store := newFolderHandler(t)
 
 	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{
@@ -283,7 +282,7 @@ func TestHandleWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreateLocalFolder_EmptyNameIsNil(t *testing.T) {
+func TestWorkspaceCreateLocalFolder_EmptyNameIsNil(t *testing.T) {
 	s, store := newFolderHandler(t)
 
 	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: t.TempDir(), Name: "   "})

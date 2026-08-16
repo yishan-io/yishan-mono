@@ -6,13 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
-func TestDispatchFile_Search(t *testing.T) {
+func TestFile_Search(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)

@@ -281,119 +281,86 @@ db/schema.ts      Table definitions, type exports
 ```
 cmd/                Cobra command definitions only — no business logic
 internal/
-  auth/             JWT validation
-  config/           Environment config reading
+  app/              Composition root: builds the 5 node services, the rpc
+                    transport, and the relay client; owns startup/shutdown
   daemon/           Daemon process lifecycle (lock, state, HTTP serving) + daemon client
-  node/             Composition root (node.App) + concrete RPC services + hydrate/close engines
-  rpc/              JSON-RPC/WebSocket transport, router, namespace handlers
-  relay/            Relay envelopes + relay client
-  runtime/          API client, credential persistence
-  workspace/        Workspace domain types + lifecycle rules
-  workspace/application/  Create/close orchestration (application.Service)
-  files/ git/ terminal/ worktree/  Workspace capability packages
-  output/           CLI output formatting
-  logx/             Log file management
+  rpc/              JSON-RPC/WebSocket transport, router, namespace handlers,
+                    wire error codes (MapRPCError)
+  node/             Local Node application boundary, split into vertical services:
+    workspace/        workspace.*/file.*/git.* + lifecycle application ops
+    agent/            pi.*/skill.*/customize.* + task runs + session registry
+    terminal/         terminal.* + remote stream state + binary frames
+    project/          project.* (list, preferences)
+    system/           system.*/memory.*/computer.*/context.* + cli tools
+    hook/             agent hook ingress (pi notify bridge)
+    context/          renderer context store
+  workspace/        Workspace domain types + lifecycle rules + application/
+    instance/ pr/ watchers/ worktree/
+  agent/            Agent domain: session/process/command/setup/auth/catalog/kind
+  tokenusage/       Usage domain: collection/scanner/attribution/pricing/repository
+  memory/           Memory domain: store/reconcile/summarizer/persona
+  files/ git/ terminal/ computer/   Standalone capability packages
+  adapter/
+    cloud/            Cloud API client + DTOs (+ session, login)
+    sqlite/           SQLite store + migrations + row conversion
+    relay/            Relay envelopes + relay client
+  platform/
+    config/           Environment config reading
+    shellenv/         Shell environment resolution
+    logging/          Log file management
+    release/          Self-update + build info
+  events/           Frontend event hub (eventbus rename deferred)
+  archtest/         Forbidden-import architecture test
 ```
-
-### Package structure (relay)
-```
-cmd/                Cobra command + server startup
-internal/
-  auth/             JWT validation
-  relay/            WebSocket server, session manager, HTTP handlers
-  jobqueue/         Job dispatch, ack/result lifecycle, retry
-```
-
-### Go rules
-- **context.Context is always the first parameter** of any function that does I/O, waits
-  on a channel, or calls another function that accepts a context. Never discard it with `_`.
-- **Every goroutine must have a defined exit condition.** Pass a `context.Context` or a
-  `done chan struct{}` to any goroutine that runs in a loop. Infinite `for {}` loops with
-  no exit path are bugs.
-- **Errors must be wrapped with `%w`**, not `%s`. Using `%s` on an error value loses the
-  type and breaks `errors.Is`/`errors.As` in callers.
-- **`os.Exit` belongs only in `main.go`**. Internal packages must return errors; they
-  must never call `os.Exit`.
-- **`sync.Mutex` vs `sync.RWMutex`**: use `RWMutex` whenever reads significantly
-  outnumber writes. Read-only methods must use `RLock`/`RUnlock`.
-- **Write deadlines on WebSocket connections**: always call `conn.SetWriteDeadline()`
-  before writing to a WebSocket connection. A missing deadline means a slow client can
-  block a goroutine indefinitely.
-- **`time.AfterFunc` callbacks run in a new goroutine.** Inside the callback, re-acquire
-  the relevant mutex and re-check state before acting — another goroutine may have already
-  handled the event.
-
-### Go naming
-- Package names are lowercase single words. No underscores.
-- Exported types: `PascalCase`. Unexported: `camelCase`.
-- Acronyms follow Go convention: `nodeID` not `nodeId`, `nodeURL` not `nodeUrl`.
-- Interface names end in `-er` where possible (`NodeTransport`, `Authenticator`).
-- Constants that represent protocol strings must be typed constants, not bare string
-  literals used in comparisons (e.g., define `const EventConnected = "connected"` and
-  compare against that, not the raw string `"connected"`).
-
-### JSON-RPC dispatch (cli daemon)
-- The `dispatch` function in `internal/daemon/jsonrpc_dispatch.go` must not contain
-  inline business logic. Each case must call a dedicated handler method.
-- Method name constants (e.g., `MethodGitBranches`) must be used in every case — never
-  compare against raw string literals.
 
 ### Workspace lifecycle layering (cli daemon)
-- Final CLI package dependency contract (Phases 7–13):
-  `cmd -> daemon client or application facade`; `daemon -> node.App`;
-  `node.App -> rpc + application services + infrastructure`;
-  `rpc -> application interfaces`; `application -> domain + interfaces`;
-  `infrastructure -> domain`; `domain -> standard library only`. Enforced by
-  `internal/archtest` (forbidden-import test). The archtest also forbids domain
-  and application packages from importing `node`, `rpc`, or `daemon` (relay may
-  use the rpc transport types for its client).
-- `internal/node.App` is the daemon's only service composition root: `node.Bootstrap`
-  constructs the whole service graph (instance registry, SQLite store, file/git/
-  terminal services, memory, computer, agents, events, watchers, PR tracker,
-  cleanup/context stores, token usage) for one account and `node.App.Close` owns
-  the shutdown order. App exposes no public service fields — only `RPCServer()`,
-  `Relay()`, `ServeAgentHook`, `Close`, `Start`, and identity (`Runtime`, `NodeID`).
-  daemon `Run` keeps the process entry points and calls `node.Bootstrap` after
-  resolving the account data dir.
-- The JSON-RPC transport lives in `internal/rpc`: `Server` (WebSocket read loop,
-  concurrency limits, binary terminal frames), `Connection`, `Router`, protocol
-  types, and one namespace handler per RPC namespace (`WorkspaceHandler`,
-  `FileHandler`, `GitHandler`, `TerminalHandler`, `MemoryHandler`,
-  `ComputerHandler`, `ContextHandler`, `ProjectHandler`, `SystemHandler`,
-  `AgentHandler`). Each handler decodes params and calls exactly one typed
-  method on a per-namespace service interface implemented by `node.Services`
-  (the concrete RPC service layer built by the composition root).
-- `internal/relay` owns the relay client: the reconnect loop, the connection
-  handle, token minting, connection status, pending dispatch verdicts, and
-  terminal-session event forwarding. The app implements `relay.MessageHandler`
-  for relay-protocol messages (job.run, snapshot changes, terminal stream
-  notifications).
-- File/Git/terminal capabilities live in `internal/files`, `internal/git`,
-  `internal/terminal` (low-level git exec stays in `internal/gitexec`);
-  agent behavior lives in `internal/agent/{session,process,command,setup,
-  auth,catalog}`; PR tracking lives in `workspace/pr`. The workspace root
-  package keeps domain types + lifecycle rules + free functions only —
-  `workspace.Manager` and `workspace/createflow` no longer exist. The create
-  engine lives in `workspace/application`, and the close/hydrate/open engines
-  live in `internal/node` (App methods). Infrastructure conversion is
-  single-owner: `internal/api` (cloud client + DTOs) and `internal/db`
-  (SQLite + row conversion).
-- `internal/workspace/application.Service` owns workspace create/close orchestration:
-  routing, rollback, and the create engine. Create and close each have one
-  application owner.
-- The workspace layer depends on `internal/workspace` interfaces (`InstanceRegistry`,
-  `WorkspaceStore`) and `internal/worktree` for git worktree provisioning. The
-  composition root injects the concrete adapters: `internal/workspace/instance.Registry`,
-  `internal/db.Store`, `internal/api` builders.
-- Conversion between domain and transport/persistence types lives in the adapter
-  packages only: `internal/api` (API DTOs), `internal/db` (SQLite rows),
-  `internal/relay` (relay envelopes). The domain packages must not import
-  `internal/api` or `internal/db`.
-- Runtime state/health are the typed `workspace.State`/`workspace.Health` values
-  (aliased as `instance.State`/`instance.Health`); use `State.Transition` for state
-  changes. Do not add new lifecycle string constants.
+- Final CLI package dependency contract (Phases 13–19):
+  `daemon -> app`; `app -> node services + rpc + adapters + platform + domain`;
+  `rpc -> service interfaces + domain error mappers`;
+  `node services -> domain owners + capability interfaces`;
+  `adapters -> domain vocabulary`; `domain -X-> rpc/daemon/app/adapters`;
+  `capability owners -X-> rpc/daemon/app`. Enforced by `internal/archtest`.
+- `internal/app` is the only composition root: `app.Bootstrap` builds the five
+  vertical node services (`workspace`, `agent`, `terminal`, `project`, `system`),
+  the rpc transport (`appHandler` adapts the router + desktop-connection
+  tracking), the relay client (`relayHandler` dispatches job.run / workspace
+  snapshot / terminal messages), and the hook ingress. `App.Close` owns the
+  shutdown order. The daemon only serves: `Run` resolves the account data dir
+  and calls `app.Bootstrap`.
+- Each node service implements only its namespace's RPC service interfaces
+  (`rpc.WorkspaceService`, `PiService`, `TerminalService`, ...) and receives a
+  small explicit dependency struct. Cross-service dependencies are injected as
+  callbacks or interfaces (e.g. `agent.WorkspaceResolver`,
+  `workspace.Deps.CreateCompleted`) — services never import each other's
+  concrete types in a cycle.
+- The JSON-RPC transport lives in `internal/rpc`: `Server` (WebSocket read
+  loop, concurrency limits, binary terminal frames), `Connection`, `Router`,
+  protocol types, and one namespace handler per RPC namespace
+  (`WorkspaceHandler`, `FileHandler`, `GitHandler`, `TerminalHandler`,
+  `MemoryHandler`, `ComputerHandler`, `ContextHandler`, `ProjectHandler`,
+  `SystemHandler`, `AgentHandler`). Each handler decodes params and calls
+  exactly one typed method on a per-namespace service interface.
+- Error ownership: domain and capability owners return their own errors
+  (`workspace.Error`, `files.Error`, `git.Error`, ...); `rpc.MapRPCError`
+  maps them to wire errors. `rpc` owns the JSON-RPC numeric codes; the
+  command output package (`cmd/output`) owns process exit codes.
+- Capability packages (`files`, `git`, `terminal`, `computer`) stay
+  independent — they are not workspace internals. `workspace/worktree` and
+  `workspace/watchers/fswatch` are single-owner packages under their owner.
+- Edge adapters (`adapter/cloud`, `adapter/sqlite`, `adapter/relay`) and
+  platform packages (`platform/config`, `platform/shellenv`,
+  `platform/logging`, `platform/release`) have no Go files in their roots —
+  the roots only classify children.
 
----
+### Test filename and ownership rules (cli)
+- A unit test uses the production-file stem; a use-case test uses the use-case
+  name (`create_test.go`); a contract test uses the port name
+  (`store_contract_test.go`); an integration test uses the flow name; test
+  support uses `test_support_test.go`. No test file exceeds 500 lines — split
+  by behavior.
+- Test names never reference removed owners (`Manager`, `Dispatch`, `Handle`
+  RPC prefixes). A test file maps to one behavior owner or one explicit flow;
+  see `apps/cli/internal/test-ownership.md` for the per-file owner matrix.
 
 ## 8. Naming Conventions
 
@@ -745,32 +712,29 @@ go vet ./...
   RPC services); no setup function forwards to another package — the
   hook-install forwarder was removed and callers use `setup/hooks` directly.
 
-### Internal package taxonomy (cli, Phase 16C)
-- Every top-level internal package has one documented role: domain owner
-  (workspace, agent, tokenusage, memory), capability owner (files, git,
-  terminal, computer), edge adapter (api, db, relay, fswatch, gitexec),
-  host/transport owner (daemon, app, node, rpc), or shared runtime owner
-  (config, events, runtime, output, logx, rpcerror, release).
-- Small packages live under their natural owner: `agent/kind` (agent kind
-  constants — shared vocabulary, not agent domain logic), `git/exec` (low-level
-  git command adapter), `node/id` (node identity file), `release` (version +
-  self-update, merged from buildinfo + selfupdate), `contextstore` (the
-  renderer-pushed desktop context state, moved out of the node package).
-- Capability owners (files, git, worktree, terminal) return domain errors
-  (files.Error / git.Error / worktree.Error / terminal.Error) and never import
-  rpcerror; `rpc.MapRPCError` maps capability domain errors to wire errors
-  (the same pattern as computer.Error). workspace.RPCError remains the
-  domain-wide error base used by the RPC service layer.
-- `node.Service` is the local Node application boundary and must not import
-  `internal/app`; `internal/app` is the only composition root and may import
-  every concrete package.
-- Behavior moved to its owner (Phase 16B): the renderer-pushed desktop
-  context state lives in `internal/contextstore`; the pending workspace
-  cleanup retry queue lives in `internal/db` (db.WorkspaceCleanupStore); the
-  agent hook HTTP ingress lives in `internal/node/hook` (hook.Ingress +
-  hook.UsageTracker). Workspace lifecycle operations (open/close/hydrate/
-  health/persist) stay on node.Service: they are local-Node application
-  operations that depend on the SQLite adapter and the cloud API client —
-  pushing them into workspace/application would leak db/api into the
-  application layer, breaking the `application -> domain + interfaces`
-  contract.
+### Internal package taxonomy (cli, Phases 16–19)
+- Every top-level internal package has one documented role: composition
+  (`app`), host/transport (`daemon`, `rpc`), application boundary
+  (`node/*` vertical services), domain owner (`workspace`, `agent`,
+  `tokenusage`, `memory`), capability owner (`files`, `git`, `terminal`,
+  `computer`), edge adapter (`adapter/cloud`, `adapter/sqlite`,
+  `adapter/relay`), or platform owner (`platform/config`,
+  `platform/shellenv`, `platform/logging`, `platform/release`). The
+  `adapter` and `platform` roots contain no Go files.
+- Small packages live under their natural owner: `agent/kind` (shared
+  vocabulary), `git/exec`, `node/id`, `node/context` (renderer context
+  store), `workspace/worktree`, `workspace/watchers/fswatch`,
+  `cmd/output` (CLI output + exit-code policy).
+- Domain and capability owners return their own errors (`workspace.Error`,
+  `files.Error`, `git.Error`, `worktree.Error`, `terminal.Error`,
+  `computer.Error`) and never import `rpc`; `rpc.MapRPCError` maps domain
+  errors to wire errors.
+- `internal/app` is the only composition root and may import every concrete
+  package; node services never import `internal/app` or `internal/daemon`.
+- Workspace lifecycle operations (open/close/hydrate/health/persist) live in
+  `node/workspace` (the workspace application service), not in the
+  `workspace/application` domain package: they depend on the SQLite adapter
+  and the cloud API client, and moving them into the application layer would
+  leak db/api into `workspace/application`, breaking the
+  `application -> domain + interfaces` contract.
+

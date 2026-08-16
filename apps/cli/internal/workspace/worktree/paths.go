@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 )
 
 // DefaultRepoPath returns the local path of the shared clone for a repo key.

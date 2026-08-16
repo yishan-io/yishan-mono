@@ -11,14 +11,14 @@ import (
 	"strconv"
 	"time"
 
-	"yishan/apps/cli/internal/app"
-	release "yishan/apps/cli/internal/platform/release"
-	"yishan/apps/cli/internal/platform/config"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/relay"
 	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/app"
 	hook "yishan/apps/cli/internal/node/hook"
 	nodeid "yishan/apps/cli/internal/node/id"
-	"yishan/apps/cli/internal/adapter/relay"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/platform/config"
+	release "yishan/apps/cli/internal/platform/release"
 )
 
 func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) (*daemonRuntime, error) {

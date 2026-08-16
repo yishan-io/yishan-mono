@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/relay"
 	nodeagent "yishan/apps/cli/internal/node/agent"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
-	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 // appHandler adapts the namespace router into the rpc server handler and

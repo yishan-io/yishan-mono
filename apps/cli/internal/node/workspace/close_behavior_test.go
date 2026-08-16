@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-
 	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"

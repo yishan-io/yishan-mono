@@ -14,23 +14,23 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	release "yishan/apps/cli/internal/platform/release"
-	internalevents "yishan/apps/cli/internal/events"
-	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	internalevents "yishan/apps/cli/internal/events"
+	release "yishan/apps/cli/internal/platform/release"
+	"yishan/apps/cli/internal/rpc"
 )
 
 // Relay protocol method names. These strings are the wire protocol between
 // daemon nodes and the relay server.
 const (
-	MethodPing                   = "relay.ping"
-	MethodPong                   = "relay.pong"
-	MethodJobRun                 = "job.run"
+	MethodPing                     = "relay.ping"
+	MethodPong                     = "relay.pong"
+	MethodJobRun                   = "job.run"
 	MethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
-	MethodTerminalSessionChanged = "terminal.session.changed"
-	MethodTerminalStreamRequest  = "terminal.stream.request"
-	MethodTerminalStreamAccept   = "terminal.stream.accept"
-	MethodTerminalStreamCancel   = "terminal.stream.cancel"
+	MethodTerminalSessionChanged   = "terminal.session.changed"
+	MethodTerminalStreamRequest    = "terminal.stream.request"
+	MethodTerminalStreamAccept     = "terminal.stream.accept"
+	MethodTerminalStreamCancel     = "terminal.stream.cancel"
 )
 
 const (

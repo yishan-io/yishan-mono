@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/rpc"
 )
 
 // newTestService builds a project application service for tests with a router

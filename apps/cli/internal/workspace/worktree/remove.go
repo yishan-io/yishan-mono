@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 )
 
 // RemoveRequest carries the teardown options for a worktree.

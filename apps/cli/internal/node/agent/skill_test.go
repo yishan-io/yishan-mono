@@ -18,7 +18,7 @@ func newSkillTestHandler(t *testing.T) *Service {
 
 // TestDispatchSkillListEmptyOnCleanHome verifies skill.list returns no skills
 // when no pi source dirs and no registry exist yet.
-func TestDispatchSkillListEmptyOnCleanHome(t *testing.T) {
+func TestSkillListEmptyOnCleanHome(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	handler := newSkillTestHandler(t)
@@ -48,32 +48,32 @@ func mustMarshalSkillParams(t *testing.T, payload map[string]any) json.RawMessag
 	return raw
 }
 
-func TestHandleSkillAdd_MissingSource(t *testing.T) {
+func TestSkillAdd_MissingSource(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.Add(context.Background(), rpc.SkillSourceParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
-func TestHandleSkillUpdate_MissingName(t *testing.T) {
+func TestSkillUpdate_MissingName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.Update(context.Background(), rpc.SkillNameParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
-func TestHandleSkillRemove_InvalidName(t *testing.T) {
+func TestSkillRemove_InvalidName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.Remove(context.Background(), rpc.SkillNameParams{Name: "../evil"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
-func TestHandleSkillRemove_OfficialSkillRejected(t *testing.T) {
+func TestSkillRemove_OfficialSkillRejected(t *testing.T) {
 	withOfficialPackageSkillHome(t)
 	handler := newSkillTestHandler(t)
 	_, err := handler.Remove(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
-func TestHandleSkillUpdate_OfficialSkillRejected(t *testing.T) {
+func TestSkillUpdate_OfficialSkillRejected(t *testing.T) {
 	withOfficialPackageSkillHome(t)
 	handler := newSkillTestHandler(t)
 	_, err := handler.Update(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
@@ -103,13 +103,13 @@ func withOfficialPackageSkillHome(t *testing.T) {
 	}
 }
 
-func TestHandleSkillRemove_MissingName(t *testing.T) {
+func TestSkillRemove_MissingName(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.Remove(context.Background(), rpc.SkillNameParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
-func TestDispatchSkill_RoutesMutationMethods(t *testing.T) {
+func TestSkill_RoutesMutationMethods(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	for _, method := range []string{rpc.MethodSkillAdd, rpc.MethodSkillRemove, rpc.MethodSkillUpdate, rpc.MethodSkillUpdateAll} {
 		_, err := handler.callRPCForTest(context.Background(), method, mustMarshalSkillParams(t, map[string]any{}))

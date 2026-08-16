@@ -2,15 +2,16 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"yishan/apps/cli/internal/platform/config"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/platform/config"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -69,5 +70,33 @@ func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t 
 	if !strings.Contains(revertCall, "PATCH /orgs/org-1/projects/project-1/workspaces/ws-1") ||
 		!strings.Contains(revertCall, `"localPath":"/tmp/ws"`) {
 		t.Errorf("expected the remote to be reverted to active after teardown failure, got call[1] = %q", revertCall)
+	}
+}
+
+func TestWorkspaceClose_RemoteNode_RelaysInsteadOfLocalClose(t *testing.T) {
+	s := newCloseRoutingTestHandler(t, "node-remote")
+	params, err := json.Marshal(workspaceCloseParams{
+		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	_, err = s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, params)
+	if err == nil || !strings.Contains(err.Error(), "relay not connected") {
+		t.Fatalf("expected relay path (relay not connected), got err=%v", err)
+	}
+}
+
+func TestWorkspaceClose_LocalNode_TakesLocalClosePath(t *testing.T) {
+	s := newCloseRoutingTestHandler(t, "node-1")
+	params, err := json.Marshal(workspaceCloseParams{
+		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	_, err = s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, params)
+	if err == nil || strings.Contains(err.Error(), "relay not connected") {
+		t.Fatalf("expected local close path (not relay), got err=%v", err)
 	}
 }

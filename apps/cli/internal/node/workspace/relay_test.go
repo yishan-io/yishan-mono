@@ -2,15 +2,14 @@ package workspace
 
 import (
 	"context"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/gorilla/websocket"
-	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/adapter/relay"
+	"yishan/apps/cli/internal/rpc"
 )
 
 // relayVerdictTestServer upgrades to a WebSocket, reads one request, and replies

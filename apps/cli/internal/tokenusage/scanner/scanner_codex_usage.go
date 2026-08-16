@@ -1,11 +1,11 @@
 package scanner
 
 import (
-	"yishan/apps/cli/internal/tokenusage/record"
-	"yishan/apps/cli/internal/tokenusage/attribution"
 	"sort"
 	"strings"
 	"time"
+	"yishan/apps/cli/internal/tokenusage/attribution"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 type hourlyKey struct {
@@ -93,7 +93,7 @@ func computeDeltaUsage(current codexUsage, previous *codexUsage) codexUsage {
 		ReasoningTokens:    maxInt64(current.ReasoningTokens-previous.ReasoningTokens, 0),
 		TotalTokens:        maxInt64(current.TotalTokens-previous.TotalTokens, 0),
 		TotalCostMicrosUSD: maxInt64(current.TotalCostMicrosUSD-previous.TotalCostMicrosUSD, 0),
-                   CostSource:         current.CostSource,
+		CostSource:         current.CostSource,
 	}
 }
 
@@ -181,13 +181,13 @@ func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanI
 			ReasoningTokens:       acc.ReasoningTokens,
 			TotalTokens:           acc.TotalTokens,
 			TotalCostMicrosUSD:    acc.TotalCostMicrosUSD,
-                    CostSource:            record.NormalizedCostSource(acc.CostSource),
+			CostSource:            record.NormalizedCostSource(acc.CostSource),
 			EventCount:            acc.EventCount,
 			SessionCount:          int64(len(acc.Sessions)),
 			TurnCount:             acc.TurnCount,
 			ToolCallCount:         acc.ToolCallCount,
-                               AttributionConfidence: key.confidence,
-                           ScannerSourceKind:     key.sourceKind,
+			AttributionConfidence: key.confidence,
+			ScannerSourceKind:     key.sourceKind,
 			ScannerSourceID:       key.sourceID,
 			IngestedAt:            input.IngestedAt,
 			RunID:                 input.RunID,

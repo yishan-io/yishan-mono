@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
-
 )
 
 func mergeHookIngressPayload(envelope hookIngressEvent, rawPayload hookIngressEvent) hookIngressEvent {

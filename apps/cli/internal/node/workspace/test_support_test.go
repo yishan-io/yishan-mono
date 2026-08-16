@@ -27,62 +27,28 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"io"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
-	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
-
-	"github.com/gorilla/websocket"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/relay"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/platform/config"
-	"yishan/apps/cli/internal/node/context"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	nodeagent "yishan/apps/cli/internal/node/agent"
+	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/node/hook"
-	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	term "yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 )
-
-// lifecycleEventTopics are the workspace lifecycle events this suite records.
-// Other workspace events (workspaceFilesChanged, workspacePullRequestUpdated)
-// are intentionally excluded so watcher/PR-tracker noise cannot break the
-// sequence assertions.
-var lifecycleEventTopics = map[string]bool{
-	"workspaceSnapshotChanged": true,
-	"workspaceCreateStarted":   true,
-	"workspaceCreateProgress":  true,
-	"workspaceCreateCompleted": true,
-	"workspaceCreateFailed":    true,
-	"workspaceStateChanged":    true,
-}
-
-// ============================= helpers =============================
-
-type apiCall struct {
-	method string
-	path   string
-	body   string
-}
-
-type apiCallRecorder struct {
-	mu    sync.Mutex
-	calls []apiCall
-}
 
 func (r *apiCallRecorder) add(method string, path string, body string) {
 	r.mu.Lock()
@@ -137,262 +103,6 @@ const apiWorkspaceRecord = `{"workspace":{"id":"ws-record","organizationId":"org
 // newWorkspaceAPIStub serves the workspace CRUD endpoints for org-1/project-1
 // and records every request. Unknown paths 404 (usage-collector scans and
 // similar best-effort calls tolerate this).
-func newWorkspaceAPIStub(t *testing.T, recorder *apiCallRecorder) *httptest.Server {
-	t.Helper()
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		recorder.add(r.Method, r.URL.Path, string(body))
-		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/orgs/org-1/projects/project-1/workspaces":
-			_, _ = w.Write([]byte(apiWorkspaceRecord))
-		case r.Method == http.MethodPatch && strings.HasPrefix(r.URL.Path, "/orgs/org-1/projects/project-1/workspaces"):
-			_, _ = w.Write([]byte(apiWorkspaceRecord))
-		case r.Method == http.MethodGet && r.URL.Path == "/orgs/org-1/nodes":
-			_, _ = w.Write([]byte(`{"nodes":[{"id":"node-2","organizationId":"org-1","name":"node-2"}]}`))
-		case r.Method == http.MethodGet && r.URL.Path == "/orgs/org-1/projects/project-1/workspaces":
-			_, _ = w.Write([]byte(`{"workspaces":[]}`))
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	t.Cleanup(server.Close)
-	return server
-}
-
-func apiConfiguredRuntime(server *httptest.Server) *cliruntime.Runtime {
-	return cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-}
-
-func openMigratedTestDB(t *testing.T) *sql.DB {
-	t.Helper()
-	database, err := localdb.Open(t.TempDir())
-	if err != nil {
-		t.Fatalf("open database: %v", err)
-	}
-	if err := localdb.Migrate(database); err != nil {
-		t.Fatalf("migrate database: %v", err)
-	}
-	t.Cleanup(func() { _ = database.Close() })
-	return database
-}
-
-// collectUntil drains the event channel until terminalTopic arrives and
-// returns every event collected (including the terminal one). Fails the test
-// on timeout so async create goroutines cannot hang the suite.
-func collectUntil(t *testing.T, ch <-chan internalevents.Event, terminalTopic string, timeout time.Duration) []internalevents.Event {
-	t.Helper()
-	var collected []internalevents.Event
-	deadline := time.After(timeout)
-	for {
-		select {
-		case event := <-ch:
-			collected = append(collected, event)
-			if event.Topic == terminalTopic {
-				return collected
-			}
-		case <-deadline:
-			t.Fatalf("timed out waiting for %q; collected: %v", terminalTopic, eventTopicNames(collected))
-		}
-	}
-}
-
-// collectFor drains the event channel for the grace period and returns what
-// arrived. Used after a terminal event to prove no further lifecycle events
-// were emitted.
-func collectFor(t *testing.T, ch <-chan internalevents.Event, grace time.Duration) []internalevents.Event {
-	t.Helper()
-	var collected []internalevents.Event
-	deadline := time.After(grace)
-	for {
-		select {
-		case event := <-ch:
-			collected = append(collected, event)
-		case <-deadline:
-			return collected
-		}
-	}
-}
-
-func eventTopicNames(events []internalevents.Event) []string {
-	names := make([]string, 0, len(events))
-	for _, event := range events {
-		names = append(names, event.Topic)
-	}
-	return names
-}
-
-func lifecycleTopicNames(events []internalevents.Event) []string {
-	var names []string
-	for _, event := range events {
-		if lifecycleEventTopics[event.Topic] {
-			names = append(names, event.Topic)
-		}
-	}
-	return names
-}
-
-func assertTopicSequence(t *testing.T, events []internalevents.Event, want []string) {
-	t.Helper()
-	got := lifecycleTopicNames(events)
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("lifecycle topic sequence = %v, want %v", got, want)
-	}
-}
-
-// wireRelayCapture runs a real relay client against a fake relay that echoes a
-// verdict and forwards every received JSON-RPC message (the relay envelope) to
-// the returned channel.
-func wireRelayCapture(t *testing.T, s *Service, result map[string]any) <-chan map[string]any {
-	t.Helper()
-	received := make(chan map[string]any, 16)
-	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		var msg map[string]any
-		if err := conn.ReadJSON(&msg); err != nil {
-			return
-		}
-		received <- msg
-		_ = conn.WriteJSON(map[string]any{"jsonrpc": "2.0", "id": msg["id"], "result": result})
-	}))
-	t.Cleanup(server.Close)
-
-	client := relay.NewClient(relay.ClientConfig{
-		Runtime:     nil,
-		NodeID:      s.deps.NodeID,
-		URL:         server.URL,
-		StaticToken: "test-token",
-		Server:      rpc.NewServer(noopRPCHandler{}),
-		Handler:     s,
-		Events:      s.deps.Events,
-	})
-	s.relayClient = client
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	go client.Run(ctx)
-	waitForRelayConnected(t, client)
-	return received
-}
-
-func decodeRelayCreateEnvelope(t *testing.T, msg map[string]any) relay.CreateEnvelope {
-	t.Helper()
-	params, ok := msg["params"].(map[string]any)
-	if !ok {
-		t.Fatalf("relay message params = %T, want map (%v)", msg["params"], msg)
-	}
-	raw, err := json.Marshal(params)
-	if err != nil {
-		t.Fatalf("marshal relay params: %v", err)
-	}
-	var envelope relay.CreateEnvelope
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		t.Fatalf("decode relay create envelope: %v", err)
-	}
-	return envelope
-}
-
-func decodeRelayCloseEnvelope(t *testing.T, msg map[string]any) relayWorkspaceCloseEnvelope {
-	t.Helper()
-	params, ok := msg["params"].(map[string]any)
-	if !ok {
-		t.Fatalf("relay message params = %T, want map (%v)", msg["params"], msg)
-	}
-	raw, err := json.Marshal(params)
-	if err != nil {
-		t.Fatalf("marshal relay params: %v", err)
-	}
-	var envelope relayWorkspaceCloseEnvelope
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		t.Fatalf("decode relay close envelope: %v", err)
-	}
-	return envelope
-}
-
-func decodeCreateStartedEvent(t *testing.T, event internalevents.Event) workspaceCreateStartedEvent {
-	t.Helper()
-	started, ok := event.Payload.(workspaceCreateStartedEvent)
-	if !ok {
-		t.Fatalf("workspaceCreateStarted payload = %T, want workspaceCreateStartedEvent", event.Payload)
-	}
-	return started
-}
-
-func decodeProgressEvents(t *testing.T, events []internalevents.Event) []workspace.CreateProgressEvent {
-	t.Helper()
-	var progress []workspace.CreateProgressEvent
-	for _, event := range events {
-		if event.Topic != "workspaceCreateProgress" {
-			continue
-		}
-		progressEvent, ok := event.Payload.(workspace.CreateProgressEvent)
-		if !ok {
-			t.Fatalf("workspaceCreateProgress payload = %T, want workspace.CreateProgressEvent", event.Payload)
-		}
-		progress = append(progress, progressEvent)
-	}
-	return progress
-}
-
-func progressStepSequence(progress []workspace.CreateProgressEvent) []string {
-	out := make([]string, 0, len(progress))
-	for _, event := range progress {
-		out = append(out, event.StepID+":"+string(event.Status))
-	}
-	return out
-}
-
-// newBehaviorHandler builds a handler with the given runtime and node. When
-// database is non-nil it is attached directly (bypassing SetLocalDatabase so
-// no token-usage collector is wired into the test).
-func newBehaviorHandler(t *testing.T, runtime *cliruntime.Runtime, nodeID string, database *sql.DB) *Service {
-	t.Helper()
-	s := newTestService(t, runtime, nodeID)
-	s.setTestDatabase(database)
-	return s
-}
-
-func findTopic(events []internalevents.Event, topic string) internalevents.Event {
-	for _, event := range events {
-		if event.Topic == topic {
-			return event
-		}
-	}
-	return internalevents.Event{}
-}
-
-func openLocalWorkspace(t *testing.T, services *Service, id string, path string) {
-	t.Helper()
-	if _, err := services.Open(workspace.OpenRequest{ID: id, Path: path, OrgID: "org-1", ProjectID: "project-1"}); err != nil {
-		t.Fatalf("open workspace %s: %v", id, err)
-	}
-}
-
-// openTestWorkspace registers a workspace instance at the given path via the
-// production open path.
-func openTestWorkspace(t *testing.T, services *Service, id string, path string) workspace.Workspace {
-	t.Helper()
-	ws, err := services.Open(workspace.OpenRequest{ID: id, Path: path})
-	if err != nil {
-		t.Fatalf("open test workspace %s: %v", id, err)
-	}
-	return ws
-}
-
-func containsString(list []string, target string) bool {
-	for _, item := range list {
-		if item == target {
-			return true
-		}
-	}
-	return false
-}
-
-// newTestService builds a workspace application service for tests with a
-// router wired for the workspace/file/git namespaces.
 func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *Service {
 	t.Helper()
 	root := t.TempDir()
@@ -512,4 +222,13 @@ type noopRPCHandler struct{}
 // Call implements rpc.Handler.
 func (noopRPCHandler) Call(ctx context.Context, connection *rpc.Connection, method string, params json.RawMessage) (any, error) {
 	return nil, rpc.NewRPCError(rpc.CodeMethodNotFound, "noop: "+method)
+}
+
+var lifecycleEventTopics = map[string]bool{
+	"workspaceSnapshotChanged": true,
+	"workspaceCreateStarted":   true,
+	"workspaceCreateProgress":  true,
+	"workspaceCreateCompleted": true,
+	"workspaceCreateFailed":    true,
+	"workspaceStateChanged":    true,
 }

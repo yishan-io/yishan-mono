@@ -15,7 +15,7 @@ func TestToHourlyRows_RoundTrip(t *testing.T) {
 			ProjectID: "proj-1", WorkspaceID: "ws-1", WorkspacePath: "/work/ws-1",
 			OrganizationID: "org-1", AgentKind: "codex", Model: "gpt-4o", ModelNormalized: "gpt-4o",
 			BucketStartHourUTC: 1751500800000,
-			InputTokens: 100, OutputTokens: 50, CachedInputTokens: 20, CachedWriteTokens: 5,
+			InputTokens:        100, OutputTokens: 50, CachedInputTokens: 20, CachedWriteTokens: 5,
 			ReasoningTokens: 10, TotalTokens: 185, TotalCostMicrosUSD: 1234,
 			CostSource: record.CostSourceEstimated, EventCount: 2, SessionCount: 1,
 			TurnCount: 3, ToolCallCount: 4,

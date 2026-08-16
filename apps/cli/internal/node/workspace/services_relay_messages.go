@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/adapter/relay"
+	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 
 	"github.com/rs/zerolog/log"

@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/files"
-	"yishan/apps/cli/internal/workspace/instance"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/instance"
 )
 
 func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {

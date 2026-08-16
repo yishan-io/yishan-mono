@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/platform/config"
-	"yishan/apps/cli/internal/node/context"
 	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/node/context"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	term "yishan/apps/cli/internal/terminal"
 )
 

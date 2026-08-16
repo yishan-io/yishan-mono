@@ -14,9 +14,9 @@ import (
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
 	"yishan/apps/cli/internal/platform/config"
-	"yishan/apps/cli/internal/tokenusage/record"
-	"yishan/apps/cli/internal/tokenusage/pricing"
 	"yishan/apps/cli/internal/tokenusage/attribution"
+	"yishan/apps/cli/internal/tokenusage/pricing"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 const piAgentKind = agentkind.Pi
@@ -256,7 +256,7 @@ func parsePiMessageActivity(
 				ReasoningTokens:    usage.ReasoningTokens,
 				TotalTokens:        usage.TotalTokens,
 				TotalCostMicrosUSD: usage.TotalCostMicrosUSD,
-                     CostSource:         usage.CostSource,
+				CostSource:         usage.CostSource,
 				ToolCallCount:      toolCalls,
 			}, true
 		}
@@ -341,7 +341,7 @@ func parsePiUsage(value any, model string, catalog pricing.Catalog) (codexUsage,
 		ReasoningTokens:    reasoningTokens,
 		TotalTokens:        totalTokens,
 		TotalCostMicrosUSD: totalCostMicrosUSD,
-                   CostSource:         costSource,
+		CostSource:         costSource,
 	}, true
 }
 
@@ -414,7 +414,7 @@ func applyPiActivity(
 			ReasoningTokens:    activity.ReasoningTokens,
 			TotalTokens:        activity.TotalTokens,
 			TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
-                    CostSource:         activity.CostSource,
+			CostSource:         activity.CostSource,
 		}, activity.SessionID)
 		if activity.ToolCallCount > 0 {
 			accumulateEngagementCounts(acc, activity.SessionID, 0, activity.ToolCallCount)
