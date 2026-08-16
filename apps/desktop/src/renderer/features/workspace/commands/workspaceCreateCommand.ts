@@ -10,7 +10,8 @@ import {
   enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../store/workspaceLifecycleNoticeStore";
-import { buildWorkspaceCreatePlaceholder, readWorkspaceStoreState } from "./workspaceStoreHelpers";
+import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
+import { workspaceStore } from "../../../store/workspaceStore";
 
 type CreateWorkspaceInput = {
   projectId: string;
@@ -99,7 +100,7 @@ function isReauthRequiredRemoteSyncWarning(message: string): boolean {
 
 /** Creates one workspace by calling backend service when available, then appending it in store state. */
 export async function createWorkspace(input: CreateWorkspaceInput): Promise<string | undefined> {
-  const store = readWorkspaceStoreState();
+  const store = workspaceStore.getState();
   const { normalizedName } = normalizeCreateWorkspaceInput(input);
   const projectId = input.projectId;
 

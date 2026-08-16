@@ -26,9 +26,14 @@ vi.mock("../../../commands/tabCommands", () => ({
   openChatFileTab: mocked.openChatFileTab,
 }));
 
-vi.mock("../../../features/workspace/commands/workspaceStoreHelpers", () => ({
-  readWorkspaceStoreState: () => mocked.workspaceState,
-}));
+vi.mock("../../../store/workspaceStore", () => {
+  const selectorMock = (selector: (state: typeof mocked.workspaceState) => unknown) => selector(mocked.workspaceState);
+  return {
+    workspaceStore: Object.assign(selectorMock, {
+      getState: () => mocked.workspaceState,
+    }),
+  };
+});
 
 vi.mock("../../../features/workspace/commands/workspaceCommands", () => ({
   selectFolderInFileTree: mocked.selectFolderInFileTree,

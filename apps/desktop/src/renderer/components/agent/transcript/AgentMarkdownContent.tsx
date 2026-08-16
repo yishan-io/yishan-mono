@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
 import { openChatFileTab, openTab, openTabInOppositePane } from "../../../commands/tabCommands";
 import { selectFolderInFileTree } from "../../../features/workspace/commands/workspaceCommands";
-import { readWorkspaceStoreState } from "../../../features/workspace/commands/workspaceStoreHelpers";
+import { workspaceStore } from "../../../store/workspaceStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 
 type AgentMarkdownContentProps = {
@@ -38,7 +38,7 @@ function getFileLineRangeSuffix(href: string): string {
  * Returns undefined when no workspace owns the transcript.
  */
 function resolveChatWorkspace(workspacePath: string): { workspaceId: string; workspaceRoot: string } | undefined {
-  const { workspaces } = readWorkspaceStoreState();
+  const { workspaces } = workspaceStore.getState();
   let best: { workspaceId: string; workspaceRoot: string } | undefined;
   for (const workspace of workspaces) {
     const root = workspace.worktreePath;

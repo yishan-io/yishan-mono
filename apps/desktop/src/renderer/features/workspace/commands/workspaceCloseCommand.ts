@@ -6,7 +6,7 @@ import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNo
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
-import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
+import { workspaceStore } from "../../../store/workspaceStore";
 import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
 
 type CloseWorkspaceResponse = {
@@ -66,7 +66,7 @@ async function removeWorkspaceInBackground(input: {
 
 /** Closes one workspace immediately in UI and schedules backend cleanup asynchronously. */
 export async function closeWorkspace(workspaceId: string, options?: { removeBranch?: boolean }): Promise<void> {
-  const store = readWorkspaceStoreState();
+  const store = workspaceStore.getState();
   const previousWorkspaces = store.workspaces;
   const workspace = store.workspaces.find((item) => item.id === workspaceId);
 

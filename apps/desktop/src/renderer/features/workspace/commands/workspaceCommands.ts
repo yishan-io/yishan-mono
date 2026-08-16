@@ -20,7 +20,6 @@ import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./works
 
 export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
-import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
 import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
 export { deleteLocalFolder } from "./localFolderCommands";
 
@@ -36,7 +35,7 @@ type OpenCreateWorkspaceDialogDetail = {
  * matching the convention used by the Changes tab comparison.
  */
 function resolveWorkspaceTargetBranch(workspaceId: string): string | undefined {
-  const workspace = readWorkspaceStoreState().workspaces.find((ws) => ws.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((ws) => ws.id === workspaceId);
   const sourceBranch = workspace?.sourceBranch?.trim();
   if (!sourceBranch) {
     return undefined;
@@ -64,7 +63,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     return;
   }
 
-  const store = readWorkspaceStoreState();
+  const store = workspaceStore.getState();
   const workspace = store.workspaces.find((workspace) => workspace.id === workspaceId);
   if (!workspace) {
     return;
@@ -135,7 +134,7 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
     return;
   }
 
-  const workspace = readWorkspaceStoreState().workspaces.find((candidate) => candidate.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((candidate) => candidate.id === workspaceId);
   if (!workspace) {
     return;
   }
@@ -200,7 +199,7 @@ export function toggleLeftPaneVisibility() {
 
 /** Toggles right workspace pane manual visibility state for the selected workspace. */
 export function toggleRightPaneVisibility() {
-  const workspaceId = readWorkspaceStoreState().selectedWorkspaceId;
+  const workspaceId = workspaceStore.getState().selectedWorkspaceId;
   const uiState = workspaceUiStore.getState();
   const isHidden = uiState.isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
   uiState.setIsRightPaneHidden(workspaceId, !isHidden);
@@ -214,9 +213,9 @@ export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
     return;
   }
 
-  const workspaceId = readWorkspaceStoreState().selectedWorkspaceId;
+  const workspaceId = workspaceStore.getState().selectedWorkspaceId;
   // Folder workspaces have no git state: never open git tabs for them.
-  const workspace = readWorkspaceStoreState().workspaces.find((item) => item.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((item) => item.id === workspaceId);
   if ((pane === "changes" || pane === "pr") && isFolderWorkspace(workspace)) {
     return;
   }
@@ -239,7 +238,7 @@ export function openCreateWorkspaceDialog() {
     return;
   }
 
-  const state = readWorkspaceStoreState();
+  const state = workspaceStore.getState();
   const selectedWorkspace = state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId);
   // Folder workspaces have no worktrees: never surface the create dialog.
   if (isFolderWorkspace(selectedWorkspace)) {
@@ -315,7 +314,7 @@ export function openWorkspaceFileSearch() {
 
 /** Requests selecting a folder path in the file tree and ensures the files tab is visible. */
 export function selectFolderInFileTree(path: string) {
-  const workspaceId = readWorkspaceStoreState().selectedWorkspaceId;
+  const workspaceId = workspaceStore.getState().selectedWorkspaceId;
   workspaceUiStore.getState().setIsRightPaneHidden(workspaceId, false);
   workspaceUiStore.getState().setRightPaneTab(workspaceId, "files");
   workspaceUiStore.getState().requestSelectFolderInFileTree(path);
@@ -339,7 +338,7 @@ export function renameWorkspace(input: { projectId?: string; repoId?: string; wo
   }
 
   if (input.projectId) {
-    readWorkspaceStoreState().renameWorkspace({
+    workspaceStore.getState().renameWorkspace({
       ...input,
       projectId,
       repoId: projectId,
@@ -347,7 +346,7 @@ export function renameWorkspace(input: { projectId?: string; repoId?: string; wo
     return;
   }
 
-  readWorkspaceStoreState().renameWorkspace({
+  workspaceStore.getState().renameWorkspace({
     repoId: projectId,
     workspaceId: input.workspaceId,
     name: input.name,
@@ -364,7 +363,7 @@ export function reorderWorkspace(input: {
     return;
   }
 
-  readWorkspaceStoreState().reorderWorkspace(input);
+  workspaceStore.getState().reorderWorkspace(input);
 }
 
 /** Renames one managed workspace branch in git and mirrors the new branch in renderer store state. */
@@ -380,7 +379,7 @@ export async function renameWorkspaceBranch(input: {
     return;
   }
 
-  const store = readWorkspaceStoreState();
+  const store = workspaceStore.getState();
   const workspace = store.workspaces.find(
     (item) => item.id === input.workspaceId && (item.projectId ?? item.repoId) === projectId && item.kind !== "local",
   );

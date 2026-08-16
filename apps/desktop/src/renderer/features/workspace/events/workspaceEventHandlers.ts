@@ -12,7 +12,7 @@ import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpc
 
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../features/project/commands/projectCommands";
-import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/commands/workspaceStoreHelpers";
+import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../store/sessionStore";

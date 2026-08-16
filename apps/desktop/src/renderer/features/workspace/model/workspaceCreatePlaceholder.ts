@@ -1,23 +1,13 @@
+/**
+ * Workspace create placeholder — pure builder for the optimistic workspace
+ * row shared by the UI create flow and the backend create-start event.
+ *
+ * Lives in the Workspace model so both Commands and Events can import it
+ * without depending on a command module.
+ */
 import type { WorkspaceStoreState } from "../../../store/types";
-import { workspaceStore } from "../../../store/workspaceStore";
-
-type WorkspaceStoreFacade = typeof workspaceStore & {
-  getState?: () => WorkspaceStoreState;
-};
 
 export type WorkspaceCreatePlaceholderInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
-
-/** Reads workspace store state for both real Zustand stores and selector-only test doubles. */
-export function readWorkspaceStoreState(): WorkspaceStoreState {
-  const facade = workspaceStore as WorkspaceStoreFacade;
-  if (typeof facade.getState === "function") {
-    return facade.getState();
-  }
-
-  return (
-    workspaceStore as unknown as (selector: (state: WorkspaceStoreState) => WorkspaceStoreState) => WorkspaceStoreState
-  )((state) => state);
-}
 
 /** Builds one optimistic workspace row payload shared by UI create and backend create-start flows. */
 export function buildWorkspaceCreatePlaceholder(
