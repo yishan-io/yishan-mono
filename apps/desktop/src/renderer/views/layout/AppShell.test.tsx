@@ -20,7 +20,7 @@ vi.mock("../../hooks/useDaemonConnectionMonitor", () => ({
   useDaemonConnectionMonitor: mocks.useDaemonConnectionMonitor,
 }));
 
-vi.mock("../../hooks/useShortcuts", () => ({
+vi.mock("../../app/runtime/useShortcuts", () => ({
   useShortcuts: mocks.useShortcuts,
 }));
 

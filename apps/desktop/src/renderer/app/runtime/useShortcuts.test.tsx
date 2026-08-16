@@ -82,20 +82,20 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../shortcuts/keybindings", () => ({
+vi.mock("../../shortcuts/keybindings", () => ({
   getShortcutDefinitions: mocks.getShortcutDefinitions,
 }));
 
-vi.mock("../store/workspaceStore", () => ({
+vi.mock("../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: typeof mocks.workspaceStoreState) => unknown) =>
     selector(mocks.workspaceStoreState),
 }));
 
-vi.mock("../store/tabStore", () => ({
+vi.mock("../../store/tabStore", () => ({
   tabStore: (selector: (state: typeof mocks.tabStoreState) => unknown) => selector(mocks.tabStoreState),
 }));
 
-vi.mock("./useCommands", () => ({
+vi.mock("../../hooks/useCommands", () => ({
   useCommands: () => mocks.commandHandlers,
 }));
 

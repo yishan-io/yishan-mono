@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
-import { getShortcutDefinitions } from "../shortcuts/keybindings";
-import { compileShortcutDefinitions, processShortcuts } from "../shortcuts/shortcutRunner";
-import { keybindingSettingsStore } from "../store/settings/keybindingSettingsStore";
-import { layoutStore } from "../store/settings/layoutStore";
-import { splitPaneStore } from "../store/splitPaneStore";
-import { tabStore } from "../store/tabStore";
-import { workspaceStore } from "../store/workspaceStore";
-import { useCommands } from "./useCommands";
+import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
+import { getShortcutDefinitions } from "../../shortcuts/keybindings";
+import { compileShortcutDefinitions, processShortcuts } from "../../shortcuts/shortcutRunner";
+import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
+import { layoutStore } from "../../store/settings/layoutStore";
+import { splitPaneStore } from "../../store/splitPaneStore";
+import { tabStore } from "../../store/tabStore";
+import { workspaceStore } from "../../store/workspaceStore";
+import { useCommands } from "../../hooks/useCommands";
 
 const WORKSPACE_ROUTE = "/";
 
