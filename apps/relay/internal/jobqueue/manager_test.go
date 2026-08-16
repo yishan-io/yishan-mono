@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
 )
 
 // ---------------------------------------------------------------------------
@@ -124,7 +126,7 @@ func TestDispatch_HappyPath(t *testing.T) {
 	}
 
 	notes := tr.notifications()
-	if len(notes) != 1 || notes[0].method != jobRunMethod {
+	if len(notes) != 1 || notes[0].method != relayprotocol.MethodJobRun {
 		t.Errorf("expected one job.run notification, got %v", notes)
 	}
 }

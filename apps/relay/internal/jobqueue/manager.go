@@ -46,10 +46,6 @@ const (
 	StatusRetrying       RunStatus = "retrying"
 )
 
-// jobRunMethod is the JSON-RPC method name for job dispatch notifications;
-// the wire string is owned by the shared relay protocol module.
-const jobRunMethod = relayprotocol.MethodJobRun
-
 // PendingRun represents a single dispatched job run.
 type PendingRun struct {
 	RunID          string         `json:"runId"`
@@ -113,9 +109,6 @@ type Metrics struct {
 }
 
 // jobRunParams is the structured params sent in job.run notifications; the
-// wire type is owned by the shared relay protocol module.
-type jobRunParams = relayprotocol.JobRunParams
-
 // ---------------------------------------------------------------------------
 // Manager
 // ---------------------------------------------------------------------------
@@ -467,7 +460,7 @@ func (m *Manager) attemptDispatch(run *PendingRun) DispatchResult {
 	m.mu.Unlock()
 
 	// Use a typed struct to avoid a heap map[string]any allocation per dispatch.
-	err := m.transport.SendNotificationWithError(run.NodeID, jobRunMethod, jobRunParams{
+	err := m.transport.SendNotificationWithError(run.NodeID, relayprotocol.MethodJobRun, relayprotocol.JobRunParams{
 		RunID:          run.RunID,
 		JobID:          run.JobID,
 		ScheduledFor:   run.ScheduledFor,

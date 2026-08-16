@@ -139,7 +139,7 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Exclude the originating node from the broadcast: it already applied the
 	// change locally, so echoing it back would cause duplicate processing.
-	notified := s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params, sourceNodeID)
+	notified := s.sessions.SendOrgNotification(organizationID, relayprotocol.MethodWorkspaceSnapshotChanged, params, sourceNodeID)
 	log.Info().
 		Str("organizationId", organizationID).
 		Str("resource", resource).
@@ -234,11 +234,11 @@ func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		node := s.sessions.Get(nodeID)
 		if node == nil || !node.isConnected() {
-			_ = client.writeJSON(response{
+			_ = client.writeJSON(relayprotocol.Response{
 				JSONRPC: "2.0",
 				ID:      nil,
-				Error: &rpcError{
-					Code:    CodeNodeOffline,
+				Error: &relayprotocol.RPCError{
+					Code:    relayprotocol.CodeNodeOffline,
 					Message: "node is offline",
 				},
 			})
@@ -279,20 +279,20 @@ func (s *Server) readLoop(session *NodeSession) {
 
 // handleMessage parses and dispatches a JSON-RPC message from a node.
 func (s *Server) handleMessage(nodeID string, payload []byte) bool {
-	var req request
+	var req relayprotocol.Request
 	if err := json.Unmarshal(payload, &req); err != nil {
 		log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid json from node")
 		return false
 	}
 
 	switch req.Method {
-	case MethodPong:
+	case relayprotocol.MethodPong:
 		// Heartbeat pong — no action needed, the read itself proves liveness.
 		log.Debug().Str("nodeId", nodeID).Msg("pong received")
 		return true
 
-	case MethodJobAck:
-		var params jobAckParams
+	case relayprotocol.MethodJobAck:
+		var params relayprotocol.JobAckParams
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid job.ack params")
 			return true
@@ -304,8 +304,8 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		})
 		return true
 
-	case MethodJobResult:
-		var params jobResultParams
+	case relayprotocol.MethodJobResult:
+		var params relayprotocol.JobResultParams
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid job.result params")
 			return true
@@ -328,41 +328,41 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		s.queue.HandleResult(nodeID, result)
 		return true
 
-	case MethodTerminalSessionChanged:
+	case relayprotocol.MethodTerminalSessionChanged:
 		session := s.sessions.Get(nodeID)
 		if session == nil {
 			log.Warn().Str("nodeId", nodeID).Msg("terminal.session.changed from unknown node")
 			return true
 		}
 		for _, orgID := range session.Identity.OrganizationIDs {
-			go s.sessions.SendOrgNotification(orgID, MethodTerminalSessionChanged, req.Params, nodeID)
+			go s.sessions.SendOrgNotification(orgID, relayprotocol.MethodTerminalSessionChanged, req.Params, nodeID)
 		}
 		return true
 
-	case MethodTerminalStreamRequest:
-		var params terminalStreamRequestParams
+	case relayprotocol.MethodTerminalStreamRequest:
+		var params relayprotocol.TerminalStreamRequestParams
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.request params")
 			return true
 		}
 		s.setStreamOwner(params.SessionID, params.OwnerNode)
 		s.addStreamSub(params.SessionID, params.FromNode)
-		go s.sessions.SendNotification(params.OwnerNode, MethodTerminalStreamRequest, req.Params)
+		go s.sessions.SendNotification(params.OwnerNode, relayprotocol.MethodTerminalStreamRequest, req.Params)
 		return true
 
-	case MethodTerminalStreamAccept:
-		var params terminalStreamAcceptParams
+	case relayprotocol.MethodTerminalStreamAccept:
+		var params relayprotocol.TerminalStreamAcceptParams
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.accept params")
 			return true
 		}
 		for _, sub := range s.streamSubsForSession(params.SessionID) {
-			go s.sessions.SendNotification(sub, MethodTerminalStreamAccept, req.Params)
+			go s.sessions.SendNotification(sub, relayprotocol.MethodTerminalStreamAccept, req.Params)
 		}
 		return true
 
-	case MethodTerminalStreamCancel:
-		var params terminalStreamCancelParams
+	case relayprotocol.MethodTerminalStreamCancel:
+		var params relayprotocol.TerminalStreamCancelParams
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.cancel params")
 			return true
@@ -370,7 +370,7 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		s.removeStreamSub(params.SessionID, params.FromNode)
 		return true
 
-	case MethodWorkspaceSnapshotChanged:
+	case relayprotocol.MethodWorkspaceSnapshotChanged:
 		// Node-originated snapshot change (workspace create/close relay).
 		// Broadcast to every other node in the org; the source node is excluded
 		// so it never receives its own message back. Each node self-selects on
@@ -397,14 +397,14 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 			// sessions, so a target dropping between check and delivery is skipped
 			// (a safe false-positive; the reverse is a safe false-negative).
 			if s.sessions.IsOnline(targetNodeID) {
-				go s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
-				_ = s.sessions.SendResponse(nodeID, response{
+				go s.sessions.SendOrgNotification(organizationID, relayprotocol.MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
+				_ = s.sessions.SendResponse(nodeID, relayprotocol.Response{
 					JSONRPC: "2.0",
 					ID:      req.ID,
 					Result:  relayprotocol.DispatchVerdict{Accepted: true, TargetOnline: true},
 				})
 			} else {
-				_ = s.sessions.SendResponse(nodeID, response{
+				_ = s.sessions.SendResponse(nodeID, relayprotocol.Response{
 					JSONRPC: "2.0",
 					ID:      req.ID,
 					Result:  relayprotocol.DispatchVerdict{Accepted: false, Reason: "target node offline"},
@@ -413,7 +413,7 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 			return true
 		}
 
-		go s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
+		go s.sessions.SendOrgNotification(organizationID, relayprotocol.MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
 		return true
 
 	default:
@@ -436,7 +436,7 @@ func (s *Server) heartbeatLoop(session *NodeSession, done <-chan struct{}) {
 			if session.conn != nil {
 				_ = session.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 			}
-			if err := session.SendNotification(MethodPing, nil); err != nil {
+			if err := session.SendNotification(relayprotocol.MethodPing, nil); err != nil {
 				log.Debug().Err(err).Str("nodeId", session.Identity.NodeID).Msg("heartbeat ping failed")
 				return
 			}
