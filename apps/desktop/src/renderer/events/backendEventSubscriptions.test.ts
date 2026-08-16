@@ -22,7 +22,7 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock("./backendEventPipeline", () => ({
+vi.mock("../app/events/backendEventRouter", () => ({
   subscribeBackendEvent: mocked.subscribeBackendEvent,
 }));
 

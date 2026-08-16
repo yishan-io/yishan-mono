@@ -10,7 +10,7 @@ import { openLink } from "./commands/appCommands";
 import { AppUpdateSnackbar } from "./components/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./components/AuthSessionExpiredSnackbar";
 import { WorkspaceOverlay } from "./components/WorkspaceOverlay";
-import { startBackendEventPipeline, startBackendEventStoreBindings } from "./events";
+import { startBackendEventHandlers, startBackendEventPipeline } from "./events";
 import { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
 import { i18n } from "./i18n";
 import { rendererQueryClient } from "./queryClient";
@@ -38,7 +38,7 @@ function AppRoot() {
 
   useEffect(() => {
     const stopPipeline = startBackendEventPipeline();
-    const stopStoreBindings = startBackendEventStoreBindings();
+    const stopStoreBindings = startBackendEventHandlers();
 
     // Listen for webview new-window requests forwarded from the main process
     // (triggered by Cmd+Click, target="_blank", window.open in <webview> guests)

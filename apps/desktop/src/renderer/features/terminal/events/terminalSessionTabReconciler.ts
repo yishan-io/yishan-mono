@@ -1,12 +1,12 @@
-import type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
-import { type DesktopAgentKind, isDesktopAgentKind } from "../helpers/agentSettings";
-import { getErrorMessage } from "../helpers/errorHelpers";
+import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
+import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   consumeExplicitlyClosedTerminalTabId,
   recordExplicitlyClosedTerminalTabId,
-} from "../helpers/terminalCloseTombstones";
-import { tabStore } from "../store/tabStore";
-import { workspaceStore } from "../store/workspaceStore";
+} from "../../../helpers/terminalCloseTombstones";
+import { tabStore } from "../../../store/tabStore";
+import { workspaceStore } from "../../../store/workspaceStore";
 
 type TerminalTab = Extract<ReturnType<typeof tabStore.getState>["tabs"][number], { kind: "terminal" }>;
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;

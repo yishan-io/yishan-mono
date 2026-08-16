@@ -10,7 +10,8 @@ export {
   subscribeAllBackendEvents,
   subscribeBackendEvent,
 } from "./backendEventPipeline";
-export { createBackendEventStoreBindings, startBackendEventStoreBindings } from "./backendEventStoreBindings";
+export { startBackendEventHandlers } from "../app/events";
+export { clearTerminalAgentStatus } from "../features/agent/events/agentEventHandlers";
 export {
   subscribeAppActionEvent,
   subscribeInAppNotificationEvent,

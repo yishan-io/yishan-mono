@@ -1,5 +1,5 @@
 import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../events/agentChatComposerFocus";
-import { clearTerminalAgentStatus } from "../events/backendEventStoreBindings";
+import { clearTerminalAgentStatus } from "../features/agent/events/agentEventHandlers";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";

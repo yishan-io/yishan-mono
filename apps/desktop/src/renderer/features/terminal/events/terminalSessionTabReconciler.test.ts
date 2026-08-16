@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
+import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
-} from "../helpers/terminalCloseTombstones";
-import { tabStore } from "../store/tabStore";
-import { workspaceStore } from "../store/workspaceStore";
+} from "../../../helpers/terminalCloseTombstones";
+import { tabStore } from "../../../store/tabStore";
+import { workspaceStore } from "../../../store/workspaceStore";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;
