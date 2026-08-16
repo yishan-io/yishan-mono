@@ -13,19 +13,8 @@ import (
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/terminal"
-	"yishan/apps/cli/internal/worktree"
-	"yishan/apps/cli/internal/rpcerror"
-)
-
-// JSON-RPC error codes (JSON-RPC 2.0 + application-specific).
-const (
-	CodeParseError     = rpcerror.CodeParseError
-	CodeInvalidRequest = rpcerror.CodeInvalidRequest
-	CodeMethodNotFound = rpcerror.CodeMethodNotFound
-	CodeInvalidParams  = rpcerror.CodeInvalidParams
-	CodeServerError    = rpcerror.CodeServerError
-	CodeSessionExists  = rpcerror.CodeSessionExists
-	CodeNotFound       = rpcerror.CodeNotFound
+	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 // Request is a JSON-RPC 2.0 request envelope.
@@ -62,10 +51,10 @@ type RPCError struct {
 // an invalid-params RPC error.
 func DecodeParams(raw json.RawMessage, out any) error {
 	if len(raw) == 0 {
-		return rpcerror.NewRPCError(CodeInvalidParams, "missing params")
+		return NewRPCError(CodeInvalidParams, "missing params")
 	}
 	if err := json.Unmarshal(raw, out); err != nil {
-		return rpcerror.NewRPCError(CodeInvalidParams, "invalid params")
+		return NewRPCError(CodeInvalidParams, "invalid params")
 	}
 	return nil
 }
@@ -83,10 +72,10 @@ func AsJSONID(raw json.RawMessage) any {
 }
 
 // MapRPCError converts a handler error into an RPC error object. Structured
-// rpcerror values pass through; computer-use errors keep their structured
+// rpc.Error values pass through; computer-use errors keep their structured
 // code/details/retryable data; anything else becomes a generic server error.
 func MapRPCError(err error) *RPCError {
-	var e *rpcerror.Error
+	var e *Error
 	if errors.As(err, &e) {
 		return &RPCError{Code: e.Code, Message: e.Message}
 	}
@@ -118,6 +107,10 @@ func MapRPCError(err error) *RPCError {
 	if errors.As(err, &terminalErr) {
 		return &RPCError{Code: mapTerminalErrorCode(terminalErr.Code), Message: terminalErr.Message}
 	}
+	var workspaceErr *workspace.Error
+	if errors.As(err, &workspaceErr) {
+		return &RPCError{Code: mapWorkspaceErrorCode(workspaceErr.Code), Message: workspaceErr.Message}
+	}
 	return &RPCError{Code: CodeServerError, Message: err.Error()}
 }
 
@@ -127,13 +120,13 @@ func MapRPCError(err error) *RPCError {
 func mapFileErrorCode(code files.ErrorCode) int {
 	switch code {
 	case files.ErrCodeInvalidParams:
-		return rpcerror.CodeInvalidParams
+		return CodeInvalidParams
 	case files.ErrCodeNotFound:
-		return rpcerror.CodeNotFound
+		return CodeNotFound
 	case files.ErrCodePathRestricted:
-		return rpcerror.CodePathRestricted
+		return CodePathRestricted
 	default:
-		return rpcerror.CodeServerError
+		return CodeServerError
 	}
 }
 
@@ -141,13 +134,13 @@ func mapFileErrorCode(code files.ErrorCode) int {
 func mapGitErrorCode(code git.ErrorCode) int {
 	switch code {
 	case git.ErrCodeInvalidParams:
-		return rpcerror.CodeInvalidParams
+		return CodeInvalidParams
 	case git.ErrCodeNotFound:
-		return rpcerror.CodeNotFound
+		return CodeNotFound
 	case git.ErrCodeToolUnavailable:
-		return rpcerror.CodeToolUnavailable
+		return CodeToolUnavailable
 	default:
-		return rpcerror.CodeServerError
+		return CodeServerError
 	}
 }
 
@@ -155,13 +148,13 @@ func mapGitErrorCode(code git.ErrorCode) int {
 func mapWorktreeErrorCode(code worktree.ErrorCode) int {
 	switch code {
 	case worktree.ErrCodeInvalidParams:
-		return rpcerror.CodeInvalidParams
+		return CodeInvalidParams
 	case worktree.ErrCodeNotFound:
-		return rpcerror.CodeNotFound
+		return CodeNotFound
 	case worktree.ErrCodeToolUnavailable:
-		return rpcerror.CodeToolUnavailable
+		return CodeToolUnavailable
 	default:
-		return rpcerror.CodeServerError
+		return CodeServerError
 	}
 }
 
@@ -169,12 +162,32 @@ func mapWorktreeErrorCode(code worktree.ErrorCode) int {
 func mapTerminalErrorCode(code terminal.ErrorCode) int {
 	switch code {
 	case terminal.ErrCodeInvalidParams:
-		return rpcerror.CodeInvalidParams
+		return CodeInvalidParams
 	case terminal.ErrCodeNotFound:
-		return rpcerror.CodeNotFound
+		return CodeNotFound
 	case terminal.ErrCodeSessionInactive:
-		return rpcerror.CodeSessionInactive
+		return CodeSessionInactive
 	default:
-		return rpcerror.CodeServerError
+		return CodeServerError
+	}
+}
+
+// mapWorkspaceErrorCode maps a workspace domain error code to the wire error
+// code. The mapping is explicit here so the workspace domain never imports
+// transport or RPC types.
+func mapWorkspaceErrorCode(code workspace.ErrorCode) int {
+	switch code {
+	case workspace.ErrCodeInvalidParams:
+		return CodeInvalidParams
+	case workspace.ErrCodeNotFound:
+		return CodeNotFound
+	case workspace.ErrCodePathRestricted:
+		return CodePathRestricted
+	case workspace.ErrCodeToolUnavailable:
+		return CodeToolUnavailable
+	case workspace.ErrCodeSessionInactive:
+		return CodeSessionInactive
+	default:
+		return CodeServerError
 	}
 }

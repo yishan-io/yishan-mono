@@ -1,14 +1,14 @@
 package scanner
 
 import (
-	"yishan/apps/cli/internal/tokenusage/record"
-	"yishan/apps/cli/internal/tokenusage/pricing"
 	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+	"yishan/apps/cli/internal/tokenusage/pricing"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 // testPricingCatalog returns a static pricing catalog for scan tests.
@@ -164,10 +164,10 @@ func TestScanCodexSessionFile(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:               "test-run",
-		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
-		Worktrees:           nil,
-		Catalog: testPricingCatalog(),
+		RunID:      "test-run",
+		IngestedAt: time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
+		Worktrees:  nil,
+		Catalog:    testPricingCatalog(),
 	}
 
 	states := make(map[string]*codexSessionState)
@@ -205,11 +205,11 @@ func TestScanCodexHourlyUsageIntegration(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:               "test-run",
-		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
-		SessionRoot:         tmpDir,
-		Worktrees:           nil,
-		Catalog: testPricingCatalog(),
+		RunID:       "test-run",
+		IngestedAt:  time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
+		SessionRoot: tmpDir,
+		Worktrees:   nil,
+		Catalog:     testPricingCatalog(),
 	}
 
 	rows, err := ScanCodexHourlyUsage(context.Background(), input)
@@ -253,10 +253,10 @@ func TestScanCodexSessionFileModelFallback(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:               "test-run",
-		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
-		Worktrees:           nil,
-		Catalog: testPricingCatalog(),
+		RunID:      "test-run",
+		IngestedAt: time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
+		Worktrees:  nil,
+		Catalog:    testPricingCatalog(),
 	}
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)

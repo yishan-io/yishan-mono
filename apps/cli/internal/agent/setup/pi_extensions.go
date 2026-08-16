@@ -15,7 +15,7 @@ import (
 
 	"golang.org/x/mod/semver"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // PiExtensionSourceLocalFile labels settings.json extensions array entries

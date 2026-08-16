@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 const maxPiSessionScanLineBytes = 1024 * 1024

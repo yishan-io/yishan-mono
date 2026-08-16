@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/platform/config"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
 )
 

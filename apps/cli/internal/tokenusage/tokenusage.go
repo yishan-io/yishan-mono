@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/tokenusage/collection"
 	"yishan/apps/cli/internal/tokenusage/pricing"
 	"yishan/apps/cli/internal/tokenusage/repository"
-	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace/instance"
 )
 

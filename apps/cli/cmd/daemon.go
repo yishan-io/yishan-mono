@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/daemon"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/cmd/output"
 )
 
 var daemonCmd = &cobra.Command{

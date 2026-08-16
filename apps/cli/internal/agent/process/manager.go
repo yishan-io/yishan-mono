@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 // ErrBinaryNotFound is returned by Start when the agent binary cannot be

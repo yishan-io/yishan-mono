@@ -9,12 +9,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/api"
-	release "yishan/apps/cli/internal/release"
+	"yishan/apps/cli/internal/adapter/cloud"
+	release "yishan/apps/cli/internal/platform/release"
 	"yishan/apps/cli/internal/daemon"
-	"yishan/apps/cli/internal/login"
+	"yishan/apps/cli/internal/adapter/cloud/login"
 	nodeid "yishan/apps/cli/internal/node/id"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/cmd/output"
 )
 
 var loginCmd = &cobra.Command{

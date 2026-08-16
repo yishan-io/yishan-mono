@@ -7,10 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
 )
-
-
 
 const maxSessionOutputBytes = 2 * 1024 * 1024
 const portScanActivityWindow = 15 * time.Second

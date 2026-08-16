@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/daemon"
 )
 

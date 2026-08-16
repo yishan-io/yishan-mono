@@ -7,7 +7,7 @@ import (
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/worktree"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 // Handle provides workspace-scoped capabilities (file, git, terminal

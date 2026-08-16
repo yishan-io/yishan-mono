@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"yishan/apps/cli/internal/worktree"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 // CreateWorkspace provisions the local git worktree for a prepared create and
@@ -83,7 +83,7 @@ func validateCreateRequest(req workspace.CreateRequest) error {
 		{name: "sourceBranch", value: req.SourceBranch},
 	} {
 		if strings.TrimSpace(field.value) == "" {
-			return workspace.NewRPCError(workspace.RPCErrorCodeInvalidParams, field.name+" is required")
+			return workspace.NewError(workspace.ErrCodeInvalidParams, field.name+" is required")
 		}
 	}
 	return nil

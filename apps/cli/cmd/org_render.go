@@ -1,7 +1,7 @@
 package cmd
 
-import "yishan/apps/cli/internal/output"
-import "yishan/apps/cli/internal/api"
+import "yishan/apps/cli/cmd/output"
+import "yishan/apps/cli/internal/adapter/cloud"
 
 func toOrgListRenderData(response api.ListOrganizationsResponse, includeAll bool) (output.RenderData, error) {
 	rows := make([]map[string]any, 0, len(response.Organizations))

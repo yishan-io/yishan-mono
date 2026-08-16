@@ -10,10 +10,10 @@ import (
 	"slices"
 
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/adapter/cloud"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	"yishan/apps/cli/internal/api"
-	localdb "yishan/apps/cli/internal/db"
-	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage/attribution"
 	"yishan/apps/cli/internal/tokenusage/ingestion"
 	"yishan/apps/cli/internal/tokenusage/pricing"
@@ -68,7 +68,7 @@ func NewCollector(
 	pricingCatalog pricing.Catalog,
 ) *Collector {
 	return &Collector{
-		registry:              registry,
+		registry:             registry,
 		runtime:              runtime,
 		repo:                 repo,
 		pricingCatalog:       pricingCatalog,
@@ -179,7 +179,6 @@ func (c *Collector) runScan(agentKind string, source string) {
 		c.Trigger(agentKind, "rerun")
 	}
 }
-
 
 func (c *Collector) scanAgent(agentKind string) ([]record.UsageRecord, error) {
 	return c.scanAgentSince(agentKind, c.recentScanStartUnixMilli())
@@ -442,7 +441,6 @@ func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]localdb.HourlyUsageRo
 	}
 	return rowsByOrg, nil
 }
-
 
 func (c *Collector) syncRowsForOrg(orgID string, rows []localdb.HourlyUsageRow) error {
 	rowInputs := make([]api.TokenUsageHourlyRowInput, 0, len(rows))

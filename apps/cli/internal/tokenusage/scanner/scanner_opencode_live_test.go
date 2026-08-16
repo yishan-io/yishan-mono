@@ -1,8 +1,6 @@
 package scanner
 
 import (
-	"yishan/apps/cli/internal/tokenusage/record"
-	"yishan/apps/cli/internal/tokenusage/attribution"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"yishan/apps/cli/internal/tokenusage/attribution"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 const runLiveOpenCodeTokenUsageTestsEnv = "YISHAN_RUN_LIVE_OPENCODE_TOKENUSAGE_TESTS"

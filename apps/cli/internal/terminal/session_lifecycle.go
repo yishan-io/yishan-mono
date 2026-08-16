@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/creack/pty"
-
 )
 
 func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartResponse, error) {

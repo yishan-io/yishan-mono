@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 var (

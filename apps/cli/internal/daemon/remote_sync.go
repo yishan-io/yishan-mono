@@ -8,9 +8,9 @@ import (
 	goruntime "runtime"
 	"strings"
 
-	"yishan/apps/cli/internal/api"
-	release "yishan/apps/cli/internal/release"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/adapter/cloud"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	release "yishan/apps/cli/internal/platform/release"
 )
 
 func isReauthRequiredError(err error) bool {

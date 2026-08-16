@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 const StateFileName = "daemon.state.json"

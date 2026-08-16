@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/cmd/output"
 )
 
 func renderProjectsList(response api.ListProjectsResponse, includeAll bool) output.RenderData {

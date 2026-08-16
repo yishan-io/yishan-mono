@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	localdb "yishan/apps/cli/internal/db"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/tokenusage"
 )

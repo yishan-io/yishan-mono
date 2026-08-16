@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"yishan/apps/cli/internal/api"
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/rpc"
 )

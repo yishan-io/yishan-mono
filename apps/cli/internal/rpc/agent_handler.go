@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // The agent namespace interfaces back the pi.*, skill.*, and customize.* RPC
@@ -16,43 +14,43 @@ import (
 // PiService backs the pi.* RPC methods. PiStart and PiAttach are
 // connection-bound: the calling WebSocket becomes the session's event sink.
 type PiService interface {
-	PiStart(ctx context.Context, connection *Connection, req PiStartParams) (any, error)
-	PiAttach(ctx context.Context, connection *Connection, req PiAttachParams) (any, error)
-	PiStop(ctx context.Context, req PiStopParams) (any, error)
-	PiSend(ctx context.Context, req PiSendParams) (any, error)
-	PiListSessions(ctx context.Context, req PiListSessionsParams) (any, error)
-	PiListActiveSessions(ctx context.Context) (any, error)
-	PiGetSessionFile(ctx context.Context, req PiGetSessionFileParams) (any, error)
-	PiRename(ctx context.Context, req PiRenameParams) (any, error)
-	PiListProviders(ctx context.Context) (any, error)
-	PiSaveProvider(ctx context.Context, req PiSaveProviderParams) (any, error)
-	PiRemoveProvider(ctx context.Context, req PiRemoveProviderParams) (any, error)
+	Start(ctx context.Context, connection *Connection, req PiStartParams) (any, error)
+	Attach(ctx context.Context, connection *Connection, req PiAttachParams) (any, error)
+	Stop(ctx context.Context, req PiStopParams) (any, error)
+	Send(ctx context.Context, req PiSendParams) (any, error)
+	ListSessions(ctx context.Context, req PiListSessionsParams) (any, error)
+	ListActiveSessions(ctx context.Context) (any, error)
+	GetSessionFile(ctx context.Context, req PiGetSessionFileParams) (any, error)
+	Rename(ctx context.Context, req PiRenameParams) (any, error)
+	ListProviders(ctx context.Context) (any, error)
+	SaveProvider(ctx context.Context, req PiSaveProviderParams) (any, error)
+	RemoveProvider(ctx context.Context, req PiRemoveProviderParams) (any, error)
 }
 
 // SkillService backs the skill.* RPC methods.
 type SkillService interface {
-	SkillList(ctx context.Context) (any, error)
-	SkillInfo(ctx context.Context, req SkillNameParams) (any, error)
-	SkillDetail(ctx context.Context, req SkillNameParams) (any, error)
-	SkillAdd(ctx context.Context, req SkillSourceParams) (any, error)
-	SkillRemove(ctx context.Context, req SkillNameParams) (any, error)
-	SkillUpdate(ctx context.Context, req SkillNameParams) (any, error)
-	SkillUpdateAll(ctx context.Context) (any, error)
+	List(ctx context.Context) (any, error)
+	Info(ctx context.Context, req SkillNameParams) (any, error)
+	Detail(ctx context.Context, req SkillNameParams) (any, error)
+	Add(ctx context.Context, req SkillSourceParams) (any, error)
+	Remove(ctx context.Context, req SkillNameParams) (any, error)
+	Update(ctx context.Context, req SkillNameParams) (any, error)
+	UpdateAll(ctx context.Context) (any, error)
 }
 
 // CustomizeService backs the customize.* RPC methods (extensions and agents
 // panels).
 type CustomizeService interface {
-	CustomizeExtensionsList(ctx context.Context) (any, error)
-	CustomizeExtensionsInstall(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
-	CustomizeExtensionsRemove(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
-	CustomizeExtensionsUpdate(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
-	CustomizeAgentsList(ctx context.Context) (any, error)
-	CustomizeAgentsDetail(ctx context.Context, req CustomizeAgentNameParams) (any, error)
-	CustomizeAgentsCreate(ctx context.Context, req CustomizeAgentCreateParams) (any, error)
-	CustomizeAgentsUpdate(ctx context.Context, req CustomizeAgentUpdateParams) (any, error)
-	CustomizeAgentsRemove(ctx context.Context, req CustomizeAgentNameParams) (any, error)
-	CustomizeAgentsRestore(ctx context.Context, req CustomizeAgentNameParams) (any, error)
+	ExtensionsList(ctx context.Context) (any, error)
+	ExtensionsInstall(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
+	ExtensionsRemove(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
+	ExtensionsUpdate(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
+	AgentsList(ctx context.Context) (any, error)
+	AgentsDetail(ctx context.Context, req CustomizeAgentNameParams) (any, error)
+	AgentsCreate(ctx context.Context, req CustomizeAgentCreateParams) (any, error)
+	AgentsUpdate(ctx context.Context, req CustomizeAgentUpdateParams) (any, error)
+	AgentsRemove(ctx context.Context, req CustomizeAgentNameParams) (any, error)
+	AgentsRestore(ctx context.Context, req CustomizeAgentNameParams) (any, error)
 }
 
 // AgentHandler owns the pi.*, skill.*, and customize.* namespace decoding.
@@ -74,7 +72,7 @@ func (h *AgentHandler) Call(ctx context.Context, connection *Connection, method 
 	case strings.HasPrefix(method, "customize."):
 		return h.callCustomize(ctx, method, params)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown agent method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown agent method: "+method)
 	}
 }
 
@@ -85,109 +83,109 @@ func (h *AgentHandler) callPi(ctx context.Context, connection *Connection, metho
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiStart(ctx, connection, req)
+		return h.Pi.Start(ctx, connection, req)
 	case MethodPiAttach:
 		var req PiAttachParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiAttach(ctx, connection, req)
+		return h.Pi.Attach(ctx, connection, req)
 	case MethodPiStop:
 		var req PiStopParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiStop(ctx, req)
+		return h.Pi.Stop(ctx, req)
 	case MethodPiSend:
 		var req PiSendParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiSend(ctx, req)
+		return h.Pi.Send(ctx, req)
 	case MethodPiListSessions:
 		var req PiListSessionsParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiListSessions(ctx, req)
+		return h.Pi.ListSessions(ctx, req)
 	case MethodPiListActiveSessions:
-		return h.Pi.PiListActiveSessions(ctx)
+		return h.Pi.ListActiveSessions(ctx)
 	case MethodPiGetSessionFile:
 		var req PiGetSessionFileParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiGetSessionFile(ctx, req)
+		return h.Pi.GetSessionFile(ctx, req)
 	case MethodPiRename:
 		var req PiRenameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiRename(ctx, req)
+		return h.Pi.Rename(ctx, req)
 	case MethodPiListProviders:
-		return h.Pi.PiListProviders(ctx)
+		return h.Pi.ListProviders(ctx)
 	case MethodPiSaveProvider:
 		var req PiSaveProviderParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiSaveProvider(ctx, req)
+		return h.Pi.SaveProvider(ctx, req)
 	case MethodPiRemoveProvider:
 		var req PiRemoveProviderParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Pi.PiRemoveProvider(ctx, req)
+		return h.Pi.RemoveProvider(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown pi method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown pi method: "+method)
 	}
 }
 
 func (h *AgentHandler) callSkill(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodSkillList:
-		return h.Skill.SkillList(ctx)
+		return h.Skill.List(ctx)
 	case MethodSkillInfo:
 		var req SkillNameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Skill.SkillInfo(ctx, req)
+		return h.Skill.Info(ctx, req)
 	case MethodSkillDetail:
 		var req SkillNameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Skill.SkillDetail(ctx, req)
+		return h.Skill.Detail(ctx, req)
 	case MethodSkillAdd:
 		var req SkillSourceParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Skill.SkillAdd(ctx, req)
+		return h.Skill.Add(ctx, req)
 	case MethodSkillRemove:
 		var req SkillNameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Skill.SkillRemove(ctx, req)
+		return h.Skill.Remove(ctx, req)
 	case MethodSkillUpdate:
 		var req SkillNameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Skill.SkillUpdate(ctx, req)
+		return h.Skill.Update(ctx, req)
 	case MethodSkillUpdateAll:
-		return h.Skill.SkillUpdateAll(ctx)
+		return h.Skill.UpdateAll(ctx)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown skill method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown skill method: "+method)
 	}
 }
 
 func (h *AgentHandler) callCustomize(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	sub, _, found := strings.Cut(strings.TrimPrefix(method, "customize."), ".")
 	if !found {
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 	switch sub {
 	case "extensions":
@@ -195,72 +193,72 @@ func (h *AgentHandler) callCustomize(ctx context.Context, method string, params 
 	case "agents":
 		return h.callCustomizeAgents(ctx, method, params)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 }
 
 func (h *AgentHandler) callCustomizeExtensions(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodCustomizeExtensionsList:
-		return h.Customize.CustomizeExtensionsList(ctx)
+		return h.Customize.ExtensionsList(ctx)
 	case MethodCustomizeExtensionsInstall:
 		var req CustomizeExtensionSourceParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeExtensionsInstall(ctx, req)
+		return h.Customize.ExtensionsInstall(ctx, req)
 	case MethodCustomizeExtensionsRemove:
 		var req CustomizeExtensionSourceParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeExtensionsRemove(ctx, req)
+		return h.Customize.ExtensionsRemove(ctx, req)
 	case MethodCustomizeExtensionsUpdate:
 		var req CustomizeExtensionSourceParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeExtensionsUpdate(ctx, req)
+		return h.Customize.ExtensionsUpdate(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 }
 
 func (h *AgentHandler) callCustomizeAgents(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodCustomizeAgentsList:
-		return h.Customize.CustomizeAgentsList(ctx)
+		return h.Customize.AgentsList(ctx)
 	case MethodCustomizeAgentsDetail:
 		var req CustomizeAgentNameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeAgentsDetail(ctx, req)
+		return h.Customize.AgentsDetail(ctx, req)
 	case MethodCustomizeAgentsCreate:
 		var req CustomizeAgentCreateParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeAgentsCreate(ctx, req)
+		return h.Customize.AgentsCreate(ctx, req)
 	case MethodCustomizeAgentsUpdate:
 		var req CustomizeAgentUpdateParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeAgentsUpdate(ctx, req)
+		return h.Customize.AgentsUpdate(ctx, req)
 	case MethodCustomizeAgentsRemove:
 		var req CustomizeAgentNameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeAgentsRemove(ctx, req)
+		return h.Customize.AgentsRemove(ctx, req)
 	case MethodCustomizeAgentsRestore:
 		var req CustomizeAgentNameParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Customize.CustomizeAgentsRestore(ctx, req)
+		return h.Customize.AgentsRestore(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown customize method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 }

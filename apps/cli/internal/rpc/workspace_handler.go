@@ -4,9 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"yishan/apps/cli/internal/rpcerror"
-	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace"
 )
 
 // WorkspaceHandler owns the workspace.* (and list) RPC namespace decoding.
@@ -26,64 +25,64 @@ func (h *WorkspaceHandler) Call(ctx context.Context, connection *Connection, met
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceCreate(ctx, req)
+		return h.Services.Create(ctx, req)
 	case MethodWorkspaceClose:
 		var req WorkspaceCloseParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceClose(ctx, req)
+		return h.Services.Close(ctx, req)
 	case MethodWorkspaceRefreshPullRequest:
 		var req workspace.RefreshPullRequestRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceRefreshPullRequest(ctx, req)
+		return h.Services.RefreshPullRequest(ctx, req)
 	case MethodWorkspaceSyncContextLink:
 		var req workspace.SyncContextLinkRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceSyncContextLink(ctx, req)
+		return h.Services.SyncContextLink(ctx, req)
 	case MethodWorkspaceSetActive:
 		var req terminal.SetActiveWorkspaceRequest
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceSetActive(ctx, req)
+		return h.Services.SetActive(ctx, req)
 	case MethodWorkspaceHealth:
 		var req WorkspaceHealthParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceHealth(ctx, req)
+		return h.Services.Health(ctx, req)
 	case MethodWorkspaceOpenProject:
 		var req WorkspaceOpenProjectParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceOpenProject(ctx, req)
+		return h.Services.OpenProject(ctx, req)
 	case MethodWorkspaceCloseProject:
 		var req WorkspaceCloseProjectParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceCloseProject(ctx, req)
+		return h.Services.CloseProject(ctx, req)
 	case MethodWorkspaceCreateLocalFolder:
 		var req WorkspaceCreateLocalFolderParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceCreateLocalFolder(ctx, req)
+		return h.Services.CreateLocalFolder(ctx, req)
 	case MethodWorkspaceListLocalFolders:
-		return h.Services.WorkspaceListLocalFolders(ctx)
+		return h.Services.ListLocalFolders(ctx)
 	case MethodWorkspaceDeleteLocalFolder:
 		var req WorkspaceDeleteLocalFolderParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.WorkspaceDeleteLocalFolder(ctx, req)
+		return h.Services.DeleteLocalFolder(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown workspace method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown workspace method: "+method)
 	}
 }

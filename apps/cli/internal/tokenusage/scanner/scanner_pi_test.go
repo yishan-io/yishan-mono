@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"yishan/apps/cli/internal/tokenusage/record"
 	"context"
 	"encoding/json"
 	"os"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 const piSessionFixture = `{"type":"session","version":3,"id":"session-1","timestamp":"2026-06-29T10:00:00.000Z","cwd":"/tmp/pi-project"}
@@ -78,10 +78,10 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:               "test-run",
-		IngestedAt:          time.Date(2026, 6, 29, 13, 0, 0, 0, time.UTC).UnixMilli(),
-		SessionRoot:         tmpDir,
-		Catalog: testPricingCatalog(),
+		RunID:       "test-run",
+		IngestedAt:  time.Date(2026, 6, 29, 13, 0, 0, 0, time.UTC).UnixMilli(),
+		SessionRoot: tmpDir,
+		Catalog:     testPricingCatalog(),
 		Worktrees: []record.WorktreeRef{{
 			ProjectID:     "proj-1",
 			WorkspaceID:   "ws-1",

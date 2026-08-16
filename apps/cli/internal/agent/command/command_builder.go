@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 // ErrBinaryNotFound is returned by ResolveCommand/ResolveCommandWithEnv when

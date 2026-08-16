@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/worktree"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
+	"yishan/apps/cli/internal/workspace/worktree"
 )
 
 // TestResolveCreatePaths_SlashInWorkspaceName verifies that a branch name

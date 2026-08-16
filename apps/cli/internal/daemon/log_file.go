@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 const (

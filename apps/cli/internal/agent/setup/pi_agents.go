@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // Agent management: pi agent definition files live in the managed pi agents

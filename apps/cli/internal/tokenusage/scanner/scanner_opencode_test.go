@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"yishan/apps/cli/internal/tokenusage/record"
 	"context"
 	"fmt"
 	"os"
@@ -9,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 // createOpenCodeTestDB creates a temporary SQLite database with the OpenCode

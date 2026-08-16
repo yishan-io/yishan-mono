@@ -1,0 +1,109 @@
+package workspace
+
+import (
+	"encoding/json"
+	"testing"
+	"time"
+)
+
+func TestPublishWorkspaceSnapshotChanged_RepublishesCreateStartedForSourceNode(t *testing.T) {
+	handler := newTestHandler(t)
+	handler.deps.NodeID = "node-source"
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
+
+	params, err := json.Marshal(relayWorkspaceCreateEnvelope{
+		OrganizationID: "org-1",
+		ProjectID:      "project-1",
+		WorkspaceID:    "workspace-1",
+		SourceNodeID:   "node-source",
+		TargetNodeID:   "node-remote",
+		Change:         workspaceRelayChangeCreateRequest,
+		Started: &workspaceCreateStartedEvent{
+			WorkspaceID:    "workspace-1",
+			OrganizationID: "org-1",
+			ProjectID:      "project-1",
+			WorkspaceName:  "feature-a",
+			SourceBranch:   "main",
+			Branch:         "feature-a",
+			NodeID:         "node-remote",
+		},
+		Request: &workspaceCreateParams{
+			ID:             "workspace-1",
+			OrganizationID: "org-1",
+			ProjectID:      "project-1",
+			NodeID:         "node-remote",
+			WorkspaceName:  "feature-a",
+			Branch:         "feature-a",
+			SourceBranch:   "main",
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	publishWorkspaceSnapshotChanged(handler, params)
+
+	event := expectEventTopic(t, events, "workspaceCreateStarted")
+	payload, ok := event.Payload.(workspaceCreateStartedEvent)
+	if !ok {
+		t.Fatalf("expected workspaceCreateStarted payload, got %T", event.Payload)
+	}
+	if payload.WorkspaceID != "workspace-1" || payload.NodeID != "node-remote" {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+	if payload.WorkspaceName != "feature-a" || payload.SourceBranch != "main" || payload.Branch != "feature-a" {
+		t.Fatalf("unexpected branch payload: %+v", payload)
+	}
+}
+
+func TestPublishWorkspaceSnapshotChanged_IgnoresGenericLoopbackFromSameNode(t *testing.T) {
+	handler := newTestHandler(t)
+	handler.deps.NodeID = "node-local"
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
+
+	params, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"resource":       "workspace",
+		"change":         "updated",
+		"projectId":      "project-1",
+		"workspaceId":    "workspace-1",
+		"sourceNodeId":   "node-local",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	publishWorkspaceSnapshotChanged(handler, params)
+	expectNoEvent(t, events, 100*time.Millisecond)
+}
+
+func TestPublishWorkspaceSnapshotChanged_RepublishesGenericEventFromOtherNode(t *testing.T) {
+	handler := newTestHandler(t)
+	handler.deps.NodeID = "node-local"
+	subscriptionID, events := handler.deps.Events.Subscribe()
+	defer handler.deps.Events.Unsubscribe(subscriptionID)
+
+	params, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"resource":       "workspace",
+		"change":         "updated",
+		"projectId":      "project-1",
+		"workspaceId":    "workspace-1",
+		"sourceNodeId":   "node-remote",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	publishWorkspaceSnapshotChanged(handler, params)
+	event := expectEventTopic(t, events, "workspaceSnapshotChanged")
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected workspaceSnapshotChanged payload, got %T", event.Payload)
+	}
+	if payload["sourceNodeId"] != "node-remote" {
+		t.Fatalf("expected sourceNodeId=node-remote, got %#v", payload["sourceNodeId"])
+	}
+}

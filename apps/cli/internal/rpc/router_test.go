@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/rpcerror"
+	"yishan/apps/cli/internal/workspace"
 )
 
 func fakeCallHandler(tag string) Handler {
@@ -62,8 +64,8 @@ func TestRouter_NoSystemHandlerReturnsMethodNotFound(t *testing.T) {
 	router := NewRouter()
 
 	_, err := router.Call(context.Background(), &Connection{}, "unknown.method", nil)
-	var rpcErr *rpcerror.Error
-	if !errors.As(err, &rpcErr) || rpcErr.Code != rpcerror.CodeMethodNotFound {
+	var rpcErr *Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeMethodNotFound {
 		t.Fatalf("expected method-not-found RPC error, got %v", err)
 	}
 }
@@ -112,12 +114,43 @@ func TestHandleMessage_Success(t *testing.T) {
 
 func TestHandleMessage_StructuredRPCErrorPassthrough(t *testing.T) {
 	server := NewServer(HandlerFunc(func(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
-		return nil, rpcerror.NewRPCError(rpcerror.CodeNotFound, "workspace not found")
+		return nil, NewRPCError(CodeNotFound, "workspace not found")
 	}))
 
 	resp := server.HandleMessage(context.Background(), &Connection{}, []byte(`{"jsonrpc":"2.0","id":1,"method":"workspace.health"}`))
 	if resp == nil || resp.Error == nil || resp.Error.Code != CodeNotFound || resp.Error.Message != "workspace not found" {
 		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestMapRPCError_WorkspaceDomainErrorsMappedToWireCodes(t *testing.T) {
+	cases := []struct {
+		name string
+		code workspace.ErrorCode
+		want int
+	}{
+		{"invalid params", workspace.ErrCodeInvalidParams, CodeInvalidParams},
+		{"not found", workspace.ErrCodeNotFound, CodeNotFound},
+		{"path restricted", workspace.ErrCodePathRestricted, CodePathRestricted},
+		{"tool unavailable", workspace.ErrCodeToolUnavailable, CodeToolUnavailable},
+		{"session inactive", workspace.ErrCodeSessionInactive, CodeSessionInactive},
+		{"unknown code falls back to server error", "unmapped", CodeServerError},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := MapRPCError(workspace.NewError(tc.code, "boom"))
+			if got == nil || got.Code != tc.want {
+				t.Fatalf("MapRPCError(%q) = %#v, want code %d", tc.code, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMapRPCError_WorkspaceDomainErrorSurvivesWrapping(t *testing.T) {
+	err := fmt.Errorf("wrapped: %w", workspace.NewError(workspace.ErrCodeNotFound, "workspace not found"))
+	got := MapRPCError(err)
+	if got == nil || got.Code != CodeNotFound || got.Message != "workspace not found" {
+		t.Fatalf("MapRPCError(wrapped) = %#v, want code %d", got, CodeNotFound)
 	}
 }
 
@@ -160,4 +193,27 @@ type BinaryFrameHandlerFunc func(connection *Connection, opcode byte, sessionID 
 // HandleBinaryFrame implements BinaryFrameHandler.
 func (f BinaryFrameHandlerFunc) HandleBinaryFrame(connection *Connection, opcode byte, sessionID string, payload []byte) {
 	f(connection, opcode, sessionID, payload)
+}
+
+// TestWireMethodNamesCarryNamespaces guards the wire method naming contract:
+// each dotted method routes to its namespace and no git method name is
+// ambiguous with another namespace.
+func TestWireMethodNamesCarryNamespaces(t *testing.T) {
+	t.Parallel()
+
+	gitMethods := []string{MethodGitPrMerge, MethodGitPrClose, MethodGitInspectPath}
+	for _, method := range gitMethods {
+		ns, _, found := strings.Cut(method, ".")
+		if !found || ns != "git" {
+			t.Fatalf("expected %q to route to git namespace", method)
+		}
+	}
+
+	nonGitMethods := []string{"list", MethodWorkspaceCreate, MethodTerminalStart}
+	for _, method := range nonGitMethods {
+		ns, _, found := strings.Cut(method, ".")
+		if found && ns == "git" {
+			t.Fatalf("expected %q NOT to route to git namespace", method)
+		}
+	}
 }

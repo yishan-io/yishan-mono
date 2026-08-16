@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 // yishanMCPServerName is the MCP server key users add to agent configs to

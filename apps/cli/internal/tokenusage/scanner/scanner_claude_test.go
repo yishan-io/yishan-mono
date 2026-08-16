@@ -1,13 +1,13 @@
 package scanner
 
 import (
-	"yishan/apps/cli/internal/tokenusage/record"
 	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+	"yishan/apps/cli/internal/tokenusage/record"
 )
 
 const claudeSessionFixture = `{"type":"user","uuid":"some-uuid","sessionId":"462765f4-76c4-4691-9ba6-37812b26f50b","timestamp":"2026-05-25T21:12:46.000Z","cwd":"/Users/zhex/code/work/vestin/yishan"}
@@ -95,10 +95,10 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:               "test-run",
-		IngestedAt:          time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		Worktrees:           nil,
-		Catalog: testPricingCatalog(),
+		RunID:      "test-run",
+		IngestedAt: time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
+		Worktrees:  nil,
+		Catalog:    testPricingCatalog(),
 	}
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
@@ -151,11 +151,11 @@ func TestScanClaudeHourlyUsageIntegration(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:               "test-run",
-		IngestedAt:          time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		SessionRoot:         tmpDir,
-		Worktrees:           nil,
-		Catalog: testPricingCatalog(),
+		RunID:       "test-run",
+		IngestedAt:  time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
+		SessionRoot: tmpDir,
+		Worktrees:   nil,
+		Catalog:     testPricingCatalog(),
 	}
 
 	rows, err := ScanClaudeHourlyUsage(context.Background(), input)

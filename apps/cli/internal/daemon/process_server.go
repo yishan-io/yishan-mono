@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	agentsetup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/app"
-	"yishan/apps/cli/internal/node"
 	hook "yishan/apps/cli/internal/node/hook"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	nodesystem "yishan/apps/cli/internal/node/system"
 
 	"github.com/rs/zerolog/log"
 )
@@ -86,7 +86,7 @@ func registerNode(dr *daemonRuntime, runtime *cliruntime.Runtime) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
-	agentDetectionStatus := node.ListAgentDetectionStatuses(false)
+	agentDetectionStatus := nodesystem.ListAgentDetectionStatuses(false)
 	if err := registerRemoteNode(runtime, NodeRegistration{
 		ID:                   dr.daemonID,
 		Endpoint:             "http://" + dr.actualAddr,

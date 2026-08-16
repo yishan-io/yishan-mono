@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/node"
+	nodesystem "yishan/apps/cli/internal/node/system"
 
 	"github.com/rs/zerolog/log"
 )
@@ -29,7 +29,7 @@ func initMemoryService(dataDir string, summarizer memory.SummarizerConfig) *memo
 		}
 	}
 
-	memSvc, memErr := memory.NewService(newPath, summarizer, node.BuildRunAgentFunc())
+	memSvc, memErr := memory.NewService(newPath, summarizer, nodesystem.BuildRunAgentFunc())
 	if memErr != nil {
 		log.Warn().Err(memErr).Msg("memory service initialization failed, memory features disabled")
 		return nil

@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // SystemHandler owns the daemon./app./agent./tokenUsage./node./cliTools./
@@ -17,58 +15,58 @@ type SystemHandler struct {
 func (h *SystemHandler) Call(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodDaemonPing:
-		return h.Services.SystemDaemonPing()
+		return h.Services.DaemonPing()
 	case MethodFrontendEventsStream:
-		return h.Services.SystemFrontendEventsStream(ctx, connection)
+		return h.Services.FrontendEventsStream(ctx, connection)
 	case MethodAgentListDetectionStatuses:
-		return h.Services.SystemAgentListDetectionStatuses(ctx, params)
+		return h.Services.AgentListDetectionStatuses(ctx, params)
 	case MethodCLIToolListStatuses:
-		return h.Services.SystemCLIToolListStatuses(ctx, params)
+		return h.Services.CLIToolListStatuses(ctx, params)
 	case MethodCLIToolInstall:
 		var req SystemCLIToolInstallParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.SystemCLIToolInstall(ctx, req)
+		return h.Services.CLIToolInstall(ctx, req)
 	case MethodCLIToolUninstall:
 		var req SystemCLIToolUninstallParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.SystemCLIToolUninstall(ctx, req)
+		return h.Services.CLIToolUninstall(ctx, req)
 	case MethodIntegrationGitHubStatus:
-		return h.Services.SystemIntegrationGitHubStatus(ctx, params)
+		return h.Services.IntegrationGitHubStatus(ctx, params)
 	case MethodAppPersistAuthTokens:
-		return h.Services.SystemAppPersistAuthTokens(ctx, params)
+		return h.Services.AppPersistAuthTokens(ctx, params)
 	case MethodAppGetAccessToken:
-		return h.Services.SystemAppGetAccessToken(ctx)
+		return h.Services.AppGetAccessToken(ctx)
 	case MethodAppCheckAuthStatus:
-		return h.Services.SystemAppCheckAuthStatus(ctx)
+		return h.Services.AppCheckAuthStatus(ctx)
 	case MethodAppLogout:
-		return h.Services.SystemAppLogout(ctx)
+		return h.Services.AppLogout(ctx)
 	case MethodAppReloadAuthConfig:
-		return h.Services.SystemAppReloadAuthConfig(ctx)
+		return h.Services.AppReloadAuthConfig(ctx)
 	case MethodAgentListModels:
 		var req SystemAgentListModelsParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.SystemAgentListModels(ctx, req)
+		return h.Services.AgentListModels(ctx, req)
 	case MethodTokenUsageDebugState:
-		return h.Services.SystemTokenUsageDebugState(ctx)
+		return h.Services.TokenUsageDebugState(ctx)
 	case MethodProjectList:
 		var req SystemProjectListParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.SystemProjectList(ctx, req)
+		return h.Services.ProjectList(ctx, req)
 	case MethodNodeList:
 		var req SystemNodeListParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.SystemNodeList(ctx, req)
+		return h.Services.NodeList(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "method not found: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "method not found: "+method)
 	}
 }

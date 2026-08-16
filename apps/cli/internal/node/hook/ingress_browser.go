@@ -2,8 +2,8 @@ package hook
 
 import (
 	"net/http"
-	internalevents "yishan/apps/cli/internal/events"
 	"strings"
+	internalevents "yishan/apps/cli/internal/events"
 )
 
 func isBrowserURLEvent(payload hookIngressEvent) bool {

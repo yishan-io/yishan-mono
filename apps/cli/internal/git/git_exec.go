@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	gitexec "yishan/apps/cli/internal/git/exec"
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 func gitCommand(ctx context.Context, cwd string, args ...string) (string, error) {

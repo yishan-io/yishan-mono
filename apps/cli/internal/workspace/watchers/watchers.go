@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/fswatch"
 	gitexec "yishan/apps/cli/internal/git/exec"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/watchers/fswatch"
 )
 
 const (

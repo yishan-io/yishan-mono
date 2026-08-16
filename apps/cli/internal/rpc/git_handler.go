@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-
-	"yishan/apps/cli/internal/rpcerror"
 )
 
 // GitHandler owns the git.* RPC namespace decoding.
@@ -20,146 +18,146 @@ func (h *GitHandler) Call(ctx context.Context, connection *Connection, method st
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitStatus(ctx, req)
+		return h.Services.Status(ctx, req)
 	case MethodGitInspect:
 		var req GitInspectParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitInspect(ctx, req)
+		return h.Services.Inspect(ctx, req)
 	case MethodGitInspectPath:
 		var req GitInspectPathParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitInspectPath(ctx, req)
+		return h.Services.InspectPath(ctx, req)
 	case MethodGitListChanges:
 		var req GitStatusParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitListChanges(ctx, req)
+		return h.Services.ListChanges(ctx, req)
 	case MethodGitTrack:
 		var req GitPathsParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitTrack(ctx, req)
+		return h.Services.Track(ctx, req)
 	case MethodGitUnstage:
 		var req GitPathsParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitUnstage(ctx, req)
+		return h.Services.Unstage(ctx, req)
 	case MethodGitRevert:
 		var req GitPathsParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitRevert(ctx, req)
+		return h.Services.Revert(ctx, req)
 	case MethodGitCommit:
 		var req GitCommitParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitCommit(ctx, req)
+		return h.Services.Commit(ctx, req)
 	case MethodGitBranchStatus:
 		var req GitStatusParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitBranchStatus(ctx, req)
+		return h.Services.BranchStatus(ctx, req)
 	case MethodGitBranchPullRequest:
 		var req GitBranchPullRequestParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitBranchPullRequest(ctx, req)
+		return h.Services.BranchPullRequest(ctx, req)
 	case MethodGitCommitsToTarget:
 		var req GitTargetBranchParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitCommitsToTarget(ctx, req)
+		return h.Services.CommitsToTarget(ctx, req)
 	case MethodGitBranchDiffSummary:
 		var req GitTargetBranchParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitBranchDiffSummary(ctx, req)
+		return h.Services.BranchDiffSummary(ctx, req)
 	case MethodGitCommitDiff:
 		var req GitCommitDiffParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitCommitDiff(ctx, req)
+		return h.Services.CommitDiff(ctx, req)
 	case MethodGitBranchDiff:
 		var req GitBranchDiffParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitBranchDiff(ctx, req)
+		return h.Services.BranchDiff(ctx, req)
 	case MethodGitBranches:
 		var req GitStatusParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitBranches(ctx, req)
+		return h.Services.Branches(ctx, req)
 	case MethodGitPush:
 		var req GitStatusParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitPush(ctx, req)
+		return h.Services.Push(ctx, req)
 	case MethodGitPublish:
 		var req GitStatusParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitPublish(ctx, req)
+		return h.Services.Publish(ctx, req)
 	case MethodGitRenameBranch:
 		var req GitRenameBranchParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitRenameBranch(ctx, req)
+		return h.Services.RenameBranch(ctx, req)
 	case MethodGitRemoveBranch:
 		var req GitRemoveBranchParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitRemoveBranch(ctx, req)
+		return h.Services.RemoveBranch(ctx, req)
 	case MethodGitPrMerge:
 		var req GitPrMergeParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitPrMerge(ctx, req)
+		return h.Services.PrMerge(ctx, req)
 	case MethodGitPrClose:
 		var req GitPrCloseParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitPrClose(ctx, req)
+		return h.Services.PrClose(ctx, req)
 	case MethodGitWorktreeCreate:
 		var req GitCreateWorktreeParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitWorktreeCreate(ctx, req)
+		return h.Services.WorktreeCreate(ctx, req)
 	case MethodGitWorktreeRemove:
 		var req GitRemoveWorktreeParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitWorktreeRemove(ctx, req)
+		return h.Services.WorktreeRemove(ctx, req)
 	case MethodGitAuthorName:
 		var req GitStatusParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.GitAuthorName(ctx, req)
+		return h.Services.AuthorName(ctx, req)
 	default:
-		return nil, rpcerror.NewRPCError(rpcerror.CodeMethodNotFound, "unknown git method: "+method)
+		return nil, NewRPCError(CodeMethodNotFound, "unknown git method: "+method)
 	}
 }

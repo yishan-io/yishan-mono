@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-
 )
 
 func (m *Manager) Send(req SendRequest) (SendResponse, error) {

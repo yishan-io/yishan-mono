@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/adapter/cloud"
 )
 
 func TestIsReauthRequiredError(t *testing.T) {

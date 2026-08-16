@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"yishan/apps/cli/internal/runtime/shellenv"
+	"yishan/apps/cli/internal/platform/shellenv"
 )
 
 // PiToolID is the tool ID of the pi coding agent CLI.

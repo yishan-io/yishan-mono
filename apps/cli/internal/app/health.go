@@ -19,7 +19,7 @@ func (a *App) StartHealthMonitor() {
 			case <-a.cleanupCtx.Done():
 				return
 			case <-ticker.C:
-				a.service.CheckWorkspaceHealth(a.cleanupCtx)
+				a.workspaceSvc.CheckHealth(a.cleanupCtx)
 			}
 		}
 	}()

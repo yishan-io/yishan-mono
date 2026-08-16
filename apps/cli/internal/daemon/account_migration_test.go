@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/config"
-	localdb "yishan/apps/cli/internal/db"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/platform/config"
 
 	"github.com/spf13/viper"
 )
