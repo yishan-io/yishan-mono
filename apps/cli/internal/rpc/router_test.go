@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"yishan/apps/cli/internal/computer"
@@ -192,4 +193,27 @@ type BinaryFrameHandlerFunc func(connection *Connection, opcode byte, sessionID 
 // HandleBinaryFrame implements BinaryFrameHandler.
 func (f BinaryFrameHandlerFunc) HandleBinaryFrame(connection *Connection, opcode byte, sessionID string, payload []byte) {
 	f(connection, opcode, sessionID, payload)
+}
+
+// TestWireMethodNamesCarryNamespaces guards the wire method naming contract:
+// each dotted method routes to its namespace and no git method name is
+// ambiguous with another namespace.
+func TestWireMethodNamesCarryNamespaces(t *testing.T) {
+	t.Parallel()
+
+	gitMethods := []string{MethodGitPrMerge, MethodGitPrClose, MethodGitInspectPath}
+	for _, method := range gitMethods {
+		ns, _, found := strings.Cut(method, ".")
+		if !found || ns != "git" {
+			t.Fatalf("expected %q to route to git namespace", method)
+		}
+	}
+
+	nonGitMethods := []string{"list", MethodWorkspaceCreate, MethodTerminalStart}
+	for _, method := range nonGitMethods {
+		ns, _, found := strings.Cut(method, ".")
+		if found && ns == "git" {
+			t.Fatalf("expected %q NOT to route to git namespace", method)
+		}
+	}
 }

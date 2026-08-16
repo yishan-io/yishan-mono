@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	localdb "yishan/apps/cli/internal/db"
-	"yishan/apps/cli/internal/node"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 )
 
@@ -42,11 +41,6 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 		t.Fatalf("add pending cleanup: %v", err)
 	}
 
-	service := node.NewService(node.Dependencies{
-		Store:        localdb.NewStore(workspaceStore),
-		Database:     database,
-		CleanupStore: cleanupStore,
-	})
 	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
 		CleanupStore: cleanupStore,
 		Database:     database,
@@ -56,7 +50,6 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 		store:        localdb.NewStore(workspaceStore),
 		cleanupStore: cleanupStore,
 		database:     database,
-		service:      service,
 		workspaceSvc: workspaceSvc,
 	}
 

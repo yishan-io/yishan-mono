@@ -12,7 +12,6 @@ import (
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
-	"yishan/apps/cli/internal/node"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
@@ -299,18 +298,6 @@ func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 		watchers.Unwatch(path)
 		prTracker.StopTracking(workspaceID)
 	})
-	service := node.NewService(node.Dependencies{
-		Registry:     registry,
-		Store:        store,
-		Files:        filesService,
-		Git:          gitService,
-		Terminals:    terminals,
-		Events:       events,
-		Watchers:     watchers,
-		PRTracker:    prTracker,
-		ContextStore: contextstore.NewStore(""),
-		NodeID:       "node-1",
-	})
 	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
 		Registry:    registry,
 		Store:       store,
@@ -333,7 +320,6 @@ func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 		watchers:     watchers,
 		prTracker:    prTracker,
 		contextStore: contextstore.NewStore(""),
-		service:      service,
 		workspaceSvc: workspaceSvc,
 		Runtime:      nil,
 		NodeID:       "node-1",

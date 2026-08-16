@@ -1,4 +1,4 @@
-package node
+package hook
 
 import (
 	"bytes"
@@ -10,15 +10,15 @@ import (
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
 	internalevents "yishan/apps/cli/internal/events"
-	"yishan/apps/cli/internal/node/hook"
 )
 
 func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":       "codex",
 		"workspaceId": "ws-1",
 		"tabId":       "tab-1",
@@ -50,11 +50,12 @@ func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":        "claude",
 		"workspaceId":  "ws-1",
 		"tabId":        "tab-1",
@@ -79,11 +80,12 @@ func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":        "claude",
 		"workspaceId":  "ws-1",
 		"tabId":        "tab-1",
@@ -104,11 +106,12 @@ func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":       "opencode",
 		"workspaceId": "ws-1",
 		"tabId":       "tab-1",
@@ -132,11 +135,12 @@ func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
 func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 	for _, agent := range agentkind.All {
 		t.Run(agent, func(t *testing.T) {
-			handler := newTestService(t, nil, "node-1")
-			subscriptionID, events := handler.deps.Events.Subscribe()
-			defer handler.deps.Events.Unsubscribe(subscriptionID)
+			hub := internalevents.NewHub()
+			ingress := newIngressForTest(hub)
+			subscriptionID, events := hub.Subscribe()
+			defer hub.Unsubscribe(subscriptionID)
 
-			response := postHookPayload(t, handler, map[string]any{
+			response := postHookPayload(t, ingress, map[string]any{
 				"agent":       agent,
 				"workspaceId": "ws-1",
 				"tabId":       "tab-1",
@@ -160,11 +164,12 @@ func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 }
 
 func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":       "cursor-agent",
 		"workspaceId": "ws-1",
 		"tabId":       "tab-1",
@@ -186,25 +191,26 @@ func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
 }
 
 func TestServeAgentHookRejectsInvalidPayload(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	response := postHookPayload(t, handler, map[string]any{"event": "Start"})
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	response := postHookPayload(t, ingress, map[string]any{"event": "Start"})
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, response.Code)
 	}
 }
 
-func postHookPayload(t *testing.T, handler *Service, payload map[string]any) *httptest.ResponseRecorder {
+func postHookPayload(t *testing.T, handler http.Handler, payload map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	request := httptest.NewRequest(http.MethodPost, hook.AgentHookIngestPath, bytes.NewReader(body))
+	request := httptest.NewRequest(http.MethodPost, AgentHookIngestPath, bytes.NewReader(body))
 	request.Header.Set("content-type", "application/json")
 	response := httptest.NewRecorder()
-	handler.ServeAgentHook(response, request)
+	handler.ServeHTTP(response, request)
 	return response
 }
 
@@ -234,11 +240,12 @@ func drainHookEvents(t *testing.T, events <-chan internalevents.Event) []interna
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":       "opencode",
 		"workspaceId": "ws-1",
 		"tabId":       "tab-1",
@@ -274,11 +281,12 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":       "opencode",
 		"workspaceId": "ws-1",
 		"tabId":       "tab-1",
@@ -310,12 +318,13 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
 }
 
 func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
 	// No tabId in payload — terminalAgentChanged must not be published.
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":       "opencode",
 		"workspaceId": "ws-1",
 		"paneId":      "pane-1",
@@ -335,11 +344,12 @@ func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
 }
 
 func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t *testing.T) {
-	handler := newTestService(t, nil, "node-1")
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
+	hub := internalevents.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
 
-	response := postHookPayload(t, handler, map[string]any{
+	response := postHookPayload(t, ingress, map[string]any{
 		"agent":       "opencode",
 		"workspaceId": "ws-1",
 		"tabId":       "tab-1",
@@ -377,4 +387,13 @@ func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t 
 	if notificationEvent != nil {
 		t.Fatalf("notificationEvent should NOT be published for Launched (no workspace spin), got: %#v", notificationEvent.Payload)
 	}
+}
+
+// newIngressForTest builds a hook ingress with an event hub (token usage,
+// memory, and registry are nil; the ingress guards them).
+func newIngressForTest(events *internalevents.Hub) *Ingress {
+	return NewIngress(IngressDeps{
+		Events: events,
+		Usage:  NewUsageTracker(),
+	})
 }

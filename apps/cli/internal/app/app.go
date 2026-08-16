@@ -25,7 +25,6 @@ import (
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/node"
 	nodeagent "yishan/apps/cli/internal/node/agent"
 	"yishan/apps/cli/internal/node/hook"
 	nodeproject "yishan/apps/cli/internal/node/project"
@@ -110,11 +109,12 @@ type App struct {
 	// work (memory searches, relayed creates).
 	serverCtx context.Context
 
-	// service is the local Node application boundary: the rpc service
-	// implementations and application operations.
-	service *node.Service
+	// agentSvc is the agent application service (pi sessions, task runs).
+	agentSvc *nodeagent.Service
 	// workspaceSvc is the workspace application service (lifecycle, relay).
 	workspaceSvc *nodeworkspace.Service
+	// hookIngress handles the agent hook HTTP ingress (pi notify bridge).
+	hookIngress *hook.Ingress
 	// router is the namespace routing table.
 	router *rpc.Router
 	// rpcServer is the JSON-RPC/WebSocket transport server.
@@ -243,32 +243,12 @@ func Bootstrap(cfg Config) (*App, error) {
 		NodeID:    cfg.NodeID,
 	})
 
-	service := node.NewService(node.Dependencies{
-		Registry:             registry,
-		Store:                store,
-		Files:                filesService,
-		Git:                  gitService,
-		Terminals:            terminals,
-		Memory:               memorySvc,
-		Computer:             computerSvc,
-		ModelList:            modelList,
-		AgentMgr:             agentMgr,
-		PIAuth:               piAuth,
-		TokenUsage:           tokenUsage,
-		Events:               events,
-		Watchers:             watchers,
-		PRTracker:            prTracker,
-		CleanupStore:         cleanupStore,
-		ContextStore:         contextStore,
-		Database:             cfg.Database,
-		Runtime:              cfg.Runtime,
-		NodeID:               cfg.NodeID,
-		LogFilePath:          cfg.LogFilePath,
-		SettingsPath:         cfg.SettingsPath,
-		AgentLifecycleCtx:    agentLifecycleCtx,
-		AgentLifecycleCancel: cancelAgentLifecycle,
-		ServerCtx:            context.Background(),
-		Usage:                usage,
+	hookIngress := hook.NewIngress(hook.IngressDeps{
+		Events:     events,
+		TokenUsage: tokenUsage,
+		Memory:     memorySvc,
+		Registry:   registry,
+		Usage:      usage,
 	})
 
 	app := &App{
@@ -298,7 +278,9 @@ func Bootstrap(cfg Config) (*App, error) {
 		cancelAgentLifecycle: cancelAgentLifecycle,
 		cleanupCtx:           cleanupCtx,
 		cancelCleanup:        cancelCleanup,
-		service:              service,
+		agentSvc:             agentSvc,
+		workspaceSvc:         workspaceSvc,
+		hookIngress:          hookIngress,
 	}
 
 	// Computer feature config comes from settings.yaml.
@@ -332,8 +314,8 @@ func Bootstrap(cfg Config) (*App, error) {
 		SettingsPath: cfg.SettingsPath,
 		ServerCtx:    context.Background(),
 	})
-	app.router = buildNamespaceRouter(service, agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
-	app.rpcServer = rpc.NewServer(service)
+	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
+	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
 	app.relay = relay.NewClient(relay.ClientConfig{
 		Runtime:     cfg.Runtime,
@@ -341,15 +323,11 @@ func Bootstrap(cfg Config) (*App, error) {
 		URL:         cfg.RelayURL,
 		StaticToken: cfg.RelayToken,
 		Server:      app.rpcServer,
-		Handler:     service,
+		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Runtime},
 		Events:      events,
 	})
-	service.SetRelayClient(app.relay)
 	terminalSvc.SetRelayClient(app.relay)
 	workspaceSvc.SetRelayClient(app.relay)
-	service.SetTerminalService(terminalSvc)
-	service.SetAgentService(agentSvc)
-	service.SetWorkspaceService(workspaceSvc)
 
 	return app, nil
 }
@@ -410,8 +388,8 @@ func (a *App) Close() error {
 			log.Warn().Err(err).Msg("failed to close memory service")
 		}
 	}
-	if a.service != nil {
-		a.service.Shutdown()
+	if a.agentSvc != nil {
+		a.agentSvc.Shutdown()
 	}
 	modellist.ShutdownShell()
 	if a.cancelCleanup != nil {
@@ -439,11 +417,11 @@ func (a *App) Relay() *relay.Client {
 
 // ServeAgentHook handles the agent hook HTTP ingress (pi notify bridge).
 func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
-	a.service.ServeAgentHook(w, r)
+	a.hookIngress.ServeHTTP(w, r)
 }
 
 // NewRouter builds the namespace routing table for the node services (test
 // and composition helper; Bootstrap wires it into the app).
-func NewRouter(service *node.Service, agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
-	return buildNamespaceRouter(service, agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
+func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
+	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
 }

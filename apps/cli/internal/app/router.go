@@ -1,7 +1,6 @@
 package app
 
 import (
-	"yishan/apps/cli/internal/node"
 	nodeagent "yishan/apps/cli/internal/node/agent"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
@@ -15,7 +14,7 @@ import (
 // and call exactly one typed service method; the daemon implements the
 // services. The agent namespaces (pi/skill/customize) route through the rpc
 // AgentHandler into the daemon's AgentService implementation.
-func buildNamespaceRouter(h *node.Service, agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
+func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
 	router := rpc.NewRouter()
 	router.Register("list", &rpc.WorkspaceHandler{Services: workspaceSvc})
 	router.Register("workspace", &rpc.WorkspaceHandler{Services: workspaceSvc})
