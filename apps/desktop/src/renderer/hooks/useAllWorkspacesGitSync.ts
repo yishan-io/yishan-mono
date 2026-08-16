@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
+import { refreshWorkspaceGitChanges } from "../features/workspace/commands/workspaceCommands";
 import { projectStore } from "../features/project/model/projectStore";
 import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { isFolderWorkspace } from "../helpers/localFolder";

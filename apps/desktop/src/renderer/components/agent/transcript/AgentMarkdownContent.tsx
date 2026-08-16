@@ -11,8 +11,8 @@ import { editorSettingsStore } from "@renderer/store/settings/editorSettingsStor
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
 import { openChatFileTab, openTab, openTabInOppositePane } from "../../../commands/tabCommands";
-import { selectFolderInFileTree } from "../../../commands/workspaceCommands";
-import { readWorkspaceStoreState } from "../../../commands/workspaceStoreHelpers";
+import { selectFolderInFileTree } from "../../../features/workspace/commands/workspaceCommands";
+import { readWorkspaceStoreState } from "../../../features/workspace/commands/workspaceStoreHelpers";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 
 type AgentMarkdownContentProps = {

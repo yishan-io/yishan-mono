@@ -11,8 +11,8 @@
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
-import { loadWorkspaceSnapshot } from "../../../commands/projectCommands";
-import { buildWorkspaceCreatePlaceholder } from "../../../commands/workspaceStoreHelpers";
+import { loadWorkspaceSnapshot } from "../../../features/project/commands/projectCommands";
+import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/commands/workspaceStoreHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../store/sessionStore";

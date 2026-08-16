@@ -26,11 +26,11 @@ vi.mock("../../../commands/tabCommands", () => ({
   openChatFileTab: mocked.openChatFileTab,
 }));
 
-vi.mock("../../../commands/workspaceStoreHelpers", () => ({
+vi.mock("../../../features/workspace/commands/workspaceStoreHelpers", () => ({
   readWorkspaceStoreState: () => mocked.workspaceState,
 }));
 
-vi.mock("../../../commands/workspaceCommands", () => ({
+vi.mock("../../../features/workspace/commands/workspaceCommands", () => ({
   selectFolderInFileTree: mocked.selectFolderInFileTree,
 }));
 

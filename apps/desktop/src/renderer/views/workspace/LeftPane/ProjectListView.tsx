@@ -11,7 +11,7 @@ import {
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
 } from "../../../../shared/contracts/externalApps";
-import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
+import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../features/workspace/commands/workspaceCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
 import { WorkspaceTree } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
