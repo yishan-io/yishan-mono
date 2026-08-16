@@ -2,6 +2,8 @@ import type { ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-co
 
 import type { AgentRecord } from "../agents/types";
 import type { AgentManager } from "../runtime/agentManager";
+import { createLiveTranscriptEmitter } from "./liveTranscriptEmitter";
+import { buildLiveTranscriptPayload } from "./liveTranscriptPayload";
 
 const STATUS_KEY = "pi-subagents";
 const WIDGET_KEY = "pi-subagents-progress";
@@ -29,6 +31,10 @@ export function bindAgentProgressUi(
   let spinnerFrameIndex = 0;
   let spinnerInterval: ReturnType<typeof setInterval> | undefined;
   let hadActiveAgents = false;
+  // Live transcripts are time-throttled (latest-value-wins) and byte-budgeted
+  // before serialization so high-frequency session changes cannot amplify into
+  // unbounded parent-process allocations (2026-08-16 OOM incident).
+  const liveTranscriptEmitter = mode === "rpc" ? createLiveTranscriptEmitter(ui) : undefined;
 
   const stopSpinner = () => {
     if (spinnerInterval) {
@@ -62,9 +68,9 @@ export function bindAgentProgressUi(
     const hasActiveAgents = records.some((record) => ACTIVE_AGENT_STATUSES.has(record.status));
     if (!hasActiveAgents) {
       clearAgentProgress(ui, { restoreWorkingVisibility: hadActiveAgents });
-      if (mode === "rpc") {
-        renderAgentLiveTranscripts(ui, []);
-      }
+      // Emitting only active children: a snapshot with no active child clears
+      // the widget immediately (see liveTranscriptEmitter.push).
+      liveTranscriptEmitter?.push(records);
       hadActiveAgents = false;
       return;
     }
@@ -75,13 +81,14 @@ export function bindAgentProgressUi(
     // is present to parse it.  In TUI mode the raw JSON would render as
     // visible widget text in the terminal, which is not useful.
     if (mode === "rpc") {
-      renderAgentLiveTranscripts(ui, latestRecords);
+      liveTranscriptEmitter?.push(records);
     }
   });
 
   return () => {
     stopSpinner();
     unsubscribe();
+    liveTranscriptEmitter?.dispose();
     clearAgentProgress(ui, { restoreWorkingVisibility: hadActiveAgents });
   };
 }
@@ -140,30 +147,14 @@ export function clearAgentProgress(ui: ExtensionUIContext, options: { restoreWor
   }
 }
 
+/**
+ * Publishes a bounded live-transcript snapshot through the dedicated widget
+ * channel. Applies emit-side budgets (per-message/per-child/aggregate bytes)
+ * before serialization; emits undefined when no active child remains.
+ */
 export function renderAgentLiveTranscripts(ui: ExtensionUIContext, records: AgentRecord[]): void {
-  const agents = records
-    .filter((record) => ACTIVE_AGENT_STATUSES.has(record.status) && record.sessionId && record.session)
-    .map((record) => ({
-      agentId: record.id,
-      childSessionId: record.sessionId as string,
-      status: record.status,
-      messages: record.session?.messages ?? [],
-      thinkingLevel: record.session?.thinkingLevel,
-      // Emit only the fields the GUI reads (id/name/provider/reasoning/contextWindow/thinkingLevelMap);
-      // the full pi-ai Model carries api function refs, cost, and baseUrl bloat.
-      model: record.session?.model
-        ? {
-            id: record.session.model.id,
-            name: record.session.model.name,
-            provider: record.session.model.provider,
-            reasoning: record.session.model.reasoning,
-            contextWindow: record.session.model.contextWindow,
-            thinkingLevelMap: record.session.model.thinkingLevelMap,
-          }
-        : undefined,
-    }));
-
-  ui.setWidget(LIVE_TRANSCRIPTS_WIDGET_KEY, agents.length > 0 ? [JSON.stringify({ version: 1, agents })] : undefined);
+  const { payload } = buildLiveTranscriptPayload(records);
+  ui.setWidget(LIVE_TRANSCRIPTS_WIDGET_KEY, payload ? [JSON.stringify(payload)] : undefined);
 }
 
 function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[], spinnerFrameIndex: number): string[] {

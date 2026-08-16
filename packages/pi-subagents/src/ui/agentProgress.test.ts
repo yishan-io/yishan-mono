@@ -301,7 +301,8 @@ describe("bindAgentProgressUi", () => {
     expect(liveTranscriptCalls).toHaveLength(0);
   });
 
-  it("emits pi-subagents-live-transcripts widget in rpc mode", () => {
+  it("emits pi-subagents-live-transcripts widget in rpc mode", async () => {
+    vi.useFakeTimers();
     const ui = createUiHarness();
     let listener: ((records: AgentRecord[]) => void) | undefined;
     const subscribe = vi.fn((nextListener: (records: AgentRecord[]) => void) => {
@@ -312,11 +313,47 @@ describe("bindAgentProgressUi", () => {
 
     const dispose = bindAgentProgressUi({ subscribe } as never, ui as never, "rpc");
     listener?.([createRecord({ session: { messages: [] } as never })]);
-    dispose();
+    // Live-transcript emission is time-throttled; let the window elapse.
+    await vi.advanceTimersByTimeAsync(200);
 
     const liveTranscriptCalls = (ui.setWidget as ReturnType<typeof vi.fn>).mock.calls.filter(
       (args) => args[0] === "pi-subagents-live-transcripts" && args[1] !== undefined,
     );
     expect(liveTranscriptCalls).toHaveLength(1);
+
+    dispose();
+  });
+
+  it("clears the live-transcript widget when the last child completes in rpc mode", async () => {
+    vi.useFakeTimers();
+    const ui = createUiHarness();
+    let listener: ((records: AgentRecord[]) => void) | undefined;
+    const subscribe = vi.fn((nextListener: (records: AgentRecord[]) => void) => {
+      listener = nextListener;
+      nextListener([]);
+      return vi.fn();
+    });
+
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never, "rpc");
+    listener?.([createRecord({ session: { messages: [] } as never })]);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(
+      (ui.setWidget as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (args) => args[0] === "pi-subagents-live-transcripts" && args[1] !== undefined,
+      ),
+    ).toHaveLength(1);
+
+    listener?.([createRecord({ status: "completed" })]);
+    expect(ui.setWidget).toHaveBeenLastCalledWith("pi-subagents-live-transcripts", undefined);
+
+    // No late payload emission after the clear.
+    await vi.advanceTimersByTimeAsync(200);
+    expect(
+      (ui.setWidget as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (args) => args[0] === "pi-subagents-live-transcripts" && args[1] !== undefined,
+      ),
+    ).toHaveLength(1);
+
+    dispose();
   });
 });
