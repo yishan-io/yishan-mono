@@ -26,8 +26,10 @@ import (
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/node"
+	nodeagent "yishan/apps/cli/internal/node/agent"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
+	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
@@ -35,6 +37,7 @@ import (
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/application"
 	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
@@ -184,7 +187,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	computerSvc := nodesystem.NewDefaultComputerService()
 	modelList := modellist.NewService()
 	agentMgr := agentmanager.NewManager()
-	piAuth := node.NewManagedPiAuthStore()
+	piAuth := nodeagent.NewManagedPiAuthStore()
 	contextStore := contextstore.NewStore(cfg.SettingsPath)
 	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer)
 
@@ -268,6 +271,27 @@ func Bootstrap(cfg Config) (*App, error) {
 		Git:       gitService,
 		Terminals: terminals,
 	})
+	agentSvc := nodeagent.NewService(nodeagent.Deps{
+		Workspace:         workspaceSvc,
+		AgentMgr:          agentMgr,
+		PIAuth:            piAuth,
+		ModelList:         modelList,
+		Events:            events,
+		Terminals:         terminals,
+		ContextStore:      contextStore,
+		AgentLifecycleCtx: agentLifecycleCtx,
+		ServerCtx:         context.Background(),
+		RelayCreateCompleted: func(prepared application.CreatePlan, completed map[string]any) {
+			service.RelayWorkspaceCreateCompleted(prepared, completed)
+		},
+	})
+	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
+		Workspace: workspaceSvc,
+		Terminals: terminals,
+		Events:    events,
+		Runtime:   cfg.Runtime,
+		NodeID:    cfg.NodeID,
+	})
 	projectSvc := nodeproject.NewService(nodeproject.Deps{
 		Runtime:  cfg.Runtime,
 		Database: cfg.Database,
@@ -284,9 +308,9 @@ func Bootstrap(cfg Config) (*App, error) {
 		SettingsPath: cfg.SettingsPath,
 		ServerCtx:    context.Background(),
 	})
-	app.router = buildNamespaceRouter(service, workspaceSvc, projectSvc, systemSvc)
+	app.router = buildNamespaceRouter(service, agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
 	app.rpcServer = rpc.NewServer(service)
-	app.rpcServer.BinaryFrameHandler = service
+	app.rpcServer.BinaryFrameHandler = terminalSvc
 	app.relay = relay.NewClient(relay.ClientConfig{
 		Runtime:     cfg.Runtime,
 		NodeID:      cfg.NodeID,
@@ -297,6 +321,9 @@ func Bootstrap(cfg Config) (*App, error) {
 		Events:      events,
 	})
 	service.SetRelayClient(app.relay)
+	terminalSvc.SetRelayClient(app.relay)
+	service.SetTerminalService(terminalSvc)
+	service.SetAgentService(agentSvc)
 
 	return app, nil
 }
@@ -391,6 +418,6 @@ func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 
 // NewRouter builds the namespace routing table for the node services (test
 // and composition helper; Bootstrap wires it into the app).
-func NewRouter(service *node.Service, workspaceSvc *nodeworkspace.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
-	return buildNamespaceRouter(service, workspaceSvc, projectSvc, systemSvc)
+func NewRouter(service *node.Service, agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
+	return buildNamespaceRouter(service, agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
 }

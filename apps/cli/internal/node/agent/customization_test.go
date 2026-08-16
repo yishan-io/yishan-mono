@@ -1,4 +1,4 @@
-package node
+package agent
 
 import (
 	"context"
@@ -13,7 +13,7 @@ func TestDispatchCustomizeExtensionsList_OnCleanHome(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 
-	result, err := handler.CustomizeExtensionsList(context.Background())
+	result, err := handler.ExtensionsList(context.Background())
 	if err != nil {
 		t.Fatalf("CustomizeExtensionsList: %v", err)
 	}
@@ -49,13 +49,13 @@ func TestDispatchCustomizeExtensions_UnknownMethod(t *testing.T) {
 
 func TestHandleCustomizeExtensionsInstall_MissingSource(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeExtensionsInstall(context.Background(), rpc.CustomizeExtensionSourceParams{})
+	_, err := handler.ExtensionsInstall(context.Background(), rpc.CustomizeExtensionSourceParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeExtensionsRemove_MissingSource(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeExtensionsRemove(context.Background(), rpc.CustomizeExtensionSourceParams{})
+	_, err := handler.ExtensionsRemove(context.Background(), rpc.CustomizeExtensionSourceParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
@@ -64,7 +64,7 @@ func TestHandleCustomizeExtensionsRemove_OfficialRejected(t *testing.T) {
 	// as managed defaults by ListPiExtensions).
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeExtensionsRemove(context.Background(), rpc.CustomizeExtensionSourceParams{Source: "npm:@yishan-io/pi-notify"})
+	_, err := handler.ExtensionsRemove(context.Background(), rpc.CustomizeExtensionSourceParams{Source: "npm:@yishan-io/pi-notify"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
@@ -73,10 +73,10 @@ func TestDispatchCustomize_RoutesExtensionsMethods(t *testing.T) {
 	handler := newSkillTestHandler(t)
 
 	for _, method := range []string{
-		MethodCustomizeExtensionsList,
-		MethodCustomizeExtensionsInstall,
-		MethodCustomizeExtensionsRemove,
-		MethodCustomizeExtensionsUpdate,
+		rpc.MethodCustomizeExtensionsList,
+		rpc.MethodCustomizeExtensionsInstall,
+		rpc.MethodCustomizeExtensionsRemove,
+		rpc.MethodCustomizeExtensionsUpdate,
 	} {
 		_, err := handler.callRPCForTest(context.Background(), method, mustMarshalSkillParams(t, map[string]any{}))
 		if err == nil {
@@ -101,7 +101,7 @@ func TestDispatchCustomizeAgentsList_OnCleanHome(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 
-	result, err := handler.CustomizeAgentsList(context.Background())
+	result, err := handler.AgentsList(context.Background())
 	if err != nil {
 		t.Fatalf("CustomizeAgentsList: %v", err)
 	}
@@ -120,26 +120,26 @@ func TestDispatchCustomizeAgentsList_OnCleanHome(t *testing.T) {
 
 func TestHandleCustomizeAgentsCreate_MissingContent(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeAgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "helper", Description: "d"})
+	_, err := handler.AgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "helper", Description: "d"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsCreate_InvalidName(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeAgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "My Agent", Description: "d", Content: "body"})
+	_, err := handler.AgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "My Agent", Description: "d", Content: "body"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsCreate_ManagedNameRejected(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeAgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "general", Description: "d", Content: "body"})
+	_, err := handler.AgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{Name: "general", Description: "d", Content: "body"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsCreate_WritesToolsFrontmatter(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
-	result, err := handler.CustomizeAgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{
+	result, err := handler.AgentsCreate(context.Background(), rpc.CustomizeAgentCreateParams{
 		Name:        "tool-helper",
 		Description: "Helper",
 		Content:     "# body\n",
@@ -163,21 +163,21 @@ func TestHandleCustomizeAgentsCreate_WritesToolsFrontmatter(t *testing.T) {
 func TestHandleCustomizeAgentsRemove_OfficialRejected(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeAgentsRemove(context.Background(), rpc.CustomizeAgentNameParams{Name: "general"})
+	_, err := handler.AgentsRemove(context.Background(), rpc.CustomizeAgentNameParams{Name: "general"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsRestore_UserAgentNotManaged(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeAgentsRestore(context.Background(), rpc.CustomizeAgentNameParams{Name: "custom-helper"})
+	_, err := handler.AgentsRestore(context.Background(), rpc.CustomizeAgentNameParams{Name: "custom-helper"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleCustomizeAgentsDetail_UnknownName(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
-	_, err := handler.CustomizeAgentsDetail(context.Background(), rpc.CustomizeAgentNameParams{Name: "missing-agent"})
+	_, err := handler.AgentsDetail(context.Background(), rpc.CustomizeAgentNameParams{Name: "missing-agent"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
@@ -185,12 +185,12 @@ func TestDispatchCustomize_RoutesAgentsMethods(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newSkillTestHandler(t)
 	for _, method := range []string{
-		MethodCustomizeAgentsList,
-		MethodCustomizeAgentsDetail,
-		MethodCustomizeAgentsCreate,
-		MethodCustomizeAgentsUpdate,
-		MethodCustomizeAgentsRemove,
-		MethodCustomizeAgentsRestore,
+		rpc.MethodCustomizeAgentsList,
+		rpc.MethodCustomizeAgentsDetail,
+		rpc.MethodCustomizeAgentsCreate,
+		rpc.MethodCustomizeAgentsUpdate,
+		rpc.MethodCustomizeAgentsRemove,
+		rpc.MethodCustomizeAgentsRestore,
 	} {
 		_, err := handler.callRPCForTest(context.Background(), method, mustMarshalSkillParams(t, map[string]any{}))
 		if err == nil {

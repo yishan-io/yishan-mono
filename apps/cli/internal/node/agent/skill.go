@@ -1,4 +1,4 @@
-package node
+package agent
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 // SkillService implementation. Each method performs one skill operation via
 // the setup package; RPC decoding happens in the agent handler.
 
-func (s *Service) SkillList(ctx context.Context) (any, error) {
+func (s *Service) List(ctx context.Context) (any, error) {
 	skills, err := setup.ListSkills(s.activeWorkspaceRoot())
 	if err != nil {
 		return nil, fmt.Errorf("list skills: %w", err)
@@ -21,7 +21,7 @@ func (s *Service) SkillList(ctx context.Context) (any, error) {
 	return map[string]any{"skills": skills}, nil
 }
 
-func (s *Service) SkillInfo(ctx context.Context, req rpc.SkillNameParams) (any, error) {
+func (s *Service) Info(ctx context.Context, req rpc.SkillNameParams) (any, error) {
 	name, err := requireSkillName(req.Name)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (s *Service) SkillInfo(ctx context.Context, req rpc.SkillNameParams) (any, 
 	return info, nil
 }
 
-func (s *Service) SkillDetail(ctx context.Context, req rpc.SkillNameParams) (any, error) {
+func (s *Service) Detail(ctx context.Context, req rpc.SkillNameParams) (any, error) {
 	name, err := requireSkillName(req.Name)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (s *Service) SkillDetail(ctx context.Context, req rpc.SkillNameParams) (any
 	return detail, nil
 }
 
-func (s *Service) SkillAdd(ctx context.Context, req rpc.SkillSourceParams) (any, error) {
+func (s *Service) Add(ctx context.Context, req rpc.SkillSourceParams) (any, error) {
 	source, err := requireSkillSource(req.Source)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (s *Service) SkillAdd(ctx context.Context, req rpc.SkillSourceParams) (any,
 
 // SkillRemove implements skill.remove with the desktop gating: only
 // user-installed global skills (~/.agents/skills, CLI-managed) may be removed.
-func (s *Service) SkillRemove(ctx context.Context, req rpc.SkillNameParams) (any, error) {
+func (s *Service) Remove(ctx context.Context, req rpc.SkillNameParams) (any, error) {
 	name, err := requireSkillName(req.Name)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (s *Service) SkillRemove(ctx context.Context, req rpc.SkillNameParams) (any
 	return map[string]any{"removed": true}, nil
 }
 
-func (s *Service) SkillUpdate(ctx context.Context, req rpc.SkillNameParams) (any, error) {
+func (s *Service) Update(ctx context.Context, req rpc.SkillNameParams) (any, error) {
 	name, err := requireSkillName(req.Name)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (s *Service) SkillUpdate(ctx context.Context, req rpc.SkillNameParams) (any
 	return map[string]any{"updated": true}, nil
 }
 
-func (s *Service) SkillUpdateAll(ctx context.Context) (any, error) {
+func (s *Service) UpdateAll(ctx context.Context) (any, error) {
 	commandCtx, cancel := context.WithTimeout(ctx, managedCommandTimeout)
 	defer cancel()
 	if err := setup.UpdateAllSkills(commandCtx); err != nil {
@@ -148,7 +148,7 @@ func (s *Service) activeWorkspaceRoot() string {
 	if workspaceID == "" {
 		return ""
 	}
-	ws, err := s.getWorkspace(workspaceID)
+	ws, err := s.deps.Workspace.GetWorkspace(workspaceID)
 	if err != nil {
 		return ""
 	}

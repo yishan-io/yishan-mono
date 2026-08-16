@@ -62,29 +62,3 @@ func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
 
 	handler.deps.Events.Publish(internalevents.Event{Topic: "workspaceSnapshotChanged", Payload: payload})
 }
-
-// publishTerminalSessionChanged republishes relay terminal session changes as
-// frontend events.
-func publishTerminalSessionChanged(handler *Service, params json.RawMessage) {
-	var payload map[string]any
-	if len(params) > 0 {
-		if err := json.Unmarshal(params, &payload); err != nil {
-			log.Warn().Err(err).Msg("relay: invalid terminal session changed params")
-			return
-		}
-	}
-	if payload == nil {
-		payload = map[string]any{}
-	}
-
-	sessionID, _ := payload["sessionId"].(string)
-	workspaceID, _ := payload["workspaceId"].(string)
-	action, _ := payload["action"].(string)
-	log.Info().
-		Str("sessionId", strings.TrimSpace(sessionID)).
-		Str("workspaceId", strings.TrimSpace(workspaceID)).
-		Str("action", strings.TrimSpace(action)).
-		Msg("relay: terminal session change received")
-
-	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalSessionChanged", Payload: payload})
-}

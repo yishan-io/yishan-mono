@@ -13,7 +13,7 @@ func (s *Service) handleForInstance(ws domain.Workspace) instance.Handle {
 }
 
 // handleFor resolves a workspace-scoped handle from the instance registry.
-func (s *Service) handleFor(workspaceID string) (instance.Handle, error) {
+func (s *Service) HandleFor(workspaceID string) (instance.Handle, error) {
 	ws, ok := s.deps.Registry.Get(workspaceID)
 	if !ok {
 		return instance.Handle{}, notFound()
@@ -23,7 +23,7 @@ func (s *Service) handleFor(workspaceID string) (instance.Handle, error) {
 
 // handleForPath resolves the canonical path and builds the handle for the
 // instance at that path.
-func (s *Service) handleForPath(path string) (instance.Handle, error) {
+func (s *Service) HandleForPath(path string) (instance.Handle, error) {
 	ws, ok := s.deps.Registry.GetByPath(path)
 	if !ok {
 		return instance.Handle{}, notFound()
@@ -33,7 +33,7 @@ func (s *Service) handleForPath(path string) (instance.Handle, error) {
 
 // getWorkspace returns the open instance for a workspace id, mapping a missing
 // instance to the RPC not-found error (instance reads go through the registry).
-func (s *Service) getWorkspace(workspaceID string) (domain.Workspace, error) {
+func (s *Service) GetWorkspace(workspaceID string) (domain.Workspace, error) {
 	ws, ok := s.deps.Registry.Get(workspaceID)
 	if !ok {
 		return domain.Workspace{}, notFound()

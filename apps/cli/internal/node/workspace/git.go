@@ -10,7 +10,7 @@ import (
 // performs one git operation.
 
 func (s *Service) Status(ctx context.Context, req rpc.GitStatusParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,7 @@ func (s *Service) Status(ctx context.Context, req rpc.GitStatusParams) (any, err
 }
 
 func (s *Service) Inspect(ctx context.Context, req rpc.GitInspectParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (s *Service) InspectPath(ctx context.Context, req rpc.GitInspectPathParams)
 }
 
 func (s *Service) ListChanges(ctx context.Context, req rpc.GitStatusParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *Service) ListChanges(ctx context.Context, req rpc.GitStatusParams) (any
 }
 
 func (s *Service) Track(ctx context.Context, req rpc.GitPathsParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (s *Service) Track(ctx context.Context, req rpc.GitPathsParams) (any, error
 }
 
 func (s *Service) Unstage(ctx context.Context, req rpc.GitPathsParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (s *Service) Unstage(ctx context.Context, req rpc.GitPathsParams) (any, err
 }
 
 func (s *Service) Revert(ctx context.Context, req rpc.GitPathsParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (s *Service) Revert(ctx context.Context, req rpc.GitPathsParams) (any, erro
 }
 
 func (s *Service) Commit(ctx context.Context, req rpc.GitCommitParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *Service) Commit(ctx context.Context, req rpc.GitCommitParams) (any, err
 }
 
 func (s *Service) BranchStatus(ctx context.Context, req rpc.GitStatusParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (s *Service) BranchStatus(ctx context.Context, req rpc.GitStatusParams) (an
 }
 
 func (s *Service) BranchPullRequest(ctx context.Context, req rpc.GitBranchPullRequestParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (s *Service) BranchPullRequest(ctx context.Context, req rpc.GitBranchPullRe
 }
 
 func (s *Service) CommitsToTarget(ctx context.Context, req rpc.GitTargetBranchParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (s *Service) CommitsToTarget(ctx context.Context, req rpc.GitTargetBranchPa
 }
 
 func (s *Service) BranchDiffSummary(ctx context.Context, req rpc.GitTargetBranchParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (s *Service) BranchDiffSummary(ctx context.Context, req rpc.GitTargetBranch
 }
 
 func (s *Service) CommitDiff(ctx context.Context, req rpc.GitCommitDiffParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (s *Service) CommitDiff(ctx context.Context, req rpc.GitCommitDiffParams) (
 }
 
 func (s *Service) BranchDiff(ctx context.Context, req rpc.GitBranchDiffParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (s *Service) BranchDiff(ctx context.Context, req rpc.GitBranchDiffParams) (
 }
 
 func (s *Service) Branches(ctx context.Context, req rpc.GitStatusParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (s *Service) Branches(ctx context.Context, req rpc.GitStatusParams) (any, e
 }
 
 func (s *Service) Push(ctx context.Context, req rpc.GitStatusParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (s *Service) Push(ctx context.Context, req rpc.GitStatusParams) (any, error
 }
 
 func (s *Service) Publish(ctx context.Context, req rpc.GitStatusParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (s *Service) Publish(ctx context.Context, req rpc.GitStatusParams) (any, er
 }
 
 func (s *Service) RenameBranch(ctx context.Context, req rpc.GitRenameBranchParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (s *Service) RenameBranch(ctx context.Context, req rpc.GitRenameBranchParam
 }
 
 func (s *Service) RemoveBranch(ctx context.Context, req rpc.GitRemoveBranchParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (s *Service) RemoveBranch(ctx context.Context, req rpc.GitRemoveBranchParam
 }
 
 func (s *Service) PrMerge(ctx context.Context, req rpc.GitPrMergeParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (s *Service) PrMerge(ctx context.Context, req rpc.GitPrMergeParams) (any, e
 }
 
 func (s *Service) PrClose(ctx context.Context, req rpc.GitPrCloseParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +197,7 @@ func (s *Service) PrClose(ctx context.Context, req rpc.GitPrCloseParams) (any, e
 }
 
 func (s *Service) WorktreeCreate(ctx context.Context, req rpc.GitCreateWorktreeParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (s *Service) WorktreeCreate(ctx context.Context, req rpc.GitCreateWorktreeP
 }
 
 func (s *Service) WorktreeRemove(ctx context.Context, req rpc.GitRemoveWorktreeParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ func (s *Service) WorktreeRemove(ctx context.Context, req rpc.GitRemoveWorktreeP
 }
 
 func (s *Service) AuthorName(ctx context.Context, req rpc.GitStatusParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}

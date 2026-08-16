@@ -1,4 +1,4 @@
-package node
+package agent
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 // itself (auth.json format, locking, ambient detection) lives in
 // internal/agent/auth.
 
-func (s *Service) PiListProviders(ctx context.Context) (any, error) {
+func (s *Service) ListProviders(ctx context.Context) (any, error) {
 	if s.deps.PIAuth == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "pi agent auth store is unavailable")
 	}
@@ -24,7 +24,7 @@ func (s *Service) PiListProviders(ctx context.Context) (any, error) {
 	return map[string]any{"providers": entries}, nil
 }
 
-func (s *Service) PiSaveProvider(ctx context.Context, req rpc.PiSaveProviderParams) (any, error) {
+func (s *Service) SaveProvider(ctx context.Context, req rpc.PiSaveProviderParams) (any, error) {
 	if s.deps.PIAuth == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "pi agent auth store is unavailable")
 	}
@@ -34,7 +34,7 @@ func (s *Service) PiSaveProvider(ctx context.Context, req rpc.PiSaveProviderPara
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) PiRemoveProvider(ctx context.Context, req rpc.PiRemoveProviderParams) (any, error) {
+func (s *Service) RemoveProvider(ctx context.Context, req rpc.PiRemoveProviderParams) (any, error) {
 	if s.deps.PIAuth == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "pi agent auth store is unavailable")
 	}

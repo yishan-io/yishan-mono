@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -13,13 +11,14 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/contextstore"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
+	nodeagent "yishan/apps/cli/internal/node/agent"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
+	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
@@ -65,7 +64,7 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		Computer:             computer.NewService(computer.NewUnavailableRuntime("unknown")),
 		ModelList:            modellist.NewService(),
 		AgentMgr:             agentmanager.NewManager(),
-		PIAuth:               NewManagedPiAuthStore(),
+		PIAuth:               nodeagent.NewManagedPiAuthStore(),
 		Events:               events,
 		Watchers:             watchers,
 		PRTracker:            prTracker,
@@ -78,12 +77,33 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		AgentLifecycleCancel: cancelAgentLifecycle,
 		ServerCtx:            context.Background(),
 	})
-	handler.SetRouter(buildTestRouter(handler, nodeworkspace.NewService(nodeworkspace.Deps{
+	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
 		Registry:  registry,
 		Files:     filesService,
 		Git:       gitService,
 		Terminals: terminals,
-	}), nodeproject.NewService(nodeproject.Deps{Runtime: runtime}), nodesystem.NewService(nodesystem.Deps{
+	})
+	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
+		Workspace: workspaceSvc,
+		Terminals: terminals,
+		Events:    events,
+		Runtime:   runtime,
+		NodeID:    nodeID,
+	})
+	handler.SetTerminalService(terminalSvc)
+	agentSvc := nodeagent.NewService(nodeagent.Deps{
+		Workspace:         workspaceSvc,
+		AgentMgr:          agentmanager.NewManager(),
+		PIAuth:            nodeagent.NewManagedPiAuthStore(),
+		ModelList:         modellist.NewService(),
+		Events:            events,
+		Terminals:         terminals,
+		ContextStore:      contextstore.NewStore(""),
+		AgentLifecycleCtx: context.Background(),
+		ServerCtx:         context.Background(),
+	})
+	handler.SetAgentService(agentSvc)
+	handler.SetRouter(buildTestRouter(handler, agentSvc, workspaceSvc, terminalSvc, nodeproject.NewService(nodeproject.Deps{Runtime: runtime}), nodesystem.NewService(nodesystem.Deps{
 		Runtime:      runtime,
 		Events:       events,
 		ModelList:    modellist.NewService(),
@@ -103,35 +123,6 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		Events:  events,
 	})
 	return handler
-}
-
-// installFakePiBinary writes a fake `pi` script that records the managed pi
-// agent dir env value into markerPath, and puts it on PATH. Shared with the
-// node/agent session tests.
-func installFakePiBinary(t *testing.T, markerPath string) {
-	t.Helper()
-	binDir := t.TempDir()
-	scriptPath := filepath.Join(binDir, "pi")
-	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$%s\" > %q\n", config.PiAgentDirEnvKey, markerPath)
-	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
-		t.Fatalf("write fake pi binary: %v", err)
-	}
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-}
-
-// waitForFileContent polls path until it has content or the deadline expires.
-func waitForFileContent(t *testing.T, path string) string {
-	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		content, err := os.ReadFile(path)
-		if err == nil {
-			return string(content)
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	t.Fatalf("timed out waiting for %s", path)
-	return ""
 }
 
 func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopic string) internalevents.Event {
@@ -195,7 +186,7 @@ func TestNewService_ReceivesDependencies(t *testing.T) {
 		Computer:          computer.NewService(computer.NewUnavailableRuntime("unknown")),
 		ModelList:         modellist.NewService(),
 		AgentMgr:          agentmanager.NewManager(),
-		PIAuth:            NewManagedPiAuthStore(),
+		PIAuth:            nodeagent.NewManagedPiAuthStore(),
 		Events:            internalevents.NewHub(),
 		Watchers:          NewWatchers(internalevents.NewHub(), nil),
 		PRTracker:         workspaceprtracker.New(workspaceprtracker.TrackerDeps{Instances: registry, Gits: gitService}),
@@ -231,20 +222,20 @@ func TestNewService_ReceivesDependencies(t *testing.T) {
 // buildTestRouter wires the namespace routing table for tests (the production
 // path builds it in internal/app; tests build their own so the node package
 // never imports the composition root).
-func buildTestRouter(service *Service, workspaceSvc *nodeworkspace.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
+func buildTestRouter(service *Service, agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
 	router := rpc.NewRouter()
 	router.Register("list", &rpc.WorkspaceHandler{Services: service})
 	router.Register("workspace", &rpc.WorkspaceHandler{Services: service})
 	router.Register("context", &rpc.ContextHandler{Services: systemSvc})
 	router.Register("git", &rpc.GitHandler{Services: workspaceSvc})
 	router.Register("file", &rpc.FileHandler{Services: workspaceSvc})
-	router.Register("terminal", &rpc.TerminalHandler{Services: service})
+	router.Register("terminal", &rpc.TerminalHandler{Services: terminalSvc})
 	router.Register("computer", &rpc.ComputerHandler{Services: systemSvc})
 	router.Register("memory", &rpc.MemoryHandler{Services: systemSvc})
 	router.Register("project", &rpc.ProjectHandler{Services: projectSvc})
 	router.Register("system", &rpc.SystemHandler{Services: systemSvc})
-	router.Register("pi", &rpc.AgentHandler{Pi: service, Skill: service, Customize: service})
-	router.Register("skill", &rpc.AgentHandler{Pi: service, Skill: service, Customize: service})
-	router.Register("customize", &rpc.AgentHandler{Pi: service, Skill: service, Customize: service})
+	router.Register("pi", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
+	router.Register("skill", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
+	router.Register("customize", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	return router
 }

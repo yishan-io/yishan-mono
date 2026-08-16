@@ -2,24 +2,24 @@ package node
 
 import (
 	"context"
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"sync"
 
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/computer"
-	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/contextstore"
+	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
-	"yishan/apps/cli/internal/node/hook"
 	"yishan/apps/cli/internal/memory"
+	nodeagent "yishan/apps/cli/internal/node/agent"
+	"yishan/apps/cli/internal/node/hook"
+	nodesystem "yishan/apps/cli/internal/node/system"
+	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -30,12 +30,6 @@ import (
 	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
-)
-
-const (
-	// Binary frame opcodes for terminal I/O fast-path.
-	binOpcodeTerminalInput  byte = 0x01
-	binOpcodeTerminalOutput byte = 0x02
 )
 
 // Dependencies are the explicit domain and capability services the local
@@ -100,27 +94,19 @@ type Service struct {
 	// relayClient owns the relay connection state (internal/relay).
 	relayClient *relay.Client
 
-	// piSessions owns the pi agent session registry (maps + mutexes live in
-	// internal/agent/session); the service only coordinates through it.
-	piSessions *session.Registry
-
 	// hookIngress handles the agent hook HTTP ingress (pi notify bridge).
 	hookIngress *hook.Ingress
 	// agentUsage tracks which agents ran per workspace (close-time
 	// summarization); owned by the hook package.
 	agentUsage *hook.UsageTracker
 
-	// desktopConns tracks live WebSocket connections tagged as the Yishan
-	// desktop app (client=desktop). Used to decide how task runs attached to
-	// workspace creation execute: agent chat tab when a desktop UI is
-	// connected, pi CLI terminal otherwise (headless/remote daemons).
-	desktopConnsMu sync.Mutex
-	desktopConns   map[*rpc.Connection]struct{}
+	// agentSvc is the agent application service: pi session state, desktop
+	// connection tracking, and task runs delegate to it.
+	agentSvc *nodeagent.Service
 
-	// remoteStreamSubs tracks desktop connections subscribed to remote
-	// terminal PTY streams (terminal.remote.subscribe).
-	remoteStreamMu   sync.Mutex
-	remoteStreamSubs map[string]map[*rpc.Connection]struct{}
+	// terminalSvc is the terminal application service: relay-level terminal
+	// messages (session changes, remote stream notifications) delegate to it.
+	terminalSvc *nodeterminal.Service
 }
 
 // NewService builds the local Node application boundary from explicit
@@ -134,10 +120,7 @@ func NewService(deps Dependencies) *Service {
 		deps.ServerCtx = context.Background()
 	}
 	service := &Service{
-		deps:             deps,
-		piSessions:       session.NewRegistry(),
-		desktopConns:     make(map[*rpc.Connection]struct{}),
-		remoteStreamSubs: make(map[string]map[*rpc.Connection]struct{}),
+		deps: deps,
 	}
 	service.app = service.newWorkspaceApplicationService()
 	service.agentUsage = hook.NewUsageTracker()
@@ -148,41 +131,7 @@ func NewService(deps Dependencies) *Service {
 		Registry:   deps.Registry,
 		Usage:      service.agentUsage,
 	})
-	service.wireTerminalListeners()
 	return service
-}
-
-// wireTerminalListeners forwards terminal lifecycle events into the frontend
-// event hub.
-func (s *Service) wireTerminalListeners() {
-	if s.deps.Terminals == nil || s.deps.Events == nil {
-		return
-	}
-	s.deps.Terminals.SetPortsChangedListener(func(ports []terminal.DetectedPort) {
-		s.deps.Events.Publish(internalevents.Event{
-			Topic: "terminalDetectedPortsChanged",
-			Payload: map[string]any{
-				"ports": ports,
-			},
-		})
-	})
-	s.deps.Terminals.SetSessionsChangedListener(func(event terminal.SessionLifecycleEvent) {
-		s.deps.Events.Publish(internalevents.Event{
-			Topic: "terminalSessionChanged",
-			Payload: map[string]any{
-				"action":      event.Action,
-				"sessionId":   event.SessionID,
-				"workspaceId": event.WorkspaceID,
-				"tabId":       event.TabID,
-				"paneId":      event.PaneID,
-				"title":       event.Title,
-				"agentKind":   event.AgentKind,
-				"pid":         event.PID,
-				"status":      event.Status,
-				"startedAt":   event.StartedAt,
-			},
-		})
-	})
 }
 
 // SetRelayClient attaches the relay client after it is built (needs the rpc
@@ -217,43 +166,47 @@ func (s *Service) OnConnect(connection *rpc.Connection, request *http.Request) {
 	if request.URL.Query().Get("client") != "desktop" {
 		return
 	}
-	s.desktopConnsMu.Lock()
-	s.desktopConns[connection] = struct{}{}
-	s.desktopConnsMu.Unlock()
+	s.agentSvc.TrackDesktop(connection)
 	connection.AddCloseHook(func() {
-		s.desktopConnsMu.Lock()
-		delete(s.desktopConns, connection)
-		s.desktopConnsMu.Unlock()
+		s.agentSvc.UntrackDesktop(connection)
 	})
 }
 
-// HandleBinaryFrame implements rpc.BinaryFrameHandler: terminal I/O frames are
-// forwarded to a remote node when the session is remote, or written to the
-// local PTY directly.
+// HandleBinaryFrame implements rpc.BinaryFrameHandler for the terminal I/O
+// fast-path, delegating to the terminal application service.
 func (s *Service) HandleBinaryFrame(connection *rpc.Connection, opcode byte, sessionID string, payload []byte) {
-	switch opcode {
-	case binOpcodeTerminalInput:
-		if s.forwardRemoteTerminalInput(sessionID, payload) {
-			return
+	s.terminalSvc.HandleBinaryFrame(connection, opcode, sessionID, payload)
+}
+
+// HandleRelayMessage implements relay.MessageHandler: job dispatch and
+// workspace snapshot changes stay on the node boundary; terminal messages
+// delegate to the terminal application service.
+func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
+	switch method {
+	case relay.MethodJobRun:
+		nodesystem.HandleJobRun(s.deps.Runtime, connState, nodeID, params)
+		return true
+	case relay.MethodWorkspaceSnapshotChanged:
+		publishWorkspaceSnapshotChanged(s, params)
+		return true
+	default:
+		if s.terminalSvc != nil {
+			return s.terminalSvc.HandleRelayMessage(ctx, connState, nodeID, method, params)
 		}
-		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
-		inputData := terminalInputData(payload)
-		if len(inputData) == 0 {
-			return
-		}
-		s.deps.Terminals.SendRaw(sessionID, inputData)
-	case binOpcodeTerminalOutput:
-		s.forwardRemoteTerminalOutput(sessionID, payload)
+		return false
 	}
 }
 
-// terminalInputData slices the payload after the null-terminated session id.
-func terminalInputData(payload []byte) []byte {
-	nullIdx := bytes.IndexByte(payload[1:], 0)
-	if nullIdx < 0 {
-		return nil
-	}
-	return payload[1+nullIdx+1:]
+// SetTerminalService attaches the terminal application service (relay
+// delegation, binary frames).
+func (s *Service) SetTerminalService(svc *nodeterminal.Service) {
+	s.terminalSvc = svc
+}
+
+// SetAgentService attaches the agent application service (pi sessions, task
+// runs, desktop connection tracking).
+func (s *Service) SetAgentService(svc *nodeagent.Service) {
+	s.agentSvc = svc
 }
 
 // Shutdown stops the application-owned runtime: it cancels the pi agent

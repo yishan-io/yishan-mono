@@ -10,7 +10,7 @@ import (
 // performs one file operation.
 
 func (s *Service) Read(ctx context.Context, req rpc.FileReadParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +22,7 @@ func (s *Service) Read(ctx context.Context, req rpc.FileReadParams) (any, error)
 }
 
 func (s *Service) List(ctx context.Context, req rpc.FileListParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (s *Service) List(ctx context.Context, req rpc.FileListParams) (any, error)
 }
 
 func (s *Service) Search(ctx context.Context, req rpc.FileSearchParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *Service) Search(ctx context.Context, req rpc.FileSearchParams) (any, er
 }
 
 func (s *Service) Stat(ctx context.Context, req rpc.FileReadParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (s *Service) Stat(ctx context.Context, req rpc.FileReadParams) (any, error)
 }
 
 func (s *Service) Write(ctx context.Context, req rpc.FileWriteParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (s *Service) Write(ctx context.Context, req rpc.FileWriteParams) (any, erro
 }
 
 func (s *Service) Delete(ctx context.Context, req rpc.FileDeleteParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (s *Service) Delete(ctx context.Context, req rpc.FileDeleteParams) (any, er
 }
 
 func (s *Service) Move(ctx context.Context, req rpc.FileMoveParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (s *Service) Move(ctx context.Context, req rpc.FileMoveParams) (any, error)
 }
 
 func (s *Service) Mkdir(ctx context.Context, req rpc.FileMkdirParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (s *Service) Mkdir(ctx context.Context, req rpc.FileMkdirParams) (any, erro
 }
 
 func (s *Service) Diff(ctx context.Context, req rpc.FileReadParams) (any, error) {
-	handle, err := s.handleFor(req.WorkspaceID)
+	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}

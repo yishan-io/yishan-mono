@@ -263,7 +263,7 @@ func (d *appDeps) CreateFailed(plan application.CreatePlan, failed application.F
 }
 
 func (d *appDeps) CreateCompleted(plan application.CreatePlan, created workspace.Workspace, warnings []any) {
-	d.s.publishWorkspaceCreateCompleted(plan, created, warnings)
+	d.s.agentSvc.PublishWorkspaceCreateCompleted(plan, created, warnings)
 }
 
 // workspaceHandle builds a workspace-scoped handle from the instance registry
@@ -306,4 +306,41 @@ func (s *Service) getWorkspace(workspaceID string) (workspace.Workspace, error) 
 		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
 	}
 	return ws, nil
+}
+
+func buildWorkspaceHookWarnings(command string, result *workspace.HookResult, logFilePath string) []any {
+	warnings := []any{}
+	if result != nil && result.Error != "" {
+		warnings = append(warnings, hookResultToWarning("setup", command, result, logFilePath))
+	}
+	return warnings
+}
+
+func hookResultToWarning(scriptKind string, command string, hr *workspace.HookResult, logFilePath string) map[string]any {
+	var exitCode any
+	if hr.ExitCode >= 0 {
+		exitCode = hr.ExitCode
+	}
+
+	timedOut := false
+	if hr.Error != "" {
+		timedOut = strings.Contains(hr.Error, "timed out")
+	}
+
+	var logFileValue any
+	if logFilePath != "" {
+		logFileValue = logFilePath
+	}
+
+	return map[string]any{
+		"scriptKind":    scriptKind,
+		"timedOut":      timedOut,
+		"message":       hr.Error,
+		"command":       command,
+		"stdoutExcerpt": hr.Stdout,
+		"stderrExcerpt": hr.Stderr,
+		"exitCode":      exitCode,
+		"signal":        nil,
+		"logFilePath":   logFileValue,
+	}
 }

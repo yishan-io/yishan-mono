@@ -1,15 +1,17 @@
-package node
+package terminal
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
+
 	internalevents "yishan/apps/cli/internal/events"
-	nodesystem "yishan/apps/cli/internal/node/system"
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/terminal"
+	term "yishan/apps/cli/internal/terminal"
 )
 
 // The remote terminal stream subscription map is app-side state: it tracks
@@ -135,17 +137,42 @@ func (s *Service) forwardRemoteTerminalInput(sessionID string, payload []byte) b
 	return true
 }
 
+// HandleBinaryFrame implements rpc.BinaryFrameHandler: terminal I/O frames
+// are forwarded to a remote node when the session is remote, or written to
+// the local PTY directly.
+func (s *Service) HandleBinaryFrame(connection *rpc.Connection, opcode byte, sessionID string, payload []byte) {
+	switch opcode {
+	case binOpcodeTerminalInput:
+		if s.forwardRemoteTerminalInput(sessionID, payload) {
+			return
+		}
+		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
+		inputData := terminalInputData(payload)
+		if len(inputData) == 0 {
+			return
+		}
+		s.deps.Terminals.SendRaw(sessionID, inputData)
+	case binOpcodeTerminalOutput:
+		s.forwardRemoteTerminalOutput(sessionID, payload)
+	}
+}
+
+// terminalInputData slices the payload after the null-terminated session id.
+func terminalInputData(payload []byte) []byte {
+	nullIdx := bytes.IndexByte(payload[1:], 0)
+	if nullIdx < 0 {
+		return nil
+	}
+	return payload[1+nullIdx+1:]
+}
+
 // HandleRelayMessage implements relay.MessageHandler for the relay-level
-// messages the relay client does not own: job dispatch, workspace snapshot
-// changes, and terminal session/stream notifications.
+// terminal messages the relay client does not own: terminal session changes
+// and remote stream request/accept/cancel notifications. Job dispatch and
+// workspace snapshot changes are handled by the system and workspace
+// application services.
 func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
 	switch method {
-	case relay.MethodJobRun:
-		nodesystem.HandleJobRun(s.deps.Runtime, connState, nodeID, params)
-		return true
-	case relay.MethodWorkspaceSnapshotChanged:
-		publishWorkspaceSnapshotChanged(s, params)
-		return true
 	case relay.MethodTerminalSessionChanged:
 		publishTerminalSessionChanged(s, params)
 		return true
@@ -163,6 +190,32 @@ func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connect
 	}
 }
 
+// publishTerminalSessionChanged republishes relay terminal session changes as
+// frontend events.
+func publishTerminalSessionChanged(handler *Service, params json.RawMessage) {
+	var payload map[string]any
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &payload); err != nil {
+			log.Warn().Err(err).Msg("relay: invalid terminal session changed params")
+			return
+		}
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+
+	sessionID, _ := payload["sessionId"].(string)
+	workspaceID, _ := payload["workspaceId"].(string)
+	action, _ := payload["action"].(string)
+	log.Info().
+		Str("sessionId", strings.TrimSpace(sessionID)).
+		Str("workspaceId", strings.TrimSpace(workspaceID)).
+		Str("action", strings.TrimSpace(action)).
+		Msg("relay: terminal session change received")
+
+	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalSessionChanged", Payload: payload})
+}
+
 // handleTerminalStreamRequest is called on the owning daemon (daemon A) when
 // another node wants to subscribe to a PTY session. It subscribes the relay
 // connState to the local terminal session so output flows back over /ws.
@@ -176,13 +229,13 @@ func handleTerminalStreamRequest(handler *Service, connState *rpc.Connection, pa
 		return
 	}
 
-	subscription, err := handler.deps.Terminals.Subscribe(terminal.SubscribeRequest{SessionID: p.SessionID})
+	subscription, err := handler.deps.Terminals.Subscribe(term.SubscribeRequest{SessionID: p.SessionID})
 	if err != nil {
 		log.Warn().Err(err).Str("sessionId", p.SessionID).Msg("relay: terminal.stream.request subscribe failed")
 		return
 	}
 	connState.AttachSubscription(p.SessionID, subscription.ID, subscription.Events, func(sessionID string, subscriptionID uint64) {
-		_, _ = handler.deps.Terminals.Unsubscribe(terminal.UnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
+		_, _ = handler.deps.Terminals.Unsubscribe(term.UnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
 	})
 
 	// Acknowledge the stream to the relay (relay forwards to subscriber).

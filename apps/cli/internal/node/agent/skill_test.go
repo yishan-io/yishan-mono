@@ -1,4 +1,4 @@
-package node
+package agent
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func TestDispatchSkillListEmptyOnCleanHome(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	handler := newSkillTestHandler(t)
-	result, err := handler.SkillList(context.Background())
+	result, err := handler.List(context.Background())
 	if err != nil {
 		t.Fatalf("SkillList: %v", err)
 	}
@@ -50,33 +50,33 @@ func mustMarshalSkillParams(t *testing.T, payload map[string]any) json.RawMessag
 
 func TestHandleSkillAdd_MissingSource(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.SkillAdd(context.Background(), rpc.SkillSourceParams{})
+	_, err := handler.Add(context.Background(), rpc.SkillSourceParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillUpdate_MissingName(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.SkillUpdate(context.Background(), rpc.SkillNameParams{})
+	_, err := handler.Update(context.Background(), rpc.SkillNameParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillRemove_InvalidName(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.SkillRemove(context.Background(), rpc.SkillNameParams{Name: "../evil"})
+	_, err := handler.Remove(context.Background(), rpc.SkillNameParams{Name: "../evil"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillRemove_OfficialSkillRejected(t *testing.T) {
 	withOfficialPackageSkillHome(t)
 	handler := newSkillTestHandler(t)
-	_, err := handler.SkillRemove(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
+	_, err := handler.Remove(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestHandleSkillUpdate_OfficialSkillRejected(t *testing.T) {
 	withOfficialPackageSkillHome(t)
 	handler := newSkillTestHandler(t)
-	_, err := handler.SkillUpdate(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
+	_, err := handler.Update(context.Background(), rpc.SkillNameParams{Name: "starting-task"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
@@ -105,13 +105,13 @@ func withOfficialPackageSkillHome(t *testing.T) {
 
 func TestHandleSkillRemove_MissingName(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	_, err := handler.SkillRemove(context.Background(), rpc.SkillNameParams{})
+	_, err := handler.Remove(context.Background(), rpc.SkillNameParams{})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
 func TestDispatchSkill_RoutesMutationMethods(t *testing.T) {
 	handler := newSkillTestHandler(t)
-	for _, method := range []string{MethodSkillAdd, MethodSkillRemove, MethodSkillUpdate, MethodSkillUpdateAll} {
+	for _, method := range []string{rpc.MethodSkillAdd, rpc.MethodSkillRemove, rpc.MethodSkillUpdate, rpc.MethodSkillUpdateAll} {
 		_, err := handler.callRPCForTest(context.Background(), method, mustMarshalSkillParams(t, map[string]any{}))
 		assertNotRPCErrorCode(t, err, rpc.CodeMethodNotFound, method)
 	}

@@ -1,4 +1,4 @@
-package node
+package agent
 
 import piauth "yishan/apps/cli/internal/agent/auth"
 

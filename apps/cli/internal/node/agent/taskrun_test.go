@@ -1,4 +1,4 @@
-package node
+package agent
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/application"
 )
 
 func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t *testing.T) {
@@ -20,8 +21,8 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t 
 	subscriptionID, events := handler.deps.Events.Subscribe()
 	defer handler.deps.Events.Unsubscribe(subscriptionID)
 
-	handler.publishWorkspaceCreateCompleted(
-		preparedWorkspaceCreate{
+	handler.PublishWorkspaceCreateCompleted(
+		application.CreatePlan{
 			LocalCreate: &workspace.CreateRequest{
 				TaskRun: &workspace.TaskRunConfig{
 					AgentKind: "opencode",
@@ -139,12 +140,12 @@ func stopAllTerminalSessions(handler *Service) {
 
 func TestHasDesktopUI_TracksDesktopConnections(t *testing.T) {
 	s := newTestHandler(t)
-	if s.hasDesktopUI() {
+	if s.HasDesktopUI() {
 		t.Fatal("hasDesktopUI() = true before any desktop connection")
 	}
 
 	registerTestDesktopConn(s)
-	if !s.hasDesktopUI() {
+	if !s.HasDesktopUI() {
 		t.Fatal("hasDesktopUI() = false with a registered desktop connection")
 	}
 
@@ -153,7 +154,7 @@ func TestHasDesktopUI_TracksDesktopConnections(t *testing.T) {
 		delete(s.desktopConns, connState)
 	}
 	s.desktopConnsMu.Unlock()
-	if s.hasDesktopUI() {
+	if s.HasDesktopUI() {
 		t.Fatal("hasDesktopUI() = true after removing the desktop connection")
 	}
 }
@@ -174,7 +175,7 @@ func TestHandlePiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) 
 	// the process manager) while agentMgr has no live session.
 	s.piSessions.Register("task-ws-1", nil, nil, "task-ws-1", "ws-1", t.TempDir(), true)
 
-	_, err := s.PiStart(context.Background(), nil, rpc.PiStartParams{
+	_, err := s.Start(context.Background(), nil, rpc.PiStartParams{
 		SessionID:   "task-ws-1",
 		TabID:       "task-ws-1",
 		WorkspaceID: "ws-1",
@@ -218,8 +219,8 @@ done
 	defer s.deps.Events.Unsubscribe(subscriptionID)
 
 	root := t.TempDir()
-	s.publishWorkspaceCreateCompleted(
-		preparedWorkspaceCreate{
+	s.PublishWorkspaceCreateCompleted(
+		application.CreatePlan{
 			LocalCreate: &workspace.CreateRequest{
 				TaskRun: &workspace.TaskRunConfig{
 					AgentKind: "pi",

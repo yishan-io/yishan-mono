@@ -1,4 +1,4 @@
-package node
+package agent
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func TestHandlePiListSessions_ReturnsSummaries(t *testing.T) {
 		t.Fatalf("write session: %v", err)
 	}
 
-	result, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
+	result, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
 	if err != nil {
 		t.Fatalf("dispatchPi: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestHandlePiListSessions_ReadsSessionInfoName(t *testing.T) {
 			t.Fatalf("write session: %v", err)
 		}
 
-		result, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
+		result, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
 		if err != nil {
 			t.Fatalf("dispatchPi: %v", err)
 		}
@@ -91,7 +91,7 @@ func TestHandlePiListSessions_ReadsSessionInfoName(t *testing.T) {
 			t.Fatalf("write session: %v", err)
 		}
 
-		result, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
+		result, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
 		if err != nil {
 			t.Fatalf("dispatchPi: %v", err)
 		}
@@ -110,7 +110,7 @@ func TestHandlePiListSessions_ReadsSessionInfoName(t *testing.T) {
 			t.Fatalf("write session: %v", err)
 		}
 
-		result, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
+		result, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
 		if err != nil {
 			t.Fatalf("dispatchPi: %v", err)
 		}
@@ -123,7 +123,7 @@ func TestHandlePiListSessions_ReadsSessionInfoName(t *testing.T) {
 
 func TestHandlePiListSessions_RequiresCWD(t *testing.T) {
 	s := newTestHandler(t)
-	_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiListSessions, json.RawMessage(`{}`))
+	_, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiListSessions, json.RawMessage(`{}`))
 	if err == nil {
 		t.Fatal("expected error for missing cwd")
 	}
@@ -144,7 +144,7 @@ func TestHandlePiGetSessionFile_ReturnsMatchingTranscriptPath(t *testing.T) {
 		t.Fatalf("write session: %v", err)
 	}
 
-	result, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{
+	result, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{
 		"cwd":       cwd,
 		"sessionId": "session-abc",
 	}))
@@ -167,7 +167,7 @@ func TestHandlePiGetSessionFile_EmptyWhenNoTranscript(t *testing.T) {
 	s := newTestHandler(t)
 	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
 
-	result, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{
+	result, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{
 		"cwd":       cwd,
 		"sessionId": "session-abc",
 	}))
@@ -186,13 +186,13 @@ func TestHandlePiGetSessionFile_EmptyWhenNoTranscript(t *testing.T) {
 func TestHandlePiGetSessionFile_RequiresCWDAndSessionID(t *testing.T) {
 	s := newTestHandler(t)
 
-	_, err := s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, json.RawMessage(`{}`))
+	_, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiGetSessionFile, json.RawMessage(`{}`))
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 
-	_, err = s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"sessionId": "session-abc"}))
+	_, err = s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"sessionId": "session-abc"}))
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 
-	_, err = s.callAgentRPCForTest(context.Background(), nil, MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"cwd": "/tmp"}))
+	_, err = s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiGetSessionFile, mustMarshalJSON(t, map[string]any{"cwd": "/tmp"}))
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
 }
 
@@ -208,7 +208,7 @@ func TestHandlePiListActiveSessions_ReturnsLiveSessions(t *testing.T) {
 	}
 
 	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-1",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -218,12 +218,12 @@ func TestHandlePiListActiveSessions_ReturnsLiveSessions(t *testing.T) {
 		t.Fatalf("dispatchPi start: %v", err)
 	}
 	defer func() {
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
 			"sessionId": "session-1",
 		}))
 	}()
 
-	result, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiListActiveSessions, mustMarshalJSON(t, map[string]any{}))
+	result, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiListActiveSessions, mustMarshalJSON(t, map[string]any{}))
 	if err != nil {
 		t.Fatalf("dispatchPi listActive: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestHandlePiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
 	}
 
 	originalConnState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), originalConnState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(context.Background(), originalConnState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach",
 		"tabId":       "tab-attach",
 		"workspaceId": "workspace-1",
@@ -262,13 +262,13 @@ func TestHandlePiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
 		t.Fatalf("dispatchPi start: %v", err)
 	}
 	defer func() {
-		_, _ = s.callAgentRPCForTest(context.Background(), originalConnState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+		_, _ = s.callAgentRPCForTest(context.Background(), originalConnState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
 			"sessionId": "session-attach",
 		}))
 	}()
 
 	reboundConnState := &rpc.Connection{}
-	_, err = s.callAgentRPCForTest(context.Background(), reboundConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
+	_, err = s.callAgentRPCForTest(context.Background(), reboundConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach",
 		"tabId":       "tab-reopened",
 		"workspaceId": "workspace-2",
@@ -309,7 +309,7 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 
 	connectionCtx, cancelConnection := context.WithCancel(context.Background())
 	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(connectionCtx, connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(connectionCtx, connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-survives-disconnect",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -327,7 +327,7 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 	}
 
 	reconnectedConnState := &rpc.Connection{}
-	_, err = s.callAgentRPCForTest(context.Background(), reconnectedConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
+	_, err = s.callAgentRPCForTest(context.Background(), reconnectedConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
 		"sessionId": "session-survives-disconnect",
 		"tabId":     "tab-reconnected",
 	}))
@@ -339,7 +339,7 @@ func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing
 	if _, exists := s.deps.AgentMgr.Session(session.ID()); exists {
 		t.Fatal("pi session remained active after daemon shutdown")
 	}
-	if _, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	if _, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-after-shutdown",
 		"tabId":       "tab-2",
 		"workspaceId": "workspace-1",
@@ -361,7 +361,7 @@ func TestHandlePiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
 	}
 
 	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-exists",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -371,12 +371,12 @@ func TestHandlePiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
 		t.Fatalf("first dispatchPi start: %v", err)
 	}
 	defer func() {
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
 			"sessionId": "session-exists",
 		}))
 	}()
 
-	_, err = s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-exists",
 		"tabId":       "tab-2",
 		"workspaceId": "workspace-1",
@@ -410,7 +410,7 @@ func TestHandlePiStart_OverridesLegacyAgentDirEnv(t *testing.T) {
 	}
 
 	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-1",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -583,7 +583,7 @@ func TestHandlePiAttach_WaitsForConcurrentStart(t *testing.T) {
 	startDone := make(chan struct{})
 	go func() {
 		defer close(startDone)
-		_, _ = s.callAgentRPCForTest(context.Background(), &rpc.Connection{}, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		_, _ = s.callAgentRPCForTest(context.Background(), &rpc.Connection{}, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 			"sessionId":   "session-concurrent",
 			"tabId":       "tab-1",
 			"workspaceId": "workspace-1",
@@ -597,7 +597,7 @@ func TestHandlePiAttach_WaitsForConcurrentStart(t *testing.T) {
 	attachConnState := &rpc.Connection{}
 	attachDone := make(chan error, 1)
 	go func() {
-		_, err := s.callAgentRPCForTest(context.Background(), attachConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
+		_, err := s.callAgentRPCForTest(context.Background(), attachConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
 			"sessionId":   "session-concurrent",
 			"tabId":       "tab-2",
 			"workspaceId": "workspace-1",
@@ -641,7 +641,7 @@ func TestHandlePiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
 	}
 
 	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-race",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -656,7 +656,7 @@ func TestHandlePiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
 	stopDone := make(chan struct{})
 	go func() {
 		defer close(stopDone)
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
 			"sessionId": "session-race",
 		}))
 	}()
@@ -665,7 +665,7 @@ func TestHandlePiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
 	// A reopen of the same id during the teardown must wait and then start a
 	// fresh process instead of failing with ErrSessionExists.
 	startStartedAt := time.Now()
-	_, err = s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-race",
 		"tabId":       "tab-reopened",
 		"workspaceId": "workspace-1",
@@ -700,7 +700,7 @@ func TestHandlePiStart_RetriesWhenStopMarkerArrivesLate(t *testing.T) {
 	}
 
 	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-race-late",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -716,12 +716,12 @@ func TestHandlePiStart_RetriesWhenStopMarkerArrivesLate(t *testing.T) {
 	stopDone := make(chan struct{})
 	go func() {
 		defer close(stopDone)
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
 			"sessionId": "session-race-late",
 		}))
 	}()
 
-	_, err = s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-race-late",
 		"tabId":       "tab-reopened",
 		"workspaceId": "workspace-1",
@@ -753,7 +753,7 @@ func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 	}
 
 	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach-stop",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -766,7 +766,7 @@ func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 	stopDone := make(chan struct{})
 	go func() {
 		defer close(stopDone)
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
 			"sessionId": "session-attach-stop",
 		}))
 	}()
@@ -774,7 +774,7 @@ func TestHandlePiAttach_RejectsStoppingSession(t *testing.T) {
 
 	// Attach during the teardown must not rebind a doomed process.
 	reboundConnState := &rpc.Connection{}
-	_, err = s.callAgentRPCForTest(context.Background(), reboundConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
+	_, err = s.callAgentRPCForTest(context.Background(), reboundConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-attach-stop",
 		"tabId":       "tab-reopened",
 		"workspaceId": "workspace-2",
@@ -850,7 +850,7 @@ func TestHandlePiSessionExit_ForwardsSessionEndOnProcessExit(t *testing.T) {
 	}
 
 	connState, clientConn := newTestWSConnState(t)
-	if _, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+	if _, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 		"sessionId":   "session-1",
 		"tabId":       "tab-1",
 		"workspaceId": "workspace-1",
@@ -861,7 +861,7 @@ func TestHandlePiSessionExit_ForwardsSessionEndOnProcessExit(t *testing.T) {
 
 	// Stopping the process triggers the exit hook, which must notify the
 	// desktop that the session ended.
-	if _, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+	if _, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
 		"sessionId": "session-1",
 	})); err != nil {
 		t.Fatalf("pi.stop: %v", err)
@@ -882,8 +882,8 @@ func TestHandlePiSessionExit_ForwardsSessionEndOnProcessExit(t *testing.T) {
 	if err := json.Unmarshal(message, &notification); err != nil {
 		t.Fatalf("unmarshal notification: %v", err)
 	}
-	if notification.Method != MethodFrontendEventsStream {
-		t.Fatalf("method = %q, want %q", notification.Method, MethodFrontendEventsStream)
+	if notification.Method != rpc.MethodFrontendEventsStream {
+		t.Fatalf("method = %q, want %q", notification.Method, rpc.MethodFrontendEventsStream)
 	}
 	if notification.Params["topic"] != "agent.pi.event" {
 		t.Fatalf("topic = %v, want agent.pi.event", notification.Params["topic"])
@@ -914,7 +914,7 @@ func TestHandlePiSessionExit_SkipsSessionSupersededByNewerProcess(t *testing.T) 
 
 	connState, clientConn := newTestWSConnState(t)
 	for _, sessionID := range []string{"session-1", "session-2"} {
-		if _, err := s.callAgentRPCForTest(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		if _, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
 			"sessionId":   sessionID,
 			"tabId":       "tab-1",
 			"workspaceId": "workspace-1",

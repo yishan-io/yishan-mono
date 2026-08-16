@@ -73,20 +73,22 @@ type GitService interface {
 }
 
 // TerminalService backs the terminal.* RPC methods. Connection-bound
-// subscriptions are wired by the handler (the connection is passed in).
+// subscriptions are wired by the handler (the connection is passed in). Each
+// method is named after the wire method tail; the service type already
+// carries the namespace.
 type TerminalService interface {
-	TerminalStart(ctx context.Context, connection *Connection, req terminal.StartRequest) (any, error)
-	TerminalSend(ctx context.Context, req terminal.SendRequest) (any, error)
-	TerminalRead(ctx context.Context, req terminal.ReadRequest) (any, error)
-	TerminalStop(ctx context.Context, req terminal.StopRequest) (any, error)
-	TerminalKillProcess(ctx context.Context, req terminal.KillProcessRequest) (any, error)
-	TerminalListSessions(ctx context.Context, req terminal.ListSessionsRequest) (any, error)
-	TerminalListPorts(ctx context.Context) (any, error)
-	TerminalResize(ctx context.Context, req terminal.ResizeRequest) (any, error)
-	TerminalSubscribe(ctx context.Context, connection *Connection, req terminal.SubscribeRequest) (any, error)
-	TerminalUnsubscribe(ctx context.Context, connection *Connection, req terminal.UnsubscribeRequest) (any, error)
-	TerminalRemoteSubscribe(ctx context.Context, connection *Connection, req TerminalRemoteSubscribeParams) (any, error)
-	TerminalRemoteUnsubscribe(ctx context.Context, connection *Connection, req TerminalRemoteUnsubscribeParams) (any, error)
+	Start(ctx context.Context, connection *Connection, req terminal.StartRequest) (any, error)
+	Send(ctx context.Context, req terminal.SendRequest) (any, error)
+	Read(ctx context.Context, req terminal.ReadRequest) (any, error)
+	Stop(ctx context.Context, req terminal.StopRequest) (any, error)
+	KillProcess(ctx context.Context, req terminal.KillProcessRequest) (any, error)
+	ListSessions(ctx context.Context, req terminal.ListSessionsRequest) (any, error)
+	ListPorts(ctx context.Context) (any, error)
+	Resize(ctx context.Context, req terminal.ResizeRequest) (any, error)
+	Subscribe(ctx context.Context, connection *Connection, req terminal.SubscribeRequest) (any, error)
+	Unsubscribe(ctx context.Context, connection *Connection, req terminal.UnsubscribeRequest) (any, error)
+	RemoteSubscribe(ctx context.Context, connection *Connection, req TerminalRemoteSubscribeParams) (any, error)
+	RemoteUnsubscribe(ctx context.Context, connection *Connection, req TerminalRemoteUnsubscribeParams) (any, error)
 }
 
 // MemoryService backs the memory.* RPC methods. Each method is named after

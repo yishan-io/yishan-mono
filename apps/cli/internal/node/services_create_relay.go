@@ -25,7 +25,7 @@ func (s *Service) relayWorkspaceCreateProgress(prepared preparedWorkspaceCreate,
 	}
 }
 
-func (s *Service) relayWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, completed map[string]any) {
+func (s *Service) RelayWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, completed map[string]any) {
 	if strings.TrimSpace(prepared.RelayReplyNodeID) == "" {
 		return
 	}

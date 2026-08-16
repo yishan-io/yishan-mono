@@ -1,4 +1,4 @@
-package node
+package agent
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 // operation; session state coordination lives in internal/agent/session (the
 // registry owns the maps and mutexes).
 
-func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
+func (s *Service) Start(ctx context.Context, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
@@ -110,7 +110,7 @@ func (s *Service) PiStart(ctx context.Context, connState *rpc.Connection, req rp
 	return map[string]any{"sessionId": req.SessionID}, nil
 }
 
-func (s *Service) PiAttach(ctx context.Context, connState *rpc.Connection, req rpc.PiAttachParams) (any, error) {
+func (s *Service) Attach(ctx context.Context, connState *rpc.Connection, req rpc.PiAttachParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
@@ -173,7 +173,7 @@ func resolvePiStartPaneID(tabID string, paneID string) string {
 	return "pane-" + tabID
 }
 
-func (s *Service) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error) {
+func (s *Service) Stop(ctx context.Context, req rpc.PiStopParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
@@ -194,7 +194,7 @@ func (s *Service) PiStop(ctx context.Context, req rpc.PiStopParams) (any, error)
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error) {
+func (s *Service) Send(ctx context.Context, req rpc.PiSendParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
@@ -220,7 +220,7 @@ func (s *Service) PiSend(ctx context.Context, req rpc.PiSendParams) (any, error)
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) PiListSessions(ctx context.Context, req rpc.PiListSessionsParams) (any, error) {
+func (s *Service) ListSessions(ctx context.Context, req rpc.PiListSessionsParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "cwd is required")
 	}
@@ -233,7 +233,7 @@ func (s *Service) PiListSessions(ctx context.Context, req rpc.PiListSessionsPara
 	return summaries, nil
 }
 
-func (s *Service) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFileParams) (any, error) {
+func (s *Service) GetSessionFile(ctx context.Context, req rpc.PiGetSessionFileParams) (any, error) {
 	if strings.TrimSpace(req.CWD) == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "cwd is required")
 	}
@@ -249,7 +249,7 @@ func (s *Service) PiGetSessionFile(ctx context.Context, req rpc.PiGetSessionFile
 	return map[string]string{"filePath": filePath}, nil
 }
 
-func (s *Service) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, error) {
+func (s *Service) Rename(ctx context.Context, req rpc.PiRenameParams) (any, error) {
 	if req.SessionID == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId is required")
 	}
@@ -283,7 +283,7 @@ func (s *Service) PiRename(ctx context.Context, req rpc.PiRenameParams) (any, er
 	return map[string]bool{"ok": true}, nil
 }
 
-func (s *Service) PiListActiveSessions(ctx context.Context) (any, error) {
+func (s *Service) ListActiveSessions(ctx context.Context) (any, error) {
 	activeSessions := s.deps.AgentMgr.Sessions()
 	if len(activeSessions) == 0 {
 		return []rpc.PiActiveSessionSummary{}, nil
@@ -328,7 +328,7 @@ func (s *Service) makePiEventCallback(sessionID string) func(string, string, str
 		}
 
 		// Forward as a frontend event notification.
-		_ = state.Conn.Notify(MethodFrontendEventsStream, map[string]any{
+		_ = state.Conn.Notify(rpc.MethodFrontendEventsStream, map[string]any{
 			"topic": "agent.pi.event",
 			"payload": map[string]any{
 				"sessionId":   sessionID,
@@ -365,7 +365,7 @@ func (s *Service) handlePiSessionExit(exited *process.Session) {
 		return
 	}
 
-	_ = connState.Notify(MethodFrontendEventsStream, map[string]any{
+	_ = connState.Notify(rpc.MethodFrontendEventsStream, map[string]any{
 		"topic": "agent.pi.event",
 		"payload": map[string]any{
 			"sessionId":   exited.ID(),
