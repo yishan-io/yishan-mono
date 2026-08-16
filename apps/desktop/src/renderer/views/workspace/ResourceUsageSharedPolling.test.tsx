@@ -2,7 +2,7 @@
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetSharedTerminalResourceUsageSnapshotForTests } from "../../hooks/useSharedTerminalResourceUsageSnapshot";
+import { resetSharedTerminalResourceUsageSnapshotForTests } from "../../features/terminal/runtime/sharedTerminalResourceUsage";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { LeftPaneResourceUsageControl } from "./LeftPane/LeftPaneResourceUsageControl";

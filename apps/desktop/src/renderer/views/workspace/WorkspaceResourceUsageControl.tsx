@@ -6,7 +6,7 @@ import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { formatCpuPercent, formatMemoryBytes } from "../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../helpers/terminalTabUtils";
 import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../hooks/useCommands";
-import { useSharedTerminalResourceUsageSnapshot } from "../../hooks/useSharedTerminalResourceUsageSnapshot";
+import { useSharedTerminalResourceUsageSnapshot } from "../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";

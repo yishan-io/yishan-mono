@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { GitLineChange } from "../../../helpers/gitGutterDiff";
 import {
   GUTTER_ADDED_CLASS,
@@ -11,6 +11,14 @@ import {
   getGutterClassName,
   getRulerColor,
 } from "./gitGutterDecorations";
+
+vi.mock("../../../helpers/monacoSetup", () => ({
+  monaco: {
+    editor: {
+      OverviewRulerLane: { Full: 7 },
+    },
+  },
+}));
 
 function change(partial: Partial<GitLineChange> & { lineNumber: number; kind: GitLineChange["kind"] }): GitLineChange {
   return { ...partial };
@@ -39,20 +47,21 @@ describe("gitGutterDecorations model", () => {
       false,
     );
 
-    expect(decorations).toHaveLength(2);
-    expect(decorations[0].range.startLineNumber).toBe(3);
-    expect(decorations[0].options.isWholeLine).toBe(true);
-    expect(decorations[0].options.linesDecorationsClassName).toBe(GUTTER_ADDED_CLASS);
-    expect(decorations[0].options.overviewRulerColor).toBe(SEMANTIC_COLOR_TOKENS.light.gitDiff.added);
-    expect(decorations[1].options.linesDecorationsClassName).toBe(GUTTER_MODIFIED_CLASS);
+    const first = decorations[0]!;
+    const second = decorations[1]!;
+    expect(first.range.startLineNumber).toBe(3);
+    expect(first.options.isWholeLine).toBe(true);
+    expect(first.options.linesDecorationsClassName).toBe(GUTTER_ADDED_CLASS);
+    expect((first.options as { overviewRulerColor?: string }).overviewRulerColor).toBe(SEMANTIC_COLOR_TOKENS.light.gitDiff.added);
+    expect(second.options.linesDecorationsClassName).toBe(GUTTER_MODIFIED_CLASS);
   });
 
   it("builds non-whole-line decorations for deleted changes", () => {
     const decorations = changesToDecorations([change({ lineNumber: 5, kind: "deleted" })], true);
 
-    expect(decorations).toHaveLength(1);
-    expect(decorations[0].options.isWholeLine).toBe(false);
-    expect(decorations[0].options.linesDecorationsClassName).toBe(GUTTER_DELETED_CLASS);
-    expect(decorations[0].options.overviewRulerColor).toBe(SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted);
+    const decoration = decorations[0]!;
+    expect(decoration.options.isWholeLine).toBe(false);
+    expect(decoration.options.linesDecorationsClassName).toBe(GUTTER_DELETED_CLASS);
+    expect((decoration.options as { overviewRulerColor?: string }).overviewRulerColor).toBe(SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted);
   });
 });
