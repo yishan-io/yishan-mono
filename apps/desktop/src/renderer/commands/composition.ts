@@ -29,11 +29,11 @@ import {
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "../features/workspace/commands/workspaceCommands";
 import type { WorkspaceProjectRecord } from "../store/types";
-import { listActivePiSessions as listActivePiSessionsCommand } from "./agentChatCommands";
+import { listActivePiSessions as listActivePiSessionsCommand } from "../features/agent/commands/agentChatCommands";
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
   listAgentModels as listAgentModelsCommand,
-} from "./agentCommands";
+} from "../features/agent/commands/agentCommands";
 import {
   appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -55,7 +55,7 @@ import {
   setChatAvailableModels as setChatAvailableModelsCommand,
   setChatCurrentModel as setChatCurrentModelCommand,
   updateChatMessage as updateChatMessageCommand,
-} from "./chatCommands";
+} from "../features/agent/commands/chatCommands";
 import { listCLIToolStatuses as listCLIToolStatusesCommand } from "./cliToolCommands";
 import {
   createFile as createFileCommand,

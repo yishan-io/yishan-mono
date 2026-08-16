@@ -5,9 +5,9 @@
  * `agentCommands` (agent kind/model detection), and `chatCommands` (legacy
  * chat surface) today; moves to `features/agent/commands/` in Phase 5.
  */
-import type * as agentChatCommands from "../agentChatCommands";
-import type * as agentCommands from "../agentCommands";
-import type * as chatCommands from "../chatCommands";
+import type * as agentChatCommands from "./agentChatCommands";
+import type * as agentCommands from "./agentCommands";
+import type * as chatCommands from "./chatCommands";
 
 export type AgentCommands = {
   ensurePiSession: typeof agentChatCommands.ensurePiSession;

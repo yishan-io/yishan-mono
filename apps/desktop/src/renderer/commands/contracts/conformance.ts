@@ -10,7 +10,7 @@
 import type { ProjectCommands } from "../../features/project/commands/contract";
 import type { WorkspaceCommands } from "../../features/workspace/commands/contract";
 import type { SelectionCommands } from "../../features/workspace/commands/selectionContract";
-import type { AgentCommands } from "./agent";
+import type { AgentCommands } from "../../features/agent/commands/contract";
 import type { TerminalCommands } from "./terminal";
 import type { WorkbenchCommands } from "./workbench";
 
@@ -20,9 +20,9 @@ import type * as selectionCommands from "../../features/workspace/commands/selec
 import type * as workspaceCloseCommand from "../../features/workspace/commands/workspaceCloseCommand";
 import type * as workspaceCommands from "../../features/workspace/commands/workspaceCommands";
 import type * as workspaceCreateCommand from "../../features/workspace/commands/workspaceCreateCommand";
-import type * as agentChatCommands from "../agentChatCommands";
-import type * as agentCommands from "../agentCommands";
-import type * as chatCommands from "../chatCommands";
+import type * as agentChatCommands from "../../features/agent/commands/agentChatCommands";
+import type * as agentCommands from "../../features/agent/commands/agentCommands";
+import type * as chatCommands from "../../features/agent/commands/chatCommands";
 import type * as tabCommands from "../tabCommands";
 import type * as terminalCommands from "../terminalCommands";
 import type * as whiteboardCommands from "../whiteboardCommands";
