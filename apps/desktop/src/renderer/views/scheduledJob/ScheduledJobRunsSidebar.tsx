@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
 import { listScheduledJobRuns } from "../../features/scheduled-job/commands/scheduledJobCommands";
-import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";
 

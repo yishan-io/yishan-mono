@@ -42,8 +42,6 @@ type KnownViolation = { rule: RuleName; file: string; phase: string };
 const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Rule 1: UI value-imports of api/rpc (cross-layer index §1) ----
   // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
-  { rule: "R1-value-api-rpc", file: "views/layout/CreateOrganizationDialogView.tsx", phase: "P8" },
-  { rule: "R1-value-api-rpc", file: "views/layout/OnboardOrgView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/workspace/WorkspacePortsMenuControl.tsx", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListPersistence.ts", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListTreeData.ts", phase: "P4" },
@@ -121,7 +119,11 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
   for (const file of files) {
     const rel = relative(RENDERER_ROOT, file).replace(/\\/g, "/");
     if (rel === "architecture.test.ts") continue;
-    const isUi = rel.startsWith("views/") || rel.startsWith("components/") || rel.startsWith("hooks/");
+    const isUi =
+      rel.startsWith("views/") ||
+      rel.startsWith("components/") ||
+      rel.startsWith("hooks/") ||
+      rel.startsWith("app/routes/");
     const isPureDomain = rel.startsWith("store/tabs/") || rel.startsWith("store/split-pane/");
 
     for (const imp of extractImports(file)) {

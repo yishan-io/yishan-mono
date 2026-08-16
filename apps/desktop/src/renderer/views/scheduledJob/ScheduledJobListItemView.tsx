@@ -2,7 +2,7 @@ import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/mat
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPause, LuPlay } from "react-icons/lu";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { projectStore } from "../../features/project/model/projectStore";
 import { useCommands } from "../../hooks/useCommands";

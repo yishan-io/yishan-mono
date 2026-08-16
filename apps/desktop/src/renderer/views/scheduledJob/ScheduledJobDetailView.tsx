@@ -1,7 +1,7 @@
 import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeft, LuPanelLeft, LuPause, LuPencil, LuPlay, LuTrash2, LuZap } from "react-icons/lu";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";

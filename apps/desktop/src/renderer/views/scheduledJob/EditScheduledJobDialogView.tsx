@@ -2,7 +2,7 @@ import { Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, Stac
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../features/project/model/projectStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";

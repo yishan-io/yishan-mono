@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../features/project/model/projectStore";
 import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
 import { workspaceStore } from "../../store/workspaceStore";

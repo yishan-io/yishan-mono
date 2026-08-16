@@ -2,7 +2,7 @@ import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { CreateScheduledJobInput } from "../../api/scheduledJobApi";
+import type { CreateScheduledJobInput } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../features/project/model/projectStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";

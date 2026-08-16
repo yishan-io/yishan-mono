@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../features/project/model/projectStore";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";

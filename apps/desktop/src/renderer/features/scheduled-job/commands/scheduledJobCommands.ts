@@ -136,3 +136,13 @@ export async function listScheduledJobRuns(
 ): Promise<import("../../../api/scheduledJobApi").ScheduledJobRunRecord[]> {
   return api.scheduledJob.listRuns(orgId, jobId, limit);
 }
+
+export type {
+  CreateScheduledJobInput,
+  ScheduledJobRecord,
+  ScheduledJobRunRecord,
+  ScheduledJobStatus,
+  ScheduledJobLastRunStatus,
+  ScheduledJobRunStatus,
+  UpdateScheduledJobInput,
+} from "../../../api/scheduledJobApi";

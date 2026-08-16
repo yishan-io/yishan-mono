@@ -5,7 +5,7 @@ import { cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api";
-import { createOrganization } from "../../api";
+import { createOrganization } from "../../commands/orgCommands";
 import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
 import { listOrgNodes } from "../../commands/nodeCommands";
@@ -71,7 +71,7 @@ vi.mock("../../commands/nodeCommands", () => ({
   listOrgNodes: vi.fn(async () => []),
 }));
 
-vi.mock("../../api", () => ({
+vi.mock("../../commands/orgCommands", () => ({
   createOrganization: vi.fn(async () => ({ id: "org-2", name: "New Organization" })),
 }));
 
