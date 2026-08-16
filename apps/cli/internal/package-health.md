@@ -282,18 +282,19 @@ into test_support_test.go; pi_agent_setup_test.go renamed agents_managed_test.go
 ### Phase 27 — `adapter/cloud`
 
 ```text
-client.go             # shared HTTP mechanics (keep; DoRaw/DoDecode/refresh)
+client.go             # shared HTTP mechanics + client-level endpoints (keep; DoRaw/DoDecode/refresh, Health/WhoAmI/RefreshToken/RevokeToken, shared DTOs OKResponse/HealthResponse/MeResponse/User/RefreshTokenResponse/TokenUpdate)
 organizations.go      # org methods + org DTOs
-nodes.go              # node methods + node DTOs
+nodes.go              # node methods + node DTOs (incl. RelayToken)
 projects.go           # project methods + project DTOs
-workspaces.go         # workspace methods + workspace DTOs
+workspaces.go         # workspace methods + workspace DTOs + input builders (was workspace_inputs.go)
 pull_requests.go      # UpsertWorkspacePullRequest + input
-usage.go              # ListTokenUsageHourly/UpsertTokenUsageHourly + row types
-jobs.go               # scheduled job methods + inputs
+usage.go              # List/UpsertTokenUsageHourly + row types
+jobs.go               # scheduled job run methods + inputs + job DTO
 service_tokens.go     # service token methods + inputs
-token.go / expiry.go / workspace_mapper.go / workspace_inputs.go / runtime_client.go  # keep
-methods.go            # deleted after all methods have resource owners
-methods_test.go       # split into per-resource test files
+workspace_mapper.go / workspace_inputs.go→workspaces.go / token.go / expiry.go / runtime_client.go  # keep
+methods.go            # deleted (phase done)
+types.go              # deleted; resource DTOs moved to their resource files
+methods_test.go       # → workspaces_test.go (payload shaping + input builders merged)
 ```
 
 ### Phase 28 — `internal/memory`
