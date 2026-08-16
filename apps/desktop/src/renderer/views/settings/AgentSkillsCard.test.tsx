@@ -18,7 +18,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../commands/skillCommands", () => ({
+vi.mock("../../features/settings/commands/skillCommands", () => ({
   listSkills: () => mocked.listSkills(),
   addSkill: (source: string) => mocked.addSkill(source),
   removeSkill: (name: string) => mocked.removeSkill(name),

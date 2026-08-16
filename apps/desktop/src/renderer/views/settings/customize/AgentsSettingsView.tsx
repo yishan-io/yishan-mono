@@ -19,7 +19,7 @@ import {
   listAgentDefinitions,
   removeAgentDefinition,
   restoreAgentDefinition,
-} from "../../../commands/customizeCommands";
+} from "../../../features/settings/commands/customizeCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
 import { SettingsCard } from "../../../components/settings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";

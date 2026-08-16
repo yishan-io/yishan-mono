@@ -10,7 +10,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../commands/customizeCommands", () => ({
+vi.mock("../../../features/settings/commands/customizeCommands", () => ({
   listExtensions: () => Promise.resolve([]),
   installExtension: () => Promise.resolve(),
   removeExtension: () => Promise.resolve(),

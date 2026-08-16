@@ -1,4 +1,4 @@
-import { listSkills } from "../../commands/skillCommands";
+import { listSkills } from "../../features/settings/commands/skillCommands";
 import type { RichComposerSlashCommand } from "../../components/RichComposer";
 import type { SkillInfo } from "../../rpc/daemonTypes";
 import { buildSubagentSlashCommands } from "./agentChatSlashCommandCatalog";

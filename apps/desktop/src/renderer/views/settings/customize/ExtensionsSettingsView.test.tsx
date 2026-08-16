@@ -17,7 +17,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../commands/customizeCommands", () => ({
+vi.mock("../../../features/settings/commands/customizeCommands", () => ({
   listExtensions: () => mocked.listExtensions(),
   installExtension: (source: string) => mocked.installExtension(source),
   removeExtension: (source: string) => mocked.removeExtension(source),

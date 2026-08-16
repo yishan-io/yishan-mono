@@ -14,7 +14,7 @@ import { MarkdownPreview } from "@renderer/components/markdown/MarkdownPreview";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
-import { addSkill, getSkillDetail } from "../../commands/skillCommands";
+import { addSkill, getSkillDetail } from "../../features/settings/commands/skillCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import type { SkillDetail, SkillInfo } from "../../rpc/daemonTypes";

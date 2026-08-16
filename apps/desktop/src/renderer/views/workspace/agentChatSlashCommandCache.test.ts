@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listSkillsMock = vi.fn();
 
-vi.mock("../../commands/skillCommands", () => ({
+vi.mock("../../features/settings/commands/skillCommands", () => ({
   listSkills: listSkillsMock,
 }));
 
