@@ -12,7 +12,7 @@ import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProg
 import { workspaceStore } from "../../../store/workspaceStore";
 
 import { createNotificationEventHandlers } from "../../notification/events/notificationEventHandlers";
-import { clearTerminalAgentStatus } from "./agentEventHandlers";
+import { clearTerminalAgentStatus } from "./agentSessionLifecycle";
 
 function createGitChangedHarness() {
   let listener:

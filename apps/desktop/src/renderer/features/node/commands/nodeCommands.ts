@@ -1,11 +1,11 @@
 import { api } from "../../../api";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { sessionStore } from "../../../features/session/model/sessionStore";
+import { selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
 
 const errNoOrgSelected = "No organization selected.";
 
 function resolveOrgId(): string {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     throw new Error(errNoOrgSelected);
   }

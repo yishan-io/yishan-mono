@@ -10,11 +10,14 @@ import {
 } from "../../../../shared/notifications/notificationPreferences";
 import { requestJson } from "../../../api/restClient";
 import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
+import {
+  selectCurrentUserNotificationPreferences,
+} from "../../../features/session/model/sessionSelectors";
+import { updateCurrentUserNotificationPreferences } from "../../../features/session/model/sessionActions";
 
 /** Loads notification preferences from current session user, then falls back to local cache. */
 export async function getNotificationPreferences() {
-  const currentUserPreferences = sessionStore.getState().currentUser?.notificationPreferences;
+  const currentUserPreferences = selectCurrentUserNotificationPreferences();
   if (currentUserPreferences) {
     const normalized = normalizeNotificationPreferences(currentUserPreferences);
     cacheNotificationPreferences(normalized);
@@ -35,17 +38,7 @@ export async function updateNotificationPreferences(patch: Partial<NotificationP
   });
   const normalized = normalizeNotificationPreferences(response.preferences);
   cacheNotificationPreferences(normalized);
-  const state = sessionStore.getState();
-  if (state.currentUser) {
-    state.setSessionData({
-      currentUser: {
-        ...state.currentUser,
-        notificationPreferences: normalized,
-      },
-      organizations: state.organizations,
-      selectedOrganizationId: state.selectedOrganizationId,
-    });
-  }
+  updateCurrentUserNotificationPreferences(normalized);
   return normalized;
 }
 

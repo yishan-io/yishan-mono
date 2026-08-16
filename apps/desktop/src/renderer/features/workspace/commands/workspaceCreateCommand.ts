@@ -1,7 +1,7 @@
 import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
+import { selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
@@ -11,7 +11,7 @@ import {
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { projectStore } from "../../project/model/projectStore";
+import { selectProjectById } from "../../project/model/projectSelectors";
 
 type CreateWorkspaceInput = {
   projectId: string;
@@ -108,8 +108,8 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  const project = projectStore.getState().projects.find((item) => item.id === projectId);
-  const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
+  const project = selectProjectById(projectId);
+  const organizationId = selectSelectedOrganizationId()?.trim() || "";
 
   const repoKey = project?.repoKey?.trim() || project?.key?.trim() || project?.id || "";
   const sourcePath = project?.localPath?.trim() || project?.path?.trim() || "";

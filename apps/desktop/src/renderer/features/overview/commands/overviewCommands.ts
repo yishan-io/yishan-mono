@@ -2,10 +2,10 @@ import { api } from "../../../api";
 import type { OverviewTimeRange } from "../../../api/overviewApi.types";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { overviewStore } from "../../../features/overview/model/overviewStore";
-import { sessionStore } from "../../session/model/sessionStore";
+import { selectSelectedOrganizationId } from "../../session/model/sessionSelectors";
 
 function selectedOrganizationId(): string {
-  const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
+  const organizationId = selectSelectedOrganizationId()?.trim() || "";
   if (!organizationId) {
     throw new Error("No organization selected");
   }

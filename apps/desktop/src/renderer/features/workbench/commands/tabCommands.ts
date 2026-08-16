@@ -1,6 +1,6 @@
 import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
 import { stopPiSession } from "../../../features/agent/commands/agentChatCommands";
-import { clearTerminalAgentStatus } from "../../../features/agent/events/agentEventHandlers";
+import { clearTerminalAgentStatus } from "../../../features/agent/commands/agentSessionLifecycle";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../../../helpers/tabHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../../../helpers/terminalCloseTombstones";

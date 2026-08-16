@@ -5,7 +5,7 @@ import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
+import { selectSessionDaemonId, selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
@@ -16,7 +16,7 @@ import {
   buildWorkspaceOpenProjectEntries,
   openWorkspaceEntries,
 } from "../../workspace/commands/workspaceWarmupCommand";
-import { workspaceProjectionStore } from "../../workspace/model/workspaceProjectionStore";
+import { incrementGitRefreshVersion } from "../../workspace/model/workspaceActions";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../model/projectStore";
 
@@ -107,7 +107,7 @@ export async function createProject(input: {
   const localRepositoryMetadata = isLocalSource ? await inspectLocalRepository(normalizedPath) : undefined;
 
   if (isLocalSource && localRepositoryMetadata) {
-    inferredNodeId = sessionStore.getState().daemonId?.trim();
+    inferredNodeId = selectSessionDaemonId()?.trim();
     inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
     inferredSourceTypeHint = inferredRemoteUrl
       ? "git"
@@ -133,8 +133,8 @@ export async function createProject(input: {
     return;
   }
 
-  const sessionState = sessionStore.getState();
-  const selectedOrganizationId = sessionState.selectedOrganizationId?.trim();
+  
+  const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
   if (!selectedOrganizationId) {
     return;
   }
@@ -229,7 +229,7 @@ export async function createProject(input: {
       await openWorkspaceEntries(openEntries);
       for (const entry of openEntries) {
         workspaceUiStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
-        workspaceProjectionStore.getState().incrementGitRefreshVersion(entry.worktreePath);
+        incrementGitRefreshVersion(entry.worktreePath);
       }
     }
   }
@@ -255,7 +255,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   }
 
   const previousWorkspaces = workspaceStore.getState().workspaces;
-  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
+  const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
   if (selectedOrganizationId) {
     try {
       await api.project.delete(selectedOrganizationId, projectId);
@@ -291,7 +291,7 @@ export async function updateProjectConfig(
 
   const previousContextEnabled = project.contextEnabled ?? true;
 
-  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
+  const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
   if (selectedOrganizationId) {
     try {
       const updatedProject = await api.project.update(selectedOrganizationId, projectId, {

@@ -1,12 +1,10 @@
 /**
- * AgentSession event handlers — owns agent lifecycle status aggregation.
- *
- * Phase 2 split: this module owns the shared `lifecycleBySessionKey` map and
- * the workspace-level agent status derivation. Both the Notification handler
- * (observer-status recording from `notification.event`) and the Terminal
- * handler (`clearTerminalAgentStatus` on tab close) depend on this module.
- * This resolves the cross-feature coupling that lived in
- * `backendEventStoreBindings.ts` (matrix flag P-D).
+ * Agent session lifecycle — the public lifecycle-status surface for the Agent
+ * feature (Phase 12, desktop5.md). Owns the shared `lifecycleBySessionKey` map
+ * and the workspace-level agent status derivation. The Notification handler
+ * (observer-status recording from `notification.event`), the Terminal handler
+ * (`clearTerminalAgentStatus` on tab close), and the Workbench tab commands
+ * consume this surface instead of importing Agent event internals.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import type { WorkspaceAgentStatus } from "../../../store/chatStore";

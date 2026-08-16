@@ -14,7 +14,7 @@ import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
+import { selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
@@ -252,7 +252,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
   },
   loadWorkspaceSnapshot,
-  getSelectedOrganizationId: () => sessionStore.getState().selectedOrganizationId,
+  getSelectedOrganizationId: () => selectSelectedOrganizationId(),
   workspaceExistsLocally: (workspaceId) =>
     workspaceStore.getState().workspaces.some((workspace) => workspace.id === workspaceId),
 };

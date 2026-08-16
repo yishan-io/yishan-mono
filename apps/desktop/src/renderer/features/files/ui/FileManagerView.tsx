@@ -3,7 +3,6 @@ import { ContextMenu } from "@renderer/components/ContextMenu";
 import { FileTree } from "@renderer/components/FileTree";
 import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
-import { workspaceProjectionStore } from "@renderer/features/workspace/model/workspaceProjectionStore";
 import { getRendererPlatform } from "@renderer/helpers/platform";
 import { useCommands } from "@renderer/hooks/useCommands";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
@@ -21,7 +20,8 @@ import {
 } from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { projectStore } from "../../../features/project/model/projectStore";
+import { useProjectLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectLastUsedExternalAppId";
+import { selectWorkspaceFileTreeRefreshVersion } from "../../../features/workspace/model/workspaceSelectors";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
@@ -39,7 +39,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const rendererPlatform = getRendererPlatform();
   const cmd = useCommands();
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
-  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
+  const lastUsedExternalAppId = useProjectLastUsedExternalAppId();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
     (state) =>
@@ -50,7 +50,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
       return 0;
     }
 
-    return workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
+    return selectWorkspaceFileTreeRefreshVersion(selectedWorkspaceWorktreePath);
   });
   const [fileManagerLastUsed, setFileManagerLastUsed] = useState(false);
   const detectedExternalAppIds = useDetectedExternalAppIds();

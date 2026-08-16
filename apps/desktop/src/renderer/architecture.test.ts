@@ -53,27 +53,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-value-api-rpc", file: "hooks/useOpenTabAutoRefresh.ts", phase: "P6" },
   // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
   // ---- Rule 4: commands importing views/components (cross-layer index) ----
-  // ---- Rule 5: feature -> another feature's internal State/Runtime/Event Handler
-  // (Phase 12 baseline from the resolution-based cross-feature scan). Public
-  // cross-feature imports (commands/ modules, index.ts) are allowed. Remove rows
-  // as Phase 12's selector/command-surface work replaces each internal import. ----
-  { rule: "R5-cross-feature-internal", file: "features/agent/commands/voiceTranscriptionCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/files/ui/FileManagerView.tsx", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/git/commands/gitCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/node/commands/nodeCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/notification/commands/notificationCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/notification/events/notificationEventHandlers.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/organization/commands/orgCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/overview/commands/overviewCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/project/commands/projectCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/commands/scheduledJobCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/events/terminalEventHandlers.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/workbench/commands/tabCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCloseCommand.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCommands.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCreateCommand.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceWarmupCommand.ts", phase: "P12" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/events/workspaceEventHandlers.ts", phase: "P12" },
 ];
 
 const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));

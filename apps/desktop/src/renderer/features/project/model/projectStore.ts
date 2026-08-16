@@ -25,7 +25,7 @@ export type WorkspaceStoreOrganizationPreference = {
   lastUsedExternalAppId?: ExternalAppId;
 };
 
-type ProjectStoreState = {
+export type ProjectStoreState = {
   projects: WorkspaceProjectRecord[];
   isProjectsLoaded: boolean;
   displayProjectIds: string[];

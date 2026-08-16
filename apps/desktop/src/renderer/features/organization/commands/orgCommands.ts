@@ -2,13 +2,14 @@ import { api } from "../../../api";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { rendererQueryClient } from "../../../queryClient";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
+import { selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
+import { setSelectedOrganizationId } from "../../../features/session/model/sessionActions";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
 
 const errNoOrgSelected = "No organization selected.";
 
 function resolveOrgId(): string {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     throw new Error(errNoOrgSelected);
   }
@@ -27,7 +28,7 @@ function wrapOrgCommand<T>(fn: (orgId: string) => Promise<T>): Promise<T> {
  */
 export async function switchOrganization(orgId: string): Promise<void> {
   workspaceUiStore.getState().closeOverlayPanel();
-  sessionStore.getState().setSelectedOrganizationId(orgId);
+  setSelectedOrganizationId(orgId);
 
   try {
     const client = await getDaemonClient();
