@@ -20,6 +20,7 @@ import {
 } from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { projectStore } from "../../../../features/project/model/projectStore";
 import { useFileDeletionConfirmation } from "../useFileDeletionConfirmation";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
@@ -37,7 +38,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const rendererPlatform = getRendererPlatform();
   const cmd = useCommands();
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
-  const lastUsedExternalAppId = workspaceStore((state) => state.lastUsedExternalAppId);
+  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
     (state) =>

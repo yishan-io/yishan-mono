@@ -187,10 +187,22 @@ vi.mock("../../../store/workspaceStore", () => ({
 }));
 
 vi.mock("../../../features/project/model/projectStore", () => {
-  const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
-    selector({ projects: mocked.stateRef.current.projects ?? [] });
-  (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
+  const projectStore = (
+    selector: (state: { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string }) => unknown,
+  ) =>
+    selector({
+      projects: mocked.stateRef.current.projects ?? [],
+      displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+      lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
+    });
+  (
+    projectStore as unknown as {
+      getState: () => { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string };
+    }
+  ).getState = () => ({
     projects: mocked.stateRef.current.projects ?? [],
+    displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+    lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
   });
   return { projectStore };
 });

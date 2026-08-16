@@ -3,6 +3,7 @@ import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps"
 import { setSelectedWorkspace } from "../commands/selectionCommands";
 import { createNewWhiteboard } from "../commands/whiteboardCommands";
 import { requestAgentChatComposerFocus } from "../events/agentChatComposerFocus";
+import { projectStore } from "../features/project/model/projectStore";
 import { reloadWebview } from "../views/workspace/browser/webviewRegistry";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
@@ -286,7 +287,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
 
     void context.commands.openEntryInExternalApp({
       workspaceWorktreePath,
-      appId: context.workspaceStoreState.lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
+      appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
     });
     event.preventDefault();
     return true;

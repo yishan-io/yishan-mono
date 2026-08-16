@@ -5,11 +5,11 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { switchOrganization } from "../commands/orgCommands";
+import { projectStore } from "../features/project/model/projectStore";
 import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { projectStore } from "../features/project/model/projectStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
 import { WorkspaceView } from "./WorkspaceView";
 

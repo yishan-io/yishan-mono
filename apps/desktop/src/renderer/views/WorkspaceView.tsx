@@ -6,6 +6,7 @@ import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
 import { SplitPaneLayout } from "../components/SplitPaneLayout";
 import { subscribeAppActionEvent } from "../events";
+import { projectStore } from "../features/project/model/projectStore";
 import { useAllWorkspacesGitSync } from "../hooks/useAllWorkspacesGitSync";
 import { useCommands } from "../hooks/useCommands";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
@@ -15,7 +16,6 @@ import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { projectStore } from "../features/project/model/projectStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
 import { OverviewView } from "./overview/OverviewView";
 import { ScheduledJobView } from "./scheduledJob/ScheduledJobView";
@@ -157,7 +157,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
         void cmd.openEntryInExternalApp({
           workspaceWorktreePath: selectedWorkspace.worktreePath,
-          appId: workspaceStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
+          appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
         });
         return;
       }

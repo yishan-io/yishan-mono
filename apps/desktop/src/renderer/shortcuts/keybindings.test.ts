@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIONS } from "../../shared/contracts/actions";
+import { projectStore } from "../features/project/model/projectStore";
 import type { SplitPaneStoreState } from "../store/splitPaneStore";
 import type { TabStoreState } from "../store/tabStore";
 import type { WorkspaceStoreState } from "../store/workspaceStore";
+
+const initialProjectStoreState = projectStore.getState();
+
+afterEach(() => {
+  projectStore.setState(initialProjectStoreState, true);
+});
 import { SUPPORTED_KEY_BINDINGS, type ShortContext, getShortcutDefinitions } from "./keybindings";
 
 vi.mock("../views/workspace/browser/webviewRegistry", () => ({
@@ -389,6 +396,9 @@ describe("getShortcutDefinitions", () => {
     expect(openSelectedFile).toBeTruthy();
 
     const openEntryInExternalApp = vi.fn(async () => ({ ok: true as const }));
+    projectStore.setState({
+      lastUsedExternalAppId: "cursor" as never,
+    });
     const context = createShortcutContext({
       commands: {
         ...createShortcutContext().commands,

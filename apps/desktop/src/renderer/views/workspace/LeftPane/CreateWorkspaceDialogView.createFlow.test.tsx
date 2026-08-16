@@ -169,9 +169,9 @@ describe("CreateWorkspaceDialogView create flow", () => {
   });
 
   it("hides projects that are hidden from the left pane in create mode", async () => {
-    workspaceStore.setState(
+    projectStore.setState(
       {
-        ...workspaceStore.getState(),
+        ...projectStore.getState(),
         displayProjectIds: ["repo-1"],
       },
       true,
@@ -194,9 +194,9 @@ describe("CreateWorkspaceDialogView create flow", () => {
   });
 
   it("falls back to the first visible project when opened with a hidden project id", async () => {
-    workspaceStore.setState(
+    projectStore.setState(
       {
-        ...workspaceStore.getState(),
+        ...projectStore.getState(),
         displayProjectIds: ["repo-1"],
       },
       true,
@@ -352,7 +352,6 @@ describe("CreateWorkspaceDialogView non-git exclusion", () => {
     workspaceStore.setState(
       {
         ...state,
-        displayProjectIds: ["repo-1", "repo-2", "repo-plain"],
         projects: [
           ...state.projects,
           {
@@ -370,6 +369,7 @@ describe("CreateWorkspaceDialogView non-git exclusion", () => {
       },
       true,
     );
+    projectStore.setState({ displayProjectIds: ["repo-1", "repo-2", "repo-plain"] });
     projectStore.setState({
       projects: [
         ...state.projects,

@@ -71,6 +71,7 @@ vi.mock("../rpc/rpcTransport", () => ({
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();
+const initialProjectStoreState = projectStore.getState();
 const initialLayoutStoreState = layoutStore.getState();
 const initialSessionStoreState = sessionStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -79,6 +80,7 @@ const initialWorkspacePaneStoreState = workspaceUiStore.getState();
 const initialChatStoreState = chatStore.getState();
 
 afterEach(() => {
+  projectStore.setState(initialProjectStoreState, true);
   workspaceStore.setState(initialWorkspaceStoreState, true);
   layoutStore.setState(initialLayoutStoreState, true);
   sessionStore.setState(initialSessionStoreState, true);
@@ -196,12 +198,12 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/workspaces/workspace-1",
         },
       ],
-      displayProjectIds: [],
     });
+    projectStore.setState({ displayProjectIds: [] });
 
     setDisplayRepoIds(["repo-1"]);
 
-    expect(workspaceStore.getState().displayProjectIds).toEqual(["repo-1"]);
+    expect(projectStore.getState().displayProjectIds).toEqual(["repo-1"]);
     // Warmup fires asynchronously — flush the promise queue.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(rpcMocks.openProject).toHaveBeenCalledTimes(1);
@@ -228,12 +230,12 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/workspaces/workspace-2",
         },
       ],
-      displayProjectIds: ["repo-1", "repo-2"],
     });
+    projectStore.setState({ displayProjectIds: ["repo-1", "repo-2"] });
 
     setDisplayRepoIds(["repo-1"]);
 
-    expect(workspaceStore.getState().displayProjectIds).toEqual(["repo-1"]);
+    expect(projectStore.getState().displayProjectIds).toEqual(["repo-1"]);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(rpcMocks.closeProject).toHaveBeenCalledTimes(1);
     expect(rpcMocks.closeProject).toHaveBeenCalledWith({
@@ -1016,9 +1018,11 @@ describe("workspaceCommands", () => {
     const setRightPaneWidth = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
+      renameWorkspace: renameWorkspaceState,
+    });
+    projectStore.setState({
       setDisplayProjectIds: setDisplayProjectIdsState,
       setLastUsedExternalAppId: setLastUsedExternalAppIdState,
-      renameWorkspace: renameWorkspaceState,
     });
     layoutStore.setState({ setLeftPaneWidth, setRightPaneWidth });
 

@@ -35,12 +35,12 @@ function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: str
 export function ProjectFilterPopoverView() {
   const { t } = useTranslation();
   const repos = projectStore((state) => state.projects);
-  const displayRepoIds = workspaceStore((state) => state.displayProjectIds);
+  const displayRepoIds = projectStore((state) => state.displayProjectIds);
   const { setDisplayRepoIds } = useCommands();
   const [repoFilterAnchor, setRepoFilterAnchor] = useState<HTMLElement | null>(null);
   const [repoQuickSearch, setRepoQuickSearch] = useState("");
-  const workspaceListHierarchyMode = workspaceStore((state) => state.workspaceListHierarchyMode);
-  const setWorkspaceListHierarchyMode = workspaceStore((state) => state.setWorkspaceListHierarchyMode);
+  const workspaceListHierarchyMode = projectStore((state) => state.workspaceListHierarchyMode);
+  const setWorkspaceListHierarchyMode = projectStore((state) => state.setWorkspaceListHierarchyMode);
 
   const handleSelectAll = () => {
     setDisplayRepoIds(repos.map((repo) => repo.id));

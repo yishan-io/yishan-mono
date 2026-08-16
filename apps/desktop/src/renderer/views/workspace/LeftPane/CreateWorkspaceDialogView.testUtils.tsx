@@ -91,7 +91,6 @@ export function setupCreateWorkspaceDialogViewTests() {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
-        displayProjectIds: ["repo-1", "repo-2"],
         projects: [
           {
             id: "repo-1",
@@ -117,6 +116,7 @@ export function setupCreateWorkspaceDialogViewTests() {
       },
       true,
     );
+    projectStore.setState({ displayProjectIds: ["repo-1", "repo-2"] });
     projectStore.setState({
       projects: [
         {

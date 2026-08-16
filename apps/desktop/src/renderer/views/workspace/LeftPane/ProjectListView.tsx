@@ -44,7 +44,7 @@ export function ProjectListView() {
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const lastUsedExternalAppId = workspaceStore((state) => state.lastUsedExternalAppId);
+  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const {
     setSelectedRepoId,
     setSelectedWorkspaceId,

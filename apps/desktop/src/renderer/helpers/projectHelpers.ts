@@ -1,6 +1,6 @@
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
-import { reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
+import { type ProjectStoreSlice, reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
 import { getFileName } from "../store/tabs";
 import type {
   WorkspaceItem,
@@ -9,21 +9,6 @@ import type {
   WorkspaceStoreState,
 } from "../store/types";
 import { resolveHydratedWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
-
-type ProjectStoreSlice = Pick<
-  WorkspaceStoreState,
-  | "projects"
-  | "workspaces"
-  | "pullRequestByWorkspaceId"
-  | "latestPullRequestByWorkspaceId"
-  | "gitChangesCountByWorkspaceId"
-  | "gitChangeTotalsByWorkspaceId"
-  | "selectedProjectId"
-  | "selectedWorkspaceId"
-  | "displayProjectIds"
-  | "lastUsedExternalAppId"
-  | "organizationPreferencesById"
->;
 
 export type RepoConfigUpdate = Pick<
   WorkspaceProjectRecord,
@@ -189,7 +174,7 @@ export function applyCreatedRepoState(
   } satisfies WorkspaceProjectRecord;
 
   state.projects.push(nextProject);
-  state.displayProjectIds = [...currentDisplayProjectIds, nextRepoId];
+  state.displayProjectIds = [...(currentDisplayProjectIds ?? []), nextRepoId];
   state.selectedProjectId = nextRepoId;
   state.selectedWorkspaceId = "";
 }
@@ -232,7 +217,7 @@ export function applyCreatedProjectState(
   } satisfies WorkspaceProjectRecord;
 
   state.projects.push(nextProject);
-  state.displayProjectIds = [...currentDisplayProjectIds, nextRepoId];
+  state.displayProjectIds = [...(currentDisplayProjectIds ?? []), nextRepoId];
 }
 
 export function applyDeletedRepoState(state: ProjectStoreSlice, repoId: string): void {
@@ -243,7 +228,7 @@ export function applyDeletedRepoState(state: ProjectStoreSlice, repoId: string):
       .map((workspace) => workspace.id),
   );
   state.workspaces = state.workspaces.filter((workspace) => (workspace.projectId ?? workspace.repoId) !== repoId);
-  state.displayProjectIds = state.displayProjectIds.filter((id) => id !== repoId);
+  state.displayProjectIds = (state.displayProjectIds ?? []).filter((id) => id !== repoId);
 
   for (const workspaceId of deletedWorkspaceIdSet) {
     delete state.gitChangesCountByWorkspaceId[workspaceId];

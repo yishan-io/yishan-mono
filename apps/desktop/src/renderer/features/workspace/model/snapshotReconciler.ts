@@ -13,29 +13,24 @@ import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspaceRecord } from "../../../api/types";
 import { resolveHydratedWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
 import { getFileName } from "../../../store/tabs";
-import type {
-  WorkspaceItem,
-  WorkspaceProjectRecord,
-  WorkspaceStoreOrganizationPreference,
-  WorkspaceStoreState,
-} from "../../../store/types";
+import type { WorkspaceItem, WorkspaceStoreOrganizationPreference, WorkspaceStoreState } from "../../../store/types";
 import { buildWorkspaceStateFromData } from "../../../store/workspace/state";
+import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { WorkspaceStatus } from "./workspaceViewModel";
 
-type ProjectStoreSlice = Pick<
-  WorkspaceStoreState,
-  | "projects"
-  | "workspaces"
-  | "pullRequestByWorkspaceId"
-  | "latestPullRequestByWorkspaceId"
-  | "gitChangesCountByWorkspaceId"
-  | "gitChangeTotalsByWorkspaceId"
-  | "selectedProjectId"
-  | "selectedWorkspaceId"
-  | "displayProjectIds"
-  | "lastUsedExternalAppId"
-  | "organizationPreferencesById"
->;
+type ProjectStoreSlice = {
+  projects: WorkspaceProjectRecord[];
+  workspaces: WorkspaceStoreState["workspaces"];
+  pullRequestByWorkspaceId: WorkspaceStoreState["pullRequestByWorkspaceId"];
+  latestPullRequestByWorkspaceId: WorkspaceStoreState["latestPullRequestByWorkspaceId"];
+  gitChangesCountByWorkspaceId: WorkspaceStoreState["gitChangesCountByWorkspaceId"];
+  gitChangeTotalsByWorkspaceId: WorkspaceStoreState["gitChangeTotalsByWorkspaceId"];
+  selectedProjectId: WorkspaceStoreState["selectedProjectId"];
+  selectedWorkspaceId: WorkspaceStoreState["selectedWorkspaceId"];
+  displayProjectIds?: string[];
+  lastUsedExternalAppId?: ExternalAppId;
+  organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
+};
 
 export type SnapshotReconcilerInput = {
   projects: ProjectRecord[];
@@ -51,7 +46,7 @@ export type SnapshotReconcilerResult = {
   selectedWorkspaceId: string;
   displayProjectIds: string[];
   lastUsedExternalAppId?: ExternalAppId;
-  organizationPreferencesById: WorkspaceStoreState["organizationPreferencesById"];
+  organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
   /** Projection records to prune after reconciliation (workspace-scoped). */
   projectionCleanup: {
     gitChangesCountByWorkspaceId: Record<string, number>;

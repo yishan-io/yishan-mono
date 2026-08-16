@@ -23,7 +23,7 @@ type LeftPaneViewProps = {
 export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneViewProps = {}) {
   const { t } = useTranslation();
   const repos = projectStore((state) => state.projects);
-  const displayRepoIds = workspaceStore((state) => state.displayProjectIds);
+  const displayRepoIds = projectStore((state) => state.displayProjectIds);
   const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
   const filteredRepos = repos.filter((repo) => displayRepoIds.includes(repo.id));
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());

@@ -81,7 +81,6 @@ describe("CreateWorkspaceDialogView node payload", () => {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
-        displayProjectIds: ["repo-1"],
         projects: [
           {
             id: "repo-1",
@@ -98,6 +97,7 @@ describe("CreateWorkspaceDialogView node payload", () => {
       },
       true,
     );
+    projectStore.setState({ displayProjectIds: ["repo-1"] });
     projectStore.setState({
       projects: [
         {

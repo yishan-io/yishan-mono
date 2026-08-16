@@ -8,6 +8,7 @@ import { SplitPaneContainer } from "../../components/SplitPaneContainer";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
 import { SessionHistoryMenu } from "../../components/agent/session/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
+import { projectStore } from "../../features/project/model/projectStore";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { useCommands } from "../../hooks/useCommands";
@@ -43,7 +44,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = workspaces.find((ws) => ws.id === workspaceId);
-  const lastUsedExternalAppId = workspaceStore((state) => state.lastUsedExternalAppId);
+  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
   const externalAppLabel = lastUsedExternalAppPreset
     ? `Open in ${lastUsedExternalAppPreset.label}`

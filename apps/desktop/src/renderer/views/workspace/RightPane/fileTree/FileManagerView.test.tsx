@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { projectStore } from "@renderer/features/project/model/projectStore";
 import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -108,6 +109,7 @@ const mocks = vi.hoisted(() => {
       closeTab: typeof closeTab;
       renameTabsForEntryRename: typeof renameTabsForEntryRename;
       setLastUsedExternalAppId: typeof setLastUsedExternalAppId;
+      lastUsedExternalAppId?: string;
     };
   } = {
     current: {
@@ -192,6 +194,25 @@ vi.mock("@renderer/commands/gitCommands", () => ({
 vi.mock("@renderer/store/workspaceStore", () => ({
   workspaceStore: mocks.workspaceStore,
 }));
+
+vi.mock("@renderer/features/project/model/projectStore", () => {
+  const projectStore = (
+    selector: (state: { lastUsedExternalAppId?: string; setLastUsedExternalAppId: (id: string) => void }) => unknown,
+  ) =>
+    selector({
+      lastUsedExternalAppId: mocks.stateRef.current.lastUsedExternalAppId as string | undefined,
+      setLastUsedExternalAppId: mocks.setLastUsedExternalAppId,
+    });
+  (
+    projectStore as unknown as {
+      getState: () => { lastUsedExternalAppId?: string; setLastUsedExternalAppId: (id: string) => void };
+    }
+  ).getState = () => ({
+    lastUsedExternalAppId: mocks.stateRef.current.lastUsedExternalAppId as string | undefined,
+    setLastUsedExternalAppId: mocks.setLastUsedExternalAppId,
+  });
+  return { projectStore };
+});
 
 vi.mock("@renderer/store/tabStore", () => ({
   tabStore: mocks.workspaceStore,

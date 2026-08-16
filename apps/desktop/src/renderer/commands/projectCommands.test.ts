@@ -371,7 +371,7 @@ describe("projectCommands", () => {
       daemonId: "node-1",
       loaded: true,
     });
-    workspaceStore.setState({
+    projectStore.setState({
       displayProjectIds: ["project-1"],
     });
     rpcMocks.listProjects.mockResolvedValueOnce([
@@ -417,7 +417,7 @@ describe("projectCommands", () => {
       daemonId: "node-1",
       loaded: true,
     });
-    workspaceStore.setState({
+    projectStore.setState({
       displayProjectIds: ["project-1"],
     });
     rpcMocks.listProjects.mockResolvedValueOnce([

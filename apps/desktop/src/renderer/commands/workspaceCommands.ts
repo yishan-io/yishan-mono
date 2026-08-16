@@ -159,8 +159,8 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
 
 /** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */
 export function setDisplayRepoIds(repoIds: string[]) {
-  const previousDisplayIds = readWorkspaceStoreState().displayProjectIds;
-  readWorkspaceStoreState().setDisplayProjectIds(repoIds);
+  const previousDisplayIds = projectStore.getState().displayProjectIds;
+  projectStore.getState().setDisplayProjectIds(repoIds);
 
   const repoIdSet = new Set(repoIds);
   const prevSet = new Set(previousDisplayIds);
@@ -178,7 +178,7 @@ export function setDisplayRepoIds(repoIds: string[]) {
 
 /** Stores last used external app id for quick-open actions. */
 export function setLastUsedExternalAppId(appId: ExternalAppId) {
-  readWorkspaceStoreState().setLastUsedExternalAppId(appId);
+  projectStore.getState().setLastUsedExternalAppId(appId);
 }
 
 /** Sets left pane width in workspace layout state. */

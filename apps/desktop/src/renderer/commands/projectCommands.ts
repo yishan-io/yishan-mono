@@ -4,7 +4,6 @@ import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/pro
 import { projectStore } from "../features/project/model/projectStore";
 import { reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
 import { getErrorMessage } from "../helpers/errorHelpers";
-import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
@@ -118,22 +117,6 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       return;
     }
 
-    const persistedWorkspacePreferences = readPersistedWorkspacePreferencesByOrg(
-      typeof localStorage === "undefined" ? undefined : localStorage,
-      selectedOrganization.id,
-    );
-    if (persistedWorkspacePreferences) {
-      workspaceStore.setState((state) => ({
-        organizationPreferencesById: {
-          ...(state.organizationPreferencesById ?? {}),
-          [selectedOrganization.id]: {
-            ...(state.organizationPreferencesById?.[selectedOrganization.id] ?? {}),
-            ...persistedWorkspacePreferences,
-          },
-        },
-      }));
-    }
-
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
 
     // Phase 3: project records + preferences live in the project store. Mirror
@@ -184,7 +167,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
     // Warm up workspaces for currently pinned projects so the daemon has them
     // open and indexed for restart recovery. Already-open workspaces are skipped.
-    const pinnedProjectIds = workspaceStore.getState().displayProjectIds;
+    const pinnedProjectIds = projectStore.getState().displayProjectIds;
     if (pinnedProjectIds.length > 0) {
       void warmupWorkspacesForProjects(pinnedProjectIds);
     }

@@ -42,7 +42,7 @@ export function CreateWorkspaceDialogView({
   const organizationId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
   const projects = projectStore((state) => state.projects);
-  const displayProjectIds = workspaceStore((state) => state.displayProjectIds);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds);
   const workspaces = workspaceStore((state) => state.workspaces);
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches, listAgentModels } = useCommands();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);

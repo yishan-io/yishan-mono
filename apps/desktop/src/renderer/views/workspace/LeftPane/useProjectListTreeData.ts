@@ -58,7 +58,7 @@ export function useProjectListTreeData(input: {
 
   const projects = projectStore((state) => state.projects) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
-  const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const gitChangeTotalsByWorkspaceId = workspaceStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);

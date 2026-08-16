@@ -73,10 +73,30 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("../../../features/project/model/projectStore", () => {
-  const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
-    selector({ projects: mocked.stateRef.current.projects ?? [] });
-  (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
+  const projectStore = (
+    selector: (state: {
+      projects: unknown[];
+      displayProjectIds: string[];
+      setDisplayProjectIds: (ids: string[]) => void;
+    }) => unknown,
+  ) =>
+    selector({
+      projects: mocked.stateRef.current.projects ?? [],
+      displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+      setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
+    });
+  (
+    projectStore as unknown as {
+      getState: () => {
+        projects: unknown[];
+        displayProjectIds: string[];
+        setDisplayProjectIds: (ids: string[]) => void;
+      };
+    }
+  ).getState = () => ({
     projects: mocked.stateRef.current.projects ?? [],
+    displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+    setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
   });
   return { projectStore };
 });
@@ -133,7 +153,7 @@ describe("LeftPaneView deletion", () => {
       projects: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
       workspaces: [{ id: "workspace-1", repoId: "repo-1", name: "Feature A", branch: "feature-a" }],
       displayProjectIds: ["repo-1"],
-      setDisplayProjectIds: mocked.setDisplayProjectIds,
+      setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
       setOrderedWorkspaceIds: () => {},
     };
   });

@@ -50,15 +50,6 @@ export function createWorkspaceRepoActions(
         resolvedPath,
         backendProject,
       });
-
-      // Persist display preferences into organization-scoped storage.
-      if (normalizedOrganizationId) {
-        state.organizationPreferencesById ??= {};
-        state.organizationPreferencesById[normalizedOrganizationId] ??= {};
-        const orgPrefs = state.organizationPreferencesById[normalizedOrganizationId];
-        orgPrefs.displayProjectIds = state.displayProjectIds;
-        orgPrefs.knownProjectIds = state.projects.map((project) => project.id);
-      }
     });
   };
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { sessionStore } from "../../../store/sessionStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
@@ -36,8 +37,8 @@ export type ProjectListFoldStateResult = {
  * so reordering workspaces in one mode must apply to the other.
  */
 export function useProjectListFoldState(): ProjectListFoldStateResult {
-  const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
-  const workspaceListHierarchyMode = workspaceStore((state) => state.workspaceListHierarchyMode);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
+  const workspaceListHierarchyMode = projectStore((state) => state.workspaceListHierarchyMode);
   const activeHierarchyMode: HierarchyMode = workspaceListHierarchyMode === "by_node" ? "by_node" : "by_project";
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId) ?? "";
 

@@ -17,6 +17,7 @@ export type { AvailableCommand, AvailableModel, ChatMessage } from "./chatTypes"
 export type {
   WorkspaceProjectCommand,
   WorkspaceProjectRecord,
+  WorkspaceStoreOrganizationPreference,
 } from "../features/project/model/projectTypes";
 export { LOCAL_FOLDER_PROJECT_ID } from "../features/project/model/projectTypes";
 
@@ -237,17 +238,10 @@ export type WorkspaceStoreState = {
   gitRefreshVersionByWorktreePath: Record<string, number>;
   selectedProjectId: string;
   selectedWorkspaceId: string;
-  displayProjectIds: string[];
   isProjectsLoaded: boolean;
-  lastUsedExternalAppId?: ExternalAppId;
-  organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
-  workspaceListHierarchyMode: "by_project" | "by_node";
   orderedWorkspaceIds: string[];
   setSelectedProjectId: (projectId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
-  setDisplayProjectIds: (projectIds: string[]) => void;
-  setLastUsedExternalAppId: (appId: ExternalAppId) => void;
-  setWorkspaceListHierarchyMode: (mode: "by_project" | "by_node") => void;
   load: (organizationId: string, projects: ProjectRecord[], workspaces: WorkspaceRecord[]) => void;
   createProject: (input: {
     name: string;
@@ -311,24 +305,12 @@ export type WorkspaceStoreState = {
   setOrderedWorkspaceIds: (ids: string[]) => void;
 };
 
-export type WorkspaceStoreOrganizationPreference = {
-  displayProjectIds?: string[];
-  knownProjectIds?: string[];
-  lastUsedExternalAppId?: ExternalAppId;
-};
-
-export type WorkspaceStorePersistedState = Pick<
-  WorkspaceStoreState,
-  "displayProjectIds" | "lastUsedExternalAppId" | "organizationPreferencesById" | "workspaceListHierarchyMode"
->;
+export type WorkspaceStorePersistedState = Record<string, never>;
 
 export type WorkspaceStoreActions = Pick<
   WorkspaceStoreState,
   | "setSelectedProjectId"
   | "setSelectedWorkspaceId"
-  | "setDisplayProjectIds"
-  | "setLastUsedExternalAppId"
-  | "setWorkspaceListHierarchyMode"
   | "load"
   | "createProject"
   | "deleteProject"

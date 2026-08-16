@@ -31,9 +31,17 @@ export type WorkspaceProjectRecord = {
   createdByUserId?: string;
 };
 
+import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
+
 /**
  * Synthetic project id used for local (non-git) folder workspaces. Folder
  * workspaces are daemon-owned rows (kind="folder") mapped into the workspace
  * list but have no real backend project, so they share this sentinel value.
  */
+export type WorkspaceStoreOrganizationPreference = {
+  displayProjectIds?: string[];
+  knownProjectIds?: string[];
+  lastUsedExternalAppId?: ExternalAppId;
+};
+
 export const LOCAL_FOLDER_PROJECT_ID = "local-folder";

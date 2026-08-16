@@ -35,7 +35,7 @@ export function MainPaneTitleBarView() {
   const { t } = useTranslation();
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
   const projects = projectStore((state) => state.projects);
-  const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);

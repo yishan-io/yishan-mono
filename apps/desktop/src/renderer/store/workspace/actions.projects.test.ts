@@ -144,7 +144,7 @@ function createHarness(overrides?: Partial<TestState>) {
 }
 
 describe("createWorkspaceRepoActions", () => {
-  it("persists organization-scoped selection + display filter when creating a new project", async () => {
+  it("appends a created project and selects it when creating a new project", async () => {
     const { actions, getState } = createHarness({
       projects: [],
       workspaces: [],
@@ -184,10 +184,10 @@ describe("createWorkspaceRepoActions", () => {
     });
 
     const state = getState();
-    expect(state.organizationPreferencesById?.["org-1"]).toEqual({
-      displayProjectIds: ["repo-1"],
-      knownProjectIds: ["repo-1"],
-    });
+    // Phase 3: org-scoped prefs moved to the project store; the workspace store
+    // keeps the entity + selection effects.
+    expect(state.projects.map((project) => project.id)).toEqual(["repo-1"]);
+    expect(state.selectedProjectId).toBe("repo-1");
   });
 
   it("deletes one project and all child workspace state", () => {
