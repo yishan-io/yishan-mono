@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
 import { registerPermissionPolicy } from "./security/permissionPolicy";
+import { MainWindow } from "./window/mainWindow";
 export { isPermissionAllowed } from "./security/permissionPolicy";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
@@ -29,7 +30,10 @@ type DispatchActionOptions = {
  * Owns Electron desktop lifecycle and main window bootstrap.
  */
 export class DesktopApplication {
-  private mainWindow: BrowserWindow | null = null;
+  private readonly mainWindow = new MainWindow({
+    shouldAllowClose: () => this.isQuitting,
+    onClosed: () => {},
+  });
   private readonly daemonManager = new DaemonManager();
   private hasProcessedBeforeQuit = false;
   private isQuitting = false;
@@ -77,7 +81,7 @@ export class DesktopApplication {
   private async start(): Promise<void> {
     await app.whenReady();
     registerWorkspaceFileProtocol();
-    registerPermissionPolicy(session.defaultSession, (webContentsId) => webContentsId === this.mainWindow?.webContents?.id);
+    registerPermissionPolicy(session.defaultSession, (webContentsId) => webContentsId === this.mainWindow.webContentsId);
 
     const defaultAppEntry = process.argv[1];
     if (process.defaultApp && defaultAppEntry) {
@@ -103,7 +107,8 @@ export class DesktopApplication {
     await this.daemonManager.ensureStarted();
     this.registerHostIpcHandlers();
     this.registerAuthIpcHandlers();
-    this.createMainWindow();
+    this.mainWindow.create();
+    this.mainWindow.loadRenderer();
     configureApplicationMenu({
       appName: "Yishan",
       devMode: isDevMode(),
@@ -144,10 +149,11 @@ export class DesktopApplication {
     });
 
     app.on("activate", () => {
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.show();
+      if (this.mainWindow.browserWindow && !this.mainWindow.browserWindow.isDestroyed()) {
+        this.mainWindow.focus();
       } else {
-        this.createMainWindow();
+        this.mainWindow.create();
+        this.mainWindow.loadRenderer();
       }
     });
 
@@ -293,8 +299,9 @@ export class DesktopApplication {
         properties: ["openDirectory", "createDirectory"],
         defaultPath: input?.startingFolder?.trim() || undefined,
       };
-      const result = this.mainWindow
-        ? await dialog.showOpenDialog(this.mainWindow, options)
+      const window = this.mainWindow.browserWindow;
+      const result = window
+        ? await dialog.showOpenDialog(window, options)
         : await dialog.showOpenDialog(options);
 
       if (result.canceled) {
@@ -305,23 +312,13 @@ export class DesktopApplication {
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.toggleMainWindowMaximized, async () => {
-      const window = this.mainWindow;
-      if (!window) {
-        return { ok: true };
-      }
-
-      if (window.isMaximized()) {
-        window.unmaximize();
-      } else {
-        window.maximize();
-      }
-
+      this.mainWindow.toggleMaximized();
       return { ok: true };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.getMainWindowFullscreenState, async () => {
       return {
-        isFullscreen: this.mainWindow?.isFullScreen() ?? false,
+        isFullscreen: this.mainWindow.isFullscreen(),
       };
     });
 
@@ -390,8 +387,9 @@ export class DesktopApplication {
       noLink: true,
     };
 
-    const result = this.mainWindow
-      ? await dialog.showMessageBox(this.mainWindow, messageBoxOptions)
+    const window = this.mainWindow.browserWindow;
+    const result = window
+      ? await dialog.showMessageBox(window, messageBoxOptions)
       : await dialog.showMessageBox(messageBoxOptions);
 
     return result.response === 1;
@@ -399,13 +397,12 @@ export class DesktopApplication {
 
   /** Focuses the main window when menu actions should bring the app forward. */
   private focusMainWindow(): void {
-    this.mainWindow?.show();
-    this.mainWindow?.focus();
+    this.mainWindow.focus();
   }
 
   /** Forwards one native menu action to renderer listeners. */
   private dispatchAction(payload: AppActionPayload, options?: DispatchActionOptions): void {
-    this.mainWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+    this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
       method: "appAction",
       payload,
     });
@@ -423,7 +420,7 @@ export class DesktopApplication {
     }
 
     this.pendingUpdateReady = payload.status === "not-available" || payload.status === "error" ? null : payload;
-    this.mainWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+    this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
       method: "desktopUpdate",
       payload,
     });
@@ -498,200 +495,6 @@ export class DesktopApplication {
       updateItem.enabled = enabled;
       updateItem.label = label;
     }
-  }
-
-  /**
-   * Creates and initializes the main BrowserWindow instance.
-   */
-  private createMainWindow() {
-    const isToggleDevToolsShortcut = (input: Electron.Input): boolean => {
-      if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
-        return false;
-      }
-
-      const normalizedKey = input.key.trim().toLowerCase();
-      if (normalizedKey === "f12") {
-        return true;
-      }
-
-      if (normalizedKey !== "i") {
-        return false;
-      }
-
-      if (process.platform === "darwin") {
-        return input.meta && input.alt;
-      }
-
-      return input.control && input.shift;
-    };
-
-    const isPrimaryShortcutModifierPressed = (input: Electron.Input): boolean => {
-      return process.platform === "darwin" ? input.meta && !input.control : input.control && !input.meta;
-    };
-
-    const isWebviewReservedShortcut = (input: Electron.Input): boolean => {
-      const normalizedKey = input.key.trim().toLowerCase();
-      const isPrimaryModifier = isPrimaryShortcutModifierPressed(input);
-      if (!isPrimaryModifier || input.alt) {
-        return false;
-      }
-
-      if (input.shift) {
-        return (
-          normalizedKey === "b" ||
-          normalizedKey === "r" ||
-          normalizedKey === "f" ||
-          normalizedKey === "g" ||
-          normalizedKey === "w"
-        );
-      }
-
-      if (
-        normalizedKey === "/" ||
-        normalizedKey === "w" ||
-        normalizedKey === "y" ||
-        normalizedKey === "n" ||
-        normalizedKey === "t"
-      ) {
-        return true;
-      }
-
-      if (
-        normalizedKey === "b" ||
-        normalizedKey === "l" ||
-        normalizedKey === "p" ||
-        normalizedKey === "o" ||
-        normalizedKey === "z"
-      ) {
-        return true;
-      }
-
-      if (normalizedKey === "backspace" || normalizedKey === "delete") {
-        return true;
-      }
-
-      return /^[1-9]$/.test(normalizedKey);
-    };
-
-    const mainWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      minWidth: 900,
-      minHeight: 600,
-      titleBarStyle: "hiddenInset",
-      webPreferences: {
-        preload: join(__dirname, "preload.js"),
-        contextIsolation: true,
-        nodeIntegration: false,
-        webviewTag: true,
-      },
-    });
-
-    // On macOS, intercept the window close to hide instead of destroy,
-    // allowing the app to stay in the Dock. During a quit flow, allow
-    // the close to proceed so the app can fully terminate.
-    if (process.platform === "darwin") {
-      mainWindow.on("close", (event) => {
-        if (!this.isQuitting) {
-          event.preventDefault();
-          mainWindow.hide();
-        }
-      });
-    }
-
-    // Intercept popup/new-window requests from <webview> guests (e.g. Cmd+Click,
-    // target="_blank", window.open) and forward the URL to the renderer so it can
-    // open the destination in a new in-app browser tab instead of a popup window.
-    const isWorkspaceNavigationShortcut = (input: Electron.Input): boolean => {
-      if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
-        return false;
-      }
-
-      const normalizedKey = input.key.trim().toLowerCase();
-      return (
-        input.control && input.meta && !input.alt && !input.shift && (normalizedKey === "j" || normalizedKey === "k")
-      );
-    };
-
-    mainWindow.webContents.on("before-input-event", (inputEvent, input) => {
-      if (isToggleDevToolsShortcut(input)) {
-        mainWindow.webContents.toggleDevTools();
-        inputEvent.preventDefault();
-        return;
-      }
-
-      if (isWorkspaceNavigationShortcut(input)) {
-        inputEvent.preventDefault();
-        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "webviewKeydown",
-          payload: {
-            key: input.key,
-            code: input.code,
-            ctrlKey: input.control,
-            metaKey: input.meta,
-            shiftKey: input.shift,
-            altKey: input.alt,
-          },
-        });
-      }
-    });
-
-    mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
-      webviewContents.on("before-input-event", (_inputEvent, input) => {
-        if (isToggleDevToolsShortcut(input)) {
-          mainWindow.webContents.toggleDevTools();
-          _inputEvent.preventDefault();
-          return;
-        }
-
-        if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
-          return;
-        }
-
-        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "webviewKeydown",
-          payload: {
-            key: input.key,
-            code: input.code,
-            ctrlKey: input.control,
-            metaKey: input.meta,
-            shiftKey: input.shift,
-            altKey: input.alt,
-          },
-        });
-
-        // Let native edit shortcuts reach Chromium, but suppress known app-level
-        // bindings so they don't trigger both page/menu behavior and app actions.
-        if (isWebviewReservedShortcut(input)) {
-          _inputEvent.preventDefault();
-        }
-      });
-
-      webviewContents.setWindowOpenHandler((details) => {
-        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "webviewOpenUrl",
-          payload: { url: details.url },
-        });
-        return { action: "deny" };
-      });
-    });
-
-    mainWindow.on("closed", () => {
-      if (this.mainWindow === mainWindow) {
-        this.mainWindow = null;
-      }
-    });
-
-    const rendererUrl = process.env.ELECTRON_RENDERER_URL;
-
-    if (rendererUrl) {
-      void mainWindow.loadURL(rendererUrl);
-      mainWindow.webContents.openDevTools({ mode: "detach" });
-    } else {
-      void mainWindow.loadFile(join(__dirname, "..", "renderer", "index.html"));
-    }
-
-    this.mainWindow = mainWindow;
   }
 
 }

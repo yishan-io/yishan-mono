@@ -105,13 +105,13 @@ describe("isPermissionAllowed", () => {
 describe("DesktopApplication update dismissal", () => {
   it("suppresses auto update availability when already dismissed today", () => {
     const desktopApplication = new DesktopApplication() as unknown as {
-      mainWindow: { webContents: { send: ReturnType<typeof vi.fn> } };
+      mainWindow: { browserWindow: { webContents: { send: ReturnType<typeof vi.fn> } } };
       dismissedAutoUpdateDate: string | null;
       pendingUpdateReady: unknown;
       dispatchUpdateEvent: (payload: unknown) => void;
     };
     const send = vi.fn();
-    desktopApplication.mainWindow = { webContents: { send } };
+    desktopApplication.mainWindow = { browserWindow: { webContents: { send } } };
     desktopApplication.dismissedAutoUpdateDate = "2026-06-29";
 
     desktopApplication.dispatchUpdateEvent({ status: "available", source: "auto", version: "1.2.3" });
@@ -122,13 +122,13 @@ describe("DesktopApplication update dismissal", () => {
 
   it("still forwards manual update availability after auto dismissal", () => {
     const desktopApplication = new DesktopApplication() as unknown as {
-      mainWindow: { webContents: { send: ReturnType<typeof vi.fn> } };
+      mainWindow: { browserWindow: { webContents: { send: ReturnType<typeof vi.fn> } } };
       dismissedAutoUpdateDate: string | null;
       pendingUpdateReady: unknown;
       dispatchUpdateEvent: (payload: unknown) => void;
     };
     const send = vi.fn();
-    desktopApplication.mainWindow = { webContents: { send } };
+    desktopApplication.mainWindow = { browserWindow: { webContents: { send } } };
     desktopApplication.dismissedAutoUpdateDate = "2026-06-29";
 
     desktopApplication.dispatchUpdateEvent({ status: "available", source: "manual", version: "1.2.3" });
