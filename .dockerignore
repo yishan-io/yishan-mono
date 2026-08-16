@@ -1,0 +1,25 @@
+# Keep the relay image build context small and leak-free.
+# Only apps/relay and packages/relay-protocol-go are needed.
+
+.git
+.gitignore
+
+node_modules
+**/node_modules
+
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Only the relay app participates in image builds
+apps/*
+!apps/relay
+
+# Only the shared Go wire protocol is referenced by the relay
+packages/*
+!packages/relay-protocol-go
+
+apps/relay/README.md
+apps/relay/Dockerfile
+apps/relay/.dockerignore

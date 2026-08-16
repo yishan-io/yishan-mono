@@ -4,10 +4,15 @@ RUN apk add --no-cache ca-certificates
 
 WORKDIR /build
 
-COPY go.mod go.sum ./
+# Preserve the monorepo layout so the go.mod replace of
+# yishan/packages/relay-protocol-go resolves inside the image.
+COPY apps/relay/go.mod apps/relay/go.sum ./apps/relay/
+COPY packages/relay-protocol-go ./packages/relay-protocol-go/
+
+WORKDIR /build/apps/relay
 RUN go mod download
 
-COPY . .
+COPY apps/relay/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /relay .
 
 FROM alpine:3.21
