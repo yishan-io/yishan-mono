@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
+function isGitInternalPath(path: string): boolean {
+  return path === ".git" || path.startsWith(".git/");
+}
+
 export type WorkspaceRightPaneTab = "files" | "changes" | "pr";
 export type WorkspaceListHierarchyMode = "by_project" | "by_node";
 
@@ -13,6 +17,10 @@ export type OverlayPanel = "overview" | "scheduledJob";
 type WorkspaceUiStoreState = {
   // ── file tree signals ──────────────────────────────────────────────────────
   selectedEntryPath: string;
+  /** Monotonic refresh version bumped on every file-tree invalidation event. */
+  fileTreeRefreshVersion: number;
+  /** Latest changed relative paths per worktree path (from workspace.files.changed). */
+  fileTreeChangedRelativePathsByWorktreePath: Record<string, string[]>;
   expandedFileTreeItemsByWorkspaceId: Record<string, string[]>;
   deleteSelectionRequestId: number;
   undoRequestId: number;
@@ -29,6 +37,8 @@ type WorkspaceUiStoreState = {
   overlayPanel: OverlayPanel | null;
 
   setSelectedEntryPath: (path: string) => void;
+  /** Bumps the file-tree refresh version and records changed relative paths for one worktree. */
+  incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;
   setExpandedFileTreeItems: (workspaceId: string, paths: string[]) => void;
   requestDeleteSelection: () => void;
   requestUndo: () => void;
@@ -47,6 +57,8 @@ type WorkspaceUiStoreState = {
 export const workspaceUiStore = create<WorkspaceUiStoreState>()(
   immer((set) => ({
     selectedEntryPath: "",
+    fileTreeRefreshVersion: 0,
+    fileTreeChangedRelativePathsByWorktreePath: {},
     expandedFileTreeItemsByWorkspaceId: {},
     deleteSelectionRequestId: 0,
     undoRequestId: 0,
@@ -57,6 +69,22 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     selectFolderInFileTreeRequestId: 0,
     overlayPanel: null,
 
+    incrementFileTreeRefreshVersion: (workspaceWorktreePath, changedRelativePaths) => {
+      const normalizedWorkspaceWorktreePath = workspaceWorktreePath?.trim() ?? "";
+      if (normalizedWorkspaceWorktreePath.length === 0) {
+        return;
+      }
+
+      const normalizedChangedRelativePaths = (changedRelativePaths ?? [])
+        .map((path) => path.trim())
+        .filter((path) => path.length > 0 && !isGitInternalPath(path));
+
+      set((state) => {
+        state.fileTreeRefreshVersion += 1;
+        state.fileTreeChangedRelativePathsByWorktreePath[normalizedWorkspaceWorktreePath] =
+          normalizedChangedRelativePaths;
+      });
+    },
     setSelectedEntryPath: (selectedEntryPath) => {
       set({ selectedEntryPath });
     },

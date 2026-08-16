@@ -16,6 +16,7 @@ import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextM
 import { WorkspaceTree } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeRow } from "../../../components/WorkspaceTree/types";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { useCommands } from "../../../hooks/useCommands";
 import { useContextMenuState } from "../../../hooks/useContextMenuState";
@@ -39,7 +40,7 @@ import { useWorkspaceInfoHover } from "./useWorkspaceInfoHover";
 /** Renders project rows and nested workspace rows with per-project fold controls. */
 export function ProjectListView() {
   const { t } = useTranslation();
-  const projects = workspaceStore((state) => state.projects) ?? [];
+  const projects = projectStore((state) => state.projects) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);

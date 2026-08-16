@@ -1,6 +1,8 @@
 import { api } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
+import { projectStore } from "../features/project/model/projectStore";
+import { reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
@@ -10,6 +12,7 @@ import { tabStore } from "../store/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../store/types";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { workspaceUiStore } from "../store/workspaceUiStore";
 import { createLocalFolderImport, openFoldersForSnapshot, restoreFolderSelectionIfNeeded } from "./localFolderCommands";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 import {
@@ -133,6 +136,36 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
 
+    // Phase 3: project records + preferences live in the project store. Mirror
+    // the reconciled result so the UI reads one source of truth per owner.
+    const reconciled = reconcileWorkspaceSnapshot({
+      projects,
+      workspacesFromApi: workspaces,
+      organizationId: selectedOrganization.id,
+      previousState: {
+        projects: projectStore.getState().projects,
+        workspaces: workspaceStore.getState().workspaces,
+        pullRequestByWorkspaceId: workspaceStore.getState().pullRequestByWorkspaceId,
+        latestPullRequestByWorkspaceId: workspaceStore.getState().latestPullRequestByWorkspaceId,
+        gitChangesCountByWorkspaceId: workspaceStore.getState().gitChangesCountByWorkspaceId,
+        gitChangeTotalsByWorkspaceId: workspaceStore.getState().gitChangeTotalsByWorkspaceId,
+        selectedProjectId: workspaceStore.getState().selectedProjectId,
+        selectedWorkspaceId: workspaceStore.getState().selectedWorkspaceId,
+        displayProjectIds: projectStore.getState().displayProjectIds,
+        lastUsedExternalAppId: projectStore.getState().lastUsedExternalAppId,
+        organizationPreferencesById: projectStore.getState().organizationPreferencesById,
+      },
+    });
+    projectStore
+      .getState()
+      .loadProjects(
+        selectedOrganization.id,
+        reconciled.projects,
+        reconciled.displayProjectIds,
+        reconciled.organizationPreferencesById,
+        reconciled.lastUsedExternalAppId,
+      );
+
     // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
     const daemonFolders = await daemonClient.workspace.listLocalFolders();
     if (!isLatestWorkspaceSnapshotRequest(requestId)) {
@@ -245,7 +278,7 @@ export async function createProject(input: {
     : primaryWorkspace?.localPath?.trim() || undefined;
   const resolvedProjectDefaultBranch = primaryWorkspace?.branch ?? inferredDefaultBranch ?? null;
 
-  workspaceStore.getState().createProject({
+  projectStore.getState().createProject({
     name: project.name || normalizedName,
     source: isLocalSource ? "local" : "remote",
     path: isLocalSource ? normalizedPath : undefined,
@@ -273,6 +306,10 @@ export async function createProject(input: {
       createdByUserId: project.createdByUserId,
     },
   });
+  // The project store appends the project + display id; the command selects it
+  // (selection is workspace-store-owned, never project-store-owned).
+  workspaceStore.getState().setSelectedProjectId(project.id);
+  workspaceStore.getState().setSelectedWorkspaceId("");
 
   for (const workspace of workspaces) {
     const workspaceName = workspace.kind === "primary" ? "local" : workspace.branch?.trim() || "workspace";
@@ -301,7 +338,7 @@ export async function createProject(input: {
       const openEntries = buildWorkspaceOpenProjectEntries(importedPrimaryWorkspaces, selectedOrganizationId);
       await openWorkspaceEntries(openEntries);
       for (const entry of openEntries) {
-        workspaceStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
+        workspaceUiStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
         workspaceStore.getState().incrementGitRefreshVersion(entry.worktreePath);
       }
     }
@@ -338,6 +375,7 @@ export async function deleteProject(projectId: string): Promise<void> {
     }
   }
 
+  projectStore.getState().deleteProject(projectId);
   workspaceStore.getState().deleteProject(projectId);
   syncTabStoreWithWorkspace(previousWorkspaces);
 }
@@ -356,7 +394,7 @@ export async function updateProjectConfig(
     commands?: Array<{ name: string; command: string }>;
   },
 ): Promise<void> {
-  const project = workspaceStore.getState().projects.find((item) => item.id === projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
   if (!project) {
     return;
   }
@@ -388,8 +426,9 @@ export async function updateProjectConfig(
       };
 
       const store = workspaceStore.getState();
+      projectStore.getState().updateProjectConfig(projectId, persistedConfig);
       store.updateProjectConfig(projectId, persistedConfig);
-      store.incrementFileTreeRefreshVersion();
+      workspaceUiStore.getState().incrementFileTreeRefreshVersion();
 
       if (config.contextEnabled !== undefined && updatedProject.contextEnabled !== previousContextEnabled) {
         await syncProjectContextLinks({
@@ -406,8 +445,9 @@ export async function updateProjectConfig(
   }
 
   const store = workspaceStore.getState();
+  projectStore.getState().updateProjectConfig(projectId, config);
   store.updateProjectConfig(projectId, config);
-  store.incrementFileTreeRefreshVersion();
+  workspaceUiStore.getState().incrementFileTreeRefreshVersion();
 }
 
 /**
@@ -424,7 +464,7 @@ async function syncProjectContextLinks(input: {
   enabled: boolean;
 }): Promise<void> {
   const state = workspaceStore.getState();
-  const project = state.projects.find((item) => item.id === input.projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === input.projectId);
   const isNonGit = project?.sourceType === "unknown";
   const repoKey = isNonGit ? "" : (input.repoKey?.trim() ?? "");
   if (!isNonGit && !repoKey) {

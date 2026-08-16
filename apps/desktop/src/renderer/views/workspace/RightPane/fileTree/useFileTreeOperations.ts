@@ -231,16 +231,16 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     (state) =>
       state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
   );
-  const changedRelativePathsForSelectedWorkspace = workspaceStore((state) => {
-    const workspaceWorktreePath =
-      state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "";
-    if (!workspaceWorktreePath) {
+  const changedRelativePathsForSelectedWorkspace = workspaceUiStore((state) => {
+    if (!selectedWorkspaceWorktreePath) {
       return EMPTY_CHANGED_RELATIVE_PATHS;
     }
 
-    return state.fileTreeChangedRelativePathsByWorktreePath?.[workspaceWorktreePath] ?? EMPTY_CHANGED_RELATIVE_PATHS;
+    return (
+      state.fileTreeChangedRelativePathsByWorktreePath?.[selectedWorkspaceWorktreePath] ?? EMPTY_CHANGED_RELATIVE_PATHS
+    );
   });
-  const fileTreeRefreshVersion = workspaceStore((state) => state.fileTreeRefreshVersion);
+  const fileTreeRefreshVersion = workspaceUiStore((state) => state.fileTreeRefreshVersion);
   const { openTab, closeTab, renameTabsForEntryRename, setLastUsedExternalAppId } = useCommands();
   const tabs = tabStore((state) => state.tabs);
   const {

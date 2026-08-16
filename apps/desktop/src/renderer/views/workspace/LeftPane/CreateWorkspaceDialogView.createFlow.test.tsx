@@ -4,6 +4,7 @@ import "./CreateWorkspaceDialogView.testSetup";
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { sessionStore } from "../../../store/sessionStore";
 import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
@@ -285,6 +286,7 @@ describe("CreateWorkspaceDialogView create flow", () => {
       },
       true,
     );
+    projectStore.setState({ projects: [...workspaceStore.getState().projects] });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
       target: { value: "Keep Repo Two" },
@@ -368,6 +370,22 @@ describe("CreateWorkspaceDialogView non-git exclusion", () => {
       },
       true,
     );
+    projectStore.setState({
+      projects: [
+        ...state.projects,
+        {
+          id: "repo-plain",
+          key: "repo-plain",
+          name: "Plain Folder",
+          path: "/tmp/plain-folder",
+          localPath: "/tmp/plain-folder",
+          worktreePath: "/tmp/plain-folder",
+          sourceType: "unknown",
+          defaultBranch: "",
+          missing: false,
+        },
+      ],
+    });
 
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 

@@ -9,12 +9,8 @@ import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetSt
 
 type WorkspaceRepoActions = Pick<
   WorkspaceStoreActions,
-  "load" | "createProject" | "deleteProject" | "updateProjectConfig" | "incrementFileTreeRefreshVersion"
+  "load" | "createProject" | "deleteProject" | "updateProjectConfig"
 >;
-
-function isGitInternalPath(path: string): boolean {
-  return path === ".git" || path.startsWith(".git/");
-}
 
 /** Creates project-related workspace store actions and reconciles backend snapshots with in-memory UI state. */
 export function createWorkspaceRepoActions(
@@ -86,22 +82,6 @@ export function createWorkspaceRepoActions(
     updateProjectConfig: (projectId, config) => {
       set((state) => {
         applyUpdatedRepoConfigState(state, projectId, config);
-      });
-    },
-    incrementFileTreeRefreshVersion: (workspaceWorktreePath, changedRelativePaths) => {
-      const normalizedWorkspaceWorktreePath = workspaceWorktreePath?.trim() ?? "";
-      if (normalizedWorkspaceWorktreePath.length === 0) {
-        return;
-      }
-
-      const normalizedChangedRelativePaths = (changedRelativePaths ?? [])
-        .map((path) => path.trim())
-        .filter((path) => path.length > 0 && !isGitInternalPath(path));
-
-      set((state) => {
-        state.fileTreeRefreshVersion += 1;
-        state.fileTreeChangedRelativePathsByWorktreePath[normalizedWorkspaceWorktreePath] =
-          normalizedChangedRelativePaths;
       });
     },
   };

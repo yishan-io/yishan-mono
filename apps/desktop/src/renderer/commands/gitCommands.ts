@@ -1,3 +1,4 @@
+import { projectStore } from "../features/project/model/projectStore";
 import { isFolderWorkspace } from "../helpers/localFolder";
 import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import type { GitChangesBySection } from "../rpc/daemonTypes";
@@ -65,7 +66,9 @@ export async function listGitChanges(params: { workspaceId: string }) {
   // mount-time consumers (file-tree badges, changes tab).
   const store = workspaceStore.getState();
   const workspace = store.workspaces.find((item) => item.id === workspaceId);
-  const project = store.projects.find((item) => item.id === (workspace?.projectId ?? workspace?.repoId));
+  const project = projectStore
+    .getState()
+    .projects.find((item) => item.id === (workspace?.projectId ?? workspace?.repoId));
   if (isFolderWorkspace(workspace) || !supportsGitFeatures(project?.sourceType)) {
     return { staged: [], unstaged: [], untracked: [] };
   }

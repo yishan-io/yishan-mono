@@ -10,6 +10,7 @@ import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneV
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { overviewStore } from "../../store/overviewStore";
 import { workspaceStore } from "../../store/workspaceStore";
+import { projectStore } from "../../features/project/model/projectStore";
 import { AgentKindChartView } from "./AgentKindChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
 import { OverviewFiltersView } from "./OverviewFiltersView";
@@ -43,7 +44,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const agentKindBreakdownLoadError = overviewStore((state) => state.agentKindBreakdownLoadError);
   const workspaceInsightsLoadState = overviewStore((state) => state.workspaceInsightsLoadState);
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
 
   const { loadAllOverviewData } = useCommands();
 

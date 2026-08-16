@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { projectStore } from "../features/project/model/projectStore";
 import { workspaceStore } from "../store/workspaceStore";
 import {
   commitGitChanges,
@@ -206,7 +207,6 @@ describe("gitCommands", () => {
 
   it("returns empty git sections for a non-git workspace without calling the daemon", async () => {
     workspaceStore.setState({
-      projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
       workspaces: [
         {
           id: "workspace-plain",
@@ -221,6 +221,8 @@ describe("gitCommands", () => {
         },
       ],
     });
+
+    projectStore.setState({ projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }] });
 
     const result = await listGitChanges({ workspaceId: "workspace-plain" });
 

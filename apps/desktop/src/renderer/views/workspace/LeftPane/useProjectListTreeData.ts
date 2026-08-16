@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { api } from "../../../api/client";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
@@ -55,7 +56,7 @@ export function useProjectListTreeData(input: {
     workspaceListHierarchyMode,
   } = input;
 
-  const projects = workspaceStore((state) => state.projects) ?? [];
+  const projects = projectStore((state) => state.projects) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
   const gitChangeTotalsByWorkspaceId = workspaceStore((state) => state.gitChangeTotalsByWorkspaceId);

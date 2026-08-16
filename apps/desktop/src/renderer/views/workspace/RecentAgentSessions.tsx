@@ -98,8 +98,11 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
           {sessions.map((session) => {
             const title =
-              formatAgentSessionTitle(session.previewText || "", t("launch.recent.defaultTitle"), session.sessionName) ||
-              t("launch.recent.defaultTitle");
+              formatAgentSessionTitle(
+                session.previewText || "",
+                t("launch.recent.defaultTitle"),
+                session.sessionName,
+              ) || t("launch.recent.defaultTitle");
             return (
               <Button
                 key={session.sessionId}

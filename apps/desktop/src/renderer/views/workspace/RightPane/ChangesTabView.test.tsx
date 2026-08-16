@@ -50,6 +50,15 @@ vi.mock("../../../commands/gitCommands", () => ({
     mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
+vi.mock("../../../features/project/model/projectStore", () => {
+  const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
+    selector({ projects: (mocks.workspaceState as { projects?: unknown[] }).projects ?? [] });
+  (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
+    projects: (mocks.workspaceState as { projects?: unknown[] }).projects ?? [],
+  });
+  return { projectStore };
+});
+
 vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),

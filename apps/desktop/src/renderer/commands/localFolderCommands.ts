@@ -5,6 +5,7 @@ import { getDaemonClient } from "../rpc/rpcTransport";
 import { tabStore } from "../store/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";
+import { workspaceUiStore } from "../store/workspaceUiStore";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
@@ -43,7 +44,7 @@ export async function createLocalFolderImport(input: { path: string; name: strin
   await openWorkspaceEntries(openEntries);
   // Refresh only the file tree (folders have no git changes to refresh).
   for (const entry of openEntries) {
-    workspaceStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
+    workspaceUiStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
   }
 
   // Read selection after setting it so the folder's id is what gets resolved.

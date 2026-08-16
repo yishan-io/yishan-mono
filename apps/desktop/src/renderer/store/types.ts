@@ -1,6 +1,8 @@
 import type { StateCreator } from "zustand";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspacePullRequestSummary, WorkspaceRecord } from "../api/types";
+import type { WorkspaceProjectRecord } from "../features/project/model/projectTypes";
+import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import type { DaemonLocalFolder, DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
 
@@ -12,60 +14,17 @@ export type { AvailableCommand, AvailableModel, ChatMessage } from "./chatTypes"
  * workspaces are daemon-owned rows (kind="folder") mapped into the workspace
  * list but have no real backend project, so they share this sentinel value.
  */
-export const LOCAL_FOLDER_PROJECT_ID = "local-folder";
+export type {
+  WorkspaceProjectCommand,
+  WorkspaceProjectRecord,
+} from "../features/project/model/projectTypes";
+export { LOCAL_FOLDER_PROJECT_ID } from "../features/project/model/projectTypes";
 
-export type WorkspaceProjectCommand = {
-  name: string;
-  command: string;
-};
-
-export type WorkspaceProjectRecord = {
-  id: string;
-  name: string;
-  key?: string;
-  path?: string;
-  missing?: boolean;
-  gitUrl?: string;
-  sourceType?: "git" | "git-local" | "unknown";
-  repoProvider?: string | null;
-  repoUrl?: string | null;
-  repoKey?: string | null;
-  localPath?: string | null;
-  worktreePath?: string | null;
-  contextEnabled?: boolean;
-  defaultBranch?: string | null;
-  icon?: string | null;
-  color?: string | null;
-  setupScript?: string | null;
-  postScript?: string | null;
-  commands?: WorkspaceProjectCommand[];
-  createdAt?: string;
-  updatedAt?: string;
-  createdByUserId?: string;
-};
-
-export type WorkspaceItem = {
-  id: string;
-  organizationId?: string;
-  projectId?: string;
-  repoId: string;
-  name: string;
-  title: string;
-  sourceBranch: string;
-  branch: string;
-  summaryId: string;
-  worktreePath?: string;
-  nodeId?: string;
-  kind?: "managed" | "local" | "folder";
-  status?: WorkspaceRecord["status"];
-  preserveOnMissingSnapshot?: boolean;
-  state?: WorkspaceLifecycleState;
-  health?: WorkspaceHealth;
-};
-
-export type WorkspaceLifecycleState = "active" | "error" | "closing";
-
-export type WorkspaceHealth = "path-missing" | "not-worktree";
+export type {
+  WorkspaceItem,
+  WorkspaceLifecycleState,
+  WorkspaceHealth,
+} from "../features/workspace/model/workspaceTypes";
 
 export type DiffFileChangeKind = "added" | "modified" | "deleted" | "renamed";
 
@@ -276,14 +235,12 @@ export type WorkspaceStoreState = {
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
   gitRefreshVersionByWorktreePath: Record<string, number>;
-  fileTreeChangedRelativePathsByWorktreePath: Record<string, string[]>;
   selectedProjectId: string;
   selectedWorkspaceId: string;
   displayProjectIds: string[];
   isProjectsLoaded: boolean;
   lastUsedExternalAppId?: ExternalAppId;
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
-  fileTreeRefreshVersion: number;
   workspaceListHierarchyMode: "by_project" | "by_node";
   orderedWorkspaceIds: string[];
   setSelectedProjectId: (projectId: string) => void;
@@ -308,7 +265,6 @@ export type WorkspaceStoreState = {
       "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript" | "commands"
     >,
   ) => void;
-  incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;
   addWorkspace: (input: {
     organizationId?: string;
     projectId?: string;
@@ -377,7 +333,6 @@ export type WorkspaceStoreActions = Pick<
   | "createProject"
   | "deleteProject"
   | "updateProjectConfig"
-  | "incrementFileTreeRefreshVersion"
   | "addWorkspace"
   | "removeWorkspace"
   | "renameWorkspace"

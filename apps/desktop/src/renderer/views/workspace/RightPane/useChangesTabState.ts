@@ -7,6 +7,7 @@ import type {
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -54,7 +55,9 @@ export function useChangesTabState() {
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const selectedWorkspaceSourceBranch = workspaceStore((state) => {
     const workspace = state.workspaces.find((w) => w.id === state.selectedWorkspaceId);
-    const project = (state.projects ?? []).find((p) => p.id === (workspace?.projectId ?? workspace?.repoId));
+    const project = (projectStore.getState().projects ?? []).find(
+      (p) => p.id === (workspace?.projectId ?? workspace?.repoId),
+    );
     // Folder workspaces and non-git projects have no branches: no source
     // branch means the commit comparison path never fires daemon git RPCs
     // from this mounted tab.

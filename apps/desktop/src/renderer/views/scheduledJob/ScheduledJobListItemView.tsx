@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LuPause, LuPlay } from "react-icons/lu";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
 import { renderProjectIcon } from "../../components/projectIcons";
+import { projectStore } from "../../features/project/model/projectStore";
 import { useCommands } from "../../hooks/useCommands";
 import { scheduledJobStore } from "../../store/scheduledJobStore";
 import { workspaceStore } from "../../store/workspaceStore";
@@ -41,7 +42,7 @@ const tdSx = {
 export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobListItemViewProps) {
   const { t } = useTranslation();
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
-  const project = workspaceStore((state) => state.projects.find((p) => p.id === job.projectId));
+  const project = projectStore((state) => state.projects.find((p) => p.id === job.projectId));
   const { pauseScheduledJob, resumeScheduledJob } = useCommands();
 
   const handlePause = useCallback(() => {

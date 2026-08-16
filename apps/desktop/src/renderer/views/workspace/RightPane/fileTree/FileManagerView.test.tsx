@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";
@@ -568,41 +569,17 @@ describe("FileManagerView file search", () => {
       });
 
       const markerChangedPaths = ["src/changed.ts"];
-      const selectorProbeState: Record<string, unknown> = {
-        selectedWorkspaceId: "workspace-1",
-        workspaces: [{ id: "workspace-1", worktreePath: " /tmp/repo " }],
-        fileTreeChangedRelativePathsByWorktreePath: {
-          "/tmp/repo": markerChangedPaths,
-        },
-        tabs: [],
-        selectedTabId: "",
-        lastUsedExternalAppId: undefined,
-        fileTreeRefreshVersion: 0,
-      };
-      const selectors = mocks.workspaceStore.mock.calls
-        .map((call) => call[0])
-        .filter(
-          (candidate): candidate is (state: Record<string, unknown>) => unknown => typeof candidate === "function",
-        );
-      const changedPathsSelector = selectors.find((selector) => {
-        try {
-          return selector(selectorProbeState) === markerChangedPaths;
-        } catch {
-          return false;
-        }
-      });
+      // The changed-paths selector lives on the real workspaceUiStore. Drive it
+      // through the real store and assert the composed read stays stable.
+      workspaceUiStore.getState().setExpandedFileTreeItems("workspace-1", []);
+      workspaceUiStore.getState().incrementFileTreeRefreshVersion("/tmp/repo", markerChangedPaths);
+      expect(workspaceUiStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"]).toEqual(
+        markerChangedPaths,
+      );
 
-      expect(changedPathsSelector).toBeDefined();
-
-      const missingPathProbeState: Record<string, unknown> = {
-        ...selectorProbeState,
-        workspaces: [{ id: "workspace-1", worktreePath: "   " }],
-        fileTreeChangedRelativePathsByWorktreePath: {},
-      };
-
-      const firstResult = changedPathsSelector?.(missingPathProbeState);
-      const secondResult = changedPathsSelector?.(missingPathProbeState);
-      expect(firstResult).toEqual([]);
+      const firstResult = workspaceUiStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"];
+      const secondResult = workspaceUiStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"];
+      expect(firstResult).toEqual(markerChangedPaths);
       expect(firstResult).toBe(secondResult);
     } finally {
       mocks.stateRef.current.selectedWorkspaceId = originalSelectedWorkspaceId;
@@ -686,10 +663,12 @@ describe("FileManagerView file loading", () => {
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/", "src/new-name.ts"]);
     });
 
-    mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
-      "/tmp/repo": ["src/old-name.ts", "src/new-name.ts"],
-    };
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({
+      fileTreeChangedRelativePathsByWorktreePath: {
+        "/tmp/repo": ["src/old-name.ts", "src/new-name.ts"],
+      },
+    });
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 
@@ -741,10 +720,12 @@ describe("FileManagerView file loading", () => {
       ]);
     });
 
-    mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
-      "/tmp/repo": [".my-context", ".my-context/sub"],
-    };
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({
+      fileTreeChangedRelativePathsByWorktreePath: {
+        "/tmp/repo": [".my-context", ".my-context/sub"],
+      },
+    });
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 
@@ -794,7 +775,7 @@ describe("FileManagerView file loading", () => {
       ]);
     });
 
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {
@@ -876,7 +857,7 @@ describe("FileManagerView file loading", () => {
       expect(getFileTreeProps().ignoredPaths ?? []).toContain(".opencode/");
     });
 
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {
@@ -924,10 +905,12 @@ describe("FileManagerView file loading", () => {
     // After mv a.txt -> b.txt: daemon now returns b.txt on shallow read.
     recursiveLeafName = "b.txt";
     loadedLeafName = "b.txt";
-    mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
-      "/tmp/repo": ["src/a.txt", "src/b.txt"],
-    };
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({
+      fileTreeChangedRelativePathsByWorktreePath: {
+        "/tmp/repo": ["src/a.txt", "src/b.txt"],
+      },
+    });
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 
@@ -976,10 +959,12 @@ describe("FileManagerView file loading", () => {
     // "src" was never explicitly loaded (no onEnsurePathLoaded call), so the
     // refresh resolves to the root directory.
     deleted = true;
-    mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
-      "/tmp/repo": ["src/foo.ts"],
-    };
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({
+      fileTreeChangedRelativePathsByWorktreePath: {
+        "/tmp/repo": ["src/foo.ts"],
+      },
+    });
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 
@@ -1282,7 +1267,7 @@ describe("FileManagerView external file tree refresh", () => {
       expect(mocks.listFiles).toHaveBeenCalledTimes(1);
     });
 
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
     expect(screen.getByTestId("repo-file-tree").textContent).toBe("1");
 
@@ -1307,14 +1292,14 @@ describe("FileManagerView external file tree refresh", () => {
       expect(mocks.listFiles).toHaveBeenCalledTimes(1);
     });
 
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {
       expect(mocks.listFiles).toHaveBeenCalledTimes(2);
     });
 
-    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {

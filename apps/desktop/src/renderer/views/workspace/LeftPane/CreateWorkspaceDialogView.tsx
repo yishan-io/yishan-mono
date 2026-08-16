@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -40,7 +41,7 @@ export function CreateWorkspaceDialogView({
   const navigate = useNavigate();
   const organizationId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
   const displayProjectIds = workspaceStore((state) => state.displayProjectIds);
   const workspaces = workspaceStore((state) => state.workspaces);
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches, listAgentModels } = useCommands();
@@ -59,9 +60,7 @@ export function CreateWorkspaceDialogView({
   // projects are excluded from the project dropdown.
   const selectableProjects = isRenameMode
     ? projects
-    : filterVisibleProjects(projects, displayProjectIds).filter((project) =>
-        supportsGitFeatures(project.sourceType),
-      );
+    : filterVisibleProjects(projects, displayProjectIds).filter((project) => supportsGitFeatures(project.sourceType));
   const branchInputPlaceholder = isRenameMode
     ? t("workspace.rename.branchNameLabel")
     : t("workspace.create.branchNameLabel");

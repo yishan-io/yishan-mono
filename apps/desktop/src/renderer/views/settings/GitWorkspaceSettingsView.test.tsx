@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { projectStore } from "../../features/project/model/projectStore";
 import { workspaceSettingsStore } from "../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { GitWorkspaceSettingsView } from "./GitWorkspaceSettingsView";
@@ -61,6 +62,19 @@ describe("GitWorkspaceSettingsView", () => {
       },
       true,
     );
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo One",
+          path: "/tmp/repo-1",
+          localPath: "/tmp/repo-1",
+          worktreePath: "/tmp/worktrees-1",
+          missing: false,
+        },
+      ],
+    });
     mocked.getGitAuthorName.mockResolvedValue("Alice Chen");
   });
 

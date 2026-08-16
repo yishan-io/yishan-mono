@@ -1,4 +1,5 @@
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
+import { projectStore } from "../features/project/model/projectStore";
 import { isWorkspaceNotFoundError } from "../helpers/errorHelpers";
 import { isFolderWorkspace } from "../helpers/localFolder";
 import { supportsGitFeatures } from "../helpers/projectGitCapability";
@@ -73,7 +74,9 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
   if (isFolderWorkspace(workspace)) {
     return;
   }
-  const project = store.projects.find((item) => item.id === (workspace.projectId ?? workspace.repoId));
+  const project = projectStore
+    .getState()
+    .projects.find((item) => item.id === (workspace.projectId ?? workspace.repoId));
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }
@@ -244,7 +247,10 @@ export function openCreateWorkspaceDialog() {
   const selectedProjectId = state.selectedProjectId.trim();
   const selectedWorkspaceProjectId = selectedWorkspace?.projectId;
   const selectedWorkspaceRepoId = selectedWorkspace?.repoId;
-  const fallbackProjectId = filterVisibleProjects(state.projects, state.displayProjectIds)[0]?.id;
+  const fallbackProjectId = filterVisibleProjects(
+    projectStore.getState().projects,
+    projectStore.getState().displayProjectIds,
+  )[0]?.id;
   const projectId = selectedProjectId || selectedWorkspaceProjectId || selectedWorkspaceRepoId || fallbackProjectId;
 
   if (!projectId) {
@@ -252,7 +258,7 @@ export function openCreateWorkspaceDialog() {
   }
 
   // Non-git projects have no worktrees: never surface the create dialog.
-  const project = state.projects.find((item) => item.id === projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }

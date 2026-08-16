@@ -1,3 +1,4 @@
+import { projectStore } from "../features/project/model/projectStore";
 import { normalizeCreateWorkspaceInput } from "../helpers/workspaceHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
@@ -106,7 +107,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  const project = store.projects.find((item) => item.id === projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
   const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
 
   const repoKey = project?.repoKey?.trim() || project?.key?.trim() || project?.id || "";

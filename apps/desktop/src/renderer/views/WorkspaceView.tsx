@@ -15,6 +15,7 @@ import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { projectStore } from "../features/project/model/projectStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
 import { OverviewView } from "./overview/OverviewView";
 import { ScheduledJobView } from "./scheduledJob/ScheduledJobView";
@@ -316,7 +317,7 @@ export function WorkspaceView() {
   const [isCreateRepoOpen, setIsCreateRepoOpen] = useState(false);
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
   const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(

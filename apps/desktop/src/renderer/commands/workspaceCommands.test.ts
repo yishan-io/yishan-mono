@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { projectStore } from "../features/project/model/projectStore";
 import { chatStore } from "../store/chatStore";
 import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
@@ -107,6 +108,19 @@ describe("workspaceCommands", () => {
         },
       ],
       addWorkspace,
+    });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          localPath: "/tmp/repo-1",
+          worktreePath: "/tmp/worktrees",
+        },
+      ],
     });
     rpcMocks.createWorkspace.mockResolvedValueOnce({
       workspaceId: "workspace-2",
@@ -246,6 +260,7 @@ describe("workspaceCommands", () => {
         },
       ],
     });
+    projectStore.setState({ projects: [] });
 
     await refreshWorkspacePullRequest("folder-workspace-1");
 
@@ -293,6 +308,19 @@ describe("workspaceCommands", () => {
   it("does not call lifecycle warnings from direct create response (warnings come via workspaceCreateCompleted event)", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          localPath: "/tmp/repo-1",
+          worktreePath: "/tmp/worktrees",
+        },
+      ],
+    });
+    projectStore.setState({
       projects: [
         {
           id: "repo-1",
@@ -358,6 +386,19 @@ describe("workspaceCommands", () => {
         },
       ],
       addWorkspace,
+    });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          localPath: "/tmp/repo-1",
+          worktreePath: "/tmp/worktrees",
+        },
+      ],
     });
     rpcMocks.createWorkspace.mockRejectedValueOnce(new Error("boom"));
 
@@ -735,6 +776,7 @@ describe("workspaceCommands", () => {
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
+    projectStore.setState({ projects: [] });
 
     await refreshWorkspaceGitChanges("folder-workspace-1");
 
@@ -764,6 +806,7 @@ describe("workspaceCommands", () => {
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
+    projectStore.setState({ projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }] });
 
     await refreshWorkspaceGitChanges("workspace-1");
 
@@ -1169,6 +1212,7 @@ describe("workspaceCommands", () => {
       ],
       selectedWorkspaceId: "folder-workspace-1",
     });
+    projectStore.setState({ projects: [] });
 
     const eventListener = vi.fn();
     window.addEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);
@@ -1185,6 +1229,7 @@ describe("workspaceCommands", () => {
       selectedProjectId: "project-plain",
       projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
     });
+    projectStore.setState({ projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }] });
 
     const eventListener = vi.fn();
     window.addEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, eventListener as EventListener);

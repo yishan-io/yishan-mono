@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 
@@ -57,6 +58,20 @@ describe("ProjectConfigDialogView", () => {
       ],
       workspaces: [],
     });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "core-repo",
+          name: "Core Repo",
+          path: "/Users/test/core-repo",
+          localPath: "/Users/test/core-repo",
+          worktreePath: "/Users/test/worktrees",
+          gitUrl: "git@github.com:acme/core-repo.git",
+          missing: false,
+        },
+      ],
+    });
 
     renderProjectConfigDialog();
 
@@ -82,6 +97,20 @@ describe("ProjectConfigDialogView", () => {
       ],
       workspaces: [],
     });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "core-repo",
+          name: "Core Repo",
+          path: "/Users/test/core-repo",
+          localPath: "/Users/test/core-repo",
+          worktreePath: "/Users/test/worktrees",
+          gitUrl: "git@github.com:acme/core-repo.git",
+          missing: false,
+        },
+      ],
+    });
 
     renderProjectConfigDialog();
 
@@ -105,6 +134,20 @@ describe("ProjectConfigDialogView", () => {
         },
       ],
       workspaces: [],
+    });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "core-repo",
+          name: "Core Repo",
+          path: "/Users/test/core-repo",
+          localPath: "/Users/test/core-repo",
+          worktreePath: "/Users/test/worktrees",
+          gitUrl: "git@github.com:acme/core-repo.git",
+          missing: false,
+        },
+      ],
     });
 
     renderProjectConfigDialog();

@@ -19,6 +19,7 @@ import {
   getNotificationPreferences,
   playNotificationSound,
 } from "../../../commands/notificationCommands";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../../../store/chatStore";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -283,7 +284,10 @@ export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependenc
       return undefined;
     }
 
-    const projectName = state.projects.find((project) => project.id === workspace?.projectId)?.name?.trim();
+    const projectName = projectStore
+      .getState()
+      .projects.find((project) => project.id === workspace?.projectId)
+      ?.name?.trim();
     return projectName ? `${projectName} / ${workspaceName}` : workspaceName;
   },
 };

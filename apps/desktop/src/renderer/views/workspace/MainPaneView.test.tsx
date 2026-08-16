@@ -61,6 +61,15 @@ vi.mock("../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
+vi.mock("../../features/project/model/projectStore", () => {
+  const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
+    selector({ projects: (mocked.stateRef.current.projects as unknown[] | undefined) ?? [] });
+  (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
+    projects: (mocked.stateRef.current.projects as unknown[] | undefined) ?? [],
+  });
+  return { projectStore };
+});
+
 vi.mock("../../store/tabStore", () => ({
   tabStore: mocked.workspaceStore,
 }));

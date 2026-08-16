@@ -2,6 +2,7 @@ import { Badge, Box, IconButton, Tooltip } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../components/PaneHeader";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -28,7 +29,7 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
   const selectedWorkspace = workspaceStore((state) =>
     state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
   );
-  const selectedProject = workspaceStore((state) =>
+  const selectedProject = projectStore((state) =>
     state.projects.find((project) => project.id === (selectedWorkspace?.projectId ?? selectedWorkspace?.repoId)),
   );
   const activeRightPaneTab = workspaceUiStore(

@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -22,7 +23,7 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
   const selectedWorkspace = workspaceStore((state) =>
     state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
   );
-  const selectedProject = workspaceStore((state) =>
+  const selectedProject = projectStore((state) =>
     state.projects.find((project) => project.id === (selectedWorkspace?.projectId ?? selectedWorkspace?.repoId)),
   );
   const activeRightPaneTab = workspaceUiStore(

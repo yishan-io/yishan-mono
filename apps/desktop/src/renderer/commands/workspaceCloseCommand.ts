@@ -1,3 +1,4 @@
+import { projectStore } from "../features/project/model/projectStore";
 import { isFolderWorkspace } from "../helpers/localFolder";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
@@ -95,7 +96,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   }
 
   const projectId = workspace.projectId ?? workspace.repoId;
-  const project = store.projects.find((item) => item.id === projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
 
   store.removeWorkspace({
     repoId: projectId,

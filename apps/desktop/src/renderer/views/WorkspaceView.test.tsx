@@ -9,6 +9,7 @@ import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { projectStore } from "../features/project/model/projectStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
 import { WorkspaceView } from "./WorkspaceView";
 
@@ -143,6 +144,7 @@ describe("WorkspaceView", () => {
       selectedWorkspaceId: "",
       workspaces: [],
     });
+    projectStore.setState({ projects: [] });
     workspaceUiStore.setState({ overlayPanel: null });
   });
 
@@ -156,6 +158,7 @@ describe("WorkspaceView", () => {
       isProjectsLoaded: true,
       projects: [{ id: "project-1", name: "Project 1" }],
     });
+    projectStore.setState({ projects: [{ id: "project-1", name: "Project 1" }] });
   }
 
   it("loads the workspace snapshot on mount and again when selected organization changes", async () => {
@@ -290,6 +293,7 @@ describe("WorkspaceView", () => {
 
   it("renders onboarding view when projects are loaded but empty", () => {
     workspaceStore.setState({ isProjectsLoaded: true, projects: [] });
+    projectStore.setState({ projects: [] });
 
     render(
       <MemoryRouter>

@@ -1,8 +1,8 @@
-import type { OverviewTimeRange } from "../api/overviewApi.types";
 import { api } from "../api";
+import type { OverviewTimeRange } from "../api/overviewApi.types";
 import { getErrorMessage } from "../helpers/errorHelpers";
-import { sessionStore } from "../store/sessionStore";
 import { overviewStore } from "../store/overviewStore";
+import { sessionStore } from "../store/sessionStore";
 
 function selectedOrganizationId(): string {
   const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";

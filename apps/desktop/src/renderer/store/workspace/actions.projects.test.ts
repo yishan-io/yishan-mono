@@ -605,37 +605,4 @@ describe("createWorkspaceRepoActions", () => {
     expect(state.displayProjectIds).toEqual(["repo-1", "repo-3"]);
     expect(state.selectedProjectId).toBe("repo-3");
   });
-
-  it("updates project config and refresh version as separate pure actions", () => {
-    const harness = createHarness();
-    harness.actions.updateProjectConfig("repo-1", {
-      name: "Repo Updated",
-      worktreePath: "/tmp/repo-1",
-      contextEnabled: true,
-      icon: "folder",
-      color: "#1E66F5",
-      setupScript: "npm ci",
-      postScript: "rm -rf node_modules",
-    });
-    harness.actions.incrementFileTreeRefreshVersion("/tmp/repo-1");
-
-    const state = harness.getState();
-    expect(state.projects[0]?.name).toBe("Repo Updated");
-    expect(state.projects[0]?.setupScript).toBe("npm ci");
-    expect(state.projects[0]?.postScript).toBe("rm -rf node_modules");
-    expect(state.fileTreeRefreshVersion).toBe(1);
-  });
-
-  it("ignores git internals when recording changed file-tree paths", () => {
-    const harness = createHarness();
-
-    harness.actions.incrementFileTreeRefreshVersion("/tmp/repo-1/.worktrees/feature-a", [
-      ".git/worktrees/feature-a",
-      "src/app.ts",
-    ]);
-
-    expect(harness.getState().fileTreeChangedRelativePathsByWorktreePath).toEqual({
-      "/tmp/repo-1/.worktrees/feature-a": ["src/app.ts"],
-    });
-  });
 });

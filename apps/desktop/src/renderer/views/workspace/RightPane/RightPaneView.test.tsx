@@ -190,6 +190,11 @@ vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 
+vi.mock("../../../features/project/model/projectStore", () => ({
+  projectStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ projects: workspaceStoreState.current.projects ?? [] }),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, params?: { path?: string; count?: number }) => {

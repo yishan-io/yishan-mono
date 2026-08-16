@@ -14,6 +14,10 @@ const workspaceStoreState: { current: Record<string, unknown> } = {
   },
 };
 
+vi.mock("../../../features/project/model/projectStore", () => ({
+  projectStore: (selector: (state: { projects: unknown[] }) => unknown) => selector({ projects: [] }),
+}));
+
 vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));

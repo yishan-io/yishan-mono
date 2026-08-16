@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CreateScheduledJobInput } from "../../api/scheduledJobApi";
+import { projectStore } from "../../features/project/model/projectStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { sessionStore } from "../../store/sessionStore";
@@ -27,7 +28,7 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
   const orgId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
   const initialState = useMemo(
     () => ({ draft: { ...DEFAULT_FORM_DRAFT, projectId: selectedProjectId ?? "" }, ...createScheduleState }),
     [selectedProjectId],

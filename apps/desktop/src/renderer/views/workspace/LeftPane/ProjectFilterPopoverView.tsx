@@ -17,6 +17,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -33,7 +34,7 @@ function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: str
 /** Renders the repo filter trigger and popover with select-all control and quick search. */
 export function ProjectFilterPopoverView() {
   const { t } = useTranslation();
-  const repos = workspaceStore((state) => state.projects);
+  const repos = projectStore((state) => state.projects);
   const displayRepoIds = workspaceStore((state) => state.displayProjectIds);
   const { setDisplayRepoIds } = useCommands();
   const [repoFilterAnchor, setRepoFilterAnchor] = useState<HTMLElement | null>(null);
