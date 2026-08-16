@@ -2,7 +2,7 @@ import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
 import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
-import { projectStore } from "../../project/model/projectStore";
+import { selectProjects } from "../../project/model/projectSelectors";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 /**
@@ -98,7 +98,7 @@ export function createAllWorkspacesGitSyncRuntime() {
     const selectedWorkspaceId = state.selectedWorkspaceId;
     const lastSeen = lastSeenVersionByWorktreePath;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
-    const projectByProjectId = new Map(projectStore.getState().projects.map((project) => [project.id, project]));
+    const projectByProjectId = new Map(selectProjects().map((project) => [project.id, project]));
 
     for (const workspaceId of refreshStateByWorkspaceId.keys()) {
       if (!activeWorkspaceIds.has(workspaceId)) {
