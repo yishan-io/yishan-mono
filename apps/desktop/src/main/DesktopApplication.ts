@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
 import { registerPermissionPolicy } from "./security/permissionPolicy";
 import { wireAppLifecycle } from "./lifecycle/appLifecycle";
+import { UpdateRuntime } from "./updates/updateRuntime";
 import { MainWindow } from "./window/mainWindow";
 export { isPermissionAllowed } from "./security/permissionPolicy";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
@@ -20,8 +21,6 @@ import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHAN
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
 import { isDevMode } from "./runtime/environment";
-import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./updates/autoUpdateDismissalState";
-import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
 
 type DispatchActionOptions = {
   focusApp?: boolean;
@@ -35,11 +34,13 @@ export class DesktopApplication {
     shouldAllowClose: () => this.isQuitting,
     onClosed: () => {},
   });
+  private readonly updateRuntime = new UpdateRuntime(app, {
+    sendEvent: (payload) => this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, payload),
+    focusApp: () => this.focusMainWindow(),
+  });
   private readonly daemonManager = new DaemonManager();
   private isQuitting = false;
   private pendingProtocolUrl: string | null = null;
-  private pendingUpdateReady: DesktopUpdateEventPayload | null = null;
-  private dismissedAutoUpdateDate: string | null = null;
   private cachedDaemonQuitOnExit: boolean | null = null;
 
   /**
@@ -116,15 +117,10 @@ export class DesktopApplication {
         this.dispatchAction(payload, options);
       },
       checkForUpdates: () => {
-        void this.handleManualUpdateCheck();
+        void this.updateRuntime.handleManualUpdateCheck();
       },
     });
-    startAutoUpdates({
-      app,
-      notifyUpdateEvent: (payload) => {
-        this.dispatchUpdateEvent(payload);
-      },
-    });
+    this.updateRuntime.startAutoUpdates();
 
     wireAppLifecycle(app, {
       confirmQuit: () => this.confirmQuit(),
@@ -298,25 +294,21 @@ export class DesktopApplication {
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.getPendingUpdate, async () => {
-      return this.pendingUpdateReady;
+      return this.updateRuntime.getPendingUpdate();
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.dismissUpdate, async () => {
-      await this.dismissUpdate();
+      await this.updateRuntime.dismissUpdate();
       return { ok: true as const };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.checkForUpdates, async () => {
-      await this.handleManualUpdateCheck();
+      await this.updateRuntime.handleManualUpdateCheck();
       return { ok: true as const };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.downloadUpdate, async () => {
-      const result = await downloadUpdate();
-      if (!result.ok) {
-        this.dispatchUpdateEvent({ status: "error", source: "download", message: result.error });
-      }
-      return result;
+      return this.updateRuntime.download();
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.installUpdate, async () => {
@@ -384,89 +376,8 @@ export class DesktopApplication {
     }
   }
 
-  /** Forwards app update events to renderer update prompts. */
-  private dispatchUpdateEvent(payload: DesktopUpdateEventPayload): void {
-    if (shouldSuppressAutoUpdateEvent(payload, this.dismissedAutoUpdateDate)) {
-      this.pendingUpdateReady = null;
-      return;
-    }
 
-    this.pendingUpdateReady = payload.status === "not-available" || payload.status === "error" ? null : payload;
-    this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-      method: "desktopUpdate",
-      payload,
-    });
-  }
 
-  /** Dismisses the current update prompt and records same-day auto-update suppression when needed. */
-  private async dismissUpdate(): Promise<void> {
-    const pendingUpdate = this.pendingUpdateReady;
-    this.pendingUpdateReady = null;
 
-    if (pendingUpdate?.status !== "available" || pendingUpdate.source !== "auto") {
-      return;
-    }
-
-    const dismissedDate = resolveLocalCalendarDate();
-    this.dismissedAutoUpdateDate = dismissedDate;
-  }
-
-  /** Handles a manual "Check for Updates" request from the native menu. */
-  private async handleManualUpdateCheck(): Promise<void> {
-    // Disable the menu item while checking to provide visual feedback.
-    this.setUpdateMenuItemEnabled(false, "Checking for Updates…");
-    this.focusMainWindow();
-    this.dispatchUpdateEvent({ status: "checking", source: "manual" });
-
-    try {
-      const result = await checkForUpdatesManually({ app });
-
-      this.setUpdateMenuItemEnabled(true);
-
-      switch (result.status) {
-        case "update-available": {
-          this.dispatchUpdateEvent({ status: "available", source: "manual", version: result.version });
-          break;
-        }
-        case "up-to-date": {
-          this.dispatchUpdateEvent({ status: "not-available", source: "manual" });
-          break;
-        }
-        case "error": {
-          this.dispatchUpdateEvent({ status: "error", source: "manual", message: result.message });
-          break;
-        }
-        case "not-available": {
-          const reason =
-            result.reason === "development"
-              ? "Update checking is not available in development mode."
-              : "Update checking is not available for unpackaged builds.";
-          this.dispatchUpdateEvent({ status: "error", source: "manual", message: reason });
-          break;
-        }
-      }
-    } catch (error: unknown) {
-      this.setUpdateMenuItemEnabled(true);
-      const message = error instanceof Error ? error.message : "An unexpected error occurred.";
-      this.dispatchUpdateEvent({ status: "error", source: "manual", message });
-    }
-  }
-
-  /** Updates the "Check for Updates" menu item's enabled state and label. */
-  private setUpdateMenuItemEnabled(enabled: boolean, label = "Check for Updates"): void {
-    const menu = Menu.getApplicationMenu();
-    if (!menu) return;
-
-    const appMenu = menu.items[0]?.submenu;
-    if (!appMenu) return;
-
-    const updateItem = appMenu.items.find(
-      (item) => item.label === "Check for Updates" || item.label === "Checking for Updates…",
-    );
-    if (updateItem) {
-      updateItem.enabled = enabled;
-      updateItem.label = label;
-    }
-  }
 
 }
