@@ -11,7 +11,7 @@
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
-import { loadWorkspaceSnapshot } from "../../../features/project/commands/projectCommands";
+import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";

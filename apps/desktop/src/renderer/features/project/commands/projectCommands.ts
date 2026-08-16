@@ -2,7 +2,6 @@ import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../model/projectStore";
-import { reconcileWorkspaceSnapshot } from "../../workspace/model/snapshotReconciler";
 import { workspaceProjectionStore } from "../../workspace/model/workspaceProjectionStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
@@ -10,21 +9,19 @@ import { sessionStore } from "../../../store/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
-import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import { createLocalFolderImport, openFoldersForSnapshot, restoreFolderSelectionIfNeeded } from "../../workspace/commands/localFolderCommands";
+import { createLocalFolderImport } from "../../workspace/commands/localFolderCommands";
 import { syncTabStoreWithWorkspace } from "../../../commands/workspaceTabSync";
+import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
 import {
   buildWorkspaceOpenProjectEntries,
   openWorkspaceEntries,
-  warmupWorkspacesForProjects,
 } from "../../workspace/commands/workspaceWarmupCommand";
 
-let latestWorkspaceSnapshotRequestId = 0;
-
-function isLatestWorkspaceSnapshotRequest(requestId: number): boolean {
-  return requestId === latestWorkspaceSnapshotRequestId;
+/** Loads the latest workspace snapshot (shared Flow owned by Events + Commands). */
+export function loadWorkspaceSnapshot(): Promise<void> {
+  return loadWorkspaceSnapshotFlow();
 }
 
 async function inspectLocalRepository(path: string): Promise<{
@@ -68,113 +65,6 @@ export async function inspectLocalProjectSource(path: string): Promise<{
     sourceTypeHint: remoteUrl ? "git" : metadata.isGitRepository ? "git-local" : "unknown",
     remoteUrl,
   };
-}
-
-/** Loads the latest workspace snapshot and syncs local desktop/daemon state to it. */
-export async function loadWorkspaceSnapshot(): Promise<void> {
-  const requestId = ++latestWorkspaceSnapshotRequestId;
-  const previousWorkspaces = workspaceStore.getState().workspaces;
-  const previousSelectedWorkspaceId = workspaceStore.getState().selectedWorkspaceId;
-
-  try {
-    const sessionState = sessionStore.getState();
-    const organizations = sessionState.organizations.length > 0 ? sessionState.organizations : await api.org.list();
-    const selectedOrganization =
-      sessionState.selectedOrganizationId &&
-      organizations.some((organization) => organization.id === sessionState.selectedOrganizationId)
-        ? organizations.find((organization) => organization.id === sessionState.selectedOrganizationId)
-        : organizations[0];
-
-    if (!selectedOrganization) {
-      if (!isLatestWorkspaceSnapshotRequest(requestId)) {
-        return;
-      }
-
-      workspaceStore.getState().load("", [], []);
-
-      const orphanDaemonClient = await getDaemonClient();
-      const orphanFolders = await orphanDaemonClient.workspace.listLocalFolders();
-      if (!isLatestWorkspaceSnapshotRequest(requestId)) {
-        return;
-      }
-      workspaceStore.getState().loadLocalFolders(orphanFolders);
-      restoreFolderSelectionIfNeeded(previousWorkspaces, previousSelectedWorkspaceId);
-      // Best-effort: re-open persisted folders on the daemon on demand so file
-      // list/read/write and terminal.start work after a daemon restart.
-      void openFoldersForSnapshot(orphanFolders, "");
-
-      syncTabStoreWithWorkspace(previousWorkspaces);
-      return;
-    }
-
-    const daemonClient = await getDaemonClient();
-    const projectsWithWorkspaces = (await daemonClient.project.listByOrg(selectedOrganization.id, {
-      withWorkspaces: true,
-    })) as ProjectWithWorkspacesRecord[];
-    const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
-    const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
-
-    if (!isLatestWorkspaceSnapshotRequest(requestId)) {
-      return;
-    }
-
-    workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
-
-    // Phase 3: project records + preferences live in the project store. Mirror
-    // the reconciled result so the UI reads one source of truth per owner.
-    const reconciled = reconcileWorkspaceSnapshot({
-      projects,
-      workspacesFromApi: workspaces,
-      organizationId: selectedOrganization.id,
-      previousState: {
-        projects: projectStore.getState().projects,
-        workspaces: workspaceStore.getState().workspaces,
-        pullRequestByWorkspaceId: workspaceProjectionStore.getState().pullRequestByWorkspaceId,
-        latestPullRequestByWorkspaceId: workspaceProjectionStore.getState().latestPullRequestByWorkspaceId,
-        gitChangesCountByWorkspaceId: workspaceProjectionStore.getState().gitChangesCountByWorkspaceId,
-        gitChangeTotalsByWorkspaceId: workspaceProjectionStore.getState().gitChangeTotalsByWorkspaceId,
-        selectedProjectId: workspaceStore.getState().selectedProjectId,
-        selectedWorkspaceId: workspaceStore.getState().selectedWorkspaceId,
-        displayProjectIds: projectStore.getState().displayProjectIds,
-        lastUsedExternalAppId: projectStore.getState().lastUsedExternalAppId,
-        organizationPreferencesById: projectStore.getState().organizationPreferencesById,
-      },
-    });
-    projectStore
-      .getState()
-      .loadProjects(
-        selectedOrganization.id,
-        reconciled.projects,
-        reconciled.displayProjectIds,
-        reconciled.organizationPreferencesById,
-        reconciled.lastUsedExternalAppId,
-      );
-
-    // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
-    const daemonFolders = await daemonClient.workspace.listLocalFolders();
-    if (!isLatestWorkspaceSnapshotRequest(requestId)) {
-      return;
-    }
-    workspaceStore.getState().loadLocalFolders(daemonFolders);
-    restoreFolderSelectionIfNeeded(previousWorkspaces, previousSelectedWorkspaceId);
-    // Best-effort: re-open persisted folders on the daemon on demand so file
-    // list/read/write and terminal.start work after a daemon restart.
-    void openFoldersForSnapshot(daemonFolders, selectedOrganization.id);
-
-    workspaceCreateProgressStore
-      .getState()
-      .reconcileHydratedWorkspaceCreateProgress(workspaceStore.getState().workspaces);
-    syncTabStoreWithWorkspace(previousWorkspaces);
-
-    // Warm up workspaces for currently pinned projects so the daemon has them
-    // open and indexed for restart recovery. Already-open workspaces are skipped.
-    const pinnedProjectIds = projectStore.getState().displayProjectIds;
-    if (pinnedProjectIds.length > 0) {
-      void warmupWorkspacesForProjects(pinnedProjectIds);
-    }
-  } catch (error) {
-    console.error("Failed to load workspace snapshot", error);
-  }
 }
 
 /** Creates one project in backend, then applies it into the local legacy store shape. */
