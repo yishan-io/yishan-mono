@@ -4,7 +4,7 @@ import { type AgentRunHandle, type StartAgentRunOptions, startAgentRun } from ".
 import { ConcurrencyQueue, QueuedTaskCancelledError } from "./concurrencyQueue";
 import { formatResultCollectorOutput } from "./resultCollector";
 
-const DEFAULT_MAX_CONCURRENCY = 16;
+const DEFAULT_MAX_CONCURRENCY = 4;
 const AGENT_ID_PREFIX = "agent";
 const MANAGER_SHUTDOWN_ERROR = "Agent manager is shut down";
 /**
