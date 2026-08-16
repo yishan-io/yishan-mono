@@ -319,14 +319,18 @@ persona_test.go       # empty stub → removed
 ### Phase 29 — `internal/workspace/pr`
 
 ```text
-tracker.go            # polling lifecycle + refresh coordination only
-compare.go            # prMeaningfullyChanged, checksEqual, deploymentsEqual (pure)
-resolve.go            # refreshWorkspace query flow against consumer-owned interface
-persist.go            # persistence hooks (persistPullRequest/resolvePullRequest) → storage adapter
-events.go             # event publication (PullRequestUpdatedEvent)
+tracker.go            # polling lifecycle + refresh coordination only (EnsureTracked/StopTracking/Stop/pollLoop/begin+endRefresh); was 435 → 213 lines
+resolve.go            # refreshWorkspace + setWorkspacePullRequest + error classification (git query flow through resolver hooks)
+compare.go            # prMeaningfullyChanged/checksEqual/deploymentsEqual/normalizeWorkspacePullRequestStatus (pure)
+persist.go            # persistPullRequest/resolvePullRequest thin hooks (composition root owns the store)
+events.go             # PullRequestUpdatedEvent type (application boundary)
 eligibility.go        # provider/remote gates (keep)
-tracker_test.go       # split: poll, compare, error tests
+tracker_test.go       # polling/coordination/eligibility/shutdown/overlap tests
+compare_test.go       # pure comparison unit tests (new)
 ```
+
+Dead code removed: `prResolver` field (set in New, never read — only
+detailResolver is used by refreshWorkspace).
 
 ## Validation
 

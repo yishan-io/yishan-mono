@@ -295,6 +295,80 @@ func TestWorkspacePRTracker_PublishesTypedUpdateOnMeaningfulChange(t *testing.T)
 	}
 }
 
+// TestWorkspacePRTracker_StopStopsPollLoop covers the shutdown exit
+// criterion: Stop closes the poll loop's done channel so the background
+// goroutine exits instead of polling forever.
+func TestWorkspacePRTracker_StopStopsPollLoop(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
+	tracker.inspectResolver = func(context.Context, string) (git.GitInspectResult, error) {
+		return git.GitInspectResult{
+			IsGitRepository: true,
+			RemoteURL:       "git@github.com:acme/repo.git",
+			CurrentBranch:   "feature/test",
+		}, nil
+	}
+	tracker.EnsureTracked(ws.Path, false)
+
+	// Ensure the poll loop goroutine has actually started before stopping.
+	tracker.mu.Lock()
+	started := tracker.started
+	tracker.mu.Unlock()
+	if !started {
+		t.Fatal("expected poll loop to be started by EnsureTracked")
+	}
+
+	tracker.Stop()
+	tracker.Stop() // safe to call multiple times
+	select {
+	case <-tracker.done:
+		// poll loop stop signal delivered
+	default:
+		t.Fatal("expected done channel to be closed after Stop")
+	}
+}
+
+// TestWorkspacePRTracker_EnsureTrackedRefreshesImmediately covers the
+// refreshImmediately flag: a tracked workspace gets an immediate refresh, not
+// only the next poll tick.
+func TestWorkspacePRTracker_EnsureTrackedRefreshesImmediately(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})
+	tracker.inspectResolver = func(context.Context, string) (git.GitInspectResult, error) {
+		return git.GitInspectResult{
+			IsGitRepository: true,
+			RemoteURL:       "git@github.com:acme/repo.git",
+			CurrentBranch:   "feature/test",
+		}, nil
+	}
+	tracker.branchResolver = func(context.Context, string) (string, error) {
+		return "feature/test", nil
+	}
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
+		return git.GitBranchPullRequestStatus{
+			Found:       true,
+			Number:      42,
+			Title:       "Add tracker",
+			URL:         "https://github.com/acme/repo/pull/42",
+			State:       "OPEN",
+			HeadRefName: "feature/test",
+			BaseRefName: "main",
+		}, nil
+	}
+
+	tracker.EnsureTracked(ws.Path, true)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		updated, ok := manager.Get(ws.ID)
+		if ok && updated.PullRequest != nil && updated.PullRequest.Number == 42 {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("expected immediate refresh to bind the pull request")
+}
+
 func openTrackedWorkspace(t *testing.T) (*instance.Registry, workspace.Workspace) {
 	t.Helper()
 	root := t.TempDir()
