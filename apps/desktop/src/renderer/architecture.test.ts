@@ -54,9 +54,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
   { rule: "R1-value-api-rpc", file: "views/layout/CreateOrganizationDialogView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/layout/OnboardOrgView.tsx", phase: "P8" },
-  { rule: "R1-value-api-rpc", file: "views/scheduledJob/ScheduledJobRunsSidebar.tsx", phase: "P8" },
-  { rule: "R1-value-api-rpc", file: "views/scheduledJob/ScheduledJobDetailFields.tsx", phase: "P8" },
-  { rule: "R1-value-api-rpc", file: "views/scheduledJob/form/useScheduledJobFormState.ts", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/settings/AccountSettingsView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/workspace/WorkspacePortsMenuControl.tsx", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListPersistence.ts", phase: "P4" },

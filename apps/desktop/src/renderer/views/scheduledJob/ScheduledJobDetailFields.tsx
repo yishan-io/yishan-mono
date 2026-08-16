@@ -1,7 +1,7 @@
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { api } from "../../api";
+import { listOrgNodes } from "../../commands/nodeCommands";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { projectStore } from "../../features/project/model/projectStore";
@@ -58,7 +58,7 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
   );
   const nodeQuery = useQuery({
     queryKey: ["org-nodes", orgId],
-    queryFn: () => api.node.listByOrg(orgId),
+    queryFn: () => listOrgNodes(orgId),
     enabled: Boolean(orgId),
   });
 

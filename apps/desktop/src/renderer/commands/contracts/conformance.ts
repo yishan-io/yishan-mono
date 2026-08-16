@@ -15,6 +15,7 @@ import type { TerminalCommands } from "../../features/terminal/commands/contract
 import type { FileCommands } from "../../features/files/commands/contract";
 import type { WorkbenchCommands } from "../../features/workbench/commands/contract";
 import type { SessionCommands } from "../../features/session/commands/contract";
+import type { ScheduledJobCommands } from "../../features/scheduled-job/commands/contract";
 
 import type * as projectCommands from "../../features/project/commands/projectCommands";
 import type * as localFolderCommands from "../../features/workspace/commands/localFolderCommands";
@@ -29,6 +30,7 @@ import type * as tabCommands from "../../features/workbench/commands/tabCommands
 import type * as terminalCommands from "../../features/terminal/commands/terminalCommands";
 import type * as fileCommands from "../../features/files/commands/fileCommands";
 import type * as sessionCommands from "../../features/session/commands/sessionCommands";
+import type * as scheduledJobCommands from "../../features/scheduled-job/commands/scheduledJobCommands";
 import type * as whiteboardCommands from "../../features/workbench/commands/whiteboardCommands";
 import type * as workspaceTabSync from "../../features/workbench/commands/workspaceTabSync";
 
@@ -137,6 +139,9 @@ type _FileCommandsConforms = Expect<typeof fileCommands extends FileCommands ? t
 
 // Session: single owning module.
 type _SessionCommandsConforms = Expect<typeof sessionCommands extends SessionCommands ? true : false>;
+
+// ScheduledJob: single owning module.
+type _ScheduledJobCommandsConforms = Expect<typeof scheduledJobCommands extends ScheduledJobCommands ? true : false>;
 
 // Workbench: three owning modules.
 type _TabCommandsConforms = Expect<

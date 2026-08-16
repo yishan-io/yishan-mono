@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
 import { projectStore } from "../../features/project/model/projectStore";
-import { scheduledJobStore } from "../../store/scheduledJobStore";
+import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";
 

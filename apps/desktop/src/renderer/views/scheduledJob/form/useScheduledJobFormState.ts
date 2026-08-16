@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { api } from "../../../api";
+import { listOrgNodes } from "../../../commands/nodeCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   type ScheduleType,
@@ -70,7 +70,7 @@ export function useScheduledJobFormState({
 
   const nodesQuery = useQuery({
     queryKey: ["org-nodes", orgId],
-    queryFn: () => api.node.listByOrg(orgId as string),
+    queryFn: () => listOrgNodes(orgId as string),
     enabled: Boolean(orgId),
   });
   const nodes = nodesQuery.data ?? [];

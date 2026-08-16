@@ -117,7 +117,7 @@ import {
   resumeScheduledJob as resumeScheduledJobCommand,
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
-} from "./scheduledJobCommands";
+} from "../features/scheduled-job/commands/scheduledJobCommands";
 import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,

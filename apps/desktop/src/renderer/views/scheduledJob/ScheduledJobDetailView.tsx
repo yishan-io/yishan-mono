@@ -9,7 +9,7 @@ import { SplitPaneLayout } from "../../components/SplitPaneLayout";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { scheduledJobStore } from "../../store/scheduledJobStore";
+import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";
 import { ScheduledJobDetailFields } from "./ScheduledJobDetailFields";

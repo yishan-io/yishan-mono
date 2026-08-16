@@ -8,7 +8,7 @@ import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { scheduledJobStore } from "../../store/scheduledJobStore";
+import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
 import { CreateScheduledJobDialogView } from "./CreateScheduledJobDialogView";
 import { ScheduledJobDetailView } from "./ScheduledJobDetailView";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";
