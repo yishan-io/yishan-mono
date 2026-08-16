@@ -14,7 +14,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
-import { useCommands } from "../../../hooks/useCommands";
+import { useAppCommands, useProjectCommands } from "../../../hooks/useCommands";
 
 type RepoDraft = {
   name: string;
@@ -67,7 +67,8 @@ export function CreateProjectFormView({
   onBusyChange,
 }: CreateProjectFormViewProps) {
   const { t } = useTranslation();
-  const { createProject, inspectLocalProjectSource, openLocalFolderDialog } = useCommands();
+  const { createProject, inspectLocalProjectSource } = useProjectCommands();
+  const { openLocalFolderDialog } = useAppCommands();
   const [repoDraft, setRepoDraft] = useState<RepoDraft>(defaultDraft);
   const [pathError, setPathError] = useState<string | null>(null);
 

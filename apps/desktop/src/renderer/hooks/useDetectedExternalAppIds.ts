@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
-import { useCommands } from "./useCommands";
+import { useFileCommands } from "./useCommands";
 
 /** Resolves detected external-app ids from the desktop host bridge. */
 export function useDetectedExternalAppIds(): readonly ExternalAppId[] | null | undefined {
-  const { listDetectedExternalAppIds } = useCommands();
+  const { listDetectedExternalAppIds } = useFileCommands();
   const [detectedExternalAppIds, setDetectedExternalAppIds] = useState<ExternalAppId[] | null | undefined>(undefined);
 
   useEffect(() => {

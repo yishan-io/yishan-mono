@@ -6,7 +6,7 @@ import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { projectStore } from "../../features/project/model/projectStore";
 import { getRendererPlatform } from "../../helpers/platform";
-import { useCommands } from "../../hooks/useCommands";
+import { useOverviewCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { overviewStore } from "../../features/overview/model/overviewStore";
@@ -46,7 +46,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
   const projects = projectStore((state) => state.projects);
 
-  const { loadAllOverviewData } = useCommands();
+  const { loadAllOverviewData } = useOverviewCommands();
 
   useEffect(() => {
     void loadAllOverviewData();

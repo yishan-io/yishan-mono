@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { ProjectGitChangeItem } from "../../../components/ProjectGitChangesList";
 import { writeClipboardText } from "../../../features/files/commands/fileCommands";
 import { resolveWorkspaceAbsolutePath } from "../../../features/files/ui/fileTreeHelpers";
-import { useCommands } from "../../../hooks/useCommands";
+import { useGitCommands, useWorkbenchCommands } from "../../../hooks/useCommands";
 import type { DiffFileChangeKind, FileDiffEntry } from "../../../store/types";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 
@@ -17,15 +17,15 @@ export function useChangesTabActions({
   selectedWorkspaceWorktreePath,
   refreshChanges,
 }: UseChangesTabActionsInput) {
+  const { openTab } = useWorkbenchCommands();
   const {
-    openTab,
     readBranchComparisonDiff,
     readCommitDiff,
     readDiff,
     revertGitChanges,
     trackGitChanges,
     unstageGitChanges,
-  } = useCommands();
+  } = useGitCommands();
 
   const trackPaths = useCallback(
     async (relativePaths: string[]) => {

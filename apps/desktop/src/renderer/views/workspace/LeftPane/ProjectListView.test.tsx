@@ -261,8 +261,9 @@ vi.mock("../../../store/workspaceCreateProgressStore", () => ({
   ),
 }));
 
-vi.mock("../../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     setSelectedRepoId: mocked.setSelectedRepoId,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
     renameWorkspace: mocked.renameWorkspace,
@@ -273,8 +274,26 @@ vi.mock("../../../hooks/useCommands", () => ({
     listDetectedExternalAppIds: mocked.listDetectedExternalAppIds,
     setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
     deleteLocalFolder: mocked.deleteLocalFolder,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("../../../features/files/commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),

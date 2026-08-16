@@ -8,7 +8,7 @@ import { getRendererPlatform } from "../../../helpers/platform";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNaming";
-import { useCommands } from "../../../hooks/useCommands";
+import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
 import { sessionStore } from "../../../features/session/model/sessionStore";
@@ -44,7 +44,9 @@ export function CreateWorkspaceDialogView({
   const projects = projectStore((state) => state.projects);
   const displayProjectIds = projectStore((state) => state.displayProjectIds);
   const workspaces = workspaceStore((state) => state.workspaces);
-  const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches, listAgentModels } = useCommands();
+  const { createWorkspace, renameWorkspace, renameWorkspaceBranch } = useWorkspaceCommands();
+  const { listGitBranches } = useGitCommands();
+  const { listAgentModels } = useAgentCommands();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
 

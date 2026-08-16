@@ -125,8 +125,9 @@ vi.mock("../../store/chatStore", () => ({
   ) => selector({ workspaceAgentStatusByWorkspaceId: {}, workspaceUnreadToneByWorkspaceId: {} }),
 }));
 
-vi.mock("../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     setSelectedRepoId: (projectId: string) => {
       mocked.stateRef.current.selectedProjectId = projectId;
     },
@@ -135,8 +136,26 @@ vi.mock("../../hooks/useCommands", () => ({
     },
     openTab: vi.fn(),
     updateProjectConfig: vi.fn(),
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => Promise.resolve({ isFullscreen: false }),

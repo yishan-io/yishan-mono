@@ -5,7 +5,7 @@ import { LuPause, LuPlay } from "react-icons/lu";
 import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { projectStore } from "../../features/project/model/projectStore";
-import { useCommands } from "../../hooks/useCommands";
+import { useScheduledJobCommands } from "../../hooks/useCommands";
 import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";
@@ -43,7 +43,7 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
   const { t } = useTranslation();
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
   const project = projectStore((state) => state.projects.find((p) => p.id === job.projectId));
-  const { pauseScheduledJob, resumeScheduledJob } = useCommands();
+  const { pauseScheduledJob, resumeScheduledJob } = useScheduledJobCommands();
 
   const handlePause = useCallback(() => {
     void pauseScheduledJob(job.id);

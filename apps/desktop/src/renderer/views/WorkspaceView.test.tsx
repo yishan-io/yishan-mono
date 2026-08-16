@@ -66,9 +66,27 @@ vi.mock("../hooks/useAllWorkspacesGitSync", () => ({
   useAllWorkspacesGitSync: vi.fn(),
 }));
 
-vi.mock("../hooks/useCommands", () => ({
-  useCommands: () => commandMocks,
-}));
+vi.mock("../hooks/useCommands", () => {
+  const commandSurface = () => commandMocks;
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("../hooks/useWorkspacePaneVisibility", () => ({
   WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,

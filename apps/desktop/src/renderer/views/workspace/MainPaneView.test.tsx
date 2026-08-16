@@ -101,8 +101,9 @@ vi.mock("../../store/chatStore", () => ({
     }),
 }));
 
-vi.mock("../../hooks/useCommands", () => ({
-  useCommands: () => {
+vi.mock("../../hooks/useCommands", () => {
+  const commandSurface = () => {
+
     const state = mocked.stateRef.current as Record<string, unknown>;
     return {
       listDetectedPorts: state.listDetectedPorts,
@@ -129,8 +130,26 @@ vi.mock("../../hooks/useCommands", () => ({
       updateFileTabContent: state.updateFileTabContent,
       markFileTabSaved: state.markFileTabSaved,
     };
-  },
-}));
+  };
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",

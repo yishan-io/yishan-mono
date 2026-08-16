@@ -17,15 +17,34 @@ const listAgentModels = vi.fn();
 const setIsCreatingWorkspace = vi.fn();
 const resetDraftInputs = vi.fn();
 
-vi.mock("../../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     createWorkspace,
     renameWorkspace,
     renameWorkspaceBranch,
     listGitBranches,
     listAgentModels,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("../../../hooks/useDialogRegistration", () => ({
   useDialogRegistration: () => {},

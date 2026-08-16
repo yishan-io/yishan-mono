@@ -3,7 +3,7 @@ import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { memo, useEffect, useRef } from "react";
-import { useCommands } from "../../../hooks/useCommands";
+import { useTerminalCommands, useWorkbenchCommands } from "../../../hooks/useCommands";
 import { terminalFocusStore } from "../../../store/terminalFocusStore";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import {
@@ -33,7 +33,7 @@ type TerminalViewProps = {
  * 4. Manages UI-only concerns: search panel, drag/drop overlay, focus, keyboard shortcuts.
  */
 export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) {
-  const cmd = useCommands();
+  const cmd = { ...useTerminalCommands(), ...useWorkbenchCommands() };
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);

@@ -6,7 +6,7 @@ import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { projectStore } from "../../../features/project/model/projectStore";
 import { getRendererPlatform } from "../../../helpers/platform";
-import { useCommands } from "../../../hooks/useCommands";
+import { useProjectCommands, useWorkspaceCommands } from "../../../hooks/useCommands";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
@@ -38,7 +38,8 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const setOverlayPanel = workspaceUiStore((state) => state.setOverlayPanel);
   const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
   const isOverviewPanelOpen = overlayPanel === "overview";
-  const { setSelectedRepoId, setSelectedWorkspaceId, loadWorkspaceSnapshot } = useCommands();
+  const { setSelectedRepoId, setSelectedWorkspaceId } = useWorkspaceCommands();
+  const { loadWorkspaceSnapshot } = useProjectCommands();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefreshProjects = useCallback(async () => {

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BrowserHistoryGroup } from "@renderer/app/commands/appCommands";
-import { useCommands } from "../../../../hooks/useCommands";
+import { useAppCommands } from "../../../../hooks/useCommands";
 
 export function useBrowserHistory() {
-  const cmd = useCommands();
+  const cmd = useAppCommands();
   const [historyGroups, setHistoryGroups] = useState<BrowserHistoryGroup[]>([]);
 
   useEffect(() => {

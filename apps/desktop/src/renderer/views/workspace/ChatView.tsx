@@ -7,7 +7,7 @@ import { subscribeWorkspaceChatEvent } from "../../events";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
-import { useCommands } from "../../hooks/useCommands";
+import { useAgentCommands } from "../../hooks/useCommands";
 import { chatStore } from "../../store/chatStore";
 import type { AvailableModel, ChatMessage } from "../../store/workspaceStore";
 
@@ -64,7 +64,7 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
     setChatAvailableModels,
     setChatCurrentModel,
     updateChatMessage,
-  } = useCommands();
+  } = useAgentCommands();
   const messagesByTabId = chatStore((state) => state.messagesByTabId);
   const messages = messagesByTabId[tabId] ?? EMPTY_MESSAGES;
   const availableModelsByTabId = chatStore((state) => state.availableModelsByTabId);

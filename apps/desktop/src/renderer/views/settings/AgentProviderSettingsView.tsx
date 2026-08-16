@@ -6,7 +6,7 @@ import type { PiProviderStatus } from "../../features/agent/commands/piProviderC
 import { ProviderMark } from "../../components/ProviderMark";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../helpers/piProviders";
-import { useCommands } from "../../hooks/useCommands";
+import { useAgentCommands } from "../../hooks/useCommands";
 import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { ProviderCredentialDialog } from "./ProviderCredentialDialog";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
@@ -105,7 +105,7 @@ function ProviderRow({
 /** Renders providers registered in the yishan pi agent with add/edit/remove. */
 export function AgentProviderSettingsView() {
   const { t } = useTranslation();
-  const { listPiProviders } = useCommands();
+  const { listPiProviders } = useAgentCommands();
   const [credentialTarget, setCredentialTarget] = useState<ProviderCredentialDialogTarget | null>(null);
   const [removeTarget, setRemoveTarget] = useState<PiProviderStatus | null>(null);
 

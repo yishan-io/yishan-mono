@@ -6,7 +6,7 @@ import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { projectStore } from "../../features/project/model/projectStore";
 import { MONOSPACE_SX } from "../../helpers/styles";
-import { useCommands } from "../../hooks/useCommands";
+import { useTerminalCommands } from "../../hooks/useCommands";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../rpc/daemonTypes";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
@@ -81,7 +81,7 @@ function resolveSessionLocationLabel(input: {
 /** Renders one settings panel for globally listing and managing terminal sessions. */
 export function TerminalSettingsView() {
   const { t } = useTranslation();
-  const { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } = useCommands();
+  const { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } = useTerminalCommands();
   const projects = projectStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
   const [isLoading, setIsLoading] = useState(true);

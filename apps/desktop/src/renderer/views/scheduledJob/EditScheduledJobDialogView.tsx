@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../features/project/model/projectStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { useCommands } from "../../hooks/useCommands";
+import { useScheduledJobCommands } from "../../hooks/useCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
@@ -24,7 +24,7 @@ const editCustomCronDescriptionSx = { mt: -0.5 };
 /** Dialog for editing an existing scheduled job's mutable fields. */
 export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduledJobDialogViewProps) {
   const { t } = useTranslation();
-  const { updateScheduledJob } = useCommands();
+  const { updateScheduledJob } = useScheduledJobCommands();
   const orgId = sessionStore((state) => state.selectedOrganizationId);
   const projects = projectStore((state) => state.projects);
   useDialogRegistration(open);

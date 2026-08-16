@@ -5,7 +5,7 @@ import { LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../helpers/platform";
-import { useCommands } from "../../hooks/useCommands";
+import { useScheduledJobCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
@@ -43,7 +43,7 @@ export function ScheduledJobView({ onClose: _onClose }: ScheduledJobViewProps = 
   const jobs = scheduledJobStore((state) => state.scheduledJobs);
   const loadState = scheduledJobStore((state) => state.loadState);
   const loadError = scheduledJobStore((state) => state.loadError);
-  const { loadScheduledJobs } = useCommands();
+  const { loadScheduledJobs } = useScheduledJobCommands();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 

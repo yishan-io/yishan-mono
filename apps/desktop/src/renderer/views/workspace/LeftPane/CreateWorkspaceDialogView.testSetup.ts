@@ -52,16 +52,35 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
-vi.mock("../../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     createWorkspace: getMockedCommands().createWorkspace,
     renameWorkspace: getMockedCommands().renameWorkspace,
     renameWorkspaceBranch: getMockedCommands().renameWorkspaceBranch,
     getGitAuthorName: getMockedCommands().getGitAuthorName,
     listGitBranches: getMockedCommands().listGitBranches,
     listAgentModels: getMockedCommands().listAgentModels,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("../../../api", () => ({
   api: {

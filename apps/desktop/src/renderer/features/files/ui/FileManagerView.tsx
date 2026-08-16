@@ -4,7 +4,7 @@ import { FileTree } from "@renderer/components/FileTree";
 import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
 import { getRendererPlatform } from "@renderer/helpers/platform";
-import { useCommands } from "@renderer/hooks/useCommands";
+import { useGitCommands } from "@renderer/hooks/useCommands";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
 import { useDetectedExternalAppIds } from "@renderer/hooks/useDetectedExternalAppIds";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
@@ -37,7 +37,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const { t } = useTranslation();
   const ops = useFileTreeOperations();
   const rendererPlatform = getRendererPlatform();
-  const cmd = useCommands();
+  const cmd = useGitCommands();
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
   const lastUsedExternalAppId = useProjectLastUsedExternalAppId();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);

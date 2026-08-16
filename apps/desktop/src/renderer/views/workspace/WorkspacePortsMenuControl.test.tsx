@@ -21,15 +21,34 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     killTerminalProcess: mocked.killTerminalProcess,
     listDetectedPorts: mocked.listDetectedPorts,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
     selectTab: mocked.selectTab,
     subscribeDetectedPorts: mocked.subscribeDetectedPorts,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 let navigateToSettings: (() => void) | null = null;
 

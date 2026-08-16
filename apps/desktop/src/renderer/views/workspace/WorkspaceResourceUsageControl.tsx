@@ -5,7 +5,7 @@ import { ResourceUsageMenu, type ResourceUsageMenuRow } from "../../components/R
 import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { formatCpuPercent, formatMemoryBytes } from "../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../helpers/terminalTabUtils";
-import { useCommands } from "../../hooks/useCommands";
+import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../hooks/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../hooks/useSharedTerminalResourceUsageSnapshot";
 import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
 import { tabStore } from "../../store/tabStore";
@@ -24,7 +24,9 @@ export function WorkspaceResourceUsageControl() {
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
-  const { getTerminalResourceUsage, selectTab, setSelectedWorkspaceId } = useCommands();
+  const { getTerminalResourceUsage } = useTerminalCommands();
+  const { selectTab } = useWorkbenchCommands();
+  const { setSelectedWorkspaceId } = useWorkspaceCommands();
   const [resourceMenuAnchorEl, setResourceMenuAnchorEl] = useState<null | HTMLElement>(null);
   const closeResourceMenu = useCallback(() => {
     setResourceMenuAnchorEl(null);

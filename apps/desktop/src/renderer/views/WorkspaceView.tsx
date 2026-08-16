@@ -9,7 +9,20 @@ import { subscribeAppActionEvent } from "../events";
 import { projectStore } from "../features/project/model/projectStore";
 import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { useAllWorkspacesGitSync } from "../hooks/useAllWorkspacesGitSync";
-import { useCommands } from "../hooks/useCommands";
+import {
+  useAgentCommands,
+  useFileCommands,
+  useProjectCommands,
+  useTerminalCommands,
+  useWorkbenchCommands,
+  useWorkspaceCommands,
+  type AgentCommandSurface,
+  type FileCommandSurface,
+  type ProjectCommandSurface,
+  type TerminalCommandSurface,
+  type WorkbenchCommandSurface,
+  type WorkspaceCommandSurface,
+} from "../hooks/useCommands";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
@@ -37,7 +50,12 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-type WorkspaceViewCommands = ReturnType<typeof useCommands>;
+type WorkspaceViewCommands = WorkspaceCommandSurface &
+  WorkbenchCommandSurface &
+  AgentCommandSurface &
+  TerminalCommandSurface &
+  ProjectCommandSurface &
+  FileCommandSurface;
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
 function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: ReturnType<typeof useNavigate> }) {
@@ -329,7 +347,14 @@ export function WorkspaceView() {
   const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
   const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
-  const cmd = useCommands();
+  const cmd: WorkspaceViewCommands = {
+    ...useWorkspaceCommands(),
+    ...useWorkbenchCommands(),
+    ...useAgentCommands(),
+    ...useTerminalCommands(),
+    ...useProjectCommands(),
+    ...useFileCommands(),
+  };
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
   const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator());

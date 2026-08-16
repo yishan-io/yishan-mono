@@ -5,7 +5,7 @@ import type { TerminalDetectedPort } from "../../features/terminal/commands/term
 import { PortsTableMenu, type PortsTableMenuRow } from "../../components/PortsTableMenu";
 import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { useCommands } from "../../hooks/useCommands";
+import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../hooks/useCommands";
 import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
 import { tabStore } from "../../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../../store/workspaceLifecycleNoticeStore";
@@ -22,8 +22,9 @@ export function WorkspacePortsMenuControl() {
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
-  const { killTerminalProcess, listDetectedPorts, selectTab, setSelectedWorkspaceId, subscribeDetectedPorts } =
-    useCommands();
+  const { killTerminalProcess, listDetectedPorts, subscribeDetectedPorts } = useTerminalCommands();
+  const { selectTab } = useWorkbenchCommands();
+  const { setSelectedWorkspaceId } = useWorkspaceCommands();
   const [portsMenuAnchorEl, setPortsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [detectedPorts, setDetectedPorts] = useState<TerminalDetectedPort[]>([]);
   const [isKillingByRowId, setIsKillingByRowId] = useState<Record<string, boolean>>({});

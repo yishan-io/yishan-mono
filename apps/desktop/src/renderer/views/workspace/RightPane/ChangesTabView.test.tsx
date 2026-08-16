@@ -80,8 +80,9 @@ vi.mock("../../../store/workspaceStore", () => ({
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),
 }));
 
-vi.mock("../../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     openTab: mocks.openTab,
     listGitChanges: mocks.listGitChanges,
     readBranchComparisonDiff: mocks.readBranchComparisonDiff,
@@ -91,8 +92,26 @@ vi.mock("../../../hooks/useCommands", () => ({
     trackGitChanges: mocks.trackGitChanges,
     revertGitChanges: mocks.revertGitChanges,
     unstageGitChanges: mocks.unstageGitChanges,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

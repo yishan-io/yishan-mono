@@ -1,6 +1,6 @@
 import { listFiles, listFilesBatch } from "@renderer/features/files/commands/fileCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import { useCommands } from "@renderer/hooks/useCommands";
+import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/hooks/useCommands";
 import { tabStore } from "@renderer/store/tabStore";
 import { workspaceStore } from "@renderer/store/workspaceStore";
 import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
@@ -241,7 +241,8 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     );
   });
   const fileTreeRefreshVersion = workspaceUiStore((state) => state.fileTreeRefreshVersion);
-  const { openTab, closeTab, renameTabsForEntryRename, setLastUsedExternalAppId } = useCommands();
+  const { openTab, closeTab, renameTabsForEntryRename } = useWorkbenchCommands();
+  const { setLastUsedExternalAppId } = useWorkspaceCommands();
   const tabs = tabStore((state) => state.tabs);
   const {
     fileOperationState,

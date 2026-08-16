@@ -1,4 +1,4 @@
-import { useCommands } from "@renderer/hooks/useCommands";
+import { useNotificationCommands } from "@renderer/hooks/useCommands";
 import { useState } from "react";
 import type { NotificationPreviewStatus, NotificationSettingsErrorKey } from "./notificationSettingsState.types";
 import { useNotificationSettingsMutations } from "./useNotificationSettingsMutations";
@@ -11,7 +11,7 @@ export type { NotificationPreviewStatus, NotificationSettingsErrorKey } from "./
  */
 export function useNotificationSettingsState() {
   const { getNotificationPreferences, playNotificationSound, previewNotification, updateNotificationPreferences } =
-    useCommands();
+    useNotificationCommands();
   const [errorKey, setErrorKey] = useState<NotificationSettingsErrorKey>(null);
   const [previewStatus, setPreviewStatus] = useState<NotificationPreviewStatus>(null);
   const persistenceState = useNotificationSettingsPersistence({

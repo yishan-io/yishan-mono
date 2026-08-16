@@ -5,7 +5,7 @@ import { ColumnSeparator } from "../../components/ColumnSeparator";
 import { TabPanel } from "../../components/TabPanel";
 import { retainOpenAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
-import { useCommands } from "../../hooks/useCommands";
+import { useTerminalCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { DEFAULT_RIGHT_WIDTH, layoutStore } from "../../store/settings/layoutStore";
@@ -32,7 +32,7 @@ function clamp(value: number, min: number, max: number): number {
 /** Renders the primary workspace pane with split-pane tabbed content, per-tab views, and pane visibility controls. */
 export function MainPaneView() {
   const { t } = useTranslation();
-  const cmd = useCommands();
+  const cmd = useTerminalCommands();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);

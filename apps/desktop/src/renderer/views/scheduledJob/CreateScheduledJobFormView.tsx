@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { CreateScheduledJobInput } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../features/project/model/projectStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { useCommands } from "../../hooks/useCommands";
+import { useScheduledJobCommands } from "../../hooks/useCommands";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
@@ -24,7 +24,7 @@ const createCustomCronDescriptionSx = { display: "block", mt: 0.75 };
 /** Form for creating a new scheduled job. */
 export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }: CreateScheduledJobFormViewProps) {
   const { t } = useTranslation();
-  const { createScheduledJob } = useCommands();
+  const { createScheduledJob } = useScheduledJobCommands();
   const orgId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);

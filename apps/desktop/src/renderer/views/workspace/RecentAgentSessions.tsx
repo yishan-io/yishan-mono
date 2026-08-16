@@ -5,7 +5,7 @@ import { LuHistory } from "react-icons/lu";
 import { fetchSessionHistory } from "../../features/agent/commands/agentChatSessionHistory";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { useCommands } from "../../hooks/useCommands";
+import { useWorkbenchCommands } from "../../hooks/useCommands";
 import type * as Rpc from "../../rpc/daemonTypes";
 
 const RECENT_SESSION_LIMIT = 5;
@@ -31,7 +31,7 @@ function formatRelativeTime(timestamp: string, t: (key: string, options?: { coun
 /** Lists recent Pi sessions for a workspace when no tabs are open. */
 export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsProps) {
   const { t } = useTranslation();
-  const { openTab } = useCommands();
+  const { openTab } = useWorkbenchCommands();
   const [sessions, setSessions] = useState<Rpc.PiSessionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(cwd));
   const [error, setError] = useState<string | null>(null);

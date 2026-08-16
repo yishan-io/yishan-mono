@@ -14,7 +14,7 @@ import {
   resolveWorkspaceNotificationColor,
   resolveWorkspaceNotificationTone,
 } from "../../helpers/workspaceNotification";
-import { useCommands } from "../../hooks/useCommands";
+import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../store/chatStore";
@@ -41,7 +41,9 @@ export function MainPaneTitleBarView() {
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
-  const { setSelectedRepoId, setSelectedWorkspaceId, openTab, updateProjectConfig } = useCommands();
+  const { setSelectedRepoId, setSelectedWorkspaceId } = useWorkspaceCommands();
+  const { openTab } = useWorkbenchCommands();
+  const { updateProjectConfig } = useProjectCommands();
   const selectedRepo = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
   const isLocalFolderSelected = isFolderWorkspace(selectedWorkspace) || selectedProjectId === LOCAL_FOLDER_PROJECT_ID;

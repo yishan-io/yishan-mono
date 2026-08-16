@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { PiProviderStatus } from "../../features/agent/commands/piProviderCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getPiProviderDisplayName } from "../../helpers/piProviders";
-import { useCommands } from "../../hooks/useCommands";
+import { useAgentCommands } from "../../hooks/useCommands";
 
 export function RemoveProviderDialog({
   open,
@@ -18,7 +18,7 @@ export function RemoveProviderDialog({
   onRemoved: () => void;
 }) {
   const { t } = useTranslation();
-  const { removePiProvider } = useCommands();
+  const { removePiProvider } = useAgentCommands();
   const [isRemoving, setIsRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

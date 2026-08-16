@@ -95,9 +95,28 @@ vi.mock("../../store/tabStore", () => ({
   tabStore: (selector: (state: typeof mocks.tabStoreState) => unknown) => selector(mocks.tabStoreState),
 }));
 
-vi.mock("../../hooks/useCommands", () => ({
-  useCommands: () => mocks.commandHandlers,
-}));
+vi.mock("../../hooks/useCommands", () => {
+  const commandSurface = () => mocks.commandHandlers;
+  return {
+    useCommands: commandSurface,
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

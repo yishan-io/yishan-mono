@@ -1,6 +1,6 @@
 import { Box, Stack } from "@mui/material";
 import { PaneLoadingBar } from "@renderer/components/PaneLoadingBar";
-import { useCommands } from "@renderer/hooks/useCommands";
+import { useWorkspaceCommands } from "@renderer/hooks/useCommands";
 import { workspaceStore } from "@renderer/store/workspaceStore";
 import { useMemo, useState } from "react";
 import PullRequestChecksSection from "./pullRequestTab/PullRequestChecksSection";
@@ -14,7 +14,7 @@ import { useWorkspacePullRequestState } from "./useWorkspacePullRequestState";
 
 /** Renders pull request, checks, and deployment details for the selected workspace. */
 export function PullRequestTabView({ active = true }: { active?: boolean }) {
-  const { refreshWorkspacePullRequest } = useCommands();
+  const { refreshWorkspacePullRequest } = useWorkspaceCommands();
   const { selectedWorkspaceId, pullRequest, historicalPullRequests, isLoading } = useWorkspacePullRequestState(active);
   const worktreePath = workspaceStore(
     (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath,

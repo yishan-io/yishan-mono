@@ -11,11 +11,30 @@ const mocked = vi.hoisted(() => ({
   getGitAuthorName: vi.fn(),
 }));
 
-vi.mock("../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     getGitAuthorName: mocked.getGitAuthorName,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 const initialWorkspaceSettingsState = workspaceSettingsStore.getState();
 const initialWorkspaceState = workspaceStore.getState();

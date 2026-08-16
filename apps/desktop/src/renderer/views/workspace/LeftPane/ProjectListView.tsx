@@ -18,7 +18,7 @@ import type { WorkspaceTreeRow } from "../../../components/WorkspaceTree/types";
 import { projectStore } from "../../../features/project/model/projectStore";
 import { subscribeOpenCreateWorkspaceDialog } from "../../../features/workspace/commands/workspaceCommands";
 import { getRendererPlatform } from "../../../helpers/platform";
-import { useCommands } from "../../../hooks/useCommands";
+import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../hooks/useCommands";
 import { useContextMenuState } from "../../../hooks/useContextMenuState";
 import { useDetectedExternalAppIds } from "../../../hooks/useDetectedExternalAppIds";
 import { useSuppressNativeContextMenuWhileOpen } from "../../../hooks/useSuppressNativeContextMenuWhileOpen";
@@ -45,16 +45,10 @@ export function ProjectListView() {
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
-  const {
-    setSelectedRepoId,
-    setSelectedWorkspaceId,
-    reorderWorkspace,
-    closeWorkspace,
-    deleteProject,
-    deleteLocalFolder,
-    openEntryInExternalApp,
-    setLastUsedExternalAppId,
-  } = useCommands();
+  const { setSelectedRepoId, setSelectedWorkspaceId, reorderWorkspace, closeWorkspace, deleteLocalFolder, setLastUsedExternalAppId } =
+    useWorkspaceCommands();
+  const { deleteProject } = useProjectCommands();
+  const { openEntryInExternalApp } = useFileCommands();
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const markWorkspaceNotificationsRead = chatStore((state) => state.markWorkspaceNotificationsRead);
   const {

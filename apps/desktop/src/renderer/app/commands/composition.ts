@@ -156,27 +156,39 @@ import {
   writeTerminalInput as writeTerminalInputCommand,
 } from "../../features/terminal/commands/terminalCommands";
 
-export type Commands = {
+/**
+ * Application command composition (Phase 12, desktop5.md).
+ *
+ * The global Commands object is split into per-feature command surfaces. Each
+ * surface is independently requestable (useWorkspaceCommands etc.); the
+ * composed `Commands` type is the union of all surfaces and remains the
+ * compatibility entry for app-level consumers (e.g. the shortcut runtime).
+ */
+
+/** App-level commands (Electron host, auth, browser history). */
+export type AppCommandSurface = {
+  logout: typeof logoutCommand;
+  openExternalUrl: typeof openExternalUrlCommand;
+  openLocalFolderDialog: typeof openLocalFolderDialogCommand;
+  getDefaultWorktreeLocation: typeof getDefaultWorktreeLocationCommand;
+  checkAgentGlobalConfigExternalDirectoryPermission: typeof checkAgentGlobalConfigExternalDirectoryPermissionCommand;
+  ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
+  toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
+  loadBrowserHistory: typeof loadBrowserHistoryCommand;
+  appendBrowserHistory: typeof appendBrowserHistoryCommand;
+};
+
+/** Session feature command surface. */
+export type SessionCommandSurface = {
+  getSessionBootstrapData: typeof getSessionBootstrapDataCommand;
+  getRemoteHealthStatus: typeof getRemoteHealthStatusCommand;
+  resetAuthExpiredState: typeof resetAuthExpiredStateCommand;
+};
+
+/** Workspace feature command surface. */
+export type WorkspaceCommandSurface = {
   setSelectedRepoId: (repoId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
-  listAgentDetectionStatuses: typeof listAgentDetectionStatusesCommand;
-  listAgentModels: typeof listAgentModelsCommand;
-  listPiProviders: typeof listPiProvidersCommand;
-  savePiProvider: typeof savePiProviderCommand;
-  removePiProvider: typeof removePiProviderCommand;
-  openPiProviderLogin: typeof openPiProviderLoginCommand;
-  loadScheduledJobs: typeof loadScheduledJobsCommand;
-  createScheduledJob: typeof createScheduledJobCommand;
-  updateScheduledJob: typeof updateScheduledJobCommand;
-  deleteScheduledJob: typeof deleteScheduledJobCommand;
-  pauseScheduledJob: typeof pauseScheduledJobCommand;
-  resumeScheduledJob: typeof resumeScheduledJobCommand;
-  runScheduledJobNow: typeof runScheduledJobNowCommand;
-  loadAllOverviewData: typeof loadAllOverviewDataCommand;
-  setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
-  setOverviewProjectId: typeof setOverviewProjectIdCommand;
-  listCLIToolStatuses: typeof listCLIToolStatusesCommand;
-  listOrgNodes: typeof listOrgNodesCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
   setLeftPaneWidth: typeof setLeftPaneWidthCommand;
@@ -192,82 +204,6 @@ export type Commands = {
   renameWorkspace: typeof renameWorkspaceCommand;
   reorderWorkspace: typeof reorderWorkspaceCommand;
   renameWorkspaceBranch: typeof renameWorkspaceBranchCommand;
-  logout: typeof logoutCommand;
-  getSessionBootstrapData: typeof getSessionBootstrapDataCommand;
-  getRemoteHealthStatus: typeof getRemoteHealthStatusCommand;
-  resetAuthExpiredState: typeof resetAuthExpiredStateCommand;
-  openExternalUrl: typeof openExternalUrlCommand;
-  switchOrganization: typeof switchOrganizationCommand;
-  openLocalFolderDialog: typeof openLocalFolderDialogCommand;
-  getDefaultWorktreeLocation: typeof getDefaultWorktreeLocationCommand;
-  checkAgentGlobalConfigExternalDirectoryPermission: typeof checkAgentGlobalConfigExternalDirectoryPermissionCommand;
-  ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
-  toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
-  loadBrowserHistory: typeof loadBrowserHistoryCommand;
-  appendBrowserHistory: typeof appendBrowserHistoryCommand;
-  ensureChatSession: typeof ensureChatSessionCommand;
-  runChatPrompt: typeof runChatPromptCommand;
-  closeAgentSession: typeof closeAgentSessionCommand;
-  getChatMessages: typeof getChatMessagesCommand;
-  appendChatMessages: typeof appendChatMessagesCommand;
-  updateChatMessage: typeof updateChatMessageCommand;
-  setChatAvailableModels: typeof setChatAvailableModelsCommand;
-  setChatCurrentModel: typeof setChatCurrentModelCommand;
-  createWorkspaceChatEventHandler: typeof createWorkspaceChatEventHandlerCommand;
-  listFiles: typeof listFilesCommand;
-  readFile: typeof readFileCommand;
-  writeFile: typeof writeFileCommand;
-  createFile: typeof createFileCommand;
-  createFolder: typeof createFolderCommand;
-  renameEntry: typeof renameEntryCommand;
-  deleteEntry: typeof deleteEntryCommand;
-  openEntryInExternalApp: typeof openEntryInExternalAppCommand;
-  listDetectedExternalAppIds: typeof listDetectedExternalAppIdsCommand;
-  readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
-  readDiff: typeof readDiffCommand;
-  readCommitDiff: typeof readCommitDiffCommand;
-  readBranchComparisonDiff: typeof readBranchComparisonDiffCommand;
-  listGitChanges: typeof listGitChangesCommand;
-  trackGitChanges: typeof trackGitChangesCommand;
-  unstageGitChanges: typeof unstageGitChangesCommand;
-  revertGitChanges: typeof revertGitChangesCommand;
-  commitGitChanges: typeof commitGitChangesCommand;
-  getGitBranchStatus: typeof getGitBranchStatusCommand;
-  listGitCommitsToTarget: typeof listGitCommitsToTargetCommand;
-  listGitBranches: typeof listGitBranchesCommand;
-  getGitAuthorName: typeof getGitAuthorNameCommand;
-  pushGitBranch: typeof pushGitBranchCommand;
-  publishGitBranch: typeof publishGitBranchCommand;
-  createTerminalSession: typeof createTerminalSessionCommand;
-  writeTerminalInput: typeof writeTerminalInputCommand;
-  resizeTerminal: typeof resizeTerminalCommand;
-  readTerminalOutput: typeof readTerminalOutputCommand;
-  listDetectedPorts: typeof listDetectedPortsCommand;
-  subscribeDetectedPorts: typeof subscribeDetectedPortsCommand;
-  setActiveWorkspace: typeof setActiveWorkspaceCommand;
-  getTerminalResourceUsage: typeof getTerminalResourceUsageCommand;
-  listTerminalSessions: typeof listTerminalSessionsCommand;
-  listActivePiSessions: typeof listActivePiSessionsCommand;
-  subscribeTerminalOutput: typeof subscribeTerminalOutputCommand;
-  subscribeTerminalSessions: typeof subscribeTerminalSessionsCommand;
-  closeTerminalSession: typeof closeTerminalSessionCommand;
-  consumeTerminalTabFocus: typeof consumeTerminalTabFocusCommand;
-  retainOpenTerminalTabFocus: typeof retainOpenTerminalTabFocusCommand;
-  killTerminalProcess: typeof killTerminalProcessCommand;
-  getNotificationPreferences: typeof getNotificationPreferencesCommand;
-  updateNotificationPreferences: typeof updateNotificationPreferencesCommand;
-  previewNotification: typeof previewNotificationCommand;
-  playNotificationSound: typeof playNotificationSoundCommand;
-  loadWorkspaceSnapshot: () => Promise<void>;
-  inspectLocalProjectSource: typeof inspectLocalProjectSourceCommand;
-  createProject: (input: {
-    name: string;
-    sourceTypeHint?: "unknown" | "git-local" | "git";
-    path?: string;
-    gitUrl?: string;
-  }) => Promise<void>;
-  deleteProject: (repoId: string) => Promise<void>;
-  updateProjectConfig: typeof updateProjectConfigCommand;
   createWorkspace: (input: {
     projectId: string;
     name: string;
@@ -284,6 +220,112 @@ export type Commands = {
   deleteLocalFolder: typeof deleteLocalFolderCommand;
   refreshWorkspacePullRequest: (workspaceId: string) => Promise<void>;
   refreshWorkspaceGitChanges: (workspaceId: string) => Promise<void>;
+};
+
+/** Agent feature command surface. */
+export type AgentCommandSurface = {
+  listAgentDetectionStatuses: typeof listAgentDetectionStatusesCommand;
+  listAgentModels: typeof listAgentModelsCommand;
+  listPiProviders: typeof listPiProvidersCommand;
+  savePiProvider: typeof savePiProviderCommand;
+  removePiProvider: typeof removePiProviderCommand;
+  openPiProviderLogin: typeof openPiProviderLoginCommand;
+  ensureChatSession: typeof ensureChatSessionCommand;
+  runChatPrompt: typeof runChatPromptCommand;
+  closeAgentSession: typeof closeAgentSessionCommand;
+  getChatMessages: typeof getChatMessagesCommand;
+  appendChatMessages: typeof appendChatMessagesCommand;
+  updateChatMessage: typeof updateChatMessageCommand;
+  setChatAvailableModels: typeof setChatAvailableModelsCommand;
+  setChatCurrentModel: typeof setChatCurrentModelCommand;
+  createWorkspaceChatEventHandler: typeof createWorkspaceChatEventHandlerCommand;
+  listActivePiSessions: typeof listActivePiSessionsCommand;
+};
+
+/** Git feature command surface. */
+export type GitCommandSurface = {
+  readDiff: typeof readDiffCommand;
+  readCommitDiff: typeof readCommitDiffCommand;
+  readBranchComparisonDiff: typeof readBranchComparisonDiffCommand;
+  listGitChanges: typeof listGitChangesCommand;
+  trackGitChanges: typeof trackGitChangesCommand;
+  unstageGitChanges: typeof unstageGitChangesCommand;
+  revertGitChanges: typeof revertGitChangesCommand;
+  commitGitChanges: typeof commitGitChangesCommand;
+  getGitBranchStatus: typeof getGitBranchStatusCommand;
+  listGitCommitsToTarget: typeof listGitCommitsToTargetCommand;
+  listGitBranches: typeof listGitBranchesCommand;
+  getGitAuthorName: typeof getGitAuthorNameCommand;
+  pushGitBranch: typeof pushGitBranchCommand;
+  publishGitBranch: typeof publishGitBranchCommand;
+};
+
+/** Node feature command surface. */
+export type NodeCommandSurface = {
+  listOrgNodes: typeof listOrgNodesCommand;
+};
+
+/** Notification feature command surface. */
+export type NotificationCommandSurface = {
+  getNotificationPreferences: typeof getNotificationPreferencesCommand;
+  updateNotificationPreferences: typeof updateNotificationPreferencesCommand;
+  previewNotification: typeof previewNotificationCommand;
+  playNotificationSound: typeof playNotificationSoundCommand;
+};
+
+/** Organization feature command surface. */
+export type OrganizationCommandSurface = {
+  switchOrganization: typeof switchOrganizationCommand;
+};
+
+/** Overview feature command surface. */
+export type OverviewCommandSurface = {
+  loadAllOverviewData: typeof loadAllOverviewDataCommand;
+  setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
+  setOverviewProjectId: typeof setOverviewProjectIdCommand;
+};
+
+/** ScheduledJob feature command surface. */
+export type ScheduledJobCommandSurface = {
+  loadScheduledJobs: typeof loadScheduledJobsCommand;
+  createScheduledJob: typeof createScheduledJobCommand;
+  updateScheduledJob: typeof updateScheduledJobCommand;
+  deleteScheduledJob: typeof deleteScheduledJobCommand;
+  pauseScheduledJob: typeof pauseScheduledJobCommand;
+  resumeScheduledJob: typeof resumeScheduledJobCommand;
+  runScheduledJobNow: typeof runScheduledJobNowCommand;
+};
+
+/** Files feature command surface. */
+export type FileCommandSurface = {
+  listFiles: typeof listFilesCommand;
+  readFile: typeof readFileCommand;
+  writeFile: typeof writeFileCommand;
+  createFile: typeof createFileCommand;
+  createFolder: typeof createFolderCommand;
+  renameEntry: typeof renameEntryCommand;
+  deleteEntry: typeof deleteEntryCommand;
+  openEntryInExternalApp: typeof openEntryInExternalAppCommand;
+  listDetectedExternalAppIds: typeof listDetectedExternalAppIdsCommand;
+  readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
+};
+
+/** Project feature command surface. */
+export type ProjectCommandSurface = {
+  loadWorkspaceSnapshot: () => Promise<void>;
+  inspectLocalProjectSource: typeof inspectLocalProjectSourceCommand;
+  createProject: (input: {
+    name: string;
+    sourceTypeHint?: "unknown" | "git-local" | "git";
+    path?: string;
+    gitUrl?: string;
+  }) => Promise<void>;
+  deleteProject: (repoId: string) => Promise<void>;
+  updateProjectConfig: typeof updateProjectConfigCommand;
+};
+
+/** Workbench feature command surface. */
+export type WorkbenchCommandSurface = {
   selectTab: typeof setSelectedTabCommand;
   createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;
@@ -304,29 +346,73 @@ export type Commands = {
   refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
-/** Returns UI-facing command handlers wired to command modules and pure store actions. */
-export function createCommands(): Commands {
+/** Terminal feature command surface. */
+export type TerminalCommandSurface = {
+  createTerminalSession: typeof createTerminalSessionCommand;
+  writeTerminalInput: typeof writeTerminalInputCommand;
+  resizeTerminal: typeof resizeTerminalCommand;
+  readTerminalOutput: typeof readTerminalOutputCommand;
+  listDetectedPorts: typeof listDetectedPortsCommand;
+  subscribeDetectedPorts: typeof subscribeDetectedPortsCommand;
+  setActiveWorkspace: typeof setActiveWorkspaceCommand;
+  getTerminalResourceUsage: typeof getTerminalResourceUsageCommand;
+  listTerminalSessions: typeof listTerminalSessionsCommand;
+  subscribeTerminalOutput: typeof subscribeTerminalOutputCommand;
+  subscribeTerminalSessions: typeof subscribeTerminalSessionsCommand;
+  closeTerminalSession: typeof closeTerminalSessionCommand;
+  consumeTerminalTabFocus: typeof consumeTerminalTabFocusCommand;
+  retainOpenTerminalTabFocus: typeof retainOpenTerminalTabFocusCommand;
+  killTerminalProcess: typeof killTerminalProcessCommand;
+};
+
+/** Settings feature command surface. */
+export type SettingsCommandSurface = {
+  listCLIToolStatuses: typeof listCLIToolStatusesCommand;
+};
+
+/** The composed application command surface (all features). */
+export type Commands = AppCommandSurface &
+  SessionCommandSurface &
+  WorkspaceCommandSurface &
+  AgentCommandSurface &
+  GitCommandSurface &
+  NodeCommandSurface &
+  NotificationCommandSurface &
+  OrganizationCommandSurface &
+  OverviewCommandSurface &
+  ScheduledJobCommandSurface &
+  FileCommandSurface &
+  ProjectCommandSurface &
+  WorkbenchCommandSurface &
+  TerminalCommandSurface &
+  SettingsCommandSurface;
+
+export function createAppCommands(): AppCommandSurface {
+  return {
+    logout: logoutCommand,
+    openExternalUrl: openExternalUrlCommand,
+    openLocalFolderDialog: openLocalFolderDialogCommand,
+    getDefaultWorktreeLocation: getDefaultWorktreeLocationCommand,
+    checkAgentGlobalConfigExternalDirectoryPermission: checkAgentGlobalConfigExternalDirectoryPermissionCommand,
+    ensureAgentGlobalConfigExternalDirectoryPermission: ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
+    toggleMainWindowMaximized: toggleMainWindowMaximizedCommand,
+    loadBrowserHistory: loadBrowserHistoryCommand,
+    appendBrowserHistory: appendBrowserHistoryCommand,
+  };
+}
+
+export function createSessionCommands(): SessionCommandSurface {
+  return {
+    getSessionBootstrapData: getSessionBootstrapDataCommand,
+    getRemoteHealthStatus: getRemoteHealthStatusCommand,
+    resetAuthExpiredState: resetAuthExpiredStateCommand,
+  };
+}
+
+export function createWorkspaceCommands(): WorkspaceCommandSurface {
   return {
     setSelectedRepoId: setSelectedRepo,
     setSelectedWorkspaceId: setSelectedWorkspace,
-    listAgentDetectionStatuses: listAgentDetectionStatusesCommand,
-    listAgentModels: listAgentModelsCommand,
-    listPiProviders: listPiProvidersCommand,
-    savePiProvider: savePiProviderCommand,
-    removePiProvider: removePiProviderCommand,
-    openPiProviderLogin: openPiProviderLoginCommand,
-    loadScheduledJobs: loadScheduledJobsCommand,
-    createScheduledJob: createScheduledJobCommand,
-    updateScheduledJob: updateScheduledJobCommand,
-    deleteScheduledJob: deleteScheduledJobCommand,
-    pauseScheduledJob: pauseScheduledJobCommand,
-    resumeScheduledJob: resumeScheduledJobCommand,
-    runScheduledJobNow: runScheduledJobNowCommand,
-    loadAllOverviewData: loadAllOverviewDataCommand,
-    setOverviewTimeRange: setOverviewTimeRangeCommand,
-    setOverviewProjectId: setOverviewProjectIdCommand,
-    listCLIToolStatuses: listCLIToolStatusesCommand,
-    listOrgNodes: listOrgNodesCommand,
     setDisplayRepoIds: setDisplayRepoIdsCommand,
     setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
     setLeftPaneWidth: setLeftPaneWidthCommand,
@@ -339,23 +425,25 @@ export function createCommands(): Commands {
     deleteSelectedFileTreeEntry: deleteSelectedFileTreeEntryCommand,
     undoFileTreeOperation: undoFileTreeOperationCommand,
     openWorkspaceFileSearch: openWorkspaceFileSearchCommand,
-    refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
     renameWorkspace: renameWorkspaceCommand,
     reorderWorkspace: reorderWorkspaceCommand,
     renameWorkspaceBranch: renameWorkspaceBranchCommand,
-    logout: logoutCommand,
-    getSessionBootstrapData: getSessionBootstrapDataCommand,
-    getRemoteHealthStatus: getRemoteHealthStatusCommand,
-    resetAuthExpiredState: resetAuthExpiredStateCommand,
-    openExternalUrl: openExternalUrlCommand,
-    switchOrganization: switchOrganizationCommand,
-    openLocalFolderDialog: openLocalFolderDialogCommand,
-    getDefaultWorktreeLocation: getDefaultWorktreeLocationCommand,
-    checkAgentGlobalConfigExternalDirectoryPermission: checkAgentGlobalConfigExternalDirectoryPermissionCommand,
-    ensureAgentGlobalConfigExternalDirectoryPermission: ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
-    toggleMainWindowMaximized: toggleMainWindowMaximizedCommand,
-    loadBrowserHistory: loadBrowserHistoryCommand,
-    appendBrowserHistory: appendBrowserHistoryCommand,
+    createWorkspace: createWorkspaceCommand,
+    closeWorkspace: closeWorkspaceCommand,
+    deleteLocalFolder: deleteLocalFolderCommand,
+    refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
+    refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
+  };
+}
+
+export function createAgentCommands(): AgentCommandSurface {
+  return {
+    listAgentDetectionStatuses: listAgentDetectionStatusesCommand,
+    listAgentModels: listAgentModelsCommand,
+    listPiProviders: listPiProvidersCommand,
+    savePiProvider: savePiProviderCommand,
+    removePiProvider: removePiProviderCommand,
+    openPiProviderLogin: openPiProviderLoginCommand,
     ensureChatSession: ensureChatSessionCommand,
     runChatPrompt: runChatPromptCommand,
     closeAgentSession: closeAgentSessionCommand,
@@ -365,16 +453,12 @@ export function createCommands(): Commands {
     setChatAvailableModels: setChatAvailableModelsCommand,
     setChatCurrentModel: setChatCurrentModelCommand,
     createWorkspaceChatEventHandler: createWorkspaceChatEventHandlerCommand,
-    listFiles: listFilesCommand,
-    readFile: readFileCommand,
-    writeFile: writeFileCommand,
-    createFile: createFileCommand,
-    createFolder: createFolderCommand,
-    renameEntry: renameEntryCommand,
-    deleteEntry: deleteEntryCommand,
-    openEntryInExternalApp: openEntryInExternalAppCommand,
-    listDetectedExternalAppIds: listDetectedExternalAppIdsCommand,
-    readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
+    listActivePiSessions: listActivePiSessionsCommand,
+  };
+}
+
+export function createGitCommands(): GitCommandSurface {
+  return {
     readDiff: readDiffCommand,
     readCommitDiff: readCommitDiffCommand,
     readBranchComparisonDiff: readBranchComparisonDiffCommand,
@@ -389,35 +473,78 @@ export function createCommands(): Commands {
     getGitAuthorName: getGitAuthorNameCommand,
     pushGitBranch: pushGitBranchCommand,
     publishGitBranch: publishGitBranchCommand,
-    createTerminalSession: createTerminalSessionCommand,
-    writeTerminalInput: writeTerminalInputCommand,
-    resizeTerminal: resizeTerminalCommand,
-    readTerminalOutput: readTerminalOutputCommand,
-    listDetectedPorts: listDetectedPortsCommand,
-    subscribeDetectedPorts: subscribeDetectedPortsCommand,
-    setActiveWorkspace: setActiveWorkspaceCommand,
-    getTerminalResourceUsage: getTerminalResourceUsageCommand,
-    listTerminalSessions: listTerminalSessionsCommand,
-    listActivePiSessions: listActivePiSessionsCommand,
-    subscribeTerminalOutput: subscribeTerminalOutputCommand,
-    subscribeTerminalSessions: subscribeTerminalSessionsCommand,
-    closeTerminalSession: closeTerminalSessionCommand,
-    consumeTerminalTabFocus: consumeTerminalTabFocusCommand,
-    retainOpenTerminalTabFocus: retainOpenTerminalTabFocusCommand,
-    killTerminalProcess: killTerminalProcessCommand,
+  };
+}
+
+export function createNodeCommands(): NodeCommandSurface {
+  return {
+    listOrgNodes: listOrgNodesCommand,
+  };
+}
+
+export function createNotificationCommands(): NotificationCommandSurface {
+  return {
     getNotificationPreferences: getNotificationPreferencesCommand,
     updateNotificationPreferences: updateNotificationPreferencesCommand,
     previewNotification: previewNotificationCommand,
     playNotificationSound: playNotificationSoundCommand,
-    selectTab: setSelectedTabCommand,
+  };
+}
+
+export function createOrganizationCommands(): OrganizationCommandSurface {
+  return {
+    switchOrganization: switchOrganizationCommand,
+  };
+}
+
+export function createOverviewCommands(): OverviewCommandSurface {
+  return {
+    loadAllOverviewData: loadAllOverviewDataCommand,
+    setOverviewTimeRange: setOverviewTimeRangeCommand,
+    setOverviewProjectId: setOverviewProjectIdCommand,
+  };
+}
+
+export function createScheduledJobCommands(): ScheduledJobCommandSurface {
+  return {
+    loadScheduledJobs: loadScheduledJobsCommand,
+    createScheduledJob: createScheduledJobCommand,
+    updateScheduledJob: updateScheduledJobCommand,
+    deleteScheduledJob: deleteScheduledJobCommand,
+    pauseScheduledJob: pauseScheduledJobCommand,
+    resumeScheduledJob: resumeScheduledJobCommand,
+    runScheduledJobNow: runScheduledJobNowCommand,
+  };
+}
+
+export function createFileCommands(): FileCommandSurface {
+  return {
+    listFiles: listFilesCommand,
+    readFile: readFileCommand,
+    writeFile: writeFileCommand,
+    createFile: createFileCommand,
+    createFolder: createFolderCommand,
+    renameEntry: renameEntryCommand,
+    deleteEntry: deleteEntryCommand,
+    openEntryInExternalApp: openEntryInExternalAppCommand,
+    listDetectedExternalAppIds: listDetectedExternalAppIdsCommand,
+    readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
+  };
+}
+
+export function createProjectCommands(): ProjectCommandSurface {
+  return {
     loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
     inspectLocalProjectSource: inspectLocalProjectSourceCommand,
     createProject: createProjectCommand,
     deleteProject: deleteProjectCommand,
     updateProjectConfig: updateProjectConfigCommand,
-    createWorkspace: createWorkspaceCommand,
-    closeWorkspace: closeWorkspaceCommand,
-    deleteLocalFolder: deleteLocalFolderCommand,
+  };
+}
+
+export function createWorkbenchCommands(): WorkbenchCommandSurface {
+  return {
+    selectTab: setSelectedTabCommand,
     createTab: createTabCommand,
     openTab: openTabCommand,
     openTabInOppositePane: openTabInOppositePaneCommand,
@@ -435,6 +562,52 @@ export function createCommands(): Commands {
     markFileTabSaved: markFileTabSavedCommand,
     refreshFileTabFromDisk: refreshFileTabFromDiskCommand,
     refreshDiffTabContent: refreshDiffTabContentCommand,
-    refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
+  };
+}
+
+export function createTerminalCommands(): TerminalCommandSurface {
+  return {
+    createTerminalSession: createTerminalSessionCommand,
+    writeTerminalInput: writeTerminalInputCommand,
+    resizeTerminal: resizeTerminalCommand,
+    readTerminalOutput: readTerminalOutputCommand,
+    listDetectedPorts: listDetectedPortsCommand,
+    subscribeDetectedPorts: subscribeDetectedPortsCommand,
+    setActiveWorkspace: setActiveWorkspaceCommand,
+    getTerminalResourceUsage: getTerminalResourceUsageCommand,
+    listTerminalSessions: listTerminalSessionsCommand,
+    subscribeTerminalOutput: subscribeTerminalOutputCommand,
+    subscribeTerminalSessions: subscribeTerminalSessionsCommand,
+    closeTerminalSession: closeTerminalSessionCommand,
+    consumeTerminalTabFocus: consumeTerminalTabFocusCommand,
+    retainOpenTerminalTabFocus: retainOpenTerminalTabFocusCommand,
+    killTerminalProcess: killTerminalProcessCommand,
+  };
+}
+
+export function createSettingsCommands(): SettingsCommandSurface {
+  return {
+    listCLIToolStatuses: listCLIToolStatusesCommand,
+  };
+}
+
+/** Returns the composed UI-facing command surface (all features). */
+export function createCommands(): Commands {
+  return {
+    ...createAppCommands(),
+    ...createSessionCommands(),
+    ...createWorkspaceCommands(),
+    ...createAgentCommands(),
+    ...createGitCommands(),
+    ...createNodeCommands(),
+    ...createNotificationCommands(),
+    ...createOrganizationCommands(),
+    ...createOverviewCommands(),
+    ...createScheduledJobCommands(),
+    ...createFileCommands(),
+    ...createProjectCommands(),
+    ...createWorkbenchCommands(),
+    ...createTerminalCommands(),
+    ...createSettingsCommands(),
   };
 }

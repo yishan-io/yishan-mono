@@ -148,8 +148,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     ensureChatSession: mocked.ensureChatSession,
     runChatPrompt: mocked.runChatPrompt,
     getChatMessages: (tabId: string) => mockedStore.stateRef.current.getMessages(tabId),
@@ -251,8 +252,26 @@ vi.mock("../../hooks/useCommands", () => ({
         }
       };
     },
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("../../events", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

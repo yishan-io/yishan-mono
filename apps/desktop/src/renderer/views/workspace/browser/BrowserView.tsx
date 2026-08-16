@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { type FormEvent, useCallback, useMemo, useRef } from "react";
 import { LuWrench } from "react-icons/lu";
-import { useCommands } from "../../../hooks/useCommands";
+import { useWorkbenchCommands } from "../../../hooks/useCommands";
 import { tabStore } from "../../../store/tabStore";
 import { BlankView } from "./BlankView";
 import { ToolsMenu } from "./ToolsMenu";
@@ -20,7 +20,7 @@ type BrowserViewProps = {
 };
 
 export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
-  const cmd = useCommands();
+  const cmd = useWorkbenchCommands();
   const textFieldRef = useRef<HTMLDivElement>(null);
 
   const { historyGroups, addHistoryEntry, filterHistory } = useBrowserHistory();

@@ -11,7 +11,7 @@ import { UnsupportedFileView } from "../../components/UnsupportedFileView";
 import { VideoPreview } from "../../components/VideoPreview";
 import { copyToClipboard } from "../../helpers/clipboard";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import type { Commands } from "../../hooks/useCommands";
+import type { FileCommandSurface, WorkbenchCommandSurface } from "../../hooks/useCommands";
 import type { WorkspaceTab } from "../../store/types";
 import { AgentChatView } from "./AgentChatView";
 import { BrowserView } from "./browser/BrowserView";
@@ -21,7 +21,7 @@ type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;
   externalAppLabel: string;
   focusContentRequestKey: number;
-  cmd: Commands;
+  cmd: WorkbenchCommandSurface & FileCommandSurface;
   onOpenExternalApp: (filePath: string) => Promise<void>;
 };
 

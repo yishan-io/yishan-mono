@@ -169,8 +169,9 @@ vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 
-vi.mock("../../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     selectTab: mocked.selectTab,
     closeTab: mocked.closeTab,
     createTerminalSession: mocked.createTerminalSession,
@@ -180,8 +181,26 @@ vi.mock("../../../hooks/useCommands", () => ({
     subscribeTerminalOutput: mocked.subscribeTerminalOutput,
     writeTerminalInput: mocked.writeTerminalInput,
     renameTab: mocked.renameTab,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 vi.mock("@xterm/xterm", () => {
   class FakeTerminal {

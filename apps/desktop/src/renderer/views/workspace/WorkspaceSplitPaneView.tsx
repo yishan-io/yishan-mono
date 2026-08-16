@@ -11,7 +11,7 @@ import { findTabWithSession } from "../../features/agent/commands/agentChatComma
 import { projectStore } from "../../features/project/model/projectStore";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
-import { useCommands } from "../../hooks/useCommands";
+import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../hooks/useCommands";
 import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "../../hooks/useOpenTabAutoRefresh";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import type { PaneLeaf, SplitPaneNode } from "../../store/split-pane";
@@ -40,7 +40,7 @@ export type WorkspaceSplitPaneProps = {
  * `display: none` when inactive, so terminals/editors preserve their state.
  */
 export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceSplitPaneProps) {
-  const cmd = useCommands();
+  const cmd = { ...useWorkbenchCommands(), ...useFileCommands(), ...useGitCommands() };
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = workspaces.find((ws) => ws.id === workspaceId);

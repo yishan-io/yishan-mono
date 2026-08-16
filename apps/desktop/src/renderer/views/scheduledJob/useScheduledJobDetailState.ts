@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
-import { useCommands } from "../../hooks/useCommands";
+import { useScheduledJobCommands } from "../../hooks/useCommands";
 
 const RUNS_PANE_MIN_WIDTH = 160;
 const RUNS_PANE_DEFAULT_WIDTH = 220;
@@ -14,7 +14,7 @@ type UseScheduledJobDetailStateParams = {
 
 /** Owns local action and dialog state for the scheduled job detail view. */
 export function useScheduledJobDetailState({ job, orgId, onBack }: UseScheduledJobDetailStateParams) {
-  const { pauseScheduledJob, resumeScheduledJob, runScheduledJobNow, deleteScheduledJob } = useCommands();
+  const { pauseScheduledJob, resumeScheduledJob, runScheduledJobNow, deleteScheduledJob } = useScheduledJobCommands();
   const queryClient = useQueryClient();
   const [runsPaneWidth, setRunsPaneWidth] = useState(RUNS_PANE_DEFAULT_WIDTH);
   const dragRef = useRef({ startX: 0, startWidth: 0 });

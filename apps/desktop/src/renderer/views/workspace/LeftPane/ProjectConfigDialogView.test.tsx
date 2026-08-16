@@ -14,14 +14,33 @@ const mocked = vi.hoisted(() => ({
   openLocalFolderDialog: vi.fn(),
 }));
 
-vi.mock("../../../hooks/useCommands", () => ({
-  useCommands: () => ({
+vi.mock("../../../hooks/useCommands", () => {
+  const commandSurface = () => ({
+
     updateProjectConfig: mocked.updateProjectConfig,
     getDefaultWorktreeLocation: mocked.getDefaultWorktreeLocation,
     openEntryInExternalApp: mocked.openEntryInExternalApp,
     openLocalFolderDialog: mocked.openLocalFolderDialog,
-  }),
-}));
+  });
+  return {
+    useAppCommands: commandSurface,
+    useSessionCommands: commandSurface,
+    useWorkspaceCommands: commandSurface,
+    useAgentCommands: commandSurface,
+    useGitCommands: commandSurface,
+    useNodeCommands: commandSurface,
+    useNotificationCommands: commandSurface,
+    useOrganizationCommands: commandSurface,
+    useOverviewCommands: commandSurface,
+    useScheduledJobCommands: commandSurface,
+    useFileCommands: commandSurface,
+    useProjectCommands: commandSurface,
+    useWorkbenchCommands: commandSurface,
+    useTerminalCommands: commandSurface,
+    useSettingsCommands: commandSurface,
+  };
+});
+
 
 const initialWorkspaceStoreState = workspaceStore.getState();
 

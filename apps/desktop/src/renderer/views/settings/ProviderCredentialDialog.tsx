@@ -26,7 +26,7 @@ import {
   isPiProviderOAuthCapable,
   isPiProviderSubscriptionCapable,
 } from "../../helpers/piProviders";
-import { useCommands } from "../../hooks/useCommands";
+import { useAgentCommands } from "../../hooks/useCommands";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 
@@ -48,7 +48,7 @@ export function ProviderCredentialDialog({
   onSaved: (providerId?: string) => void;
 }) {
   const { t } = useTranslation();
-  const { savePiProvider, openPiProviderLogin } = useCommands();
+  const { savePiProvider, openPiProviderLogin } = useAgentCommands();
   const [providerId, setProviderId] = useState(initialProviderId ?? "");
   const [key, setKey] = useState("");
   const [envValues, setEnvValues] = useState<Record<string, string>>({});

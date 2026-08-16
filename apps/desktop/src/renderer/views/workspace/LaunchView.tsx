@@ -21,7 +21,7 @@ import {
   type DesktopAgentKind,
 } from "../../helpers/agentSettings";
 import { getRendererPlatform } from "../../helpers/platform";
-import { useCommands } from "../../hooks/useCommands";
+import { useWorkbenchCommands, useWorkspaceCommands } from "../../hooks/useCommands";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import {
   type WorkspaceCreateProgressStep,
@@ -76,7 +76,8 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
   const { t } = useTranslation();
   const workspace = workspaceStore((state) => state.workspaces.find((item) => item.id === workspaceId));
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
-  const { openTab, openWorkspaceFileSearch } = useCommands();
+  const { openTab } = useWorkbenchCommands();
+  const { openWorkspaceFileSearch } = useWorkspaceCommands();
   const workspaces = workspaceStore((state) => state.workspaces);
   const platform = getRendererPlatform();
   const isPreparingWorkspace = workspace?.status === "provisioning" && Boolean(workspaceCreateProgress);

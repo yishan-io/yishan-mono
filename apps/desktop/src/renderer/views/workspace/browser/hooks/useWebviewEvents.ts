@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useCommands } from "../../../../hooks/useCommands";
+import { useWorkbenchCommands } from "../../../../hooks/useCommands";
 
 export function useWebviewEvents(args: {
   tabId: string;
@@ -10,7 +10,7 @@ export function useWebviewEvents(args: {
   onNavigated?: (url: string) => void;
 }) {
   const { tabId, resolvedUrl, pageTitle, addHistoryEntry, setPageTitle, onNavigated } = args;
-  const cmd = useCommands();
+  const cmd = useWorkbenchCommands();
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const isWebviewReadyRef = useRef(false);
   const pageTitleRef = useRef(pageTitle);

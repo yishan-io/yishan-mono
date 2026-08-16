@@ -12,7 +12,7 @@ import { workspaceProjectionStore } from "../../../features/workspace/model/work
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
-import { useCommands } from "../../../hooks/useCommands";
+import { useGitCommands } from "../../../hooks/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../../store/selectors";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
@@ -71,7 +71,7 @@ export function useChangesTabState() {
   const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}`;
   const selectedWorkspaceRequestKeyRef = useRef(selectedWorkspaceRequestKey);
   selectedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;
-  const { listGitChanges, listGitCommitsToTarget } = useCommands();
+  const { listGitChanges, listGitCommitsToTarget } = useGitCommands();
 
   const loadCommitComparison = useCallback(
     async (targetBranch: string, showProgress = false, canApply: () => boolean = () => true) => {
