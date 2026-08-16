@@ -41,8 +41,6 @@ type KnownViolation = { rule: RuleName; file: string; phase: string };
  */
 const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Rule 1: UI value-imports of api/rpc (cross-layer index §1) ----
-  { rule: "R1-value-api-rpc", file: "views/LoginView.tsx", phase: "P7" },
-  { rule: "R1-value-api-rpc", file: "views/layout/ApplicationRouterView.tsx", phase: "P7" },
   { rule: "R1-value-api-rpc", file: "views/settings/LanguageSettingsView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/settings/NodesSettingsView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/settings/MemberSettingsView.tsx", phase: "P8" },
@@ -55,7 +53,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-value-api-rpc", file: "views/settings/daemon/daemonSettings/useDaemonLogDialog.ts", phase: "P8" },
   // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
   { rule: "R1-value-api-rpc", file: "views/layout/CreateOrganizationDialogView.tsx", phase: "P8" },
-  { rule: "R1-value-api-rpc", file: "views/layout/ApplicationRouterView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/layout/OnboardOrgView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/scheduledJob/ScheduledJobRunsSidebar.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/scheduledJob/ScheduledJobDetailFields.tsx", phase: "P8" },
@@ -66,15 +63,9 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListTreeData.ts", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/RightPane/useWorkspacePullRequestState.ts", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/useAgentChatSessionLifecycle.ts", phase: "P5" },
-  { rule: "R1-value-api-rpc", file: "hooks/useDaemonConnectionMonitor.ts", phase: "P7" },
   { rule: "R1-value-api-rpc", file: "hooks/useOpenTabAutoRefresh.ts", phase: "P6" },
-  { rule: "R1-value-api-rpc", file: "hooks/useRemoteHealthQuery.ts", phase: "P7" },
   { rule: "R1-value-api-rpc", file: "hooks/useShortcuts.ts", phase: "P6" },
-  { rule: "R1-value-api-rpc", file: "components/AuthSessionExpiredSnackbar.tsx", phase: "P7" },
-  { rule: "R1-value-api-rpc", file: "components/AppUpdateSnackbar.tsx", phase: "P7" },
   // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
-  { rule: "R1-main", file: "components/AppUpdateSnackbar.tsx", phase: "P7" },
-  { rule: "R1-main", file: "hooks/useDaemonConnectionMonitor.ts", phase: "P7" },
   { rule: "R1-main", file: "views/settings/daemon/daemonSettings/DaemonConnectionSection.tsx", phase: "P8" },
   { rule: "R1-main", file: "views/settings/daemon/daemonSettings/DaemonRelaySection.tsx", phase: "P8" },
   { rule: "R1-main", file: "views/settings/daemon/daemonSettings/useDaemonConnectionState.ts", phase: "P8" },

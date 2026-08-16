@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaGoogle } from "react-icons/fa";
 import logo from "../../assets/images/yishan-transparent.png";
-import { resetAuthExpiredState } from "../api/restClient";
+import { resetAuthExpiredState } from "../features/session/commands/sessionCommands";
 import { login } from "../commands/appCommands";
 import { AppBackgroundContainer } from "../components/AppBackgroundContainer";
 import { CenteredContentLayout } from "../components/CenteredContentLayout";

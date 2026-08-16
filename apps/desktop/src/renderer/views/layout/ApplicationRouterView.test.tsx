@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api";
 import { createOrganization } from "../../api";
 import { RestApiError } from "../../api/restClient";
-import { getSessionBootstrapData } from "../../api/sessionApi";
+import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
+import { listOrgNodes } from "../../commands/nodeCommands";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../features/session/model/sessionStore";
@@ -33,7 +34,8 @@ vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({})),
 }));
 
-vi.mock("../../api/sessionApi", () => ({
+vi.mock("../../features/session/commands/sessionCommands", () => ({
+  isAuthExpiredError: (error: unknown) => error instanceof RestApiError && error.status === 401,
   getSessionBootstrapData: vi.fn(async () => ({
     currentUser: {
       id: "user-1",
@@ -64,13 +66,12 @@ vi.mock("../../api/sessionApi", () => ({
   })),
 }));
 
+vi.mock("../../commands/nodeCommands", () => ({
+  listOrgNodes: vi.fn(async () => []),
+}));
+
 vi.mock("../../api", () => ({
   createOrganization: vi.fn(async () => ({ id: "org-2", name: "New Organization" })),
-  api: {
-    node: {
-      listByOrg: vi.fn(async () => []),
-    },
-  },
 }));
 
 vi.mock("../WorkspaceView", async () => {
@@ -182,7 +183,7 @@ describe("ApplicationRouterView", () => {
         },
       ],
     });
-    vi.mocked(api.node.listByOrg).mockResolvedValue([]);
+    vi.mocked(listOrgNodes).mockResolvedValue([]);
     vi.mocked(createOrganization).mockResolvedValue({ id: "org-2", name: "New Organization" });
   });
 
@@ -235,7 +236,7 @@ describe("ApplicationRouterView", () => {
 
     expect(await screen.findByText("onboarding.firstOrganization.title")).toBeTruthy();
     expect(screen.queryByTestId("workspace-input")).toBeNull();
-    expect(api.node.listByOrg).not.toHaveBeenCalled();
+    expect(listOrgNodes).not.toHaveBeenCalled();
   });
 
   it("creates first organization and enters workspace", async () => {
@@ -468,7 +469,7 @@ describe("ApplicationRouterView", () => {
 
     expect(rendererQueryClient.getQueryData(["org-nodes", "org-legacy"])).toBeUndefined();
     expect(rendererQueryClient.getQueryData(["some-query"])).toBeUndefined();
-    expect(api.node.listByOrg).not.toHaveBeenCalledWith("org-legacy");
+    expect(listOrgNodes).not.toHaveBeenCalledWith("org-legacy");
     expect(sessionStore.getState().currentUserId).toBe("user-1");
     expect(sessionStore.getState().currentUser?.id).toBe("user-1");
     // The previous user's org selection is dropped; the new session selects

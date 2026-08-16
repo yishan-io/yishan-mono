@@ -2,8 +2,14 @@ import { Box, Button, IconButton, LinearProgress, Paper, Slide, Snackbar, Stack,
 import type { SlideProps } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { DesktopUpdateEventPayload } from "../../main/ipc";
-import { getDesktopBridge, getDesktopHostBridge } from "../rpc/rpcTransport";
+import {
+  dismissDesktopUpdate,
+  downloadDesktopUpdate,
+  getPendingDesktopUpdate,
+  installDesktopUpdate,
+  subscribeDesktopUpdates,
+} from "../commands/appCommands";
+import type { DesktopUpdateEventPayload } from "../commands/appCommands";
 
 function isDesktopUpdatePayload(value: unknown): value is DesktopUpdateEventPayload {
   return Boolean(value && typeof value === "object" && "status" in value);
@@ -74,33 +80,27 @@ export function AppUpdateSnackbar() {
 
   useEffect(() => {
     let disposed = false;
-    const bridge = getDesktopBridge();
-    if (bridge) {
-      void bridge.host
-        .getPendingUpdate()
-        .then((pendingUpdate) => {
-          if (!disposed && pendingUpdate) {
-            setUpdate(pendingUpdate);
-          }
-        })
-        .catch((error: unknown) => {
-          if (import.meta.env.DEV) {
-            console.debug("[AppUpdateSnackbar] failed to load pending update", error);
-          }
-        });
-    }
+    void getPendingDesktopUpdate()
+      .then((pendingUpdate) => {
+        if (!disposed && pendingUpdate) {
+          setUpdate(pendingUpdate);
+        }
+      })
+      .catch((error: unknown) => {
+        if (import.meta.env.DEV) {
+          console.debug("[AppUpdateSnackbar] failed to load pending update", error);
+        }
+      });
 
-    const unsubscribe = bridge?.events.subscribe((event) => {
-      if (event.method !== "desktopUpdate" || !isDesktopUpdatePayload(event.payload)) {
-        return;
+    const unsubscribe = subscribeDesktopUpdates((payload) => {
+      if (!disposed) {
+        setUpdate(payload);
       }
-
-      setUpdate(event.payload);
     });
 
     return () => {
       disposed = true;
-      unsubscribe?.();
+      unsubscribe();
     };
   }, []);
 
@@ -113,7 +113,7 @@ export function AppUpdateSnackbar() {
   const handleClose = () => {
     if (shouldDismissAutoUpdate) {
       // fire-and-forget: dismissal only needs best-effort persistence in the main process.
-      void getDesktopHostBridge().dismissUpdate();
+      dismissDesktopUpdate();
     }
 
     setUpdate(null);
@@ -187,8 +187,8 @@ export function AppUpdateSnackbar() {
                 setIsBusy(true);
                 const request =
                   update.status === "downloaded"
-                    ? getDesktopHostBridge().installUpdate()
-                    : getDesktopHostBridge().downloadUpdate();
+                    ? installDesktopUpdate()
+                    : downloadDesktopUpdate();
                 void request
                   .then((result) => {
                     if ("ok" in result && !result.ok) {

@@ -13,4 +13,5 @@ export type SessionCommands = {
   subscribeAuthExpired: typeof sessionCommands.subscribeAuthExpired;
   isAuthExpiredError: typeof sessionCommands.isAuthExpiredError;
   subscribeDaemonInfoRefresh: typeof sessionCommands.subscribeDaemonInfoRefresh;
+  subscribeDaemonConnectionStatus: typeof sessionCommands.subscribeDaemonConnectionStatus;
 };

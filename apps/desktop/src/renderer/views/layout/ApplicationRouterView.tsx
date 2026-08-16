@@ -2,9 +2,8 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate } from "react-router-dom";
-import { api } from "../../api";
-import { RestApiError } from "../../api/restClient";
-import { getSessionBootstrapData } from "../../api/sessionApi";
+import { isAuthExpiredError, getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
+import { listOrgNodes } from "../../commands/nodeCommands";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
 import { setAppLanguage } from "../../i18n";
 import { rendererQueryClient } from "../../queryClient";
@@ -215,7 +214,7 @@ export function ApplicationRouterView() {
 
         const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
         if (selectedOrganizationId) {
-          const nodes = await api.node.listByOrg(selectedOrganizationId);
+          const nodes = await listOrgNodes(selectedOrganizationId);
           if (disposed) {
             return;
           }
@@ -234,7 +233,7 @@ export function ApplicationRouterView() {
 
           // A 401 from the API means the session token is invalid or expired.
           // Transition back to the login view instead of showing a retry screen.
-          if (error instanceof RestApiError && error.status === 401) {
+          if (isAuthExpiredError(error)) {
             sessionStore.getState().setAuthState(false, true);
             sessionStore.getState().clearSessionData();
             rendererQueryClient.clear();

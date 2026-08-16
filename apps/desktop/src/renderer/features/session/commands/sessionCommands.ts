@@ -9,7 +9,7 @@ import type { DaemonInfoResult } from "../../../../main/ipc";
 import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../../../api/systemApi";
 import { onAuthExpired, resetAuthExpiredState as resetAuthExpiredStateFromApi, RestApiError } from "../../../api/restClient";
 import { getSessionBootstrapData as getSessionBootstrapDataFromApi } from "../../../api/sessionApi";
-import { subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
+import { subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromRpc, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
 import { sessionStore } from "../../../features/session/model/sessionStore";
 
 /** Loads the session bootstrap payload (user, orgs, preferences). */
@@ -64,4 +64,14 @@ export function subscribeDaemonInfoRefresh(): () => void {
       daemonVersion: event.payload.version,
     });
   });
+}
+
+/**
+ * Subscribes one listener to daemon connection status changes. Returns a
+ * teardown. Session owns the transport binding; hooks reflect the state.
+ */
+export function subscribeDaemonConnectionStatus(
+  listener: (status: "connected" | "connecting" | "disconnected") => void,
+): () => void {
+  return subscribeDaemonConnectionStatusFromRpc(listener);
 }

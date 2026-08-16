@@ -13,20 +13,12 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
-  getDesktopBridge: () => ({
-    host: {
-      getPendingUpdate,
-    },
-    events: {
-      subscribe: vi.fn(() => () => undefined),
-    },
-  }),
-  getDesktopHostBridge: () => ({
-    dismissUpdate,
-    downloadUpdate: vi.fn(),
-    installUpdate: vi.fn(),
-  }),
+vi.mock("../commands/appCommands", () => ({
+  getPendingDesktopUpdate: getPendingUpdate,
+  subscribeDesktopUpdates: vi.fn(() => () => undefined),
+  dismissDesktopUpdate: dismissUpdate,
+  downloadDesktopUpdate: vi.fn(),
+  installDesktopUpdate: vi.fn(),
 }));
 
 describe("AppUpdateSnackbar", () => {
