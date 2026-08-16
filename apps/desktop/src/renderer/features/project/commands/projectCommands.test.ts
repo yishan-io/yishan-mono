@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../store/chatStore";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";

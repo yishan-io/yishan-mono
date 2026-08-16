@@ -10,7 +10,7 @@ import { getRendererPlatform } from "../../helpers/platform";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { scheduledJobStore } from "../../store/scheduledJobStore";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";
 import { ScheduledJobDetailFields } from "./ScheduledJobDetailFields";
 import { ScheduledJobRunsSidebar } from "./ScheduledJobRunsSidebar";

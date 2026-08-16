@@ -2,7 +2,7 @@ import { api } from "../api";
 import type { OverviewTimeRange } from "../api/overviewApi.types";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { overviewStore } from "../store/overviewStore";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 
 function selectedOrganizationId(): string {
   const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";

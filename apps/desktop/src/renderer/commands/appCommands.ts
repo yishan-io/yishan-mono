@@ -9,7 +9,7 @@ import { resetAuthExpiredState } from "../api/restClient";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { rendererQueryClient } from "../queryClient";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 import { type LinkTarget, layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";

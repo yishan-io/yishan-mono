@@ -87,6 +87,11 @@ import {
 } from "./gitCommands";
 import { listOrgNodes as listOrgNodesCommand } from "./nodeCommands";
 import {
+  getRemoteHealthStatus as getRemoteHealthStatusCommand,
+  getSessionBootstrapData as getSessionBootstrapDataCommand,
+  resetAuthExpiredState as resetAuthExpiredStateCommand,
+} from "../features/session/commands/sessionCommands";
+import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
   previewNotification as previewNotificationCommand,
@@ -188,6 +193,9 @@ export type Commands = {
   reorderWorkspace: typeof reorderWorkspaceCommand;
   renameWorkspaceBranch: typeof renameWorkspaceBranchCommand;
   logout: typeof logoutCommand;
+  getSessionBootstrapData: typeof getSessionBootstrapDataCommand;
+  getRemoteHealthStatus: typeof getRemoteHealthStatusCommand;
+  resetAuthExpiredState: typeof resetAuthExpiredStateCommand;
   openExternalUrl: typeof openExternalUrlCommand;
   switchOrganization: typeof switchOrganizationCommand;
   openLocalFolderDialog: typeof openLocalFolderDialogCommand;
@@ -336,6 +344,9 @@ export function createCommands(): Commands {
     reorderWorkspace: reorderWorkspaceCommand,
     renameWorkspaceBranch: renameWorkspaceBranchCommand,
     logout: logoutCommand,
+    getSessionBootstrapData: getSessionBootstrapDataCommand,
+    getRemoteHealthStatus: getRemoteHealthStatusCommand,
+    resetAuthExpiredState: resetAuthExpiredStateCommand,
     openExternalUrl: openExternalUrlCommand,
     switchOrganization: switchOrganizationCommand,
     openLocalFolderDialog: openLocalFolderDialogCommand,

@@ -152,7 +152,7 @@ describe("createWorkspaceRepoActions", () => {
       organizationPreferencesById: { "org-1": {} },
     });
 
-    const { sessionStore } = await import("../sessionStore");
+    const { sessionStore } = await import("../../features/session/model/sessionStore");
     sessionStore.setState({ selectedOrganizationId: "org-1" });
 
     actions.createProject({

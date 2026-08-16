@@ -5,7 +5,7 @@ import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, vi } from "vitest";
 import { projectStore } from "../../../features/project/model/projectStore";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";

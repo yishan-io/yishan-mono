@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
 import { projectStore } from "../../features/project/model/projectStore";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";
 

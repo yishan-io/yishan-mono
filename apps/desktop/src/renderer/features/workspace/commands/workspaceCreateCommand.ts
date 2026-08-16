@@ -1,7 +1,7 @@
 import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";

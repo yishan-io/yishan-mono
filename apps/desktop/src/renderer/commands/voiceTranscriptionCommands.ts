@@ -1,5 +1,5 @@
 import { api } from "../api";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 
 export async function transcribeVoiceForOrganization(input: {
   organizationId: string;

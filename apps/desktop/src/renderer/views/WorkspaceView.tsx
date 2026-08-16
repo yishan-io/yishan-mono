@@ -14,7 +14,7 @@ import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
 import { useSelectedWorkspaceWithProject } from "../store/selectors";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";

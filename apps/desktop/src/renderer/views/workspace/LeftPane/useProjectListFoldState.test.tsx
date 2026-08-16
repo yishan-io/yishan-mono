@@ -29,7 +29,7 @@ const mocked = vi.hoisted(() => {
   return { getListPreferences, setListPreferences, sessionState, workspaceState };
 });
 
-vi.mock("../../../store/sessionStore", () => ({
+vi.mock("../../../features/session/model/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector(mocked.sessionState),
   ),

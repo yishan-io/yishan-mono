@@ -1,7 +1,7 @@
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";

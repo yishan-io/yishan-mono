@@ -1,4 +1,4 @@
-import { sessionStore } from "../sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import type {
   WorkspaceStoreActions,
   WorkspaceStoreGetState,

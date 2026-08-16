@@ -12,5 +12,6 @@ export type { SelectionCommands } from "../../features/workspace/commands/select
 export type { AgentCommands } from "../../features/agent/commands/contract";
 export type { TerminalCommands } from "../../features/terminal/commands/contract";
 export type { FileCommands } from "../../features/files/commands/contract";
+export type { SessionCommands } from "../../features/session/commands/contract";
 export type { WorkbenchCommands } from "../../features/workbench/commands/contract";
 export * from "./conformance";

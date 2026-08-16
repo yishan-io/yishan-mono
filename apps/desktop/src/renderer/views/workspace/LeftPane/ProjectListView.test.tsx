@@ -230,7 +230,7 @@ vi.mock("../../../features/project/model/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../store/sessionStore", () => ({
+vi.mock("../../../features/session/model/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector({ selectedOrganizationId: "" }),
   ),

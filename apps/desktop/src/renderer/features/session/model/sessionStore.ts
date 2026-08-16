@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
-import type { SupportedLanguageCode } from "../i18n";
+import type { NotificationPreferences } from "../../../../shared/notifications/notificationPreferences";
+import type { SupportedLanguageCode } from "../../../i18n";
 
 export type SessionUser = {
   id: string;

@@ -31,7 +31,7 @@ import { warmupWorkspacesForProjects } from "../../features/workspace/commands/w
 import { reconcileWorkspaceSnapshot } from "../../features/workspace/model/snapshotReconciler";
 import { workspaceProjectionStore } from "../../features/workspace/model/workspaceProjectionStore";
 import { getDaemonClient } from "../../rpc/rpcTransport";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceCreateProgressStore } from "../../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../../store/workspaceStore";
 

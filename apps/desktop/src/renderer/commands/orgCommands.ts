@@ -2,7 +2,7 @@ import { api } from "../api";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { rendererQueryClient } from "../queryClient";
 import { getDaemonClient } from "../rpc/rpcTransport";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
 
 const errNoOrgSelected = "No organization selected.";

@@ -7,7 +7,7 @@ import { resetAuthExpiredState } from "../api/restClient";
 import { login } from "../commands/appCommands";
 import { AppBackgroundContainer } from "../components/AppBackgroundContainer";
 import { CenteredContentLayout } from "../components/CenteredContentLayout";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 
 /** Renders one pre-authentication entry screen with Google sign-in action. */
 export function LoginView() {

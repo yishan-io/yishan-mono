@@ -11,7 +11,7 @@ import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNa
 import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";

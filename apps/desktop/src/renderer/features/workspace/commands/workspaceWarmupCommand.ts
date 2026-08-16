@@ -1,5 +1,5 @@
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 type WorkspaceOpenProjectEntry = {

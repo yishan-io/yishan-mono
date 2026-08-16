@@ -1,5 +1,5 @@
 import type { DaemonLocalFolder } from "../../rpc/daemonTypes";
-import { sessionStore } from "../sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { getFileName } from "../tabs";
 import type {
   WorkspaceHealth,

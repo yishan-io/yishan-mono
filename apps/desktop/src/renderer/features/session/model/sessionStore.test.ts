@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { sessionStore } from "./sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 
 const initialSessionState = sessionStore.getState();
 
@@ -9,7 +9,7 @@ afterEach(() => {
   sessionStore.setState(initialSessionState, true);
 });
 
-describe("sessionStore", () => {
+describe("../../../features/session/model/sessionStore", () => {
   it("normalizes the selected organization to the first organization when none is selected", () => {
     sessionStore.getState().setSessionData({
       currentUser: { id: "user-1", email: "a@yishan.io", name: null, avatarUrl: null },

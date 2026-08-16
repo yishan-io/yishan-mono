@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { projectStore } from "../../../features/project/model/projectStore";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
   EMPTY_FOLD_STATE,

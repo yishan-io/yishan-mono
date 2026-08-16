@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../store/workspaceStore";

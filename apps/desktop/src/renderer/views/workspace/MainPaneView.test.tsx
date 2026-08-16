@@ -53,7 +53,7 @@ vi.mock("react-router-dom", () => ({
   useInRouterContext: () => false,
 }));
 
-vi.mock("../../store/sessionStore", () => ({
+vi.mock("../../features/session/model/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));

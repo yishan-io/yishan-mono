@@ -8,7 +8,7 @@ import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
 import { setAppLanguage } from "../../i18n";
 import { rendererQueryClient } from "../../queryClient";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { LoginView } from "../LoginView";
 import { WorkspaceView } from "../WorkspaceView";
 import { AppBootstrapLoadingView } from "./AppBootstrapLoadingView";

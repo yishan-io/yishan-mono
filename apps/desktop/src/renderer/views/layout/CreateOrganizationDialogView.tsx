@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { createOrganization, listOrganizations } from "../../api";
 import { switchOrganization } from "../../commands/orgCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 
 type CreateOrganizationDialogViewProps = {
   open: boolean;

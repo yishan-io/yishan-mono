@@ -10,7 +10,7 @@ import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
 import { rendererQueryClient } from "../../queryClient";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
 vi.mock("react-i18next", () => ({

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { DaemonInfoResult } from "../../main/ipc";
 import { subscribeDaemonConnectionStatus, subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 
 type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
 

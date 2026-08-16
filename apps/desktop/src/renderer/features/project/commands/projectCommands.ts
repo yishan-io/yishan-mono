@@ -5,7 +5,7 @@ import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";

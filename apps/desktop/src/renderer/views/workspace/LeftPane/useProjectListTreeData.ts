@@ -10,7 +10,7 @@ import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
 import { resolveWorkspaceNotificationTone } from "../../../helpers/workspaceNotification";
 import { chatStore } from "../../../store/chatStore";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { reconcileOrder } from "./projectListHelpers";

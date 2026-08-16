@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
-import { type SessionUser, sessionStore } from "../../store/sessionStore";
+import { type SessionUser, sessionStore } from "../../features/session/model/sessionStore";
 
 const PLAN_LABELS = {
   free: "Free",
