@@ -14,14 +14,14 @@ import (
 	"fmt"
 	"path/filepath"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
@@ -49,7 +49,7 @@ import (
 // graph. The database, runtime, and paths are resolved by the daemon process
 // layer (account-scoped); Bootstrap composes the services around them.
 type Config struct {
-	Runtime     *cliruntime.Runtime
+	Session     *session.Session
 	NodeID      string
 	LogFilePath string
 	Database    *sql.DB
@@ -91,13 +91,13 @@ type App struct {
 	agentMgr     *agentmanager.Manager
 	piAuth       *piauth.Store
 	tokenUsage   tokenusage.Service
-	events       *internalevents.Hub
+	events       *eventbus.Hub
 	watchers     *workspacewatchers.Watchers
 	prTracker    *workspaceprtracker.Tracker
-	cleanupStore *localdb.WorkspaceCleanupStore
+	cleanupStore *sqlite.WorkspaceCleanupStore
 	contextStore *contextstore.Store
 	database     *sql.DB
-	Runtime      *cliruntime.Runtime
+	Session      *session.Session
 	NodeID       string
 	logFilePath  string
 	settingsPath string
@@ -135,21 +135,20 @@ type App struct {
 func Bootstrap(cfg Config) (*App, error) {
 	filesService := files.NewFileService()
 	registry := instance.NewRegistry(filesService)
-	store := localdb.NewStore(localdb.NewWorkspaceStore(cfg.Database))
+	store := sqlite.NewStore(sqlite.NewWorkspaceStore(cfg.Database))
 	gitService := git.NewGitService()
 	terminals := terminal.NewManager()
 
-	legacyCleanupPath := filepath.Join(cfg.DataDir, localdb.PendingCleanupFileName)
-	cleanupStore, err := localdb.NewWorkspaceCleanupStore(cfg.Database, legacyCleanupPath)
+	legacyCleanupPath := filepath.Join(cfg.DataDir, sqlite.PendingCleanupFileName)
+	cleanupStore, err := sqlite.NewWorkspaceCleanupStore(cfg.Database, legacyCleanupPath)
 	if err != nil {
 		return nil, fmt.Errorf("create workspace cleanup store: %w", err)
 	}
 
-	events := internalevents.NewHub()
+	events := eventbus.NewHub()
 	prTracker := workspaceprtracker.New(workspaceprtracker.TrackerDeps{
 		Instances: registry,
 		Gits:      gitService,
-		Runtime:   cfg.Runtime,
 		PersistPR: func(ctx context.Context, workspaceID string, pr *workspace.WorkspacePullRequest) error {
 			return store.UpsertPR(ctx, &workspace.StoredPullRequest{
 				WorkspaceID: workspaceID, OrganizationID: nodeworkspace.PROrgID(registry, workspaceID), PRID: fmt.Sprintf("%d", pr.Number),
@@ -178,8 +177,8 @@ func Bootstrap(cfg Config) (*App, error) {
 	if tokenUsage == nil {
 		tokenUsage = tokenusage.NewCollectorWithRepository(
 			registry,
-			cfg.Runtime,
-			localdb.NewHourlyUsageStore(cfg.Database),
+			cfg.Session,
+			sqlite.NewHourlyUsageStore(cfg.Database),
 			cfg.EnvDir,
 		)
 	}
@@ -212,7 +211,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		PRTracker:    prTracker,
 		CleanupStore: cleanupStore,
 		Database:     cfg.Database,
-		Runtime:      cfg.Runtime,
+		Session:      cfg.Session,
 		NodeID:       cfg.NodeID,
 		LogFilePath:  cfg.LogFilePath,
 		ServerCtx:    context.Background(),
@@ -239,7 +238,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		Workspace: workspaceSvc,
 		Terminals: terminals,
 		Events:    events,
-		Runtime:   cfg.Runtime,
+		Session:   cfg.Session,
 		NodeID:    cfg.NodeID,
 	})
 
@@ -269,7 +268,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		cleanupStore:         cleanupStore,
 		contextStore:         contextStore,
 		database:             cfg.Database,
-		Runtime:              cfg.Runtime,
+		Session:              cfg.Session,
 		NodeID:               cfg.NodeID,
 		logFilePath:          cfg.LogFilePath,
 		settingsPath:         cfg.SettingsPath,
@@ -299,11 +298,11 @@ func Bootstrap(cfg Config) (*App, error) {
 	app.Start()
 
 	projectSvc := nodeproject.NewService(nodeproject.Deps{
-		Runtime:  cfg.Runtime,
+		Session:  cfg.Session,
 		Database: cfg.Database,
 	})
 	systemSvc := nodesystem.NewService(nodesystem.Deps{
-		Runtime:      cfg.Runtime,
+		Session:      cfg.Session,
 		Events:       events,
 		ModelList:    modelList,
 		TokenUsage:   tokenUsage,
@@ -318,12 +317,12 @@ func Bootstrap(cfg Config) (*App, error) {
 	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
 	app.relay = relay.NewClient(relay.ClientConfig{
-		Runtime:     cfg.Runtime,
+		Session:     cfg.Session,
 		NodeID:      cfg.NodeID,
 		URL:         cfg.RelayURL,
 		StaticToken: cfg.RelayToken,
 		Server:      app.rpcServer,
-		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Runtime},
+		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session},
 		Events:      events,
 	})
 	terminalSvc.SetRelayClient(app.relay)

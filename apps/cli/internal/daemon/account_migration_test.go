@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/platform/config"
 
 	"github.com/spf13/viper"
@@ -31,12 +31,12 @@ func seedLegacyEnvRootData(t *testing.T, envDir string) {
 	if err := os.WriteFile(filepath.Join(envDir, "pending-workspace-cleanups.json"), []byte(`{"items":[]}`), 0o600); err != nil {
 		t.Fatalf("seed pending cleanups: %v", err)
 	}
-	database, err := localdb.Open(envDir)
+	database, err := sqlite.Open(envDir)
 	if err != nil {
 		t.Fatalf("seed yishan.db: %v", err)
 	}
 	defer database.Close()
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate seeded db: %v", err)
 	}
 }
@@ -194,7 +194,7 @@ func TestEnsureUserIDForAccountResolution_BackfillsFromWhoAmI(t *testing.T) {
 		t.Fatalf("seed credential: %v", err)
 	}
 
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: configPath,
 		API: config.APIConfig{
 			BaseURL: server.URL,
@@ -222,7 +222,7 @@ func TestEnsureUserIDForAccountResolution_SwallowsWhoAmIError(t *testing.T) {
 		t.Fatalf("seed credential: %v", err)
 	}
 
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: configPath,
 		API: config.APIConfig{
 			BaseURL: server.URL,
@@ -252,7 +252,7 @@ func TestEnsureUserIDForAccountResolution_SkipsWhenUserIDPresent(t *testing.T) {
 		t.Fatalf("seed credential: %v", err)
 	}
 
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: configPath,
 		API: config.APIConfig{
 			BaseURL: server.URL,
@@ -289,7 +289,7 @@ func TestEnsureUserIDForAccountResolution_RevalidatesEnvCredentialUserID(t *test
 		t.Fatalf("seed credential: %v", err)
 	}
 
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: configPath,
 		API: config.APIConfig{
 			BaseURL: server.URL,
@@ -320,7 +320,7 @@ func TestEnsureUserIDForAccountResolution_KeepsStaleUserIDWhenRevalidationFails(
 		t.Fatalf("seed credential: %v", err)
 	}
 
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: configPath,
 		API: config.APIConfig{
 			BaseURL: server.URL,

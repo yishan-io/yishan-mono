@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -23,8 +23,8 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 
 	path := t.TempDir() // plain dir: no git teardown needed, close succeeds fast
 	openLocalWorkspace(t, s, "ws-close-1", path)
-	store := localdb.NewWorkspaceStore(database)
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	store := sqlite.NewWorkspaceStore(database)
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-close-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: path,
 		State: string(workspace.StateActive),
@@ -79,8 +79,8 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 	s := newBehaviorHandler(t, nil, "node-1", database)
 	relayMessages := wireRelayCapture(t, s, map[string]any{"accepted": true})
 
-	store := localdb.NewWorkspaceStore(database)
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	store := sqlite.NewWorkspaceStore(database)
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-remote-close", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-2",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: t.TempDir(),
 		State: string(workspace.StateActive),

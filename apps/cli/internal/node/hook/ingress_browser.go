@@ -3,7 +3,7 @@ package hook
 import (
 	"net/http"
 	"strings"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 )
 
 func isBrowserURLEvent(payload hookIngressEvent) bool {
@@ -34,7 +34,7 @@ func (i *Ingress) handleBrowserURLEvent(w http.ResponseWriter, payload hookIngre
 		return
 	}
 
-	i.events.Publish(internalevents.Event{
+	i.events.Publish(eventbus.Event{
 		Topic: "openBrowserUrl",
 		Payload: map[string]any{
 			"url":         urlVal,

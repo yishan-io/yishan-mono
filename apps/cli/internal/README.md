@@ -1,6 +1,6 @@
 # internal — CLI daemon package map
 
-Current after Phases 13–19 (cli-refactor-4). Every top-level package has one
+Current after Phases 13–21 (cli-refactor-5). Every top-level package has one
 role; `adapter/` and `platform/` roots contain no Go files and only classify
 their children.
 
@@ -37,14 +37,14 @@ Enforced by `internal/archtest` (`TestForbiddenImports`).
 | `tokenusage` | Domain owner | `collection/`, `scanner/`, `attribution/`, `pricing/`, `repository/` |
 | `memory` | Domain owner | Store, reconcile, summarizer, persona |
 | `files` `git` `terminal` `computer` | Capability owners | Standalone local capabilities (standalone = not workspace internals) |
-| `adapter/cloud` | Edge adapter | Cloud API client + DTOs; `session/` (auth token state), `login/` |
+| `adapter/cloud` | Edge adapter | `cloud.Client` HTTP operations + DTOs; `session/` (auth state), `login/` |
 | `adapter/sqlite` | Edge adapter | SQLite store + migrations + row conversion |
 | `adapter/relay` | Edge adapter | Relay envelopes + relay client |
 | `platform/config` | Platform | Environment config reading |
 | `platform/shellenv` | Platform | Shell environment resolution |
 | `platform/logging` | Platform | Log file management |
 | `platform/release` | Platform | Version + self-update |
-| `events` | Infrastructure | Frontend event hub (eventbus rename deferred until one owner) |
+| `eventbus` | Infrastructure | Application event publication and subscription (frontend event hub) |
 | `archtest` | Test-only | Forbidden-import architecture test |
 
 ## Archtest rules (source → forbidden targets)
@@ -61,7 +61,7 @@ Enforced by `internal/archtest` (`TestForbiddenImports`).
 - `node` → daemon, app (node services never import the composition root)
 - `node/id`, `agent/kind`, `git/exec` → their owner package (no reverse import)
 - `tokenusage` subpackages → each other's orchestrators (leaf owners)
-- `memory`, `events` → daemon, rpc, node, agent
+- `memory`, `eventbus` → daemon, rpc, node, agent
 
 ## Error ownership
 

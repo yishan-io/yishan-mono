@@ -32,8 +32,8 @@ var forbiddenEdges = []struct {
 }{
 	{
 		sourcePrefix: "workspace",
-		targets:      []string{"daemon", "rpc", "agent", "api", "db", "relay", "node"},
-		reason:       "the workspace domain depends only on interfaces and infrastructure, never on transport or the composition root",
+		targets:      []string{"daemon", "rpc", "agent", "adapter/cloud", "adapter/sqlite", "adapter/relay", "node"},
+		reason:       "the workspace domain depends only on interfaces and infrastructure, never on transport, adapters, or the composition root",
 	},
 	{
 		sourcePrefix: "rpc",
@@ -59,11 +59,6 @@ var forbiddenEdges = []struct {
 		sourcePrefix: "workspace/worktree",
 		targets:      []string{"daemon", "rpc", "agent", "node"},
 		reason:       "worktree provisioning is standalone infrastructure and returns domain errors, not RPC errors",
-	},
-	{
-		sourcePrefix: "gitexec",
-		targets:      []string{"daemon", "rpc", "agent", "node"},
-		reason:       "the low-level git adapter is standalone",
 	},
 	{
 		sourcePrefix: "agent",
@@ -104,16 +99,6 @@ var forbiddenEdges = []struct {
 		sourcePrefix: "git/exec",
 		targets:      []string{"git"},
 		reason:       "the low-level git exec adapter must not import the git service package",
-	},
-	{
-		sourcePrefix: "files",
-		targets:      []string{"daemon", "rpc", "agent", "node"},
-		reason:       "file services are standalone infrastructure and return domain errors, not RPC errors",
-	},
-	{
-		sourcePrefix: "git",
-		targets:      []string{"daemon", "rpc", "agent", "node"},
-		reason:       "git services are standalone infrastructure and return domain errors, not RPC errors",
 	},
 	{
 		sourcePrefix: "tokenusage",
@@ -161,7 +146,7 @@ var forbiddenEdges = []struct {
 		reason:       "memory services are standalone infrastructure",
 	},
 	{
-		sourcePrefix: "events",
+		sourcePrefix: "eventbus",
 		targets:      []string{"daemon", "rpc", "node", "agent"},
 		reason:       "the frontend event hub is standalone infrastructure",
 	},

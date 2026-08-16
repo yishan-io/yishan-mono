@@ -1,4 +1,4 @@
-package db
+package sqlite
 
 // Workspace is the daemon-owned local workspace record.
 type Workspace struct {

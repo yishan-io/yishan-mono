@@ -59,7 +59,7 @@ func TestSyncDaemonAuthTokensCallsPersistMethodWhenDaemonIsRunning(t *testing.T)
 		return state.Port == 65072
 	}
 
-	update := api.TokenUpdate{
+	update := cloud.TokenUpdate{
 		AccessToken:           "fresh-access",
 		RefreshToken:          "fresh-refresh",
 		AccessTokenExpiresAt:  "2026-06-29T00:00:00Z",
@@ -73,9 +73,9 @@ func TestSyncDaemonAuthTokensCallsPersistMethodWhenDaemonIsRunning(t *testing.T)
 			if method != rpc.MethodAppPersistAuthTokens {
 				t.Fatalf("method = %q, want %q", method, rpc.MethodAppPersistAuthTokens)
 			}
-			gotUpdate, ok := params.(api.TokenUpdate)
+			gotUpdate, ok := params.(cloud.TokenUpdate)
 			if !ok {
-				t.Fatalf("params type = %T, want api.TokenUpdate", params)
+				t.Fatalf("params type = %T, want cloud.TokenUpdate", params)
 			}
 			if gotUpdate != update {
 				t.Fatalf("params = %#v, want %#v", gotUpdate, update)
@@ -122,7 +122,7 @@ func TestSyncDaemonAuthTokensSkipsWhenDaemonStateFileIsMissing(t *testing.T) {
 		return nil
 	}
 
-	handled, err := syncDaemonAuthTokens(context.Background(), api.TokenUpdate{AccessToken: "fresh-access"})
+	handled, err := syncDaemonAuthTokens(context.Background(), cloud.TokenUpdate{AccessToken: "fresh-access"})
 	if err != nil {
 		t.Fatalf("syncDaemonAuthTokens: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestSyncDaemonAuthTokensReturnsClientErrorWhenDaemonSyncFails(t *testing.T)
 		}}
 	}
 
-	handled, err := syncDaemonAuthTokens(context.Background(), api.TokenUpdate{AccessToken: "fresh-access"})
+	handled, err := syncDaemonAuthTokens(context.Background(), cloud.TokenUpdate{AccessToken: "fresh-access"})
 	if !handled {
 		t.Fatal("handled = false, want true")
 	}
@@ -198,7 +198,7 @@ func TestPersistAuthTokensForLoginUsesDaemonSyncWithoutLocalPersistence(t *testi
 	}
 	isDaemonProcessRunningForAuthSync = func(pid int) bool { return true }
 	probeDaemonHealthForAuthSync = func(state daemon.RuntimeState, timeout time.Duration) bool { return true }
-	persistAuthTokensLocallyForAuthSync = func(update api.TokenUpdate) error {
+	persistAuthTokensLocallyForAuthSync = func(update cloud.TokenUpdate) error {
 		t.Fatal("persistAuthTokensLocallyForAuthSync should not be called")
 		return nil
 	}
@@ -210,7 +210,7 @@ func TestPersistAuthTokensForLoginUsesDaemonSyncWithoutLocalPersistence(t *testi
 		}}
 	}
 
-	update := api.TokenUpdate{AccessToken: "fresh-access", RefreshToken: "fresh-refresh"}
+	update := cloud.TokenUpdate{AccessToken: "fresh-access", RefreshToken: "fresh-refresh"}
 	result, err := persistAuthTokensForLogin(context.Background(), update)
 	if err != nil {
 		t.Fatalf("persistAuthTokensForLogin: %v", err)
@@ -244,7 +244,7 @@ func TestPersistAuthTokensForLoginWritesUserIDLocally(t *testing.T) {
 		return daemon.RuntimeState{}, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
 	}
 
-	update := api.TokenUpdate{AccessToken: "access", RefreshToken: "refresh", UserID: "user_123"}
+	update := cloud.TokenUpdate{AccessToken: "access", RefreshToken: "refresh", UserID: "user_123"}
 	if _, err := persistAuthTokensForLogin(context.Background(), update); err != nil {
 		t.Fatalf("persistAuthTokensForLogin: %v", err)
 	}
@@ -295,14 +295,14 @@ func TestPersistAuthTokensForLoginFallsBackToLocalPersistenceOnDaemonSyncError(t
 			return errors.New("boom")
 		}}
 	}
-	var persistedUpdate api.TokenUpdate
-	persistAuthTokensLocallyForAuthSync = func(update api.TokenUpdate) error {
+	var persistedUpdate cloud.TokenUpdate
+	persistAuthTokensLocallyForAuthSync = func(update cloud.TokenUpdate) error {
 		persistedUpdate = update
 		applyAuthTokenUpdate(update)
 		return nil
 	}
 
-	update := api.TokenUpdate{AccessToken: "fresh-access"}
+	update := cloud.TokenUpdate{AccessToken: "fresh-access"}
 	result, err := persistAuthTokensForLogin(context.Background(), update)
 	if err != nil {
 		t.Fatalf("persistAuthTokensForLogin: %v", err)

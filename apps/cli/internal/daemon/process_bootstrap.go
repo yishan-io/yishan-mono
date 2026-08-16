@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"time"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/app"
 	hook "yishan/apps/cli/internal/node/hook"
 	nodeid "yishan/apps/cli/internal/node/id"
@@ -21,7 +21,7 @@ import (
 	release "yishan/apps/cli/internal/platform/release"
 )
 
-func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) (*daemonRuntime, error) {
+func bootstrapDaemon(cfg RunConfig, statePath string, runtime *session.Session) (*daemonRuntime, error) {
 	if err := checkNotAlreadyRunning(statePath); err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func resolveDaemonID(statePath string) (string, error) {
 // buildHandler composes the account-scoped service graph (node.Bootstrap) and
 // returns the composed app. envDir stays env-root scoped (e.g. the token-usage
 // pricing cache); dataDir is the per-account data dir.
-func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*app.App, *relay.Status, error) {
+func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, daemonID string) (*app.App, *relay.Status, error) {
 	envDir := filepath.Dir(statePath)
 	credentialPath := filepath.Join(envDir, "credential.yaml")
 	dataDir, err := config.ResolveAccountDataDir(credentialPath)
@@ -114,7 +114,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	}
 
 	app, err := app.Bootstrap(app.Config{
-		Runtime:          runtime,
+		Session:          runtime,
 		NodeID:           daemonID,
 		LogFilePath:      cfg.LogFilePath,
 		Database:         database,
@@ -140,15 +140,15 @@ func initLocalDatabase(envDir string, dataDir string) (*sql.DB, error) {
 	if err := migrateAccountLayout(envDir, dataDir); err != nil {
 		return nil, fmt.Errorf("migrate account data layout: %w", err)
 	}
-	database, err := localdb.Open(dataDir)
+	database, err := sqlite.Open(dataDir)
 	if err != nil {
 		return nil, fmt.Errorf("open local database: %w", err)
 	}
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		_ = database.Close() // cleanup after failed migration
 		return nil, fmt.Errorf("migrate local database: %w", err)
 	}
-	if err := localdb.CleanupLegacyProfileFiles(dataDir); err != nil {
+	if err := sqlite.CleanupLegacyProfileFiles(dataDir); err != nil {
 		_ = database.Close() // cleanup after failed legacy-file cleanup
 		return nil, fmt.Errorf("clean up legacy profile files: %w", err)
 	}

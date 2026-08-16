@@ -39,7 +39,7 @@ func wireRelayReader(t *testing.T, s *Service, result map[string]any) {
 	t.Helper()
 	server := relayVerdictTestServer(t, result)
 	client := relay.NewClient(relay.ClientConfig{
-		Runtime:     nil,
+		Session:     nil,
 		NodeID:      "node-1",
 		URL:         server.URL,
 		StaticToken: "test-token",

@@ -55,7 +55,7 @@ var orgCreateCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := apiClient.CreateOrganization(api.CreateOrganizationInput{
+		response, err := apiClient.CreateOrganization(cloud.CreateOrganizationInput{
 			Name:          name,
 			MemberUserIDs: memberUserIDs,
 		})

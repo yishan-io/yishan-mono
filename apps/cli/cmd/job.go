@@ -35,7 +35,7 @@ scheduled job so the API can track run state.`,
 			return err
 		}
 
-		response, err := apiClient.StartScheduledJobRun(nodeID, api.StartScheduledJobRunInput{
+		response, err := apiClient.StartScheduledJobRun(nodeID, cloud.StartScheduledJobRunInput{
 			RunID:     runID,
 			StartedAt: startedAt,
 		})
@@ -74,7 +74,7 @@ passing the outcome (success or error) back to the API.`,
 		errorCode, _ := cmd.Flags().GetString("error-code")
 		errorMessage, _ := cmd.Flags().GetString("error-message")
 
-		response, err := apiClient.CompleteScheduledJobRun(nodeID, api.CompleteScheduledJobRunInput{
+		response, err := apiClient.CompleteScheduledJobRun(nodeID, cloud.CompleteScheduledJobRunInput{
 			RunID:        runID,
 			FinishedAt:   finishedAt,
 			Status:       status,

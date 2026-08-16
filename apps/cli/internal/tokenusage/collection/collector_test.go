@@ -5,35 +5,35 @@ import (
 	"testing"
 	"time"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/workspace/instance"
 )
 
 type stubHourlyUsageRepository struct {
-	state localdb.HourlyUsageSyncState
+	state sqlite.HourlyUsageSyncState
 }
 
-func (s *stubHourlyUsageRepository) ReplaceAgentHourlyRows(_ context.Context, _ string, _ []localdb.HourlyUsageRow) error {
+func (s *stubHourlyUsageRepository) ReplaceAgentHourlyRows(_ context.Context, _ string, _ []sqlite.HourlyUsageRow) error {
 	return nil
 }
 
-func (s *stubHourlyUsageRepository) ListDirtyHourlyRows(_ context.Context) ([]localdb.HourlyUsageRow, error) {
+func (s *stubHourlyUsageRepository) ListDirtyHourlyRows(_ context.Context) ([]sqlite.HourlyUsageRow, error) {
 	return nil, nil
 }
 
-func (s *stubHourlyUsageRepository) MarkHourlyRowsSynced(_ context.Context, _ []localdb.HourlyUsageRow, _ int64) error {
+func (s *stubHourlyUsageRepository) MarkHourlyRowsSynced(_ context.Context, _ []sqlite.HourlyUsageRow, _ int64) error {
 	return nil
 }
 
-func (s *stubHourlyUsageRepository) GetHourlyUsageSyncState(_ context.Context) (localdb.HourlyUsageSyncState, error) {
+func (s *stubHourlyUsageRepository) GetHourlyUsageSyncState(_ context.Context) (sqlite.HourlyUsageSyncState, error) {
 	return s.state, nil
 }
 
 func TestRecentScanStartUnixMilliUsesBootstrapWhenNeverSynced(t *testing.T) {
 	t.Parallel()
 
-	collector := &Collector{repo: &stubHourlyUsageRepository{state: localdb.HourlyUsageSyncState{}}}
+	collector := &Collector{repo: &stubHourlyUsageRepository{state: sqlite.HourlyUsageSyncState{}}}
 	if got := collector.recentScanStartUnixMilli(); got != 0 {
 		t.Fatalf("expected bootstrap scan start 0, got %d", got)
 	}
@@ -43,7 +43,7 @@ func TestRecentScanStartUnixMilliUsesLastSuccessfulSyncOverlap(t *testing.T) {
 	t.Parallel()
 
 	lastSuccessfulSyncAt := time.Date(2026, time.June, 3, 12, 0, 0, 0, time.UTC).UnixMilli()
-	collector := &Collector{repo: &stubHourlyUsageRepository{state: localdb.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}}}
+	collector := &Collector{repo: &stubHourlyUsageRepository{state: sqlite.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}}}
 
 	got := collector.recentScanStartUnixMilli()
 	want := time.UnixMilli(lastSuccessfulSyncAt).UTC().Add(-tokenUsageScanOverlap).UnixMilli()
@@ -58,7 +58,7 @@ func TestResolveScanStartUnixMilliUsesRecoveryWindowWhenEarlier(t *testing.T) {
 	lastSuccessfulSyncAt := time.Date(2026, time.June, 3, 12, 0, 0, 0, time.UTC).UnixMilli()
 	recoverySinceUnixMilli := time.Date(2026, time.May, 30, 12, 0, 0, 0, time.UTC).UnixMilli()
 	collector := &Collector{
-		repo:                 &stubHourlyUsageRepository{state: localdb.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}},
+		repo:                 &stubHourlyUsageRepository{state: sqlite.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}},
 		recoverySinceByAgent: map[string]int64{"opencode": recoverySinceUnixMilli},
 	}
 
@@ -75,7 +75,7 @@ func TestResolveScanStartUnixMilliKeepsNormalWindowWhenRecoveryIsLater(t *testin
 	normalScanStartUnixMilli := time.UnixMilli(lastSuccessfulSyncAt).UTC().Add(-tokenUsageScanOverlap).UnixMilli()
 	recoverySinceUnixMilli := normalScanStartUnixMilli + int64(time.Hour)
 	collector := &Collector{
-		repo:                 &stubHourlyUsageRepository{state: localdb.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}},
+		repo:                 &stubHourlyUsageRepository{state: sqlite.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}},
 		recoverySinceByAgent: map[string]int64{"opencode": recoverySinceUnixMilli},
 	}
 
@@ -130,10 +130,10 @@ func TestRequestRecoveryScanRecordsWindowWithoutRerunWhenIdle(t *testing.T) {
 type countingHourlyUsageRepository struct {
 	stubHourlyUsageRepository
 	replaceCalls int
-	lastRows     []localdb.HourlyUsageRow
+	lastRows     []sqlite.HourlyUsageRow
 }
 
-func (s *countingHourlyUsageRepository) ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []localdb.HourlyUsageRow) error {
+func (s *countingHourlyUsageRepository) ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []sqlite.HourlyUsageRow) error {
 	s.replaceCalls++
 	s.lastRows = rows
 	return nil
@@ -145,7 +145,7 @@ func (s *countingHourlyUsageRepository) ReplaceAgentHourlyRows(ctx context.Conte
 // mechanism). gemini is used because its scanner is a deterministic empty
 // stub.
 func TestRunScanReplacesRowsIdempotently(t *testing.T) {
-	repo := &countingHourlyUsageRepository{stubHourlyUsageRepository: stubHourlyUsageRepository{state: localdb.HourlyUsageSyncState{}}}
+	repo := &countingHourlyUsageRepository{stubHourlyUsageRepository: stubHourlyUsageRepository{state: sqlite.HourlyUsageSyncState{}}}
 	collector := &Collector{
 		registry:             instance.NewRegistry(files.NewFileService()),
 		repo:                 repo,
@@ -153,7 +153,7 @@ func TestRunScanReplacesRowsIdempotently(t *testing.T) {
 		inFlight:             make(map[string]bool),
 		needsRerun:           make(map[string]bool),
 		recoverySinceByAgent: make(map[string]int64),
-		pending:              make(map[string][]localdb.HourlyUsageRow),
+		pending:              make(map[string][]sqlite.HourlyUsageRow),
 	}
 
 	collector.runScan("gemini", "test")

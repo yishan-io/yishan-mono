@@ -14,8 +14,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/events"
 	release "yishan/apps/cli/internal/platform/release"
 	"yishan/apps/cli/internal/rpc"
 )
@@ -54,26 +54,26 @@ type MessageHandler interface {
 // relay-protocol messages; Events is the frontend hub the client forwards
 // terminal session changes from.
 type ClientConfig struct {
-	Runtime     *cliruntime.Runtime
+	Session     *session.Session
 	NodeID      string
 	URL         string
 	StaticToken string
 	Server      *rpc.Server
 	Handler     MessageHandler
-	Events      *internalevents.Hub
+	Events      *eventbus.Hub
 }
 
 // Client is the relay WebSocket client: the reconnect loop, the per-session
 // read loop, the connection handle, pending dispatch verdicts, and the
 // connection status. It is the single owner of the relay connection state.
 type Client struct {
-	runtime     *cliruntime.Runtime
+	runtime     *session.Session
 	nodeID      string
 	url         string
 	staticToken string
 	server      *rpc.Server
 	handler     MessageHandler
-	events      *internalevents.Hub
+	events      *eventbus.Hub
 	status      *Status
 
 	connMu sync.RWMutex
@@ -86,7 +86,7 @@ type Client struct {
 // NewClient creates a relay client. The reconnect loop starts via Run.
 func NewClient(cfg ClientConfig) *Client {
 	return &Client{
-		runtime:     cfg.Runtime,
+		runtime:     cfg.Session,
 		nodeID:      cfg.NodeID,
 		url:         cfg.URL,
 		staticToken: cfg.StaticToken,

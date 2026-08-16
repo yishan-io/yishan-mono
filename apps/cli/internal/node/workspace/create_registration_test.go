@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 )
@@ -54,7 +54,7 @@ func TestWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 	defer server.Close()
 
 	root := t.TempDir()
-	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
+	runtime := session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
 	handler := newTestService(t, runtime, "node-1")
 	subscriptionID, events := handler.deps.Events.Subscribe()
 	defer handler.deps.Events.Unsubscribe(subscriptionID)

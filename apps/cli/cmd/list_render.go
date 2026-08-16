@@ -5,7 +5,7 @@ import (
 	"yishan/apps/cli/cmd/output"
 )
 
-func renderProjectsList(response api.ListProjectsResponse, includeAll bool) output.RenderData {
+func renderProjectsList(response cloud.ListProjectsResponse, includeAll bool) output.RenderData {
 	rows := make([]map[string]any, 0, len(response.Projects))
 	for _, project := range response.Projects {
 		row := map[string]any{
@@ -36,7 +36,7 @@ func renderProjectsList(response api.ListProjectsResponse, includeAll bool) outp
 	return output.RenderData{Title: "projects", Columns: columns, Rows: rows}
 }
 
-func renderNodesList(response api.ListNodesResponse, includeAll bool) output.RenderData {
+func renderNodesList(response cloud.ListNodesResponse, includeAll bool) output.RenderData {
 	rows := make([]map[string]any, 0, len(response.Nodes))
 	for _, node := range response.Nodes {
 		row := map[string]any{
@@ -62,7 +62,7 @@ func renderNodesList(response api.ListNodesResponse, includeAll bool) output.Ren
 	return output.RenderData{Title: "nodes", Columns: columns, Rows: rows}
 }
 
-func renderWorkspacesList(response api.ListWorkspacesResponse, includeAll bool, includeProjectColumn bool, projectNames map[string]string) output.RenderData {
+func renderWorkspacesList(response cloud.ListWorkspacesResponse, includeAll bool, includeProjectColumn bool, projectNames map[string]string) output.RenderData {
 	rows := make([]map[string]any, 0, len(response.Workspaces))
 	for _, workspace := range response.Workspaces {
 		row := map[string]any{

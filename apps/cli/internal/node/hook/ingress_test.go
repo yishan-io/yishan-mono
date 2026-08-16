@@ -9,11 +9,11 @@ import (
 	"time"
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 )
 
 func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -50,7 +50,7 @@ func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -80,7 +80,7 @@ func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -106,7 +106,7 @@ func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -135,7 +135,7 @@ func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
 func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 	for _, agent := range agentkind.All {
 		t.Run(agent, func(t *testing.T) {
-			hub := internalevents.NewHub()
+			hub := eventbus.NewHub()
 			ingress := newIngressForTest(hub)
 			subscriptionID, events := hub.Subscribe()
 			defer hub.Unsubscribe(subscriptionID)
@@ -164,7 +164,7 @@ func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 }
 
 func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -191,7 +191,7 @@ func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
 }
 
 func TestServeAgentHookRejectsInvalidPayload(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	response := postHookPayload(t, ingress, map[string]any{"event": "Start"})
 
@@ -214,7 +214,7 @@ func postHookPayload(t *testing.T, handler http.Handler, payload map[string]any)
 	return response
 }
 
-func readPublishedEvent(t *testing.T, events <-chan internalevents.Event) internalevents.Event {
+func readPublishedEvent(t *testing.T, events <-chan eventbus.Event) eventbus.Event {
 	t.Helper()
 	select {
 	case event := <-events:
@@ -222,13 +222,13 @@ func readPublishedEvent(t *testing.T, events <-chan internalevents.Event) intern
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for frontend event")
 	}
-	return internalevents.Event{}
+	return eventbus.Event{}
 }
 
 // drainHookEvents reads all events published within a short window.
-func drainHookEvents(t *testing.T, events <-chan internalevents.Event) []internalevents.Event {
+func drainHookEvents(t *testing.T, events <-chan eventbus.Event) []eventbus.Event {
 	t.Helper()
-	var collected []internalevents.Event
+	var collected []eventbus.Event
 	for {
 		select {
 		case event := <-events:
@@ -240,7 +240,7 @@ func drainHookEvents(t *testing.T, events <-chan internalevents.Event) []interna
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -257,7 +257,7 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
 	}
 
 	published := drainHookEvents(t, events)
-	var agentEvent *internalevents.Event
+	var agentEvent *eventbus.Event
 	for i := range published {
 		if published[i].Topic == "terminalAgentChanged" {
 			agentEvent = &published[i]
@@ -281,7 +281,7 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -298,7 +298,7 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
 	}
 
 	published := drainHookEvents(t, events)
-	var agentEvent *internalevents.Event
+	var agentEvent *eventbus.Event
 	for i := range published {
 		if published[i].Topic == "terminalAgentChanged" {
 			agentEvent = &published[i]
@@ -318,7 +318,7 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
 }
 
 func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -344,7 +344,7 @@ func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
 }
 
 func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	ingress := newIngressForTest(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -362,8 +362,8 @@ func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t 
 
 	published := drainHookEvents(t, events)
 
-	var agentEvent *internalevents.Event
-	var notificationEvent *internalevents.Event
+	var agentEvent *eventbus.Event
+	var notificationEvent *eventbus.Event
 	for i := range published {
 		if published[i].Topic == "terminalAgentChanged" {
 			agentEvent = &published[i]
@@ -391,7 +391,7 @@ func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t 
 
 // newIngressForTest builds a hook ingress with an event hub (token usage,
 // memory, and registry are nil; the ingress guards them).
-func newIngressForTest(events *internalevents.Hub) *Ingress {
+func newIngressForTest(events *eventbus.Hub) *Ingress {
 	return NewIngress(IngressDeps{
 		Events: events,
 		Usage:  NewUsageTracker(),

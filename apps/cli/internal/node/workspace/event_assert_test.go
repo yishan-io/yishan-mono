@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 )
 
-func collectUntil(t *testing.T, ch <-chan internalevents.Event, terminalTopic string, timeout time.Duration) []internalevents.Event {
+func collectUntil(t *testing.T, ch <-chan eventbus.Event, terminalTopic string, timeout time.Duration) []eventbus.Event {
 	t.Helper()
-	var collected []internalevents.Event
+	var collected []eventbus.Event
 	deadline := time.After(timeout)
 	for {
 		select {
@@ -28,9 +28,9 @@ func collectUntil(t *testing.T, ch <-chan internalevents.Event, terminalTopic st
 // arrived. Used after a terminal event to prove no further lifecycle events
 // were emitted.
 
-func collectFor(t *testing.T, ch <-chan internalevents.Event, grace time.Duration) []internalevents.Event {
+func collectFor(t *testing.T, ch <-chan eventbus.Event, grace time.Duration) []eventbus.Event {
 	t.Helper()
-	var collected []internalevents.Event
+	var collected []eventbus.Event
 	deadline := time.After(grace)
 	for {
 		select {
@@ -42,7 +42,7 @@ func collectFor(t *testing.T, ch <-chan internalevents.Event, grace time.Duratio
 	}
 }
 
-func eventTopicNames(events []internalevents.Event) []string {
+func eventTopicNames(events []eventbus.Event) []string {
 	names := make([]string, 0, len(events))
 	for _, event := range events {
 		names = append(names, event.Topic)
@@ -50,7 +50,7 @@ func eventTopicNames(events []internalevents.Event) []string {
 	return names
 }
 
-func lifecycleTopicNames(events []internalevents.Event) []string {
+func lifecycleTopicNames(events []eventbus.Event) []string {
 	var names []string
 	for _, event := range events {
 		if lifecycleEventTopics[event.Topic] {
@@ -60,7 +60,7 @@ func lifecycleTopicNames(events []internalevents.Event) []string {
 	return names
 }
 
-func assertTopicSequence(t *testing.T, events []internalevents.Event, want []string) {
+func assertTopicSequence(t *testing.T, events []eventbus.Event, want []string) {
 	t.Helper()
 	got := lifecycleTopicNames(events)
 	if !reflect.DeepEqual(got, want) {

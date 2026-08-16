@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -25,23 +25,23 @@ func TestListWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsStale(t *testin
 	}))
 	defer server.Close()
 
-	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
+	runtime := session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
 	handler := newTestService(t, runtime)
 
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	handler.setTestDatabase(database)
 
 	// The local create finalized: the daemon row is active with a real path
 	// (finalizePersistedWorkspace runs before the remote PATCH is attempted).
-	store := localdb.NewWorkspaceStore(database)
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	store := sqlite.NewWorkspaceStore(database)
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID:             "workspace-1",
 		OrganizationID: "org-1",
 		ProjectID:      "project-1",
@@ -82,15 +82,15 @@ func TestListWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t *testing.T) {
 	}))
 	defer server.Close()
 
-	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
+	runtime := session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
 	handler := newTestService(t, runtime)
 
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	handler.setTestDatabase(database)

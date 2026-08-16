@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
@@ -13,31 +13,31 @@ import (
 )
 
 func TestHydrate_RestoresActiveWorkspace(t *testing.T) {
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	workspacePath := t.TempDir()
-	workspaceStore := localdb.NewWorkspaceStore(database)
-	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: workspacePath, State: "active",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
 	metadata := `{"number":42,"status":"open","checks":[]}`
-	if err := workspaceStore.UpsertPR(context.Background(), &localdb.WorkspacePullRequest{
+	if err := workspaceStore.UpsertPR(context.Background(), &sqlite.WorkspacePullRequest{
 		WorkspaceID: "workspace-1", OrganizationID: "org-1", PRID: "42", State: "open",
 		Metadata: &metadata, DetectedAt: "2026-07-29T00:00:00Z",
 	}); err != nil {
 		t.Fatalf("create pull request: %v", err)
 	}
 
-	svc := NewService(Deps{Store: localdb.NewStore(workspaceStore), Registry: instance.NewRegistry(files.NewFileService())})
+	svc := NewService(Deps{Store: sqlite.NewStore(workspaceStore), Registry: instance.NewRegistry(files.NewFileService())})
 	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
@@ -167,25 +167,25 @@ func TestCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
 	}
 }
 
-func openTestManagerStore(t *testing.T) (*Service, *localdb.WorkspaceStore) {
+func openTestManagerStore(t *testing.T) (*Service, *sqlite.WorkspaceStore) {
 	t.Helper()
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	store := localdb.NewWorkspaceStore(database)
-	return NewService(Deps{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}), store
+	store := sqlite.NewWorkspaceStore(database)
+	return NewService(Deps{Store: sqlite.NewStore(store), Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}), store
 }
 
 func TestHydrate_MissingWorktreeMarkedError(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branchMissing := "feature/missing"
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branchMissing, LocalPath: missingPath, State: "active",
 	}); err != nil {
@@ -193,7 +193,7 @@ func TestHydrate_MissingWorktreeMarkedError(t *testing.T) {
 	}
 	healthyPath := t.TempDir()
 	branchHealthy := "feature/healthy"
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-2", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branchHealthy, LocalPath: healthyPath, State: "active",
 	}); err != nil {
@@ -239,7 +239,7 @@ func TestHydrate_NonMissingOpenFailureMarkedError(t *testing.T) {
 		t.Fatalf("write file: %v", err)
 	}
 	branch := "feature/file"
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: filePath, State: "active",
 	}); err != nil {
@@ -269,7 +269,7 @@ func TestHydrate_SkipsClosedWorkspaces(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	missingPath := filepath.Join(t.TempDir(), "deleted-worktree")
 	branch := "feature/closed"
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "closed", Branch: &branch, LocalPath: missingPath, State: "active",
 	}); err != nil {
@@ -287,7 +287,7 @@ func TestHydrate_SkipsClosedWorkspaces(t *testing.T) {
 func TestHydrate_SkipsFolderWorkspaces(t *testing.T) {
 	svc, store := openTestManagerStore(t)
 	folderPath := t.TempDir()
-	if _, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{
+	if _, err := store.CreateFolder(context.Background(), sqlite.FolderWorkspaceInput{
 		LocalPath: folderPath, NodeID: "node-1",
 	}); err != nil {
 		t.Fatalf("create folder workspace: %v", err)
@@ -308,7 +308,7 @@ func TestHydrate_RestoresActiveWorkspaceAndRefreshesState(t *testing.T) {
 	workspacePath := t.TempDir()
 	branch := "feature/restored"
 	health := string(workspace.HealthPathMissing)
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
 		State: string(workspace.StateError), Health: &health,
@@ -342,7 +342,7 @@ func TestHydrate_PreservesNotWorktreeError(t *testing.T) {
 	workspacePath := t.TempDir()
 	branch := "feature/not-worktree"
 	health := string(workspace.HealthNotWorktree)
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath,
 		State: string(workspace.StateError), Health: &health,

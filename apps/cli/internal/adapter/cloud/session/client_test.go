@@ -1,4 +1,4 @@
-package runtime
+package session
 
 import (
 	"encoding/json"
@@ -31,7 +31,7 @@ func TestPersistAuthTokensRejectsStaleExpiryUpdate(t *testing.T) {
 		Configure(nil)
 	})
 
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           cfg.API.Token,
 		RefreshToken:          cfg.API.RefreshToken,
 		AccessTokenExpiresAt:  cfg.API.AccessTokenExpiresAt,
@@ -40,7 +40,7 @@ func TestPersistAuthTokensRejectsStaleExpiryUpdate(t *testing.T) {
 		t.Fatalf("seed config: %v", err)
 	}
 
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           "stale-access",
 		RefreshToken:          "stale-refresh",
 		AccessTokenExpiresAt:  "2026-05-11T09:10:00Z",
@@ -82,7 +82,7 @@ func TestPersistAuthTokensAcceptsNewerExpiryUpdate(t *testing.T) {
 		Configure(nil)
 	})
 
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           "new-access",
 		RefreshToken:          "new-refresh",
 		AccessTokenExpiresAt:  "2026-05-11T10:10:00Z",
@@ -124,7 +124,7 @@ func TestPersistAuthTokensClearsRefreshFieldsWhenUpdateOmitsThem(t *testing.T) {
 		Configure(nil)
 	})
 
-	if err := PersistAuthTokens(api.TokenUpdate{AccessToken: "service-token"}); err != nil {
+	if err := PersistAuthTokens(cloud.TokenUpdate{AccessToken: "service-token"}); err != nil {
 		t.Fatalf("persist service token update: %v", err)
 	}
 
@@ -251,7 +251,7 @@ func TestEnsureFreshAccessTokenRefreshesExpiredToken(t *testing.T) {
 	newExpiry := time.Now().Add(10 * time.Minute).Format(time.RFC3339Nano)
 	meHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/refresh" {
-			json.NewEncoder(w).Encode(api.TokenUpdate{
+			json.NewEncoder(w).Encode(cloud.TokenUpdate{
 				AccessToken:           "refreshed-access",
 				RefreshToken:          "refreshed-refresh",
 				AccessTokenExpiresAt:  newExpiry,
@@ -322,7 +322,7 @@ func TestCheckAuthStatusReturnsTrueForValidSession(t *testing.T) {
 			return
 		}
 		if r.URL.Path == "/auth/refresh" {
-			json.NewEncoder(w).Encode(api.TokenUpdate{
+			json.NewEncoder(w).Encode(cloud.TokenUpdate{
 				AccessToken:           "new-access",
 				RefreshToken:          "new-refresh",
 				AccessTokenExpiresAt:  newExpiry,
@@ -435,7 +435,7 @@ func TestCheckAuthStatus_ClearsPersistedCredentialsWhenRefreshTokenInvalid(t *te
 	Configure(cfg)
 	t.Cleanup(func() { Configure(nil) })
 
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           cfg.API.Token,
 		RefreshToken:          cfg.API.RefreshToken,
 		AccessTokenExpiresAt:  cfg.API.AccessTokenExpiresAt,

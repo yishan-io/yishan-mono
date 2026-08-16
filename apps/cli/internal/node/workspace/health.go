@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -96,7 +96,7 @@ func (s *Service) emitStateChanged(workspaceID string, state string, health stri
 	if s.deps.Events == nil {
 		return
 	}
-	s.deps.Events.Publish(internalevents.Event{
+	s.deps.Events.Publish(eventbus.Event{
 		Topic: "workspaceStateChanged",
 		Payload: map[string]any{
 			"workspaceId": workspaceID,
@@ -128,7 +128,7 @@ func (s *Service) IsFolder(ctx context.Context, workspaceID string) bool {
 	if s.deps.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return false
 	}
-	row, err := localdb.NewWorkspaceStore(s.deps.Database).Get(ctx, workspaceID)
+	row, err := sqlite.NewWorkspaceStore(s.deps.Database).Get(ctx, workspaceID)
 	if err != nil {
 		return false
 	}

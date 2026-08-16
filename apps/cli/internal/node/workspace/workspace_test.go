@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -45,15 +45,15 @@ func installTokenUsageRecoveryProbe(t *testing.T, services *Service) (string, *t
 func newCloseRoutingTestHandler(t *testing.T, workspaceNodeID string) *Service {
 	t.Helper()
 	s := newTestHandler(t)
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
+	if err := sqlite.NewWorkspaceStore(database).Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: workspaceNodeID,
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: "/tmp/ws", State: "active",
 	}); err != nil {

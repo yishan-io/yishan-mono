@@ -5,7 +5,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 )
 
@@ -64,7 +64,7 @@ func (c *Client) runSession(ctx context.Context, conn *websocket.Conn) {
 
 // forwardTerminalEventsToRelay publishes local terminal session lifecycle
 // changes to the relay so remote nodes can track sessions.
-func forwardTerminalEventsToRelay(connState *rpc.Connection, events <-chan internalevents.Event) {
+func forwardTerminalEventsToRelay(connState *rpc.Connection, events <-chan eventbus.Event) {
 	for event := range events {
 		if event.Topic != "terminalSessionChanged" {
 			continue

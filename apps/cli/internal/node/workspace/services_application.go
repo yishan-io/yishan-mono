@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	api "yishan/apps/cli/internal/adapter/cloud"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -49,7 +49,7 @@ func (s *Service) newAppService() *application.Service {
 			if s.deps.CleanupStore == nil {
 				return nil
 			}
-			return s.deps.CleanupStore.Add(localdb.PendingWorkspaceCleanup{
+			return s.deps.CleanupStore.Add(sqlite.PendingWorkspaceCleanup{
 				WorkspaceID: req.WorkspaceID, Path: req.Path, Branch: req.Branch,
 				RemoveBranch: req.RemoveBranch, ForceWorktree: req.ForceWorktree,
 				ForceBranch: req.ForceBranch, PostHook: req.PostHook,
@@ -84,11 +84,11 @@ func (s *Service) newAppService() *application.Service {
 // ---- Environment ----
 
 func (d *appDeps) APIConfigured() bool {
-	return d.s.deps.Runtime != nil && d.s.deps.Runtime.APIConfigured()
+	return d.s.deps.Session != nil && d.s.deps.Session.APIConfigured()
 }
 
 func (d *appDeps) ListProjects(ctx context.Context, organizationID string) ([]application.Project, error) {
-	runtime := d.s.deps.Runtime
+	runtime := d.s.deps.Session
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil, fmt.Errorf("workspace creation requires an authenticated API session")
 	}
@@ -107,25 +107,25 @@ func (d *appDeps) ListProjects(ctx context.Context, organizationID string) ([]ap
 }
 
 func (d *appDeps) ListWorkspaces(ctx context.Context, organizationID string, projectID string) ([]workspace.Record, error) {
-	if d.s.deps.Runtime == nil || !d.s.deps.Runtime.APIConfigured() {
+	if d.s.deps.Session == nil || !d.s.deps.Session.APIConfigured() {
 		return nil, fmt.Errorf("load project workspaces: no authenticated API session")
 	}
-	response, err := d.s.deps.Runtime.APIClient().ListWorkspaces(organizationID, projectID)
+	response, err := d.s.deps.Session.APIClient().ListWorkspaces(organizationID, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("load project workspaces: %w", err)
 	}
 	records := make([]workspace.Record, 0, len(response.Workspaces))
 	for _, item := range response.Workspaces {
-		records = append(records, api.WorkspaceToDomain(item))
+		records = append(records, cloud.WorkspaceToDomain(item))
 	}
 	return records, nil
 }
 
 func (d *appDeps) ListNodes(ctx context.Context, organizationID string) ([]application.Node, error) {
-	if d.s.deps.Runtime == nil || !d.s.deps.Runtime.APIConfigured() {
+	if d.s.deps.Session == nil || !d.s.deps.Session.APIConfigured() {
 		return nil, fmt.Errorf("load organization nodes: no authenticated API session")
 	}
-	response, err := d.s.deps.Runtime.APIClient().ListNodes(organizationID)
+	response, err := d.s.deps.Session.APIClient().ListNodes(organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("load organization nodes: %w", err)
 	}
@@ -170,11 +170,11 @@ func (d *appDeps) LocalRow(ctx context.Context, workspaceID string) (workspace.R
 	if d.s.deps.Database == nil {
 		return workspace.Record{}, false
 	}
-	row, err := localdb.NewWorkspaceStore(d.s.deps.Database).Get(ctx, workspaceID)
+	row, err := sqlite.NewWorkspaceStore(d.s.deps.Database).Get(ctx, workspaceID)
 	if err != nil {
 		return workspace.Record{}, false
 	}
-	return localdb.WorkspaceToDomain(row), true
+	return sqlite.WorkspaceToDomain(row), true
 }
 
 // ---- Instances ----
@@ -240,7 +240,7 @@ func (d *appDeps) DispatchClose(ctx context.Context, command application.CloseCo
 // ---- Events ----
 
 func (d *appDeps) Publish(topic string, payload any) {
-	d.s.deps.Events.Publish(internalevents.Event{Topic: topic, Payload: payload})
+	d.s.deps.Events.Publish(eventbus.Event{Topic: topic, Payload: payload})
 }
 
 func (d *appDeps) SnapshotChanged(organizationID string, projectID string, workspaceID string, change string) {
@@ -248,16 +248,16 @@ func (d *appDeps) SnapshotChanged(organizationID string, projectID string, works
 }
 
 func (d *appDeps) CreateStarted(event application.StartedEvent) {
-	d.s.deps.Events.Publish(internalevents.Event{Topic: "workspaceCreateStarted", Payload: event})
+	d.s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateStarted", Payload: event})
 }
 
 func (d *appDeps) CreateProgress(plan application.CreatePlan, event workspace.CreateProgressEvent) {
-	d.s.deps.Events.Publish(internalevents.Event{Topic: "workspaceCreateProgress", Payload: event})
+	d.s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateProgress", Payload: event})
 	d.s.relayCreateProgress(plan, event)
 }
 
 func (d *appDeps) CreateFailed(plan application.CreatePlan, failed application.FailedEvent) {
-	d.s.deps.Events.Publish(internalevents.Event{Topic: "workspaceCreateFailed", Payload: failed})
+	d.s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateFailed", Payload: failed})
 	d.s.relayCreateFailed(plan, workspaceCreateFailedEvent(failed))
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"yishan/apps/cli/internal/adapter/cloud"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	agentcmd "yishan/apps/cli/internal/agent/command"
 	"yishan/apps/cli/internal/rpc"
 )
@@ -35,7 +35,7 @@ type jobRunParams struct {
 // HandleJobRun processes a job.run notification received from the relay: it
 // validates the payload, sends job.ack, and runs the scheduled agent
 // asynchronously.
-func HandleJobRun(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
+func HandleJobRun(runtime *session.Session, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
 	var params jobRunParams
 	if err := json.Unmarshal(raw, &params); err != nil {
 		log.Warn().Err(err).Msg("scheduler: invalid job.run params")
@@ -62,11 +62,11 @@ func HandleJobRun(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID
 	go processRelayJob(runtime, connState, nodeID, params)
 }
 
-func processRelayJob(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, params jobRunParams) {
+func processRelayJob(runtime *session.Session, connState *rpc.Connection, nodeID string, params jobRunParams) {
 	startTime := time.Now()
 	client := runtime.APIClient()
 
-	_, err := client.StartScheduledJobRun(nodeID, api.StartScheduledJobRunInput{
+	_, err := client.StartScheduledJobRun(nodeID, cloud.StartScheduledJobRunInput{
 		RunID:     params.RunID,
 		StartedAt: startTime.UTC().Format(time.RFC3339),
 	})
@@ -93,7 +93,7 @@ func processRelayJob(runtime *cliruntime.Runtime, connState *rpc.Connection, nod
 	durationMs := finishedAt.Sub(startTime).Milliseconds()
 
 	// Report to API
-	apiInput := api.CompleteScheduledJobRunInput{
+	apiInput := cloud.CompleteScheduledJobRunInput{
 		RunID:      params.RunID,
 		FinishedAt: finishedAt.UTC().Format(time.RFC3339),
 	}

@@ -1,4 +1,4 @@
-package runtime
+package session
 
 import (
 	"path/filepath"
@@ -25,7 +25,7 @@ func TestPersistAuthTokensWritesUserIDWhenProvided(t *testing.T) {
 		Configure(nil)
 	})
 
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           cfg.API.Token,
 		RefreshToken:          cfg.API.RefreshToken,
 		AccessTokenExpiresAt:  cfg.API.AccessTokenExpiresAt,
@@ -63,7 +63,7 @@ func TestPersistAuthTokensKeepsUserIDWhenUpdateOmitsIt(t *testing.T) {
 	})
 
 	// Seed the file with a known user_id first (as a prior login would).
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           cfg.API.Token,
 		RefreshToken:          cfg.API.RefreshToken,
 		AccessTokenExpiresAt:  cfg.API.AccessTokenExpiresAt,
@@ -74,7 +74,7 @@ func TestPersistAuthTokensKeepsUserIDWhenUpdateOmitsIt(t *testing.T) {
 	}
 
 	// A token refresh update carries no user_id and must not wipe it.
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           "new-access",
 		RefreshToken:          "new-refresh",
 		AccessTokenExpiresAt:  "2026-05-12T10:10:00Z",
@@ -110,7 +110,7 @@ func TestClearAuthStateClearsUserID(t *testing.T) {
 		Configure(nil)
 	})
 
-	if err := PersistAuthTokens(api.TokenUpdate{
+	if err := PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:           cfg.API.Token,
 		RefreshToken:          cfg.API.RefreshToken,
 		AccessTokenExpiresAt:  cfg.API.AccessTokenExpiresAt,

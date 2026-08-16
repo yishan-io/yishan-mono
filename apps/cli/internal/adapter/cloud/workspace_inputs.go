@@ -1,4 +1,4 @@
-package api
+package cloud
 
 import (
 	"yishan/apps/cli/internal/workspace"

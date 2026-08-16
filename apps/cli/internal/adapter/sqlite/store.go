@@ -1,4 +1,4 @@
-package db
+package sqlite
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 // Store implements workspace.WorkspaceStore over the raw SQLite store,
-// converting between the domain Stored* types and the localdb rows. The
+// converting between the domain Stored* types and the sqlite rows. The
 // workspace layer depends on this adapter through the interface, never on the
 // database package directly.
 type Store struct {

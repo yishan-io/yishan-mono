@@ -3,7 +3,7 @@ package cmd
 import "yishan/apps/cli/cmd/output"
 import "yishan/apps/cli/internal/adapter/cloud"
 
-func toOrgListRenderData(response api.ListOrganizationsResponse, includeAll bool) (output.RenderData, error) {
+func toOrgListRenderData(response cloud.ListOrganizationsResponse, includeAll bool) (output.RenderData, error) {
 	rows := make([]map[string]any, 0, len(response.Organizations))
 	for _, organization := range response.Organizations {
 		rows = append(rows, organizationSummaryRow(organization, includeAll))
@@ -21,7 +21,7 @@ func toOrgListRenderData(response api.ListOrganizationsResponse, includeAll bool
 	}, nil
 }
 
-func toOrgCurrentRenderData(organization api.Organization) output.RenderData {
+func toOrgCurrentRenderData(organization cloud.Organization) output.RenderData {
 	return output.RenderData{
 		Title:   "organization",
 		Columns: []string{"id", "name", "memberCount", "createdAt", "updatedAt"},
@@ -29,7 +29,7 @@ func toOrgCurrentRenderData(organization api.Organization) output.RenderData {
 	}
 }
 
-func toOrgMembersRenderData(organization api.Organization) output.RenderData {
+func toOrgMembersRenderData(organization cloud.Organization) output.RenderData {
 	rows := make([]map[string]any, 0, len(organization.Members))
 	for _, member := range organization.Members {
 		rows = append(rows, map[string]any{
@@ -50,7 +50,7 @@ func toOrgMembersRenderData(organization api.Organization) output.RenderData {
 // toOrgCurrentCombinedObject returns a single JSON-safe object combining the
 // organization record and its member list. Used by orgCurrentCmd in JSON mode
 // to avoid emitting two separate JSON documents to stdout.
-func toOrgCurrentCombinedObject(organization api.Organization) map[string]any {
+func toOrgCurrentCombinedObject(organization cloud.Organization) map[string]any {
 	members := make([]map[string]any, 0, len(organization.Members))
 	for _, member := range organization.Members {
 		members = append(members, map[string]any{
@@ -67,7 +67,7 @@ func toOrgCurrentCombinedObject(organization api.Organization) map[string]any {
 	}
 }
 
-func organizationSummaryRow(organization api.Organization, includeAll bool) map[string]any {
+func organizationSummaryRow(organization cloud.Organization, includeAll bool) map[string]any {
 	row := map[string]any{
 		"id":          organization.ID,
 		"name":        organization.Name,

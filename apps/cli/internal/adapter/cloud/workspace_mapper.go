@@ -1,8 +1,8 @@
-// Package apiclient owns conversion between the cloud API workspace DTO and
+// Package cloud owns conversion between the cloud API workspace DTO and
 // the workspace domain record. Created in Phase 1 of the CLI/daemon refactor
 // as the named mapper boundary; Phase 5 moves all remaining API DTO
 // conversion (request building, cache sync) into this package.
-package api
+package cloud
 
 import (
 	"yishan/apps/cli/internal/workspace"

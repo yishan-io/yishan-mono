@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/adapter/relay"
@@ -213,7 +213,7 @@ func publishTerminalSessionChanged(handler *Service, params json.RawMessage) {
 		Str("action", strings.TrimSpace(action)).
 		Msg("relay: terminal session change received")
 
-	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalSessionChanged", Payload: payload})
+	handler.deps.Events.Publish(eventbus.Event{Topic: "terminalSessionChanged", Payload: payload})
 }
 
 // handleTerminalStreamRequest is called on the owning daemon (daemon A) when
@@ -258,7 +258,7 @@ func publishTerminalStreamAccept(handler *Service, params json.RawMessage) {
 			return
 		}
 	}
-	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalStreamAccepted", Payload: payload})
+	handler.deps.Events.Publish(eventbus.Event{Topic: "terminalStreamAccepted", Payload: payload})
 }
 
 // publishTerminalStreamCancel notifies the desktop that a remote stream was cancelled.
@@ -270,5 +270,5 @@ func publishTerminalStreamCancel(handler *Service, params json.RawMessage) {
 			return
 		}
 	}
-	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalStreamCancelled", Payload: payload})
+	handler.deps.Events.Publish(eventbus.Event{Topic: "terminalStreamCancelled", Payload: payload})
 }

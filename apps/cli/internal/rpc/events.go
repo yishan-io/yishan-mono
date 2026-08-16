@@ -1,12 +1,12 @@
 package rpc
 
 import (
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 )
 
 // Event is a frontend event streamed to clients (topic + payload). It aliases
 // the internal event hub's event type so subscriptions flow without copies.
-type Event = internalevents.Event
+type Event = eventbus.Event
 
 // AttachEventStream forwards frontend events to the client as notifications on
 // the given method until the stream is detached (or the connection closes).

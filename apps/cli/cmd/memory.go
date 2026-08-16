@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"yishan/apps/cli/internal/platform/config"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/cmd/output"
 )
@@ -140,12 +140,12 @@ func readProfileWorkspaceRefs() ([]memory.WorkspaceRef, error) {
 	if err != nil {
 		return nil, err
 	}
-	database, err := localdb.OpenReadOnly(dataDir)
+	database, err := sqlite.OpenReadOnly(dataDir)
 	if err != nil {
 		return nil, err
 	}
 	defer database.Close()
-	workspaceStore := localdb.NewWorkspaceStore(database)
+	workspaceStore := sqlite.NewWorkspaceStore(database)
 	dbWorkspaces, err := workspaceStore.List(context.Background())
 	if err != nil {
 		return nil, err

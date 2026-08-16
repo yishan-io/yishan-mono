@@ -6,18 +6,18 @@ import (
 	"path/filepath"
 	"testing"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 )
 
 func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	return database
@@ -25,19 +25,19 @@ func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 
 func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
-	cleanupStore, err := localdb.NewWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), localdb.PendingCleanupFileName))
+	cleanupStore, err := sqlite.NewWorkspaceCleanupStore(database, filepath.Join(t.TempDir(), sqlite.PendingCleanupFileName))
 	if err != nil {
 		t.Fatalf("new cleanup store: %v", err)
 	}
 	workspacePath := t.TempDir()
-	workspaceStore := localdb.NewWorkspaceStore(database)
-	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: workspacePath, State: "active",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	if err := cleanupStore.Add(localdb.PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
+	if err := cleanupStore.Add(sqlite.PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: workspacePath}); err != nil {
 		t.Fatalf("add pending cleanup: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 		ServerCtx:    context.Background(),
 	})
 	app := &App{
-		store:        localdb.NewStore(workspaceStore),
+		store:        sqlite.NewStore(workspaceStore),
 		cleanupStore: cleanupStore,
 		database:     database,
 		workspaceSvc: workspaceSvc,

@@ -1,4 +1,4 @@
-package db
+package sqlite
 
 // ProjectCommand is a named shell command configured for a project.
 type ProjectCommand struct {

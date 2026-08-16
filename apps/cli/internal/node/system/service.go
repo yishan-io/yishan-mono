@@ -8,10 +8,10 @@ package system
 import (
 	"context"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	"yishan/apps/cli/internal/computer"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/rpc"
@@ -21,8 +21,8 @@ import (
 
 // Deps are the explicit dependencies of the system application service.
 type Deps struct {
-	Runtime    *cliruntime.Runtime
-	Events     *internalevents.Hub
+	Session    *session.Session
+	Events     *eventbus.Hub
 	ModelList  *modellist.Service
 	TokenUsage tokenusage.Service
 

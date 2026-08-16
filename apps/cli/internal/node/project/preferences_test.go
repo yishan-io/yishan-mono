@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -15,12 +15,12 @@ func newPreferencesHandler(t *testing.T) *Service {
 	root := t.TempDir()
 	handler := newTestService(t, nil)
 
-	database, err := localdb.Open(filepath.Join(root, "db"))
+	database, err := sqlite.Open(filepath.Join(root, "db"))
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	handler.setTestDatabase(database)
@@ -38,20 +38,20 @@ func TestGetListPreferences_ReturnsDefaultsForMissingOrg(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get list preferences: %v", err)
 	}
-	preference, ok := result.(localdb.ProjectListPreference)
+	preference, ok := result.(sqlite.ProjectListPreference)
 	if !ok {
-		t.Fatalf("result type = %T, want localdb.ProjectListPreference", result)
+		t.Fatalf("result type = %T, want sqlite.ProjectListPreference", result)
 	}
-	if preference.Version != localdb.ProjectListPreferencesVersion {
-		t.Fatalf("version = %d, want %d", preference.Version, localdb.ProjectListPreferencesVersion)
+	if preference.Version != sqlite.ProjectListPreferencesVersion {
+		t.Fatalf("version = %d, want %d", preference.Version, sqlite.ProjectListPreferencesVersion)
 	}
 }
 
 func TestGetSetListPreferences_RoundTrip(t *testing.T) {
 	handler := newPreferencesHandler(t)
 
-	preferences := localdb.ProjectListPreference{
-		ByProject: localdb.ProjectListModePreference{
+	preferences := sqlite.ProjectListPreference{
+		ByProject: sqlite.ProjectListModePreference{
 			ProjectOrderIds: []string{"project-1"},
 		},
 	}
@@ -75,7 +75,7 @@ func TestGetSetListPreferences_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get list preferences: %v", err)
 	}
-	got := result.(localdb.ProjectListPreference)
+	got := result.(sqlite.ProjectListPreference)
 	if len(got.ByProject.ProjectOrderIds) != 1 || got.ByProject.ProjectOrderIds[0] != "project-1" {
 		t.Fatalf("project order = %v, want [project-1]", got.ByProject.ProjectOrderIds)
 	}
@@ -93,9 +93,9 @@ func TestGetListPreferences_RequiresOrganizationID(t *testing.T) {
 
 func TestGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
 	handler := newPreferencesHandler(t)
-	database := localdb.NewWorkspaceStore(handler.deps.Database)
+	database := sqlite.NewWorkspaceStore(handler.deps.Database)
 
-	if err := database.Create(context.Background(), &localdb.Workspace{
+	if err := database.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: "/tmp/ws", State: "active",
 	}); err != nil {
@@ -107,7 +107,7 @@ func TestGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
 		rpc.MethodProjectSetListPreferences,
 		marshalParams(t, map[string]any{
 			"organizationId": "org-1",
-			"preferences": localdb.ProjectListPreference{
+			"preferences": sqlite.ProjectListPreference{
 				WorkspaceOrderByParentId: map[string][]string{"project-1:node-1": {"ws-1", "ws-gone"}},
 			},
 		}),
@@ -127,7 +127,7 @@ func TestGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get list preferences: %v", err)
 	}
-	got := result.(localdb.ProjectListPreference)
+	got := result.(sqlite.ProjectListPreference)
 	if len(got.WorkspaceOrderByParentId["project-1:node-1"]) != 0 {
 		t.Fatalf("deleted workspace id must be pruned, got %v", got.WorkspaceOrderByParentId)
 	}

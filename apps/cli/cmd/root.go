@@ -8,7 +8,7 @@ import (
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/platform/logging"
 	"yishan/apps/cli/cmd/output"
-	runtime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -17,7 +17,7 @@ import (
 
 var cfgFile string
 var appConfig config.Config
-var apiClient *api.Client
+var apiClient *cloud.Client
 
 var rootCmd = &cobra.Command{
 	Use:   "yishan",
@@ -57,7 +57,7 @@ func initConfig() {
 	viper.AutomaticEnv()
 	viper.SetDefault("profile", "default")
 	viper.SetDefault("log_level", "info")
-	viper.SetDefault("log_format", logx.FormatPretty)
+	viper.SetDefault("log_format", logging.FormatPretty)
 	viper.SetDefault("output", "default")
 	viper.SetDefault("daemon_relay_enabled", true)
 	viper.SetDefault("daemon_relay_url", "https://relay.yishan.io")
@@ -84,7 +84,7 @@ func initConfig() {
 		cobra.CheckErr(err)
 	}
 	appConfig = loaded
-	apiClient = api.NewRuntimeClient(&appConfig)
+	apiClient = cloud.NewRuntimeClient(&appConfig)
 
 	if err := configureLogger(appConfig.LogLevel, appConfig.LogFormat); err != nil {
 		cobra.CheckErr(err)
@@ -99,16 +99,16 @@ func initConfig() {
 	}
 }
 
-func apiClientRuntime() *runtime.Runtime {
-	return runtime.New(&appConfig)
+func apiClientSession() *session.Session {
+	return session.New(&appConfig)
 }
 
 // activeLogFileWriter holds the current daemon log file writer so it can be
 // closed on shutdown and referenced for status/diagnostics.
-var activeLogFileWriter *logx.FileWriter
+var activeLogFileWriter *logging.FileWriter
 
 func configureLogger(level string, format string) error {
-	cfg := logx.Config{
+	cfg := logging.Config{
 		Level:   level,
 		Format:  format,
 		Out:     os.Stderr,
@@ -117,7 +117,7 @@ func configureLogger(level string, format string) error {
 	if activeLogFileWriter != nil {
 		cfg.FileOut = activeLogFileWriter
 	}
-	return logx.Configure(cfg)
+	return logging.Configure(cfg)
 }
 
 // configureDaemonLogFile opens (or re-uses) a rotating log file writer at the
@@ -128,7 +128,7 @@ func configureDaemonLogFile(path string) error {
 		return nil
 	}
 
-	fw, err := logx.NewFileWriter(logx.FileWriterConfig{Path: path})
+	fw, err := logging.NewFileWriter(logging.FileWriterConfig{Path: path})
 	if err != nil {
 		return err
 	}

@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/rpc"
 )
 
 // newTestService builds a project application service for tests with a router
 // wired for the project namespace.
-func newTestService(t *testing.T, runtime *cliruntime.Runtime) *Service {
+func newTestService(t *testing.T, runtime *session.Session) *Service {
 	t.Helper()
-	svc := NewService(Deps{Runtime: runtime})
+	svc := NewService(Deps{Session: runtime})
 	router := rpc.NewRouter()
 	router.Register("project", &rpc.ProjectHandler{Services: svc})
 	svc.router = router

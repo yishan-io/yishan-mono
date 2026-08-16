@@ -8,7 +8,6 @@ import (
 	"time"
 	"yishan/apps/cli/internal/git"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 
@@ -29,7 +28,6 @@ type Tracker struct {
 	mu        sync.Mutex
 	gits      *git.GitService
 	instances *instance.Registry
-	runtime   *cliruntime.Runtime
 	// active maps workspaceID → Workspace for all workspaces currently being
 	// tracked. Storing the full Workspace avoids calling registry.List() on
 	// every poll tick and filtering by active map membership.
@@ -52,7 +50,6 @@ type Tracker struct {
 type TrackerDeps struct {
 	Instances            *instance.Registry
 	Gits                 *git.GitService
-	Runtime              *cliruntime.Runtime
 	PersistPR            func(context.Context, string, *workspace.WorkspacePullRequest) error
 	ResolvePR            func(context.Context, string, int) error
 	OnPullRequestUpdated func(PullRequestUpdatedEvent)
@@ -62,7 +59,6 @@ func New(deps TrackerDeps) *Tracker {
 	tracker := &Tracker{
 		gits:                 deps.Gits,
 		instances:            deps.Instances,
-		runtime:              deps.Runtime,
 		active:               make(map[string]workspace.Workspace),
 		inFlight:             make(map[string]bool),
 		done:                 make(chan struct{}),

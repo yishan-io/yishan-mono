@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/workspace/application"
 )
@@ -276,8 +276,8 @@ type ProjectGetListPreferencesParams struct {
 }
 
 type ProjectSetListPreferencesParams struct {
-	OrganizationID string                        `json:"organizationId"`
-	Preferences    localdb.ProjectListPreference `json:"preferences"`
+	OrganizationID string                       `json:"organizationId"`
+	Preferences    sqlite.ProjectListPreference `json:"preferences"`
 }
 
 // ---- context namespace ----

@@ -2,7 +2,7 @@
 // the workspace domain record. Created in Phase 1 of the CLI/daemon refactor
 // as the named mapper boundary; Phase 5 moves all remaining SQLite row
 // conversion (state/health updates, folder rows) into this package.
-package db
+package sqlite
 
 import (
 	"yishan/apps/cli/internal/workspace"

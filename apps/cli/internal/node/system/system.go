@@ -76,7 +76,7 @@ func (s *Service) IntegrationGitHubStatus(ctx context.Context, params json.RawMe
 }
 
 func (s *Service) AppPersistAuthTokens(ctx context.Context, params json.RawMessage) (any, error) {
-	var req api.TokenUpdate
+	var req cloud.TokenUpdate
 	if err := rpc.DecodeParams(params, &req); err != nil {
 		return nil, err
 	}
@@ -85,14 +85,14 @@ func (s *Service) AppPersistAuthTokens(ctx context.Context, params json.RawMessa
 	if req.AccessToken == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "accessToken is required")
 	}
-	if err := s.deps.Runtime.PersistAuthTokens(req); err != nil {
+	if err := s.deps.Session.PersistAuthTokens(req); err != nil {
 		return nil, err
 	}
 	return map[string]bool{"ok": true}, nil
 }
 
 func (s *Service) AppGetAccessToken(ctx context.Context) (any, error) {
-	accessToken, expiresAt, err := s.deps.Runtime.EnsureFreshAccessToken()
+	accessToken, expiresAt, err := s.deps.Session.EnsureFreshAccessToken()
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (s *Service) AppGetAccessToken(ctx context.Context) (any, error) {
 }
 
 func (s *Service) AppCheckAuthStatus(ctx context.Context) (any, error) {
-	authenticated, expiresAt, err := s.deps.Runtime.CheckAuthStatus()
+	authenticated, expiresAt, err := s.deps.Session.CheckAuthStatus()
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to check authentication status")
 		return map[string]any{"authenticated": false}, nil
@@ -117,14 +117,14 @@ func (s *Service) AppCheckAuthStatus(ctx context.Context) (any, error) {
 }
 
 func (s *Service) AppLogout(ctx context.Context) (any, error) {
-	if err := s.deps.Runtime.ClearAuthState(); err != nil {
+	if err := s.deps.Session.ClearAuthState(); err != nil {
 		return nil, err
 	}
 	return map[string]bool{"ok": true}, nil
 }
 
 func (s *Service) AppReloadAuthConfig(ctx context.Context) (any, error) {
-	if err := s.deps.Runtime.ReloadAuthConfig(); err != nil {
+	if err := s.deps.Session.ReloadAuthConfig(); err != nil {
 		return nil, err
 	}
 	return map[string]bool{"ok": true}, nil
@@ -153,7 +153,7 @@ func (s *Service) ProjectList(ctx context.Context, req rpc.SystemProjectListPara
 	if orgID == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "orgId is required")
 	}
-	client := s.deps.Runtime.APIClient()
+	client := s.deps.Session.APIClient()
 	resp, err := client.ListProjects(orgID)
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
@@ -166,7 +166,7 @@ func (s *Service) NodeList(ctx context.Context, req rpc.SystemNodeListParams) (a
 	if orgID == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "orgId is required")
 	}
-	client := s.deps.Runtime.APIClient()
+	client := s.deps.Session.APIClient()
 	resp, err := client.ListNodes(orgID)
 	if err != nil {
 		return nil, fmt.Errorf("list nodes: %w", err)

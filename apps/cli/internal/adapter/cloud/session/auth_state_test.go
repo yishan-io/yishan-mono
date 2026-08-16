@@ -1,4 +1,4 @@
-package runtime
+package session
 
 import (
 	"encoding/json"
@@ -24,9 +24,9 @@ func TestRuntimeClearAuthState_RetainsInMemoryCredentialsWhenPersistenceFails(t 
 			RefreshTokenExpiresAt: "2026-08-31T00:00:00Z",
 		},
 	}
-	runtime := New(cfg)
+	session := New(cfg)
 
-	if err := runtime.ClearAuthState(); err == nil {
+	if err := session.ClearAuthState(); err == nil {
 		t.Fatal("expected clear auth state to fail when config path is a directory")
 	}
 	if cfg.API.Token != "access-token" || cfg.API.RefreshToken != "refresh-token" {
@@ -56,15 +56,15 @@ func TestRuntimeAPIClient_ClearsPersistedCredentialsAfterPermanentRefreshFailure
 			RefreshToken: "invalid-refresh",
 		},
 	}
-	runtime := New(cfg)
-	if err := runtime.PersistAuthTokens(api.TokenUpdate{
+	session := New(cfg)
+	if err := session.PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:  cfg.API.Token,
 		RefreshToken: cfg.API.RefreshToken,
 	}); err != nil {
 		t.Fatalf("seed credential file: %v", err)
 	}
 
-	if _, err := runtime.APIClient().DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"}); err == nil {
+	if _, err := session.APIClient().DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"}); err == nil {
 		t.Fatal("expected permanent refresh failure")
 	}
 	if cfg.API.Token != "" || cfg.API.RefreshToken != "" {
@@ -86,7 +86,7 @@ func TestRuntimeClearAuthState_DoesNotAllowStaleClientToRestoreCredentials(t *te
 			}
 			http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
 		case "/auth/refresh":
-			json.NewEncoder(w).Encode(api.TokenUpdate{
+			json.NewEncoder(w).Encode(cloud.TokenUpdate{
 				AccessToken:           "fresh-access",
 				RefreshToken:          "fresh-refresh",
 				AccessTokenExpiresAt:  time.Now().Add(10 * time.Minute).Format(time.RFC3339Nano),
@@ -107,16 +107,16 @@ func TestRuntimeClearAuthState_DoesNotAllowStaleClientToRestoreCredentials(t *te
 			RefreshToken: "valid-refresh",
 		},
 	}
-	runtime := New(cfg)
-	if err := runtime.PersistAuthTokens(api.TokenUpdate{
+	session := New(cfg)
+	if err := session.PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:  cfg.API.Token,
 		RefreshToken: cfg.API.RefreshToken,
 	}); err != nil {
 		t.Fatalf("seed credential file: %v", err)
 	}
 
-	staleClient := runtime.APIClient()
-	if err := runtime.ClearAuthState(); err != nil {
+	staleClient := session.APIClient()
+	if err := session.ClearAuthState(); err != nil {
 		t.Fatalf("clear auth state: %v", err)
 	}
 	if _, err := staleClient.DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"}); err == nil {
@@ -158,7 +158,7 @@ func TestRuntimeAPIClient_AllowsConcurrentRefreshesFromSameAuthGeneration(t *tes
 			if refreshNumber == 1 {
 				close(firstRefreshStarted)
 				<-releaseFirstRefresh
-				json.NewEncoder(w).Encode(api.TokenUpdate{
+				json.NewEncoder(w).Encode(cloud.TokenUpdate{
 					AccessToken:           "older-access",
 					RefreshToken:          "valid-refresh",
 					AccessTokenExpiresAt:  olderAccessExpiry,
@@ -166,7 +166,7 @@ func TestRuntimeAPIClient_AllowsConcurrentRefreshesFromSameAuthGeneration(t *tes
 				})
 				return
 			}
-			json.NewEncoder(w).Encode(api.TokenUpdate{
+			json.NewEncoder(w).Encode(cloud.TokenUpdate{
 				AccessToken:           "newer-access",
 				RefreshToken:          "valid-refresh",
 				AccessTokenExpiresAt:  newerAccessExpiry,
@@ -188,21 +188,21 @@ func TestRuntimeAPIClient_AllowsConcurrentRefreshesFromSameAuthGeneration(t *tes
 			RefreshToken: "valid-refresh",
 		},
 	}
-	runtime := New(cfg)
-	if err := runtime.PersistAuthTokens(api.TokenUpdate{
+	session := New(cfg)
+	if err := session.PersistAuthTokens(cloud.TokenUpdate{
 		AccessToken:  cfg.API.Token,
 		RefreshToken: cfg.API.RefreshToken,
 	}); err != nil {
 		t.Fatalf("seed credential file: %v", err)
 	}
 
-	clients := []*api.Client{runtime.APIClient(), runtime.APIClient()}
+	clients := []*cloud.Client{session.APIClient(), session.APIClient()}
 	start := make(chan struct{})
 	errs := make(chan error, len(clients))
 	var wg sync.WaitGroup
 	for _, client := range clients {
 		wg.Add(1)
-		go func(client *api.Client) {
+		go func(client *cloud.Client) {
 			defer wg.Done()
 			<-start
 			_, err := client.DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"})

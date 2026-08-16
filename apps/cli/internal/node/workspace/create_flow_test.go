@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -42,7 +42,7 @@ func TestWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *testing.T
 
 func newWorkspaceCreateFlowTestHandler(t *testing.T, baseURL string) *Service {
 	t.Helper()
-	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: baseURL, Token: "test-token"}})
+	runtime := session.New(&config.Config{API: config.APIConfig{BaseURL: baseURL, Token: "test-token"}})
 	handler := newTestService(t, runtime, "node-local")
 	return handler
 }

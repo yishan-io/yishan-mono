@@ -13,7 +13,7 @@ import (
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/rpc"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 const daemonAuthSyncHealthTimeout = 250 * time.Millisecond
@@ -30,15 +30,15 @@ var probeDaemonHealthForAuthSync = daemon.ProbeHealth
 var newDaemonRPCClientForAuthSync = func(wsURL string) daemonAuthSyncRPCClient {
 	return daemonclient.New(wsURL, "")
 }
-var persistAuthTokensLocallyForAuthSync = func(update api.TokenUpdate) error {
-	return cliruntime.New(&appConfig).PersistAuthTokens(update)
+var persistAuthTokensLocallyForAuthSync = func(update cloud.TokenUpdate) error {
+	return session.New(&appConfig).PersistAuthTokens(update)
 }
 
 type authTokenPersistenceResult struct {
 	Warning error
 }
 
-func persistAuthTokensForLogin(ctx context.Context, update api.TokenUpdate) (authTokenPersistenceResult, error) {
+func persistAuthTokensForLogin(ctx context.Context, update cloud.TokenUpdate) (authTokenPersistenceResult, error) {
 	daemonHandled, err := syncDaemonAuthTokens(ctx, update)
 	if daemonHandled && err == nil {
 		applyAuthTokenUpdate(update)
@@ -53,7 +53,7 @@ func persistAuthTokensForLogin(ctx context.Context, update api.TokenUpdate) (aut
 	return authTokenPersistenceResult{}, nil
 }
 
-func applyAuthTokenUpdate(update api.TokenUpdate) {
+func applyAuthTokenUpdate(update cloud.TokenUpdate) {
 	appConfig.API.Token = update.AccessToken
 	appConfig.API.RefreshToken = update.RefreshToken
 	appConfig.API.AccessTokenExpiresAt = update.AccessTokenExpiresAt
@@ -63,7 +63,7 @@ func applyAuthTokenUpdate(update api.TokenUpdate) {
 	}
 }
 
-func syncDaemonAuthTokens(ctx context.Context, update api.TokenUpdate) (bool, error) {
+func syncDaemonAuthTokens(ctx context.Context, update cloud.TokenUpdate) (bool, error) {
 	statePath, err := resolveDaemonStatePathForAuthSync(appConfig.ConfigPath)
 	if err != nil {
 		return false, fmt.Errorf("resolve daemon state path: %w", err)

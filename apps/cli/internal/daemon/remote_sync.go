@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/cloud"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	release "yishan/apps/cli/internal/platform/release"
 )
 
@@ -18,12 +18,12 @@ func isReauthRequiredError(err error) bool {
 		return false
 	}
 
-	var refreshErr *api.TokenRefreshError
+	var refreshErr *cloud.TokenRefreshError
 	if errors.As(err, &refreshErr) {
 		return true
 	}
 
-	var apiErr *api.APIError
+	var apiErr *cloud.APIError
 	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == http.StatusUnauthorized
 	}
@@ -35,7 +35,7 @@ func formatReauthRequiredMessage(operation string) string {
 	return fmt.Sprintf("%s requires an authenticated API session; your refresh token may be expired. Run `yishan login` and retry", operation)
 }
 
-func registerRemoteNode(runtime *cliruntime.Runtime, registration NodeRegistration) error {
+func registerRemoteNode(runtime *session.Session, registration NodeRegistration) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
@@ -56,7 +56,7 @@ func registerRemoteNode(runtime *cliruntime.Runtime, registration NodeRegistrati
 		agentDetection = append(agentDetection, entry)
 	}
 
-	_, err = runtime.APIClient().RegisterNode(api.RegisterNodeInput{
+	_, err = runtime.APIClient().RegisterNode(cloud.RegisterNodeInput{
 		NodeID:   registration.ID,
 		Name:     hostname,
 		Kind:     "managed",

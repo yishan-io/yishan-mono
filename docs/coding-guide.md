@@ -309,7 +309,7 @@ internal/
     shellenv/         Shell environment resolution
     logging/          Log file management
     release/          Self-update + build info
-  events/           Frontend event hub (eventbus rename deferred)
+  eventbus/         Application event publication and subscription (frontend event hub)
   archtest/         Forbidden-import architecture test
 ```
 
@@ -712,7 +712,14 @@ go vet ./...
   RPC services); no setup function forwards to another package — the
   hook-install forwarder was removed and callers use `setup/hooks` directly.
 
-### Internal package taxonomy (cli, Phases 16–19)
+### Internal package taxonomy (cli, Phases 16–21)
+
+Package names match their directory roles (Phase 21): `adapter/cloud` is
+`package cloud`, `adapter/cloud/session` is `package session`
+(`session.Session` owns cloud authentication state), `adapter/sqlite` is
+`package sqlite`, `platform/logging` is `package logging`, and `events` is
+`package eventbus`.
+
 - Every top-level internal package has one documented role: composition
   (`app`), host/transport (`daemon`, `rpc`), application boundary
   (`node/*` vertical services), domain owner (`workspace`, `agent`,

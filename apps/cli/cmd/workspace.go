@@ -35,7 +35,7 @@ var workspaceListCmd = &cobra.Command{
 			return err
 		}
 
-		response := api.ListWorkspacesResponse{Workspaces: []api.Workspace{}}
+		response := cloud.ListWorkspacesResponse{Workspaces: []cloud.Workspace{}}
 		projectNames := map[string]string{}
 		if strings.TrimSpace(projectID) != "" {
 			response, err = apiClient.ListWorkspaces(orgID, projectID)
@@ -142,7 +142,7 @@ var workspaceCloseCmd = &cobra.Command{
 			return formatWorkspaceLifecycleError("close", err)
 		}
 
-		var selected *api.Workspace
+		var selected *cloud.Workspace
 		for i := range workspaces.Workspaces {
 			item := &workspaces.Workspaces[i]
 			if item.ID == workspaceID {
@@ -154,7 +154,7 @@ var workspaceCloseCmd = &cobra.Command{
 			return fmt.Errorf("workspace %s was not found in project %s; run `yishan workspace list --project-id %s` to find a valid id", workspaceID, projectID, projectID)
 		}
 
-		response, err := apiClient.CloseWorkspace(orgID, projectID, api.CloseWorkspaceInput{
+		response, err := apiClient.CloseWorkspace(orgID, projectID, cloud.CloseWorkspaceInput{
 			WorkspaceID: selected.ID,
 		})
 		if err != nil {
@@ -221,7 +221,7 @@ func validateWorkspaceKind(kind string) error {
 }
 
 func formatWorkspaceLifecycleError(action string, err error) error {
-	var apiErr *api.APIError
+	var apiErr *cloud.APIError
 	if !errors.As(err, &apiErr) {
 		return err
 	}
