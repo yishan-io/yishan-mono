@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
-	"yishan/apps/cli/internal/tokenusage"
+	"yishan/apps/cli/internal/tokenusage/collection"
 )
 
 // recordingTokenUsage is a tokenusage.Service fake that records startup/shutdown
@@ -43,17 +43,17 @@ func (r *recordingTokenUsage) Close() {
 func (r *recordingTokenUsage) SyncNow(string)                   {}
 func (r *recordingTokenUsage) Trigger(string, string)           {}
 func (r *recordingTokenUsage) RequestRecentRecoveryScan(string) {}
-func (r *recordingTokenUsage) DebugState() tokenusage.CollectorDebugState {
-	return tokenusage.CollectorDebugState{}
+func (r *recordingTokenUsage) DebugState() collection.DebugState {
+	return collection.DebugState{}
 }
 
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	return database
@@ -72,8 +72,8 @@ func TestBootstrap_StartupSequence(t *testing.T) {
 	// A persisted active workspace row: hydration must restore it as an open
 	// instance and watch registration must attach a filesystem watcher to it.
 	database := openTestDB(t)
-	workspaceStore := localdb.NewWorkspaceStore(database)
-	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: root, State: "active",
 	}); err != nil {
@@ -136,8 +136,8 @@ func TestAppClose_ShutdownOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	database := openTestDB(t)
-	workspaceStore := localdb.NewWorkspaceStore(database)
-	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: root, State: "active",
 	}); err != nil {

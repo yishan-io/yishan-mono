@@ -8,7 +8,7 @@ import (
 
 	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/cmd/output"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 var setupCmd = &cobra.Command{
@@ -46,7 +46,7 @@ Codex, and Cursor agents. These hooks send lifecycle events
 				"message": "agent hooks removed from all supported agents",
 			})
 		}
-		setup.EnsureManagedAgentRuntime(cliruntime.UsesServiceTokenAuth())
+		setup.EnsureManagedAgentRuntime(session.UsesServiceTokenAuth())
 		return output.PrintAny(map[string]any{
 			"action":  "installed",
 			"message": "agent hooks installed for all supported agents",
@@ -72,7 +72,7 @@ var setupStateCmd = &cobra.Command{
 func runSetupAll(_ *cobra.Command, _ []string) error {
 	var allErrors []string
 
-	disablePersona := cliruntime.UsesServiceTokenAuth()
+	disablePersona := session.UsesServiceTokenAuth()
 	setup.EnsureManagedAgentRuntime(disablePersona)
 
 	if err := setup.EnsureDefaultPiExtensionSetup(); err != nil {

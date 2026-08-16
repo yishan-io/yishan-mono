@@ -85,7 +85,7 @@ func TestBuildPersonaMarkdown_roundTrip(t *testing.T) {
 		t.Errorf("WorkflowHabits round-trip failed: got %v", parsed.WorkflowHabits)
 	}
 	// Empty sections should still be present as headings.
-	for _, heading := range []PersonaSection{
+	for _, heading := range []personaSection{
 		PersonaSectionCodeStyle, PersonaSectionWorkflowHabits,
 		PersonaSectionDomainExpertise, PersonaSectionToolPreferences, PersonaSectionCommunication,
 	} {
@@ -97,7 +97,7 @@ func TestBuildPersonaMarkdown_roundTrip(t *testing.T) {
 
 func TestBuildPersonaMarkdown_allSectionsPresent_evenIfEmpty(t *testing.T) {
 	md := buildPersonaMarkdown(personaSections{})
-	for _, h := range []PersonaSection{
+	for _, h := range []personaSection{
 		PersonaSectionCodeStyle, PersonaSectionWorkflowHabits,
 		PersonaSectionDomainExpertise, PersonaSectionToolPreferences, PersonaSectionCommunication,
 	} {

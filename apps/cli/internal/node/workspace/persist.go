@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
@@ -21,7 +21,7 @@ func (s *Service) PublishSnapshotChanged(organizationID string, projectID string
 		return
 	}
 
-	s.deps.Events.Publish(internalevents.Event{
+	s.deps.Events.Publish(eventbus.Event{
 		Topic: "workspaceSnapshotChanged",
 		Payload: map[string]any{
 			"organizationId": organizationID,
@@ -39,8 +39,8 @@ func (s *Service) PersistPlan(ctx context.Context, prepared application.CreatePl
 	if s.deps.Database == nil || prepared.Registration == nil {
 		return nil
 	}
-	row := localdb.ProvisioningRow(*prepared.Registration)
-	return localdb.NewWorkspaceStore(s.deps.Database).Create(ctx, &row)
+	row := sqlite.ProvisioningRow(*prepared.Registration)
+	return sqlite.NewWorkspaceStore(s.deps.Database).Create(ctx, &row)
 }
 
 // FinalizePersisted transitions the persisted row to active once the local
@@ -52,8 +52,8 @@ func (s *Service) Finalize(ctx context.Context, prepared application.CreatePlan,
 	if s.deps.Database == nil || prepared.Registration == nil {
 		return nil
 	}
-	err := localdb.NewWorkspaceStore(s.deps.Database).Update(ctx, created.ID, localdb.ActiveUpdate(created))
-	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	err := sqlite.NewWorkspaceStore(s.deps.Database).Update(ctx, created.ID, sqlite.ActiveUpdate(created))
+	if err != nil && !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
 		return err
 	}
 	return nil
@@ -65,8 +65,8 @@ func (s *Service) UpdateState(ctx context.Context, workspaceID string, state str
 	if s.deps.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
-	err := localdb.NewWorkspaceStore(s.deps.Database).Update(ctx, workspaceID, localdb.StateUpdate(state, health))
-	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	err := sqlite.NewWorkspaceStore(s.deps.Database).Update(ctx, workspaceID, sqlite.StateUpdate(state, health))
+	if err != nil && !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
 		return err
 	}
 	return nil
@@ -78,8 +78,8 @@ func (s *Service) MarkClosed(ctx context.Context, workspaceID string) error {
 	if s.deps.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
-	workspaceStore := localdb.NewWorkspaceStore(s.deps.Database)
-	if err := workspaceStore.Update(ctx, workspaceID, localdb.StatusUpdate(string(workspace.StatusClosed))); err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	workspaceStore := sqlite.NewWorkspaceStore(s.deps.Database)
+	if err := workspaceStore.Update(ctx, workspaceID, sqlite.StatusUpdate(string(workspace.StatusClosed))); err != nil && !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
 		return err
 	}
 	// Mirror the closed status on the remote record (best-effort). The local row

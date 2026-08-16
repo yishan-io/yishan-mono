@@ -92,7 +92,7 @@ func runDaemon(_ *cobra.Command, _ []string) error {
 
 	log.Info().Str("log_file", logFile).Msg("daemon log file configured")
 
-	return daemon.Run(buildRunConfig(logFile), statePath, apiClientRuntime())
+	return daemon.Run(buildRunConfig(logFile), statePath, apiClientSession())
 }
 
 func startDaemon(_ *cobra.Command, _ []string) error {

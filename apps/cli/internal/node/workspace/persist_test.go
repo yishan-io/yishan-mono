@@ -4,23 +4,24 @@ import (
 	"context"
 	"testing"
 	"time"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/workspace"
+	application "yishan/apps/cli/internal/workspace/application"
 )
 
 func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	handler := newTestHandler(t)
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	handler.setTestDatabase(database)
 
-	prepared := preparedWorkspaceCreate{Registration: &WorkspaceCreation{
+	prepared := preparedWorkspaceCreate{Registration: &application.Registration{
 		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: "project-1",
 		Kind: workspace.KindWorktree, Branch: "feature/local-db", SourceBranch: "main",
 	}}
@@ -29,7 +30,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	if err := handler.PersistPlan(context.Background(), prepared); err != nil {
 		t.Fatalf("persist prepared workspace: %v", err)
 	}
-	provisioningWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
+	provisioningWorkspace, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), created.ID)
 	if err != nil {
 		t.Fatalf("get provisioning workspace: %v", err)
 	}
@@ -39,7 +40,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	if err := handler.Finalize(context.Background(), prepared, created); err != nil {
 		t.Fatalf("finalize persisted workspace: %v", err)
 	}
-	storedWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
+	storedWorkspace, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), created.ID)
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}

@@ -179,10 +179,14 @@ func TestMapRPCErrorIncludesComputerMetadata(t *testing.T) {
 		true,
 	))
 
-	if rpcErr.Data["code"] != computer.ErrorCodePermissionMissing {
-		t.Fatalf("expected computer code metadata, got %#v", rpcErr.Data)
+	data, ok := rpcErr.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected structured data, got %#v", rpcErr.Data)
 	}
-	if rpcErr.Data["retryable"] != true {
-		t.Fatalf("expected retryable metadata, got %#v", rpcErr.Data)
+	if data["code"] != computer.ErrorCodePermissionMissing {
+		t.Fatalf("expected computer code metadata, got %#v", data)
+	}
+	if data["retryable"] != true {
+		t.Fatalf("expected retryable metadata, got %#v", data)
 	}
 }

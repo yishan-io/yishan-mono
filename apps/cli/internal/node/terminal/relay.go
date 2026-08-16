@@ -1,14 +1,15 @@
 package terminal
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"strings"
 
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 
 	"github.com/rs/zerolog/log"
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/rpc"
 	term "yishan/apps/cli/internal/terminal"
@@ -89,10 +90,10 @@ func (s *Service) remoteSubscribe(connState *rpc.Connection, req rpc.TerminalRem
 	if !firstSub {
 		return map[string]bool{"ok": true}, nil
 	}
-	if err := s.relayClient.SendNotification(relay.MethodTerminalStreamRequest, map[string]string{
-		"sessionId": req.SessionID,
-		"ownerNode": req.OwnerNode,
-		"fromNode":  s.deps.NodeID,
+	if err := s.relayClient.SendNotification(relay.MethodTerminalStreamRequest, relayprotocol.TerminalStreamRequestParams{
+		SessionID: req.SessionID,
+		OwnerNode: req.OwnerNode,
+		FromNode:  s.deps.NodeID,
 	}); err != nil {
 		s.removeRemoteStreamSub(req.SessionID, connState)
 		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
@@ -106,9 +107,9 @@ func (s *Service) remoteUnsubscribe(connState *rpc.Connection, req rpc.TerminalR
 		return map[string]bool{"ok": true}, nil
 	}
 	// Best-effort: the relay may be gone, in which case there is nothing to cancel.
-	_ = s.relayClient.SendNotification(relay.MethodTerminalStreamCancel, map[string]string{
-		"sessionId": req.SessionID,
-		"fromNode":  s.deps.NodeID,
+	_ = s.relayClient.SendNotification(relay.MethodTerminalStreamCancel, relayprotocol.TerminalStreamCancelParams{
+		SessionID: req.SessionID,
+		FromNode:  s.deps.NodeID,
 	})
 	return map[string]bool{"ok": true}, nil
 }
@@ -142,7 +143,7 @@ func (s *Service) forwardRemoteTerminalInput(sessionID string, payload []byte) b
 // the local PTY directly.
 func (s *Service) HandleBinaryFrame(connection *rpc.Connection, opcode byte, sessionID string, payload []byte) {
 	switch opcode {
-	case binOpcodeTerminalInput:
+	case relayprotocol.BinaryFrameOpcodeInput:
 		if s.forwardRemoteTerminalInput(sessionID, payload) {
 			return
 		}
@@ -152,18 +153,18 @@ func (s *Service) HandleBinaryFrame(connection *rpc.Connection, opcode byte, ses
 			return
 		}
 		s.deps.Terminals.SendRaw(sessionID, inputData)
-	case binOpcodeTerminalOutput:
+	case relayprotocol.BinaryFrameOpcodeOutput:
 		s.forwardRemoteTerminalOutput(sessionID, payload)
 	}
 }
 
 // terminalInputData slices the payload after the null-terminated session id.
 func terminalInputData(payload []byte) []byte {
-	nullIdx := bytes.IndexByte(payload[1:], 0)
-	if nullIdx < 0 {
+	_, _, data, ok := relayprotocol.DecodeBinaryFrame(payload)
+	if !ok {
 		return nil
 	}
-	return payload[1+nullIdx+1:]
+	return data
 }
 
 // HandleRelayMessage implements relay.MessageHandler for the relay-level
@@ -213,17 +214,14 @@ func publishTerminalSessionChanged(handler *Service, params json.RawMessage) {
 		Str("action", strings.TrimSpace(action)).
 		Msg("relay: terminal session change received")
 
-	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalSessionChanged", Payload: payload})
+	handler.deps.Events.Publish(eventbus.Event{Topic: "terminalSessionChanged", Payload: payload})
 }
 
 // handleTerminalStreamRequest is called on the owning daemon (daemon A) when
 // another node wants to subscribe to a PTY session. It subscribes the relay
 // connState to the local terminal session so output flows back over /ws.
 func handleTerminalStreamRequest(handler *Service, connState *rpc.Connection, params json.RawMessage) {
-	var p struct {
-		SessionID string `json:"sessionId"`
-		FromNode  string `json:"fromNode"`
-	}
+	var p relayprotocol.TerminalStreamRequestParams
 	if err := json.Unmarshal(params, &p); err != nil {
 		log.Warn().Err(err).Msg("relay: invalid terminal.stream.request params")
 		return
@@ -242,7 +240,7 @@ func handleTerminalStreamRequest(handler *Service, connState *rpc.Connection, pa
 	acceptNotif := rpc.Notification{
 		JSONRPC: "2.0",
 		Method:  relay.MethodTerminalStreamAccept,
-		Params:  map[string]string{"sessionId": p.SessionID},
+		Params:  relayprotocol.TerminalStreamAcceptParams{SessionID: p.SessionID},
 	}
 	if err := connState.WriteJSON(acceptNotif); err != nil {
 		log.Warn().Err(err).Str("sessionId", p.SessionID).Msg("relay: failed to send terminal.stream.accept")
@@ -258,7 +256,7 @@ func publishTerminalStreamAccept(handler *Service, params json.RawMessage) {
 			return
 		}
 	}
-	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalStreamAccepted", Payload: payload})
+	handler.deps.Events.Publish(eventbus.Event{Topic: "terminalStreamAccepted", Payload: payload})
 }
 
 // publishTerminalStreamCancel notifies the desktop that a remote stream was cancelled.
@@ -270,5 +268,5 @@ func publishTerminalStreamCancel(handler *Service, params json.RawMessage) {
 			return
 		}
 	}
-	handler.deps.Events.Publish(internalevents.Event{Topic: "terminalStreamCancelled", Payload: payload})
+	handler.deps.Events.Publish(eventbus.Event{Topic: "terminalStreamCancelled", Payload: payload})
 }

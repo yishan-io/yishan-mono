@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -29,21 +29,21 @@ func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t 
 	}))
 	defer server.Close()
 
-	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
+	runtime := session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
 	handler := newTestService(t, runtime, "node-1")
 
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	// The local row exists (so the failure revert can resolve the worktree
 	// path), but the workspace is NOT registered in the manager, so the local
 	// teardown (manager.CloseWorkspace) fails.
-	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
+	if err := sqlite.NewWorkspaceStore(database).Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: "/tmp/ws", State: "active",
 	}); err != nil {

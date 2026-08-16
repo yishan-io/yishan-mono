@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/relay"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 
 	"github.com/rs/zerolog/log"
@@ -76,5 +76,5 @@ func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
 		return
 	}
 
-	handler.deps.Events.Publish(internalevents.Event{Topic: "workspaceSnapshotChanged", Payload: payload})
+	handler.deps.Events.Publish(eventbus.Event{Topic: "workspaceSnapshotChanged", Payload: payload})
 }

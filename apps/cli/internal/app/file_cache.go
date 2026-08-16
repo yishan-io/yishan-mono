@@ -3,7 +3,7 @@ package app
 import (
 	"path/filepath"
 
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 
 	"github.com/rs/zerolog/log"
 )
@@ -17,7 +17,7 @@ func (a *App) StartFileCacheConsumer() {
 	go a.consumeFileCacheInvalidationEvents(events)
 }
 
-func (a *App) consumeFileCacheInvalidationEvents(events <-chan internalevents.Event) {
+func (a *App) consumeFileCacheInvalidationEvents(events <-chan eventbus.Event) {
 	for event := range events {
 		if event.Topic != "workspaceFilesChanged" {
 			continue

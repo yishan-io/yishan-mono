@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/node/context"
@@ -20,7 +20,7 @@ import (
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 
-func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopic string) internalevents.Event {
+func expectEventTopic(t *testing.T, events <-chan eventbus.Event, wantTopic string) eventbus.Event {
 	t.Helper()
 	deadline := time.After(3 * time.Second)
 
@@ -36,7 +36,7 @@ func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopi
 	}
 }
 
-func expectNoEvent(t *testing.T, events <-chan internalevents.Event, wait time.Duration) {
+func expectNoEvent(t *testing.T, events <-chan eventbus.Event, wait time.Duration) {
 	t.Helper()
 
 	select {
@@ -56,7 +56,7 @@ func evalSymlinks(t *testing.T, path string) string {
 }
 
 func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	sink := nodeworkspace.NewEventHubWatcherSink(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -82,7 +82,7 @@ func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *t
 }
 
 func TestEventHubWorkspaceWatcherSink_PublishesGitChangedPayload(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	sink := nodeworkspace.NewEventHubWatcherSink(hub)
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
@@ -105,7 +105,7 @@ func TestEventHubWorkspaceWatcherSink_PublishesGitChangedPayload(t *testing.T) {
 }
 
 func TestPublishWorkspacePullRequestUpdatedEvent(t *testing.T) {
-	hub := internalevents.NewHub()
+	hub := eventbus.NewHub()
 	subscriptionID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subscriptionID)
 
@@ -158,7 +158,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "b.txt"), []byte("b"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	app.events.Publish(internalevents.Event{
+	app.events.Publish(eventbus.Event{
 		Topic: "workspaceFilesChanged",
 		Payload: map[string]any{
 			"workspaceWorktreePath": root,
@@ -178,7 +178,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "c.txt"), []byte("c"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	app.events.Publish(internalevents.Event{
+	app.events.Publish(eventbus.Event{
 		Topic: "workspaceFilesChanged",
 		Payload: map[string]any{
 			"workspaceWorktreePath": root,
@@ -203,15 +203,15 @@ func TestApp_WatchActiveWorkspacesRegistersWatchersForHydratedWorkspaces(t *test
 	}
 
 	database := openCleanupStoreTestDB(t)
-	workspaceStore := localdb.NewWorkspaceStore(database)
-	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: root, State: "active",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	app := newWatchTestApp(t, localdb.NewStore(workspaceStore))
+	app := newWatchTestApp(t, sqlite.NewStore(workspaceStore))
 
 	// Hydration alone must not register watchers (the regression this guards):
 	// without the explicit watch step, file-change events stop flowing after a
@@ -280,7 +280,7 @@ func TestApp_HealthRecoveryRewatchesWorkspace(t *testing.T) {
 // newWatchTestApp builds a minimal app for watcher/file-cache behavior tests.
 func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 	t.Helper()
-	events := internalevents.NewHub()
+	events := eventbus.NewHub()
 	filesService := files.NewFileService()
 	registry := instance.NewRegistry(filesService)
 	gitService := git.NewGitService()
@@ -288,7 +288,6 @@ func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 	prTracker := workspaceprtracker.New(workspaceprtracker.TrackerDeps{
 		Instances: registry,
 		Gits:      gitService,
-		Runtime:   nil,
 		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
 			nodeworkspace.PublishPullRequestUpdated(events, event)
 		},
@@ -321,7 +320,7 @@ func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 		prTracker:    prTracker,
 		contextStore: contextstore.NewStore(""),
 		workspaceSvc: workspaceSvc,
-		Runtime:      nil,
+		Session:      nil,
 		NodeID:       "node-1",
 		logFilePath:  filepath.Join(t.TempDir(), "daemon.log"),
 		settingsPath: filepath.Join(t.TempDir(), "config.yml"),

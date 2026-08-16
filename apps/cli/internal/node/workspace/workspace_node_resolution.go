@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	gitexec "yishan/apps/cli/internal/git/exec"
 )
 
-func ensureNodeUsableForWorkspace(runtime *cliruntime.Runtime, organizationID string, nodeID string) error {
+func ensureNodeUsableForWorkspace(runtime *session.Session, organizationID string, nodeID string) error {
 	nodesResponse, err := runtime.APIClient().ListNodes(organizationID)
 	if err != nil {
 		return fmt.Errorf("load organization nodes: %w", err)

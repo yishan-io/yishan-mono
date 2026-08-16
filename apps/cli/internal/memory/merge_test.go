@@ -63,7 +63,7 @@ func TestMergePersona_allSections(t *testing.T) {
 		CodeStyle:      []string{"Prefers npm over bun"},
 		WorkflowHabits: []string{"Always runs lint"},
 	}
-	extracted := ExtractedPersona{
+	extracted := extractedPersona{
 		CodeStyle:       []string{"Prefers bun over npm"},
 		DomainExpertise: []string{"Go concurrency patterns"},
 	}

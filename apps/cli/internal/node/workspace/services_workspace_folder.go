@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -27,8 +27,8 @@ func (s *Service) CreateLocalFolder(ctx context.Context, req rpc.WorkspaceCreate
 	if err != nil {
 		return nil, err
 	}
-	store := localdb.NewWorkspaceStore(s.deps.Database)
-	created, err := store.CreateFolder(ctx, localdb.FolderWorkspaceInput{
+	store := sqlite.NewWorkspaceStore(s.deps.Database)
+	created, err := store.CreateFolder(ctx, sqlite.FolderWorkspaceInput{
 		LocalPath: resolvedPath,
 		NodeID:    s.deps.NodeID,
 		Name:      req.Name,
@@ -70,10 +70,10 @@ func (s *Service) validateFolderPath(ctx context.Context, rawPath string) (strin
 	if inspect.IsGitRepository {
 		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is a git repository; folder workspaces must be non-git")
 	}
-	store := localdb.NewWorkspaceStore(s.deps.Database)
+	store := sqlite.NewWorkspaceStore(s.deps.Database)
 	if _, err := store.GetByPath(ctx, resolvedPath); err == nil {
 		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
-	} else if !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+	} else if !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
 		return "", err
 	}
 	return resolvedPath, nil
@@ -99,7 +99,7 @@ func (s *Service) ListLocalFolders(ctx context.Context) (any, error) {
 	if s.deps.Database == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
-	return localdb.NewWorkspaceStore(s.deps.Database).ListFolders(ctx)
+	return sqlite.NewWorkspaceStore(s.deps.Database).ListFolders(ctx)
 }
 
 // WorkspaceDeleteLocalFolder removes a folder workspace row. If the folder
@@ -128,7 +128,7 @@ func (s *Service) DeleteLocalFolder(ctx context.Context, req rpc.WorkspaceDelete
 	// usage is lost and no stale usage survives the delete.
 	s.summarizeUsedAgents(req.ID, workspace.CloseRequest{WorkspaceID: req.ID})
 	s.clearAgentUsage(req.ID)
-	if err := localdb.NewWorkspaceStore(s.deps.Database).Delete(ctx, req.ID); err != nil {
+	if err := sqlite.NewWorkspaceStore(s.deps.Database).Delete(ctx, req.ID); err != nil {
 		return nil, err
 	}
 	return map[string]any{"ok": true}, nil

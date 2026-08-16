@@ -13,7 +13,7 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/agent/session"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/rpc"
 	term "yishan/apps/cli/internal/terminal"
@@ -34,7 +34,7 @@ type Deps struct {
 	AgentMgr     *agentmanager.Manager
 	PIAuth       *piauth.Store
 	ModelList    *modellist.Service
-	Events       *internalevents.Hub
+	Events       *eventbus.Hub
 	Terminals    *term.Manager
 	ContextStore *contextstore.Store
 

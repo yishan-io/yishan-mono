@@ -119,7 +119,7 @@ func TestReconcile_ClassifiesTypes(t *testing.T) {
 
 	cases := []struct {
 		relPath string
-		want    FileType
+		want    fileType
 	}{
 		{"MEMORY.md", FileTypeMemory},
 		{filepath.Join("architecture", "decisions.md"), FileTypeArchitecture},
@@ -191,7 +191,7 @@ func TestIndexFileOnDisk_NewFile(t *testing.T) {
 func TestIndexFileOnDisk_DeletesOnNotExist(t *testing.T) {
 	db := openTestDB(t)
 	p := "/nonexistent/MEMORY.md"
-	db.UpsertFile(MemoryFile{Path: p, ProjectPath: "/nonexistent", Type: FileTypeMemory, Body: "x", Fingerprint: "fp", IndexedAt: 1})
+	db.UpsertFile(memoryFile{Path: p, ProjectPath: "/nonexistent", Type: FileTypeMemory, Body: "x", Fingerprint: "fp", IndexedAt: 1})
 
 	if err := db.IndexFileOnDisk(p, "/nonexistent", "p1"); err != nil {
 		t.Fatal(err)

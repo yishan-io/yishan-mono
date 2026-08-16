@@ -66,7 +66,7 @@ To use on a remote host:
 			return err
 		}
 
-		input := api.CreateServiceTokenInput{Name: name}
+		input := cloud.CreateServiceTokenInput{Name: name}
 		if expiresInDays > 0 {
 			input.ExpiresInDays = &expiresInDays
 		}

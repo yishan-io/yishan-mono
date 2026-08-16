@@ -147,26 +147,26 @@ func TestPlanStartDecisions(t *testing.T) {
 }
 
 func TestStopPIDRejectsInvalidPID(t *testing.T) {
-	if err := StopPID(0, time.Second); !errors.Is(err, ErrNotRunning) {
-		t.Fatalf("StopPID(0): got %v, want ErrNotRunning", err)
+	if err := stopPID(0, time.Second); !errors.Is(err, ErrNotRunning) {
+		t.Fatalf("stopPID(0): got %v, want ErrNotRunning", err)
 	}
-	if err := StopPID(-1, time.Second); !errors.Is(err, ErrNotRunning) {
-		t.Fatalf("StopPID(-1): got %v, want ErrNotRunning", err)
+	if err := stopPID(-1, time.Second); !errors.Is(err, ErrNotRunning) {
+		t.Fatalf("stopPID(-1): got %v, want ErrNotRunning", err)
 	}
 }
 
 func TestStopPIDReturnsNotRunningForDeadPID(t *testing.T) {
-	if err := StopPID(999999, time.Second); !errors.Is(err, ErrNotRunning) {
-		t.Fatalf("StopPID(dead pid): got %v, want ErrNotRunning", err)
+	if err := stopPID(999999, time.Second); !errors.Is(err, ErrNotRunning) {
+		t.Fatalf("stopPID(dead pid): got %v, want ErrNotRunning", err)
 	}
 }
 
 func TestResolveStopPIDPrefersLiveLockHolder(t *testing.T) {
 	dir := t.TempDir()
-	lockPath := dir + "/" + LockFileName
+	lockPath := dir + "/" + lockFileName
 	statePath := dir + "/" + StateFileName
 
-	lock, err := AcquireDaemonLock(lockPath)
+	lock, err := acquireDaemonLock(lockPath)
 	if err != nil {
 		t.Fatalf("acquire lock: %v", err)
 	}
@@ -180,11 +180,11 @@ func TestResolveStopPIDPrefersLiveLockHolder(t *testing.T) {
 
 func TestResolveStopPIDFallsBackToStateRecordWithoutLock(t *testing.T) {
 	dir := t.TempDir()
-	lockPath := dir + "/" + LockFileName
+	lockPath := dir + "/" + lockFileName
 	statePath := dir + "/" + StateFileName
 
 	state := RuntimeState{PID: os.Getpid(), Host: "127.0.0.1", Port: 43123}
-	if err := SaveState(statePath, state); err != nil {
+	if err := saveState(statePath, state); err != nil {
 		t.Fatalf("save state: %v", err)
 	}
 
@@ -195,7 +195,7 @@ func TestResolveStopPIDFallsBackToStateRecordWithoutLock(t *testing.T) {
 
 func TestResolveStopPIDReturnsZeroWhenNothingOwnsProfile(t *testing.T) {
 	dir := t.TempDir()
-	if pid := resolveStopPID(dir+"/"+LockFileName, dir+"/"+StateFileName); pid != 0 {
+	if pid := resolveStopPID(dir+"/"+lockFileName, dir+"/"+StateFileName); pid != 0 {
 		t.Fatalf("resolveStopPID: got %d, want 0", pid)
 	}
 }

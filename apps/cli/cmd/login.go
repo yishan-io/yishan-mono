@@ -64,14 +64,14 @@ service token created via "yishan auth create-service-token".`,
 		// without an extra network call. On the rare parse failure, fall back
 		// to WhoAmI so the persisted user_id always matches the new account
 		// (a stale user_id would otherwise pin the wrong account dir).
-		userID, ok := api.ParseUserIDFromJWT(result.AccessToken)
+		userID, ok := cloud.ParseUserIDFromJWT(result.AccessToken)
 		if !ok {
-			if me, whoAmIErr := api.NewClient(appConfig.API.BaseURL, result.AccessToken, "", "", "", nil).WhoAmI(); whoAmIErr == nil {
+			if me, whoAmIErr := cloud.NewClient(appConfig.API.BaseURL, result.AccessToken, "", "", "", nil).WhoAmI(); whoAmIErr == nil {
 				userID = me.User.ID
 			}
 		}
 
-		persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), api.TokenUpdate{
+		persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), cloud.TokenUpdate{
 			AccessToken:           result.AccessToken,
 			RefreshToken:          result.RefreshToken,
 			AccessTokenExpiresAt:  result.AccessTokenExpiresAt,
@@ -106,13 +106,13 @@ func init() {
 func loginWithServiceToken(cmd *cobra.Command, token string) error {
 	// Verify the token before persisting: WhoAmI provides the user_id needed
 	// for account data dir resolution, so it must run first.
-	client := api.NewClient(appConfig.API.BaseURL, token, "", "", "", nil)
+	client := cloud.NewClient(appConfig.API.BaseURL, token, "", "", "", nil)
 	me, err := client.WhoAmI()
 	if err != nil {
 		return fmt.Errorf("service token verification failed: %w", err)
 	}
 
-	persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), api.TokenUpdate{
+	persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), cloud.TokenUpdate{
 		AccessToken: token,
 		UserID:      me.User.ID,
 	})
@@ -160,7 +160,7 @@ func registerLocalNodeAfterLogin() error {
 	}
 
 	updateIfExists := false
-	client := api.NewClient(
+	client := cloud.NewClient(
 		appConfig.API.BaseURL,
 		appConfig.API.Token,
 		appConfig.API.RefreshToken,
@@ -168,7 +168,7 @@ func registerLocalNodeAfterLogin() error {
 		appConfig.API.RefreshTokenExpiresAt,
 		nil,
 	)
-	_, err = client.RegisterNode(api.RegisterNodeInput{
+	_, err = client.RegisterNode(cloud.RegisterNodeInput{
 		NodeID: daemonID,
 		Name:   hostname,
 		Kind:   "managed",

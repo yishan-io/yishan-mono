@@ -5,6 +5,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/cli/internal/terminal"
 )
 
@@ -219,20 +222,14 @@ func (c *Connection) handleTerminalEvent(event terminal.Event, batcher *terminal
 }
 
 type terminalOutputBatcher struct {
-	outputFramePrefix []byte
-	pendingPayload    []byte
+	sessionID      string
+	pendingPayload []byte
 }
 
 func newTerminalOutputBatcher(sessionID string) *terminalOutputBatcher {
-	sid := []byte(sessionID)
-	prefix := make([]byte, 1+len(sid)+1)
-	prefix[0] = 0x02
-	copy(prefix[1:], sid)
-	prefix[1+len(sid)] = 0
-
 	return &terminalOutputBatcher{
-		outputFramePrefix: prefix,
-		pendingPayload:    make([]byte, 0, terminalOutputMaxBatchBytes),
+		sessionID:      sessionID,
+		pendingPayload: make([]byte, 0, terminalOutputMaxBatchBytes),
 	}
 }
 
@@ -249,11 +246,9 @@ func (b *terminalOutputBatcher) flush(conn *Connection) error {
 		return nil
 	}
 
-	frame := make([]byte, len(b.outputFramePrefix)+len(b.pendingPayload))
-	copy(frame, b.outputFramePrefix)
-	copy(frame[len(b.outputFramePrefix):], b.pendingPayload)
+	frames := relayprotocol.EncodeBinaryFrame(relayprotocol.BinaryFrameOpcodeOutput, b.sessionID, b.pendingPayload)
 	b.pendingPayload = b.pendingPayload[:0]
-	return conn.WriteBinary(frame)
+	return conn.WriteBinary(frames)
 }
 
 func (b *terminalOutputBatcher) hasPendingPayload() bool {

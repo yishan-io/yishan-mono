@@ -32,11 +32,11 @@ import (
 	"strings"
 	"testing"
 	"time"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	nodeagent "yishan/apps/cli/internal/node/agent"
@@ -103,10 +103,10 @@ const apiWorkspaceRecord = `{"workspace":{"id":"ws-record","organizationId":"org
 // newWorkspaceAPIStub serves the workspace CRUD endpoints for org-1/project-1
 // and records every request. Unknown paths 404 (usage-collector scans and
 // similar best-effort calls tolerate this).
-func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *Service {
+func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Service {
 	t.Helper()
 	root := t.TempDir()
-	events := internalevents.NewHub()
+	events := eventbus.NewHub()
 	filesService := files.NewFileService()
 	registry := instance.NewRegistry(filesService)
 	gitService := git.NewGitService()
@@ -114,7 +114,6 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 	prTracker := workspaceprtracker.New(workspaceprtracker.TrackerDeps{
 		Instances: registry,
 		Gits:      gitService,
-		Runtime:   runtime,
 		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
 			PublishPullRequestUpdated(events, event)
 		},
@@ -134,7 +133,7 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		Events:      events,
 		Watchers:    watchers,
 		PRTracker:   prTracker,
-		Runtime:     runtime,
+		Session:     runtime,
 		NodeID:      nodeID,
 		LogFilePath: filepath.Join(root, "daemon.log"),
 		ServerCtx:   context.Background(),
@@ -155,7 +154,7 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		ServerCtx:         context.Background(),
 	})
 	svc.SetRelayClient(relay.NewClient(relay.ClientConfig{
-		Runtime: runtime,
+		Session: runtime,
 		NodeID:  nodeID,
 		// No URL/static token: the client stays disconnected unless a test
 		// wires it to a fake relay (wireRelayReader/wireRelayCapture).
@@ -190,7 +189,7 @@ func (s *Service) callRPCForTest(ctx context.Context, method string, params json
 }
 
 // expectEventTopic waits for an event with the wanted topic on the hub.
-func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopic string) internalevents.Event {
+func expectEventTopic(t *testing.T, events <-chan eventbus.Event, wantTopic string) eventbus.Event {
 	t.Helper()
 	deadline := time.After(3 * time.Second)
 	for {
@@ -206,7 +205,7 @@ func expectEventTopic(t *testing.T, events <-chan internalevents.Event, wantTopi
 }
 
 // expectNoEvent fails when an event arrives within the wait window.
-func expectNoEvent(t *testing.T, events <-chan internalevents.Event, wait time.Duration) {
+func expectNoEvent(t *testing.T, events <-chan eventbus.Event, wait time.Duration) {
 	t.Helper()
 	select {
 	case event := <-events:

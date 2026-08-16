@@ -1,4 +1,4 @@
-package logx
+package logging
 
 import (
 	"fmt"
@@ -41,7 +41,7 @@ type FileWriterConfig struct {
 // The file is opened in append mode so logs survive restarts.
 func NewFileWriter(cfg FileWriterConfig) (*FileWriter, error) {
 	if cfg.Path == "" {
-		return nil, fmt.Errorf("logx: file path is required")
+		return nil, fmt.Errorf("logging: file path is required")
 	}
 	if cfg.MaxBytes <= 0 {
 		cfg.MaxBytes = DefaultMaxBytes
@@ -52,18 +52,18 @@ func NewFileWriter(cfg FileWriterConfig) (*FileWriter, error) {
 
 	dir := filepath.Dir(cfg.Path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, fmt.Errorf("logx: create log dir %q: %w", dir, err)
+		return nil, fmt.Errorf("logging: create log dir %q: %w", dir, err)
 	}
 
 	f, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
-		return nil, fmt.Errorf("logx: open log file %q: %w", cfg.Path, err)
+		return nil, fmt.Errorf("logging: open log file %q: %w", cfg.Path, err)
 	}
 
 	info, err := f.Stat()
 	if err != nil {
 		_ = f.Close()
-		return nil, fmt.Errorf("logx: stat log file %q: %w", cfg.Path, err)
+		return nil, fmt.Errorf("logging: stat log file %q: %w", cfg.Path, err)
 	}
 
 	return &FileWriter{

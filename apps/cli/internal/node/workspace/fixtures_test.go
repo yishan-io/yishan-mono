@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -37,17 +37,17 @@ func newWorkspaceAPIStub(t *testing.T, recorder *apiCallRecorder) *httptest.Serv
 	return server
 }
 
-func apiConfiguredRuntime(server *httptest.Server) *cliruntime.Runtime {
-	return cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
+func apiConfiguredRuntime(server *httptest.Server) *session.Session {
+	return session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
 }
 
 func openMigratedTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
@@ -58,20 +58,20 @@ func openMigratedTestDB(t *testing.T) *sql.DB {
 // returns every event collected (including the terminal one). Fails the test
 // on timeout so async create goroutines cannot hang the suite.
 
-func newBehaviorHandler(t *testing.T, runtime *cliruntime.Runtime, nodeID string, database *sql.DB) *Service {
+func newBehaviorHandler(t *testing.T, runtime *session.Session, nodeID string, database *sql.DB) *Service {
 	t.Helper()
 	s := newTestService(t, runtime, nodeID)
 	s.setTestDatabase(database)
 	return s
 }
 
-func findTopic(events []internalevents.Event, topic string) internalevents.Event {
+func findTopic(events []eventbus.Event, topic string) eventbus.Event {
 	for _, event := range events {
 		if event.Topic == topic {
 			return event
 		}
 	}
-	return internalevents.Event{}
+	return eventbus.Event{}
 }
 
 func openLocalWorkspace(t *testing.T, services *Service, id string, path string) {

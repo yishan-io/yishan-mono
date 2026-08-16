@@ -8,30 +8,30 @@ import (
 )
 
 func TestAcquireDaemonLockExcludesSecondHolder(t *testing.T) {
-	path := filepath.Join(t.TempDir(), LockFileName)
+	path := filepath.Join(t.TempDir(), lockFileName)
 
-	lock, err := AcquireDaemonLock(path)
+	lock, err := acquireDaemonLock(path)
 	if err != nil {
 		t.Fatalf("first acquire failed: %v", err)
 	}
 	defer lock.Release()
 
-	if _, err := AcquireDaemonLock(path); !errors.Is(err, ErrDaemonLocked) {
-		t.Fatalf("second acquire: got %v, want ErrDaemonLocked", err)
+	if _, err := acquireDaemonLock(path); !errors.Is(err, errDaemonLocked) {
+		t.Fatalf("second acquire: got %v, want errDaemonLocked", err)
 	}
 }
 
 func TestDaemonLockReleaseAllowsReacquire(t *testing.T) {
-	path := filepath.Join(t.TempDir(), LockFileName)
+	path := filepath.Join(t.TempDir(), lockFileName)
 
-	lock, err := AcquireDaemonLock(path)
+	lock, err := acquireDaemonLock(path)
 	if err != nil {
 		t.Fatalf("acquire failed: %v", err)
 	}
 	lock.Release()
 	lock.Release() // double release is a no-op
 
-	lock, err = AcquireDaemonLock(path)
+	lock, err = acquireDaemonLock(path)
 	if err != nil {
 		t.Fatalf("reacquire after release failed: %v", err)
 	}
@@ -39,13 +39,13 @@ func TestDaemonLockReleaseAllowsReacquire(t *testing.T) {
 }
 
 func TestDaemonLockRecordsHolderPID(t *testing.T) {
-	path := filepath.Join(t.TempDir(), LockFileName)
+	path := filepath.Join(t.TempDir(), lockFileName)
 
 	if pid := LockHolderPID(path); pid != 0 {
 		t.Fatalf("missing lock file: got holder pid %d, want 0", pid)
 	}
 
-	lock, err := AcquireDaemonLock(path)
+	lock, err := acquireDaemonLock(path)
 	if err != nil {
 		t.Fatalf("acquire failed: %v", err)
 	}
@@ -57,20 +57,20 @@ func TestDaemonLockRecordsHolderPID(t *testing.T) {
 }
 
 func TestIsLockHeld(t *testing.T) {
-	path := filepath.Join(t.TempDir(), LockFileName)
+	path := filepath.Join(t.TempDir(), lockFileName)
 
-	if IsLockHeld(path) {
-		t.Fatal("IsLockHeld on free lock: want false")
+	if isLockHeld(path) {
+		t.Fatal("isLockHeld on free lock: want false")
 	}
 
-	lock, err := AcquireDaemonLock(path)
+	lock, err := acquireDaemonLock(path)
 	if err != nil {
 		t.Fatalf("acquire failed: %v", err)
 	}
 	defer lock.Release()
 
-	if !IsLockHeld(path) {
-		t.Fatal("IsLockHeld on held lock: want true")
+	if !isLockHeld(path) {
+		t.Fatal("isLockHeld on held lock: want true")
 	}
 }
 
@@ -82,7 +82,7 @@ func TestResolveLockFilePathSitsNextToState(t *testing.T) {
 		t.Fatalf("resolve lock path: %v", err)
 	}
 
-	want := filepath.Join(filepath.Dir(configPath), LockFileName)
+	want := filepath.Join(filepath.Dir(configPath), lockFileName)
 	if lockPath != want {
 		t.Fatalf("lock path: got %q, want %q", lockPath, want)
 	}

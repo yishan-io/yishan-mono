@@ -15,7 +15,7 @@ func TestLoadState_AllowsRunningCurrentProcess(t *testing.T) {
 		Port:      43123,
 		StartedAt: time.Now().UTC(),
 	}
-	if err := SaveState(statePath, state); err != nil {
+	if err := saveState(statePath, state); err != nil {
 		t.Fatalf("save state: %v", err)
 	}
 
@@ -36,7 +36,7 @@ func TestLoadState_RemovesStaleStateFileForDeadProcess(t *testing.T) {
 		Port:      43123,
 		StartedAt: time.Now().UTC(),
 	}
-	if err := SaveState(statePath, state); err != nil {
+	if err := saveState(statePath, state); err != nil {
 		t.Fatalf("save state: %v", err)
 	}
 

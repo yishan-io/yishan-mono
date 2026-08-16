@@ -26,4 +26,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
+	yishan/packages/relay-protocol-go v0.0.0
 )
+
+replace yishan/packages/relay-protocol-go => ../../packages/relay-protocol-go

@@ -17,7 +17,7 @@ func ClassifyError(err error) string {
 	}
 
 	// API errors — map HTTP status to a code
-	var apiErr *api.APIError
+	var apiErr *cloud.APIError
 	if errors.As(err, &apiErr) {
 		switch apiErr.StatusCode {
 		case http.StatusBadRequest:
@@ -37,7 +37,7 @@ func ClassifyError(err error) string {
 	}
 
 	// Token refresh failure (wraps an API 401)
-	var refreshErr *api.TokenRefreshError
+	var refreshErr *cloud.TokenRefreshError
 	if errors.As(err, &refreshErr) {
 		return "unauthenticated"
 	}

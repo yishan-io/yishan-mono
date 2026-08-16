@@ -17,10 +17,10 @@ const (
 	futureDir       = "future-improvement"
 )
 
-// classifyFileType derives FileType from the path relative to the canonical
+// classifyFileType derives fileType from the path relative to the canonical
 // context root (~/.yishan/contexts/<repoKey>/).
 // contextRoot must be the resolved (non-symlink) context directory.
-func classifyFileType(absPath string, contextRoot string) FileType {
+func classifyFileType(absPath string, contextRoot string) fileType {
 	if contextRoot == "" {
 		return FileTypeGlobal
 	}
@@ -78,7 +78,7 @@ type diskFile struct {
 	ProjectID   string
 	// explicitType overrides classifyFileType when non-empty.
 	// Set for global files which have a known type independent of path structure.
-	explicitType FileType
+	explicitType fileType
 }
 
 func scanWorkspaces(refs []WorkspaceRef, globalMemoryDir string) ([]diskFile, error) {
@@ -187,25 +187,25 @@ func fingerprint(body []byte) string {
 	return fmt.Sprintf("%x", sum[:8])
 }
 
-type ReconcileResult struct {
+type reconcileResult struct {
 	Inserted int
 	Updated  int
 	Deleted  int
 }
 
-func (db *DB) Reconcile(refs []WorkspaceRef, globalMemoryDir string) (ReconcileResult, error) {
+func (db *DB) Reconcile(refs []WorkspaceRef, globalMemoryDir string) (reconcileResult, error) {
 	diskFiles, err := scanWorkspaces(refs, globalMemoryDir)
 	if err != nil {
-		return ReconcileResult{}, err
+		return reconcileResult{}, err
 	}
 
 	dbPaths, err := db.AllPaths()
 	if err != nil {
-		return ReconcileResult{}, fmt.Errorf("read db paths: %w", err)
+		return reconcileResult{}, fmt.Errorf("read db paths: %w", err)
 	}
 
 	now := time.Now().Unix()
-	var result ReconcileResult
+	var result reconcileResult
 
 	diskPathSet := make(map[string]bool, len(diskFiles))
 	for _, df := range diskFiles {
@@ -228,7 +228,7 @@ func (db *DB) Reconcile(refs []WorkspaceRef, globalMemoryDir string) (ReconcileR
 			fileType = classifyFileType(df.Path, df.ProjectPath)
 		}
 
-		if err := db.UpsertFile(MemoryFile{
+		if err := db.UpsertFile(memoryFile{
 			Path:        df.Path,
 			ProjectPath: df.ProjectPath,
 			ProjectID:   df.ProjectID,
@@ -273,7 +273,7 @@ func (db *DB) IndexFileOnDisk(filePath string, contextRoot string, projectID str
 	now := time.Now().Unix()
 	fileType := classifyFileType(filePath, contextRoot)
 
-	return db.UpsertFile(MemoryFile{
+	return db.UpsertFile(memoryFile{
 		Path:        filePath,
 		ProjectPath: contextRoot,
 		ProjectID:   projectID,

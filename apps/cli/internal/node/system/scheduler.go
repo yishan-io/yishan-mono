@@ -10,8 +10,10 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/cli/internal/adapter/cloud"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	agentcmd "yishan/apps/cli/internal/agent/command"
 	"yishan/apps/cli/internal/rpc"
 )
@@ -23,20 +25,11 @@ const (
 	agentExecErrorCode = "AGENT_EXEC_ERROR"
 )
 
-// jobRunParams matches the relay protocol's job.run notification params.
-type jobRunParams struct {
-	RunID          string         `json:"runId"`
-	JobID          string         `json:"jobId"`
-	ScheduledFor   string         `json:"scheduledFor"`
-	IdempotencyKey string         `json:"idempotencyKey"`
-	Payload        map[string]any `json:"payload"`
-}
-
 // HandleJobRun processes a job.run notification received from the relay: it
 // validates the payload, sends job.ack, and runs the scheduled agent
 // asynchronously.
-func HandleJobRun(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
-	var params jobRunParams
+func HandleJobRun(runtime *session.Session, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
+	var params relayprotocol.JobRunParams
 	if err := json.Unmarshal(raw, &params); err != nil {
 		log.Warn().Err(err).Msg("scheduler: invalid job.run params")
 		sendJobAck(connState, params.RunID, "rejected", "invalid params")
@@ -62,11 +55,11 @@ func HandleJobRun(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID
 	go processRelayJob(runtime, connState, nodeID, params)
 }
 
-func processRelayJob(runtime *cliruntime.Runtime, connState *rpc.Connection, nodeID string, params jobRunParams) {
+func processRelayJob(runtime *session.Session, connState *rpc.Connection, nodeID string, params relayprotocol.JobRunParams) {
 	startTime := time.Now()
 	client := runtime.APIClient()
 
-	_, err := client.StartScheduledJobRun(nodeID, api.StartScheduledJobRunInput{
+	_, err := client.StartScheduledJobRun(nodeID, cloud.StartScheduledJobRunInput{
 		RunID:     params.RunID,
 		StartedAt: startTime.UTC().Format(time.RFC3339),
 	})
@@ -93,7 +86,7 @@ func processRelayJob(runtime *cliruntime.Runtime, connState *rpc.Connection, nod
 	durationMs := finishedAt.Sub(startTime).Milliseconds()
 
 	// Report to API
-	apiInput := api.CompleteScheduledJobRunInput{
+	apiInput := cloud.CompleteScheduledJobRunInput{
 		RunID:      params.RunID,
 		FinishedAt: finishedAt.UTC().Format(time.RFC3339),
 	}
@@ -113,7 +106,7 @@ func processRelayJob(runtime *cliruntime.Runtime, connState *rpc.Connection, nod
 
 	// Send job.result back to relay
 	if execErr != nil {
-		sendJobResult(connState, params.RunID, "failed", durationMs, nil, &jobResultError{
+		sendJobResult(connState, params.RunID, "failed", durationMs, nil, &relayprotocol.JobError{
 			Code:    agentExecErrorCode,
 			Message: execErr.Error(),
 		})
@@ -126,42 +119,11 @@ func processRelayJob(runtime *cliruntime.Runtime, connState *rpc.Connection, nod
 // Relay protocol messages (job.ack and job.result)
 // ---------------------------------------------------------------------------
 
-type jobAckNotification struct {
-	JSONRPC string       `json:"jsonrpc"`
-	Method  string       `json:"method"`
-	Params  jobAckParams `json:"params"`
-}
-
-type jobAckParams struct {
-	RunID  string `json:"runId"`
-	Status string `json:"status"` // "accepted" | "rejected"
-	Reason string `json:"reason,omitempty"`
-}
-
-type jobResultNotification struct {
-	JSONRPC string          `json:"jsonrpc"`
-	Method  string          `json:"method"`
-	Params  jobResultParams `json:"params"`
-}
-
-type jobResultParams struct {
-	RunID      string          `json:"runId"`
-	Status     string          `json:"status"` // "completed" | "failed" | "cancelled"
-	Output     map[string]any  `json:"output,omitempty"`
-	Error      *jobResultError `json:"error,omitempty"`
-	DurationMs int64           `json:"durationMs,omitempty"`
-}
-
-type jobResultError struct {
-	Code    string `json:"code,omitempty"`
-	Message string `json:"message"`
-}
-
 func sendJobAck(connState *rpc.Connection, runID, status, reason string) {
-	msg := jobAckNotification{
+	msg := relayprotocol.Notification{
 		JSONRPC: "2.0",
-		Method:  "job.ack",
-		Params: jobAckParams{
+		Method:  relayprotocol.MethodJobAck,
+		Params: relayprotocol.JobAckParams{
 			RunID:  runID,
 			Status: status,
 			Reason: reason,
@@ -172,11 +134,11 @@ func sendJobAck(connState *rpc.Connection, runID, status, reason string) {
 	}
 }
 
-func sendJobResult(connState *rpc.Connection, runID, status string, durationMs int64, output map[string]any, jobErr *jobResultError) {
-	msg := jobResultNotification{
+func sendJobResult(connState *rpc.Connection, runID, status string, durationMs int64, output map[string]any, jobErr *relayprotocol.JobError) {
+	msg := relayprotocol.Notification{
 		JSONRPC: "2.0",
-		Method:  "job.result",
-		Params: jobResultParams{
+		Method:  relayprotocol.MethodJobResult,
+		Params: relayprotocol.JobResultParams{
 			RunID:      runID,
 			Status:     status,
 			Output:     output,

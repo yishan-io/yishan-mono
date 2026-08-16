@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/cloud"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 
@@ -16,7 +16,7 @@ import (
 // workspace records to the remote API. When false the remote write is skipped
 // and the local SQLite row remains the only record (offline or unauthenticated
 // mode).
-func remoteWorkspaceRecordsEnabled(runtime *cliruntime.Runtime) bool {
+func remoteWorkspaceRecordsEnabled(runtime *session.Session) bool {
 	return runtime != nil && runtime.APIConfigured()
 }
 
@@ -29,10 +29,10 @@ func remoteWorkspaceRecordsEnabled(runtime *cliruntime.Runtime) bool {
 // Best-effort: failures are logged and the local record remains the source of
 // truth until the next remote→local cache sync reconciles the row.
 func (s *Service) CreateRecord(ctx context.Context, registration application.Registration) {
-	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
+	if !remoteWorkspaceRecordsEnabled(s.deps.Session) {
 		return
 	}
-	_, err := s.deps.Runtime.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildCreateWorkspaceInput(registration, s.deps.NodeID))
+	_, err := s.deps.Session.APIClient().CreateWorkspace(registration.OrganizationID, registration.ProjectID, cloud.BuildCreateWorkspaceInput(registration, s.deps.NodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to create remote workspace record")
 	}
@@ -45,10 +45,10 @@ func (s *Service) CreateRecord(ctx context.Context, registration application.Reg
 // Best-effort: failures are logged and the local record remains the source of
 // truth until the next remote→local cache sync reconciles the row.
 func (s *Service) UpdateRecord(ctx context.Context, registration application.Registration, localPath string) {
-	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
+	if !remoteWorkspaceRecordsEnabled(s.deps.Session) {
 		return
 	}
-	_, err := s.deps.Runtime.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, api.BuildUpdateWorkspaceInput(registration, localPath, s.deps.NodeID))
+	_, err := s.deps.Session.APIClient().UpdateWorkspace(registration.OrganizationID, registration.ProjectID, cloud.BuildUpdateWorkspaceInput(registration, localPath, s.deps.NodeID))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", registration.ID).Msg("failed to update remote workspace record")
 	}
@@ -60,7 +60,7 @@ func (s *Service) UpdateRecord(ctx context.Context, registration application.Reg
 // succeeds. Best-effort: failures are logged and the local record remains the
 // source of truth until the next remote→local cache sync reconciles the row.
 func (s *Service) CloseRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status string) {
-	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
+	if !remoteWorkspaceRecordsEnabled(s.deps.Session) {
 		return
 	}
 	if strings.TrimSpace(organizationID) == "" || strings.TrimSpace(projectID) == "" {
@@ -69,7 +69,7 @@ func (s *Service) CloseRecord(ctx context.Context, organizationID string, projec
 	if status == "" {
 		status = "closed"
 	}
-	_, err := s.deps.Runtime.APIClient().CloseWorkspace(organizationID, projectID, api.BuildCloseWorkspaceInput(workspaceID, s.deps.NodeID, workspace.Status(status)))
+	_, err := s.deps.Session.APIClient().CloseWorkspace(organizationID, projectID, cloud.BuildCloseWorkspaceInput(workspaceID, s.deps.NodeID, workspace.Status(status)))
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("status", status).Msg("failed to close remote workspace record")
 	}

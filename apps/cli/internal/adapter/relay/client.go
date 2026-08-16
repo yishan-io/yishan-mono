@@ -14,23 +14,26 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	internalevents "yishan/apps/cli/internal/events"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
+
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/events"
 	release "yishan/apps/cli/internal/platform/release"
 	"yishan/apps/cli/internal/rpc"
 )
 
-// Relay protocol method names. These strings are the wire protocol between
-// daemon nodes and the relay server.
+// Relay protocol method names are defined by the shared relay protocol module
+// and re-exported here so CLI consumers keep the relay.Method* names.
 const (
-	MethodPing                     = "relay.ping"
-	MethodPong                     = "relay.pong"
-	MethodJobRun                   = "job.run"
-	MethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
-	MethodTerminalSessionChanged   = "terminal.session.changed"
-	MethodTerminalStreamRequest    = "terminal.stream.request"
-	MethodTerminalStreamAccept     = "terminal.stream.accept"
-	MethodTerminalStreamCancel     = "terminal.stream.cancel"
+	MethodPing                     = relayprotocol.MethodPing
+	MethodPong                     = relayprotocol.MethodPong
+	MethodJobRun                   = relayprotocol.MethodJobRun
+	MethodWorkspaceSnapshotChanged = relayprotocol.MethodWorkspaceSnapshotChanged
+	MethodTerminalSessionChanged   = relayprotocol.MethodTerminalSessionChanged
+	MethodTerminalStreamRequest    = relayprotocol.MethodTerminalStreamRequest
+	MethodTerminalStreamAccept     = relayprotocol.MethodTerminalStreamAccept
+	MethodTerminalStreamCancel     = relayprotocol.MethodTerminalStreamCancel
 )
 
 const (
@@ -54,26 +57,26 @@ type MessageHandler interface {
 // relay-protocol messages; Events is the frontend hub the client forwards
 // terminal session changes from.
 type ClientConfig struct {
-	Runtime     *cliruntime.Runtime
+	Session     *session.Session
 	NodeID      string
 	URL         string
 	StaticToken string
 	Server      *rpc.Server
 	Handler     MessageHandler
-	Events      *internalevents.Hub
+	Events      *eventbus.Hub
 }
 
 // Client is the relay WebSocket client: the reconnect loop, the per-session
 // read loop, the connection handle, pending dispatch verdicts, and the
 // connection status. It is the single owner of the relay connection state.
 type Client struct {
-	runtime     *cliruntime.Runtime
+	runtime     *session.Session
 	nodeID      string
 	url         string
 	staticToken string
 	server      *rpc.Server
 	handler     MessageHandler
-	events      *internalevents.Hub
+	events      *eventbus.Hub
 	status      *Status
 
 	connMu sync.RWMutex
@@ -86,7 +89,7 @@ type Client struct {
 // NewClient creates a relay client. The reconnect loop starts via Run.
 func NewClient(cfg ClientConfig) *Client {
 	return &Client{
-		runtime:     cfg.Runtime,
+		runtime:     cfg.Session,
 		nodeID:      cfg.NodeID,
 		url:         cfg.URL,
 		staticToken: cfg.StaticToken,

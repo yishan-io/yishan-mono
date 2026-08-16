@@ -87,17 +87,17 @@ func TestParseNameStatusLines(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  string
-		expect []GitCommitFile
+		expect []gitCommitFile
 	}{
 		{
 			name:   "empty",
 			input:  "",
-			expect: []GitCommitFile{},
+			expect: []gitCommitFile{},
 		},
 		{
 			name:  "modified and added",
 			input: "M\tsrc/foo.ts\nA\tsrc/bar.ts\n",
-			expect: []GitCommitFile{
+			expect: []gitCommitFile{
 				{Path: "src/foo.ts", Status: "M"},
 				{Path: "src/bar.ts", Status: "A"},
 			},
@@ -105,28 +105,28 @@ func TestParseNameStatusLines(t *testing.T) {
 		{
 			name:  "deleted",
 			input: "D\told.ts",
-			expect: []GitCommitFile{
+			expect: []gitCommitFile{
 				{Path: "old.ts", Status: "D"},
 			},
 		},
 		{
 			name:  "rename with similarity score",
 			input: "R100\told.ts\tnew.ts",
-			expect: []GitCommitFile{
+			expect: []gitCommitFile{
 				{Path: "new.ts", OldPath: "old.ts", Status: "R"},
 			},
 		},
 		{
 			name:  "copy",
 			input: "C085\tsrc.ts\tdst.ts",
-			expect: []GitCommitFile{
+			expect: []gitCommitFile{
 				{Path: "dst.ts", OldPath: "src.ts", Status: "C"},
 			},
 		},
 		{
 			name:  "ignores blank lines",
 			input: "\nM\ta.ts\n\nD\tb.ts\n",
-			expect: []GitCommitFile{
+			expect: []gitCommitFile{
 				{Path: "a.ts", Status: "M"},
 				{Path: "b.ts", Status: "D"},
 			},

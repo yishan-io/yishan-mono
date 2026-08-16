@@ -23,7 +23,7 @@ func TestIsReauthRequiredError(t *testing.T) {
 		},
 		{
 			name: "token refresh error",
-			err: &api.TokenRefreshError{
+			err: &cloud.TokenRefreshError{
 				RequestError: errors.New("request failed"),
 				RefreshError: errors.New("invalid refresh token"),
 			},
@@ -31,17 +31,17 @@ func TestIsReauthRequiredError(t *testing.T) {
 		},
 		{
 			name: "direct unauthorized api error",
-			err:  &api.APIError{StatusCode: http.StatusUnauthorized},
+			err:  &cloud.APIError{StatusCode: http.StatusUnauthorized},
 			want: true,
 		},
 		{
 			name: "wrapped unauthorized api error",
-			err:  fmt.Errorf("outer: %w", &api.APIError{StatusCode: http.StatusUnauthorized}),
+			err:  fmt.Errorf("outer: %w", &cloud.APIError{StatusCode: http.StatusUnauthorized}),
 			want: true,
 		},
 		{
 			name: "non-unauthorized api error",
-			err:  &api.APIError{StatusCode: http.StatusForbidden},
+			err:  &cloud.APIError{StatusCode: http.StatusForbidden},
 			want: false,
 		},
 		{

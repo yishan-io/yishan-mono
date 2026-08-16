@@ -7,26 +7,26 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
 // newFolderHandler builds a Service wired to an in-memory(disk-backed)
 // migrated database so folder RPC handlers can persist rows.
-func newFolderHandler(t *testing.T) (*Service, *localdb.WorkspaceStore) {
+func newFolderHandler(t *testing.T) (*Service, *sqlite.WorkspaceStore) {
 	t.Helper()
 	s := newTestHandler(t)
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	s.setTestDatabase(database)
-	return s, localdb.NewWorkspaceStore(database)
+	return s, sqlite.NewWorkspaceStore(database)
 }
 
 func TestWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
@@ -41,7 +41,7 @@ func TestWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
-	row, ok := result.(localdb.Workspace)
+	row, ok := result.(sqlite.Workspace)
 	if !ok {
 		t.Fatalf("unexpected result type %T", result)
 	}
@@ -144,11 +144,11 @@ func TestWorkspaceCreateLocalFolder_RejectsDuplicatePath(t *testing.T) {
 
 func TestWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
 	s, store := newFolderHandler(t)
-	if _, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{LocalPath: t.TempDir(), NodeID: "node-1"}); err != nil {
+	if _, err := store.CreateFolder(context.Background(), sqlite.FolderWorkspaceInput{LocalPath: t.TempDir(), NodeID: "node-1"}); err != nil {
 		t.Fatalf("create folder: %v", err)
 	}
 	// Add a normal worktree row that must NOT appear in the folder list.
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: t.TempDir(), State: "active",
 	}); err != nil {
@@ -159,7 +159,7 @@ func TestWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list local folders: %v", err)
 	}
-	rows, ok := result.([]localdb.Workspace)
+	rows, ok := result.([]sqlite.Workspace)
 	if !ok {
 		t.Fatalf("unexpected result type %T", result)
 	}
@@ -173,7 +173,7 @@ func TestWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
 
 func TestWorkspaceDeleteLocalFolder_RemovesRow(t *testing.T) {
 	s, store := newFolderHandler(t)
-	created, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{LocalPath: t.TempDir(), NodeID: "node-1"})
+	created, err := store.CreateFolder(context.Background(), sqlite.FolderWorkspaceInput{LocalPath: t.TempDir(), NodeID: "node-1"})
 	if err != nil {
 		t.Fatalf("create folder: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestWorkspaceDeleteLocalFolder_RemovesRow(t *testing.T) {
 func TestWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	s, store := newFolderHandler(t)
 	folderPath := t.TempDir()
-	created, err := store.CreateFolder(context.Background(), localdb.FolderWorkspaceInput{LocalPath: folderPath, NodeID: "node-1"})
+	created, err := store.CreateFolder(context.Background(), sqlite.FolderWorkspaceInput{LocalPath: folderPath, NodeID: "node-1"})
 	if err != nil {
 		t.Fatalf("create folder: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
-	row, ok := result.(localdb.Workspace)
+	row, ok := result.(sqlite.Workspace)
 	if !ok {
 		t.Fatalf("unexpected result type %T", result)
 	}
@@ -293,7 +293,7 @@ func TestWorkspaceCreateLocalFolder_EmptyNameIsNil(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
-	row, ok := result.(localdb.Workspace)
+	row, ok := result.(sqlite.Workspace)
 	if !ok {
 		t.Fatalf("unexpected result type %T", result)
 	}

@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/relay/internal/auth"
 )
 
@@ -88,7 +90,7 @@ func (s *NodeSession) SendJSON(v any) error {
 
 // SendNotification sends a JSON-RPC notification to the node.
 func (s *NodeSession) SendNotification(method string, params any) error {
-	return s.SendJSON(notification{JSONRPC: "2.0", Method: method, Params: params})
+	return s.SendJSON(relayprotocol.Notification{JSONRPC: "2.0", Method: method, Params: params})
 }
 
 // SendMessage sends a raw WebSocket message to the node. Thread-safe.
@@ -408,7 +410,7 @@ func (m *SessionManager) SendNotificationWithError(nodeID, method string, params
 
 // SendResponse sends a JSON-RPC response to a specific node. Returns an error
 // when the node is offline or the write fails.
-func (m *SessionManager) SendResponse(nodeID string, resp response) error {
+func (m *SessionManager) SendResponse(nodeID string, resp relayprotocol.Response) error {
 	m.mu.RLock()
 	session := m.sessions[nodeID]
 	m.mu.RUnlock()

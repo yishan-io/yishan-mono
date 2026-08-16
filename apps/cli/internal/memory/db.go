@@ -143,7 +143,7 @@ func createFTSTriggers(conn *sql.DB) error {
 	return nil
 }
 
-func (db *DB) UpsertFile(file MemoryFile) error {
+func (db *DB) UpsertFile(file memoryFile) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -163,23 +163,23 @@ func (db *DB) DeleteByPath(path string) error {
 	return err
 }
 
-func (db *DB) GetByPath(path string) (MemoryFile, bool, error) {
+func (db *DB) GetByPath(path string) (memoryFile, bool, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	var file MemoryFile
-	var fileType string
+	var file memoryFile
+	var typeStr string
 	err := db.conn.QueryRow(
 		`SELECT id, path, project_path, project_id, type, body, fingerprint, indexed_at FROM memory_files WHERE path = ?`,
 		path,
-	).Scan(&file.ID, &file.Path, &file.ProjectPath, &file.ProjectID, &fileType, &file.Body, &file.Fingerprint, &file.IndexedAt)
+	).Scan(&file.ID, &file.Path, &file.ProjectPath, &file.ProjectID, &typeStr, &file.Body, &file.Fingerprint, &file.IndexedAt)
 	if err == sql.ErrNoRows {
-		return MemoryFile{}, false, nil
+		return memoryFile{}, false, nil
 	}
 	if err != nil {
-		return MemoryFile{}, false, err
+		return memoryFile{}, false, err
 	}
-	file.Type = FileType(fileType)
+	file.Type = fileType(typeStr)
 	return file, true, nil
 }
 
@@ -228,7 +228,7 @@ func (db *DB) DeleteAllNotIn(paths []string) error {
 	return err
 }
 
-func (db *DB) Search(query string, projectID string, fileType FileType, limit int) ([]MemorySearchResult, error) {
+func (db *DB) Search(query string, projectID string, fileType fileType, limit int) ([]MemorySearchResult, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/platform/config"
 )
 
@@ -35,7 +35,7 @@ func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {
 }
 
 func TestUsesRemoteHostPolicyReturnsTrueForServiceTokenRuntime(t *testing.T) {
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
 		API: config.APIConfig{
 			Token: "yst_service_token_value",
@@ -54,7 +54,7 @@ func TestUsesRemoteHostPolicyReturnsFalseForNilRuntime(t *testing.T) {
 }
 
 func TestUsesRemoteHostPolicyReturnsFalseForJWTAuthRuntime(t *testing.T) {
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
 		API: config.APIConfig{
 			Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
@@ -67,7 +67,7 @@ func TestUsesRemoteHostPolicyReturnsFalseForJWTAuthRuntime(t *testing.T) {
 }
 
 func TestBuildMemorySummarizerConfigDisablesMemoryForRemoteHostPolicy(t *testing.T) {
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
 		API:        config.APIConfig{Token: "yst_service_token_value"},
 	})
@@ -90,7 +90,7 @@ func TestBuildMemorySummarizerConfigDisablesMemoryForRemoteHostPolicy(t *testing
 }
 
 func TestBuildMemorySummarizerConfigPreservesLocalDefaults(t *testing.T) {
-	runtime := cliruntime.New(&config.Config{
+	runtime := session.New(&config.Config{
 		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
 		API:        config.APIConfig{Token: "jwt-token"},
 	})

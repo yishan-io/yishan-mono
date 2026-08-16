@@ -8,27 +8,24 @@ package terminal
 import (
 	"sync"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/rpc"
 	term "yishan/apps/cli/internal/terminal"
 )
 
-// Binary frame opcodes for terminal I/O fast-path.
-const (
-	binOpcodeTerminalInput  byte = 0x01
-	binOpcodeTerminalOutput byte = 0x02
-)
+// Binary frame opcodes for terminal I/O live in the shared relay protocol
+// module (relayprotocol.BinaryFrameOpcodeInput / BinaryFrameOpcodeOutput).
 
 // Deps are the explicit dependencies of the terminal application service.
 type Deps struct {
 	// Workspace resolves workspace-scoped handles for terminal sessions.
 	Workspace *nodeworkspace.Service
 	Terminals *term.Manager
-	Events    *internalevents.Hub
-	Runtime   *cliruntime.Runtime
+	Events    *eventbus.Hub
+	Session   *session.Session
 	NodeID    string
 }
 
@@ -68,12 +65,12 @@ func NewService(deps Deps) *Service {
 // WireTerminalListeners forwards terminal lifecycle events into the frontend
 // event hub. Exported so test harnesses that construct services directly can
 // wire the same glue the composition root wires.
-func WireTerminalListeners(terminals *term.Manager, events *internalevents.Hub) {
+func WireTerminalListeners(terminals *term.Manager, events *eventbus.Hub) {
 	if terminals == nil || events == nil {
 		return
 	}
 	terminals.SetPortsChangedListener(func(ports []term.DetectedPort) {
-		events.Publish(internalevents.Event{
+		events.Publish(eventbus.Event{
 			Topic: "terminalDetectedPortsChanged",
 			Payload: map[string]any{
 				"ports": ports,
@@ -81,7 +78,7 @@ func WireTerminalListeners(terminals *term.Manager, events *internalevents.Hub) 
 		})
 	})
 	terminals.SetSessionsChangedListener(func(event term.SessionLifecycleEvent) {
-		events.Publish(internalevents.Event{
+		events.Publish(eventbus.Event{
 			Topic: "terminalSessionChanged",
 			Payload: map[string]any{
 				"action":      event.Action,

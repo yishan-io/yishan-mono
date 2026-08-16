@@ -9,9 +9,9 @@ import (
 	"context"
 	"database/sql"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
@@ -25,7 +25,7 @@ import (
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 )
 
 // Deps are the explicit dependencies of the workspace application service.
@@ -38,12 +38,12 @@ type Deps struct {
 
 	Memory       *memory.Service
 	TokenUsage   tokenusage.Service
-	Events       *internalevents.Hub
+	Events       *eventbus.Hub
 	Watchers     *workspacewatchers.Watchers
 	PRTracker    *workspaceprtracker.Tracker
-	CleanupStore *localdb.WorkspaceCleanupStore
+	CleanupStore *sqlite.WorkspaceCleanupStore
 	Database     *sql.DB
-	Runtime      *cliruntime.Runtime
+	Session      *session.Session
 	NodeID       string
 	LogFilePath  string
 

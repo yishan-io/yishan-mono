@@ -1,4 +1,6 @@
-package events
+// Package eventbus owns application event publication and subscription
+// for the frontend event hub.
+package eventbus
 
 import (
 	"sync"

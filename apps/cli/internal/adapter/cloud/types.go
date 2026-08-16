@@ -1,4 +1,4 @@
-package api
+package cloud
 
 type OKResponse struct {
 	OK bool `json:"ok"`

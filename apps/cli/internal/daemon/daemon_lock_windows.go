@@ -29,7 +29,7 @@ func tryAcquireDaemonLock(path string) (*os.File, error) {
 	)
 	if err != nil {
 		if errors.Is(err, windows.ERROR_SHARING_VIOLATION) || errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			return nil, ErrDaemonLocked
+			return nil, errDaemonLocked
 		}
 		return nil, fmt.Errorf("open daemon lock file %q: %w", path, err)
 	}

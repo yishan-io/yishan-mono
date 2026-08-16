@@ -228,12 +228,12 @@ func TestRunHook_InvalidWorkspacePath(t *testing.T) {
 }
 
 func TestRunHook_DefaultTimeout(t *testing.T) {
-	// Verify that DefaultHookTimeout is reasonable (not zero).
-	if DefaultHookTimeout <= 0 {
-		t.Fatalf("DefaultHookTimeout must be positive, got %s", DefaultHookTimeout)
+	// Verify that defaultHookTimeout is reasonable (not zero).
+	if defaultHookTimeout <= 0 {
+		t.Fatalf("defaultHookTimeout must be positive, got %s", defaultHookTimeout)
 	}
-	if DefaultHookTimeout < 10*time.Second {
-		t.Fatalf("DefaultHookTimeout seems too short: %s", DefaultHookTimeout)
+	if defaultHookTimeout < 10*time.Second {
+		t.Fatalf("defaultHookTimeout seems too short: %s", defaultHookTimeout)
 	}
 }
 

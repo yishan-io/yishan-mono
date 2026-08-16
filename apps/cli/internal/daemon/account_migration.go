@@ -9,7 +9,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/platform/config"
 )
 
@@ -38,7 +38,7 @@ var accountDataItemNames = []string{
 // otherwise pin the current env account to the wrong data dir. Errors are
 // swallowed so boot proceeds with the env-root fallback; the backfill is
 // retried on the next boot.
-func ensureUserIDForAccountResolution(runtime *cliruntime.Runtime, configPath string) {
+func ensureUserIDForAccountResolution(runtime *session.Session, configPath string) {
 	if runtime == nil || !runtime.APIConfigured() {
 		return
 	}
@@ -51,7 +51,7 @@ func ensureUserIDForAccountResolution(runtime *cliruntime.Runtime, configPath st
 	resolveAndPersistUserID(runtime, configPath)
 }
 
-func resolveAndPersistUserID(runtime *cliruntime.Runtime, configPath string) {
+func resolveAndPersistUserID(runtime *session.Session, configPath string) {
 	me, err := runtime.APIClient().WhoAmI()
 	if err != nil {
 		log.Warn().Err(err).Msg("could not resolve user id for account data dir; falling back to profile root")

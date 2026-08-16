@@ -34,7 +34,7 @@ type Manager struct {
 	portScopeWorkspaceID string
 	portScanHintCh       chan struct{}
 	sessionsListenerMu   sync.RWMutex
-	onSessionsChanged    SessionLifecycleListener
+	onSessionsChanged    sessionLifecycleListener
 }
 
 type session struct {
@@ -70,7 +70,7 @@ func (m *Manager) SetPortsChangedListener(listener portsChangedListener) {
 	m.portsListenerMu.Unlock()
 }
 
-func (m *Manager) SetSessionsChangedListener(listener SessionLifecycleListener) {
+func (m *Manager) SetSessionsChangedListener(listener sessionLifecycleListener) {
 	m.sessionsListenerMu.Lock()
 	m.onSessionsChanged = listener
 	m.sessionsListenerMu.Unlock()

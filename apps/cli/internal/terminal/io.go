@@ -9,25 +9,25 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (m *Manager) Send(req SendRequest) (SendResponse, error) {
+func (m *Manager) Send(req SendRequest) (sendResponse, error) {
 	s, err := m.session(req.SessionID)
 	if err != nil {
-		return SendResponse{}, err
+		return sendResponse{}, err
 	}
 
 	if !s.running.Load() {
-		return SendResponse{}, NewError(ErrCodeSessionInactive, "terminal session not running")
+		return sendResponse{}, NewError(ErrCodeSessionInactive, "terminal session not running")
 	}
 
 	n, err := io.WriteString(s.pty, req.Input)
 	if err != nil {
-		return SendResponse{}, err
+		return sendResponse{}, err
 	}
 	s.lastActivityUnixNano.Store(time.Now().UTC().UnixNano())
 	if strings.ContainsRune(req.Input, rune(0x03)) {
 		m.requestPortScanHint()
 	}
-	return SendResponse{Written: n}, nil
+	return sendResponse{Written: n}, nil
 }
 
 // SendRaw writes raw bytes directly to a PTY session without any
@@ -50,10 +50,10 @@ func (m *Manager) SendRaw(sessionID string, data []byte) {
 	_, _ = s.pty.Write(data)
 }
 
-func (m *Manager) Read(req ReadRequest) (ReadResponse, error) {
+func (m *Manager) Read(req ReadRequest) (readResponse, error) {
 	s, err := m.session(req.SessionID)
 	if err != nil {
-		return ReadResponse{}, err
+		return readResponse{}, err
 	}
 
 	s.outputMu.Lock()
@@ -63,11 +63,11 @@ func (m *Manager) Read(req ReadRequest) (ReadResponse, error) {
 
 	running := s.running.Load()
 	if running {
-		return ReadResponse{Output: out, Running: true}, nil
+		return readResponse{Output: out, Running: true}, nil
 	}
 
 	code := int(s.exitCode.Load())
-	return ReadResponse{Output: out, ExitCode: &code, Running: false}, nil
+	return readResponse{Output: out, ExitCode: &code, Running: false}, nil
 }
 
 func (s *session) capture() {

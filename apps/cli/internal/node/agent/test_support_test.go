@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/node/context"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	"yishan/apps/cli/internal/platform/config"
@@ -22,9 +22,9 @@ import (
 
 // newTestService builds an agent application service for tests with a router
 // wired for the pi/skill/customize namespaces.
-func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *Service {
+func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Service {
 	t.Helper()
-	events := internalevents.NewHub()
+	events := eventbus.NewHub()
 	terminals := term.NewManager()
 	nodeterminal.WireTerminalListeners(terminals, events)
 	agentLifecycleCtx, cancel := context.WithCancel(context.Background())

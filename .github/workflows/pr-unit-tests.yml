@@ -67,9 +67,11 @@ jobs:
               - 'packages/core/**'
             cli:
               - 'apps/cli/**'
+              - 'packages/relay-protocol-go/**'
               - '.github/workflows/pr-unit-tests.yml'
             relay:
               - 'apps/relay/**'
+              - 'packages/relay-protocol-go/**'
               - '.github/workflows/pr-unit-tests.yml'
 
       - name: Build test matrix

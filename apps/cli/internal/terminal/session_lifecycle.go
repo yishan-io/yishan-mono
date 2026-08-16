@@ -184,27 +184,27 @@ func (m *Manager) StopAllForWorkspace(workspaceID string) []error {
 	return errs
 }
 
-func (m *Manager) Resize(req ResizeRequest) (ResizeResponse, error) {
+func (m *Manager) Resize(req ResizeRequest) (resizeResponse, error) {
 	s, err := m.session(req.SessionID)
 	if err != nil {
-		return ResizeResponse{}, err
+		return resizeResponse{}, err
 	}
 
 	if req.Cols == 0 || req.Rows == 0 {
-		return ResizeResponse{}, NewError(ErrCodeInvalidParams, "cols and rows are required")
+		return resizeResponse{}, NewError(ErrCodeInvalidParams, "cols and rows are required")
 	}
 
 	if err := pty.Setsize(s.pty, &pty.Winsize{Cols: req.Cols, Rows: req.Rows}); err != nil {
-		return ResizeResponse{}, err
+		return resizeResponse{}, err
 	}
 
-	return ResizeResponse{Resized: true}, nil
+	return resizeResponse{Resized: true}, nil
 }
 
-func (m *Manager) Subscribe(req SubscribeRequest) (Subscription, error) {
+func (m *Manager) Subscribe(req SubscribeRequest) (subscription, error) {
 	s, err := m.session(req.SessionID)
 	if err != nil {
-		return Subscription{}, err
+		return subscription{}, err
 	}
 
 	id := m.nextSubID.Add(1)
@@ -214,7 +214,7 @@ func (m *Manager) Subscribe(req SubscribeRequest) (Subscription, error) {
 	s.subs[id] = ch
 	s.subsMu.Unlock()
 
-	return Subscription{ID: id, Events: ch}, nil
+	return subscription{ID: id, Events: ch}, nil
 }
 
 func (m *Manager) Unsubscribe(req UnsubscribeRequest) (UnsubscribeResponse, error) {

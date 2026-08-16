@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/tokenusage/collection"
 	"yishan/apps/cli/internal/tokenusage/pricing"
 	"yishan/apps/cli/internal/tokenusage/repository"
@@ -28,10 +28,6 @@ type Service interface {
 	Close()
 }
 
-// CollectorDebugState is the debug snapshot of the collector, exposed over
-// tokenUsage.debugState.
-type CollectorDebugState = collection.DebugState
-
 // modelPricingCacheFileName is the disk cache file for the remote model
 // pricing catalog (profile-scoped).
 const modelPricingCacheFileName = "token-usage-model-pricing.json"
@@ -41,7 +37,7 @@ const modelPricingCacheFileName = "token-usage-model-pricing.json"
 // (SQLite-backed), and the registry of open workspaces for attribution.
 func NewCollectorWithRepository(
 	registry *instance.Registry,
-	runtime *cliruntime.Runtime,
+	runtime *session.Session,
 	repo repository.HourlyUsageRepository,
 	profileDir string,
 ) Service {

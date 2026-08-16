@@ -1,6 +1,10 @@
 package relay
 
-import "github.com/rs/zerolog/log"
+import (
+	"github.com/rs/zerolog/log"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
+)
 
 // ---------------------------------------------------------------------------
 // Stream subscription helpers
@@ -84,23 +88,12 @@ func (s *Server) cancelStreamSubsForNode(nodeID string) {
 // that have subscribed to that frame's sessionId.
 // Frame format: [opcode 1 byte][sessionId (null-terminated)][payload]
 func (s *Server) routeBinaryToStreamSubs(nodeID string, msgType int, payload []byte) {
-	if len(payload) < 3 {
+	opcode, sessionIDBytes, _, ok := relayprotocol.DecodeBinaryFrame(payload)
+	if !ok {
 		return
 	}
-	// Skip opcode byte, find null terminator for sessionId.
-	rest := payload[1:]
-	nullIdx := -1
-	for i, b := range rest {
-		if b == 0 {
-			nullIdx = i
-			break
-		}
-	}
-	if nullIdx <= 0 {
-		return
-	}
-	sessionID := string(rest[:nullIdx])
-	if payload[0] == 0x01 {
+	sessionID := string(sessionIDBytes)
+	if opcode == relayprotocol.BinaryFrameOpcodeInput {
 		ownerNodeID := s.streamOwner(sessionID)
 		if ownerNodeID == "" || ownerNodeID == nodeID {
 			return

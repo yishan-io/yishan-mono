@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 
+	relayprotocol "yishan/packages/relay-protocol-go"
+
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
@@ -17,35 +19,21 @@ import (
 	"yishan/apps/cli/internal/workspace/worktree"
 )
 
+// Wire envelope types live in the shared relay protocol module so the daemon
+// and the relay server encode one JSON-RPC shape. rpc keeps the exported
+// names its consumers use.
+
 // Request is a JSON-RPC 2.0 request envelope.
-type Request struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
-}
+type Request = relayprotocol.Request
 
 // Response is a JSON-RPC 2.0 response envelope.
-type Response struct {
-	JSONRPC string    `json:"jsonrpc"`
-	ID      any       `json:"id,omitempty"`
-	Result  any       `json:"result,omitempty"`
-	Error   *RPCError `json:"error,omitempty"`
-}
+type response = relayprotocol.Response
 
 // Notification is a server-initiated JSON-RPC 2.0 notification (no id).
-type Notification struct {
-	JSONRPC string `json:"jsonrpc"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
+type Notification = relayprotocol.Notification
 
 // RPCError is a JSON-RPC 2.0 error object.
-type RPCError struct {
-	Code    int            `json:"code"`
-	Message string         `json:"message"`
-	Data    map[string]any `json:"data,omitempty"`
-}
+type RPCError = relayprotocol.RPCError
 
 // DecodeParams unmarshals raw params into out, mapping empty/invalid input to
 // an invalid-params RPC error.
@@ -59,8 +47,8 @@ func DecodeParams(raw json.RawMessage, out any) error {
 	return nil
 }
 
-// AsJSONID decodes a raw JSON id into a JSON-encodable value.
-func AsJSONID(raw json.RawMessage) any {
+// asJSONID decodes a raw JSON id into a JSON-encodable value.
+func asJSONID(raw json.RawMessage) any {
 	if len(raw) == 0 {
 		return nil
 	}

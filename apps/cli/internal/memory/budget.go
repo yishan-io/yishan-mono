@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type BudgetCheck struct {
+type budgetCheck struct {
 	Exceeded       bool
 	CurrentChars   int
 	Limit          int
@@ -20,14 +20,14 @@ type BudgetCheck struct {
 // contextRoot is the canonical context directory (~/.yishan/contexts/<repoKey>/)
 // used to derive the overflow archive path. Pass "" for global memory files
 // (which have a lower limit but no overflow target).
-func checkBudget(content string, memoryPath string, contextRoot string) BudgetCheck {
+func checkBudget(content string, memoryPath string, contextRoot string) budgetCheck {
 	limit := MaxProjectMemoryChars
 	if strings.Contains(filepath.ToSlash(memoryPath), "/.yishan/memory/global/") {
 		limit = MaxGlobalMemoryChars
 	}
 
 	currentChars := len([]rune(content))
-	result := BudgetCheck{CurrentChars: currentChars, Limit: limit}
+	result := budgetCheck{CurrentChars: currentChars, Limit: limit}
 
 	if currentChars <= limit {
 		result.TrimmedContent = content

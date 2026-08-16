@@ -18,25 +18,25 @@ const (
 	MaxPersonaChars       = 2000
 )
 
-type FileType string
+type fileType string
 
 const (
-	FileTypeMemory       FileType = "memory"
-	FileTypeArchitecture FileType = "architecture"
-	FileTypeArchive      FileType = "archive"
-	FileTypeTask         FileType = "task"
-	FileTypeFuture       FileType = "future"
-	FileTypeGlobal       FileType = "global"
+	FileTypeMemory       fileType = "memory"
+	FileTypeArchitecture fileType = "architecture"
+	FileTypeArchive      fileType = "archive"
+	FileTypeTask         fileType = "task"
+	FileTypeFuture       fileType = "future"
+	FileTypeGlobal       fileType = "global"
 )
 
-type MemoryFile struct {
+type memoryFile struct {
 	ID   int64
 	Path string
 	// ProjectPath is the canonical context directory (~/.yishan/contexts/<repoKey>/).
 	// Derived by resolving the .my-context symlink in the worktree.
 	ProjectPath string
 	ProjectID   string
-	Type        FileType
+	Type        fileType
 	Body        string
 	Fingerprint string
 	IndexedAt   int64
@@ -56,20 +56,20 @@ type MemorySearchResult struct {
 	Score   float64 `json:"score"`
 }
 
-type ExtractedKnowledge struct {
+type extractedKnowledge struct {
 	LockedDecisions    []string
 	DurableDiscoveries []string
 }
 
-type MemorySection string
+type memorySection string
 
 const (
-	SectionLockedDecisions    MemorySection = "## Decisions"
-	SectionDurableDiscoveries MemorySection = "## Durable Discoveries"
+	SectionLockedDecisions    memorySection = "## Decisions"
+	SectionDurableDiscoveries memorySection = "## Durable Discoveries"
 )
 
-// BuiltInSummarizerAgentKind is the fixed agent used for post-session memory summarization.
-const BuiltInSummarizerAgentKind = "pi"
+// builtInSummarizerAgentKind is the fixed agent used for post-session memory summarization.
+const builtInSummarizerAgentKind = "pi"
 
 // SummarizerConfig controls the automatic post-session summarizer.
 // AgentKind is retained for backwards-compatible settings wiring, but the
@@ -83,13 +83,13 @@ type SummarizerConfig struct {
 	Model                string
 }
 
-// NormalizeSummarizerConfig forces summarizer execution onto the built-in Pi agent.
-func NormalizeSummarizerConfig(cfg SummarizerConfig) SummarizerConfig {
+// normalizeSummarizerConfig forces summarizer execution onto the built-in Pi agent.
+func normalizeSummarizerConfig(cfg SummarizerConfig) SummarizerConfig {
 	trimmedAgentKind := strings.TrimSpace(cfg.AgentKind)
-	if trimmedAgentKind != "" && trimmedAgentKind != BuiltInSummarizerAgentKind {
+	if trimmedAgentKind != "" && trimmedAgentKind != builtInSummarizerAgentKind {
 		cfg.Model = ""
 	}
-	cfg.AgentKind = BuiltInSummarizerAgentKind
+	cfg.AgentKind = builtInSummarizerAgentKind
 	return cfg
 }
 
@@ -115,46 +115,46 @@ type sessionMessage struct {
 	Timestamp time.Time
 }
 
-type SummarizeResult struct {
+type summarizeResult struct {
 	WrittenPaths    []string
 	Skipped         bool
 	SourceAgent     string
 	SummarizerAgent string
 }
 
-type SummarizeSessionError struct {
+type summarizeSessionError struct {
 	SourceAgent     string
 	SummarizerAgent string
 	Err             error
 }
 
-func (e *SummarizeSessionError) Error() string {
+func (e *summarizeSessionError) Error() string {
 	if e == nil || e.Err == nil {
 		return ""
 	}
 	return e.Err.Error()
 }
 
-func (e *SummarizeSessionError) Unwrap() error {
+func (e *summarizeSessionError) Unwrap() error {
 	if e == nil {
 		return nil
 	}
 	return e.Err
 }
 
-// PersonaSection identifies a section heading in PERSONA.md.
-type PersonaSection string
+// personaSection identifies a section heading in PERSONA.md.
+type personaSection string
 
 const (
-	PersonaSectionCodeStyle       PersonaSection = "## Code Style"
-	PersonaSectionWorkflowHabits  PersonaSection = "## Workflow Habits"
-	PersonaSectionDomainExpertise PersonaSection = "## Domain Expertise"
-	PersonaSectionToolPreferences PersonaSection = "## Tool Preferences"
-	PersonaSectionCommunication   PersonaSection = "## Communication Style"
+	PersonaSectionCodeStyle       personaSection = "## Code Style"
+	PersonaSectionWorkflowHabits  personaSection = "## Workflow Habits"
+	PersonaSectionDomainExpertise personaSection = "## Domain Expertise"
+	PersonaSectionToolPreferences personaSection = "## Tool Preferences"
+	PersonaSectionCommunication   personaSection = "## Communication Style"
 )
 
-// ExtractedPersona holds persona signals extracted from session transcripts by the LLM.
-type ExtractedPersona struct {
+// extractedPersona holds persona signals extracted from session transcripts by the LLM.
+type extractedPersona struct {
 	CodeStyle          []string
 	WorkflowHabits     []string
 	DomainExpertise    []string
@@ -162,8 +162,8 @@ type ExtractedPersona struct {
 	CommunicationStyle []string
 }
 
-// PersonaSummarizeResult is returned by PersonaSummarizer.SummarizeForPersona.
-type PersonaSummarizeResult struct {
+// personaSummarizeResult is returned by personaSummarizer.SummarizeForPersona.
+type personaSummarizeResult struct {
 	WrittenPath string
 	Skipped     bool
 }

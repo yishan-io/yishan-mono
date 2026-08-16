@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 
 	agentcmd "yishan/apps/cli/internal/agent/command"
 	agentmanager "yishan/apps/cli/internal/agent/process"
@@ -34,7 +34,7 @@ func (s *Service) PublishWorkspaceCreateCompleted(prepared application.CreatePla
 		completionPayload["taskRunSessionId"] = taskRunSession.sessionID
 		completionPayload["taskRunTitle"] = taskRunSession.title
 	}
-	s.deps.Events.Publish(internalevents.Event{Topic: "workspaceCreateCompleted", Payload: completionPayload})
+	s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateCompleted", Payload: completionPayload})
 	if s.deps.RelayCreateCompleted != nil {
 		s.deps.RelayCreateCompleted(prepared, completionPayload)
 	}

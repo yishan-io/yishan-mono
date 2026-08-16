@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"time"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/app"
 	"yishan/apps/cli/internal/memory"
@@ -60,14 +60,14 @@ type shutdownContext struct {
 	serverErr <-chan error
 }
 
-func usesRemoteHostPolicy(runtime *cliruntime.Runtime) bool {
+func usesRemoteHostPolicy(runtime *session.Session) bool {
 	if runtime == nil {
 		return false
 	}
 	return runtime.UsesServiceTokenAuth()
 }
 
-func buildMemorySummarizerConfig(cfg RunConfig, runtime *cliruntime.Runtime) memory.SummarizerConfig {
+func buildMemorySummarizerConfig(cfg RunConfig, runtime *session.Session) memory.SummarizerConfig {
 	memoryCfg := memory.SummarizerConfig{
 		Enabled:   cfg.MemorySummarizer,
 		AgentKind: cfg.MemorySummarizerAgent,
@@ -85,7 +85,7 @@ func (sc *shutdownContext) cleanup() {
 	sc.cancel()
 }
 
-func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
+func Run(cfg RunConfig, statePath string, runtime *session.Session) error {
 	if runtime == nil {
 		return fmt.Errorf("runtime is required")
 	}
@@ -93,7 +93,7 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	// Enforce a single daemon per profile: hold the exclusive profile lock for
 	// the lifetime of this process. If another live daemon holds it, refuse to
 	// start instead of stacking a duplicate on the same profile.
-	lock, err := AcquireDaemonLock(lockFilePathForState(statePath))
+	lock, err := acquireDaemonLock(lockFilePathForState(statePath))
 	if err != nil {
 		return err
 	}

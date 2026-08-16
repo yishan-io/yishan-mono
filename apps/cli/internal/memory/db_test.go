@@ -20,7 +20,7 @@ func openTestDB(t *testing.T) *DB {
 func TestDB_UpsertAndGet(t *testing.T) {
 	db := openTestDB(t)
 
-	file := MemoryFile{
+	file := memoryFile{
 		Path:        "/ctx/MEMORY.md",
 		ProjectPath: "/ctx",
 		ProjectID:   "proj-1",
@@ -45,8 +45,8 @@ func TestDB_UpsertAndGet(t *testing.T) {
 func TestDB_UpsertReplaces(t *testing.T) {
 	db := openTestDB(t)
 
-	f1 := MemoryFile{Path: "/ctx/MEMORY.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "v1", Fingerprint: "fp1", IndexedAt: 1}
-	f2 := MemoryFile{Path: "/ctx/MEMORY.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "v2", Fingerprint: "fp2", IndexedAt: 2}
+	f1 := memoryFile{Path: "/ctx/MEMORY.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "v1", Fingerprint: "fp1", IndexedAt: 1}
+	f2 := memoryFile{Path: "/ctx/MEMORY.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "v2", Fingerprint: "fp2", IndexedAt: 2}
 
 	if err := db.UpsertFile(f1); err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestDB_UpsertReplaces(t *testing.T) {
 func TestDB_DeleteByPath(t *testing.T) {
 	db := openTestDB(t)
 
-	if err := db.UpsertFile(MemoryFile{Path: "/ctx/x.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "x", Fingerprint: "fp", IndexedAt: 1}); err != nil {
+	if err := db.UpsertFile(memoryFile{Path: "/ctx/x.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "x", Fingerprint: "fp", IndexedAt: 1}); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.DeleteByPath("/ctx/x.md"); err != nil {
@@ -90,7 +90,7 @@ func TestDB_AllPaths(t *testing.T) {
 
 	paths := []string{"/ctx/a.md", "/ctx/b.md", "/ctx/c.md"}
 	for _, p := range paths {
-		if err := db.UpsertFile(MemoryFile{Path: p, ProjectPath: "/ctx", Type: FileTypeMemory, Body: "x", Fingerprint: "fp" + p, IndexedAt: 1}); err != nil {
+		if err := db.UpsertFile(memoryFile{Path: p, ProjectPath: "/ctx", Type: FileTypeMemory, Body: "x", Fingerprint: "fp" + p, IndexedAt: 1}); err != nil {
 			t.Fatal(err)
 		}
 	}

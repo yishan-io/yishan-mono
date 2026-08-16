@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/platform/config"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
 )
 
@@ -138,16 +138,16 @@ func seedTestCredential(t *testing.T, configPath string, userID string) {
 }
 
 func openTestWorkspaceDB(dir string) (*sql.DB, error) {
-	database, err := localdb.Open(dir)
+	database, err := sqlite.Open(dir)
 	if err != nil {
 		return nil, err
 	}
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		database.Close()
 		return nil, err
 	}
-	workspaceStore := localdb.NewWorkspaceStore(database)
-	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{
 		ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", LocalPath: "/tmp/worktree-1", State: "active",
 	}); err != nil {

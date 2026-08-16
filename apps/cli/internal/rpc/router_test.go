@@ -163,8 +163,12 @@ func TestHandleMessage_ComputerErrorKeepsStructuredData(t *testing.T) {
 	if resp == nil || resp.Error == nil || resp.Error.Code != CodeServerError {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
-	code, _ := resp.Error.Data["code"].(computer.ErrorCode)
-	retryable, _ := resp.Error.Data["retryable"].(bool)
+	data, ok := resp.Error.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("computer error data lost: %#v", resp.Error)
+	}
+	code, _ := data["code"].(computer.ErrorCode)
+	retryable, _ := data["retryable"].(bool)
 	if code != "computer.Error" || !retryable {
 		t.Fatalf("computer error data lost: %#v", resp.Error)
 	}

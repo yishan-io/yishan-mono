@@ -13,10 +13,10 @@ import (
 	"yishan/apps/cli/internal/platform/shellenv"
 )
 
-// DefaultHookTimeout is the maximum duration a lifecycle hook is allowed to
+// defaultHookTimeout is the maximum duration a lifecycle hook is allowed to
 // run before the process is killed. Callers may override this per-invocation
 // via HookRequest.Timeout.
-const DefaultHookTimeout = 30 * time.Second
+const defaultHookTimeout = 30 * time.Second
 
 // HookRequest describes a lifecycle hook to execute.
 type HookRequest struct {
@@ -37,7 +37,7 @@ type HookRequest struct {
 	// error messages.
 	HookName string
 
-	// Timeout overrides DefaultHookTimeout when set to a positive duration.
+	// Timeout overrides defaultHookTimeout when set to a positive duration.
 	Timeout time.Duration
 }
 
@@ -82,7 +82,7 @@ func RunHook(ctx context.Context, req HookRequest) (HookResult, error) {
 
 	timeout := req.Timeout
 	if timeout <= 0 {
-		timeout = DefaultHookTimeout
+		timeout = defaultHookTimeout
 	}
 
 	hookCtx, cancel := context.WithTimeout(ctx, timeout)

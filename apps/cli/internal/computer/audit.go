@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type AuditEvent struct {
+type auditEvent struct {
 	Timestamp         string `json:"timestamp"`
 	Operation         string `json:"operation"`
 	TargetApplication string `json:"targetApplication,omitempty"`
@@ -16,12 +16,12 @@ type AuditEvent struct {
 	ErrorCode         string `json:"errorCode,omitempty"`
 }
 
-type AuditLog struct {
+type auditLog struct {
 	mu     sync.Mutex
-	events []AuditEvent
+	events []auditEvent
 }
 
-func (l *AuditLog) Add(event AuditEvent) {
+func (l *auditLog) Add(event auditEvent) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if event.Timestamp == "" {
@@ -30,10 +30,10 @@ func (l *AuditLog) Add(event AuditEvent) {
 	l.events = append(l.events, event)
 }
 
-func (l *AuditLog) Snapshot() []AuditEvent {
+func (l *auditLog) Snapshot() []auditEvent {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	result := make([]AuditEvent, len(l.events))
+	result := make([]auditEvent, len(l.events))
 	copy(result, l.events)
 	return result
 }

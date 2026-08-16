@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 	"time"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -67,20 +67,20 @@ func TestCheckWorkspaceHealth_KeepsHealthyWorkspaceActive(t *testing.T) {
 
 func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 	s := newTestHandler(t)
-	database, err := localdb.Open(t.TempDir())
+	database, err := sqlite.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = database.Close() })
-	if err := localdb.Migrate(database); err != nil {
+	if err := sqlite.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
 	s.setTestDatabase(database)
 
 	workspacePath := t.TempDir()
 	branch := "feature/health"
-	workspaceStore := localdb.NewWorkspaceStore(database)
-	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: "worktree", Status: "active", Branch: &branch, LocalPath: workspacePath, State: "active",
 	}); err != nil {

@@ -12,7 +12,7 @@ type GitStatusResponse struct {
 	Raw    string   `json:"raw"`
 }
 
-type GitChange struct {
+type gitChange struct {
 	Path      string `json:"path"`
 	Kind      string `json:"kind"`
 	Additions int    `json:"additions"`
@@ -20,9 +20,9 @@ type GitChange struct {
 }
 
 type GitChangesBySection struct {
-	Unstaged  []GitChange `json:"unstaged"`
-	Staged    []GitChange `json:"staged"`
-	Untracked []GitChange `json:"untracked"`
+	Unstaged  []gitChange `json:"unstaged"`
+	Staged    []gitChange `json:"staged"`
+	Untracked []gitChange `json:"untracked"`
 }
 
 type GitBranchStatus struct {
@@ -65,26 +65,26 @@ type GitPullRequestDeployment struct {
 	OriginalPayload string `json:"originalPayload,omitempty"`
 }
 
-type GitCommitFile struct {
+type gitCommitFile struct {
 	Path    string `json:"path"`
 	OldPath string `json:"oldPath,omitempty"` // populated for renames/copies
 	Status  string `json:"status"`            // A, M, D, R, C, T, U, X
 }
 
-type GitCommit struct {
+type gitCommit struct {
 	Hash         string          `json:"hash"`
 	ShortHash    string          `json:"shortHash"`
 	AuthorName   string          `json:"authorName"`
 	CommittedAt  string          `json:"committedAt"`
 	Subject      string          `json:"subject"`
-	ChangedFiles []GitCommitFile `json:"changedFiles"`
+	ChangedFiles []gitCommitFile `json:"changedFiles"`
 }
 
 type GitCommitComparison struct {
 	CurrentBranch   string          `json:"currentBranch"`
 	TargetBranch    string          `json:"targetBranch"`
-	AllChangedFiles []GitCommitFile `json:"allChangedFiles"`
-	Commits         []GitCommit     `json:"commits"`
+	AllChangedFiles []gitCommitFile `json:"allChangedFiles"`
+	Commits         []gitCommit     `json:"commits"`
 }
 
 type GitBranchDiffSummary struct {

@@ -11,6 +11,8 @@ import (
 
 	"yishan/apps/relay/internal/auth"
 	"yishan/apps/relay/internal/jobqueue"
+
+	relayprotocol "yishan/packages/relay-protocol-go"
 )
 
 // ---------------------------------------------------------------------------
@@ -156,8 +158,8 @@ func TestHandlePublishOrgEvent_ForwardsSourceNodeID(t *testing.T) {
 	if err := receiverCli.ReadJSON(&message); err != nil {
 		t.Fatalf("receiver should get the notification: %v", err)
 	}
-	if message["method"] != MethodWorkspaceSnapshotChanged {
-		t.Fatalf("expected method %s, got %v", MethodWorkspaceSnapshotChanged, message["method"])
+	if message["method"] != relayprotocol.MethodWorkspaceSnapshotChanged {
+		t.Fatalf("expected method %s, got %v", relayprotocol.MethodWorkspaceSnapshotChanged, message["method"])
 	}
 	params, ok := message["params"].(map[string]any)
 	if !ok {
@@ -191,7 +193,7 @@ func TestHandleMessage_WorkspaceSnapshotChanged_BroadcastsToOrgExcludingSource(t
 	}
 	payload, err := json.Marshal(map[string]any{
 		"jsonrpc": "2.0",
-		"method":  MethodWorkspaceSnapshotChanged,
+		"method":  relayprotocol.MethodWorkspaceSnapshotChanged,
 		"params":  json.RawMessage(params),
 	})
 	if err != nil {
@@ -210,8 +212,8 @@ func TestHandleMessage_WorkspaceSnapshotChanged_BroadcastsToOrgExcludingSource(t
 	if err := targetCli.ReadJSON(&targetMessage); err != nil {
 		t.Fatalf("target node should receive the notification: %v", err)
 	}
-	if targetMessage["method"] != MethodWorkspaceSnapshotChanged {
-		t.Fatalf("expected method %s, got %v", MethodWorkspaceSnapshotChanged, targetMessage["method"])
+	if targetMessage["method"] != relayprotocol.MethodWorkspaceSnapshotChanged {
+		t.Fatalf("expected method %s, got %v", relayprotocol.MethodWorkspaceSnapshotChanged, targetMessage["method"])
 	}
 
 	// Source node must not receive its own message back.
@@ -244,7 +246,7 @@ func TestHandleMessage_WorkspaceSnapshotChanged_TargetOffline_Rejects(t *testing
 	payload, err := json.Marshal(map[string]any{
 		"jsonrpc": "2.0",
 		"id":      "dispatch-node-2-1",
-		"method":  MethodWorkspaceSnapshotChanged,
+		"method":  relayprotocol.MethodWorkspaceSnapshotChanged,
 		"params":  json.RawMessage(params),
 	})
 	if err != nil {
@@ -299,7 +301,7 @@ func TestHandleMessage_WorkspaceSnapshotChanged_TargetOnline_AcceptsAndBroadcast
 	payload, err := json.Marshal(map[string]any{
 		"jsonrpc": "2.0",
 		"id":      "dispatch-node-2-2",
-		"method":  MethodWorkspaceSnapshotChanged,
+		"method":  relayprotocol.MethodWorkspaceSnapshotChanged,
 		"params":  json.RawMessage(params),
 	})
 	if err != nil {
@@ -334,8 +336,8 @@ func TestHandleMessage_WorkspaceSnapshotChanged_TargetOnline_AcceptsAndBroadcast
 	if err := targetCli.ReadJSON(&targetMessage); err != nil {
 		t.Fatalf("target node should receive the notification: %v", err)
 	}
-	if targetMessage["method"] != MethodWorkspaceSnapshotChanged {
-		t.Fatalf("expected method %s, got %v", MethodWorkspaceSnapshotChanged, targetMessage["method"])
+	if targetMessage["method"] != relayprotocol.MethodWorkspaceSnapshotChanged {
+		t.Fatalf("expected method %s, got %v", relayprotocol.MethodWorkspaceSnapshotChanged, targetMessage["method"])
 	}
 }
 
@@ -567,9 +569,9 @@ func TestHandleDispatch_InvalidJSON_Returns400(t *testing.T) {
 
 func TestHandleMessage_Pong_ReturnsTrue(t *testing.T) {
 	srv := newTestServer(t)
-	payload, _ := json.Marshal(request{JSONRPC: "2.0", Method: MethodPong})
+	payload, _ := json.Marshal(relayprotocol.Request{JSONRPC: "2.0", Method: relayprotocol.MethodPong})
 	if !srv.handleMessage("node-1", payload) {
-		t.Error("handleMessage should return true for MethodPong")
+		t.Error("handleMessage should return true for relayprotocol.MethodPong")
 	}
 }
 
@@ -592,10 +594,10 @@ func TestHandleMessage_JobAck_ReturnsTrueAndCallsQueue(t *testing.T) {
 	}
 
 	params, _ := json.Marshal(map[string]string{"runId": "run-ack", "status": "accepted"})
-	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodJobAck, "params": json.RawMessage(params)})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": relayprotocol.MethodJobAck, "params": json.RawMessage(params)})
 
 	if !srv.handleMessage("node-1", payload) {
-		t.Error("handleMessage should return true for MethodJobAck")
+		t.Error("handleMessage should return true for relayprotocol.MethodJobAck")
 	}
 	run := queue.GetRun("run-ack")
 	if run.Status != jobqueue.StatusAwaitingResult {
@@ -622,10 +624,10 @@ func TestHandleMessage_JobResult_ReturnsTrueAndCallsQueue(t *testing.T) {
 	}
 
 	params, _ := json.Marshal(map[string]any{"runId": "run-res", "status": "completed", "durationMs": 100})
-	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodJobResult, "params": json.RawMessage(params)})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": relayprotocol.MethodJobResult, "params": json.RawMessage(params)})
 
 	if !srv.handleMessage("node-1", payload) {
-		t.Error("handleMessage should return true for MethodJobResult")
+		t.Error("handleMessage should return true for relayprotocol.MethodJobResult")
 	}
 	run := queue.GetRun("run-res")
 	if run.Status != jobqueue.StatusCompleted {
@@ -635,7 +637,7 @@ func TestHandleMessage_JobResult_ReturnsTrueAndCallsQueue(t *testing.T) {
 
 func TestHandleMessage_UnknownMethod_ReturnsFalse(t *testing.T) {
 	srv := newTestServer(t)
-	payload, _ := json.Marshal(request{JSONRPC: "2.0", Method: "unknown.method"})
+	payload, _ := json.Marshal(relayprotocol.Request{JSONRPC: "2.0", Method: "unknown.method"})
 	if srv.handleMessage("node-1", payload) {
 		t.Error("handleMessage should return false for unknown methods")
 	}
@@ -769,10 +771,10 @@ func TestHandleMessage_TerminalSessionChanged_BroadcastsToOrg(t *testing.T) {
 	}
 
 	params, _ := json.Marshal(map[string]any{"sessionId": "sess-1", "action": "created"})
-	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalSessionChanged, "params": json.RawMessage(params)})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": relayprotocol.MethodTerminalSessionChanged, "params": json.RawMessage(params)})
 
 	if !srv.handleMessage("node-1", payload) {
-		t.Error("handleMessage should return true for MethodTerminalSessionChanged")
+		t.Error("handleMessage should return true for relayprotocol.MethodTerminalSessionChanged")
 	}
 }
 
@@ -799,10 +801,10 @@ func TestHandleMessage_TerminalSessionChanged_ExcludesSenderFromBroadcast(t *tes
 	}
 
 	params, _ := json.Marshal(map[string]any{"sessionId": "sess-1", "action": "created"})
-	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalSessionChanged, "params": json.RawMessage(params)})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": relayprotocol.MethodTerminalSessionChanged, "params": json.RawMessage(params)})
 
 	if !srv.handleMessage("node-1", payload) {
-		t.Fatal("handleMessage should return true for MethodTerminalSessionChanged")
+		t.Fatal("handleMessage should return true for relayprotocol.MethodTerminalSessionChanged")
 	}
 
 	var received map[string]any
@@ -812,8 +814,8 @@ func TestHandleMessage_TerminalSessionChanged_ExcludesSenderFromBroadcast(t *tes
 	if err := receiverCli.ReadJSON(&received); err != nil {
 		t.Fatalf("receiver should get the notification: %v", err)
 	}
-	if received["method"] != MethodTerminalSessionChanged {
-		t.Errorf("receiver got method %v, want %s", received["method"], MethodTerminalSessionChanged)
+	if received["method"] != relayprotocol.MethodTerminalSessionChanged {
+		t.Errorf("receiver got method %v, want %s", received["method"], relayprotocol.MethodTerminalSessionChanged)
 	}
 
 	if err := senderCli.SetReadDeadline(time.Now().Add(200 * time.Millisecond)); err != nil {
@@ -828,11 +830,11 @@ func TestHandleMessage_TerminalSessionChanged_ExcludesSenderFromBroadcast(t *tes
 func TestHandleMessage_TerminalSessionChanged_UnknownNode_ReturnsTrueNoOp(t *testing.T) {
 	srv := newTestServer(t)
 	params, _ := json.Marshal(map[string]any{"sessionId": "sess-1"})
-	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalSessionChanged, "params": json.RawMessage(params)})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": relayprotocol.MethodTerminalSessionChanged, "params": json.RawMessage(params)})
 
 	// Node "ghost" is not registered — handler must return true (consumed) without panic.
 	if !srv.handleMessage("ghost", payload) {
-		t.Error("handleMessage should return true for MethodTerminalSessionChanged even for unknown node")
+		t.Error("handleMessage should return true for relayprotocol.MethodTerminalSessionChanged even for unknown node")
 	}
 }
 
@@ -858,8 +860,8 @@ func newStreamServer(t *testing.T) *Server {
 
 func streamRequestPayload(t *testing.T, sessionID, ownerNode, fromNode string) []byte {
 	t.Helper()
-	params, _ := json.Marshal(terminalStreamRequestParams{SessionID: sessionID, OwnerNode: ownerNode, FromNode: fromNode})
-	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalStreamRequest, "params": json.RawMessage(params)})
+	params, _ := json.Marshal(relayprotocol.TerminalStreamRequestParams{SessionID: sessionID, OwnerNode: ownerNode, FromNode: fromNode})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": relayprotocol.MethodTerminalStreamRequest, "params": json.RawMessage(params)})
 	return payload
 }
 
@@ -873,7 +875,7 @@ func TestStreamSub_RequestForwardsToOwner(t *testing.T) {
 
 	payload := streamRequestPayload(t, "sess-1", "owner", "node-b")
 	if !srv.handleMessage("node-b", payload) {
-		t.Fatal("handleMessage should return true for MethodTerminalStreamRequest")
+		t.Fatal("handleMessage should return true for relayprotocol.MethodTerminalStreamRequest")
 	}
 
 	// node-b should be in streamSubs for sess-1.
@@ -888,8 +890,8 @@ func TestStreamSub_RequestForwardsToOwner(t *testing.T) {
 	if err := ownerCli.ReadJSON(&msg); err != nil {
 		t.Fatalf("owner did not receive stream.request: %v", err)
 	}
-	if msg["method"] != MethodTerminalStreamRequest {
-		t.Errorf("expected %s, got %v", MethodTerminalStreamRequest, msg["method"])
+	if msg["method"] != relayprotocol.MethodTerminalStreamRequest {
+		t.Errorf("expected %s, got %v", relayprotocol.MethodTerminalStreamRequest, msg["method"])
 	}
 }
 
@@ -897,11 +899,11 @@ func TestStreamSub_CancelRemovesSubscriber(t *testing.T) {
 	srv := newStreamServer(t)
 	srv.addStreamSub("sess-1", "node-b")
 
-	params, _ := json.Marshal(terminalStreamCancelParams{SessionID: "sess-1", FromNode: "node-b"})
-	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalStreamCancel, "params": json.RawMessage(params)})
+	params, _ := json.Marshal(relayprotocol.TerminalStreamCancelParams{SessionID: "sess-1", FromNode: "node-b"})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": relayprotocol.MethodTerminalStreamCancel, "params": json.RawMessage(params)})
 
 	if !srv.handleMessage("node-b", payload) {
-		t.Fatal("handleMessage should return true for MethodTerminalStreamCancel")
+		t.Fatal("handleMessage should return true for relayprotocol.MethodTerminalStreamCancel")
 	}
 	if subs := srv.streamSubsForSession("sess-1"); len(subs) != 0 {
 		t.Errorf("expected empty subs after cancel, got %v", subs)

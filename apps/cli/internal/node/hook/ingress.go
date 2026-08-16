@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -22,7 +22,7 @@ const AgentHookIngestPath = "/v1/agent-hook/ingest"
 // the hook pipeline touches: token usage triggers, memory summarization, the
 // frontend event hub, and the workspace registry for path/project resolution.
 type IngressDeps struct {
-	Events     *internalevents.Hub
+	Events     *eventbus.Hub
 	TokenUsage tokenusage.Service
 	Memory     *memory.Service
 	Registry   *instance.Registry
@@ -34,7 +34,7 @@ type IngressDeps struct {
 
 // Ingress is the agent hook HTTP handler.
 type Ingress struct {
-	events     *internalevents.Hub
+	events     *eventbus.Hub
 	tokenUsage tokenusage.Service
 	memory     *memory.Service
 	registry   *instance.Registry
@@ -122,7 +122,7 @@ func (i *Ingress) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if notification := buildHookNotificationPayload(event); notification != nil {
-		i.events.Publish(internalevents.Event{Topic: "notificationEvent", Payload: notification})
+		i.events.Publish(eventbus.Event{Topic: "notificationEvent", Payload: notification})
 	}
 
 	if event.tabID != "" && (event.eventType == "start" || event.eventType == "stop" || event.eventType == "launched") {
@@ -130,7 +130,7 @@ func (i *Ingress) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if event.eventType == "stop" {
 			agentForEvent = ""
 		}
-		i.events.Publish(internalevents.Event{
+		i.events.Publish(eventbus.Event{
 			Topic: "terminalAgentChanged",
 			Payload: map[string]any{
 				"tabId": event.tabID,

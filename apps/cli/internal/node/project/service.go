@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/cloud"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
 
 	"github.com/rs/zerolog/log"
@@ -19,8 +19,8 @@ import (
 
 // Deps are the explicit dependencies of the project application service.
 type Deps struct {
-	// Runtime provides the cloud API client and auth state.
-	Runtime *cliruntime.Runtime
+	// Session provides the cloud API client and auth state.
+	Session *session.Session
 	// Database provides the local workspace store for the runtime overlay.
 	Database *sql.DB
 }
@@ -43,8 +43,8 @@ func NewService(deps Deps) *Service {
 // projectWithWorkspaces is the project + live workspaces shape returned by
 // project.listWithWorkspaces.
 type projectWithWorkspaces struct {
-	localdb.Project
-	Workspaces []localdb.Workspace `json:"workspaces"`
+	sqlite.Project
+	Workspaces []sqlite.Workspace `json:"workspaces"`
 }
 
 func optionalString(value string) *string {
@@ -55,18 +55,18 @@ func optionalString(value string) *string {
 	return &trimmedValue
 }
 
-func (s *Service) projectListPreferenceStore() *localdb.ProjectListPreferenceStore {
-	return localdb.NewProjectListPreferenceStore(s.deps.Database)
+func (s *Service) projectListPreferenceStore() *sqlite.ProjectListPreferenceStore {
+	return sqlite.NewProjectListPreferenceStore(s.deps.Database)
 }
 
 // apiProjectToLocalRecord maps a remote project list record to the
 // local-shaped record used by the RPC response.
-func apiProjectToLocalRecord(project api.Project) localdb.Project {
-	commands := make([]localdb.ProjectCommand, 0, len(project.Commands))
+func apiProjectToLocalRecord(project cloud.Project) sqlite.Project {
+	commands := make([]sqlite.ProjectCommand, 0, len(project.Commands))
 	for _, command := range project.Commands {
-		commands = append(commands, localdb.ProjectCommand{Name: command.Name, Command: command.Command})
+		commands = append(commands, sqlite.ProjectCommand{Name: command.Name, Command: command.Command})
 	}
-	return localdb.Project{
+	return sqlite.Project{
 		ID:              project.ID,
 		Name:            project.Name,
 		SourceType:      project.SourceType,
@@ -89,8 +89,8 @@ func apiProjectToLocalRecord(project api.Project) localdb.Project {
 // apiWorkspaceToLocalRecord maps a remote workspace list record to the
 // local-shaped record used by the RPC response. Runtime fields (state/health/
 // localPath) are overlaid afterwards from the local store.
-func apiWorkspaceToLocalRecord(workspace api.Workspace) localdb.Workspace {
-	return localdb.Workspace{
+func apiWorkspaceToLocalRecord(workspace cloud.Workspace) sqlite.Workspace {
+	return sqlite.Workspace{
 		ID:             workspace.ID,
 		OrganizationID: workspace.OrganizationID,
 		ProjectID:      workspace.ProjectID,
@@ -106,12 +106,12 @@ func apiWorkspaceToLocalRecord(workspace api.Workspace) localdb.Workspace {
 
 // listRemoteProjects fetches the org's projects from the remote list endpoint
 // (org-scoped), mapped to the local-shaped records used by the RPC response.
-func (s *Service) listRemote(ctx context.Context, orgID string) ([]localdb.Project, error) {
-	response, err := s.deps.Runtime.APIClient().ListProjects(orgID)
+func (s *Service) listRemote(ctx context.Context, orgID string) ([]sqlite.Project, error) {
+	response, err := s.deps.Session.APIClient().ListProjects(orgID)
 	if err != nil {
 		return nil, err
 	}
-	projects := make([]localdb.Project, 0, len(response.Projects))
+	projects := make([]sqlite.Project, 0, len(response.Projects))
 	for _, project := range response.Projects {
 		projects = append(projects, apiProjectToLocalRecord(project))
 	}
@@ -123,14 +123,14 @@ func (s *Service) listRemote(ctx context.Context, orgID string) ([]localdb.Proje
 // endpoint (one backend call), then overlays the host-local workspace runtime
 // (state/health/localPath) from the local workspace store.
 func (s *Service) listRemoteWithWorkspaces(ctx context.Context, orgID string) ([]projectWithWorkspaces, error) {
-	response, err := s.deps.Runtime.APIClient().ListProjectsWithWorkspaces(orgID)
+	response, err := s.deps.Session.APIClient().ListProjectsWithWorkspaces(orgID)
 	if err != nil {
 		return nil, err
 	}
 
-	runtimeByID := map[string]localdb.Workspace{}
+	runtimeByID := map[string]sqlite.Workspace{}
 	if s.deps.Database != nil {
-		if local, err := localdb.NewWorkspaceStore(s.deps.Database).List(ctx); err == nil {
+		if local, err := sqlite.NewWorkspaceStore(s.deps.Database).List(ctx); err == nil {
 			for _, workspace := range local {
 				runtimeByID[workspace.ID] = workspace
 			}
@@ -139,7 +139,7 @@ func (s *Service) listRemoteWithWorkspaces(ctx context.Context, orgID string) ([
 
 	results := make([]projectWithWorkspaces, 0, len(response.Projects))
 	for _, project := range response.Projects {
-		workspaces := make([]localdb.Workspace, 0, len(project.Workspaces))
+		workspaces := make([]sqlite.Workspace, 0, len(project.Workspaces))
 		for _, workspace := range project.Workspaces {
 			record := apiWorkspaceToLocalRecord(workspace)
 			if runtime, ok := runtimeByID[record.ID]; ok {
@@ -165,13 +165,13 @@ func (s *Service) listRemoteWithWorkspaces(ctx context.Context, orgID string) ([
 // local project store anymore, so a failed/unconfigured remote read returns an
 // empty list.
 func (s *Service) List(ctx context.Context, req rpc.ProjectListParams) (any, error) {
-	if s.deps.Runtime == nil || !s.deps.Runtime.APIConfigured() {
-		return []localdb.Project{}, nil
+	if s.deps.Session == nil || !s.deps.Session.APIConfigured() {
+		return []sqlite.Project{}, nil
 	}
 	projects, err := s.listRemote(ctx, req.OrganizationID)
 	if err != nil {
 		log.Warn().Err(err).Str("orgId", req.OrganizationID).Msg("remote project list failed")
-		return []localdb.Project{}, nil
+		return []sqlite.Project{}, nil
 	}
 	return projects, nil
 }
@@ -181,7 +181,7 @@ func (s *Service) List(ctx context.Context, req rpc.ProjectListParams) (any, err
 // no local project store anymore; a failed/unconfigured remote read returns an
 // empty list.
 func (s *Service) ListWithWorkspaces(ctx context.Context, req rpc.ProjectListWithWorkspacesParams) (any, error) {
-	if s.deps.Runtime == nil || !s.deps.Runtime.APIConfigured() {
+	if s.deps.Session == nil || !s.deps.Session.APIConfigured() {
 		return []projectWithWorkspaces{}, nil
 	}
 	results, err := s.listRemoteWithWorkspaces(ctx, req.OrganizationID)
@@ -203,7 +203,7 @@ func (s *Service) SetListPreferences(ctx context.Context, req rpc.ProjectSetList
 	if strings.TrimSpace(req.OrganizationID) == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "organizationId is required")
 	}
-	req.Preferences.Version = localdb.ProjectListPreferencesVersion
+	req.Preferences.Version = sqlite.ProjectListPreferencesVersion
 	if err := s.projectListPreferenceStore().Set(ctx, req.OrganizationID, req.Preferences); err != nil {
 		return nil, err
 	}

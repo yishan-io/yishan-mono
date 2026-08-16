@@ -11,7 +11,7 @@ import (
 )
 
 func TestSummarizeSession_SkipsWhenReaderFails(t *testing.T) {
-	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(context.Context, string, string, string, string) (string, error) {
+	summarizer := newSummarizer(SummarizerConfig{Enabled: true}, func(context.Context, string, string, string, string) (string, error) {
 		t.Fatal("runAgent should not be called when reader fails")
 		return "", nil
 	})
@@ -35,12 +35,12 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	memoryPath := filepath.Join(contextRoot, "MEMORY.md")
 	var prompt string
 
-	summarizer := NewSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
+	summarizer := newSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
 		prompt = gotPrompt
-		if agentKind != BuiltInSummarizerAgentKind {
+		if agentKind != builtInSummarizerAgentKind {
 			t.Fatalf("unexpected agent kind: %q", agentKind)
 		}
-		return `{"lockedDecisions":["2026-06-16 — Fixed reader. Why: reader was broken."],"durableDiscoveries":["[Workflow Trap] 2026-06-16 — Summarizer writes MEMORY.md on normal runs"],"openQuestions":[]}`,
+		return `{"lockedDecisions":["2026-06-16 — Fixed reader. Why: reader was broken."],"durableDiscoveries":["[Workflow Trap] 2026-06-16 — summarizer writes MEMORY.md on normal runs"],"openQuestions":[]}`,
 			nil
 	})
 	summarizer.dbReader = fakeSessionReader{session: &sessionMessages{Messages: []sessionMessage{{Role: "user", Content: "hello", Timestamp: time.UnixMilli(1000)}, {Role: "assistant", Content: "world", Timestamp: time.UnixMilli(2000)}}}}
@@ -55,8 +55,8 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	if result.SourceAgent != "pi" {
 		t.Fatalf("expected source agent pi, got %q", result.SourceAgent)
 	}
-	if result.SummarizerAgent != BuiltInSummarizerAgentKind {
-		t.Fatalf("expected summarizer agent %q, got %q", BuiltInSummarizerAgentKind, result.SummarizerAgent)
+	if result.SummarizerAgent != builtInSummarizerAgentKind {
+		t.Fatalf("expected summarizer agent %q, got %q", builtInSummarizerAgentKind, result.SummarizerAgent)
 	}
 	if len(result.WrittenPaths) == 0 || result.WrittenPaths[0] != memoryPath {
 		t.Fatalf("unexpected written paths: %v", result.WrittenPaths)
@@ -73,7 +73,7 @@ func TestSummarizeSession_UsesPiWhenNoAgentOverrideConfigured(t *testing.T) {
 	workspacePath := t.TempDir()
 	var gotAgentKind string
 
-	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
+	summarizer := newSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
 		gotAgentKind = agentKind
 		return `{"lockedDecisions":["2026-08-03 — Summaries always run with Pi. Why: Pi is built in."],"durableDiscoveries":[],"openQuestions":[]}`,
 			nil
@@ -87,11 +87,11 @@ func TestSummarizeSession_UsesPiWhenNoAgentOverrideConfigured(t *testing.T) {
 	if result.Skipped {
 		t.Fatal("expected summarize run, got skipped")
 	}
-	if gotAgentKind != BuiltInSummarizerAgentKind {
-		t.Fatalf("expected summarize run to use %q, got %q", BuiltInSummarizerAgentKind, gotAgentKind)
+	if gotAgentKind != builtInSummarizerAgentKind {
+		t.Fatalf("expected summarize run to use %q, got %q", builtInSummarizerAgentKind, gotAgentKind)
 	}
-	if result.SummarizerAgent != BuiltInSummarizerAgentKind {
-		t.Fatalf("expected result summarizer agent %q, got %q", BuiltInSummarizerAgentKind, result.SummarizerAgent)
+	if result.SummarizerAgent != builtInSummarizerAgentKind {
+		t.Fatalf("expected result summarizer agent %q, got %q", builtInSummarizerAgentKind, result.SummarizerAgent)
 	}
 }
 
@@ -114,7 +114,7 @@ func TestSummarizeSession_WorktreeGone(t *testing.T) {
 	}
 
 	var gotWorkDir string
-	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, _ string, _ string, _ string, workDir string) (string, error) {
+	summarizer := newSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, _ string, _ string, _ string, workDir string) (string, error) {
 		gotWorkDir = workDir
 		return `{"lockedDecisions":["2026-06-23 — Worktree gone. Why: test."],"durableDiscoveries":[],"openQuestions":[]}`, nil
 	})

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
 	nodeagent "yishan/apps/cli/internal/node/agent"
 	nodesystem "yishan/apps/cli/internal/node/system"
@@ -46,7 +46,7 @@ type relayHandler struct {
 	system    *nodesystem.Service
 	workspace *nodeworkspace.Service
 	terminal  *nodeterminal.Service
-	runtime   *cliruntime.Runtime
+	runtime   *session.Session
 }
 
 // HandleRelayMessage implements relay.MessageHandler.

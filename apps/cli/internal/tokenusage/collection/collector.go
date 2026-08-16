@@ -11,8 +11,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/adapter/cloud"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	agentkind "yishan/apps/cli/internal/agent/kind"
 	"yishan/apps/cli/internal/tokenusage/attribution"
 	"yishan/apps/cli/internal/tokenusage/ingestion"
@@ -37,14 +37,14 @@ var tokenUsageScannableAgentKinds = agentkind.WithActiveTokenScanners
 type Collector struct {
 	mu                   sync.Mutex
 	registry             *instance.Registry
-	runtime              *cliruntime.Runtime
+	runtime              *session.Session
 	repo                 repository.HourlyUsageRepository
 	pricingCatalog       pricing.Catalog
 	timers               map[string]*time.Timer
 	inFlight             map[string]bool
 	needsRerun           map[string]bool
 	recoverySinceByAgent map[string]int64
-	pending              map[string][]localdb.HourlyUsageRow
+	pending              map[string][]sqlite.HourlyUsageRow
 	syncTimer            *time.Timer
 	hourTimer            *time.Timer
 	closed               bool
@@ -63,7 +63,7 @@ type DebugState struct {
 // tokenusage facade wires the disk-cached default catalog).
 func NewCollector(
 	registry *instance.Registry,
-	runtime *cliruntime.Runtime,
+	runtime *session.Session,
 	repo repository.HourlyUsageRepository,
 	pricingCatalog pricing.Catalog,
 ) *Collector {
@@ -76,7 +76,7 @@ func NewCollector(
 		inFlight:             make(map[string]bool),
 		needsRerun:           make(map[string]bool),
 		recoverySinceByAgent: make(map[string]int64),
-		pending:              make(map[string][]localdb.HourlyUsageRow),
+		pending:              make(map[string][]sqlite.HourlyUsageRow),
 	}
 }
 
@@ -418,13 +418,13 @@ func (c *Collector) syncPending(source string) {
 	}
 }
 
-func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]localdb.HourlyUsageRow, error) {
+func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]sqlite.HourlyUsageRow, error) {
 	rows, err := c.repo.ListDirtyHourlyRows(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	rowsByOrg := make(map[string][]localdb.HourlyUsageRow)
+	rowsByOrg := make(map[string][]sqlite.HourlyUsageRow)
 	for _, row := range rows {
 		if strings.TrimSpace(row.WorkspaceID) == "" {
 			continue
@@ -442,10 +442,10 @@ func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]localdb.HourlyUsageRo
 	return rowsByOrg, nil
 }
 
-func (c *Collector) syncRowsForOrg(orgID string, rows []localdb.HourlyUsageRow) error {
-	rowInputs := make([]api.TokenUsageHourlyRowInput, 0, len(rows))
+func (c *Collector) syncRowsForOrg(orgID string, rows []sqlite.HourlyUsageRow) error {
+	rowInputs := make([]cloud.TokenUsageHourlyRowInput, 0, len(rows))
 	for _, row := range rows {
-		rowInputs = append(rowInputs, api.TokenUsageHourlyRowInput{
+		rowInputs = append(rowInputs, cloud.TokenUsageHourlyRowInput{
 			ProjectID:             row.ProjectID,
 			WorkspaceID:           row.WorkspaceID,
 			WorkspacePath:         row.WorkspacePath,
@@ -487,7 +487,7 @@ func (c *Collector) syncRowsForOrg(orgID string, rows []localdb.HourlyUsageRow) 
 }
 
 func (c *Collector) ensureHistoricalCostBackfillStarted() {
-	store, ok := c.repo.(*localdb.HourlyUsageStore)
+	store, ok := c.repo.(*sqlite.HourlyUsageStore)
 	if !ok {
 		return
 	}
@@ -497,7 +497,7 @@ func (c *Collector) ensureHistoricalCostBackfillStarted() {
 }
 
 func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
-	store, ok := c.repo.(*localdb.HourlyUsageStore)
+	store, ok := c.repo.(*sqlite.HourlyUsageStore)
 	if !ok || c.pricingCatalog == nil || !c.pricingCatalog.HasPrices() {
 		return
 	}
@@ -514,7 +514,7 @@ func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
 		log.Warn().Err(err).Str("source", source).Msg("failed to read token usage historical cost backfill cutoff")
 		return
 	}
-	updatedCount, err := store.BackfillEstimatedCost(context.Background(), startedAt, func(row localdb.HourlyUsageRow) int64 {
+	updatedCount, err := store.BackfillEstimatedCost(context.Background(), startedAt, func(row sqlite.HourlyUsageRow) int64 {
 		uncachedInputTokens := reconstructedUncachedInputTokens(row)
 		return c.pricingCatalog.EstimateCost(
 			row.Model,
@@ -524,7 +524,7 @@ func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
 			row.CachedWriteTokens,
 			row.ReasoningTokens,
 		)
-	}, localdb.CostBackfillOptions{RecomputeEstimated: force})
+	}, sqlite.CostBackfillOptions{RecomputeEstimated: force})
 	if err != nil {
 		log.Warn().Err(err).Str("source", source).Msg("token usage historical cost backfill failed")
 		return
@@ -539,7 +539,7 @@ func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
 	}
 }
 
-func reconstructedUncachedInputTokens(row localdb.HourlyUsageRow) int64 {
+func reconstructedUncachedInputTokens(row sqlite.HourlyUsageRow) int64 {
 	switch strings.ToLower(strings.TrimSpace(row.AgentKind)) {
 	case "pi", "opencode", "codex", "claude":
 		uncachedInputTokens := row.InputTokens - row.CachedInputTokens - row.CachedWriteTokens

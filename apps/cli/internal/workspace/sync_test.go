@@ -178,7 +178,7 @@ func TestSyncContextLink_NonGitEnabledCreatesMarkedRealDir(t *testing.T) {
 	if !info.IsDir() {
 		t.Fatalf("expected directory")
 	}
-	marker := filepath.Join(dir, ContextMarkerName)
+	marker := filepath.Join(dir, contextMarkerName)
 	markerInfo, err := os.Stat(marker)
 	if err != nil {
 		t.Fatalf("expected marker file: %v", err)
@@ -334,7 +334,7 @@ func TestSyncContextLink_NonGitEnableLeavesStaleSymlinkAlone(t *testing.T) {
 	if _, err := os.Lstat(linkPath); err != nil {
 		t.Fatalf("expected symlink untouched: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(target, ContextMarkerName)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(target, contextMarkerName)); !os.IsNotExist(err) {
 		t.Fatalf("expected marker NOT written into the symlink target, got err=%v", err)
 	}
 }

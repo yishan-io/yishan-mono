@@ -1,5 +1,5 @@
-// Package db provides durable local SQLite storage for daemon-managed data.
-package db
+// Package sqlite provides durable local SQLite storage for daemon-managed data.
+package sqlite
 
 import (
 	"database/sql"

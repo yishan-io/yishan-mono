@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	agentsetup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/app"
 	hook "yishan/apps/cli/internal/node/hook"
@@ -19,7 +19,7 @@ import (
 )
 
 func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
-	if err := SaveState(dr.statePath, RuntimeState{
+	if err := saveState(dr.statePath, RuntimeState{
 		PID:       os.Getpid(),
 		Host:      cfg.Host,
 		Port:      dr.actualPort,
@@ -28,12 +28,12 @@ func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
 		return fmt.Errorf("save daemon state: %w", err)
 	}
 	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+dr.actualAddr+hook.AgentHookIngestPath)
-	if usesRemoteHostPolicy(dr.app.Runtime) {
+	if usesRemoteHostPolicy(dr.app.Session) {
 		_ = os.Setenv(agentsetup.RemoteHostPolicyEnvKey, "1")
 	} else {
 		_ = os.Unsetenv(agentsetup.RemoteHostPolicyEnvKey)
 	}
-	agentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.app.Runtime))
+	agentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.app.Session))
 	return nil
 }
 
@@ -82,12 +82,12 @@ func handleShutdownSignal(stop chan os.Signal, cancelShutdown context.CancelFunc
 	}
 }
 
-func registerNode(dr *daemonRuntime, runtime *cliruntime.Runtime) error {
+func registerNode(dr *daemonRuntime, runtime *session.Session) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
 	agentDetectionStatus := nodesystem.ListAgentDetectionStatuses(false)
-	if err := registerRemoteNode(runtime, NodeRegistration{
+	if err := registerRemoteNode(runtime, nodeRegistration{
 		ID:                   dr.daemonID,
 		Endpoint:             "http://" + dr.actualAddr,
 		AgentDetectionStatus: agentDetectionStatus,

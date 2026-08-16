@@ -165,26 +165,26 @@ func DecodeCloseEnvelope(params json.RawMessage) (CloseEnvelope, bool) {
 // it should republish locally (create started on the source node, progress /
 // completed / failed on the target node). Returns nil when the envelope is not
 // destined for this node.
-func RepublishedCreateEvent(payload CreateEnvelope, localNodeID string) (*events.Event, bool) {
+func RepublishedCreateEvent(payload CreateEnvelope, localNodeID string) (*eventbus.Event, bool) {
 	switch payload.Change {
 	case ChangeCreateRequest:
 		if payload.Started != nil && strings.TrimSpace(payload.SourceNodeID) == strings.TrimSpace(localNodeID) {
-			event := events.Event{Topic: "workspaceCreateStarted", Payload: *payload.Started}
+			event := eventbus.Event{Topic: "workspaceCreateStarted", Payload: *payload.Started}
 			return &event, true
 		}
 	case ChangeCreateProgress:
 		if strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(localNodeID) && payload.Progress != nil {
-			event := events.Event{Topic: "workspaceCreateProgress", Payload: *payload.Progress}
+			event := eventbus.Event{Topic: "workspaceCreateProgress", Payload: *payload.Progress}
 			return &event, true
 		}
 	case ChangeCreateCompleted:
 		if strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(localNodeID) && payload.Completed != nil {
-			event := events.Event{Topic: "workspaceCreateCompleted", Payload: payload.Completed}
+			event := eventbus.Event{Topic: "workspaceCreateCompleted", Payload: payload.Completed}
 			return &event, true
 		}
 	case ChangeCreateFailed:
 		if strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(localNodeID) && payload.Failed != nil {
-			event := events.Event{Topic: "workspaceCreateFailed", Payload: *payload.Failed}
+			event := eventbus.Event{Topic: "workspaceCreateFailed", Payload: *payload.Failed}
 			return &event, true
 		}
 	}

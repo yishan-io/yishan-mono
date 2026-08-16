@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	cliruntime "yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -109,7 +109,7 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 	}
 
 	// Local record changes: SQLite row provisioning → active with localPath.
-	store := localdb.NewWorkspaceStore(s.deps.Database)
+	store := sqlite.NewWorkspaceStore(s.deps.Database)
 	row, err := store.Get(context.Background(), "ws-seq-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
@@ -183,7 +183,7 @@ func TestCreateRemoteNode_EventSequence(t *testing.T) {
 	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
 		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
 	}
-	if _, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-remote-1"); err == nil {
+	if _, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-remote-1"); err == nil {
 		t.Fatal("expected no local SQLite row for remote-target create")
 	}
 	if len(s.deps.Registry.List()) != 0 {
@@ -240,7 +240,7 @@ func TestCreateLocalNode_WorktreeStepFailureRollsBack(t *testing.T) {
 	}
 
 	// Local row closed.
-	row, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-fail-1")
+	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-fail-1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
@@ -322,7 +322,7 @@ func TestCreateLocalNode_ContextStepFailureRollsBackWorktree(t *testing.T) {
 	if len(statuses) == 0 || statuses[0] != "closed" {
 		t.Fatalf("expected close with status closed, got %v", statuses)
 	}
-	row, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-ctxfail")
+	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-ctxfail")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
@@ -379,7 +379,7 @@ func TestCreateLocalNode_SetupHookWarningCompletes(t *testing.T) {
 	if _, statErr := os.Stat(worktreePath); statErr != nil {
 		t.Fatalf("worktree missing after warning create: %v", statErr)
 	}
-	row, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-warn")
+	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-warn")
 	if err != nil || row.Status != "active" {
 		t.Fatalf("persisted workspace = %#v, err %v; want status active", row, err)
 	}
@@ -436,7 +436,7 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	initDispatchWorkspaceTestGitRepoWithCommit(t, sourceRepo)
 
 	database := openMigratedTestDB(t)
-	unreachableRuntime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: "http://127.0.0.1:1", Token: "test-token"}})
+	unreachableRuntime := session.New(&config.Config{API: config.APIConfig{BaseURL: "http://127.0.0.1:1", Token: "test-token"}})
 	s := newBehaviorHandler(t, unreachableRuntime, "node-1", database)
 	subscriptionID, eventCh := s.deps.Events.Subscribe()
 	defer s.deps.Events.Unsubscribe(subscriptionID)
@@ -466,7 +466,7 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	if _, statErr := os.Stat(worktreePath); statErr != nil {
 		t.Fatalf("worktree missing after create: %v", statErr)
 	}
-	row, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-unreachable")
+	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-unreachable")
 	if err != nil || row.Status != "active" {
 		t.Fatalf("persisted workspace = %#v, err %v; want status active", row, err)
 	}

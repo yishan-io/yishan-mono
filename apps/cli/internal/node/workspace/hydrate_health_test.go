@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -19,9 +19,9 @@ import (
 
 func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 	database := openMigratedTestDB(t)
-	store := localdb.NewWorkspaceStore(database)
+	store := sqlite.NewWorkspaceStore(database)
 	path := t.TempDir() // exists: proves the row is not opened
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-closing", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "closing", LocalPath: path,
 		State: string(workspace.StateClosing),
@@ -29,7 +29,7 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	svc := NewService(Deps{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
+	svc := NewService(Deps{Store: sqlite.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
 	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
@@ -42,10 +42,10 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 
 func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 	database := openMigratedTestDB(t)
-	store := localdb.NewWorkspaceStore(database)
+	store := sqlite.NewWorkspaceStore(database)
 	path := t.TempDir() // exists, so the row can be opened
 	health := string(workspace.HealthPathMissing)
-	if err := store.Create(context.Background(), &localdb.Workspace{
+	if err := store.Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-recovered", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: path,
 		State: string(workspace.StateActive), Health: &health,
@@ -53,7 +53,7 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	svc := NewService(Deps{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
+	svc := NewService(Deps{Store: sqlite.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
 	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 		t.Fatalf("write .git file: %v", err)
 	}
 	openLocalWorkspace(t, s, "ws-h1", path)
-	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
+	if err := sqlite.NewWorkspaceStore(database).Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-h1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: path,
 		State: string(workspace.StateActive),
@@ -114,14 +114,14 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	}
 
 	// State change is persisted and published.
-	row, err := localdb.NewWorkspaceStore(database).Get(context.Background(), "ws-h1")
+	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-h1")
 	if err != nil {
 		t.Fatalf("get persisted workspace: %v", err)
 	}
 	if row.State != string(workspace.StateError) || row.Health == nil || *row.Health != string(workspace.HealthNotWorktree) {
 		t.Fatalf("persisted row = %#v, want error/not-worktree", row)
 	}
-	stateEvents := []internalevents.Event{}
+	stateEvents := []eventbus.Event{}
 	for _, event := range collectFor(t, eventCh, 200*time.Millisecond) {
 		if event.Topic == "workspaceStateChanged" {
 			stateEvents = append(stateEvents, event)
@@ -143,7 +143,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 	// A folder workspace is a plain directory (no git) but must stay healthy.
 	path := t.TempDir()
 	openLocalWorkspace(t, s, "ws-folder", path)
-	if err := localdb.NewWorkspaceStore(database).Create(context.Background(), &localdb.Workspace{
+	if err := sqlite.NewWorkspaceStore(database).Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-folder", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindFolder), Status: "active", LocalPath: path,
 		State: string(workspace.StateActive),

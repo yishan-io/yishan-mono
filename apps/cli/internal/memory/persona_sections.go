@@ -51,7 +51,7 @@ func buildPersonaMarkdown(s personaSections) string {
 	buf.WriteString("# Developer Persona\n\n")
 	buf.WriteString("_Last updated: " + time.Now().UTC().Format("2006-01-02") + "_\n\n")
 
-	writeSection := func(heading PersonaSection, entries []string) {
+	writeSection := func(heading personaSection, entries []string) {
 		buf.WriteString(string(heading) + "\n\n")
 		for _, e := range entries {
 			buf.WriteString("- " + e + "\n")
@@ -66,7 +66,7 @@ func buildPersonaMarkdown(s personaSections) string {
 	return buf.String()
 }
 
-func mergePersona(existing personaSections, extracted ExtractedPersona) personaSections {
+func mergePersona(existing personaSections, extracted extractedPersona) personaSections {
 	existing.CodeStyle = mergePersonaSection(existing.CodeStyle, extracted.CodeStyle)
 	existing.WorkflowHabits = mergePersonaSection(existing.WorkflowHabits, extracted.WorkflowHabits)
 	existing.DomainExpertise = mergePersonaSection(existing.DomainExpertise, extracted.DomainExpertise)
@@ -148,7 +148,7 @@ func trimPersonaToLimit(content string, maxChars int) string {
 	return buildPersonaMarkdown(s)
 }
 
-func parseExtractedPersona(text string) (ExtractedPersona, error) {
+func parseExtractedPersona(text string) (extractedPersona, error) {
 	text = strings.TrimSpace(text)
 	if idx := strings.Index(text, "{"); idx >= 0 {
 		if end := strings.LastIndex(text, "}"); end > idx {
@@ -164,9 +164,9 @@ func parseExtractedPersona(text string) (ExtractedPersona, error) {
 		CommunicationStyle []string `json:"communicationStyle"`
 	}
 	if err := json.Unmarshal([]byte(text), &raw); err != nil {
-		return ExtractedPersona{}, fmt.Errorf("parse persona json: %w (%s)", err, truncate(text, 200))
+		return extractedPersona{}, fmt.Errorf("parse persona json: %w (%s)", err, truncate(text, 200))
 	}
-	return ExtractedPersona{
+	return extractedPersona{
 		CodeStyle:          raw.CodeStyle,
 		WorkflowHabits:     raw.WorkflowHabits,
 		DomainExpertise:    raw.DomainExpertise,

@@ -6,7 +6,7 @@ package repository
 import (
 	"context"
 
-	localdb "yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/tokenusage/record"
 )
 
@@ -14,18 +14,18 @@ import (
 // agent's hourly rows, list dirty rows for sync, mark rows synced, and read
 // the sync state. The SQLite implementation lives in internal/db.
 type HourlyUsageRepository interface {
-	ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []localdb.HourlyUsageRow) error
-	ListDirtyHourlyRows(ctx context.Context) ([]localdb.HourlyUsageRow, error)
-	MarkHourlyRowsSynced(ctx context.Context, rows []localdb.HourlyUsageRow, syncedAt int64) error
-	GetHourlyUsageSyncState(ctx context.Context) (localdb.HourlyUsageSyncState, error)
+	ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []sqlite.HourlyUsageRow) error
+	ListDirtyHourlyRows(ctx context.Context) ([]sqlite.HourlyUsageRow, error)
+	MarkHourlyRowsSynced(ctx context.Context, rows []sqlite.HourlyUsageRow, syncedAt int64) error
+	GetHourlyUsageSyncState(ctx context.Context) (sqlite.HourlyUsageSyncState, error)
 }
 
 // ToHourlyRows converts normalized scanner records into SQLite row shape for
 // persistence.
-func ToHourlyRows(records []record.UsageRecord) []localdb.HourlyUsageRow {
-	rows := make([]localdb.HourlyUsageRow, 0, len(records))
+func ToHourlyRows(records []record.UsageRecord) []sqlite.HourlyUsageRow {
+	rows := make([]sqlite.HourlyUsageRow, 0, len(records))
 	for _, r := range records {
-		rows = append(rows, localdb.HourlyUsageRow{
+		rows = append(rows, sqlite.HourlyUsageRow{
 			ProjectID:             r.ProjectID,
 			WorkspaceID:           r.WorkspaceID,
 			WorkspacePath:         r.WorkspacePath,
@@ -41,13 +41,13 @@ func ToHourlyRows(records []record.UsageRecord) []localdb.HourlyUsageRow {
 			ReasoningTokens:       r.ReasoningTokens,
 			TotalTokens:           r.TotalTokens,
 			TotalCostMicrosUSD:    r.TotalCostMicrosUSD,
-			CostSource:            localdb.CostSource(r.CostSource),
+			CostSource:            sqlite.CostSource(r.CostSource),
 			EventCount:            r.EventCount,
 			SessionCount:          r.SessionCount,
 			TurnCount:             r.TurnCount,
 			ToolCallCount:         r.ToolCallCount,
-			AttributionConfidence: localdb.AttributionConfidence(r.AttributionConfidence),
-			ScannerSourceKind:     localdb.ScannerSourceKind(r.ScannerSourceKind),
+			AttributionConfidence: sqlite.AttributionConfidence(r.AttributionConfidence),
+			ScannerSourceKind:     sqlite.ScannerSourceKind(r.ScannerSourceKind),
 			ScannerSourceID:       r.ScannerSourceID,
 			IngestedAt:            r.IngestedAt,
 			RunID:                 r.RunID,

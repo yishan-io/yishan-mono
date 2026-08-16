@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"yishan/apps/cli/internal/adapter/relay"
-	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -33,7 +33,7 @@ func wireRelayCapture(t *testing.T, s *Service, result map[string]any) <-chan ma
 	t.Cleanup(server.Close)
 
 	client := relay.NewClient(relay.ClientConfig{
-		Runtime:     nil,
+		Session:     nil,
 		NodeID:      s.deps.NodeID,
 		URL:         server.URL,
 		StaticToken: "test-token",
@@ -83,7 +83,7 @@ func decodeRelayCloseEnvelope(t *testing.T, msg map[string]any) relayWorkspaceCl
 	return envelope
 }
 
-func decodeCreateStartedEvent(t *testing.T, event internalevents.Event) workspaceCreateStartedEvent {
+func decodeCreateStartedEvent(t *testing.T, event eventbus.Event) workspaceCreateStartedEvent {
 	t.Helper()
 	started, ok := event.Payload.(workspaceCreateStartedEvent)
 	if !ok {
@@ -92,7 +92,7 @@ func decodeCreateStartedEvent(t *testing.T, event internalevents.Event) workspac
 	return started
 }
 
-func decodeProgressEvents(t *testing.T, events []internalevents.Event) []workspace.CreateProgressEvent {
+func decodeProgressEvents(t *testing.T, events []eventbus.Event) []workspace.CreateProgressEvent {
 	t.Helper()
 	var progress []workspace.CreateProgressEvent
 	for _, event := range events {

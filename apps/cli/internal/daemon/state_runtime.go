@@ -57,7 +57,7 @@ func LoadState(path string) (RuntimeState, error) {
 	return state, nil
 }
 
-func SaveState(path string, state RuntimeState) error {
+func saveState(path string, state RuntimeState) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create daemon state dir for %q: %w", path, err)
 	}

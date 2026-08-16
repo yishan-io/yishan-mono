@@ -194,12 +194,12 @@ func (m *Manager) requestPortScanHint() {
 	}
 }
 
-func (m *Manager) SetActiveWorkspace(req SetActiveWorkspaceRequest) (SetActiveWorkspaceResponse, error) {
+func (m *Manager) SetActiveWorkspace(req SetActiveWorkspaceRequest) (setActiveWorkspaceResponse, error) {
 	m.portSnapshotMu.Lock()
 	m.portScopeWorkspaceID = strings.TrimSpace(req.WorkspaceID)
 	m.lastPortSnapshotKey = ""
 	m.portSnapshotMu.Unlock()
-	return SetActiveWorkspaceResponse{Updated: true}, nil
+	return setActiveWorkspaceResponse{Updated: true}, nil
 }
 
 func (m *Manager) currentPortScopeWorkspaceID() string {
@@ -270,17 +270,17 @@ func buildPortSnapshotKey(ports []DetectedPort) string {
 	return builder.String()
 }
 
-func (m *Manager) KillProcess(req KillProcessRequest) (KillProcessResponse, error) {
+func (m *Manager) KillProcess(req KillProcessRequest) (killProcessResponse, error) {
 	if req.PID <= 0 {
-		return KillProcessResponse{}, NewError(ErrCodeInvalidParams, "pid is required")
+		return killProcessResponse{}, NewError(ErrCodeInvalidParams, "pid is required")
 	}
 
 	if err := stopProcessByPID(req.PID); err != nil {
-		return KillProcessResponse{}, err
+		return killProcessResponse{}, err
 	}
 	m.requestPortScanHint()
 
-	return KillProcessResponse{Killed: true}, nil
+	return killProcessResponse{Killed: true}, nil
 }
 
 func stopListeningProcessesForSession(s *session) error {
