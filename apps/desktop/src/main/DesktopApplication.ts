@@ -2,6 +2,8 @@ import { readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
+import { registerPermissionPolicy } from "./security/permissionPolicy";
+export { isPermissionAllowed } from "./security/permissionPolicy";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
@@ -22,12 +24,6 @@ import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./upd
 type DispatchActionOptions = {
   focusApp?: boolean;
 };
-
-const ALLOWED_PERMISSIONS = new Set(["media", "clipboard-read", "clipboard-write", "clipboard-sanitized-write"]);
-
-export function isPermissionAllowed(permission: string): boolean {
-  return ALLOWED_PERMISSIONS.has(permission);
-}
 
 /**
  * Owns Electron desktop lifecycle and main window bootstrap.
@@ -81,7 +77,7 @@ export class DesktopApplication {
   private async start(): Promise<void> {
     await app.whenReady();
     registerWorkspaceFileProtocol();
-    this.registerPermissionHandlers();
+    registerPermissionPolicy(session.defaultSession, (webContentsId) => webContentsId === this.mainWindow?.webContents?.id);
 
     const defaultAppEntry = process.argv[1];
     if (process.defaultApp && defaultAppEntry) {
@@ -698,18 +694,4 @@ export class DesktopApplication {
     this.mainWindow = mainWindow;
   }
 
-  private registerPermissionHandlers(): void {
-    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-      // Media stays available to all webContents (unchanged behavior); the
-      // clipboard grants are scoped to the main window only so arbitrary
-      // BrowserView <webview> content never gets them.
-      const isMainWindow = _webContents?.id === this.mainWindow?.webContents?.id;
-      callback(isPermissionAllowed(permission) && (permission === "media" || isMainWindow));
-    });
-
-    session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
-      const isMainWindow = _webContents?.id === this.mainWindow?.webContents?.id;
-      return isPermissionAllowed(permission) && (permission === "media" || isMainWindow);
-    });
-  }
 }
