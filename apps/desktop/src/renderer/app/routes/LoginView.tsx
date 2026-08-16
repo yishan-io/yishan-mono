@@ -2,12 +2,12 @@ import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/ma
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaGoogle } from "react-icons/fa";
-import logo from "../../assets/images/yishan-transparent.png";
-import { resetAuthExpiredState } from "../features/session/commands/sessionCommands";
-import { login } from "../commands/appCommands";
-import { AppBackgroundContainer } from "../components/AppBackgroundContainer";
-import { CenteredContentLayout } from "../components/CenteredContentLayout";
-import { sessionStore } from "../features/session/model/sessionStore";
+import logo from "../../../assets/images/yishan-transparent.png";
+import { resetAuthExpiredState } from "../../features/session/commands/sessionCommands";
+import { login } from "../../commands/appCommands";
+import { AppBackgroundContainer } from "../../components/AppBackgroundContainer";
+import { CenteredContentLayout } from "../../components/CenteredContentLayout";
+import { sessionStore } from "../../features/session/model/sessionStore";
 
 /** Renders one pre-authentication entry screen with Google sign-in action. */
 export function LoginView() {

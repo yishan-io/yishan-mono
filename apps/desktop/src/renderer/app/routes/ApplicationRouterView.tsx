@@ -8,9 +8,9 @@ import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../comman
 import { setAppLanguage } from "../../i18n";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../features/session/model/sessionStore";
-import { LoginView } from "../LoginView";
-import { WorkspaceView } from "../WorkspaceView";
-import { AppBootstrapLoadingView } from "./AppBootstrapLoadingView";
+import { LoginView } from "./LoginView";
+import { WorkspaceView } from "../../views/WorkspaceView";
+import { AppBootstrapLoadingView } from "../../views/layout/AppBootstrapLoadingView";
 import { OnboardOrgView } from "./OnboardOrgView";
 
 const WORKSPACE_ROUTE = "/";

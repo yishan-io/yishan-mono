@@ -30,8 +30,9 @@ vi.mock("../../commands/appCommands", () => ({
   getDesktopAppVersion: vi.fn(async () => "0.0.0"),
 }));
 
-vi.mock("../../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({})),
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
 }));
 
 vi.mock("../../features/session/commands/sessionCommands", () => ({
@@ -74,7 +75,7 @@ vi.mock("../../api", () => ({
   createOrganization: vi.fn(async () => ({ id: "org-2", name: "New Organization" })),
 }));
 
-vi.mock("../WorkspaceView", async () => {
+vi.mock("../../views/WorkspaceView", async () => {
   const reactModule = await import("react");
 
   return {
@@ -98,15 +99,15 @@ vi.mock("../WorkspaceView", async () => {
   };
 });
 
-vi.mock("../LoginView", () => ({
+vi.mock("./LoginView", () => ({
   LoginView: () => <div data-testid="login-view">login-view</div>,
 }));
 
-vi.mock("./AppBootstrapLoadingView", () => ({
+vi.mock("../../views/layout/AppBootstrapLoadingView", () => ({
   AppBootstrapLoadingView: () => <div data-testid="bootstrap-loading-view">bootstrap-loading</div>,
 }));
 
-vi.mock("./AppMenuView", () => ({
+vi.mock("../../views/layout/AppMenuView", () => ({
   AppMenuView: () => <div data-testid="app-menu-view" />,
 }));
 

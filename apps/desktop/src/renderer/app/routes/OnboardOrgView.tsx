@@ -5,7 +5,7 @@ import { LuBuilding2 } from "react-icons/lu";
 import { createOrganization } from "../../api";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../features/session/model/sessionStore";
-import { AppMenuView } from "./AppMenuView";
+import { AppMenuView } from "../../views/layout/AppMenuView";
 
 /** Renders the required first-organization setup for signed-in users without organizations. */
 export function OnboardOrgView() {
