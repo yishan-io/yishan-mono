@@ -12,7 +12,7 @@ import { projectStore } from "../../features/project/model/projectStore";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../hooks/useCommands";
-import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "../../hooks/useOpenTabAutoRefresh";
+import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "../../features/workbench/ui/hooks/useOpenTabAutoRefresh";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import type { PaneLeaf, SplitPaneNode } from "../../store/split-pane";
 import { splitPaneStore } from "../../store/splitPaneStore";

@@ -36,7 +36,7 @@ const mocked = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../events/backendEventPipeline", () => ({
+vi.mock("../../../../events/backendEventPipeline", () => ({
   startBackendEventPipeline: mocked.startBackendEventPipeline,
   subscribeBackendEvent: mocked.subscribeBackendEvent,
 }));

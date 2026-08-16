@@ -50,7 +50,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Rule 1: UI value-imports of api/rpc (cross-layer index §1) ----
   // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
   { rule: "R1-value-api-rpc", file: "views/workspace/useAgentChatSessionLifecycle.ts", phase: "P5" },
-  { rule: "R1-value-api-rpc", file: "hooks/useOpenTabAutoRefresh.ts", phase: "P6" },
   // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
   // ---- Rule 4: commands importing views/components (cross-layer index) ----
 ];
