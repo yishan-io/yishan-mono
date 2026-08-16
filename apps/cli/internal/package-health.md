@@ -252,13 +252,32 @@ collection code.
 
 ### Phase 26 — `agent/setup` (resource files, same package)
 
+Stayed one package: dense cross-coupling (shared YAML scalar helpers, pi
+command execution, settings loader, skill dir scanning) means subpackages
+would force exporting internals and grow the parent API. File-level owners
+instead (Phase 26 done):
+
 ```text
-pi_agents.go          # split: agents/io.go (file read/write/paths), agents/frontmatter.go (parse/format), agents/policy.go (official-agent rules)
-pi_extensions.go      # split: extensions/install.go, extensions/registry.go (version lookup), extensions/source.go (parse), extensions/metadata.go (description/readme)
-skill_discovery.go    # keep discovery entry; move package-skill scanning to skill_source_scan.go; trust rules → skill_trust.go
-skill_cli.go / skill_service.go / skill_setup.go / skill_source_scan.go / shell_setup.go / hook_setup.go / state.go  # keep
-test support → test_support_test.go
+agents.go               # pi agent operations (List/Get/Create/Update/Remove/Restore, errors, types)
+agents_io.go            # agent file I/O + path rules (piAgentPath, read/write, validateAgentPathName)
+agents_frontmatter.go   # agent frontmatter parse/format (no policy)
+agents_policy.go        # official-agent policy (managed names, name pattern, thinking levels)
+agents_managed.go       # managed agent sync + manifest (was pi_agent_setup.go)
+extensions.go           # extension ops (List/Install/Remove/Update) + default-set install
+extensions_source.go   # source-spec parsing (packageEntrySource, extensionNameFromSource, git parts)
+extensions_registry.go  # npm registry version lookup + TTL cache (no fs mutation)
+extensions_metadata.go  # installed package.json/README reads (no mutation)
+pi_command.go           # managed pi/npx command execution + env (was pi_runtime.go)
+frontmatter.go          # shared YAML scalar helpers (block scalars, quoted values, escapes)
+skill_discovery.go      # discovery entry + dir scanning + trust (keep)
+skill_source_scan.go    # package + settings skill sources (keep)
+skill_cli.go            # skill install/remove/update via CLI (keep)
+skill_service.go        # skill list/get/detail (keep; scalar helpers moved to frontmatter.go)
+state.go / hook_setup.go / hook_assets.go / shell_setup.go / provider.go / skill_setup.go / doc.go  # keep
 ```
+
+Test support: helper-only pi_agents_test.go + pi_extensions_test.go merged
+into test_support_test.go; pi_agent_setup_test.go renamed agents_managed_test.go.
 
 ### Phase 27 — `adapter/cloud`
 

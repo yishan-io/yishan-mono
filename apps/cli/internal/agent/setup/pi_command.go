@@ -29,42 +29,6 @@ var (
 	}
 )
 
-// EnsureDefaultPiExtensions installs every official extension. Setup runs
-// outside the RPC request lifecycle, so it uses a background context; the
-// RPC-facing mutations receive the caller's context.
-func EnsureDefaultPiExtensions() error {
-	return installPiExtensions(context.Background(), defaultPiExtensionNames)
-}
-
-func RemoveDefaultPiExtensions() error {
-	return removePiExtensions(context.Background(), defaultPiExtensionNames)
-}
-
-func DefaultPiExtensionNames() []string {
-	return append([]string(nil), defaultPiExtensionNames...)
-}
-
-func installPiExtensions(ctx context.Context, names []string) error {
-	for _, name := range names {
-		if err := InstallPiExtension(ctx, piExtensionInstallSource(name)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func removePiExtensions(ctx context.Context, names []string) error {
-	for _, name := range names {
-		// pi uninstall matches by source identity, so the npm: prefix is
-		// required — a bare package name never matches (pi reports "No
-		// matching package found").
-		if err := RemovePiExtension(ctx, piExtensionInstallSource(name)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func runPiCommand(ctx context.Context, args ...string) error {
 	cmd, err := newPiCommand(ctx, args...)
 	if err != nil {
@@ -75,14 +39,6 @@ func runPiCommand(ctx context.Context, args ...string) error {
 		return fmt.Errorf("pi %s failed: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(string(output)))
 	}
 	return nil
-}
-
-// isManagedPiExtensionInstalled reports whether a default extension is
-// installed, using the same rule as the catalog (the package.json presence in
-// the managed install dirs). The reconcile state reuses this single
-// installed-state rule instead of owning a second discovery check.
-func isManagedPiExtensionInstalled(name string) bool {
-	return isExtensionPackageInstalled(name, piExtensionInstallSource(name))
 }
 
 func newPiCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {

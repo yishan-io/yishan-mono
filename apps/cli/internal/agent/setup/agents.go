@@ -5,18 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
-	"unicode"
-
-	"yishan/apps/cli/internal/platform/config"
 )
 
 // Agent management: pi agent definition files live in the managed pi agents
 // dir (<agentDir>/agents/<name>.md). The runtime identifies an agent by its
 // file name; official agents are the 6 managed names synced from
-// @yishan-io/pi-subagents/agents on `yishan setup`.
+// @yishan-io/pi-subagents/agents on `yishan setup`. File I/O and path rules
+// live in agents_io.go, frontmatter parsing in agents_frontmatter.go, and the
+// official-agent policy in agents_policy.go.
 
 var (
 	// ErrInvalidAgentName is returned when an agent name cannot be a safe
@@ -40,10 +38,6 @@ var (
 	// of the pi-supported values (off|minimal|low|medium|high|xhigh).
 	ErrInvalidAgentThinking = errors.New("invalid agent thinking level")
 )
-
-// agentNamePattern is the slug allowed for new agent names: lowercase
-// letters, digits, and dashes (also a safe file basename).
-var agentNamePattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 // PiAgentInfo is one agent definition's metadata. Name is the file basename
 // without .md — the identity pi uses at runtime. Model, Thinking, and Tools
@@ -182,9 +176,6 @@ func ValidateAgentThinking(thinking string) error {
 	return fmt.Errorf("%w: %q (use off|minimal|low|medium|high|xhigh|max)", ErrInvalidAgentThinking, trimmed)
 }
 
-// allowedAgentThinkingLevels mirrors pi's ALLOWED_THINKING_LEVELS.
-var allowedAgentThinkingLevels = []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"}
-
 // UpdatePiAgent overwrites an agent definition (official or user) with the
 // given full file content — frontmatter plus body, exactly as returned by
 // GetPiAgentDetail. A frontmatter name that diverges from the file name is
@@ -251,229 +242,4 @@ func RestorePiAgent(name string) error {
 	manifest := loadManagedAgentManifest(agentsDir)
 	manifest.Files[trimmedName+".md"] = fileSHA256(targetPath)
 	return saveManagedAgentManifest(agentsDir, manifest)
-}
-
-func isManagedPiAgentName(name string) bool {
-	for _, fileName := range managedPiAgentFileNames {
-		if strings.TrimSuffix(fileName, ".md") == name {
-			return true
-		}
-	}
-	return false
-}
-
-// piAgentPath resolves <agentsDir>/<name>.md without requiring existence.
-func piAgentPath(name string) string {
-	agentsDir, err := configManagedPiAgentsDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(agentsDir, name+".md")
-}
-
-// piAgentFilePath resolves <agentsDir>/<name>.md, erroring when the agent
-// does not exist.
-func piAgentFilePath(name string) (string, error) {
-	path := piAgentPath(name)
-	if path == "" {
-		return "", fmt.Errorf("resolve pi agents dir: %w", ErrAgentNotFound)
-	}
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("%w: %q", ErrAgentNotFound, name)
-		}
-		return "", fmt.Errorf("stat pi agent %s: %w", name, err)
-	}
-	return path, nil
-}
-
-// writePiAgentFile writes <agentsDir>/<name>.md, creating the dir as needed.
-func writePiAgentFile(name string, content string) error {
-	agentsDir, err := configManagedPiAgentsDir()
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
-		return fmt.Errorf("create pi agents dir: %w", err)
-	}
-	path := filepath.Join(agentsDir, name+".md")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		return fmt.Errorf("write pi agent %s: %w", name, err)
-	}
-	return nil
-}
-
-func readPiAgentFile(name string) ([]byte, error) {
-	path, err := piAgentFilePath(name)
-	if err != nil {
-		return nil, err
-	}
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read pi agent %s: %w", name, err)
-	}
-	return content, nil
-}
-
-// validateAgentPathName guards agent file paths: the name becomes a file
-// basename in the agents dir, so it must not contain separators, parent
-// references, the .md suffix, Windows drive characters, or control chars.
-// (Create applies the stricter slug pattern on top.)
-func validateAgentPathName(name string) error {
-	if name == "" {
-		return fmt.Errorf("%w: empty name", ErrInvalidAgentName)
-	}
-	if strings.ContainsAny(name, `/:\`) || strings.ContainsFunc(name, unicode.IsControl) || name == "." || name == ".." || strings.HasSuffix(name, ".md") {
-		return fmt.Errorf("%w: %q", ErrInvalidAgentName, name)
-	}
-	return nil
-}
-
-// yamlQuotedScalar renders a value as a double-quoted YAML scalar, escaping
-// quotes, backslashes, tabs, and newlines so arbitrary descriptions survive
-// round-trips through the frontmatter parser.
-func yamlQuotedScalar(value string) string {
-	escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`, "\t", `\t`, "\r", "").Replace(value)
-	return `"` + escaped + `"`
-}
-
-// agentFrontMatter mirrors the subset of an agent definition's frontmatter
-// the management surface needs.
-type agentFrontMatter struct {
-	Name        string
-	Description string
-	Model       string
-	Thinking    string
-	Tools       []string
-}
-
-// parseAgentFrontMatter extracts name and description from an agent file's
-// YAML frontmatter (same shape as skill frontmatter, with block scalars and
-// quoted values supported).
-func parseAgentFrontMatter(content []byte) agentFrontMatter {
-	lines := strings.Split(string(content), "\n")
-	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
-		return agentFrontMatter{}
-	}
-	meta := agentFrontMatter{}
-	for i := 1; i < len(lines); i++ {
-		trimmed := strings.TrimSpace(lines[i])
-		if trimmed == "---" {
-			break
-		}
-		key, value, ok := strings.Cut(trimmed, ":")
-		if !ok {
-			continue
-		}
-		key = strings.TrimSpace(key)
-		value = strings.TrimSpace(value)
-		if key == "tools" {
-			meta.Tools, i = parseToolsValue(value, lines, i)
-			continue
-		}
-		value, i = decodeScalarValue(lines, value, i)
-		switch key {
-		case "name":
-			meta.Name = value
-		case "description":
-			meta.Description = value
-		case "model":
-			meta.Model = value
-		case "thinking":
-			meta.Thinking = value
-		}
-	}
-	return meta
-}
-
-// unescapeYAMLDoubleQuoted converts the escapes YAML double-quoted scalars
-// use (\n, \", \\, …) back into their literal characters. It mirrors what
-// yamlQuotedScalar emits, keeping descriptions round-trip safe.
-func unescapeYAMLDoubleQuoted(value string) string {
-	return strings.NewReplacer(`\\`, `\`, `\"`, `"`, `\n`, "\n", `\t`, "\t", `\r`, "").Replace(value)
-}
-
-// decodeScalarValue resolves a frontmatter scalar value whose key line sits
-// at lines[startIdx]: block scalars consume their indented continuation
-// lines, and double-quoted values are unescaped. Returns the decoded value
-// and the index of the last consumed line.
-func decodeScalarValue(lines []string, value string, startIdx int) (string, int) {
-	wasDoubleQuoted := strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) && len(value) >= 2
-	if value == "" || isYAMLBlockScalarIndicator(value) {
-		value, startIdx = collectBlockScalar(lines, startIdx)
-		wasDoubleQuoted = false
-	}
-	value = trimQuotedValue(value)
-	if wasDoubleQuoted {
-		value = unescapeYAMLDoubleQuoted(value)
-	}
-	return value, startIdx
-}
-
-// parseToolsValue resolves the tools key of a frontmatter line: flow style
-// ("[read, grep]") directly, or a block list whose "- item" lines start at
-// lines[startIdx]. Returns the tools and the index of the last consumed line.
-func parseToolsValue(value string, lines []string, startIdx int) ([]string, int) {
-	if value != "" {
-		return parseInlineToolList(value), startIdx
-	}
-	return collectAgentToolsBlock(lines, startIdx)
-}
-
-// collectAgentToolsBlock collects the "- item" lines of a YAML tools block
-// starting after lines[startIdx]. Returns the tool names and the index of
-// the last consumed line.
-func collectAgentToolsBlock(lines []string, startIdx int) ([]string, int) {
-	var tools []string
-	idx := startIdx
-	for idx+1 < len(lines) {
-		next := lines[idx+1]
-		nextTrimmed := strings.TrimSpace(next)
-		if nextTrimmed == "" || nextTrimmed == "---" || !strings.HasPrefix(nextTrimmed, "-") {
-			break
-		}
-		tools = append(tools, strings.TrimSpace(strings.TrimPrefix(nextTrimmed, "-")))
-		idx++
-	}
-	return tools, idx
-}
-
-// parseInlineToolList splits a flow-style YAML list value ("[read, grep]") into
-// its items, trimming brackets, quotes, and whitespace.
-func parseInlineToolList(value string) []string {
-	trimmed := strings.TrimSpace(value)
-	trimmed = strings.TrimPrefix(trimmed, "[")
-	trimmed = strings.TrimSuffix(trimmed, "]")
-	if trimmed == "" {
-		return nil
-	}
-	parts := strings.Split(trimmed, ",")
-	tools := make([]string, 0, len(parts))
-	for _, part := range parts {
-		item := strings.Trim(strings.TrimSpace(part), `"'`)
-		if item != "" {
-			tools = append(tools, item)
-		}
-	}
-	return tools
-}
-
-// formatAgentToolsBlock renders a tools list as YAML block-list lines with
-// two-space indentation ("  - read"). Empty or whitespace-only entries are
-// dropped so they cannot produce bare "-" items.
-func formatAgentToolsBlock(tools []string) string {
-	var builder strings.Builder
-	for _, tool := range tools {
-		if trimmed := strings.TrimSpace(tool); trimmed != "" {
-			builder.WriteString("  - ")
-			builder.WriteString(trimmed)
-			builder.WriteString("\n")
-		}
-	}
-	return builder.String()
-}
-
-// configManagedPiAgentsDir resolves the managed pi agents dir via config.
-func configManagedPiAgentsDir() (string, error) {
-	return config.ManagedPiAgentsDir()
 }

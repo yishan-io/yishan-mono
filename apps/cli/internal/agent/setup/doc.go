@@ -29,4 +29,14 @@
 // (EnumeratePiSkills); agent discovery has exactly one entry (ListPiAgents).
 // The reconcile state reuses those declarations instead of owning a second
 // discovery rule.
+//
+// Files are grouped by managed resource (Phase 26): agents.go/agents_io.go/
+// agents_frontmatter.go/agents_policy.go/agents_managed.go own pi agent
+// definitions and their managed sync; extensions.go/extensions_source.go/
+// extensions_registry.go/extensions_metadata.go own pi extensions (source
+// parsing, registry version lookup, installed metadata, install execution);
+// skill_*.go own skill discovery, sources, CLI install, and the skill
+// service; hooks.go and shell_setup.go own managed hook assets and shell
+// integration; pi_command.go owns managed pi/npx command execution;
+// frontmatter.go owns the shared YAML scalar helpers.
 package setup
