@@ -10,7 +10,7 @@ const { openTabMock } = vi.hoisted(() => ({
   openTabMock: vi.fn(),
 }));
 
-vi.mock("../../../commands/tabCommands", () => ({
+vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   openTab: openTabMock,
 }));
 

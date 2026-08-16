@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TerminalView } from "./TerminalView";
-import { __resetTerminalRuntimeRegistryForTests, getTerminalRuntime } from "./terminalRuntimeRegistry";
-import { __resetTerminalSessionServiceForTests } from "./terminalSessionService";
+import { __resetTerminalRuntimeRegistryForTests, getTerminalRuntime } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
+import { __resetTerminalSessionServiceForTests } from "../../../features/terminal/runtime/terminalSessionService";
 
 type TerminalOutputEvent =
   | { type: "output"; sessionId: string; chunk: string | Uint8Array; nextIndex: number }
@@ -247,7 +247,7 @@ vi.mock("@xterm/xterm", () => {
   };
 });
 
-vi.mock("./terminalAddons", () => ({
+vi.mock("../../../features/terminal/runtime/terminalAddons", () => ({
   loadTerminalAddons: mocked.loadTerminalAddons,
 }));
 

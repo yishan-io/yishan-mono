@@ -66,7 +66,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListTreeData.ts", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/RightPane/useWorkspacePullRequestState.ts", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/useAgentChatSessionLifecycle.ts", phase: "P5" },
-  { rule: "R1-value-api-rpc", file: "views/workspace/terminal/terminalSessionService.ts", phase: "P6" },
   { rule: "R1-value-api-rpc", file: "hooks/useDaemonConnectionMonitor.ts", phase: "P7" },
   { rule: "R1-value-api-rpc", file: "hooks/useOpenTabAutoRefresh.ts", phase: "P6" },
   { rule: "R1-value-api-rpc", file: "hooks/useRemoteHealthQuery.ts", phase: "P7" },

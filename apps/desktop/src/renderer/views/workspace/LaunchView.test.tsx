@@ -38,7 +38,7 @@ vi.mock("../../features/agent/commands/agentChatSessionHistory", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 
-vi.mock("../../commands/whiteboardCommands", () => ({
+vi.mock("../../features/workbench/commands/whiteboardCommands", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
 }));
 

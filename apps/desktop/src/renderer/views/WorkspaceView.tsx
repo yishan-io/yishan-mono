@@ -27,7 +27,7 @@ import { MainPaneView } from "./workspace/MainPaneView";
 import { OnboardingView } from "./workspace/OnboardingView";
 import { WorkspaceLifecycleNoticeView } from "./workspace/WorkspaceLifecycleNoticeView";
 import { AgentChatRecoveryCoordinator } from "../features/agent/runtime/agentChatRecovery";
-import { TerminalRecoveryCoordinator } from "./workspace/terminal/terminalRecovery";
+import { TerminalRecoveryCoordinator } from "../features/terminal/runtime/terminalRecovery";
 
 const LEFT_MIN_WIDTH = 240;
 const MAIN_MIN_WIDTH = 520;

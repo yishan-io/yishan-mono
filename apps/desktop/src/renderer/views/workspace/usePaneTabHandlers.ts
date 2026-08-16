@@ -10,7 +10,7 @@ import type { Commands } from "../../hooks/useCommands";
 import { splitPaneStore } from "../../store/splitPaneStore";
 import { tabStore } from "../../store/tabStore";
 import type { WorkspaceTab } from "../../store/types";
-import { forceFitTerminalRuntimes } from "./terminal/terminalRuntimeRegistry";
+import { forceFitTerminalRuntimes } from "../../features/terminal/runtime/terminalRuntimeRegistry";
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;

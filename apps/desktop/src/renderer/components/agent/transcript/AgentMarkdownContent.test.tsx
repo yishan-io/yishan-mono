@@ -20,7 +20,7 @@ vi.mock("@renderer/components/markdown/markdownService", () => ({
   },
 }));
 
-vi.mock("../../../commands/tabCommands", () => ({
+vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   openTab: mocked.openTab,
   openTabInOppositePane: mocked.openTabInOppositePane,
   openChatFileTab: mocked.openChatFileTab,

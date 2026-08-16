@@ -1,5 +1,5 @@
 import { Terminal } from "@xterm/xterm";
-import { createFixedRuntimeLayer } from "../runtime/runtimeSurfaceLayer";
+import { createFixedRuntimeLayer } from "../../../views/workspace/runtime/runtimeSurfaceLayer";
 import { loadTerminalAddons } from "./terminalAddons";
 import {
   MIN_FIT_INTERVAL_MS,

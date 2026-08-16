@@ -221,7 +221,7 @@ vi.mock("../../features/agent/commands/agentChatSubagentCommands", () => ({
   openSubagentSessionInRightSplitPane: mocked.openSubagentSessionInRightSplitPane,
 }));
 
-vi.mock("../../commands/tabCommands", () => ({
+vi.mock("../../features/workbench/commands/tabCommands", () => ({
   renameTab: vi.fn(),
   readTabStoreState: () => ({ tabs: mocked.stateRef.current.tabs }),
 }));

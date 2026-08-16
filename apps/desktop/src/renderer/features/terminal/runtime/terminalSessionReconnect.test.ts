@@ -69,7 +69,7 @@ vi.mock("../../../features/terminal/commands/terminalCommands", () => ({
   closeTerminalSession: (...args: unknown[]) => mockCloseTerminalSession(...args),
 }));
 
-vi.mock("../../../commands/tabCommands", () => ({
+vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   closeTab: vi.fn(),
   renameTab: vi.fn(),
 }));

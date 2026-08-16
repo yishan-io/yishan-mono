@@ -103,7 +103,7 @@ vi.mock("./workspace/WorkspaceLifecycleNoticeView", () => ({
   WorkspaceLifecycleNoticeView: () => null,
 }));
 
-vi.mock("./workspace/terminal/terminalRecovery", () => ({
+vi.mock("../features/terminal/runtime/terminalRecovery", () => ({
   TerminalRecoveryCoordinator: vi.fn(
     class {
       restoreTerminalTabsFromDaemon = terminalRecoveryMocks.restoreTerminalTabsFromDaemon;
