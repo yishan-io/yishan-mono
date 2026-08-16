@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
+import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../features/agent/events/agentChatEventRouter";
 
 const mocks = vi.hoisted(() => ({
   subscribeDesktopRpcEvent: vi.fn<(listener: (envelope: { method: string; payload: unknown }) => void) => () => void>(),

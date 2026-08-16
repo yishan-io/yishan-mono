@@ -1,13 +1,13 @@
-import { generateId } from "../helpers/generateId";
-import { getDaemonClient } from "../rpc/rpcTransport";
-import { agentChatStore } from "../store/agentChatStore";
+import { generateId } from "../../../helpers/generateId";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { agentChatStore } from "../../../store/agentChatStore";
 import type {
   AgentMessage,
   AgentModel,
   AgentQueueState,
   AgentSessionStats,
   AgentStreamEvent,
-} from "../store/agentChatTypes";
+} from "../../../store/agentChatTypes";
 import {
   PER_MESSAGE_UTF8_BYTES,
   isRecord,
@@ -21,7 +21,7 @@ import {
   peekAgentChatStreamMessage,
   queueAgentChatStreamMessage,
   setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
-} from "../features/agent/runtime/agentChatStreamBuffer";
+} from "../runtime/agentChatStreamBuffer";
 import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessageHelpers";
 import {
   applySubagentLifecycleWidget,

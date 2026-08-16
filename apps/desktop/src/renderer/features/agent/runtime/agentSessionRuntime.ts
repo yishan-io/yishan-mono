@@ -22,12 +22,12 @@ import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../../../store/agentChatStore";
 import { tabStore } from "../../../store/tabStore";
 import type { AgentChatSessionView } from "../../../store/types";
-import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../../../commands/agentChatEventRouter";
-import { handleAgentPiEvent } from "../../../commands/agentChatPiEventHandler";
+import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
+import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import {
   clearAgentChatSessionStatsSequence,
   refreshAgentSessionStats,
-} from "../../../commands/agentChatPiEventShared";
+} from "../events/agentChatPiEventShared";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
 type PiSessionHandle = {

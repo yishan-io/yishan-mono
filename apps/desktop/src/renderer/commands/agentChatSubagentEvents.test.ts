@@ -8,7 +8,7 @@ import {
   applySubagentLiveTranscripts,
   parseSubagentLifecycleWidget,
   parseSubagentLiveTranscripts,
-} from "./agentChatSubagentEvents";
+} from "../features/agent/events/agentChatSubagentEvents";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();

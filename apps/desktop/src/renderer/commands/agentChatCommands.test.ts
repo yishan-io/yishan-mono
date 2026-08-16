@@ -16,7 +16,7 @@ import {
   startAgentChatSession,
   stopPiSession,
 } from "./agentChatCommands";
-import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
+import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../features/agent/events/agentChatEventRouter";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "./agentChatSubagentCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
@@ -36,7 +36,7 @@ vi.mock("../helpers/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
 
-vi.mock("./agentChatEventRouter", () => ({
+vi.mock("../features/agent/events/agentChatEventRouter", () => ({
   ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()),
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));

@@ -6,15 +6,15 @@ import { isAgentSessionBusy } from "../../../store/agentChatTypes";
 import { tabStore } from "../../../store/tabStore";
 import type { AgentChatSessionView } from "../../../store/types";
 import { delay } from "../../../helpers/delay";
+import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import {
   clearAgentChatSessionStatsSequence,
-  handleAgentPiEvent,
   refreshAgentSessionStats,
   registerAgentSession,
   setAgentChatStreamTabVisible,
   setAgentModel,
   setAgentThinkingLevel,
-} from "../../../commands/agentChatPiEventHelpers";
+} from "../events/agentChatPiEventShared";
 import {
   clearPiSessionHandle,
   ensurePiSession,
@@ -30,15 +30,15 @@ import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 
 // Re-export moved public APIs so existing callers need no import changes
 // (removed in Phase 5 task 6 once callers migrate to the canonical paths).
+export { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 export {
-  handleAgentPiEvent,
+  clearAgentChatSessionStatsSequence,
   refreshAgentSessionStats,
   registerAgentSession,
   setAgentChatStreamTabVisible,
   setAgentModel,
   setAgentThinkingLevel,
-} from "../../../commands/agentChatPiEventHelpers";
-export { clearAgentChatSessionStatsSequence } from "../../../commands/agentChatPiEventShared";
+} from "../events/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the
