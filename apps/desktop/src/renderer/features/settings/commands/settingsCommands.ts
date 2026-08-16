@@ -55,9 +55,9 @@ export async function updateMemoryConfig(config: MemoryConfig) {
 }
 
 /** Lists agent models for the memory settings view. */
-export async function listAgentModelsForMemorySettings(agentKind?: string, forceRefresh?: boolean) {
+export async function listAgentModelsForMemorySettings(input?: { agentKind?: string; forceRefresh?: boolean }) {
   const client = await getDaemonClient();
-  return client.agent.listModels({ agentKind, forceRefresh });
+  return client.agent.listModels(input);
 }
 
 /** Reads computer-use permission state from the daemon. */
@@ -67,7 +67,9 @@ export async function getComputerUsePermissions() {
 }
 
 /** Opens the computer-use permission settings for one permission. */
-export async function openComputerUsePermissionSettings(permission: "accessibility" | "screenRecording") {
+export async function openComputerUsePermissionSettings(
+  permission: "accessibility" | "screenRecording" | "camera" | "fullDiskAccess" | "localNetwork" | "bluetooth",
+) {
   const client = await getDaemonClient();
   return client.computer.openPermissionSettings({ permission });
 }

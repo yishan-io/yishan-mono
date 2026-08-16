@@ -1,4 +1,4 @@
-import { getDesktopHostBridge } from "@renderer/rpc/rpcTransport";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../../commands/appCommands";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Manages loading and saving the daemon quit-on-exit setting. */
@@ -10,7 +10,7 @@ export function useQuitOnExitSetting() {
 
   const loadQuitOnExit = useCallback(async () => {
     try {
-      const value = await getDesktopHostBridge().getDaemonQuitOnExit();
+      const value = await getDaemonQuitOnExit();
       if (!isMountedRef.current) {
         return;
       }
@@ -37,7 +37,7 @@ export function useQuitOnExitSetting() {
     setQuitOnExitValue(nextChecked);
     setIsSaving(true);
     try {
-      await getDesktopHostBridge().setDaemonQuitOnExit(nextChecked);
+      await setDaemonQuitOnExit(nextChecked);
     } catch (error) {
       console.error("[DaemonSettingsView] Failed to save quit-on-exit setting", error);
       if (isMountedRef.current) {

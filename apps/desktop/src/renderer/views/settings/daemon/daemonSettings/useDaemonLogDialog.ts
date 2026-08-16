@@ -1,6 +1,6 @@
-import type { DaemonLogResult } from "@main/ipc";
+import type { DaemonLogResult } from "@renderer/commands/appCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import { getDesktopHostBridge } from "@renderer/rpc/rpcTransport";
+import { getDaemonLog } from "@renderer/features/settings/commands/settingsCommands";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 const INITIAL_VISIBLE_ENTRY_COUNT = 100;
@@ -28,9 +28,7 @@ function parseLogEntries(logContent: string | null): LogEntry[] {
     });
 }
 
-async function readDaemonLog(): Promise<DaemonLogResult> {
-  return getDesktopHostBridge().readDaemonLog();
-}
+
 
 /** Manages daemon log dialog loading state, parsing, and prepend-on-scroll behavior. */
 export function useDaemonLogDialog() {
@@ -54,7 +52,7 @@ export function useDaemonLogDialog() {
     prevScrollHeightRef.current = 0;
 
     try {
-      const result = await readDaemonLog();
+      const result = await getDaemonLog();
       if (result.ok) {
         setLogContent(result.content);
         return;

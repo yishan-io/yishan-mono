@@ -67,6 +67,21 @@ export function subscribeDaemonInfoRefresh(): () => void {
 }
 
 /**
+ * Subscribes one listener to daemon.info.refreshed desktop events with the full
+ * DaemonInfoResult payload. Returns a teardown. Used by daemon settings views
+ * that need wsUrl/relay, unlike `subscribeDaemonInfoRefresh` which only mirrors
+ * daemonId/version into sessionStore.
+ */
+export function subscribeDaemonInfoRefreshed(listener: (info: DaemonInfoResult) => void): () => void {
+  return subscribeDesktopRpcEvent((event) => {
+    if (event.method !== "daemon.info.refreshed" || !isDaemonInfo(event.payload)) {
+      return;
+    }
+    listener(event.payload);
+  });
+}
+
+/**
  * Subscribes one listener to daemon connection status changes. Returns a
  * teardown. Session owns the transport binding; hooks reflect the state.
  */

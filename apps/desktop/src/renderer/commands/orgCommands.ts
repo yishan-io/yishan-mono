@@ -84,3 +84,23 @@ export async function leaveOrg(): Promise<void> {
     await api.org.leave(orgId);
   });
 }
+
+/** Creates one organization. */
+export async function createOrganization(name: string) {
+  return api.org.create(name);
+}
+
+/** Lists all organizations for the current user. */
+export async function listOrganizations() {
+  return api.org.list();
+}
+
+/** Lists members for one organization. */
+export async function listOrganizationMembers(orgId: string) {
+  return api.org.listMembers(orgId);
+}
+
+/** Lists pending invites for one organization. */
+export async function listPendingInvites(orgId: string) {
+  return api.org.listInvites(orgId);
+}

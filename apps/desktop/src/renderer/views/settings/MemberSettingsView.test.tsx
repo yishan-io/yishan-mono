@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api/client";
-import { removeOrgMember } from "../../commands/orgCommands";
+import { listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
 import { sessionStore } from "../../features/session/model/sessionStore";
 import { MemberSettingsView } from "./MemberSettingsView";
 
@@ -25,6 +25,7 @@ vi.mock("../../api/client", () => ({
 
 vi.mock("../../commands/orgCommands", () => ({
   addOrgMember: vi.fn(),
+  listOrganizationMembers: vi.fn(),
   removeOrgMember: vi.fn(),
   leaveOrg: vi.fn(),
 }));
@@ -50,7 +51,7 @@ describe("MemberSettingsView", () => {
   });
 
   it("renders members with role and identity details", async () => {
-    vi.mocked(api.org.listMembers).mockResolvedValue([
+    vi.mocked(listOrganizationMembers).mockResolvedValue([
       {
         userId: "user-1",
         role: "admin",
@@ -72,7 +73,7 @@ describe("MemberSettingsView", () => {
   });
 
   it("renders empty state when there are no members", async () => {
-    vi.mocked(api.org.listMembers).mockResolvedValue([]);
+    vi.mocked(listOrganizationMembers).mockResolvedValue([]);
 
     render(<MemberSettingsView />);
 
@@ -82,7 +83,7 @@ describe("MemberSettingsView", () => {
   });
 
   it("renders error alert when request fails", async () => {
-    vi.mocked(api.org.listMembers).mockRejectedValue(new Error("failed"));
+    vi.mocked(listOrganizationMembers).mockRejectedValue(new Error("failed"));
 
     render(<MemberSettingsView />);
 
@@ -92,7 +93,7 @@ describe("MemberSettingsView", () => {
   });
 
   it("reloads members when selected organization changes", async () => {
-    vi.mocked(api.org.listMembers)
+    vi.mocked(listOrganizationMembers)
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
@@ -107,7 +108,7 @@ describe("MemberSettingsView", () => {
     const { rerender } = render(<MemberSettingsView />);
 
     await waitFor(() => {
-      expect(api.org.listMembers).toHaveBeenCalledWith("org-1");
+      expect(listOrganizationMembers).toHaveBeenCalledWith("org-1");
     });
 
     sessionStore.setState({
@@ -120,20 +121,20 @@ describe("MemberSettingsView", () => {
     rerender(<MemberSettingsView />);
 
     await waitFor(() => {
-      expect(api.org.listMembers).toHaveBeenCalledWith("org-2");
+      expect(listOrganizationMembers).toHaveBeenCalledWith("org-2");
     });
     expect(screen.getByText("Member User")).toBeTruthy();
   });
 
   it("renders the Add member button", async () => {
-    vi.mocked(api.org.listMembers).mockResolvedValue([]);
+    vi.mocked(listOrganizationMembers).mockResolvedValue([]);
     render(<MemberSettingsView />);
     await waitFor(() => expect(screen.getByText("settings.members.empty")).toBeTruthy());
     expect(screen.getByText("settings.members.addMember")).toBeTruthy();
   });
 
   it("opens the add-member dialog when the Add member button is clicked", async () => {
-    vi.mocked(api.org.listMembers).mockResolvedValue([]);
+    vi.mocked(listOrganizationMembers).mockResolvedValue([]);
     render(<MemberSettingsView />);
     await waitFor(() => expect(screen.getByText("settings.members.empty")).toBeTruthy());
 
@@ -143,7 +144,7 @@ describe("MemberSettingsView", () => {
   });
 
   it("removes a member after confirm", async () => {
-    vi.mocked(api.org.listMembers).mockResolvedValue([
+    vi.mocked(listOrganizationMembers).mockResolvedValue([
       {
         userId: "user-1",
         role: "admin",
@@ -183,7 +184,7 @@ describe("MemberSettingsView", () => {
   });
 
   it("hides remove button for owner member", async () => {
-    vi.mocked(api.org.listMembers).mockResolvedValue([
+    vi.mocked(listOrganizationMembers).mockResolvedValue([
       {
         userId: "user-1",
         role: "admin",

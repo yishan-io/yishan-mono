@@ -1,7 +1,7 @@
 import { Alert, Box, MenuItem } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { updateLanguagePreference } from "../../api/sessionApi";
+import { updateLanguagePreference } from "../../features/settings/commands/settingsCommands";
 import {
   SettingsCard,
   SettingsCompactSelect,

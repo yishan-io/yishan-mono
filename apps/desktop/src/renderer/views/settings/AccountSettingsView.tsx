@@ -1,7 +1,7 @@
 import { Avatar, Box, LinearProgress, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../../api";
+import { getVoiceUsage } from "../../features/settings/commands/settingsCommands";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { type SessionUser, sessionStore } from "../../features/session/model/sessionStore";
 
@@ -73,8 +73,7 @@ export function AccountSettingsView() {
     }
 
     let isActive = true;
-    api.voiceTranscription
-      .getUsage(selectedOrganization.id)
+    getVoiceUsage(selectedOrganization.id)
       .then((usage) => {
         if (isActive) {
           setOrganizationVoiceUsage(selectedOrganization.id, usage);

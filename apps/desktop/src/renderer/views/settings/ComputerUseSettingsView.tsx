@@ -5,9 +5,13 @@ import { BiBluetooth, BiCamera, BiChip, BiHdd, BiShield, BiSolidKeyboard, BiUsb,
 import { LuGlobe } from "react-icons/lu";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import {
+  getComputerUsePermissions,
+  openComputerUsePermissionSettings,
+} from "../../features/settings/commands/settingsCommands";
 import { getRendererPlatform } from "../../helpers/platform";
 import type { ComputerPermissionState, ComputerPermissionStatus } from "../../rpc/daemonTypes";
-import { getDaemonClient } from "../../rpc/rpcTransport";
+
 
 type PermissionRowKey = "accessibility" | "screenRecording" | "inputMonitoring" | "automation";
 
@@ -100,8 +104,7 @@ export function ComputerUseSettingsView() {
 
   const loadPermissions = useCallback(async () => {
     try {
-      const client = await getDaemonClient();
-      const next = await client.computer.permissions();
+      const next = await getComputerUsePermissions();
       setPermissions(next);
       setLoadError(null);
     } catch (error) {
@@ -118,8 +121,7 @@ export function ComputerUseSettingsView() {
       permission: "accessibility" | "screenRecording" | "camera" | "fullDiskAccess" | "localNetwork" | "bluetooth",
     ) => {
       try {
-        const client = await getDaemonClient();
-        await client.computer.openPermissionSettings({ permission });
+        await openComputerUsePermissionSettings(permission);
         setActionError(null);
       } catch (error) {
         setActionError(getErrorMessage(error));
