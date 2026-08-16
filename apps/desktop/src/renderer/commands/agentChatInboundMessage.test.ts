@@ -5,7 +5,7 @@ import { agentChatStore } from "../store/agentChatStore";
 import type { AgentMessage } from "../store/agentChatTypes";
 import { handleAgentPiEvent } from "./agentChatCommands";
 import { MAX_DETAILS_ITEMS, MAX_DETAILS_STRING_UTF8_BYTES, PER_MESSAGE_UTF8_BYTES } from "./agentChatInboundMessage";
-import { flushAgentChatStreamBuffer, setAgentChatStreamTabVisible } from "./agentChatStreamBuffer";
+import { flushAgentChatStreamBuffer, setAgentChatStreamTabVisible } from "../features/agent/runtime/agentChatStreamBuffer";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 

@@ -88,7 +88,6 @@ type _AgentChatCommandsConforms = Expect<
     AgentCommands,
     | "ensurePiSession"
     | "findTabWithSession"
-    | "setPiSessionUnsubscribe"
     | "clearPiSessionHandle"
     | "reattachPiSession"
     | "stopPiSession"

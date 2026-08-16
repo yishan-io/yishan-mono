@@ -21,7 +21,7 @@ import {
   peekAgentChatStreamMessage,
   queueAgentChatStreamMessage,
   setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
-} from "./agentChatStreamBuffer";
+} from "../features/agent/runtime/agentChatStreamBuffer";
 import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessageHelpers";
 import {
   applySubagentLifecycleWidget,

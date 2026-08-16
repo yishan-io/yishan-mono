@@ -13,7 +13,6 @@ import {
   registerAgentSession,
   respondToAgentExtensionUiRequest,
   sendAgentPrompt,
-  setPiSessionUnsubscribe,
   stopPiSession,
 } from "./agentChatCommands";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
@@ -261,12 +260,10 @@ describe("agentChatCommands.ensurePiSession", () => {
       cwd: "/tmp/project",
     });
     registerAgentSession({ tabId: "tab-clear-handle", sessionId: "generated-session-id" });
-    setPiSessionUnsubscribe("tab-clear-handle", unsubscribe);
 
     clearPiSessionHandle("tab-clear-handle");
     await stopPiSession("tab-clear-handle");
 
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
     expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "generated-session-id" });
   });
 

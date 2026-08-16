@@ -12,7 +12,6 @@ import type * as chatCommands from "./chatCommands";
 export type AgentCommands = {
   ensurePiSession: typeof agentChatCommands.ensurePiSession;
   findTabWithSession: typeof agentChatCommands.findTabWithSession;
-  setPiSessionUnsubscribe: typeof agentChatCommands.setPiSessionUnsubscribe;
   clearPiSessionHandle: typeof agentChatCommands.clearPiSessionHandle;
   reattachPiSession: typeof agentChatCommands.reattachPiSession;
   stopPiSession: typeof agentChatCommands.stopPiSession;

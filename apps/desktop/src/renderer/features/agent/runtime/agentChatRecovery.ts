@@ -1,8 +1,8 @@
-import type { PiActiveSessionSummary } from "../../rpc/daemonTypes";
-import { tabStore } from "../../store/tabStore";
-import type { TabStoreState } from "../../store/tabStore";
-import type { AgentChatSessionView } from "../../store/types";
-import { workspaceStore } from "../../store/workspaceStore";
+import type { PiActiveSessionSummary } from "../../../rpc/daemonTypes";
+import { tabStore } from "../../../store/tabStore";
+import type { TabStoreState } from "../../../store/tabStore";
+import type { AgentChatSessionView } from "../../../store/types";
+import { workspaceStore } from "../../../store/workspaceStore";
 
 type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
 

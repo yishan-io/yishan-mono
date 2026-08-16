@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { TabStoreState } from "../../store/tabStore";
-import type { WorkspaceStoreState } from "../../store/types";
+import type { TabStoreState } from "../../../store/tabStore";
+import type { WorkspaceStoreState } from "../../../store/types";
 import { AgentChatRecoveryCoordinator } from "./agentChatRecovery";
 
 function createMemoryStorage(): Storage {

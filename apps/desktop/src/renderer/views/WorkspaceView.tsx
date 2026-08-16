@@ -26,7 +26,7 @@ import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
 import { MainPaneView } from "./workspace/MainPaneView";
 import { OnboardingView } from "./workspace/OnboardingView";
 import { WorkspaceLifecycleNoticeView } from "./workspace/WorkspaceLifecycleNoticeView";
-import { AgentChatRecoveryCoordinator } from "./workspace/agentChatRecovery";
+import { AgentChatRecoveryCoordinator } from "../features/agent/runtime/agentChatRecovery";
 import { TerminalRecoveryCoordinator } from "./workspace/terminal/terminalRecovery";
 
 const LEFT_MIN_WIDTH = 240;
