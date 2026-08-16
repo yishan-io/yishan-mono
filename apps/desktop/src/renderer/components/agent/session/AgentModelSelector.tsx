@@ -2,7 +2,7 @@ import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
 import { getSupportedThinkingLevels } from "../../../helpers/agentThinkingLevels";
-import type { AgentModel } from "../../../store/agentChatTypes";
+import type { AgentModel } from "../../../features/agent/model/agentChatTypes";
 import { ModelPickerMenu } from "../../ModelPickerMenu";
 import { ProviderMark } from "../../ProviderMark";
 import { type ModelPickerOption, buildModelPickerOption, groupModelPickerOptionsByProvider } from "../../modelPicker";

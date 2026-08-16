@@ -4,7 +4,8 @@ import "./CreateWorkspaceDialogView.testSetup";
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../../../store/sessionStore";
+import { projectStore } from "../../../features/project/model/projectStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -168,9 +169,9 @@ describe("CreateWorkspaceDialogView create flow", () => {
   });
 
   it("hides projects that are hidden from the left pane in create mode", async () => {
-    workspaceStore.setState(
+    projectStore.setState(
       {
-        ...workspaceStore.getState(),
+        ...projectStore.getState(),
         displayProjectIds: ["repo-1"],
       },
       true,
@@ -193,9 +194,9 @@ describe("CreateWorkspaceDialogView create flow", () => {
   });
 
   it("falls back to the first visible project when opened with a hidden project id", async () => {
-    workspaceStore.setState(
+    projectStore.setState(
       {
-        ...workspaceStore.getState(),
+        ...projectStore.getState(),
         displayProjectIds: ["repo-1"],
       },
       true,
@@ -285,6 +286,7 @@ describe("CreateWorkspaceDialogView create flow", () => {
       },
       true,
     );
+    projectStore.setState({ projects: [...workspaceStore.getState().projects] });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
       target: { value: "Keep Repo Two" },
@@ -350,7 +352,6 @@ describe("CreateWorkspaceDialogView non-git exclusion", () => {
     workspaceStore.setState(
       {
         ...state,
-        displayProjectIds: ["repo-1", "repo-2", "repo-plain"],
         projects: [
           ...state.projects,
           {
@@ -368,6 +369,23 @@ describe("CreateWorkspaceDialogView non-git exclusion", () => {
       },
       true,
     );
+    projectStore.setState({ displayProjectIds: ["repo-1", "repo-2", "repo-plain"] });
+    projectStore.setState({
+      projects: [
+        ...state.projects,
+        {
+          id: "repo-plain",
+          key: "repo-plain",
+          name: "Plain Folder",
+          path: "/tmp/plain-folder",
+          localPath: "/tmp/plain-folder",
+          worktreePath: "/tmp/plain-folder",
+          sourceType: "unknown",
+          defaultBranch: "",
+          missing: false,
+        },
+      ],
+    });
 
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 

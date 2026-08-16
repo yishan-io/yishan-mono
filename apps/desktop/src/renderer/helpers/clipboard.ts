@@ -1,4 +1,4 @@
-import { writeClipboardText } from "../commands/fileCommands";
+import { writeClipboardText } from "../features/files/commands/fileCommands";
 
 /**
  * Copies text to the system clipboard via the Electron main process.

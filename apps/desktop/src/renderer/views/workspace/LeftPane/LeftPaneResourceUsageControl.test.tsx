@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { LeftPaneResourceUsageControl } from "./LeftPaneResourceUsageControl";
@@ -146,6 +147,26 @@ describe("LeftPaneResourceUsageControl", () => {
       ],
       selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-1",
+    });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          worktreePath: "/tmp/repo-1",
+        },
+        {
+          id: "repo-2",
+          key: "repo-2",
+          name: "Repo 2",
+          path: "/tmp/repo-2",
+          missing: false,
+          worktreePath: "/tmp/repo-2",
+        },
+      ],
     });
 
     tabStore.setState({

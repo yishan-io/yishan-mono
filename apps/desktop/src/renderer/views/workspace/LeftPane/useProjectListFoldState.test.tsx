@@ -23,17 +23,41 @@ const mocked = vi.hoisted(() => {
   const setListPreferences = vi.fn(async () => ({ ok: true }));
   const sessionState = { selectedOrganizationId: "org-1" };
   const workspaceState = {
-    displayProjectIds: [] as string[],
+    displayProjectIds: ["project-1", "project-2"] as string[],
     workspaceListHierarchyMode: "by_project" as "by_project" | "by_node",
   };
   return { getListPreferences, setListPreferences, sessionState, workspaceState };
 });
 
-vi.mock("../../../store/sessionStore", () => ({
+vi.mock("../../../features/session/model/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector(mocked.sessionState),
   ),
 }));
+
+vi.mock("../../../features/project/model/projectStore", () => {
+  const projectStore = (
+    selector: (state: {
+      projects: unknown[];
+      workspaceListHierarchyMode: string;
+      displayProjectIds: string[];
+    }) => unknown,
+  ) =>
+    selector({
+      projects: (mocked.workspaceState as { projects?: unknown[] }).projects ?? [],
+      workspaceListHierarchyMode:
+        (mocked.workspaceState as { workspaceListHierarchyMode?: string }).workspaceListHierarchyMode ?? "by_project",
+      displayProjectIds: (mocked.workspaceState as { displayProjectIds?: string[] }).displayProjectIds ?? [],
+    });
+  (
+    projectStore as unknown as { getState: () => { projects: unknown[]; workspaceListHierarchyMode: string } }
+  ).getState = () => ({
+    projects: (mocked.workspaceState as { projects?: unknown[] }).projects ?? [],
+    workspaceListHierarchyMode:
+      (mocked.workspaceState as { workspaceListHierarchyMode?: string }).workspaceListHierarchyMode ?? "by_project",
+  });
+  return { projectStore };
+});
 
 vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: vi.fn((selector: (state: typeof mocked.workspaceState) => unknown) =>

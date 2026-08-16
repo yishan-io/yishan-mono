@@ -4,6 +4,7 @@ import "./CreateWorkspaceDialogView.testSetup";
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";

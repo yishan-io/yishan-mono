@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../../../api";
+import { listOrgNodes } from "../../../commands/nodeCommands";
 import type { BranchDropdownGroups } from "../../../components/BranchDropdown";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
@@ -166,7 +166,7 @@ export function useCreateWorkspaceDialogState({
     let isCancelled = false;
     const loadNodes = async () => {
       try {
-        const listedNodes = await api.node.listByOrg(organizationId);
+        const listedNodes = await listOrgNodes(organizationId);
         if (isCancelled) {
           return;
         }

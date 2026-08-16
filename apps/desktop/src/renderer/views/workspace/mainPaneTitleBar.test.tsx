@@ -97,7 +97,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../store/sessionStore", () => ({
+vi.mock("../../features/session/model/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
@@ -106,6 +106,15 @@ vi.mock("../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: (typeof mocked.stateRef)["current"]) => unknown) =>
     selector(mocked.stateRef.current),
 }));
+
+vi.mock("../../features/project/model/projectStore", () => {
+  const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
+    selector({ projects: mocked.stateRef.current.projects ?? [] });
+  (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
+    projects: mocked.stateRef.current.projects ?? [],
+  });
+  return { projectStore };
+});
 
 vi.mock("../../store/chatStore", () => ({
   chatStore: (

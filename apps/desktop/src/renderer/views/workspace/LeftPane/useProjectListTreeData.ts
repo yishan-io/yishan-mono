@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { api } from "../../../api/client";
+import { listOrgNodes } from "../../../commands/nodeCommands";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
+import { projectStore } from "../../../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
 import { resolveWorkspaceNotificationTone } from "../../../helpers/workspaceNotification";
 import { chatStore } from "../../../store/chatStore";
-import { sessionStore } from "../../../store/sessionStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { reconcileOrder } from "./projectListHelpers";
@@ -55,17 +57,17 @@ export function useProjectListTreeData(input: {
     workspaceListHierarchyMode,
   } = input;
 
-  const projects = workspaceStore((state) => state.projects) ?? [];
+  const projects = projectStore((state) => state.projects) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
-  const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
-  const gitChangeTotalsByWorkspaceId = workspaceStore((state) => state.gitChangeTotalsByWorkspaceId);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
+  const gitChangeTotalsByWorkspaceId = workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({
     queryKey: ["org-nodes", selectedOrganizationId],
-    queryFn: () => api.node.listByOrg(selectedOrganizationId as string),
+    queryFn: () => listOrgNodes(selectedOrganizationId as string),
     enabled: Boolean(selectedOrganizationId),
   });
 

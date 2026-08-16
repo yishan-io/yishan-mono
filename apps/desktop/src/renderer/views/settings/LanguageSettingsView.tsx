@@ -1,7 +1,7 @@
 import { Alert, Box, MenuItem } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { updateLanguagePreference } from "../../api/sessionApi";
+import { updateLanguagePreference } from "../../features/settings/commands/settingsCommands";
 import {
   SettingsCard,
   SettingsCompactSelect,
@@ -9,7 +9,7 @@ import {
   SettingsSectionHeader,
 } from "../../components/settings";
 import { SUPPORTED_LANGUAGE_CODES, type SupportedLanguageCode, i18n, setAppLanguage } from "../../i18n";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 
 /**
  * Renders language selection and persists profile preference.

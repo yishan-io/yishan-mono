@@ -10,7 +10,7 @@ import {
 } from "../../shared/notifications/notificationPreferences";
 import { requestJson } from "../api/restClient";
 import { getDesktopHostBridge } from "../rpc/rpcTransport";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 
 /** Loads notification preferences from current session user, then falls back to local cache. */
 export async function getNotificationPreferences() {

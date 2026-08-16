@@ -20,7 +20,11 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiCopy, BiTrash } from "react-icons/bi";
-import { api } from "../../api/client";
+import {
+  createServiceToken,
+  listServiceTokens,
+  revokeServiceToken,
+} from "../../features/settings/commands/settingsCommands";
 import type { ServiceTokenRecord } from "../../api/serviceTokenTypes";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { StatusIndicator } from "../../components/StatusIndicator";
@@ -65,7 +69,7 @@ export function ServiceTokenSettingsView() {
     setIsLoading(true);
     setHasLoadError(false);
     try {
-      const result = await api.serviceToken.list();
+      const result = await listServiceTokens();
       setTokens(result);
     } catch (error) {
       console.error("[ServiceTokenSettingsView] Failed to load service tokens", error);
@@ -82,7 +86,7 @@ export function ServiceTokenSettingsView() {
 
   const handleRevoke = async (tokenId: string) => {
     try {
-      await api.serviceToken.revoke(tokenId);
+      await revokeServiceToken(tokenId);
       setRevokeTarget(null);
       await loadTokens();
     } catch (error) {
@@ -265,7 +269,7 @@ function CreateServiceTokenDialog(props: {
         input.expiresInDays = parsedDays;
       }
 
-      const result = await api.serviceToken.create(input);
+      const result = await createServiceToken(input);
       if (result.token) {
         props.onCreated(result.token);
       }

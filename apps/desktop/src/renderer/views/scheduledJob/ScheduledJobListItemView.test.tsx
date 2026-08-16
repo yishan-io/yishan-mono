@@ -2,8 +2,9 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
-import { scheduledJobStore } from "../../store/scheduledJobStore";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
+import { projectStore } from "../../features/project/model/projectStore";
+import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";
 
@@ -77,6 +78,7 @@ describe("ScheduledJobListItemView", () => {
   it("wraps a non-null last-run 14px icon in its translated caller-owned tooltip", async () => {
     scheduledJobStore.setState({ pendingActionIds: [] });
     workspaceStore.setState({ projects: [] });
+    projectStore.setState({ projects: [] });
 
     render(
       <table>

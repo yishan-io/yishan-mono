@@ -1,5 +1,5 @@
 import type { DaemonLocalFolder } from "../../rpc/daemonTypes";
-import { sessionStore } from "../sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { getFileName } from "../tabs";
 import type {
   WorkspaceHealth,
@@ -16,13 +16,11 @@ type LocalFolderActions = Pick<WorkspaceStoreActions, "loadLocalFolders" | "addL
 
 type FolderStoreSlice = Pick<
   WorkspaceStoreState,
-  | "projects"
-  | "workspaces"
-  | "selectedProjectId"
-  | "selectedWorkspaceId"
-  | "gitChangesCountByWorkspaceId"
-  | "gitChangeTotalsByWorkspaceId"
->;
+  "projects" | "workspaces" | "selectedProjectId" | "selectedWorkspaceId"
+> & {
+  gitChangesCountByWorkspaceId?: Record<string, unknown>;
+  gitChangeTotalsByWorkspaceId?: Record<string, unknown>;
+};
 
 const FOLDER_STATES = new Set<string>(["active", "error", "closing"]);
 const FOLDER_HEALTHS = new Set<string>(["path-missing", "not-worktree"]);
@@ -78,8 +76,8 @@ function applyFolderSnapshot(state: FolderStoreSlice, folders: DaemonLocalFolder
 
 /** Removes workspace-scoped UI caches that are keyed by a folder workspace id. */
 function cleanupFolderWorkspaceState(state: FolderStoreSlice, folderId: string): void {
-  delete state.gitChangesCountByWorkspaceId[folderId];
-  delete state.gitChangeTotalsByWorkspaceId[folderId];
+  delete state.gitChangesCountByWorkspaceId?.[folderId];
+  delete state.gitChangeTotalsByWorkspaceId?.[folderId];
 }
 
 export function createLocalFolderActions(

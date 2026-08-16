@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgentMessage } from "../../../store/agentChatTypes";
+import type { AgentMessage } from "../../../features/agent/model/agentChatTypes";
 import {
   type TranscriptRow,
   type TurnItem,

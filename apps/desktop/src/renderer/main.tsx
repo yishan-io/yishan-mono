@@ -10,7 +10,7 @@ import { openLink } from "./commands/appCommands";
 import { AppUpdateSnackbar } from "./components/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./components/AuthSessionExpiredSnackbar";
 import { WorkspaceOverlay } from "./components/WorkspaceOverlay";
-import { startBackendEventPipeline, startBackendEventStoreBindings } from "./events";
+import { startBackendEventHandlers, startBackendEventPipeline } from "./events";
 import { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
 import { i18n } from "./i18n";
 import { rendererQueryClient } from "./queryClient";
@@ -18,7 +18,7 @@ import { subscribeDesktopRpcEvent } from "./rpc/rpcTransport";
 import { createAppTheme } from "./theme";
 import { SettingsView } from "./views/SettingsView";
 import { AppShell } from "./views/layout/AppShell";
-import { ApplicationRouterView, NotFoundRouteView } from "./views/layout/ApplicationRouterView";
+import { ApplicationRouterView, NotFoundRouteView } from "./app/routes/ApplicationRouterView";
 
 // React 19 dev mode emits performance.measure() entries for every component render/update.
 // These accumulate indefinitely in the Performance API buffer and cause unbounded memory growth.
@@ -38,7 +38,7 @@ function AppRoot() {
 
   useEffect(() => {
     const stopPipeline = startBackendEventPipeline();
-    const stopStoreBindings = startBackendEventStoreBindings();
+    const stopStoreBindings = startBackendEventHandlers();
 
     // Listen for webview new-window requests forwarded from the main process
     // (triggered by Cmd+Click, target="_blank", window.open in <webview> guests)

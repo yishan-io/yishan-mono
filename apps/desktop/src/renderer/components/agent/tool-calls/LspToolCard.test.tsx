@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage } from "../../../features/agent/model/agentChatTypes";
 import { AgentToolCallCard } from "./AgentToolCallCard";
 
 afterEach(() => {

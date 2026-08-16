@@ -1,20 +1,10 @@
-import type { DaemonInfoResult } from "@main/ipc";
+import type { DaemonInfoResult } from "@renderer/commands/appCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import { getDesktopHostBridge, subscribeDesktopRpcEvent } from "@renderer/rpc/rpcTransport";
+import { getDaemonInfo, restartDaemon as restartDaemonCommand } from "@renderer/commands/appCommands";
+import { subscribeDaemonInfoRefreshed } from "@renderer/features/session/commands/sessionCommands";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { closeTerminalTabsForDaemonRestart } from "./closeTerminalTabsForDaemonRestart";
-
-function isDaemonInfoPayload(value: unknown): value is DaemonInfoResult {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const payload = value as Record<string, unknown>;
-  return (
-    typeof payload.daemonId === "string" && typeof payload.version === "string" && typeof payload.wsUrl === "string"
-  );
-}
 
 /** Manages daemon info loading, refresh, restart, and live update subscription state. */
 export function useDaemonConnectionState() {
@@ -40,7 +30,7 @@ export function useDaemonConnectionState() {
     setHasLoadError(false);
 
     try {
-      const info = await getDesktopHostBridge().getDaemonInfo();
+      const info = await getDaemonInfo();
       if (!isLatestMountedLoad()) {
         return;
       }
@@ -70,12 +60,11 @@ export function useDaemonConnectionState() {
   }, [loadDaemonInfo]);
 
   useEffect(() => {
-    const unsubscribe = subscribeDesktopRpcEvent((event) => {
-      if (event.method !== "daemon.info.refreshed" || !isDaemonInfoPayload(event.payload) || !isMountedRef.current) {
+    const unsubscribe = subscribeDaemonInfoRefreshed((info) => {
+      if (!isMountedRef.current) {
         return;
       }
-
-      setDaemonInfo(event.payload);
+      setDaemonInfo(info);
       setHasLoadError(false);
     });
 
@@ -102,7 +91,7 @@ export function useDaemonConnectionState() {
         return;
       }
 
-      const result = await getDesktopHostBridge().restartDaemon();
+      const result = await restartDaemonCommand();
       if (!isMountedRef.current) {
         return;
       }

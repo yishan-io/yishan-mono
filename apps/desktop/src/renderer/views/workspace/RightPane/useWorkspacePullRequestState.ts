@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../../../api/client";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import {
+  listPullRequestHistory,
+  refreshWorkspacePullRequest,
+} from "../../../features/workspace/commands/workspaceCommands";
+import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;
   /** The live PR from the daemon (current branch, real-time). */
-  pullRequest: import("../../../rpc/daemonTypes").DaemonWorkspacePullRequest | undefined;
+  pullRequest: DaemonWorkspacePullRequest | undefined;
   /** Historical PRs from the api-service, ordered by detected_at desc. */
   historicalPullRequests: WorkspacePullRequestRecord[];
   isLoading: boolean;
@@ -16,7 +20,9 @@ export type WorkspacePullRequestState = {
 /** Returns live and historical pull request state for the currently selected workspace. */
 export function useWorkspacePullRequestState(enabled = true): WorkspacePullRequestState {
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const pullRequest = workspaceStore((state) => state.pullRequestByWorkspaceId[state.selectedWorkspaceId]);
+  const pullRequest = workspaceProjectionStore(
+    (state) => state.pullRequestByWorkspaceId[workspaceStore.getState().selectedWorkspaceId],
+  );
   const workspace = workspaceStore((state) => state.workspaces.find((w) => w.id === state.selectedWorkspaceId));
 
   const [historicalPullRequests, setHistoricalPullRequests] = useState<WorkspacePullRequestRecord[]>([]);
@@ -39,8 +45,7 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     let cancelled = false;
     setIsLoading(true);
 
-    api.workspacePullRequest
-      .list(orgId, projectId, selectedWorkspaceId)
+    listPullRequestHistory(orgId, projectId, selectedWorkspaceId)
       .then((records) => {
         if (!cancelled) {
           setHistoricalPullRequests(records);
@@ -80,22 +85,9 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     // Mark as attempted immediately so concurrent renders don't fire duplicates.
     daemonRefreshAttemptedRef.current = selectedWorkspaceId;
 
-    let cancelled = false;
-
-    getDaemonClient()
-      .then((client) => client.workspace.refreshPullRequest({ workspaceId: selectedWorkspaceId }))
-      .then((daemonWorkspace) => {
-        if (!cancelled && daemonWorkspace.pullRequest) {
-          workspaceStore.getState().setWorkspacePullRequest(selectedWorkspaceId, daemonWorkspace.pullRequest);
-        }
-      })
-      .catch(() => {
-        // Best-effort — daemon refresh failures are non-fatal.
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    refreshWorkspacePullRequest(selectedWorkspaceId).catch(() => {
+      // Best-effort — daemon refresh failures are non-fatal.
+    });
   }, [enabled, selectedWorkspaceId, worktreePath, pullRequest]);
 
   // Reset the daemon refresh tracker when the workspace changes so a new workspace

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveClipboardSource } from "./clipboardSourceResolvers";
+import { resolveClipboardSource } from "../../../features/files/ui/clipboardSourceResolvers";
 
 describe("resolveClipboardSource", () => {
   it("prioritizes internal move clipboard over external paths", () => {

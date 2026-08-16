@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../store/agentChatStore";
+import { agentChatStore } from "../features/agent/model/agentChatStore";
 import { tabStore } from "../store/tabStore";
 import {
   applySubagentLifecycleWidget,
   applySubagentLiveTranscripts,
   parseSubagentLifecycleWidget,
   parseSubagentLiveTranscripts,
-} from "./agentChatSubagentEvents";
+} from "../features/agent/events/agentChatSubagentEvents";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();

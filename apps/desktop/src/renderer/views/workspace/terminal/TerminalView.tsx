@@ -12,8 +12,8 @@ import {
   ensureTerminalRuntime,
   getTerminalRuntime,
   requestTerminalRuntimeFocus,
-} from "./terminalRuntimeRegistry";
-import { initTerminalSessionLifecycle } from "./terminalSessionService";
+} from "../../../features/terminal/runtime/terminalRuntimeRegistry";
+import { initTerminalSessionLifecycle } from "../../../features/terminal/runtime/terminalSessionService";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { useTerminalWakeRecovery } from "./useTerminalWakeRecovery";

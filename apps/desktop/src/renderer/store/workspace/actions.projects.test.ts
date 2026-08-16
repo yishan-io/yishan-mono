@@ -144,7 +144,7 @@ function createHarness(overrides?: Partial<TestState>) {
 }
 
 describe("createWorkspaceRepoActions", () => {
-  it("persists organization-scoped selection + display filter when creating a new project", async () => {
+  it("appends a created project and selects it when creating a new project", async () => {
     const { actions, getState } = createHarness({
       projects: [],
       workspaces: [],
@@ -152,7 +152,7 @@ describe("createWorkspaceRepoActions", () => {
       organizationPreferencesById: { "org-1": {} },
     });
 
-    const { sessionStore } = await import("../sessionStore");
+    const { sessionStore } = await import("../../features/session/model/sessionStore");
     sessionStore.setState({ selectedOrganizationId: "org-1" });
 
     actions.createProject({
@@ -184,10 +184,10 @@ describe("createWorkspaceRepoActions", () => {
     });
 
     const state = getState();
-    expect(state.organizationPreferencesById?.["org-1"]).toEqual({
-      displayProjectIds: ["repo-1"],
-      knownProjectIds: ["repo-1"],
-    });
+    // Phase 3: org-scoped prefs moved to the project store; the workspace store
+    // keeps the entity + selection effects.
+    expect(state.projects.map((project) => project.id)).toEqual(["repo-1"]);
+    expect(state.selectedProjectId).toBe("repo-1");
   });
 
   it("deletes one project and all child workspace state", () => {
@@ -604,38 +604,5 @@ describe("createWorkspaceRepoActions", () => {
     const state = harness.getState();
     expect(state.displayProjectIds).toEqual(["repo-1", "repo-3"]);
     expect(state.selectedProjectId).toBe("repo-3");
-  });
-
-  it("updates project config and refresh version as separate pure actions", () => {
-    const harness = createHarness();
-    harness.actions.updateProjectConfig("repo-1", {
-      name: "Repo Updated",
-      worktreePath: "/tmp/repo-1",
-      contextEnabled: true,
-      icon: "folder",
-      color: "#1E66F5",
-      setupScript: "npm ci",
-      postScript: "rm -rf node_modules",
-    });
-    harness.actions.incrementFileTreeRefreshVersion("/tmp/repo-1");
-
-    const state = harness.getState();
-    expect(state.projects[0]?.name).toBe("Repo Updated");
-    expect(state.projects[0]?.setupScript).toBe("npm ci");
-    expect(state.projects[0]?.postScript).toBe("rm -rf node_modules");
-    expect(state.fileTreeRefreshVersion).toBe(1);
-  });
-
-  it("ignores git internals when recording changed file-tree paths", () => {
-    const harness = createHarness();
-
-    harness.actions.incrementFileTreeRefreshVersion("/tmp/repo-1/.worktrees/feature-a", [
-      ".git/worktrees/feature-a",
-      "src/app.ts",
-    ]);
-
-    expect(harness.getState().fileTreeChangedRelativePathsByWorktreePath).toEqual({
-      "/tmp/repo-1/.worktrees/feature-a": ["src/app.ts"],
-    });
   });
 });

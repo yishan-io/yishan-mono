@@ -1,4 +1,5 @@
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
+import { projectStore } from "@renderer/features/project/model/projectStore";
 import { useCommands } from "@renderer/hooks/useCommands";
 import { useDialogRegistration } from "@renderer/hooks/useDialogRegistration";
 import { workspaceStore } from "@renderer/store/workspaceStore";
@@ -24,7 +25,7 @@ type ProjectConfigDialogViewProps = {
 
 export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfigDialogViewProps) {
   const { t } = useTranslation();
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
   const { getDefaultWorktreeLocation } = useCommands();
   const {
     repo,

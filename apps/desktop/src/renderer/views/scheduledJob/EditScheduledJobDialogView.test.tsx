@@ -3,8 +3,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
-import { sessionStore } from "../../store/sessionStore";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
+import { projectStore } from "../../features/project/model/projectStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";
 
@@ -89,6 +90,7 @@ describe("EditScheduledJobDialogView", () => {
     workspaceStore.setState({
       projects: [{ id: "project-1", name: "Alpha", icon: "terminal", color: "#111111" }],
     });
+    projectStore.setState({ projects: [{ id: "project-1", name: "Alpha", icon: "terminal", color: "#111111" }] });
     mocked.listNodesByOrg.mockResolvedValueOnce([
       {
         id: "node-2",

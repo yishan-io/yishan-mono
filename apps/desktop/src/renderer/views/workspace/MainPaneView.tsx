@@ -21,7 +21,7 @@ import { RightPaneView } from "./RightPane/RightPaneView";
 import { WorkspaceErrorStateView } from "./WorkspaceErrorStateView";
 import { WorkspaceSplitPane } from "./WorkspaceSplitPaneView";
 import { removeWebviewsForClosedTabs } from "./browser/webviewRegistry";
-import { disposeTerminalRuntimesForClosedTabs } from "./terminal/terminalRuntimeRegistry";
+import { disposeTerminalRuntimesForClosedTabs } from "../../features/terminal/runtime/terminalRuntimeRegistry";
 
 const RIGHT_MIN_WIDTH = 280;
 

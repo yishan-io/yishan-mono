@@ -1,7 +1,7 @@
 import { Box, IconButton, Paper, Tooltip, Typography } from "@mui/material";
 import { LuBot, LuLoaderCircle, LuRefreshCw, LuTriangleAlert, LuX } from "react-icons/lu";
-import type { RunningSubagentSummary } from "../../../store/agentChatSubagents";
-import type { AgentSubagentCancelState } from "../../../store/agentChatTypes";
+import type { RunningSubagentSummary } from "../../../features/agent/model/agentChatSubagents";
+import type { AgentSubagentCancelState } from "../../../features/agent/model/agentChatTypes";
 
 type AgentChatSubagentRowProps = {
   subagent: RunningSubagentSummary;

@@ -3,8 +3,8 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { COLOR_PRIMITIVES } from "@yishan-io/design-tokens/v1";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../../../store/agentChatStore";
-import type { AgentMessage } from "../../../store/agentChatTypes";
+import { agentChatStore } from "../../../features/agent/model/agentChatStore";
+import type { AgentMessage } from "../../../features/agent/model/agentChatTypes";
 import { AgentChatUsageSummaryLabel, getUsageSummaryColor } from "./AgentChatUsageSummaryLabel";
 
 vi.mock("react-i18next", () => ({

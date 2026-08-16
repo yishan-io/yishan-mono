@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
+import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { PullRequestTabView } from "./PullRequestTabView";
@@ -51,6 +52,7 @@ vi.mock("./useWorkspacePullRequestState", () => ({
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();
+const initialProjectionStoreState = workspaceProjectionStore.getState();
 
 function setupSelectedWorkspace() {
   workspaceStore.setState({
@@ -82,6 +84,7 @@ function buildHistoricalPullRequest(
 
 afterEach(() => {
   cleanup();
+  workspaceProjectionStore.setState(initialProjectionStoreState, true);
   workspaceStore.setState(initialWorkspaceStoreState, true);
   mocked.openLink.mockReset();
   mocked.mergePullRequest.mockReset();
@@ -193,8 +196,8 @@ describe("PullRequestTabView", () => {
         { id: "workspace-1", worktreePath: "/tmp/workspace-1" } as never,
         { id: "workspace-2", worktreePath: "/tmp/workspace-2" } as never,
       ],
-      pullRequestByWorkspaceId: {},
     });
+    workspaceProjectionStore.setState({ pullRequestByWorkspaceId: {} });
     mocked.state.pullRequest = {
       number: 42,
       title: "Add PR tab",
@@ -228,10 +231,10 @@ describe("PullRequestTabView", () => {
       await Promise.resolve();
     });
 
-    expect(workspaceStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual(
+    expect(workspaceProjectionStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual(
       expect.objectContaining({ number: 42, complete: true, status: "merged" }),
     );
-    expect(workspaceStore.getState().pullRequestByWorkspaceId["workspace-2"]).toBeUndefined();
+    expect(workspaceProjectionStore.getState().pullRequestByWorkspaceId["workspace-2"]).toBeUndefined();
   });
 
   it("renders the open historical PR fallback and past history entries", () => {

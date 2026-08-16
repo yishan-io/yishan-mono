@@ -3,13 +3,15 @@ import type {
   AuthStatusResult,
   BrowserHistoryGroup,
   DaemonInfoResult,
+  DaemonLogResult,
   DaemonRestartResult,
+  DesktopUpdateEventPayload,
 } from "../../main/ipc";
 import { resetAuthExpiredState } from "../api/restClient";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { rendererQueryClient } from "../queryClient";
-import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
-import { sessionStore } from "../store/sessionStore";
+import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../rpc/rpcTransport";
+import { sessionStore } from "../features/session/model/sessionStore";
 import { type LinkTarget, layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -177,4 +179,55 @@ export async function loadBrowserHistory(): Promise<BrowserHistoryGroup[]> {
 
 export async function appendBrowserHistory(input: AppendBrowserHistoryInput): Promise<{ ok: true }> {
   return await getDesktopHostBridge().appendBrowserHistory(input);
+}
+
+// ─── Desktop update surface ────────────────────────────────────────────────────
+// Owns the Electron bridge update calls so UI never imports the bridge value
+// or main-process types directly (UpdateRuntime ownership: Phase 9).
+
+/** Reads one pending update payload from the Electron host, if any. */
+export async function getPendingDesktopUpdate() {
+  return await getDesktopHostBridge().getPendingUpdate();
+}
+
+/** Subscribes one listener to desktopUpdate bridge events. Returns a teardown. */
+export function subscribeDesktopUpdates(listener: (payload: DesktopUpdateEventPayload) => void): () => void {
+  const bridge = getDesktopBridge();
+  if (!bridge) {
+    return () => {};
+  }
+  return bridge.events.subscribe((event: { method?: string; payload?: unknown }) => {
+    if (event.method !== "desktopUpdate") {
+      return;
+    }
+    const payload = event.payload;
+    if (payload && typeof payload === "object" && "status" in payload) {
+      listener(payload as DesktopUpdateEventPayload);
+    }
+  });
+}
+
+/** Asks the Electron host to dismiss the update prompt. */
+export function dismissDesktopUpdate(): void {
+  void getDesktopHostBridge().dismissUpdate();
+}
+
+/** Downloads the pending update. */
+export function downloadDesktopUpdate() {
+  return getDesktopHostBridge().downloadUpdate();
+}
+
+/** Installs the downloaded update. */
+export function installDesktopUpdate() {
+  return getDesktopHostBridge().installUpdate();
+}
+
+
+export type { DesktopUpdateEventPayload } from "../../main/ipc";
+
+export type { BrowserHistoryGroup, DaemonInfoResult, DaemonLogResult } from "../../main/ipc";
+
+/** Reads the daemon log from the Electron host. */
+export async function getDaemonLog(): Promise<DaemonLogResult> {
+  return getDesktopHostBridge().readDaemonLog();
 }

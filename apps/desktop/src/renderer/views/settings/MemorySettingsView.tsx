@@ -17,8 +17,13 @@ import {
   SettingsToggleRow,
 } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import {
+  getMemoryConfig,
+  listAgentModelsForMemorySettings,
+  updateMemoryConfig,
+} from "../../features/settings/commands/settingsCommands";
 import type { MemoryConfig } from "../../rpc/daemonTypes";
-import { getDaemonClient } from "../../rpc/rpcTransport";
+
 
 const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
 
@@ -95,8 +100,7 @@ export function MemorySettingsView() {
     setModelsLoading(true);
     setModelsError(null);
     try {
-      const client = await getDaemonClient();
-      const result = await client.agent.listModels(
+      const result = await listAgentModelsForMemorySettings(
         forceRefresh
           ? { agentKind: MEMORY_SUMMARIZER_AGENT_KIND, forceRefresh: true }
           : { agentKind: MEMORY_SUMMARIZER_AGENT_KIND },
@@ -120,8 +124,7 @@ export function MemorySettingsView() {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const client = await getDaemonClient();
-      const nextConfig = normalizeMemoryConfig(await client.memory.getConfig());
+      const nextConfig = normalizeMemoryConfig(await getMemoryConfig());
       setConfig(nextConfig);
       setSaveError(null);
       fetchModels();
@@ -140,8 +143,7 @@ export function MemorySettingsView() {
     const normalizedNext = normalizeMemoryConfig(next);
     setConfig(normalizedNext);
     try {
-      const client = await getDaemonClient();
-      await client.memory.updateConfig(normalizedNext);
+      await updateMemoryConfig(normalizedNext);
       setSaveError(null);
     } catch (error) {
       setSaveError(getErrorMessage(error));

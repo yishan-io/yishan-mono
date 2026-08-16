@@ -30,11 +30,10 @@ export const initialWorkspaceState = buildWorkspaceStateFromData({
   workspaces: [],
 });
 
-export function partializeWorkspaceState(state: WorkspaceStoreState): WorkspaceStorePersistedState {
-  return {
-    displayProjectIds: state.displayProjectIds,
-    lastUsedExternalAppId: state.lastUsedExternalAppId,
-    organizationPreferencesById: state.organizationPreferencesById,
-    workspaceListHierarchyMode: state.workspaceListHierarchyMode,
-  };
+export function partializeWorkspaceState(_state: WorkspaceStoreState): WorkspaceStorePersistedState {
+  // Phase 3: project preferences (displayProjectIds, lastUsedExternalAppId,
+  // organizationPreferencesById, workspaceListHierarchyMode) moved to the
+  // project store (yishan-project-store). Nothing workspace-scoped persists
+  // here anymore; keep the empty shape so the persist key stays valid.
+  return {};
 }

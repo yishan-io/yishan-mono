@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { inspectGitRepository } from "../../../commands/gitCommands";
-import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
+import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../features/workspace/commands/workspaceCommands";
 import { ProjectListView } from "./ProjectListView";
 
 const mocked = vi.hoisted(() => {
@@ -186,7 +186,51 @@ vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../store/sessionStore", () => ({
+vi.mock("../../../features/workspace/model/workspaceProjectionStore", () => {
+  const project = (
+    selector: (state: {
+      pullRequestByWorkspaceId: Record<string, unknown>;
+      currentBranchByWorkspaceId: Record<string, string>;
+      gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
+      setWorkspaceCurrentBranch: (id: string, branch: string) => void;
+    }) => unknown,
+  ) =>
+    selector({
+      pullRequestByWorkspaceId: mocked.stateRef.current.pullRequestByWorkspaceId,
+      currentBranchByWorkspaceId: mocked.stateRef.current.currentBranchByWorkspaceId,
+      gitChangeTotalsByWorkspaceId: mocked.stateRef.current.gitChangeTotalsByWorkspaceId,
+      setWorkspaceCurrentBranch: mocked.stateRef.current.setWorkspaceCurrentBranch,
+    });
+  (
+    project as unknown as {
+      getState: () => typeof mocked.stateRef.current;
+    }
+  ).getState = () => mocked.stateRef.current;
+  return { workspaceProjectionStore: project };
+});
+
+vi.mock("../../../features/project/model/projectStore", () => {
+  const projectStore = (
+    selector: (state: { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string }) => unknown,
+  ) =>
+    selector({
+      projects: mocked.stateRef.current.projects ?? [],
+      displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+      lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
+    });
+  (
+    projectStore as unknown as {
+      getState: () => { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string };
+    }
+  ).getState = () => ({
+    projects: mocked.stateRef.current.projects ?? [],
+    displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+    lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
+  });
+  return { projectStore };
+});
+
+vi.mock("../../../features/session/model/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector({ selectedOrganizationId: "" }),
   ),
@@ -232,7 +276,7 @@ vi.mock("../../../hooks/useCommands", () => ({
   }),
 }));
 
-vi.mock("../../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),
   listDetectedExternalAppIds: (...args: unknown[]) => mocked.listDetectedExternalAppIds(...args),
 }));

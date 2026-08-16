@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionUser } from "../store/sessionStore";
+import type { SessionUser } from "../features/session/model/sessionStore";
 import {
   dispatchNotification,
   getNotificationPreferences,
@@ -52,7 +52,7 @@ vi.mock("../rpc/rpcTransport", () => ({
   })),
 }));
 
-vi.mock("../store/sessionStore", () => ({
+vi.mock("../features/session/model/sessionStore", () => ({
   sessionStore: {
     getState: () => ({
       ...mocks.sessionState,

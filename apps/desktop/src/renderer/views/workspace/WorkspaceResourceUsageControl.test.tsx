@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { projectStore } from "../../features/project/model/projectStore";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { WorkspaceResourceUsageControl } from "./WorkspaceResourceUsageControl";
@@ -96,6 +97,18 @@ describe("WorkspaceResourceUsageControl", () => {
       ],
       selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-1",
+    });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          worktreePath: "/tmp/repo-1",
+        },
+      ],
     });
 
     tabStore.setState({

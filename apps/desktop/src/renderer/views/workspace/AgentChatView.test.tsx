@@ -3,8 +3,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requestAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
-import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
+import type { AgentMessage, AgentModel } from "../../features/agent/model/agentChatTypes";
 import { AgentChatView } from "./AgentChatView";
 
 const mocked = vi.hoisted(() => {
@@ -75,6 +75,108 @@ const mocked = vi.hoisted(() => {
     setAgentThinkingLevel: vi.fn(),
     stopPiSession: vi.fn().mockResolvedValue(undefined),
     sendAgentPrompt: vi.fn(),
+    startAgentChatSession: vi.fn(
+      async (opts: {
+        tabId: string;
+        workspaceId: string;
+        cwd: string;
+        sessionId?: string;
+        sessionView: string;
+        paneId?: string;
+        subagentParentSessionId?: string;
+      }) => {
+        // Replicate the read-only subagent-detail fast path: the transcript is
+        // streamed from the parent session, so no Pi session is started.
+        if (opts.sessionView === "subagent-detail" && opts.subagentParentSessionId) {
+          const childSessionId = opts.sessionId?.trim() || opts.tabId;
+          const parentTabId = mocked.findTabWithSession(opts.subagentParentSessionId);
+          const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
+          const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
+          const isChildFinished = parentSession?.finishedSubagents.some(
+            (subagent) => subagent.childSessionId === childSessionId,
+          );
+          const isParentTrackingChild =
+            !isChildFinished &&
+            Boolean(
+              parentSession?.subagentLiveTranscripts[childSessionId] ||
+                parentSession?.subagentProgressTargets.some((target) => target.childSessionId === childSessionId),
+            );
+          if (isParentTrackingChild) {
+            agentChatStore.getState().initSession(opts.tabId, childSessionId);
+            agentChatStore.getState().replaceMessages(opts.tabId, initialMessages);
+            agentChatStore.getState().setAvailableModels(opts.tabId, []);
+            agentChatStore.getState().markStateLoaded(opts.tabId);
+            return;
+          }
+        }
+        const resolved = await mocked.ensurePiSession({
+          tabId: opts.tabId,
+          workspaceId: opts.workspaceId,
+          cwd: opts.cwd,
+          sessionId: opts.sessionId,
+          sessionView: opts.sessionView,
+          paneId: opts.paneId,
+        });
+        const sessionId = typeof resolved === "object" && resolved ? (resolved.sessionId ?? "session-1") : "session-1";
+        await mocked.fetchAgentState({ tabId: opts.tabId, sessionId });
+        await mocked.fetchAgentMessages({ tabId: opts.tabId, sessionId });
+        await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId });
+        await mocked.refreshAgentSessionStats(sessionId);
+      },
+    ),
+    recoverAgentSessionAfterReconnect: vi.fn(
+      async (opts: {
+        tabId: string;
+        workspaceId: string;
+        cwd: string;
+        sessionId: string;
+        sessionView: string;
+        paneId?: string;
+      }) => {
+        await mocked.reattachPiSession(opts.tabId);
+        await mocked.fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
+        await mocked.fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
+        await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
+        await mocked.refreshAgentSessionStats(opts.sessionId);
+      },
+    ),
+    restartAgentSessionForProvider: vi.fn(
+      async (opts: {
+        tabId: string;
+        workspaceId: string;
+        cwd: string;
+        paneId?: string;
+        sessionId: string;
+        providerId: string;
+      }) => {
+        await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
+        const models = agentChatStore.getState().sessionsByTabId[opts.tabId]?.availableModels ?? [];
+        const providerVisible = models.some(
+          (model) => model.provider?.trim().toLowerCase() === opts.providerId.trim().toLowerCase(),
+        );
+        if (providerVisible) {
+          return;
+        }
+        await mocked.stopPiSession(opts.tabId);
+        try {
+          const resolved = await mocked.ensurePiSession({
+            tabId: opts.tabId,
+            workspaceId: opts.workspaceId,
+            cwd: opts.cwd,
+            sessionId: opts.sessionId,
+            paneId: opts.paneId,
+          });
+          const sessionId =
+            typeof resolved === "object" && resolved ? (resolved.sessionId ?? opts.sessionId) : opts.sessionId;
+          await mocked.fetchAgentState({ tabId: opts.tabId, sessionId });
+          await mocked.fetchAgentMessages({ tabId: opts.tabId, sessionId });
+          await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId });
+          await mocked.refreshAgentSessionStats(sessionId);
+        } catch (error) {
+          agentChatStore.getState().setSessionError(opts.tabId, error instanceof Error ? error.message : String(error));
+        }
+      },
+    ),
     getDaemonClient: vi.fn().mockResolvedValue({
       events: {
         frontendStream: {
@@ -89,7 +191,7 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../commands/agentChatCommands", () => ({
+vi.mock("../../features/agent/commands/agentChatCommands", () => ({
   abortAgent: mocked.abortAgent,
   clearPiSessionHandle: mocked.clearPiSessionHandle,
   ensurePiSession: mocked.ensurePiSession,
@@ -102,18 +204,24 @@ vi.mock("../../commands/agentChatCommands", () => ({
   refreshAgentSessionStats: mocked.refreshAgentSessionStats,
   respondToAgentExtensionUiRequest: mocked.respondToAgentExtensionUiRequest,
   sendAgentPrompt: mocked.sendAgentPrompt,
+  stopPiSession: mocked.stopPiSession,
+  startAgentChatSession: mocked.startAgentChatSession,
+  recoverAgentSessionAfterReconnect: mocked.recoverAgentSessionAfterReconnect,
+  restartAgentSessionForProvider: mocked.restartAgentSessionForProvider,
+}));
+
+vi.mock("../../features/agent/events/agentChatPiEventShared", () => ({
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
   setAgentModel: mocked.setAgentModel,
   setAgentThinkingLevel: mocked.setAgentThinkingLevel,
-  stopPiSession: mocked.stopPiSession,
 }));
 
-vi.mock("../../commands/agentChatSubagentCommands", () => ({
+vi.mock("../../features/agent/commands/agentChatSubagentCommands", () => ({
   cancelSubagentRun: mocked.cancelSubagentRun,
   openSubagentSessionInRightSplitPane: mocked.openSubagentSessionInRightSplitPane,
 }));
 
-vi.mock("../../commands/tabCommands", () => ({
+vi.mock("../../features/workbench/commands/tabCommands", () => ({
   renameTab: vi.fn(),
   readTabStoreState: () => ({ tabs: mocked.stateRef.current.tabs }),
 }));

@@ -1,6 +1,12 @@
 import { readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
+import { registerPermissionPolicy } from "./security/permissionPolicy";
+import { wireAppLifecycle } from "./lifecycle/appLifecycle";
+import { UpdateRuntime } from "./updates/updateRuntime";
+import { MainWindow } from "./window/mainWindow";
+export { isPermissionAllowed } from "./security/permissionPolicy";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
@@ -15,39 +21,26 @@ import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHAN
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
 import { isDevMode } from "./runtime/environment";
-import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./updates/autoUpdateDismissalState";
-import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
 
 type DispatchActionOptions = {
   focusApp?: boolean;
 };
 
-const WORKSPACE_FILE_PROTOCOL = "yishan-file";
-const WORKSPACE_FILE_PROTOCOL_HOST = "workspace-file";
-
-function isPathWithinOrEqual(rootPath: string, candidatePath: string): boolean {
-  const normalizedRootPath = resolve(rootPath);
-  const normalizedCandidatePath = resolve(candidatePath);
-  return normalizedCandidatePath === normalizedRootPath || normalizedCandidatePath.startsWith(`${normalizedRootPath}/`);
-}
-
-const ALLOWED_PERMISSIONS = new Set(["media", "clipboard-read", "clipboard-write", "clipboard-sanitized-write"]);
-
-export function isPermissionAllowed(permission: string): boolean {
-  return ALLOWED_PERMISSIONS.has(permission);
-}
-
 /**
  * Owns Electron desktop lifecycle and main window bootstrap.
  */
 export class DesktopApplication {
-  private mainWindow: BrowserWindow | null = null;
+  private readonly mainWindow = new MainWindow({
+    shouldAllowClose: () => this.isQuitting,
+    onClosed: () => {},
+  });
+  private readonly updateRuntime = new UpdateRuntime(app, {
+    sendEvent: (payload) => this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, payload),
+    focusApp: () => this.focusMainWindow(),
+  });
   private readonly daemonManager = new DaemonManager();
-  private hasProcessedBeforeQuit = false;
   private isQuitting = false;
   private pendingProtocolUrl: string | null = null;
-  private pendingUpdateReady: DesktopUpdateEventPayload | null = null;
-  private dismissedAutoUpdateDate: string | null = null;
   private cachedDaemonQuitOnExit: boolean | null = null;
 
   /**
@@ -88,8 +81,8 @@ export class DesktopApplication {
    */
   private async start(): Promise<void> {
     await app.whenReady();
-    this.registerWorkspaceFileProtocol();
-    this.registerPermissionHandlers();
+    registerWorkspaceFileProtocol();
+    registerPermissionPolicy(session.defaultSession, (webContentsId) => webContentsId === this.mainWindow.webContentsId);
 
     const defaultAppEntry = process.argv[1];
     if (process.defaultApp && defaultAppEntry) {
@@ -115,7 +108,8 @@ export class DesktopApplication {
     await this.daemonManager.ensureStarted();
     this.registerHostIpcHandlers();
     this.registerAuthIpcHandlers();
-    this.createMainWindow();
+    this.mainWindow.create();
+    this.mainWindow.loadRenderer();
     configureApplicationMenu({
       appName: "Yishan",
       devMode: isDevMode(),
@@ -123,136 +117,32 @@ export class DesktopApplication {
         this.dispatchAction(payload, options);
       },
       checkForUpdates: () => {
-        void this.handleManualUpdateCheck();
+        void this.updateRuntime.handleManualUpdateCheck();
       },
     });
-    startAutoUpdates({
-      app,
-      notifyUpdateEvent: (payload) => {
-        this.dispatchUpdateEvent(payload);
+    this.updateRuntime.startAutoUpdates();
+
+    wireAppLifecycle(app, {
+      confirmQuit: () => this.confirmQuit(),
+      runBeforeQuitCleanup: () => this.runBeforeQuitCleanup(),
+      onProtocolUrl: (callbackUrl) => this.handleProtocolCallbackUrl(callbackUrl),
+      onActivate: () => {
+        if (this.mainWindow.browserWindow && !this.mainWindow.browserWindow.isDestroyed()) {
+          this.mainWindow.focus();
+        } else {
+          this.mainWindow.create();
+          this.mainWindow.loadRenderer();
+        }
       },
-    });
-
-    app.on("before-quit", (event) => {
-      this.isQuitting = true;
-
-      if (this.hasProcessedBeforeQuit) {
-        return;
-      }
-
-      event.preventDefault();
-
-      void this.confirmQuit().then((shouldQuit) => {
-        if (!shouldQuit) {
-          this.isQuitting = false;
-          return;
-        }
-
-        this.hasProcessedBeforeQuit = true;
-        void this.runBeforeQuitCleanup().finally(() => {
-          app.quit();
-        });
-      });
-    });
-
-    app.on("activate", () => {
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.show();
-      } else {
-        this.createMainWindow();
-      }
-    });
-
-    app.on("open-url", (event, callbackUrl) => {
-      event.preventDefault();
-      this.handleProtocolCallbackUrl(callbackUrl);
-    });
-
-    app.on("window-all-closed", () => {
-      if (process.platform !== "darwin" || this.isQuitting) {
-        app.quit();
-      }
-    });
-
-    if (this.pendingProtocolUrl) {
-      const callbackUrl = this.pendingProtocolUrl;
-      this.pendingProtocolUrl = null;
-      this.handleProtocolCallbackUrl(callbackUrl);
-    }
-  }
-
-  private registerWorkspaceFileProtocol(): void {
-    protocol.handle(WORKSPACE_FILE_PROTOCOL, async (request) => {
-      try {
-        const parsedUrl = new URL(request.url);
-        if (parsedUrl.hostname !== WORKSPACE_FILE_PROTOCOL_HOST) {
-          return new Response("Not found", { status: 404 });
-        }
-
-        const workspaceWorktreePath = parsedUrl.searchParams.get("workspaceWorktreePath")?.trim() ?? "";
-        const relativePath = parsedUrl.searchParams.get("relativePath")?.trim() ?? "";
-        if (!workspaceWorktreePath || !relativePath) {
-          return new Response("Missing workspaceWorktreePath or relativePath", { status: 400 });
-        }
-
-        const resolvedWorktreePath = resolve(workspaceWorktreePath);
-        const resolvedFilePath = resolve(resolvedWorktreePath, relativePath);
-        if (!isPathWithinOrEqual(resolvedWorktreePath, resolvedFilePath)) {
-          return new Response("Path escapes workspace root", { status: 403 });
-        }
-
-        const fileUrl = pathToFileURL(resolvedFilePath).toString();
-
-        // Handle Range requests (required for <audio>/<video> seeking)
-        const rangeHeader = request.headers.get("Range");
-        if (rangeHeader) {
-          const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
-          if (match) {
-            const fileStat = await stat(resolvedFilePath);
-            const fileSize = fileStat.size;
-            const start = match[1] ? Number.parseInt(match[1], 10) : 0;
-            const end = match[2] ? Number.parseInt(match[2], 10) : fileSize - 1;
-            const chunkSize = end - start + 1;
-
-            // Use net.fetch for the file:// URL — it handles byte serving natively
-            const fileResponse = await net.fetch(fileUrl, {
-              headers: { Range: rangeHeader },
-            });
-
-            if (fileResponse.status === 206) {
-              return fileResponse;
-            }
-
-            // Fallback: read the chunk ourselves
-            const buffer = Buffer.alloc(chunkSize);
-            const fd = await import("node:fs/promises").then((m) => m.open(resolvedFilePath, "r"));
-            await fd.read(buffer, 0, chunkSize, start);
-            await fd.close();
-
-            const mimeType = fileResponse.headers.get("Content-Type") ?? "application/octet-stream";
-            return new Response(buffer, {
-              status: 206,
-              headers: {
-                "Content-Type": mimeType,
-                "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-                "Content-Length": `${chunkSize}`,
-                "Accept-Ranges": "bytes",
-              },
-            });
-          }
-        }
-
-        // No Range header — return the full file (no stat() needed)
-        const fileResponse = await net.fetch(fileUrl);
-        const headers = new Headers(fileResponse.headers);
-        headers.set("Accept-Ranges", "bytes");
-        return new Response(fileResponse.body, {
-          status: fileResponse.status,
-          headers,
-        });
-      } catch {
-        return new Response("Failed to read workspace file", { status: 500 });
-      }
+      isQuitting: () => this.isQuitting,
+      setQuitting: (quitting) => {
+        this.isQuitting = quitting;
+      },
+      takePendingProtocolUrl: () => {
+        const callbackUrl = this.pendingProtocolUrl;
+        this.pendingProtocolUrl = null;
+        return callbackUrl;
+      },
     });
   }
 
@@ -380,8 +270,9 @@ export class DesktopApplication {
         properties: ["openDirectory", "createDirectory"],
         defaultPath: input?.startingFolder?.trim() || undefined,
       };
-      const result = this.mainWindow
-        ? await dialog.showOpenDialog(this.mainWindow, options)
+      const window = this.mainWindow.browserWindow;
+      const result = window
+        ? await dialog.showOpenDialog(window, options)
         : await dialog.showOpenDialog(options);
 
       if (result.canceled) {
@@ -392,56 +283,39 @@ export class DesktopApplication {
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.toggleMainWindowMaximized, async () => {
-      const window = this.mainWindow;
-      if (!window) {
-        return { ok: true };
-      }
-
-      if (window.isMaximized()) {
-        window.unmaximize();
-      } else {
-        window.maximize();
-      }
-
+      this.mainWindow.toggleMaximized();
       return { ok: true };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.getMainWindowFullscreenState, async () => {
       return {
-        isFullscreen: this.mainWindow?.isFullScreen() ?? false,
+        isFullscreen: this.mainWindow.isFullscreen(),
       };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.getPendingUpdate, async () => {
-      return this.pendingUpdateReady;
+      return this.updateRuntime.getPendingUpdate();
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.dismissUpdate, async () => {
-      await this.dismissUpdate();
+      await this.updateRuntime.dismissUpdate();
       return { ok: true as const };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.checkForUpdates, async () => {
-      await this.handleManualUpdateCheck();
+      await this.updateRuntime.handleManualUpdateCheck();
       return { ok: true as const };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.downloadUpdate, async () => {
-      const result = await downloadUpdate();
-      if (!result.ok) {
-        this.dispatchUpdateEvent({ status: "error", source: "download", message: result.error });
-      }
-      return result;
+      return this.updateRuntime.download();
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.installUpdate, async () => {
       // Mark quit intent before electron-updater closes windows so the
       // macOS close handler does not convert update restart into a hide.
       this.isQuitting = true;
-      if (!this.hasProcessedBeforeQuit) {
-        this.hasProcessedBeforeQuit = true;
-        await this.runBeforeQuitCleanup();
-      }
+      await this.runBeforeQuitCleanup();
       autoUpdater.quitAndInstall(false, true);
       return { ok: true as const };
     });
@@ -477,8 +351,9 @@ export class DesktopApplication {
       noLink: true,
     };
 
-    const result = this.mainWindow
-      ? await dialog.showMessageBox(this.mainWindow, messageBoxOptions)
+    const window = this.mainWindow.browserWindow;
+    const result = window
+      ? await dialog.showMessageBox(window, messageBoxOptions)
       : await dialog.showMessageBox(messageBoxOptions);
 
     return result.response === 1;
@@ -486,13 +361,12 @@ export class DesktopApplication {
 
   /** Focuses the main window when menu actions should bring the app forward. */
   private focusMainWindow(): void {
-    this.mainWindow?.show();
-    this.mainWindow?.focus();
+    this.mainWindow.focus();
   }
 
   /** Forwards one native menu action to renderer listeners. */
   private dispatchAction(payload: AppActionPayload, options?: DispatchActionOptions): void {
-    this.mainWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+    this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
       method: "appAction",
       payload,
     });
@@ -502,297 +376,8 @@ export class DesktopApplication {
     }
   }
 
-  /** Forwards app update events to renderer update prompts. */
-  private dispatchUpdateEvent(payload: DesktopUpdateEventPayload): void {
-    if (shouldSuppressAutoUpdateEvent(payload, this.dismissedAutoUpdateDate)) {
-      this.pendingUpdateReady = null;
-      return;
-    }
 
-    this.pendingUpdateReady = payload.status === "not-available" || payload.status === "error" ? null : payload;
-    this.mainWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-      method: "desktopUpdate",
-      payload,
-    });
-  }
 
-  /** Dismisses the current update prompt and records same-day auto-update suppression when needed. */
-  private async dismissUpdate(): Promise<void> {
-    const pendingUpdate = this.pendingUpdateReady;
-    this.pendingUpdateReady = null;
 
-    if (pendingUpdate?.status !== "available" || pendingUpdate.source !== "auto") {
-      return;
-    }
 
-    const dismissedDate = resolveLocalCalendarDate();
-    this.dismissedAutoUpdateDate = dismissedDate;
-  }
-
-  /** Handles a manual "Check for Updates" request from the native menu. */
-  private async handleManualUpdateCheck(): Promise<void> {
-    // Disable the menu item while checking to provide visual feedback.
-    this.setUpdateMenuItemEnabled(false, "Checking for Updates…");
-    this.focusMainWindow();
-    this.dispatchUpdateEvent({ status: "checking", source: "manual" });
-
-    try {
-      const result = await checkForUpdatesManually({ app });
-
-      this.setUpdateMenuItemEnabled(true);
-
-      switch (result.status) {
-        case "update-available": {
-          this.dispatchUpdateEvent({ status: "available", source: "manual", version: result.version });
-          break;
-        }
-        case "up-to-date": {
-          this.dispatchUpdateEvent({ status: "not-available", source: "manual" });
-          break;
-        }
-        case "error": {
-          this.dispatchUpdateEvent({ status: "error", source: "manual", message: result.message });
-          break;
-        }
-        case "not-available": {
-          const reason =
-            result.reason === "development"
-              ? "Update checking is not available in development mode."
-              : "Update checking is not available for unpackaged builds.";
-          this.dispatchUpdateEvent({ status: "error", source: "manual", message: reason });
-          break;
-        }
-      }
-    } catch (error: unknown) {
-      this.setUpdateMenuItemEnabled(true);
-      const message = error instanceof Error ? error.message : "An unexpected error occurred.";
-      this.dispatchUpdateEvent({ status: "error", source: "manual", message });
-    }
-  }
-
-  /** Updates the "Check for Updates" menu item's enabled state and label. */
-  private setUpdateMenuItemEnabled(enabled: boolean, label = "Check for Updates"): void {
-    const menu = Menu.getApplicationMenu();
-    if (!menu) return;
-
-    const appMenu = menu.items[0]?.submenu;
-    if (!appMenu) return;
-
-    const updateItem = appMenu.items.find(
-      (item) => item.label === "Check for Updates" || item.label === "Checking for Updates…",
-    );
-    if (updateItem) {
-      updateItem.enabled = enabled;
-      updateItem.label = label;
-    }
-  }
-
-  /**
-   * Creates and initializes the main BrowserWindow instance.
-   */
-  private createMainWindow() {
-    const isToggleDevToolsShortcut = (input: Electron.Input): boolean => {
-      if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
-        return false;
-      }
-
-      const normalizedKey = input.key.trim().toLowerCase();
-      if (normalizedKey === "f12") {
-        return true;
-      }
-
-      if (normalizedKey !== "i") {
-        return false;
-      }
-
-      if (process.platform === "darwin") {
-        return input.meta && input.alt;
-      }
-
-      return input.control && input.shift;
-    };
-
-    const isPrimaryShortcutModifierPressed = (input: Electron.Input): boolean => {
-      return process.platform === "darwin" ? input.meta && !input.control : input.control && !input.meta;
-    };
-
-    const isWebviewReservedShortcut = (input: Electron.Input): boolean => {
-      const normalizedKey = input.key.trim().toLowerCase();
-      const isPrimaryModifier = isPrimaryShortcutModifierPressed(input);
-      if (!isPrimaryModifier || input.alt) {
-        return false;
-      }
-
-      if (input.shift) {
-        return (
-          normalizedKey === "b" ||
-          normalizedKey === "r" ||
-          normalizedKey === "f" ||
-          normalizedKey === "g" ||
-          normalizedKey === "w"
-        );
-      }
-
-      if (
-        normalizedKey === "/" ||
-        normalizedKey === "w" ||
-        normalizedKey === "y" ||
-        normalizedKey === "n" ||
-        normalizedKey === "t"
-      ) {
-        return true;
-      }
-
-      if (
-        normalizedKey === "b" ||
-        normalizedKey === "l" ||
-        normalizedKey === "p" ||
-        normalizedKey === "o" ||
-        normalizedKey === "z"
-      ) {
-        return true;
-      }
-
-      if (normalizedKey === "backspace" || normalizedKey === "delete") {
-        return true;
-      }
-
-      return /^[1-9]$/.test(normalizedKey);
-    };
-
-    const mainWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      minWidth: 900,
-      minHeight: 600,
-      titleBarStyle: "hiddenInset",
-      webPreferences: {
-        preload: join(__dirname, "preload.js"),
-        contextIsolation: true,
-        nodeIntegration: false,
-        webviewTag: true,
-      },
-    });
-
-    // On macOS, intercept the window close to hide instead of destroy,
-    // allowing the app to stay in the Dock. During a quit flow, allow
-    // the close to proceed so the app can fully terminate.
-    if (process.platform === "darwin") {
-      mainWindow.on("close", (event) => {
-        if (!this.isQuitting) {
-          event.preventDefault();
-          mainWindow.hide();
-        }
-      });
-    }
-
-    // Intercept popup/new-window requests from <webview> guests (e.g. Cmd+Click,
-    // target="_blank", window.open) and forward the URL to the renderer so it can
-    // open the destination in a new in-app browser tab instead of a popup window.
-    const isWorkspaceNavigationShortcut = (input: Electron.Input): boolean => {
-      if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
-        return false;
-      }
-
-      const normalizedKey = input.key.trim().toLowerCase();
-      return (
-        input.control && input.meta && !input.alt && !input.shift && (normalizedKey === "j" || normalizedKey === "k")
-      );
-    };
-
-    mainWindow.webContents.on("before-input-event", (inputEvent, input) => {
-      if (isToggleDevToolsShortcut(input)) {
-        mainWindow.webContents.toggleDevTools();
-        inputEvent.preventDefault();
-        return;
-      }
-
-      if (isWorkspaceNavigationShortcut(input)) {
-        inputEvent.preventDefault();
-        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "webviewKeydown",
-          payload: {
-            key: input.key,
-            code: input.code,
-            ctrlKey: input.control,
-            metaKey: input.meta,
-            shiftKey: input.shift,
-            altKey: input.alt,
-          },
-        });
-      }
-    });
-
-    mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
-      webviewContents.on("before-input-event", (_inputEvent, input) => {
-        if (isToggleDevToolsShortcut(input)) {
-          mainWindow.webContents.toggleDevTools();
-          _inputEvent.preventDefault();
-          return;
-        }
-
-        if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
-          return;
-        }
-
-        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "webviewKeydown",
-          payload: {
-            key: input.key,
-            code: input.code,
-            ctrlKey: input.control,
-            metaKey: input.meta,
-            shiftKey: input.shift,
-            altKey: input.alt,
-          },
-        });
-
-        // Let native edit shortcuts reach Chromium, but suppress known app-level
-        // bindings so they don't trigger both page/menu behavior and app actions.
-        if (isWebviewReservedShortcut(input)) {
-          _inputEvent.preventDefault();
-        }
-      });
-
-      webviewContents.setWindowOpenHandler((details) => {
-        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "webviewOpenUrl",
-          payload: { url: details.url },
-        });
-        return { action: "deny" };
-      });
-    });
-
-    mainWindow.on("closed", () => {
-      if (this.mainWindow === mainWindow) {
-        this.mainWindow = null;
-      }
-    });
-
-    const rendererUrl = process.env.ELECTRON_RENDERER_URL;
-
-    if (rendererUrl) {
-      void mainWindow.loadURL(rendererUrl);
-      mainWindow.webContents.openDevTools({ mode: "detach" });
-    } else {
-      void mainWindow.loadFile(join(__dirname, "..", "renderer", "index.html"));
-    }
-
-    this.mainWindow = mainWindow;
-  }
-
-  private registerPermissionHandlers(): void {
-    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-      // Media stays available to all webContents (unchanged behavior); the
-      // clipboard grants are scoped to the main window only so arbitrary
-      // BrowserView <webview> content never gets them.
-      const isMainWindow = _webContents?.id === this.mainWindow?.webContents?.id;
-      callback(isPermissionAllowed(permission) && (permission === "media" || isMainWindow));
-    });
-
-    session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
-      const isMainWindow = _webContents?.id === this.mainWindow?.webContents?.id;
-      return isPermissionAllowed(permission) && (permission === "media" || isMainWindow);
-    });
-  }
 }

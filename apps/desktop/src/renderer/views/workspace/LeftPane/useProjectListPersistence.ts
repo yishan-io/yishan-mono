@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "react";
+import {
+  getProjectListPreferences,
+  setProjectListPreferences,
+} from "../../../features/project/commands/projectCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import {
   EMPTY_FOLD_STATE,
   EMPTY_ORDER_STATE,
@@ -92,8 +95,7 @@ export function useProjectListPersistence(input: ProjectListPersistenceInput): v
     let attempt = 0;
     const fetchPreferences = async () => {
       try {
-        const client = await getDaemonClient();
-        const preferences = await client.project.getListPreferences(org);
+        const preferences = await getProjectListPreferences(org);
         if (cancelled) {
           return;
         }
@@ -166,8 +168,7 @@ export function useProjectListPersistence(input: ProjectListPersistenceInput): v
 
 async function pushPreferences(organizationId: string, preferences: ProjectListPreference): Promise<void> {
   try {
-    const client = await getDaemonClient();
-    await client.project.setListPreferences(organizationId, preferences);
+    await setProjectListPreferences(organizationId, preferences);
   } catch (error) {
     // The daemon may be temporarily unreachable; local state stays live and
     // the next change retries the push.

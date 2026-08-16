@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage } from "../../../store/agentChatTypes";
+import type { AgentMessage } from "../../../features/agent/model/agentChatTypes";
 import type { TurnWorkingBlock } from "../transcript/turnModel";
 import { AgentToolCallGroup, buildLiveHeaderGradient } from "./AgentToolCallGroup";
 

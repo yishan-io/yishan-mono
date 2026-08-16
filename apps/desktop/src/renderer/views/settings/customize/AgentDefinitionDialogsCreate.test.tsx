@@ -25,11 +25,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../commands/agentCommands", () => ({
+vi.mock("../../../features/agent/commands/agentCommands", () => ({
   listAgentModels: () => mocked.listAgentModels(),
 }));
 
-vi.mock("../../../commands/customizeCommands", () => ({
+vi.mock("../../../features/settings/commands/customizeCommands", () => ({
   listAgentDefinitions: () => mocked.listAgentDefinitions(),
   getAgentDefinitionDetail: (name: string) => mocked.getAgentDefinitionDetail(name),
   createAgentDefinition: (input: {

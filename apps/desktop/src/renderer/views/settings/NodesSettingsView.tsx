@@ -13,15 +13,17 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
-import { api } from "../../api/client";
+
 import type { NodeRecord, OrganizationMemberRecord } from "../../api/types";
+import { listOrgNodes } from "../../commands/nodeCommands";
+import { listOrganizationMembers } from "../../commands/orgCommands";
 import { unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 
 function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {
   if (!node.ownerUserId) {
@@ -93,8 +95,8 @@ export function NodesSettingsView() {
 
       try {
         const [nextNodes, nextMembers] = await Promise.all([
-          api.node.listByOrg(organizationId),
-          api.org.listMembers(organizationId),
+          listOrgNodes(organizationId),
+          listOrganizationMembers(organizationId),
         ]);
 
         if (cancelled) {

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
-import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { useCommands } from "../../hooks/useCommands";
 
 const RUNS_PANE_MIN_WIDTH = 160;

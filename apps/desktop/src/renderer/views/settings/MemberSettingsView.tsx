@@ -18,14 +18,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
-import { api } from "../../api/client";
+
 import type { OrganizationMemberRecord } from "../../api/types";
-import { leaveOrg, removeOrgMember } from "../../commands/orgCommands";
+import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
 
@@ -86,7 +86,7 @@ export function MemberSettingsView() {
     setHasLoadError(false);
 
     try {
-      const nextMembers = await api.org.listMembers(orgId);
+      const nextMembers = await listOrganizationMembers(orgId);
       if (signal.cancelled) {
         return;
       }

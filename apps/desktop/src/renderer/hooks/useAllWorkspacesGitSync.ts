@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
-import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
+import { projectStore } from "../features/project/model/projectStore";
+import { refreshWorkspaceGitChanges } from "../features/workspace/commands/workspaceCommands";
+import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { isFolderWorkspace } from "../helpers/localFolder";
 import { supportsGitFeatures } from "../helpers/projectGitCapability";
 import { workspaceStore } from "../store/workspaceStore";
@@ -87,7 +89,7 @@ export function useAllWorkspacesGitSync() {
   const refreshStateByWorkspaceId = useRef(new Map<string, WorkspaceRefreshState>());
   const lastSeenVersionByWorktreePath = useRef<Record<string, number>>({});
 
-  const gitRefreshVersionByWorktreePath = workspaceStore((state) => state.gitRefreshVersionByWorktreePath);
+  const gitRefreshVersionByWorktreePath = workspaceProjectionStore((state) => state.gitRefreshVersionByWorktreePath);
 
   useEffect(() => {
     const state = workspaceStore.getState();
@@ -95,7 +97,7 @@ export function useAllWorkspacesGitSync() {
     const selectedWorkspaceId = state.selectedWorkspaceId;
     const lastSeen = lastSeenVersionByWorktreePath.current;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
-    const projectByProjectId = new Map(state.projects.map((project) => [project.id, project]));
+    const projectByProjectId = new Map(projectStore.getState().projects.map((project) => [project.id, project]));
 
     for (const workspaceId of refreshStateByWorkspaceId.current.keys()) {
       if (!activeWorkspaceIds.has(workspaceId)) {

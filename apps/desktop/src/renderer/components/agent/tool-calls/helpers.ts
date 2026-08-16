@@ -1,8 +1,8 @@
 import { getSingularPatch, parseDiffFromFile } from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import { resolveRelativePath, toWorkspaceRelativePath } from "@renderer/components/markdown/markdownHelpers";
-import { openTab } from "../../../commands/tabCommands";
-import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
+import { openTab } from "../../../features/workbench/commands/tabCommands";
+import type { AgentContentBlock, AgentMessage } from "../../../features/agent/model/agentChatTypes";
 
 /** Shared props for one rendered agent tool-call card. */
 export type CompletedSubagentOpenTarget = {

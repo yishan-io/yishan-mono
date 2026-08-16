@@ -2,9 +2,9 @@ import { Box, Button, IconButton, Paper, Slide, Snackbar, Stack, Typography } fr
 import type { SlideProps } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { onAuthExpired } from "../api/restClient";
+import { subscribeAuthExpired } from "../features/session/commands/sessionCommands";
 import { rendererQueryClient } from "../queryClient";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
@@ -19,7 +19,7 @@ export function AuthSessionExpiredSnackbar() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthExpired(() => {
+    const unsubscribe = subscribeAuthExpired(() => {
       if (sessionStore.getState().isAuthenticated) {
         setVisible(true);
       }

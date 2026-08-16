@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
-import type { AgentMessage as AgentMessageType, AgentQueueState } from "../../../store/agentChatTypes";
+import type { AgentMessage as AgentMessageType, AgentQueueState } from "../../../features/agent/model/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import { AgentChatEmptyState } from "./AgentChatEmptyState";
 import { AgentTurn } from "./AgentTurn";

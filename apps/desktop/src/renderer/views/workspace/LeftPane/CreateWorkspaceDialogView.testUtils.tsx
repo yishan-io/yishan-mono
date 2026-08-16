@@ -4,7 +4,8 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, vi } from "vitest";
-import { sessionStore } from "../../../store/sessionStore";
+import { projectStore } from "../../../features/project/model/projectStore";
+import { sessionStore } from "../../../features/session/model/sessionStore";
 import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -26,6 +27,7 @@ const defaultAgentSettingsState = {
 };
 
 const initialWorkspaceStoreState = workspaceStore.getState();
+const initialProjectStoreState = projectStore.getState();
 const initialWorkspaceSettingsStoreState = workspaceSettingsStore.getState();
 const initialSessionStoreState = sessionStore.getState();
 
@@ -89,7 +91,6 @@ export function setupCreateWorkspaceDialogViewTests() {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
-        displayProjectIds: ["repo-1", "repo-2"],
         projects: [
           {
             id: "repo-1",
@@ -115,6 +116,31 @@ export function setupCreateWorkspaceDialogViewTests() {
       },
       true,
     );
+    projectStore.setState({ displayProjectIds: ["repo-1", "repo-2"] });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo One",
+          path: "/tmp/repo-1",
+          localPath: "/tmp/repo-1",
+          worktreePath: "/tmp/worktrees-1",
+          defaultBranch: "main",
+          missing: false,
+        },
+        {
+          id: "repo-2",
+          key: "repo-2",
+          name: "Repo Two",
+          path: "/tmp/repo-2",
+          localPath: "/tmp/repo-2",
+          worktreePath: "/tmp/worktrees-2",
+          defaultBranch: "develop",
+          missing: false,
+        },
+      ],
+    });
 
     getMockedCommands().listGitBranches.mockImplementation(
       async ({ workspaceWorktreePath }: { workspaceWorktreePath: string }): Promise<{ branches: string[] }> => {
@@ -146,6 +172,7 @@ export function setupCreateWorkspaceDialogViewTests() {
   });
 
   afterEach(() => {
+    projectStore.setState(initialProjectStoreState, true);
     workspaceStore.setState(initialWorkspaceStoreState, true);
     workspaceSettingsStore.setState(initialWorkspaceSettingsStoreState, true);
     sessionStore.setState(initialSessionStoreState, true);

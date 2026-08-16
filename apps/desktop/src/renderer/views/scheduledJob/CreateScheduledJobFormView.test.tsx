@@ -3,7 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../../store/sessionStore";
+import { projectStore } from "../../features/project/model/projectStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { CreateScheduledJobFormView } from "./CreateScheduledJobFormView";
 
@@ -57,6 +58,22 @@ describe("CreateScheduledJobFormView", () => {
     sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "node-daemon" });
     workspaceStore.setState({
       selectedProjectId: "project-2",
+      projects: [
+        {
+          id: "project-1",
+          name: "Alpha",
+          icon: "terminal",
+          color: "#111111",
+        },
+        {
+          id: "project-2",
+          name: "Beta",
+          icon: "terminal",
+          color: "#222222",
+        },
+      ],
+    });
+    projectStore.setState({
       projects: [
         {
           id: "project-1",

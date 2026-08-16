@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { ScheduledJobRunsSidebar } from "./ScheduledJobRunsSidebar";
 
 vi.mock("@mui/material", async (importOriginal) => {

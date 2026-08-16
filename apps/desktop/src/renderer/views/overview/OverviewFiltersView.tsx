@@ -2,9 +2,9 @@ import { Box, FormControl, MenuItem, Select, ToggleButton, ToggleButtonGroup, Ty
 import type { SelectChangeEvent } from "@mui/material";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { OverviewTimeRange } from "../../api/overviewApi.types";
-import { setOverviewProjectId, setOverviewTimeRange } from "../../commands/overviewCommands";
-import { overviewStore } from "../../store/overviewStore";
+import type { OverviewTimeRange } from "../../features/overview/commands/overviewCommands";
+import { setOverviewProjectId, setOverviewTimeRange } from "../../features/overview/commands/overviewCommands";
+import { overviewStore } from "../../features/overview/model/overviewStore";
 import type { WorkspaceProjectRecord } from "../../store/types";
 
 const TIME_RANGE_OPTIONS: { value: OverviewTimeRange; label: string }[] = [

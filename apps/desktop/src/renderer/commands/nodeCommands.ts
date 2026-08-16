@@ -1,6 +1,6 @@
 import { api } from "../api";
 import { getErrorMessage } from "../helpers/errorHelpers";
-import { sessionStore } from "../store/sessionStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 
 const errNoOrgSelected = "No organization selected.";
 
@@ -26,4 +26,9 @@ export function updateNodeScope(nodeId: string, scope: "private" | "shared") {
 /** Unregisters one organization node in the selected organization. */
 export function unregisterNode(nodeId: string): Promise<void> {
   return wrapNodeCommand((orgId) => api.node.unregister(orgId, nodeId));
+}
+
+/** Lists all nodes for the given organization (project-tree node hierarchy). */
+export async function listOrgNodes(organizationId: string) {
+  return api.node.listByOrg(organizationId);
 }

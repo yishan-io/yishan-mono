@@ -1,4 +1,4 @@
-import type { AgentMessage } from "../store/agentChatTypes";
+import type { AgentMessage } from "../features/agent/model/agentChatTypes";
 
 // ─── Budget constants ─────────────────────────────────────────────────────────
 

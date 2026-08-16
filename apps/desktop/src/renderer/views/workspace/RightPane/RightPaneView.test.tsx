@@ -82,7 +82,7 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
-vi.mock("../../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => listFiles(...args),
   listFilesBatch: async (input: {
     workspaceId: string;
@@ -137,8 +137,10 @@ vi.mock("../../../mod/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("./fileTree/FileManagerView", async () => {
-  const actual = await vi.importActual<typeof import("./fileTree/FileManagerView")>("./fileTree/FileManagerView");
+vi.mock("../../../features/files/ui/FileManagerView", async () => {
+  const actual = await vi.importActual<typeof import("../../../features/files/ui/FileManagerView")>(
+    "../../../features/files/ui/FileManagerView",
+  );
 
   function TrackedFileManagerView(props: Parameters<typeof actual.FileManagerView>[0]) {
     useEffect(() => {
@@ -188,6 +190,11 @@ vi.mock("./useWorkspacePullRequestState", () => ({
 
 vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
+}));
+
+vi.mock("../../../features/project/model/projectStore", () => ({
+  projectStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ projects: workspaceStoreState.current.projects ?? [] }),
 }));
 
 vi.mock("react-i18next", () => ({

@@ -6,12 +6,15 @@ import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
 import { SplitPaneLayout } from "../components/SplitPaneLayout";
 import { subscribeAppActionEvent } from "../events";
+import { projectStore } from "../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { useAllWorkspacesGitSync } from "../hooks/useAllWorkspacesGitSync";
 import { useCommands } from "../hooks/useCommands";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
-import { sessionStore } from "../store/sessionStore";
+import { useSelectedWorkspaceWithProject } from "../store/selectors";
+import { sessionStore } from "../features/session/model/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -23,8 +26,8 @@ import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
 import { MainPaneView } from "./workspace/MainPaneView";
 import { OnboardingView } from "./workspace/OnboardingView";
 import { WorkspaceLifecycleNoticeView } from "./workspace/WorkspaceLifecycleNoticeView";
-import { AgentChatRecoveryCoordinator } from "./workspace/agentChatRecovery";
-import { TerminalRecoveryCoordinator } from "./workspace/terminal/terminalRecovery";
+import { AgentChatRecoveryCoordinator } from "../features/agent/runtime/agentChatRecovery";
+import { TerminalRecoveryCoordinator } from "../features/terminal/runtime/terminalRecovery";
 
 const LEFT_MIN_WIDTH = 240;
 const MAIN_MIN_WIDTH = 520;
@@ -156,7 +159,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
         void cmd.openEntryInExternalApp({
           workspaceWorktreePath: selectedWorkspace.worktreePath,
-          appId: workspaceStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
+          appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
         });
         return;
       }
@@ -316,19 +319,13 @@ export function WorkspaceView() {
   const [isCreateRepoOpen, setIsCreateRepoOpen] = useState(false);
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
   const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const selectedWorkspaceWorktreePath = workspaceStore(
-    (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath,
+  const { selectedWorkspaceId, selectedWorkspace } = useSelectedWorkspaceWithProject();
+  const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
+  const workspaceGitRefreshVersion = workspaceProjectionStore((state) =>
+    selectedWorkspaceWorktreePath ? (state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0) : 0,
   );
-  const workspaceGitRefreshVersion = workspaceStore((state) => {
-    if (!selectedWorkspaceWorktreePath) {
-      return 0;
-    }
-
-    return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
-  });
   const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
   const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);

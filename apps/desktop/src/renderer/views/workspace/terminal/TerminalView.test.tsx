@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TerminalView } from "./TerminalView";
-import { __resetTerminalRuntimeRegistryForTests, getTerminalRuntime } from "./terminalRuntimeRegistry";
-import { __resetTerminalSessionServiceForTests } from "./terminalSessionService";
+import { __resetTerminalRuntimeRegistryForTests, getTerminalRuntime } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
+import { __resetTerminalSessionServiceForTests } from "../../../features/terminal/runtime/terminalSessionService";
 
 type TerminalOutputEvent =
   | { type: "output"; sessionId: string; chunk: string | Uint8Array; nextIndex: number }
@@ -150,12 +150,12 @@ vi.mock("../../../store/tabStore", () => ({
   tabStore: mocked.tabStore,
 }));
 
-vi.mock("../../../commands/tabCommands", () => ({
+vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   closeTab: mocked.closeTab,
   renameTab: mocked.renameTab,
 }));
 
-vi.mock("../../../commands/terminalCommands", () => ({
+vi.mock("../../../features/terminal/commands/terminalCommands", () => ({
   createTerminalSession: mocked.createTerminalSession,
   listTerminalSessions: mocked.listTerminalSessions,
   readTerminalOutput: mocked.readTerminalOutput,
@@ -247,7 +247,7 @@ vi.mock("@xterm/xterm", () => {
   };
 });
 
-vi.mock("./terminalAddons", () => ({
+vi.mock("../../../features/terminal/runtime/terminalAddons", () => ({
   loadTerminalAddons: mocked.loadTerminalAddons,
 }));
 

@@ -2,8 +2,8 @@ import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/mat
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
-import { api } from "../../api";
-import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../api/scheduledJobApi";
+import { listScheduledJobRuns } from "../../features/scheduled-job/commands/scheduledJobCommands";
+import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";
 
@@ -100,7 +100,7 @@ export function ScheduledJobRunsSidebar({ orgId, job }: ScheduledJobRunsSidebarP
 
   const runsQuery = useQuery({
     queryKey: ["scheduled-job-runs", orgId, job.id],
-    queryFn: () => api.scheduledJob.listRuns(orgId, job.id, 20),
+    queryFn: () => listScheduledJobRuns(orgId, job.id, 20),
     enabled: Boolean(orgId && job.id),
     refetchInterval: (query) => {
       const runs = query.state.data;

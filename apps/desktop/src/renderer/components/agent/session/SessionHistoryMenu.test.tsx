@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   fetchSessionHistory: vi.fn(),
 }));
 
-vi.mock("../../../commands/agentChatCommands", () => ({
+vi.mock("../../../features/agent/commands/agentChatSessionHistory", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 

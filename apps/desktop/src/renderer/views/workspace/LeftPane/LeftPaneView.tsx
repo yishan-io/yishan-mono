@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { useCommands } from "../../../hooks/useCommands";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
@@ -21,8 +22,8 @@ type LeftPaneViewProps = {
 /** Renders repo/workspace navigation and top-level left pane chrome. */
 export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneViewProps = {}) {
   const { t } = useTranslation();
-  const repos = workspaceStore((state) => state.projects);
-  const displayRepoIds = workspaceStore((state) => state.displayProjectIds);
+  const repos = projectStore((state) => state.projects);
+  const displayRepoIds = projectStore((state) => state.displayProjectIds);
   const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
   const filteredRepos = repos.filter((repo) => displayRepoIds.includes(repo.id));
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());

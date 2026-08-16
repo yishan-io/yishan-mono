@@ -5,7 +5,8 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { switchOrganization } from "../commands/orgCommands";
-import { sessionStore } from "../store/sessionStore";
+import { projectStore } from "../features/project/model/projectStore";
+import { sessionStore } from "../features/session/model/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -102,7 +103,7 @@ vi.mock("./workspace/WorkspaceLifecycleNoticeView", () => ({
   WorkspaceLifecycleNoticeView: () => null,
 }));
 
-vi.mock("./workspace/terminal/terminalRecovery", () => ({
+vi.mock("../features/terminal/runtime/terminalRecovery", () => ({
   TerminalRecoveryCoordinator: vi.fn(
     class {
       restoreTerminalTabsFromDaemon = terminalRecoveryMocks.restoreTerminalTabsFromDaemon;
@@ -143,6 +144,7 @@ describe("WorkspaceView", () => {
       selectedWorkspaceId: "",
       workspaces: [],
     });
+    projectStore.setState({ projects: [] });
     workspaceUiStore.setState({ overlayPanel: null });
   });
 
@@ -156,6 +158,7 @@ describe("WorkspaceView", () => {
       isProjectsLoaded: true,
       projects: [{ id: "project-1", name: "Project 1" }],
     });
+    projectStore.setState({ projects: [{ id: "project-1", name: "Project 1" }] });
   }
 
   it("loads the workspace snapshot on mount and again when selected organization changes", async () => {
@@ -290,6 +293,7 @@ describe("WorkspaceView", () => {
 
   it("renders onboarding view when projects are loaded but empty", () => {
     workspaceStore.setState({ isProjectsLoaded: true, projects: [] });
+    projectStore.setState({ projects: [] });
 
     render(
       <MemoryRouter>

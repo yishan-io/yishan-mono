@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgentMessage, AgentModel, AgentSessionStats } from "../../store/agentChatTypes";
+import type { AgentMessage, AgentModel, AgentSessionStats } from "../../features/agent/model/agentChatTypes";
 import { buildAgentChatUsageSummaryLabel, getCompactContextPercent } from "./agentChatUsageSummary";
 
 function buildModel(contextWindow?: number): AgentModel {

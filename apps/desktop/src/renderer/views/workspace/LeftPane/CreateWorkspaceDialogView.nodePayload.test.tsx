@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -80,7 +81,6 @@ describe("CreateWorkspaceDialogView node payload", () => {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
-        displayProjectIds: ["repo-1"],
         projects: [
           {
             id: "repo-1",
@@ -97,6 +97,21 @@ describe("CreateWorkspaceDialogView node payload", () => {
       },
       true,
     );
+    projectStore.setState({ displayProjectIds: ["repo-1"] });
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-1",
+          name: "Repo One",
+          path: "/tmp/repo-1",
+          localPath: "/tmp/repo-1",
+          worktreePath: "/tmp/worktrees-1",
+          defaultBranch: "main",
+          missing: false,
+        },
+      ],
+    });
     agentSettingsStore.setState(
       {
         ...initialAgentSettingsStoreState,

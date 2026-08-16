@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { createNewWhiteboard } from "../../commands/whiteboardCommands";
+import { createNewWhiteboard } from "../../features/workbench/commands/whiteboardCommands";
 import type { SplitDropRegion } from "../../components/SplitDropZone";
 import { resolveDropResult } from "../../components/SplitDropZone";
 import type { TabBarCreateOption } from "../../components/TabBar";
@@ -10,7 +10,7 @@ import type { Commands } from "../../hooks/useCommands";
 import { splitPaneStore } from "../../store/splitPaneStore";
 import { tabStore } from "../../store/tabStore";
 import type { WorkspaceTab } from "../../store/types";
-import { forceFitTerminalRuntimes } from "./terminal/terminalRuntimeRegistry";
+import { forceFitTerminalRuntimes } from "../../features/terminal/runtime/terminalRuntimeRegistry";
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;

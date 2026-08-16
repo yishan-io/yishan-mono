@@ -15,7 +15,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck } from "react-icons/lu";
-import { listSkills, removeSkill, updateAllSkills, updateSkill } from "../../commands/skillCommands";
+import { listSkills, removeSkill, updateAllSkills, updateSkill } from "../../features/settings/commands/skillCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { SettingsCard } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";

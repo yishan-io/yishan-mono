@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
+import type { AgentMessage as AgentMessageType } from "../../../features/agent/model/agentChatTypes";
 import { AgentMessageList } from "./AgentMessageList";
 
 const virtualizerMocks = vi.hoisted(() => ({

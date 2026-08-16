@@ -1,17 +1,7 @@
 import { useEffect, useRef } from "react";
-import {
-  clearPiSessionHandle,
-  ensurePiSession,
-  fetchAgentMessages,
-  fetchAgentModels,
-  fetchAgentState,
-  findTabWithSession,
-  reattachPiSession,
-  refreshAgentSessionStats,
-} from "../../commands/agentChatCommands";
-import { getErrorMessage } from "../../helpers/errorHelpers";
+import { recoverAgentSessionAfterReconnect, startAgentChatSession } from "../../features/agent/commands/agentChatCommands";
 import { subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
-import { agentChatStore } from "../../store/agentChatStore";
+import { agentChatStore } from "../../features/agent/model/agentChatStore";
 import type { AgentChatSessionView } from "../../store/types";
 
 type UseAgentChatSessionLifecycleOptions = {
@@ -24,7 +14,11 @@ type UseAgentChatSessionLifecycleOptions = {
   subagentParentSessionId?: string;
 };
 
-/** Initializes an agent session and restores its daemon connection after reconnects. */
+/**
+ * Initializes an agent session and restores its daemon connection after
+ * reconnects. React binding only — the session start and recovery races live
+ * in AgentSessionRuntime via the AgentChatCommands surface.
+ */
 export function useAgentChatSessionLifecycle({
   tabId,
   workspaceId,
@@ -41,66 +35,24 @@ export function useAgentChatSessionLifecycle({
   useEffect(() => {
     let isDisposed = false;
 
-    const initialize = async (): Promise<void> => {
-      if (isReadOnlySubagentDetail) {
-        const childSessionId = startupSessionIdRef.current ?? tabId;
-        const parentTabId = subagentParentSessionId ? findTabWithSession(subagentParentSessionId) : undefined;
-        const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
-        const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
-        const isChildFinished = parentSession?.finishedSubagents.some(
-          (subagent) => subagent.childSessionId === childSessionId,
-        );
-        const isParentTrackingChild =
-          !isChildFinished &&
-          Boolean(
-            parentSession?.subagentLiveTranscripts[childSessionId] ||
-              parentSession?.subagentProgressTargets.some((target) => target.childSessionId === childSessionId),
-          );
-
-        if (isParentTrackingChild) {
-          agentChatStore.getState().initSession(tabId, childSessionId);
-          agentChatStore.getState().replaceMessages(tabId, initialMessages);
-          agentChatStore.getState().setAvailableModels(tabId, []);
-          agentChatStore.getState().markStateLoaded(tabId);
-          return;
-        }
+    void startAgentChatSession({
+      tabId,
+      workspaceId,
+      cwd,
+      sessionId: startupSessionIdRef.current,
+      sessionView,
+      paneId: startupPaneIdRef.current,
+      subagentParentSessionId,
+    }).then(() => {
+      if (isDisposed) {
+        return;
       }
+    });
 
-      try {
-        const { sessionId: startedSessionId, attached } = await ensurePiSession({
-          tabId,
-          workspaceId,
-          cwd,
-          sessionId: startupSessionIdRef.current,
-          sessionView,
-          paneId: startupPaneIdRef.current,
-        });
-        if (isDisposed) return;
-
-        // A fresh process means the previous owner is gone: any sub-agent rows
-        // started before this moment are interrupted history, not live runs.
-        // An attach means the process is still alive, so rows stay live.
-        agentChatStore.getState().setSubagentSessionEndedAt(tabId, attached ? null : Date.now());
-
-        await fetchAgentState({ tabId, sessionId: startedSessionId });
-        if (isDisposed) return;
-        await fetchAgentMessages({ tabId, sessionId: startedSessionId });
-        if (isDisposed) return;
-        await fetchAgentModels({ tabId, sessionId: startedSessionId });
-        if (isDisposed) return;
-        await refreshAgentSessionStats(startedSessionId);
-      } catch (error) {
-        if (isDisposed) return;
-        agentChatStore.getState().initSession(tabId, tabId);
-        agentChatStore.getState().setSessionError(tabId, getErrorMessage(error));
-      }
-    };
-
-    initialize();
     return () => {
       isDisposed = true;
     };
-  }, [cwd, isReadOnlySubagentDetail, sessionView, subagentParentSessionId, tabId, workspaceId]);
+  }, [cwd, sessionView, subagentParentSessionId, tabId, workspaceId]);
 
   useEffect(() => {
     let hasObservedConnectedState = false;
@@ -125,41 +77,14 @@ export function useAgentChatSessionLifecycle({
           }
 
           // fire-and-forget: the connection-status subscription cannot await recovery.
-          void (async () => {
-            try {
-              await reattachPiSession(tabId);
-              // The process survived the connection drop; rows stay live.
-              agentChatStore.getState().setSubagentSessionEndedAt(tabId, null);
-              await fetchAgentState({ tabId, sessionId: liveSessionId });
-              await fetchAgentMessages({ tabId, sessionId: liveSessionId });
-              await fetchAgentModels({ tabId, sessionId: liveSessionId });
-              await refreshAgentSessionStats(liveSessionId);
-            } catch {
-              // The daemon no longer holds the session (e.g. it was re-run and
-              // started fresh). Drop the stale handle and re-start the session
-              // so the tab heals itself instead of staying broken.
-              clearPiSessionHandle(tabId);
-              try {
-                const { attached } = await ensurePiSession({
-                  tabId,
-                  workspaceId,
-                  cwd,
-                  sessionId: liveSessionId,
-                  sessionView,
-                  paneId: startupPaneIdRef.current,
-                });
-                // Fresh start resets the session; classify pre-existing rows
-                // as interrupted when the previous process is gone.
-                agentChatStore.getState().setSubagentSessionEndedAt(tabId, attached ? null : Date.now());
-                await fetchAgentState({ tabId, sessionId: liveSessionId });
-                await fetchAgentMessages({ tabId, sessionId: liveSessionId });
-                await fetchAgentModels({ tabId, sessionId: liveSessionId });
-                await refreshAgentSessionStats(liveSessionId);
-              } catch (recoveryError) {
-                agentChatStore.getState().setSessionError(tabId, getErrorMessage(recoveryError));
-              }
-            }
-          })();
+          void recoverAgentSessionAfterReconnect({
+            tabId,
+            workspaceId,
+            cwd,
+            sessionId: liveSessionId,
+            sessionView,
+            paneId: startupPaneIdRef.current,
+          });
         }
       }
     });

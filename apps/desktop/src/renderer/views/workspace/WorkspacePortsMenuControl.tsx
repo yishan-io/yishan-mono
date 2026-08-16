@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
-import type { TerminalDetectedPort } from "../../commands/terminalCommands";
+import type { TerminalDetectedPort } from "../../features/terminal/commands/terminalCommands";
 import { PortsTableMenu, type PortsTableMenuRow } from "../../components/PortsTableMenu";
 import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
-import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
 import { tabStore } from "../../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../store/workspaceStore";
@@ -23,7 +22,8 @@ export function WorkspacePortsMenuControl() {
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
-  const { killTerminalProcess, listDetectedPorts, selectTab, setSelectedWorkspaceId } = useCommands();
+  const { killTerminalProcess, listDetectedPorts, selectTab, setSelectedWorkspaceId, subscribeDetectedPorts } =
+    useCommands();
   const [portsMenuAnchorEl, setPortsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [detectedPorts, setDetectedPorts] = useState<TerminalDetectedPort[]>([]);
   const [isKillingByRowId, setIsKillingByRowId] = useState<Record<string, boolean>>({});
@@ -92,17 +92,10 @@ export function WorkspacePortsMenuControl() {
       }
     };
 
-    const unsubscribePortsChanged = subscribeDesktopRpcEvent((event) => {
-      if (event.method !== "terminalDetectedPortsChanged") {
-        return;
+    const unsubscribePortsChanged = subscribeDetectedPorts((ports) => {
+      if (!cancelled) {
+        setDetectedPorts(ports);
       }
-
-      const payload = event.payload as { ports?: TerminalDetectedPort[] } | undefined;
-      if (!Array.isArray(payload?.ports) || cancelled) {
-        return;
-      }
-
-      setDetectedPorts(payload.ports);
     });
 
     void refreshDetectedPorts();
@@ -111,7 +104,13 @@ export function WorkspacePortsMenuControl() {
       cancelled = true;
       unsubscribePortsChanged();
     };
-  }, [closePortsMenu, hasTerminalTabInSelectedWorkspace, listDetectedPorts, selectedWorkspaceId]);
+  }, [
+    closePortsMenu,
+    hasTerminalTabInSelectedWorkspace,
+    listDetectedPorts,
+    selectedWorkspaceId,
+    subscribeDetectedPorts,
+  ]);
 
   if (workspacePorts.length === 0) {
     return null;

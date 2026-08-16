@@ -1,7 +1,7 @@
 import { Box, Paper, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuFolderGit2 } from "react-icons/lu";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { AppMenuView } from "../layout/AppMenuView";
 import { CreateProjectFormView } from "./LeftPane/CreateProjectFormView";
 

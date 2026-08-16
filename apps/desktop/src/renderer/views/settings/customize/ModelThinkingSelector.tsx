@@ -1,16 +1,16 @@
 import { Box, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { listAgentModels } from "../../../commands/agentCommands";
 import { AgentModelSelector } from "../../../components/agent/session/AgentModelSelector";
 import { splitModelId, stripProviderPrefix } from "../../../components/modelPicker";
+import { listAgentModels } from "../../../features/agent/commands/agentCommands";
+import type { AgentModel } from "../../../features/agent/model/agentChatTypes";
 import {
   clampThinkingLevel,
   formatSupportedThinkingLevels,
   isThinkingLevelSupported,
 } from "../../../helpers/agentThinkingLevels";
 import { getPiProviderDisplayName } from "../../../helpers/piProviders";
-import type { AgentModel } from "../../../store/agentChatTypes";
 
 type ModelThinkingSelectorProps = {
   model: string;

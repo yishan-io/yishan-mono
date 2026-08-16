@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next";
 import { LuChartBar } from "react-icons/lu";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
+import { projectStore } from "../../features/project/model/projectStore";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { overviewStore } from "../../store/overviewStore";
+import { overviewStore } from "../../features/overview/model/overviewStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { AgentKindChartView } from "./AgentKindChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
@@ -43,7 +44,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const agentKindBreakdownLoadError = overviewStore((state) => state.agentKindBreakdownLoadError);
   const workspaceInsightsLoadState = overviewStore((state) => state.workspaceInsightsLoadState);
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
 
   const { loadAllOverviewData } = useCommands();
 

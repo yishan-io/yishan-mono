@@ -6,6 +6,7 @@ import { getMainWindowFullscreenState } from "../../commands/appCommands";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../components/projectIcons";
+import { projectStore } from "../../features/project/model/projectStore";
 import { isFolderWorkspace } from "../../helpers/localFolder";
 import { getRendererPlatform } from "../../helpers/platform";
 import { filterVisibleProjects } from "../../helpers/projectHelpers";
@@ -33,8 +34,8 @@ import {
 export function MainPaneTitleBarView() {
   const { t } = useTranslation();
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
-  const projects = workspaceStore((state) => state.projects);
-  const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
+  const projects = projectStore((state) => state.projects);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);

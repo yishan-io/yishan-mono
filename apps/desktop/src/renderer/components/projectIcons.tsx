@@ -39,53 +39,65 @@ import {
   LuUser,
   LuWrench,
 } from "react-icons/lu";
+import {
+  DEFAULT_PROJECT_ICON_ID,
+  PROJECT_COLOR_PRESETS,
+  PROJECT_ICON_IDS,
+  pickRandomProjectColor,
+  pickRandomProjectIcon,
+} from "../features/project/model/projectIconPresets";
+
+const PROJECT_ICON_BY_ID: Record<string, IconType> = {
+  folder: LuFolder,
+  code: LuCode,
+  terminal: LuSquareTerminal,
+  rocket: LuRocket,
+  globe: LuGlobe,
+  book: LuBookOpen,
+  bot: LuBot,
+  layer: LuLayers,
+  settings: LuSettings,
+  briefcase: LuBriefcase,
+  alarm: LuAlarmClock,
+  anchor: LuAnchor,
+  aperture: LuAperture,
+  archive: LuArchive,
+  atom: LuAtom,
+  award: LuAward,
+  badge: LuBadgeCheck,
+  bell: LuBell,
+  bug: LuBug,
+  bulb: LuLightbulb,
+  bus: LuBus,
+  calendar: LuCalendar,
+  camera: LuCamera,
+  cloud: LuCloud,
+  heart: LuHeart,
+  home: LuHouse,
+  image: LuImage,
+  key: LuKey,
+  lock: LuLock,
+  map: LuMap,
+  moon: LuMoon,
+  shield: LuShield,
+  bag: LuShoppingBag,
+  star: LuStar,
+  sun: LuSun,
+  user: LuUser,
+  wrench: LuWrench,
+};
 
 type ProjectIconOption = {
   id: string;
   Icon: IconType;
 };
 
-export const PROJECT_ICON_OPTIONS: ProjectIconOption[] = [
-  { id: "folder", Icon: LuFolder },
-  { id: "code", Icon: LuCode },
-  { id: "terminal", Icon: LuSquareTerminal },
-  { id: "rocket", Icon: LuRocket },
-  { id: "globe", Icon: LuGlobe },
-  { id: "book", Icon: LuBookOpen },
-  { id: "bot", Icon: LuBot },
-  { id: "layer", Icon: LuLayers },
-  { id: "settings", Icon: LuSettings },
-  { id: "briefcase", Icon: LuBriefcase },
-  { id: "alarm", Icon: LuAlarmClock },
-  { id: "anchor", Icon: LuAnchor },
-  { id: "aperture", Icon: LuAperture },
-  { id: "archive", Icon: LuArchive },
-  { id: "atom", Icon: LuAtom },
-  { id: "award", Icon: LuAward },
-  { id: "badge", Icon: LuBadgeCheck },
-  { id: "bell", Icon: LuBell },
-  { id: "bug", Icon: LuBug },
-  { id: "bulb", Icon: LuLightbulb },
-  { id: "bus", Icon: LuBus },
-  { id: "calendar", Icon: LuCalendar },
-  { id: "camera", Icon: LuCamera },
-  { id: "cloud", Icon: LuCloud },
-  { id: "heart", Icon: LuHeart },
-  { id: "home", Icon: LuHouse },
-  { id: "image", Icon: LuImage },
-  { id: "key", Icon: LuKey },
-  { id: "lock", Icon: LuLock },
-  { id: "map", Icon: LuMap },
-  { id: "moon", Icon: LuMoon },
-  { id: "shield", Icon: LuShield },
-  { id: "bag", Icon: LuShoppingBag },
-  { id: "star", Icon: LuStar },
-  { id: "sun", Icon: LuSun },
-  { id: "user", Icon: LuUser },
-  { id: "wrench", Icon: LuWrench },
-];
+export const PROJECT_ICON_OPTIONS: ProjectIconOption[] = PROJECT_ICON_IDS.map((id) => {
+  const Icon = PROJECT_ICON_BY_ID[id];
+  return { id, Icon: Icon ?? LuFolder };
+});
 
-export const DEFAULT_PROJECT_ICON_ID = "folder";
+export { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, pickRandomProjectColor, pickRandomProjectIcon };
 
 /** Finds a configured icon option by its persisted id. */
 export function findProjectIconOption(iconId?: string): ProjectIconOption | undefined {
@@ -105,29 +117,6 @@ export function renderProjectIcon(iconId: string | undefined, size: number): Rea
   }
 
   return <LuFolder size={size} />;
-}
-
-/** Curated palette of background colors for project avatars. */
-export const PROJECT_COLOR_PRESETS = [
-  "#1E66F5",
-  "#0F766E",
-  "#CA8A04",
-  "#DC2626",
-  "#7C3AED",
-  "#DB2777",
-  "#0891B2",
-];
-
-/** Picks a random icon id from the available project icon options. */
-export function pickRandomProjectIcon(): string {
-  const index = Math.floor(Math.random() * PROJECT_ICON_OPTIONS.length);
-  return PROJECT_ICON_OPTIONS[index]!.id;
-}
-
-/** Picks a random color from the curated project color palette. */
-export function pickRandomProjectColor(): string {
-  const index = Math.floor(Math.random() * PROJECT_COLOR_PRESETS.length);
-  return PROJECT_COLOR_PRESETS[index]!;
 }
 
 export const REPO_ICON_OPTIONS = PROJECT_ICON_OPTIONS;

@@ -2,6 +2,7 @@ import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "../../components/settings";
+import { projectStore } from "../../features/project/model/projectStore";
 import { useGitAuthorName } from "../../hooks/useGitAuthorName";
 import {
   type GitBranchPrefixMode,
@@ -19,7 +20,7 @@ const PREVIEW_BRANCH_SUFFIX = "dev-123-settings-polish";
  */
 export function GitWorkspaceSettingsView() {
   const { t } = useTranslation();
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);

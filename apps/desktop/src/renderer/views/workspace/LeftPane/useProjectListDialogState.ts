@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { projectStore } from "../../../features/project/model/projectStore";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -14,7 +15,7 @@ export function useProjectListDialogState() {
 
   const handleOpenCreateWorkspace = useCallback((projectId: string) => {
     // Non-git projects have no worktrees: never surface the create dialog.
-    const project = workspaceStore.getState().projects.find((item) => item.id === projectId);
+    const project = projectStore.getState().projects.find((item) => item.id === projectId);
     if (!supportsGitFeatures(project?.sourceType)) {
       return;
     }

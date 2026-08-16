@@ -38,6 +38,7 @@ const mocked = vi.hoisted(() => {
       collectedAt: 0,
       processes: [],
     }),
+    subscribeDetectedPorts: vi.fn(() => () => {}),
   };
 });
 
@@ -52,7 +53,7 @@ vi.mock("react-router-dom", () => ({
   useInRouterContext: () => false,
 }));
 
-vi.mock("../../store/sessionStore", () => ({
+vi.mock("../../features/session/model/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
@@ -60,6 +61,23 @@ vi.mock("../../store/sessionStore", () => ({
 vi.mock("../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
+
+vi.mock("../../features/project/model/projectStore", () => {
+  const projectStore = (selector: (state: { projects: unknown[]; displayProjectIds: string[] }) => unknown) =>
+    selector({
+      projects: (mocked.stateRef.current.projects as unknown[] | undefined) ?? [],
+      displayProjectIds: (mocked.stateRef.current.displayProjectIds as string[] | undefined) ?? [],
+    });
+  (
+    projectStore as unknown as {
+      getState: () => { projects: unknown[]; displayProjectIds: string[] };
+    }
+  ).getState = () => ({
+    projects: (mocked.stateRef.current.projects as unknown[] | undefined) ?? [],
+    displayProjectIds: (mocked.stateRef.current.displayProjectIds as string[] | undefined) ?? [],
+  });
+  return { projectStore };
+});
 
 vi.mock("../../store/tabStore", () => ({
   tabStore: mocked.workspaceStore,
@@ -88,6 +106,7 @@ vi.mock("../../hooks/useCommands", () => ({
     const state = mocked.stateRef.current as Record<string, unknown>;
     return {
       listDetectedPorts: state.listDetectedPorts,
+      subscribeDetectedPorts: state.subscribeDetectedPorts ?? mocked.subscribeDetectedPorts,
       getTerminalResourceUsage: state.getTerminalResourceUsage ?? mocked.getTerminalResourceUsage,
       retainOpenTerminalTabFocus: state.retainOpenTerminalTabFocus ?? vi.fn(),
       setSelectedRepoId: state.setSelectedRepoId,
@@ -121,7 +140,7 @@ vi.mock("../../commands/appCommands", () => ({
   getMainWindowFullscreenState: () => mocked.getMainWindowFullscreenState(),
 }));
 
-vi.mock("../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   listDetectedExternalAppIds: vi.fn(async () => []),
   writeFile: vi.fn(),
 }));

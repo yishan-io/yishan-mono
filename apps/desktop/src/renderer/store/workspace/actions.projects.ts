@@ -9,12 +9,8 @@ import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetSt
 
 type WorkspaceRepoActions = Pick<
   WorkspaceStoreActions,
-  "load" | "createProject" | "deleteProject" | "updateProjectConfig" | "incrementFileTreeRefreshVersion"
+  "load" | "createProject" | "deleteProject" | "updateProjectConfig"
 >;
-
-function isGitInternalPath(path: string): boolean {
-  return path === ".git" || path.startsWith(".git/");
-}
 
 /** Creates project-related workspace store actions and reconciles backend snapshots with in-memory UI state. */
 export function createWorkspaceRepoActions(
@@ -46,7 +42,7 @@ export function createWorkspaceRepoActions(
     const normalizedOrganizationId = organizationId.trim();
 
     set((state) => {
-      applyCreatedRepoState(state, {
+      applyCreatedRepoState(state as unknown as Parameters<typeof applyCreatedRepoState>[0], {
         name,
         source,
         normalizedPath,
@@ -54,22 +50,18 @@ export function createWorkspaceRepoActions(
         resolvedPath,
         backendProject,
       });
-
-      // Persist display preferences into organization-scoped storage.
-      if (normalizedOrganizationId) {
-        state.organizationPreferencesById ??= {};
-        state.organizationPreferencesById[normalizedOrganizationId] ??= {};
-        const orgPrefs = state.organizationPreferencesById[normalizedOrganizationId];
-        orgPrefs.displayProjectIds = state.displayProjectIds;
-        orgPrefs.knownProjectIds = state.projects.map((project) => project.id);
-      }
     });
   };
 
   return {
     load: (organizationId, projects, workspaces) => {
       set((state) => {
-        applyHydratedStateFromApiData(state, organizationId, projects, workspaces);
+        applyHydratedStateFromApiData(
+          state as unknown as Parameters<typeof applyHydratedStateFromApiData>[0],
+          organizationId,
+          projects,
+          workspaces,
+        );
         state.isProjectsLoaded = true;
       });
     },
@@ -80,28 +72,12 @@ export function createWorkspaceRepoActions(
       }
 
       set((state) => {
-        applyDeletedRepoState(state, projectId);
+        applyDeletedRepoState(state as unknown as Parameters<typeof applyDeletedRepoState>[0], projectId);
       });
     },
     updateProjectConfig: (projectId, config) => {
       set((state) => {
         applyUpdatedRepoConfigState(state, projectId, config);
-      });
-    },
-    incrementFileTreeRefreshVersion: (workspaceWorktreePath, changedRelativePaths) => {
-      const normalizedWorkspaceWorktreePath = workspaceWorktreePath?.trim() ?? "";
-      if (normalizedWorkspaceWorktreePath.length === 0) {
-        return;
-      }
-
-      const normalizedChangedRelativePaths = (changedRelativePaths ?? [])
-        .map((path) => path.trim())
-        .filter((path) => path.length > 0 && !isGitInternalPath(path));
-
-      set((state) => {
-        state.fileTreeRefreshVersion += 1;
-        state.fileTreeChangedRelativePathsByWorktreePath[normalizedWorkspaceWorktreePath] =
-          normalizedChangedRelativePaths;
       });
     },
   };

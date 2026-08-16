@@ -20,17 +20,22 @@ vi.mock("@renderer/components/markdown/markdownService", () => ({
   },
 }));
 
-vi.mock("../../../commands/tabCommands", () => ({
+vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   openTab: mocked.openTab,
   openTabInOppositePane: mocked.openTabInOppositePane,
   openChatFileTab: mocked.openChatFileTab,
 }));
 
-vi.mock("../../../commands/workspaceStoreHelpers", () => ({
-  readWorkspaceStoreState: () => mocked.workspaceState,
-}));
+vi.mock("../../../store/workspaceStore", () => {
+  const selectorMock = (selector: (state: typeof mocked.workspaceState) => unknown) => selector(mocked.workspaceState);
+  return {
+    workspaceStore: Object.assign(selectorMock, {
+      getState: () => mocked.workspaceState,
+    }),
+  };
+});
 
-vi.mock("../../../commands/workspaceCommands", () => ({
+vi.mock("../../../features/workspace/commands/workspaceCommands", () => ({
   selectFolderInFileTree: mocked.selectFolderInFileTree,
 }));
 

@@ -2,7 +2,7 @@ import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
-import { fetchSessionHistory } from "../../commands/agentChatCommands";
+import { fetchSessionHistory } from "../../features/agent/commands/agentChatSessionHistory";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
@@ -98,8 +98,11 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
           {sessions.map((session) => {
             const title =
-              formatAgentSessionTitle(session.previewText || "", t("launch.recent.defaultTitle"), session.sessionName) ||
-              t("launch.recent.defaultTitle");
+              formatAgentSessionTitle(
+                session.previewText || "",
+                t("launch.recent.defaultTitle"),
+                session.sessionName,
+              ) || t("launch.recent.defaultTitle");
             return (
               <Button
                 key={session.sessionId}

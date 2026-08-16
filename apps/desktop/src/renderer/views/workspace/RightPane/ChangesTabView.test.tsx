@@ -50,6 +50,31 @@ vi.mock("../../../commands/gitCommands", () => ({
     mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
+vi.mock("../../../features/workspace/model/workspaceProjectionStore", () => {
+  const project = (selector: (state: { gitRefreshVersionByWorktreePath: Record<string, number> }) => unknown) =>
+    selector({
+      gitRefreshVersionByWorktreePath:
+        (mocks.workspaceState as { gitRefreshVersionByWorktreePath?: Record<string, number> })
+          .gitRefreshVersionByWorktreePath ?? {},
+    });
+  (project as unknown as { getState: () => { gitRefreshVersionByWorktreePath: Record<string, number> } }).getState =
+    () => ({
+      gitRefreshVersionByWorktreePath:
+        (mocks.workspaceState as { gitRefreshVersionByWorktreePath?: Record<string, number> })
+          .gitRefreshVersionByWorktreePath ?? {},
+    });
+  return { workspaceProjectionStore: project };
+});
+
+vi.mock("../../../features/project/model/projectStore", () => {
+  const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
+    selector({ projects: (mocks.workspaceState as { projects?: unknown[] }).projects ?? [] });
+  (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
+    projects: (mocks.workspaceState as { projects?: unknown[] }).projects ?? [],
+  });
+  return { projectStore };
+});
+
 vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),

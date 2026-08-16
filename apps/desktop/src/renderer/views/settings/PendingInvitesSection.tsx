@@ -13,9 +13,9 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiX } from "react-icons/bi";
-import { api } from "../../api/client";
+
 import type { OrganizationInviteRecord } from "../../api/types";
-import { cancelOrgInvite } from "../../commands/orgCommands";
+import { cancelOrgInvite, listPendingInvites } from "../../commands/orgCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
@@ -42,7 +42,7 @@ export function PendingInvitesSection({ organizationId, reloadKey }: PendingInvi
     setIsLoading(true);
     setHasLoadError(false);
     try {
-      const nextInvites = await api.org.listInvites(orgId);
+      const nextInvites = await listPendingInvites(orgId);
       if (!signal.cancelled) {
         setInvites(nextInvites);
       }

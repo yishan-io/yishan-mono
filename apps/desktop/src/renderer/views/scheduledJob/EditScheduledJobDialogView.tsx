@@ -2,11 +2,12 @@ import { Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, Stac
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
+import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
+import { projectStore } from "../../features/project/model/projectStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
-import { sessionStore } from "../../store/sessionStore";
+import { sessionStore } from "../../features/session/model/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
 import { useScheduledJobFormState } from "./form/useScheduledJobFormState";
@@ -25,7 +26,7 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
   const { t } = useTranslation();
   const { updateScheduledJob } = useCommands();
   const orgId = sessionStore((state) => state.selectedOrganizationId);
-  const projects = workspaceStore((state) => state.projects);
+  const projects = projectStore((state) => state.projects);
   useDialogRegistration(open);
 
   const initialState = useMemo(() => {

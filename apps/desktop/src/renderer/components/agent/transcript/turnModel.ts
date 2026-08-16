@@ -1,4 +1,4 @@
-import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "../../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "../../../features/agent/model/agentChatTypes";
 import { type AgentToolResultMap, extractMessageText } from "./helpers";
 
 /** One display message inside a turn (assistant messages with merged tool results). */
