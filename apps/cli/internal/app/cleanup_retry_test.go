@@ -8,6 +8,7 @@ import (
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/node"
+	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 )
 
 func openCleanupStoreTestDB(t *testing.T) *sql.DB {
@@ -22,7 +23,6 @@ func openCleanupStoreTestDB(t *testing.T) *sql.DB {
 	}
 	return database
 }
-
 
 func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 	database := openCleanupStoreTestDB(t)
@@ -47,11 +47,17 @@ func TestRetryPendingWorkspaceCleanups_MarksWorkspaceClosed(t *testing.T) {
 		Database:     database,
 		CleanupStore: cleanupStore,
 	})
+	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
+		CleanupStore: cleanupStore,
+		Database:     database,
+		ServerCtx:    context.Background(),
+	})
 	app := &App{
 		store:        localdb.NewStore(workspaceStore),
 		cleanupStore: cleanupStore,
 		database:     database,
 		service:      service,
+		workspaceSvc: workspaceSvc,
 	}
 
 	app.retryPendingCleanups(context.Background())

@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	}}
 	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: "project-1", Path: t.TempDir(), State: workspace.StateActive}
 
-	if err := handler.PersistPrepared(context.Background(), prepared); err != nil {
+	if err := handler.PersistPlan(context.Background(), prepared); err != nil {
 		t.Fatalf("persist prepared workspace: %v", err)
 	}
 	provisioningWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
@@ -48,7 +48,7 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	if provisioningWorkspace.Status != "provisioning" || provisioningWorkspace.LocalPath != "" {
 		t.Fatalf("unexpected provisioning workspace: %#v", provisioningWorkspace)
 	}
-	if err := handler.FinalizePersisted(context.Background(), prepared, created); err != nil {
+	if err := handler.Finalize(context.Background(), prepared, created); err != nil {
 		t.Fatalf("finalize persisted workspace: %v", err)
 	}
 	storedWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
@@ -61,17 +61,13 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 }
 
 // newTestHandler creates a Service for dispatch handler unit tests.
-func newTestHandler(t *testing.T) *Service {
-	t.Helper()
-	return newTestService(t, nil, "node-1")
-}
 
 func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *testing.T) {
 	s := newTestHandler(t)
 	subscriptionID, events := s.deps.Events.Subscribe()
 	defer s.deps.Events.Unsubscribe(subscriptionID)
 
-	s.PublishWorkspaceSnapshotChanged("org-1", "project-1", "workspace-1", "updated")
+	s.PublishSnapshotChanged("org-1", "project-1", "workspace-1", "updated")
 
 	select {
 	case event := <-events:
@@ -105,7 +101,7 @@ func TestHandleWorkspaceCreate_ReturnsPendingWhenAPIRegistrationIsSkipped(t *tes
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := handler.callRPCForTest(context.Background(), MethodWorkspaceCreate, params)
+	result, err := handler.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreate, params)
 	if err != nil {
 		t.Fatalf("handleWorkspaceCreate returned unexpected error: %v", err)
 	}
@@ -152,7 +148,7 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := handler.callRPCForTest(context.Background(), MethodWorkspaceCreate, params)
+	result, err := handler.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreate, params)
 	if err != nil {
 		t.Fatalf("handleWorkspaceCreate returned unexpected error: %v", err)
 	}
@@ -241,7 +237,7 @@ func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	raw, err := s.callRPCForTest(context.Background(), MethodWorkspaceOpenProject, params)
+	raw, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceOpenProject, params)
 	if err != nil {
 		t.Fatalf("handleWorkspaceOpenProject: %v", err)
 	}
@@ -261,7 +257,7 @@ func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 	}
 
 	// Workspace must be in manager now.
-	if _, err := s.getWorkspace("ws-1"); err != nil {
+	if _, err := s.GetWorkspace("ws-1"); err != nil {
 		t.Errorf("workspace ws-1 should be in manager after openProject: %v", err)
 	}
 
@@ -281,7 +277,7 @@ func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, s)
 
 	// Pre-open the workspace directly in the manager with matching metadata.
-	if _, err := s.OpenWorkspace(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
+	if _, err := s.Open(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
 		t.Fatalf("pre-open: %v", err)
 	}
 
@@ -294,7 +290,7 @@ func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	raw, err := s.callRPCForTest(context.Background(), MethodWorkspaceOpenProject, params)
+	raw, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceOpenProject, params)
 	if err != nil {
 		t.Fatalf("handleWorkspaceOpenProject: %v", err)
 	}
@@ -319,7 +315,7 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 	s := newTestHandler(t)
 	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, s)
 
-	if _, err := s.OpenWorkspace(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
+	if _, err := s.Open(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
 		t.Fatalf("pre-open: %v", err)
 	}
 
@@ -335,7 +331,7 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	raw, err := s.callRPCForTest(context.Background(), MethodWorkspaceOpenProject, params)
+	raw, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceOpenProject, params)
 	if err != nil {
 		t.Fatalf("handleWorkspaceOpenProject: %v", err)
 	}
@@ -348,7 +344,7 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 		t.Fatalf("expected no skipped entries, got %v", result.Skipped)
 	}
 
-	repairedWorkspace, err := s.getWorkspace("ws-3")
+	repairedWorkspace, err := s.GetWorkspace("ws-3")
 	if err != nil {
 		t.Fatalf("GetWorkspace: %v", err)
 	}
@@ -381,7 +377,7 @@ func TestHandleWorkspaceOpenProject_MissingFields(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	raw, err := s.callRPCForTest(context.Background(), MethodWorkspaceOpenProject, params)
+	raw, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceOpenProject, params)
 	if err != nil {
 		t.Fatalf("handleWorkspaceOpenProject: %v", err)
 	}
@@ -407,7 +403,7 @@ func TestHandleWorkspaceCloseProject(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	raw, err := s.callRPCForTest(context.Background(), MethodWorkspaceCloseProject, params)
+	raw, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCloseProject, params)
 	if err != nil {
 		t.Fatalf("handleWorkspaceCloseProject: %v", err)
 	}
@@ -454,7 +450,7 @@ func TestHandleWorkspaceClose_RemoteNode_RelaysInsteadOfLocalClose(t *testing.T)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	_, err = s.callRPCForTest(context.Background(), MethodWorkspaceClose, params)
+	_, err = s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, params)
 	if err == nil || !strings.Contains(err.Error(), "relay not connected") {
 		t.Fatalf("expected relay path (relay not connected), got err=%v", err)
 	}
@@ -468,7 +464,7 @@ func TestHandleWorkspaceClose_LocalNode_TakesLocalClosePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	_, err = s.callRPCForTest(context.Background(), MethodWorkspaceClose, params)
+	_, err = s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, params)
 	if err == nil || strings.Contains(err.Error(), "relay not connected") {
 		t.Fatalf("expected local close path (not relay), got err=%v", err)
 	}
@@ -502,7 +498,7 @@ func runDispatchWorkspaceTestGitCmd(t *testing.T, dir string, args ...string) {
 func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 	s := newTestHandler(t)
 	workspacePath := t.TempDir()
-	if _, err := s.OpenWorkspace(workspace.OpenRequest{
+	if _, err := s.Open(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
@@ -514,9 +510,9 @@ func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 		t.Fatalf("remove workspace path: %v", err)
 	}
 
-	s.CheckWorkspaceHealth(context.Background())
+	s.CheckHealth(context.Background())
 
-	ws, err := s.getWorkspace("ws-1")
+	ws, err := s.GetWorkspace("ws-1")
 	if err != nil {
 		t.Fatalf("get workspace: %v", err)
 	}
@@ -538,15 +534,15 @@ func TestCheckWorkspaceHealth_MarksMissingPathWorkspaceError(t *testing.T) {
 func TestCheckWorkspaceHealth_KeepsHealthyWorkspaceActive(t *testing.T) {
 	s := newTestHandler(t)
 	workspacePath := t.TempDir()
-	if _, err := s.OpenWorkspace(workspace.OpenRequest{
+	if _, err := s.Open(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "proj-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 
-	s.CheckWorkspaceHealth(context.Background())
+	s.CheckHealth(context.Background())
 
-	ws, err := s.getWorkspace("ws-1")
+	ws, err := s.GetWorkspace("ws-1")
 	if err != nil {
 		t.Fatalf("get workspace: %v", err)
 	}
@@ -576,7 +572,7 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
-	if _, err := s.OpenWorkspace(workspace.OpenRequest{
+	if _, err := s.Open(workspace.OpenRequest{
 		ID: "ws-1", Path: workspacePath, OrgID: "org-1", ProjectID: "project-1",
 	}); err != nil {
 		t.Fatalf("open workspace: %v", err)
@@ -585,7 +581,7 @@ func TestCheckWorkspaceHealth_PersistsErrorState(t *testing.T) {
 		t.Fatalf("remove workspace path: %v", err)
 	}
 
-	s.CheckWorkspaceHealth(context.Background())
+	s.CheckHealth(context.Background())
 
 	persisted, err := workspaceStore.Get(context.Background(), "ws-1")
 	if err != nil {

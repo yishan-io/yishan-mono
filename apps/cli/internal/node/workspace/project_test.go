@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"os"
@@ -25,7 +25,7 @@ func TestServices_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
 	}
 
 	handler := newTestService(t, nil, "node-1")
-	if _, err := handler.OpenWorkspace(workspace.OpenRequest{
+	if _, err := handler.Open(workspace.OpenRequest{
 		ID:        "workspace-1",
 		Path:      root,
 		ProjectID: "project-1",

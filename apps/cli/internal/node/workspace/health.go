@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 // Only the missing-path condition is monitored here; not-worktree detection
 // stays on demand (workspace.health) to avoid false positives for
 // git-local/primary workspaces that are plain directories.
-func (s *Service) CheckWorkspaceHealth(ctx context.Context) {
+func (s *Service) CheckHealth(ctx context.Context) {
 	for _, ws := range s.deps.Registry.List() {
 		if instance.State(ws.State) != instance.StateActive {
 			continue
@@ -28,7 +28,7 @@ func (s *Service) CheckWorkspaceHealth(ctx context.Context) {
 		if _, statErr := os.Stat(ws.Path); statErr == nil {
 			continue
 		}
-		if _, _, _, refreshErr := s.RefreshWorkspaceHealth(ctx, ws.ID); refreshErr != nil {
+		if _, _, _, refreshErr := s.RefreshHealth(ctx, ws.ID); refreshErr != nil {
 			log.Warn().Err(refreshErr).Str("workspaceId", ws.ID).Msg("workspace health check failed")
 		}
 	}
@@ -38,7 +38,7 @@ func (s *Service) CheckWorkspaceHealth(ctx context.Context) {
 // transitions its state (active → error), persists the change, and emits a
 // workspace state changed event. Returns the resolved state, health detail,
 // and any health-check error message.
-func (s *Service) RefreshWorkspaceHealth(ctx context.Context, workspaceID string) (string, string, string, error) {
+func (s *Service) RefreshHealth(ctx context.Context, workspaceID string) (string, string, string, error) {
 	ws, ok := s.deps.Registry.Get(workspaceID)
 	if !ok {
 		return "", "", "", rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
@@ -57,7 +57,7 @@ func (s *Service) RefreshWorkspaceHealth(ctx context.Context, workspaceID string
 	// Folder workspaces are plain directories, never git worktrees; skip the
 	// git-worktree check so an open folder is never marked not-worktree/error.
 	// Path-missing detection above still applies.
-	if !s.IsFolderWorkspace(ctx, workspaceID) && healthErr == "" {
+	if !s.IsFolder(ctx, workspaceID) && healthErr == "" {
 		isWorktree, checkErr := isGitWorktree(ws.Path)
 		if checkErr != nil {
 			state = instance.StateError
@@ -83,16 +83,16 @@ func (s *Service) RefreshWorkspaceHealth(ctx context.Context, workspaceID string
 		s.WatchAndTrack(workspaceID, ws.Path)
 	}
 
-	if err := s.UpdatePersistedWorkspaceState(ctx, workspaceID, string(state), string(health)); err != nil {
+	if err := s.UpdateState(ctx, workspaceID, string(state), string(health)); err != nil {
 		return "", "", "", err
 	}
 
-	s.emitWorkspaceStateChanged(workspaceID, string(state), string(health), false)
+	s.emitStateChanged(workspaceID, string(state), string(health), false)
 
 	return string(state), string(health), healthErr, nil
 }
 
-func (s *Service) emitWorkspaceStateChanged(workspaceID string, state string, health string, removed bool) {
+func (s *Service) emitStateChanged(workspaceID string, state string, health string, removed bool) {
 	if s.deps.Events == nil {
 		return
 	}
@@ -124,7 +124,7 @@ func isGitWorktree(path string) (bool, error) {
 // kind, so the durable store is the source of truth. Returns false when the row
 // cannot be resolved (no local DB, unknown id) so git workspaces keep current
 // health behavior.
-func (s *Service) IsFolderWorkspace(ctx context.Context, workspaceID string) bool {
+func (s *Service) IsFolder(ctx context.Context, workspaceID string) bool {
 	if s.deps.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return false
 	}

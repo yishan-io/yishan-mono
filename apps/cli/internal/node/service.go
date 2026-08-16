@@ -20,13 +20,14 @@ import (
 	"yishan/apps/cli/internal/node/hook"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
+	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/relay"
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/application"
+
 	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
@@ -60,6 +61,10 @@ type Dependencies struct {
 	LogFilePath  string
 	SettingsPath string
 
+	// Usage tracks which agents ran per workspace (close-time summarization);
+	// owned by the hook package. Shared with the workspace application service.
+	Usage *hook.UsageTracker
+
 	// AgentLifecycleCtx bounds pi agent process lifetimes.
 	AgentLifecycleCtx context.Context
 	// AgentLifecycleCancel cancels AgentLifecycleCtx (daemon shutdown).
@@ -84,9 +89,6 @@ type Dependencies struct {
 type Service struct {
 	deps Dependencies
 
-	// The application service for workspace create/close orchestration.
-	app *application.Service
-
 	// router is the namespace routing table, built by the composition root
 	// (internal/app) and injected via SetRouter.
 	router *rpc.Router
@@ -107,6 +109,10 @@ type Service struct {
 	// terminalSvc is the terminal application service: relay-level terminal
 	// messages (session changes, remote stream notifications) delegate to it.
 	terminalSvc *nodeterminal.Service
+
+	// workspaceSvc is the workspace application service: relay-level
+	// workspace snapshot changes delegate to it.
+	workspaceSvc *nodeworkspace.Service
 }
 
 // NewService builds the local Node application boundary from explicit
@@ -122,8 +128,10 @@ func NewService(deps Dependencies) *Service {
 	service := &Service{
 		deps: deps,
 	}
-	service.app = service.newWorkspaceApplicationService()
-	service.agentUsage = hook.NewUsageTracker()
+	if deps.Usage == nil {
+		deps.Usage = hook.NewUsageTracker()
+	}
+	service.agentUsage = deps.Usage
 	service.hookIngress = hook.NewIngress(hook.IngressDeps{
 		Events:     deps.Events,
 		TokenUsage: deps.TokenUsage,
@@ -187,8 +195,10 @@ func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connect
 		nodesystem.HandleJobRun(s.deps.Runtime, connState, nodeID, params)
 		return true
 	case relay.MethodWorkspaceSnapshotChanged:
-		publishWorkspaceSnapshotChanged(s, params)
-		return true
+		if s.workspaceSvc != nil {
+			return s.workspaceSvc.HandleRelayMessage(ctx, connState, nodeID, method, params)
+		}
+		return false
 	default:
 		if s.terminalSvc != nil {
 			return s.terminalSvc.HandleRelayMessage(ctx, connState, nodeID, method, params)
@@ -207,6 +217,12 @@ func (s *Service) SetTerminalService(svc *nodeterminal.Service) {
 // runs, desktop connection tracking).
 func (s *Service) SetAgentService(svc *nodeagent.Service) {
 	s.agentSvc = svc
+}
+
+// SetWorkspaceService attaches the workspace application service (relay
+// workspace snapshot changes).
+func (s *Service) SetWorkspaceService(svc *nodeworkspace.Service) {
+	s.workspaceSvc = svc
 }
 
 // Shutdown stops the application-owned runtime: it cancels the pi agent

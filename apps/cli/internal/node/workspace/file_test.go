@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"yishan/apps/cli/internal/files"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -21,7 +22,7 @@ func TestDispatchFile_Search(t *testing.T) {
 	}
 
 	handler := newTestService(t, nil, "node-1")
-	openedWorkspace, err := handler.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: root})
+	openedWorkspace, err := handler.Open(workspace.OpenRequest{ID: "ws-1", Path: root})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
@@ -35,7 +36,7 @@ func TestDispatchFile_Search(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	result, err := handler.callRPCForTest(context.Background(), MethodFileSearch, params)
+	result, err := handler.callRPCForTest(context.Background(), rpc.MethodFileSearch, params)
 	if err != nil {
 		t.Fatalf("dispatch file.search: %v", err)
 	}

@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 
 // PublishWorkspaceSnapshotChanged emits the snapshot-changed frontend event
 // that drives the desktop's workspace list refresh.
-func (s *Service) PublishWorkspaceSnapshotChanged(organizationID string, projectID string, workspaceID string, change string) {
+func (s *Service) PublishSnapshotChanged(organizationID string, projectID string, workspaceID string, change string) {
 	if strings.TrimSpace(organizationID) == "" || strings.TrimSpace(projectID) == "" || strings.TrimSpace(workspaceID) == "" {
 		return
 	}
@@ -35,7 +35,7 @@ func (s *Service) PublishWorkspaceSnapshotChanged(organizationID string, project
 
 // PersistPrepared writes the provisioning row for a prepared create before the
 // worktree is provisioned, so the workspace survives a crash mid-create.
-func (s *Service) PersistPrepared(ctx context.Context, prepared application.CreatePlan) error {
+func (s *Service) PersistPlan(ctx context.Context, prepared application.CreatePlan) error {
 	if s.deps.Database == nil || prepared.Registration == nil {
 		return nil
 	}
@@ -48,7 +48,7 @@ func (s *Service) PersistPrepared(ctx context.Context, prepared application.Crea
 // which may not have a local row for the workspace (the origin node wrote it);
 // a missing row is tolerated because the remote record is authoritative and
 // the cache is reconciled on the next sync.
-func (s *Service) FinalizePersisted(ctx context.Context, prepared application.CreatePlan, created workspace.Workspace) error {
+func (s *Service) Finalize(ctx context.Context, prepared application.CreatePlan, created workspace.Workspace) error {
 	if s.deps.Database == nil || prepared.Registration == nil {
 		return nil
 	}
@@ -61,7 +61,7 @@ func (s *Service) FinalizePersisted(ctx context.Context, prepared application.Cr
 
 // UpdatePersistedWorkspaceState writes the runtime state/health to the local
 // row.
-func (s *Service) UpdatePersistedWorkspaceState(ctx context.Context, workspaceID string, state string, health string) error {
+func (s *Service) UpdateState(ctx context.Context, workspaceID string, state string, health string) error {
 	if s.deps.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
@@ -74,7 +74,7 @@ func (s *Service) UpdatePersistedWorkspaceState(ctx context.Context, workspaceID
 
 // ClosePersisted marks the workspace record closed locally and mirrors the
 // closed status on the remote record (best-effort).
-func (s *Service) ClosePersisted(ctx context.Context, workspaceID string) error {
+func (s *Service) MarkClosed(ctx context.Context, workspaceID string) error {
 	if s.deps.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
@@ -85,7 +85,7 @@ func (s *Service) ClosePersisted(ctx context.Context, workspaceID string) error 
 	// Mirror the closed status on the remote record (best-effort). The local row
 	// still carries the org/project ids after the status update.
 	if record, err := workspaceStore.Get(ctx, workspaceID); err == nil {
-		s.CloseRemoteRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID, string(workspace.StatusClosed))
+		s.CloseRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID, string(workspace.StatusClosed))
 	}
 	return nil
 }

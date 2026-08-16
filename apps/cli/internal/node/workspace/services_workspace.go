@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -19,7 +19,7 @@ func (s *Service) ListWorkspaces() (any, error) {
 	return s.deps.Registry.List(), nil
 }
 
-func (s *Service) WorkspaceCreate(ctx context.Context, req rpc.WorkspaceCreateParams) (any, error) {
+func (s *Service) Create(ctx context.Context, req rpc.WorkspaceCreateParams) (any, error) {
 	result, err := s.app.Create(ctx, application.CreateCommand(req))
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (s *Service) WorkspaceCreate(ctx context.Context, req rpc.WorkspaceCreatePa
 	return map[string]any{"id": result.ID, "status": result.Status}, nil
 }
 
-func (s *Service) WorkspaceClose(ctx context.Context, req rpc.WorkspaceCloseParams) (any, error) {
+func (s *Service) Close(ctx context.Context, req rpc.WorkspaceCloseParams) (any, error) {
 	result, err := s.app.Close(ctx, application.CloseCommand(req))
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (s *Service) WorkspaceClose(ctx context.Context, req rpc.WorkspaceClosePara
 	}, nil
 }
 
-func (s *Service) WorkspaceRefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error) {
+func (s *Service) RefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error) {
 	workspaceID := strings.TrimSpace(req.WorkspaceID)
 	workspacePath := strings.TrimSpace(req.Path)
 	if workspaceID == "" && workspacePath == "" {
@@ -50,7 +50,7 @@ func (s *Service) WorkspaceRefreshPullRequest(ctx context.Context, req workspace
 
 	ws, err := func() (workspace.Workspace, error) {
 		if workspaceID != "" {
-			return s.getWorkspace(workspaceID)
+			return s.GetWorkspace(workspaceID)
 		}
 		resolvedWorkspace, ok := s.deps.Registry.GetByPath(workspacePath)
 		if !ok {
@@ -65,28 +65,28 @@ func (s *Service) WorkspaceRefreshPullRequest(ctx context.Context, req workspace
 	s.deps.PRTracker.EnsureTracked(ws.Path, false)
 	s.deps.PRTracker.RefreshWorkspaceByPath(ws.Path)
 
-	refreshedWorkspace, err := s.getWorkspace(ws.ID)
+	refreshedWorkspace, err := s.GetWorkspace(ws.ID)
 	if err != nil {
 		return nil, err
 	}
 	return refreshedWorkspace, nil
 }
 
-func (s *Service) WorkspaceSetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error) {
+func (s *Service) SetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error) {
 	return s.deps.Terminals.SetActiveWorkspace(req)
 }
 
-func (s *Service) WorkspaceSyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error) {
+func (s *Service) SyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error) {
 	return workspace.SyncContextLink(req)
 }
 
-func (s *Service) WorkspaceHealth(ctx context.Context, req rpc.WorkspaceHealthParams) (any, error) {
-	ws, err := s.getWorkspace(req.WorkspaceID)
+func (s *Service) Health(ctx context.Context, req rpc.WorkspaceHealthParams) (any, error) {
+	ws, err := s.GetWorkspace(req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
 
-	state, health, healthErr, err := s.RefreshWorkspaceHealth(ctx, req.WorkspaceID)
+	state, health, healthErr, err := s.RefreshHealth(ctx, req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (s *Service) WorkspaceHealth(ctx context.Context, req rpc.WorkspaceHealthPa
 	}, nil
 }
 
-func (s *Service) WorkspaceOpenProject(ctx context.Context, req rpc.WorkspaceOpenProjectParams) (any, error) {
+func (s *Service) OpenProject(ctx context.Context, req rpc.WorkspaceOpenProjectParams) (any, error) {
 	opened, skipped, openErrors := []string{}, []string{}, []string{}
 	for _, entry := range req.Workspaces {
 		workspaceID, didOpenWorkspace, err := s.openProjectWorkspace(entry)
@@ -131,7 +131,7 @@ func (s *Service) WorkspaceOpenProject(ctx context.Context, req rpc.WorkspaceOpe
 	}, nil
 }
 
-func (s *Service) WorkspaceCloseProject(ctx context.Context, req rpc.WorkspaceCloseProjectParams) (any, error) {
+func (s *Service) CloseProject(ctx context.Context, req rpc.WorkspaceCloseProjectParams) (any, error) {
 	stopped := []string{}
 	for _, wsID := range req.WorkspaceIDs {
 		wsID = strings.TrimSpace(wsID)

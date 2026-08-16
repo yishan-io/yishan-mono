@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"yishan/apps/cli/internal/workspace"
@@ -14,7 +14,7 @@ func (s *Service) summarizeUsedAgents(workspaceID string, closeReq workspace.Clo
 	if len(agents) == 0 {
 		return
 	}
-	ws, err := s.getWorkspace(workspaceID)
+	ws, err := s.GetWorkspace(workspaceID)
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("cannot resolve workspace for agent summarization")
 		return

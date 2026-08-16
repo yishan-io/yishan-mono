@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"yishan/apps/cli/internal/relay"

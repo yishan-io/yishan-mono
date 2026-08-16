@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func wireRelayReader(t *testing.T, s *Service, result map[string]any) {
 		NodeID:      "node-1",
 		URL:         server.URL,
 		StaticToken: "test-token",
-		Server:      rpc.NewServer(s),
+		Server:      rpc.NewServer(noopRPCHandler{}),
 		Handler:     s,
 		Events:      s.deps.Events,
 	})

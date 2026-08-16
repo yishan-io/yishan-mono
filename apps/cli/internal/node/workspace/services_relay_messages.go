@@ -1,12 +1,28 @@
-package node
+package workspace
 
 import (
+	"context"
 	"encoding/json"
-	internalevents "yishan/apps/cli/internal/events"
 	"strings"
+
+	internalevents "yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/relay"
+	"yishan/apps/cli/internal/rpc"
 
 	"github.com/rs/zerolog/log"
 )
+
+// HandleRelayMessage implements relay.MessageHandler for the relay-level
+// workspace snapshot change messages the relay client does not own.
+func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
+	switch method {
+	case relay.MethodWorkspaceSnapshotChanged:
+		publishWorkspaceSnapshotChanged(s, params)
+		return true
+	default:
+		return false
+	}
+}
 
 // publishWorkspaceSnapshotChanged republishes relay workspace snapshot changes
 // as frontend events and runs the relayed create/close workflows on this node
@@ -15,17 +31,17 @@ func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
 	if payload, ok := decodeRelayWorkspaceCreateEnvelope(params); ok {
 		switch payload.Change {
 		case workspaceRelayChangeCreateRequest:
-			handler.handleRelayedWorkspaceCreate(payload)
-			handler.republishRelayedWorkspaceCreate(payload)
+			handler.handleRelayedCreate(payload)
+			handler.republishCreate(payload)
 		default:
-			handler.republishRelayedWorkspaceCreate(payload)
+			handler.republishCreate(payload)
 		}
 		return
 	}
 
 	if payload, ok := decodeRelayWorkspaceCloseEnvelope(params); ok {
 		if payload.Change == relayChangeWorkspaceCloseRequest && strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(handler.deps.NodeID) {
-			handler.handleRelayedWorkspaceClose(payload)
+			handler.handleRelayedClose(payload)
 		}
 		return
 	}

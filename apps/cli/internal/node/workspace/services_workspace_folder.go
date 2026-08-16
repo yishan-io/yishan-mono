@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 // daemon-owned workspace row. The folder is validated before insertion: it must
 // exist, be a directory, must not already be a git repository (folder
 // workspaces are strictly non-git), and must not already be tracked.
-func (s *Service) WorkspaceCreateLocalFolder(ctx context.Context, req rpc.WorkspaceCreateLocalFolderParams) (any, error) {
+func (s *Service) CreateLocalFolder(ctx context.Context, req rpc.WorkspaceCreateLocalFolderParams) (any, error) {
 	if s.deps.Database == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
@@ -23,7 +23,7 @@ func (s *Service) WorkspaceCreateLocalFolder(ctx context.Context, req rpc.Worksp
 	if rawPath == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "path is required")
 	}
-	resolvedPath, err := s.validateFolderWorkspacePath(ctx, rawPath)
+	resolvedPath, err := s.validateFolderPath(ctx, rawPath)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (s *Service) WorkspaceCreateLocalFolder(ctx context.Context, req rpc.Worksp
 // validateFolderWorkspacePath normalizes the raw folder path and verifies it is
 // an existing, non-git directory that is not already tracked as a folder
 // workspace. It returns the normalized absolute path.
-func (s *Service) validateFolderWorkspacePath(ctx context.Context, rawPath string) (string, error) {
+func (s *Service) validateFolderPath(ctx context.Context, rawPath string) (string, error) {
 	resolvedPath := normalizeWorkspaceOpenProjectPath(rawPath)
 	if resolvedPath == "" {
 		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is required")
@@ -95,7 +95,7 @@ func isFolderPathUniqueViolation(err error) bool {
 // WorkspaceListLocalFolders returns all local-only folder workspaces that
 // the daemon has persisted. They are not required to be open in the runtime
 // manager; the desktop opens them on demand.
-func (s *Service) WorkspaceListLocalFolders(ctx context.Context) (any, error) {
+func (s *Service) ListLocalFolders(ctx context.Context) (any, error) {
 	if s.deps.Database == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
@@ -106,7 +106,7 @@ func (s *Service) WorkspaceListLocalFolders(ctx context.Context) (any, error) {
 // is currently open in the runtime manager, its terminals are stopped and it is
 // unregistered from memory before the row is deleted. Git teardown is not
 // performed: folder workspaces are plain directories, not worktrees.
-func (s *Service) WorkspaceDeleteLocalFolder(ctx context.Context, req rpc.WorkspaceDeleteLocalFolderParams) (any, error) {
+func (s *Service) DeleteLocalFolder(ctx context.Context, req rpc.WorkspaceDeleteLocalFolderParams) (any, error) {
 	if s.deps.Database == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
@@ -117,7 +117,7 @@ func (s *Service) WorkspaceDeleteLocalFolder(ctx context.Context, req rpc.Worksp
 	// manager so no live handle survives deletion. Mirror the workspace-close
 	// teardown so no filesystem watcher or pull-request tracker entry leaks and
 	// keeps polling a deleted folder.
-	if ws, err := s.getWorkspace(req.ID); err == nil {
+	if ws, err := s.GetWorkspace(req.ID); err == nil {
 		s.deps.Terminals.StopAllForWorkspace(req.ID)
 		s.deps.Watchers.Unwatch(ws.Path)
 		s.deps.PRTracker.StopTracking(req.ID)

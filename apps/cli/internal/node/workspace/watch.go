@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"strings"
@@ -19,7 +19,7 @@ func (s *Service) WatchAndTrack(workspaceID string, path string) {
 // warmup skips already-registered workspaces, so without this step no watcher
 // would ever be created for pre-existing workspaces after a daemon restart
 // and file-change events (which drive the Git Changes tab) would stop flowing.
-func (s *Service) WatchActiveWorkspaces() {
+func (s *Service) WatchActive() {
 	for _, ws := range s.deps.Registry.List() {
 		if instance.State(ws.State) != instance.StateActive {
 			continue

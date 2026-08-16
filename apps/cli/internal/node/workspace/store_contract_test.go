@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -38,8 +38,8 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 		t.Fatalf("create pull request: %v", err)
 	}
 
-	svc := NewService(Dependencies{Store: localdb.NewStore(workspaceStore), Registry: instance.NewRegistry(files.NewFileService())})
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	svc := NewService(Deps{Store: localdb.NewStore(workspaceStore), Registry: instance.NewRegistry(files.NewFileService())})
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 	workspace, ok := svc.deps.Registry.Get("workspace-1")
@@ -69,8 +69,8 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	svc := NewService(Dependencies{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
-	openedWorkspace, err := svc.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: symlinkPath})
+	svc := NewService(Deps{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
+	openedWorkspace, err := svc.Open(workspace.OpenRequest{ID: "ws-1", Path: symlinkPath})
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
@@ -91,13 +91,13 @@ func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 
 func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 	root := t.TempDir()
-	svc := NewService(Dependencies{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
+	svc := NewService(Deps{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
 
-	if _, err := svc.OpenWorkspace(workspace.OpenRequest{ID: "stale-id", Path: root}); err != nil {
+	if _, err := svc.Open(workspace.OpenRequest{ID: "stale-id", Path: root}); err != nil {
 		t.Fatalf("open stale workspace: %v", err)
 	}
 
-	openedWorkspace, err := svc.OpenWorkspace(workspace.OpenRequest{
+	openedWorkspace, err := svc.Open(workspace.OpenRequest{
 		ID:        "workspace-1",
 		Path:      root,
 		OrgID:     "org-1",
@@ -130,9 +130,9 @@ func TestManagerOpen_ReplacesExistingWorkspaceForSamePath(t *testing.T) {
 }
 
 func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
-	svc := NewService(Dependencies{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
+	svc := NewService(Deps{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
 	workspacePath := t.TempDir()
-	if _, err := svc.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+	if _, err := svc.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 	if err := os.RemoveAll(workspacePath); err != nil {
@@ -142,7 +142,7 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 		t.Fatalf("replace path with file: %v", err)
 	}
 
-	if _, err := svc.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+	if _, err := svc.CloseLocal(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with replaced path: %v", err)
 	}
 	if _, ok := svc.deps.Registry.Get("ws-1"); ok {
@@ -151,13 +151,13 @@ func TestManagerCloseWorkspace_ReplacedPathWithFileSucceeds(t *testing.T) {
 }
 
 func TestManagerCloseWorkspace_NotGitRepositorySucceeds(t *testing.T) {
-	svc := NewService(Dependencies{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
+	svc := NewService(Deps{Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()})
 	workspacePath := t.TempDir()
-	if _, err := svc.OpenWorkspace(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
+	if _, err := svc.Open(workspace.OpenRequest{ID: "ws-1", Path: workspacePath}); err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
 
-	if _, err := svc.CloseWorkspace(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
+	if _, err := svc.CloseLocal(context.Background(), workspace.CloseRequest{WorkspaceID: "ws-1"}); err != nil {
 		t.Fatalf("close workspace with non-git path: %v", err)
 	}
 	if _, ok := svc.deps.Registry.Get("ws-1"); ok {
@@ -179,7 +179,7 @@ func openTestManagerStore(t *testing.T) (*Service, *localdb.WorkspaceStore) {
 		t.Fatalf("migrate database: %v", err)
 	}
 	store := localdb.NewWorkspaceStore(database)
-	return NewService(Dependencies{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}), store
+	return NewService(Deps{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService()), Terminals: terminal.NewManager()}), store
 }
 
 func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
@@ -201,7 +201,7 @@ func TestManagerHydrateFromDB_MissingWorktreeMarkedError(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 
@@ -247,7 +247,7 @@ func TestManagerHydrateFromDB_NonMissingOpenFailureMarkedError(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 	ws, ok := svc.deps.Registry.Get("workspace-1")
@@ -277,7 +277,7 @@ func TestManagerHydrateFromDB_SkipsClosedWorkspaces(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 	if _, ok := svc.deps.Registry.Get("workspace-1"); ok {
@@ -294,7 +294,7 @@ func TestManagerHydrateFromDB_SkipsFolderWorkspaces(t *testing.T) {
 		t.Fatalf("create folder workspace: %v", err)
 	}
 
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 	// Folder workspaces must never be auto-opened at boot; the desktop opens
@@ -317,7 +317,7 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspaceAndRefreshesState(t *testin
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 	ws, ok := svc.deps.Registry.Get("workspace-1")
@@ -351,7 +351,7 @@ func TestManagerHydrateFromDB_PreservesNotWorktreeError(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("hydrate manager: %v", err)
 	}
 	ws, ok := svc.deps.Registry.Get("workspace-1")

@@ -16,6 +16,7 @@ import (
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	nodeagent "yishan/apps/cli/internal/node/agent"
+	"yishan/apps/cli/internal/node/hook"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
@@ -24,6 +25,8 @@ import (
 	"yishan/apps/cli/internal/rpc"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/application"
 	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 )
@@ -46,10 +49,10 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		Gits:      gitService,
 		Runtime:   runtime,
 		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
-			PublishPullRequestUpdated(events, event)
+			nodeworkspace.PublishPullRequestUpdated(events, event)
 		},
 	})
-	watchers := NewWatchers(events, prTracker.RefreshWorkspaceByPath)
+	watchers := nodeworkspace.NewWatchers(events, prTracker.RefreshWorkspaceByPath)
 	registry.SetOnRemoved(func(workspaceID string, path string) {
 		watchers.Unwatch(path)
 		prTracker.StopTracking(workspaceID)
@@ -77,21 +80,26 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		AgentLifecycleCancel: cancelAgentLifecycle,
 		ServerCtx:            context.Background(),
 	})
+	var agentSvc *nodeagent.Service
+	usage := hook.NewUsageTracker()
 	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
-		Registry:  registry,
-		Files:     filesService,
-		Git:       gitService,
-		Terminals: terminals,
+		Registry:    registry,
+		Files:       filesService,
+		Git:         gitService,
+		Terminals:   terminals,
+		Events:      events,
+		Watchers:    watchers,
+		PRTracker:   prTracker,
+		Runtime:     runtime,
+		NodeID:      nodeID,
+		LogFilePath: filepath.Join(root, "daemon.log"),
+		ServerCtx:   context.Background(),
+		CreateCompleted: func(plan application.CreatePlan, created workspace.Workspace, warnings []any) {
+			agentSvc.PublishWorkspaceCreateCompleted(plan, created, warnings)
+		},
+		Usage: usage,
 	})
-	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
-		Workspace: workspaceSvc,
-		Terminals: terminals,
-		Events:    events,
-		Runtime:   runtime,
-		NodeID:    nodeID,
-	})
-	handler.SetTerminalService(terminalSvc)
-	agentSvc := nodeagent.NewService(nodeagent.Deps{
+	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
 		AgentMgr:          agentmanager.NewManager(),
 		PIAuth:            nodeagent.NewManagedPiAuthStore(),
@@ -102,7 +110,16 @@ func newTestService(t *testing.T, runtime *cliruntime.Runtime, nodeID string) *S
 		AgentLifecycleCtx: context.Background(),
 		ServerCtx:         context.Background(),
 	})
+	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
+		Workspace: workspaceSvc,
+		Terminals: terminals,
+		Events:    events,
+		Runtime:   runtime,
+		NodeID:    nodeID,
+	})
+	handler.SetTerminalService(terminalSvc)
 	handler.SetAgentService(agentSvc)
+	handler.SetWorkspaceService(workspaceSvc)
 	handler.SetRouter(buildTestRouter(handler, agentSvc, workspaceSvc, terminalSvc, nodeproject.NewService(nodeproject.Deps{Runtime: runtime}), nodesystem.NewService(nodesystem.Deps{
 		Runtime:      runtime,
 		Events:       events,
@@ -188,7 +205,7 @@ func TestNewService_ReceivesDependencies(t *testing.T) {
 		AgentMgr:          agentmanager.NewManager(),
 		PIAuth:            nodeagent.NewManagedPiAuthStore(),
 		Events:            internalevents.NewHub(),
-		Watchers:          NewWatchers(internalevents.NewHub(), nil),
+		Watchers:          nodeworkspace.NewWatchers(internalevents.NewHub(), nil),
 		PRTracker:         workspaceprtracker.New(workspaceprtracker.TrackerDeps{Instances: registry, Gits: gitService}),
 		ContextStore:      contextstore.NewStore(""),
 		Runtime:           nil,
@@ -214,9 +231,6 @@ func TestNewService_ReceivesDependencies(t *testing.T) {
 		handler.deps.AgentLifecycleCtx != deps.AgentLifecycleCtx || handler.deps.ServerCtx != deps.ServerCtx {
 		t.Fatal("service did not receive store/context dependencies")
 	}
-	if handler.app == nil {
-		t.Fatal("service must wire the workspace application service")
-	}
 }
 
 // buildTestRouter wires the namespace routing table for tests (the production
@@ -224,8 +238,8 @@ func TestNewService_ReceivesDependencies(t *testing.T) {
 // never imports the composition root).
 func buildTestRouter(service *Service, agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
 	router := rpc.NewRouter()
-	router.Register("list", &rpc.WorkspaceHandler{Services: service})
-	router.Register("workspace", &rpc.WorkspaceHandler{Services: service})
+	router.Register("list", &rpc.WorkspaceHandler{Services: workspaceSvc})
+	router.Register("workspace", &rpc.WorkspaceHandler{Services: workspaceSvc})
 	router.Register("context", &rpc.ContextHandler{Services: systemSvc})
 	router.Register("git", &rpc.GitHandler{Services: workspaceSvc})
 	router.Register("file", &rpc.FileHandler{Services: workspaceSvc})

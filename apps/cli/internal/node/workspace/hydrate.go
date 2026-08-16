@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 // A workspace whose worktree is missing or otherwise cannot be opened is
 // registered as error instead of aborting the whole hydration, so daemon
 // bootstrap never fails because of one broken workspace.
-func (s *Service) HydrateFromDB(ctx context.Context) error {
+func (s *Service) Hydrate(ctx context.Context) error {
 	if s.deps.Store == nil {
 		return nil
 	}
@@ -44,26 +44,26 @@ func (s *Service) HydrateFromDB(ctx context.Context) error {
 		if storedWorkspace.Status == string(workspace.StatusProvisioning) {
 			continue
 		}
-		if err := s.hydrateWorkspace(storedWorkspace); err != nil {
+		if err := s.hydrate(storedWorkspace); err != nil {
 			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping workspace restore")
 			// Any open failure (missing path, path replaced by a file,
 			// permissions, ...) leaves the workspace unusable: register it as
 			// error so the UI offers close-only and it stays closable.
-			s.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(workspace.StateError), string(workspace.HealthPathMissing))
+			s.persistState(ctx, storedWorkspace.ID, string(workspace.StateError), string(workspace.HealthPathMissing))
 			s.registerErrorWorkspace(storedWorkspace, workspace.HealthPathMissing)
 			continue
 		}
 		if isPersistedNotWorktreeError(storedWorkspace) {
 			// Open succeeds for any directory, so a previously-detected
 			// not-worktree error must be preserved, not reset to active.
-			s.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(workspace.StateError), string(workspace.HealthNotWorktree))
+			s.persistState(ctx, storedWorkspace.ID, string(workspace.StateError), string(workspace.HealthNotWorktree))
 			s.registerErrorWorkspace(storedWorkspace, workspace.HealthNotWorktree)
 			continue
 		}
 		if storedWorkspace.State != string(workspace.StateActive) || (storedWorkspace.Health != nil && *storedWorkspace.Health != "") {
-			s.persistWorkspaceLifecycleState(ctx, storedWorkspace.ID, string(workspace.StateActive), "")
+			s.persistState(ctx, storedWorkspace.ID, string(workspace.StateActive), "")
 		}
-		if err := s.hydrateWorkspacePullRequest(ctx, storedWorkspace.ID); err != nil {
+		if err := s.hydratePullRequest(ctx, storedWorkspace.ID); err != nil {
 			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping PR hydration for workspace")
 		}
 	}
@@ -72,7 +72,7 @@ func (s *Service) HydrateFromDB(ctx context.Context) error {
 
 // persistWorkspaceLifecycleState best-effort persists a workspace lifecycle
 // state transition. Persistence failures are logged and never fail hydration.
-func (s *Service) persistWorkspaceLifecycleState(ctx context.Context, workspaceID string, state string, health string) {
+func (s *Service) persistState(ctx context.Context, workspaceID string, state string, health string) {
 	if s.deps.Store == nil {
 		return
 	}
@@ -121,8 +121,8 @@ func canonicalizeWorkspacePath(path string) string {
 	return filepath.Clean(absolutePath)
 }
 
-func (s *Service) hydrateWorkspace(storedWorkspace workspace.StoredWorkspace) error {
-	_, err := s.OpenWorkspace(workspace.OpenRequest{ID: storedWorkspace.ID, Path: storedWorkspace.LocalPath,
+func (s *Service) hydrate(storedWorkspace workspace.StoredWorkspace) error {
+	_, err := s.Open(workspace.OpenRequest{ID: storedWorkspace.ID, Path: storedWorkspace.LocalPath,
 		OrgID: storedWorkspace.OrganizationID, ProjectID: storedWorkspace.ProjectID})
 	if err != nil {
 		return fmt.Errorf("restore workspace %q: %w", storedWorkspace.ID, err)
@@ -130,7 +130,7 @@ func (s *Service) hydrateWorkspace(storedWorkspace workspace.StoredWorkspace) er
 	return nil
 }
 
-func (s *Service) hydrateWorkspacePullRequest(ctx context.Context, workspaceID string) error {
+func (s *Service) hydratePullRequest(ctx context.Context, workspaceID string) error {
 	pullRequests, err := s.deps.Store.ListPRsByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return fmt.Errorf("list persisted pull requests: %w", err)
@@ -171,7 +171,7 @@ func isLiveWorkspaceStatus(status string) bool {
 // OpenWorkspace opens an instance in the registry: it canonicalizes the path,
 // validates it is a directory, ensures the context-link git exclude, and lets
 // the registry preserve runtime fields and replace same-path instances.
-func (s *Service) OpenWorkspace(req workspace.OpenRequest) (workspace.Workspace, error) {
+func (s *Service) Open(req workspace.OpenRequest) (workspace.Workspace, error) {
 	if req.ID == "" || req.Path == "" {
 		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeInvalidParams, "id and path are required")
 	}
@@ -221,21 +221,21 @@ func OptionalString(value string) *string {
 	return &value
 }
 
-func PersistedPullRequestState(pullRequest *workspace.WorkspacePullRequest) string {
+func PRState(pullRequest *workspace.WorkspacePullRequest) string {
 	if pullRequest.Status == "review" || pullRequest.Status == "draft" {
 		return "open"
 	}
 	return pullRequest.Status
 }
 
-func PersistedPullRequestDetectedAt(pullRequest *workspace.WorkspacePullRequest) string {
+func PRDetectedAt(pullRequest *workspace.WorkspacePullRequest) string {
 	if pullRequest.UpdatedAt != "" {
 		return pullRequest.UpdatedAt
 	}
 	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
-func PersistedPullRequestResolvedAt(pullRequest *workspace.WorkspacePullRequest) *string {
+func PRResolvedAt(pullRequest *workspace.WorkspacePullRequest) *string {
 	if pullRequest.Status != "merged" && pullRequest.Status != "closed" {
 		return nil
 	}

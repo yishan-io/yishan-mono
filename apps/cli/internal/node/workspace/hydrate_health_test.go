@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -30,8 +30,8 @@ func TestHydrateFromDB_SkipsClosingStatusRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	svc := NewService(Dependencies{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	svc := NewService(Deps{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 	// A closing row is a tombstone-for-listing: it must not be restored, and
@@ -54,8 +54,8 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	svc := NewService(Dependencies{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
-	if err := svc.HydrateFromDB(context.Background()); err != nil {
+	svc := NewService(Deps{Store: localdb.NewStore(store), Registry: instance.NewRegistry(files.NewFileService())})
+	if err := svc.Hydrate(context.Background()); err != nil {
 		t.Fatalf("HydrateFromDB: %v", err)
 	}
 
@@ -102,7 +102,7 @@ func TestHealthTransition_NotWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal health params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceHealth, raw)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceHealth, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceHealth: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 		t.Fatalf("create persisted workspace: %v", err)
 	}
 
-	state, health, healthErr, err := s.RefreshWorkspaceHealth(context.Background(), "ws-folder")
+	state, health, healthErr, err := s.RefreshHealth(context.Background(), "ws-folder")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestHealthTransition_RecoveryReRegistersWatcher(t *testing.T) {
 		t.Fatal("watcher must not be registered before health recovery")
 	}
 
-	state, health, _, err := s.RefreshWorkspaceHealth(context.Background(), "ws-recover")
+	state, health, _, err := s.RefreshHealth(context.Background(), "ws-recover")
 	if err != nil {
 		t.Fatalf("refreshWorkspaceHealth: %v", err)
 	}

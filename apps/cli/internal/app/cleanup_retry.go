@@ -42,7 +42,7 @@ func (a *App) retryPendingCleanups(ctx context.Context) {
 		if err := ctx.Err(); err != nil {
 			return
 		}
-		_, cleanupErr := a.service.CloseWorkspacePath(ctx, workspace.ClosePathRequest{
+		_, cleanupErr := a.workspaceSvc.ClosePath(ctx, workspace.ClosePathRequest{
 			WorkspaceID:   item.WorkspaceID,
 			Path:          item.Path,
 			Branch:        item.Branch,
@@ -60,7 +60,7 @@ func (a *App) retryPendingCleanups(ctx context.Context) {
 		}
 		// Mark the workspace record closed before dropping the retry entry so
 		// hydration on the next daemon start does not resurrect it as active.
-		if closeErr := a.service.ClosePersisted(ctx, item.WorkspaceID); closeErr != nil {
+		if closeErr := a.workspaceSvc.MarkClosed(ctx, item.WorkspaceID); closeErr != nil {
 			log.Warn().Err(closeErr).Str("workspaceId", item.WorkspaceID).Msg("failed to mark persisted workspace closed after cleanup")
 		}
 		if err := a.cleanupStore.Remove(item.WorkspaceID); err != nil {

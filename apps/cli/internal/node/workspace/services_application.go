@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	api "yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
-	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 	"yishan/apps/cli/internal/workspace/instance"
@@ -28,7 +27,7 @@ type appDeps struct {
 
 // newWorkspaceApplicationService wires the application Service for the
 // services layer.
-func (s *Service) newWorkspaceApplicationService() *application.Service {
+func (s *Service) newAppService() *application.Service {
 	deps := &appDeps{s: s}
 	return application.New(application.Dependencies{
 		NodeID:      s.deps.NodeID,
@@ -39,7 +38,7 @@ func (s *Service) newWorkspaceApplicationService() *application.Service {
 		Relay:       deps,
 		Events:      deps,
 		HookWarnings: func(setupHook string, result *workspace.HookResult) []any {
-			return buildWorkspaceHookWarnings(setupHook, result, s.deps.LogFilePath)
+			return buildHookWarnings(setupHook, result, s.deps.LogFilePath)
 		},
 		SyncUsage: func(source string) {
 			if s.deps.TokenUsage != nil {
@@ -144,27 +143,27 @@ func (d *appDeps) EnsureSharedRepoClone(ctx context.Context, repoKey string, rep
 // ---- WorkspaceRecords ----
 
 func (d *appDeps) CreateRemoteRecord(ctx context.Context, registration application.Registration) {
-	d.s.CreateRemoteRecord(ctx, registration)
+	d.s.CreateRecord(ctx, registration)
 }
 
 func (d *appDeps) UpdateRemoteRecord(ctx context.Context, registration application.Registration, localPath string) {
-	d.s.UpdateRemoteRecord(ctx, registration, localPath)
+	d.s.UpdateRecord(ctx, registration, localPath)
 }
 
 func (d *appDeps) CloseRemoteRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status workspace.Status) {
-	d.s.CloseRemoteRecord(ctx, organizationID, projectID, workspaceID, string(status))
+	d.s.CloseRecord(ctx, organizationID, projectID, workspaceID, string(status))
 }
 
 func (d *appDeps) PersistPrepared(ctx context.Context, plan application.CreatePlan) error {
-	return d.s.PersistPrepared(ctx, plan)
+	return d.s.PersistPlan(ctx, plan)
 }
 
 func (d *appDeps) FinalizePersisted(ctx context.Context, plan application.CreatePlan, created workspace.Workspace) error {
-	return d.s.FinalizePersisted(ctx, plan, created)
+	return d.s.Finalize(ctx, plan, created)
 }
 
 func (d *appDeps) ClosePersisted(ctx context.Context, workspaceID string) error {
-	return d.s.ClosePersisted(ctx, workspaceID)
+	return d.s.MarkClosed(ctx, workspaceID)
 }
 
 func (d *appDeps) LocalRow(ctx context.Context, workspaceID string) (workspace.Record, bool) {
@@ -185,18 +184,18 @@ func (d *appDeps) CreateWorkspaceWithProgress(ctx context.Context, req workspace
 }
 
 func (d *appDeps) CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error) {
-	return d.s.closeWorkspace(ctx, req)
+	return d.s.CloseLocal(ctx, req)
 }
 
 func (d *appDeps) CloseWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error) {
-	return d.s.closeWorkspacePath(ctx, req)
+	return d.s.ClosePath(ctx, req)
 }
 
 func (d *appDeps) SetState(workspaceID string, state instance.State, health instance.Health) error {
 	return d.s.deps.Registry.SetState(workspaceID, state, health)
 }
 func (d *appDeps) Get(workspaceID string) (workspace.Workspace, error) {
-	return d.s.getWorkspace(workspaceID)
+	return d.s.GetWorkspace(workspaceID)
 }
 
 func (d *appDeps) RemoveFromMemory(workspaceID string) {
@@ -218,7 +217,7 @@ func (d *appDeps) StopTracking(workspaceID string) {
 // ---- Relay ----
 
 func (d *appDeps) DispatchCreate(ctx context.Context, plan application.CreatePlan, command application.CreateCommand) error {
-	return d.s.dispatchRemoteWorkspaceCreate(workspaceCreateParams(command), workspaceCreateStartedEvent(plan.StartedEvent))
+	return d.s.dispatchCreate(workspaceCreateParams(command), workspaceCreateStartedEvent(plan.StartedEvent))
 }
 
 func (d *appDeps) DispatchClose(ctx context.Context, command application.CloseCommand, targetNodeID string) error {
@@ -245,7 +244,7 @@ func (d *appDeps) Publish(topic string, payload any) {
 }
 
 func (d *appDeps) SnapshotChanged(organizationID string, projectID string, workspaceID string, change string) {
-	d.s.PublishWorkspaceSnapshotChanged(organizationID, projectID, workspaceID, change)
+	d.s.PublishSnapshotChanged(organizationID, projectID, workspaceID, change)
 }
 
 func (d *appDeps) CreateStarted(event application.StartedEvent) {
@@ -254,61 +253,21 @@ func (d *appDeps) CreateStarted(event application.StartedEvent) {
 
 func (d *appDeps) CreateProgress(plan application.CreatePlan, event workspace.CreateProgressEvent) {
 	d.s.deps.Events.Publish(internalevents.Event{Topic: "workspaceCreateProgress", Payload: event})
-	d.s.relayWorkspaceCreateProgress(plan, event)
+	d.s.relayCreateProgress(plan, event)
 }
 
 func (d *appDeps) CreateFailed(plan application.CreatePlan, failed application.FailedEvent) {
 	d.s.deps.Events.Publish(internalevents.Event{Topic: "workspaceCreateFailed", Payload: failed})
-	d.s.relayWorkspaceCreateFailed(plan, workspaceCreateFailedEvent(failed))
+	d.s.relayCreateFailed(plan, workspaceCreateFailedEvent(failed))
 }
 
 func (d *appDeps) CreateCompleted(plan application.CreatePlan, created workspace.Workspace, warnings []any) {
-	d.s.agentSvc.PublishWorkspaceCreateCompleted(plan, created, warnings)
-}
-
-// workspaceHandle builds a workspace-scoped handle from the instance registry
-// and the manager's shared services (file cache, git, terminals).
-func (s *Service) workspaceHandle(workspaceID string) (instance.Handle, error) {
-	ws, ok := s.deps.Registry.Get(workspaceID)
-	if !ok {
-		return instance.Handle{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
+	if d.s.deps.CreateCompleted != nil {
+		d.s.deps.CreateCompleted(plan, created, warnings)
 	}
-	return s.handleForInstance(ws), nil
 }
 
-// workspaceHandleByPath resolves the canonical path and builds the handle for
-// the instance at that path.
-func (s *Service) workspaceHandleByPath(path string) (instance.Handle, error) {
-	ws, ok := s.deps.Registry.GetByPath(path)
-	if !ok {
-		return instance.Handle{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
-	}
-	return s.handleForInstance(ws), nil
-}
-
-func (s *Service) handleForInstance(ws workspace.Workspace) instance.Handle {
-	return instance.NewHandle(ws, s.deps.Files, s.deps.Git, s.deps.Terminals)
-}
-
-// getWorkspace returns the open instance for a workspace id, mapping a missing
-// instance to the RPC not-found error (instance reads go through the registry).
-func (s *Service) closeWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error) {
-	return s.CloseWorkspace(ctx, req)
-}
-
-func (s *Service) closeWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error) {
-	return s.CloseWorkspacePath(ctx, req)
-}
-
-func (s *Service) getWorkspace(workspaceID string) (workspace.Workspace, error) {
-	ws, ok := s.deps.Registry.Get(workspaceID)
-	if !ok {
-		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
-	}
-	return ws, nil
-}
-
-func buildWorkspaceHookWarnings(command string, result *workspace.HookResult, logFilePath string) []any {
+func buildHookWarnings(command string, result *workspace.HookResult, logFilePath string) []any {
 	warnings := []any{}
 	if result != nil && result.Error != "" {
 		warnings = append(warnings, hookResultToWarning("setup", command, result, logFilePath))

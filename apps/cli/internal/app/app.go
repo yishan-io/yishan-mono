@@ -18,8 +18,8 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/contextstore"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/contextstore"
 	localdb "yishan/apps/cli/internal/db"
 	internalevents "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
@@ -27,6 +27,7 @@ import (
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/node"
 	nodeagent "yishan/apps/cli/internal/node/agent"
+	"yishan/apps/cli/internal/node/hook"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
@@ -112,6 +113,8 @@ type App struct {
 	// service is the local Node application boundary: the rpc service
 	// implementations and application operations.
 	service *node.Service
+	// workspaceSvc is the workspace application service (lifecycle, relay).
+	workspaceSvc *nodeworkspace.Service
 	// router is the namespace routing table.
 	router *rpc.Router
 	// rpcServer is the JSON-RPC/WebSocket transport server.
@@ -149,21 +152,21 @@ func Bootstrap(cfg Config) (*App, error) {
 		Runtime:   cfg.Runtime,
 		PersistPR: func(ctx context.Context, workspaceID string, pr *workspace.WorkspacePullRequest) error {
 			return store.UpsertPR(ctx, &workspace.StoredPullRequest{
-				WorkspaceID: workspaceID, OrganizationID: node.PROrgID(registry, workspaceID), PRID: fmt.Sprintf("%d", pr.Number),
-				Title: node.OptionalString(pr.Title), URL: node.OptionalString(pr.URL), Branch: node.OptionalString(pr.Branch),
-				BaseBranch: node.OptionalString(pr.BaseBranch), State: node.PersistedPullRequestState(pr),
-				Metadata: node.OptionalString(node.MarshalPRMetadata(pr)), DetectedAt: node.PersistedPullRequestDetectedAt(pr),
-				ResolvedAt: node.PersistedPullRequestResolvedAt(pr),
+				WorkspaceID: workspaceID, OrganizationID: nodeworkspace.PROrgID(registry, workspaceID), PRID: fmt.Sprintf("%d", pr.Number),
+				Title: nodeworkspace.OptionalString(pr.Title), URL: nodeworkspace.OptionalString(pr.URL), Branch: nodeworkspace.OptionalString(pr.Branch),
+				BaseBranch: nodeworkspace.OptionalString(pr.BaseBranch), State: nodeworkspace.PRState(pr),
+				Metadata: nodeworkspace.OptionalString(nodeworkspace.MarshalPRMetadata(pr)), DetectedAt: nodeworkspace.PRDetectedAt(pr),
+				ResolvedAt: nodeworkspace.PRResolvedAt(pr),
 			})
 		},
 		ResolvePR: func(ctx context.Context, workspaceID string, prNumber int) error {
 			return store.ResolvePR(ctx, workspaceID, fmt.Sprintf("%d", prNumber))
 		},
 		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
-			node.PublishWorkspacePullRequestUpdatedEvent(events, event)
+			nodeworkspace.PublishPullRequestUpdated(events, event)
 		},
 	})
-	watchers := node.NewWatchers(events, prTracker.RefreshWorkspaceByPath)
+	watchers := nodeworkspace.NewWatchers(events, prTracker.RefreshWorkspaceByPath)
 	// Watcher and PR-tracker cleanup follows instance removal (close, rollback,
 	// or same-path replacement in the registry).
 	registry.SetOnRemoved(func(workspaceID string, path string) {
@@ -191,87 +194,34 @@ func Bootstrap(cfg Config) (*App, error) {
 	contextStore := contextstore.NewStore(cfg.SettingsPath)
 	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer)
 
-	service := node.NewService(node.Dependencies{
-		Registry:          registry,
-		Store:             store,
-		Files:             filesService,
-		Git:               gitService,
-		Terminals:         terminals,
-		Memory:            memorySvc,
-		Computer:          computerSvc,
-		ModelList:         modelList,
-		AgentMgr:          agentMgr,
-		PIAuth:            piAuth,
-		TokenUsage:        tokenUsage,
-		Events:            events,
-		Watchers:          watchers,
-		PRTracker:         prTracker,
-		CleanupStore:      cleanupStore,
-		ContextStore:      contextStore,
-		Database:          cfg.Database,
-		Runtime:           cfg.Runtime,
-		NodeID:            cfg.NodeID,
-		LogFilePath:       cfg.LogFilePath,
-		SettingsPath:      cfg.SettingsPath,
-		AgentLifecycleCtx:    agentLifecycleCtx,
-		AgentLifecycleCancel: cancelAgentLifecycle,
-		ServerCtx:            context.Background(),
-	})
-
-	app := &App{
-		registry:     registry,
-		store:        store,
-		files:        filesService,
-		git:          gitService,
-		terminals:    terminals,
-		memory:       memorySvc,
-		computer:     computerSvc,
-		modelList:    modelList,
-		agentMgr:     agentMgr,
-		piAuth:       piAuth,
-		tokenUsage:   tokenUsage,
-		events:       events,
-		watchers:     watchers,
-		prTracker:    prTracker,
-		cleanupStore: cleanupStore,
-		contextStore: contextStore,
-		database:     cfg.Database,
-		Runtime:      cfg.Runtime,
-		NodeID:       cfg.NodeID,
-		logFilePath:  cfg.LogFilePath,
-		settingsPath: cfg.SettingsPath,
-		serverCtx:             context.Background(),
-		agentLifecycleCtx:     agentLifecycleCtx,
-		cancelAgentLifecycle:  cancelAgentLifecycle,
-		cleanupCtx:            cleanupCtx,
-		cancelCleanup:         cancelCleanup,
-		service:               service,
-	}
-
-	// Computer feature config comes from settings.yaml.
-	if err := app.applyComputerSettings(); err != nil {
-		return nil, err
-	}
-
-	// Restore persisted workspaces and register a filesystem watcher for every
-	// active one (see WatchActiveWorkspaces for why hydration is not enough).
-	if err := service.HydrateFromDB(context.Background()); err != nil {
-		return nil, fmt.Errorf("restore persisted workspaces: %w", err)
-	}
-	service.WatchActiveWorkspaces()
-
-	// Background tasks (and the lifecycle contexts that bound them).
-	app.Start()
+	usage := hook.NewUsageTracker()
 
 	// Build the rpc service layer and the transport server, then the relay
 	// client (it needs the rpc server and the service as its message handler).
+	var agentSvc *nodeagent.Service
 	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
-		Registry:  registry,
-		Files:     filesService,
-		Git:       gitService,
-		Terminals: terminals,
+		Registry:     registry,
+		Store:        store,
+		Files:        filesService,
+		Git:          gitService,
+		Terminals:    terminals,
+		Memory:       memorySvc,
+		TokenUsage:   tokenUsage,
+		Events:       events,
+		Watchers:     watchers,
+		PRTracker:    prTracker,
+		CleanupStore: cleanupStore,
+		Database:     cfg.Database,
+		Runtime:      cfg.Runtime,
+		NodeID:       cfg.NodeID,
+		LogFilePath:  cfg.LogFilePath,
+		ServerCtx:    context.Background(),
+		CreateCompleted: func(plan application.CreatePlan, created workspace.Workspace, warnings []any) {
+			agentSvc.PublishWorkspaceCreateCompleted(plan, created, warnings)
+		},
+		Usage: usage,
 	})
-	agentSvc := nodeagent.NewService(nodeagent.Deps{
+	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
 		AgentMgr:          agentMgr,
 		PIAuth:            piAuth,
@@ -282,7 +232,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		AgentLifecycleCtx: agentLifecycleCtx,
 		ServerCtx:         context.Background(),
 		RelayCreateCompleted: func(prepared application.CreatePlan, completed map[string]any) {
-			service.RelayWorkspaceCreateCompleted(prepared, completed)
+			workspaceSvc.RelayCreateCompleted(prepared, completed)
 		},
 	})
 	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
@@ -292,6 +242,80 @@ func Bootstrap(cfg Config) (*App, error) {
 		Runtime:   cfg.Runtime,
 		NodeID:    cfg.NodeID,
 	})
+
+	service := node.NewService(node.Dependencies{
+		Registry:             registry,
+		Store:                store,
+		Files:                filesService,
+		Git:                  gitService,
+		Terminals:            terminals,
+		Memory:               memorySvc,
+		Computer:             computerSvc,
+		ModelList:            modelList,
+		AgentMgr:             agentMgr,
+		PIAuth:               piAuth,
+		TokenUsage:           tokenUsage,
+		Events:               events,
+		Watchers:             watchers,
+		PRTracker:            prTracker,
+		CleanupStore:         cleanupStore,
+		ContextStore:         contextStore,
+		Database:             cfg.Database,
+		Runtime:              cfg.Runtime,
+		NodeID:               cfg.NodeID,
+		LogFilePath:          cfg.LogFilePath,
+		SettingsPath:         cfg.SettingsPath,
+		AgentLifecycleCtx:    agentLifecycleCtx,
+		AgentLifecycleCancel: cancelAgentLifecycle,
+		ServerCtx:            context.Background(),
+		Usage:                usage,
+	})
+
+	app := &App{
+		registry:             registry,
+		store:                store,
+		files:                filesService,
+		git:                  gitService,
+		terminals:            terminals,
+		memory:               memorySvc,
+		computer:             computerSvc,
+		modelList:            modelList,
+		agentMgr:             agentMgr,
+		piAuth:               piAuth,
+		tokenUsage:           tokenUsage,
+		events:               events,
+		watchers:             watchers,
+		prTracker:            prTracker,
+		cleanupStore:         cleanupStore,
+		contextStore:         contextStore,
+		database:             cfg.Database,
+		Runtime:              cfg.Runtime,
+		NodeID:               cfg.NodeID,
+		logFilePath:          cfg.LogFilePath,
+		settingsPath:         cfg.SettingsPath,
+		serverCtx:            context.Background(),
+		agentLifecycleCtx:    agentLifecycleCtx,
+		cancelAgentLifecycle: cancelAgentLifecycle,
+		cleanupCtx:           cleanupCtx,
+		cancelCleanup:        cancelCleanup,
+		service:              service,
+	}
+
+	// Computer feature config comes from settings.yaml.
+	if err := app.applyComputerSettings(); err != nil {
+		return nil, err
+	}
+
+	// Restore persisted workspaces and register a filesystem watcher for every
+	// active one (see WatchActiveWorkspaces for why hydration is not enough).
+	if err := workspaceSvc.Hydrate(context.Background()); err != nil {
+		return nil, fmt.Errorf("restore persisted workspaces: %w", err)
+	}
+	workspaceSvc.WatchActive()
+
+	// Background tasks (and the lifecycle contexts that bound them).
+	app.Start()
+
 	projectSvc := nodeproject.NewService(nodeproject.Deps{
 		Runtime:  cfg.Runtime,
 		Database: cfg.Database,
@@ -322,8 +346,10 @@ func Bootstrap(cfg Config) (*App, error) {
 	})
 	service.SetRelayClient(app.relay)
 	terminalSvc.SetRelayClient(app.relay)
+	workspaceSvc.SetRelayClient(app.relay)
 	service.SetTerminalService(terminalSvc)
 	service.SetAgentService(agentSvc)
+	service.SetWorkspaceService(workspaceSvc)
 
 	return app, nil
 }

@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"fmt"
@@ -39,7 +39,7 @@ func (s *Service) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (str
 	if workspaceID == "" || workspacePath == "" {
 		return "", false, fmt.Errorf("missing workspaceId or worktreePath")
 	}
-	if existingWorkspace, err := s.getWorkspace(workspaceID); err == nil {
+	if existingWorkspace, err := s.GetWorkspace(workspaceID); err == nil {
 		if shouldSkipWorkspaceOpenProject(existingWorkspace, entry) {
 			// The workspace is already open (for example restored from the local
 			// DB at daemon boot). Watch registration is idempotent per worktree
@@ -51,7 +51,7 @@ func (s *Service) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (str
 			return workspaceID, false, nil
 		}
 	}
-	openedWorkspace, err := s.OpenWorkspace(workspace.OpenRequest{
+	openedWorkspace, err := s.Open(workspace.OpenRequest{
 		ID:        workspaceID,
 		Path:      workspacePath,
 		ProjectID: entry.ProjectID,

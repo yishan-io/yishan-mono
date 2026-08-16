@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"yishan/apps/cli/internal/config"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -33,7 +34,7 @@ func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *tes
 		t.Fatalf("marshal params: %v", err)
 	}
 
-	_, err = handler.callRPCForTest(context.Background(), MethodWorkspaceCreate, params)
+	_, err = handler.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreate, params)
 	if err == nil || !strings.Contains(err.Error(), "unsupported task-run agent kind") {
 		t.Fatalf("err = %v, want unsupported task-run agent kind", err)
 	}

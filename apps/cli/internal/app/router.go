@@ -17,8 +17,8 @@ import (
 // AgentHandler into the daemon's AgentService implementation.
 func buildNamespaceRouter(h *node.Service, agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
 	router := rpc.NewRouter()
-	router.Register("list", &rpc.WorkspaceHandler{Services: h})
-	router.Register("workspace", &rpc.WorkspaceHandler{Services: h})
+	router.Register("list", &rpc.WorkspaceHandler{Services: workspaceSvc})
+	router.Register("workspace", &rpc.WorkspaceHandler{Services: workspaceSvc})
 	router.Register("context", &rpc.ContextHandler{Services: systemSvc})
 	router.Register("git", &rpc.GitHandler{Services: workspaceSvc})
 	router.Register("file", &rpc.FileHandler{Services: workspaceSvc})

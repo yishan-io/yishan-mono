@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 // CloseWorkspace closes a workspace: it stops its terminals, tears down the
 // worktree (via the worktree package), and removes the runtime instance.
-func (s *Service) CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error) {
+func (s *Service) CloseLocal(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error) {
 	ws, err := s.registryWorkspace(req.WorkspaceID)
 	if err != nil {
 		return workspace.CloseResult{}, err
@@ -29,7 +29,7 @@ func (s *Service) CloseWorkspace(ctx context.Context, req workspace.CloseRequest
 		result.TerminalCleanupErrors = messages
 	}
 
-	result, err = s.CloseWorkspacePath(ctx, workspace.ClosePathRequest{
+	result, err = s.ClosePath(ctx, workspace.ClosePathRequest{
 		WorkspaceID:   req.WorkspaceID,
 		Path:          ws.Path,
 		Branch:        req.Branch,
@@ -59,7 +59,7 @@ func (s *Service) registryWorkspace(id string) (workspace.Workspace, error) {
 // optionally its branch) via the worktree package. A directory that lost its
 // git registration is treated as already gone (the leftover directory is
 // deliberately not removed).
-func (s *Service) CloseWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error) {
+func (s *Service) ClosePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error) {
 	var result workspace.CloseResult
 
 	if info, statErr := os.Stat(req.Path); statErr != nil {

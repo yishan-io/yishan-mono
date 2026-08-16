@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	localdb "yishan/apps/cli/internal/db"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -39,7 +40,7 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 		t.Fatalf("marshal close params: %v", err)
 	}
 
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceClose, raw)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceClose: %v", err)
 	}
@@ -95,7 +96,7 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 		t.Fatalf("marshal close params: %v", err)
 	}
 
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceClose, raw)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, raw)
 	if err != nil {
 		t.Fatalf("handleWorkspaceClose: %v", err)
 	}

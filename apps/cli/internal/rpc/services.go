@@ -13,20 +13,23 @@ import (
 // namespace handlers call. Each RPC method maps to exactly one typed service
 // method. The daemon implements them; handlers never construct services.
 
-// WorkspaceService backs the workspace.* and list RPC methods.
+// WorkspaceService backs the workspace.* and list RPC methods. Each method is
+// named after the wire method tail; the service type already carries the
+// namespace. ListWorkspaces keeps its name because the bare "list" method is
+// the workspace list (file.List is the file.* list).
 type WorkspaceService interface {
 	ListWorkspaces() (any, error)
-	WorkspaceCreate(ctx context.Context, req WorkspaceCreateParams) (any, error)
-	WorkspaceClose(ctx context.Context, req WorkspaceCloseParams) (any, error)
-	WorkspaceRefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error)
-	WorkspaceSetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error)
-	WorkspaceSyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error)
-	WorkspaceHealth(ctx context.Context, req WorkspaceHealthParams) (any, error)
-	WorkspaceOpenProject(ctx context.Context, req WorkspaceOpenProjectParams) (any, error)
-	WorkspaceCloseProject(ctx context.Context, req WorkspaceCloseProjectParams) (any, error)
-	WorkspaceCreateLocalFolder(ctx context.Context, req WorkspaceCreateLocalFolderParams) (any, error)
-	WorkspaceListLocalFolders(ctx context.Context) (any, error)
-	WorkspaceDeleteLocalFolder(ctx context.Context, req WorkspaceDeleteLocalFolderParams) (any, error)
+	Create(ctx context.Context, req WorkspaceCreateParams) (any, error)
+	Close(ctx context.Context, req WorkspaceCloseParams) (any, error)
+	RefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error)
+	SetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error)
+	SyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error)
+	Health(ctx context.Context, req WorkspaceHealthParams) (any, error)
+	OpenProject(ctx context.Context, req WorkspaceOpenProjectParams) (any, error)
+	CloseProject(ctx context.Context, req WorkspaceCloseProjectParams) (any, error)
+	CreateLocalFolder(ctx context.Context, req WorkspaceCreateLocalFolderParams) (any, error)
+	ListLocalFolders(ctx context.Context) (any, error)
+	DeleteLocalFolder(ctx context.Context, req WorkspaceDeleteLocalFolderParams) (any, error)
 }
 
 // FileService backs the file.* RPC methods. Each method is named after the

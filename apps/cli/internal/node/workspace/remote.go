@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func remoteWorkspaceRecordsEnabled(runtime *cliruntime.Runtime) bool {
 //
 // Best-effort: failures are logged and the local record remains the source of
 // truth until the next remote→local cache sync reconciles the row.
-func (s *Service) CreateRemoteRecord(ctx context.Context, registration application.Registration) {
+func (s *Service) CreateRecord(ctx context.Context, registration application.Registration) {
 	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
 		return
 	}
@@ -44,7 +44,7 @@ func (s *Service) CreateRemoteRecord(ctx context.Context, registration applicati
 //
 // Best-effort: failures are logged and the local record remains the source of
 // truth until the next remote→local cache sync reconciles the row.
-func (s *Service) UpdateRemoteRecord(ctx context.Context, registration application.Registration, localPath string) {
+func (s *Service) UpdateRecord(ctx context.Context, registration application.Registration, localPath string) {
 	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
 		return
 	}
@@ -59,7 +59,7 @@ func (s *Service) UpdateRemoteRecord(ctx context.Context, registration applicati
 // showing the workspace; "closed" is the terminal state written after teardown
 // succeeds. Best-effort: failures are logged and the local record remains the
 // source of truth until the next remote→local cache sync reconciles the row.
-func (s *Service) CloseRemoteRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status string) {
+func (s *Service) CloseRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status string) {
 	if !remoteWorkspaceRecordsEnabled(s.deps.Runtime) {
 		return
 	}

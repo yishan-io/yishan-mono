@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func TestHandleWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsEmptyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for empty path")
 	}
 }
@@ -86,7 +86,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsNonexistentPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for nonexistent path")
 	}
 }
@@ -101,7 +101,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsFilePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for file path (not a directory)")
 	}
 }
@@ -115,7 +115,7 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for git repository folder")
 	}
 	// Ensure nothing was persisted for the rejected git folder.
@@ -135,10 +135,10 @@ func TestHandleWorkspaceCreateLocalFolder_RejectsDuplicatePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err != nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err != nil {
 		t.Fatalf("first create: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
 		t.Fatal("expected error for duplicate path")
 	}
 }
@@ -156,7 +156,7 @@ func TestHandleWorkspaceListLocalFolders_ReturnsOnlyFolders(t *testing.T) {
 		t.Fatalf("create worktree row: %v", err)
 	}
 
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceListLocalFolders, json.RawMessage{})
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceListLocalFolders, json.RawMessage{})
 	if err != nil {
 		t.Fatalf("list local folders: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestHandleWorkspaceDeleteLocalFolder_RemovesRow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceDeleteLocalFolder, params)
 	if err != nil {
 		t.Fatalf("delete local folder: %v", err)
 	}
@@ -206,10 +206,10 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	// is exercised. Folders are strictly non-git so no real watcher is ever
 	// registered, but the manager entry means the delete path must still run
 	// the same teardown calls the workspace-close flow uses without panic.
-	if _, err := s.OpenWorkspace(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
+	if _, err := s.Open(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
 		t.Fatalf("open folder in manager: %v", err)
 	}
-	if _, err := s.getWorkspace(created.ID); err != nil {
+	if _, err := s.GetWorkspace(created.ID); err != nil {
 		t.Fatalf("folder should be open in manager: %v", err)
 	}
 
@@ -217,11 +217,11 @@ func TestHandleWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params); err != nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceDeleteLocalFolder, params); err != nil {
 		t.Fatalf("delete local folder: %v", err)
 	}
 
-	if _, err := s.getWorkspace(created.ID); err == nil {
+	if _, err := s.GetWorkspace(created.ID); err == nil {
 		t.Fatal("expected folder to be removed from the manager")
 	}
 	if _, err := store.Get(context.Background(), created.ID); err == nil {
@@ -236,7 +236,7 @@ func TestHandleWorkspaceDeleteLocalFolder_UnknownID(t *testing.T) {
 		t.Fatalf("marshal params: %v", err)
 	}
 	// Per Delete convention an unknown id returns a not-found error.
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceDeleteLocalFolder, params); err == nil {
 		t.Fatal("expected error for unknown id")
 	}
 }
@@ -247,7 +247,7 @@ func TestHandleWorkspaceDeleteLocalFolder_RejectsEmptyID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), MethodWorkspaceDeleteLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceDeleteLocalFolder, params); err == nil {
 		t.Fatal("expected error for empty id")
 	}
 }
@@ -262,7 +262,7 @@ func TestHandleWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestHandleWorkspaceCreateLocalFolder_EmptyNameIsNil(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), MethodWorkspaceCreateLocalFolder, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}

@@ -15,16 +15,22 @@ import (
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/contextstore"
 	internalevents "yishan/apps/cli/internal/events"
-	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/workspace"
 	term "yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace/application"
 )
 
+// WorkspaceResolver resolves an open workspace instance by id (skill active
+// workspace). The workspace application service implements it.
+type WorkspaceResolver interface {
+	GetWorkspace(workspaceID string) (workspace.Workspace, error)
+}
+
 // Deps are the explicit dependencies of the agent application service.
 type Deps struct {
 	// Workspace resolves workspace-scoped handles (skill active workspace).
-	Workspace    *nodeworkspace.Service
+	Workspace    WorkspaceResolver
 	AgentMgr     *agentmanager.Manager
 	PIAuth       *piauth.Store
 	ModelList    *modellist.Service

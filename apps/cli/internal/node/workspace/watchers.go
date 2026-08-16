@@ -1,4 +1,4 @@
-package node
+package workspace
 
 import (
 	internalevents "yishan/apps/cli/internal/events"
@@ -58,10 +58,6 @@ func newWatchersForEventHub(events *internalevents.Hub, onGitChanged func(worktr
 
 // PublishPullRequestUpdated emits the pull-request-updated frontend event.
 func PublishPullRequestUpdated(events *internalevents.Hub, event workspaceprtracker.PullRequestUpdatedEvent) {
-	PublishWorkspacePullRequestUpdatedEvent(events, event)
-}
-
-func PublishWorkspacePullRequestUpdatedEvent(events *internalevents.Hub, event workspaceprtracker.PullRequestUpdatedEvent) {
 	if events == nil {
 		return
 	}
