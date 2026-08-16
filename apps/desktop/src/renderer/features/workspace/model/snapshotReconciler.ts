@@ -11,20 +11,23 @@
  */
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspaceRecord } from "../../../api/types";
+import type { WorkspacePullRequestSummary } from "../../../api/types";
 import { resolveHydratedWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { getFileName } from "../../../store/tabs";
 import type { WorkspaceItem, WorkspaceStoreOrganizationPreference, WorkspaceStoreState } from "../../../store/types";
 import { buildWorkspaceStateFromData } from "../../../store/workspace/state";
 import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
+import type { WorkspaceGitChangeTotals } from "./workspaceTypes";
 import type { WorkspaceStatus } from "./workspaceViewModel";
 
 type ProjectStoreSlice = {
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceStoreState["workspaces"];
-  pullRequestByWorkspaceId: WorkspaceStoreState["pullRequestByWorkspaceId"];
-  latestPullRequestByWorkspaceId: WorkspaceStoreState["latestPullRequestByWorkspaceId"];
-  gitChangesCountByWorkspaceId: WorkspaceStoreState["gitChangesCountByWorkspaceId"];
-  gitChangeTotalsByWorkspaceId: WorkspaceStoreState["gitChangeTotalsByWorkspaceId"];
+  pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
+  latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
+  gitChangesCountByWorkspaceId: Record<string, number>;
+  gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
   selectedProjectId: WorkspaceStoreState["selectedProjectId"];
   selectedWorkspaceId: WorkspaceStoreState["selectedWorkspaceId"];
   displayProjectIds?: string[];
@@ -50,9 +53,9 @@ export type SnapshotReconcilerResult = {
   /** Projection records to prune after reconciliation (workspace-scoped). */
   projectionCleanup: {
     gitChangesCountByWorkspaceId: Record<string, number>;
-    gitChangeTotalsByWorkspaceId: WorkspaceStoreState["gitChangeTotalsByWorkspaceId"];
-    pullRequestByWorkspaceId: WorkspaceStoreState["pullRequestByWorkspaceId"];
-    latestPullRequestByWorkspaceId: WorkspaceStoreState["latestPullRequestByWorkspaceId"];
+    gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
+    pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
+    latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
   };
 };
 
@@ -213,8 +216,8 @@ function resolvePreservedHydrationWorkspaces(
 
 function buildLatestPullRequestByWorkspaceId(
   workspacesFromApi: WorkspaceRecord[],
-): WorkspaceStoreState["latestPullRequestByWorkspaceId"] {
-  const nextLatestPrByWorkspaceId: WorkspaceStoreState["latestPullRequestByWorkspaceId"] = {};
+): Record<string, WorkspacePullRequestSummary | undefined> {
+  const nextLatestPrByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined> = {};
   for (const workspace of workspacesFromApi) {
     if (workspace.latestPullRequest) {
       nextLatestPrByWorkspaceId[workspace.id] = workspace.latestPullRequest;

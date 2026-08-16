@@ -19,12 +19,6 @@ export const workspaceStore = create<WorkspaceStoreState>()(
     immer((set, get) => ({
       projects: initialWorkspaceState.projects,
       workspaces: initialWorkspaceState.workspaces,
-      pullRequestByWorkspaceId: {},
-      latestPullRequestByWorkspaceId: {},
-      currentBranchByWorkspaceId: {},
-      gitChangesCountByWorkspaceId: {},
-      gitChangeTotalsByWorkspaceId: {},
-      gitRefreshVersionByWorktreePath: {},
       selectedProjectId: initialWorkspaceState.selectedProjectId,
       selectedWorkspaceId: initialWorkspaceState.selectedWorkspaceId,
       isProjectsLoaded: false,

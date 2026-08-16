@@ -2,7 +2,7 @@ import type { StateCreator } from "zustand";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspacePullRequestSummary, WorkspaceRecord } from "../api/types";
 import type { WorkspaceProjectRecord } from "../features/project/model/projectTypes";
-import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
+import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../features/workspace/model/workspaceTypes";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import type { DaemonLocalFolder, DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
 
@@ -22,6 +22,7 @@ export type {
 export { LOCAL_FOLDER_PROJECT_ID } from "../features/project/model/projectTypes";
 
 export type {
+  WorkspaceGitChangeTotals,
   WorkspaceItem,
   WorkspaceLifecycleState,
   WorkspaceHealth,
@@ -39,11 +40,6 @@ export type FileDiffEntry = {
   oldContent: string;
   newContent: string;
   changeKind: DiffFileChangeKind;
-  additions: number;
-  deletions: number;
-};
-
-export type WorkspaceGitChangeTotals = {
   additions: number;
   deletions: number;
 };
@@ -230,12 +226,6 @@ export type OpenWorkspaceTabInput =
 export type WorkspaceStoreState = {
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
-  pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
-  latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
-  currentBranchByWorkspaceId: Record<string, string>;
-  gitChangesCountByWorkspaceId: Record<string, number>;
-  gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
-  gitRefreshVersionByWorktreePath: Record<string, number>;
   selectedProjectId: string;
   selectedWorkspaceId: string;
   isProjectsLoaded: boolean;
@@ -294,11 +284,6 @@ export type WorkspaceStoreState = {
     targetWorkspaceId: string;
     position: "before" | "after";
   }) => void;
-  setWorkspaceGitChangesCount: (workspaceId: string, count: number) => void;
-  setWorkspaceGitChangeTotals: (workspaceId: string, totals: WorkspaceGitChangeTotals) => void;
-  setWorkspacePullRequest: (workspaceId: string, pullRequest?: DaemonWorkspacePullRequest) => void;
-  setWorkspaceCurrentBranch: (workspaceId: string, branch: string) => void;
-  incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
   loadLocalFolders: (folders: DaemonLocalFolder[]) => void;
   addLocalFolder: (folder: DaemonLocalFolder) => void;
   removeLocalFolder: (id: string) => void;
@@ -320,11 +305,6 @@ export type WorkspaceStoreActions = Pick<
   | "renameWorkspace"
   | "renameWorkspaceBranch"
   | "reorderWorkspace"
-  | "setWorkspaceGitChangesCount"
-  | "setWorkspaceGitChangeTotals"
-  | "setWorkspacePullRequest"
-  | "setWorkspaceCurrentBranch"
-  | "incrementGitRefreshVersion"
   | "loadLocalFolders"
   | "addLocalFolder"
   | "removeLocalFolder"

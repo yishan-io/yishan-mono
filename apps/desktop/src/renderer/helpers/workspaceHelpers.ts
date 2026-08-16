@@ -3,14 +3,12 @@ import { resolveExplicitWorkspaceDisplayMetadata } from "./workspaceDisplayNames
 
 type WorkspaceStoreSlice = Pick<
   WorkspaceStoreState,
-  | "projects"
-  | "workspaces"
-  | "pullRequestByWorkspaceId"
-  | "selectedProjectId"
-  | "selectedWorkspaceId"
-  | "gitChangesCountByWorkspaceId"
-  | "gitChangeTotalsByWorkspaceId"
->;
+  "projects" | "workspaces" | "selectedProjectId" | "selectedWorkspaceId"
+> & {
+  pullRequestByWorkspaceId?: Record<string, unknown>;
+  gitChangesCountByWorkspaceId?: Record<string, unknown>;
+  gitChangeTotalsByWorkspaceId?: Record<string, unknown>;
+};
 
 function resolveWorkspaceProjectId(workspace: { projectId?: string; repoId: string }): string {
   return workspace.projectId ?? workspace.repoId;
@@ -90,9 +88,9 @@ export function applyDeletedWorkspaceState(
     state.workspaces.splice(removedIndex, 1);
   }
 
-  delete state.gitChangesCountByWorkspaceId[input.workspaceId];
-  delete state.gitChangeTotalsByWorkspaceId[input.workspaceId];
-  delete state.pullRequestByWorkspaceId[input.workspaceId];
+  delete state.gitChangesCountByWorkspaceId?.[input.workspaceId];
+  delete state.gitChangeTotalsByWorkspaceId?.[input.workspaceId];
+  delete state.pullRequestByWorkspaceId?.[input.workspaceId];
 
   if (!state.projects.some((project) => project.id === state.selectedProjectId)) {
     state.selectedProjectId = state.projects[0]?.id ?? "";

@@ -3,6 +3,7 @@ import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
 import { projectStore } from "../features/project/model/projectStore";
 import { reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
+import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
@@ -128,10 +129,10 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       previousState: {
         projects: projectStore.getState().projects,
         workspaces: workspaceStore.getState().workspaces,
-        pullRequestByWorkspaceId: workspaceStore.getState().pullRequestByWorkspaceId,
-        latestPullRequestByWorkspaceId: workspaceStore.getState().latestPullRequestByWorkspaceId,
-        gitChangesCountByWorkspaceId: workspaceStore.getState().gitChangesCountByWorkspaceId,
-        gitChangeTotalsByWorkspaceId: workspaceStore.getState().gitChangeTotalsByWorkspaceId,
+        pullRequestByWorkspaceId: workspaceProjectionStore.getState().pullRequestByWorkspaceId,
+        latestPullRequestByWorkspaceId: workspaceProjectionStore.getState().latestPullRequestByWorkspaceId,
+        gitChangesCountByWorkspaceId: workspaceProjectionStore.getState().gitChangesCountByWorkspaceId,
+        gitChangeTotalsByWorkspaceId: workspaceProjectionStore.getState().gitChangeTotalsByWorkspaceId,
         selectedProjectId: workspaceStore.getState().selectedProjectId,
         selectedWorkspaceId: workspaceStore.getState().selectedWorkspaceId,
         displayProjectIds: projectStore.getState().displayProjectIds,
@@ -322,7 +323,7 @@ export async function createProject(input: {
       await openWorkspaceEntries(openEntries);
       for (const entry of openEntries) {
         workspaceUiStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
-        workspaceStore.getState().incrementGitRefreshVersion(entry.worktreePath);
+        workspaceProjectionStore.getState().incrementGitRefreshVersion(entry.worktreePath);
       }
     }
   }

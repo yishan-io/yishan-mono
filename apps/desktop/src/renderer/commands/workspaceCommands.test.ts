@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { chatStore } from "../store/chatStore";
 import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
@@ -71,6 +72,7 @@ vi.mock("../rpc/rpcTransport", () => ({
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();
+const initialProjectionStoreState = workspaceProjectionStore.getState();
 const initialProjectStoreState = projectStore.getState();
 const initialLayoutStoreState = layoutStore.getState();
 const initialSessionStoreState = sessionStore.getState();
@@ -81,6 +83,7 @@ const initialChatStoreState = chatStore.getState();
 
 afterEach(() => {
   projectStore.setState(initialProjectStoreState, true);
+  workspaceProjectionStore.setState(initialProjectionStoreState, true);
   workspaceStore.setState(initialWorkspaceStoreState, true);
   layoutStore.setState(initialLayoutStoreState, true);
   sessionStore.setState(initialSessionStoreState, true);
@@ -300,7 +303,7 @@ describe("workspaceCommands", () => {
     expect(rpcMocks.refreshWorkspacePullRequest).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
     });
-    expect(workspaceStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual({
+    expect(workspaceProjectionStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual({
       number: 42,
       title: "Add refresh button",
       status: "OPEN",
@@ -735,6 +738,8 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/repo-1/.worktrees/existing",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
@@ -775,6 +780,8 @@ describe("workspaceCommands", () => {
           kind: "folder",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
@@ -805,6 +812,8 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/plain-folder",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
@@ -833,6 +842,8 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
@@ -877,6 +888,8 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
@@ -914,6 +927,8 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
@@ -961,6 +976,8 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });
@@ -998,6 +1015,8 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
+    });
+    workspaceProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
     });

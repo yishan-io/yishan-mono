@@ -42,7 +42,7 @@ export function createWorkspaceRepoActions(
     const normalizedOrganizationId = organizationId.trim();
 
     set((state) => {
-      applyCreatedRepoState(state, {
+      applyCreatedRepoState(state as unknown as Parameters<typeof applyCreatedRepoState>[0], {
         name,
         source,
         normalizedPath,
@@ -56,7 +56,12 @@ export function createWorkspaceRepoActions(
   return {
     load: (organizationId, projects, workspaces) => {
       set((state) => {
-        applyHydratedStateFromApiData(state, organizationId, projects, workspaces);
+        applyHydratedStateFromApiData(
+          state as unknown as Parameters<typeof applyHydratedStateFromApiData>[0],
+          organizationId,
+          projects,
+          workspaces,
+        );
         state.isProjectsLoaded = true;
       });
     },
@@ -67,7 +72,7 @@ export function createWorkspaceRepoActions(
       }
 
       set((state) => {
-        applyDeletedRepoState(state, projectId);
+        applyDeletedRepoState(state as unknown as Parameters<typeof applyDeletedRepoState>[0], projectId);
       });
     },
     updateProjectConfig: (projectId, config) => {

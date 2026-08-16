@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { inspectGitRepository } from "../../../commands/gitCommands";
+import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { WorkspaceItem } from "../../../store/types";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -89,7 +90,7 @@ export function useWorkspaceInfoHover({
           return;
         }
 
-        workspaceStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, result.currentBranch ?? "");
+        workspaceProjectionStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, result.currentBranch ?? "");
       })
       .catch(() => {});
 
@@ -99,11 +100,13 @@ export function useWorkspaceInfoHover({
   }, [hoveredWorkspaceId, workspaces]);
 
   const hoveredWorkspace = workspaces.find((workspace) => workspace.id === hoveredWorkspaceId);
-  const hoveredWorkspaceCurrentBranch = workspaceStore((state) =>
+  const hoveredWorkspaceCurrentBranch = workspaceProjectionStore((state) =>
     hoveredWorkspaceId ? (state.currentBranchByWorkspaceId[hoveredWorkspaceId] ?? "") : "",
   );
-  const hoveredWorkspacePullRequest = workspaceStore((state) => state.pullRequestByWorkspaceId?.[hoveredWorkspaceId]);
-  const hoveredWorkspaceLatestPullRequest = workspaceStore(
+  const hoveredWorkspacePullRequest = workspaceProjectionStore(
+    (state) => state.pullRequestByWorkspaceId?.[hoveredWorkspaceId],
+  );
+  const hoveredWorkspaceLatestPullRequest = workspaceProjectionStore(
     (state) => state.latestPullRequestByWorkspaceId?.[hoveredWorkspaceId],
   );
   const isHoveredWorkspacePrimary = Boolean(

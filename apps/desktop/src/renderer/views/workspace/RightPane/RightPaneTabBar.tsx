@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../components/PaneHeader";
 import { projectStore } from "../../../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -36,7 +37,9 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );
   const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
-  const changesCount = workspaceStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
+  const changesCount = workspaceProjectionStore(
+    (state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0,
+  );
   // Folder workspaces have no real project (undefined): never show git tabs.
   const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
 

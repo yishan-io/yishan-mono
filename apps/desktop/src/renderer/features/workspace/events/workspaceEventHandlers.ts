@@ -21,6 +21,7 @@ import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProg
 import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;
 const WORKSPACE_SNAPSHOT_REFRESH_DEBOUNCE_MS = 300;
@@ -161,13 +162,13 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
   },
   refreshWorkspaceCurrentBranch: async (workspaceId, currentBranch) => {
     if (currentBranch !== undefined) {
-      workspaceStore.getState().setWorkspaceCurrentBranch(workspaceId, currentBranch);
+      workspaceProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, currentBranch);
       return;
     }
     try {
       const client = await getDaemonClient();
       const result = await client.git.inspect({ workspaceId });
-      workspaceStore.getState().setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
+      workspaceProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
     } catch {
       // Non-fatal: cache stays stale until the next gitChanged event.
     }
@@ -176,7 +177,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     workspaceUiStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
   },
   incrementGitRefreshVersion: (workspaceWorktreePath) => {
-    workspaceStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
+    workspaceProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
   },
   applyWorkspaceCreateStartedEvent: (payload) => {
     workspaceStore.getState().addWorkspace(
@@ -248,7 +249,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     });
   },
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
-    workspaceStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
+    workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
   },
   loadWorkspaceSnapshot,
   getSelectedOrganizationId: () => sessionStore.getState().selectedOrganizationId,

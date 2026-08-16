@@ -186,6 +186,29 @@ vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
+vi.mock("../../../features/workspace/model/workspaceProjectionStore", () => {
+  const project = (
+    selector: (state: {
+      pullRequestByWorkspaceId: Record<string, unknown>;
+      currentBranchByWorkspaceId: Record<string, string>;
+      gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
+      setWorkspaceCurrentBranch: (id: string, branch: string) => void;
+    }) => unknown,
+  ) =>
+    selector({
+      pullRequestByWorkspaceId: mocked.stateRef.current.pullRequestByWorkspaceId,
+      currentBranchByWorkspaceId: mocked.stateRef.current.currentBranchByWorkspaceId,
+      gitChangeTotalsByWorkspaceId: mocked.stateRef.current.gitChangeTotalsByWorkspaceId,
+      setWorkspaceCurrentBranch: mocked.stateRef.current.setWorkspaceCurrentBranch,
+    });
+  (
+    project as unknown as {
+      getState: () => typeof mocked.stateRef.current;
+    }
+  ).getState = () => mocked.stateRef.current;
+  return { workspaceProjectionStore: project };
+});
+
 vi.mock("../../../features/project/model/projectStore", () => {
   const projectStore = (
     selector: (state: { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string }) => unknown,

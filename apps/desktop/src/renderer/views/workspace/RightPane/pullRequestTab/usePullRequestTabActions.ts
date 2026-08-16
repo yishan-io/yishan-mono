@@ -1,4 +1,5 @@
 import { closePullRequest, mergePullRequest } from "@renderer/commands/gitCommands";
+import { workspaceProjectionStore } from "@renderer/features/workspace/model/workspaceProjectionStore";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import type { DaemonWorkspacePullRequest } from "@renderer/rpc/daemonTypes";
 import { workspaceStore } from "@renderer/store/workspaceStore";
@@ -61,8 +62,7 @@ export function usePullRequestTabActions(params: UsePullRequestTabActionsParams)
 
   const updateWorkspacePullRequest = useCallback(
     (status: PullRequestActionStatus) => {
-      const state = workspaceStore.getState();
-      state.setWorkspacePullRequest(
+      workspaceProjectionStore.getState().setWorkspacePullRequest(
         params.selectedWorkspaceId,
         params.hasLivePr && params.pullRequest
           ? {

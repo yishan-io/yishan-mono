@@ -56,6 +56,10 @@ export type WorkspacePullRequestViewModel = {
   number?: number;
   branch?: string;
   state?: string;
+  status?: string;
+  reviewDecision?: string;
+  complete?: boolean;
+  isDraft?: boolean;
   checks?: unknown;
   mergeable?: boolean;
   author?: string;
@@ -76,7 +80,10 @@ export function mapPullRequestToViewModel(dto: DaemonWorkspacePullRequest): Work
     number: dto.number,
     title: dto.title,
     branch: dto.branch,
-    state: dto.status,
+    status: dto.status,
+    reviewDecision: dto.reviewDecision,
+    complete: dto.complete,
+    isDraft: dto.isDraft,
     checks: dto.checks,
     updatedAt: dto.updatedAt,
   };

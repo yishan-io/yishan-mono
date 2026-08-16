@@ -4,6 +4,7 @@ import { api } from "../../../api/client";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
 import { projectStore } from "../../../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
@@ -59,7 +60,7 @@ export function useProjectListTreeData(input: {
   const projects = projectStore((state) => state.projects) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
-  const gitChangeTotalsByWorkspaceId = workspaceStore((state) => state.gitChangeTotalsByWorkspaceId);
+  const gitChangeTotalsByWorkspaceId = workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);

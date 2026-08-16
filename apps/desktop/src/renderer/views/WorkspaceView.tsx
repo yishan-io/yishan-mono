@@ -7,6 +7,7 @@ import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps"
 import { SplitPaneLayout } from "../components/SplitPaneLayout";
 import { subscribeAppActionEvent } from "../events";
 import { projectStore } from "../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { useAllWorkspacesGitSync } from "../hooks/useAllWorkspacesGitSync";
 import { useCommands } from "../hooks/useCommands";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
@@ -328,7 +329,7 @@ export function WorkspaceView() {
       return 0;
     }
 
-    return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
+    return workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
   });
   const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
   const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);

@@ -8,6 +8,11 @@ export type WorkspaceLifecycleState = "active" | "error" | "closing";
 
 export type WorkspaceHealth = "path-missing" | "not-worktree";
 
+export type WorkspaceGitChangeTotals = {
+  additions: number;
+  deletions: number;
+};
+
 export type WorkspaceItem = {
   id: string;
   organizationId?: string;

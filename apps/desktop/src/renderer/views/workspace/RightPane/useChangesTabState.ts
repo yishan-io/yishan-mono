@@ -8,6 +8,7 @@ import type {
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
 import { projectStore } from "../../../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -67,7 +68,7 @@ export function useChangesTabState() {
     const raw = workspace?.sourceBranch?.trim() || project?.defaultBranch?.trim() || "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
   });
-  const workspaceGitRefreshVersion = workspaceStore((state) => {
+  const workspaceGitRefreshVersion = workspaceProjectionStore((state) => {
     if (!selectedWorkspaceWorktreePath) {
       return 0;
     }

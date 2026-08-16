@@ -1,5 +1,6 @@
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import { projectStore } from "../features/project/model/projectStore";
+import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import { isWorkspaceNotFoundError } from "../helpers/errorHelpers";
 import { isFolderWorkspace } from "../helpers/localFolder";
 import { supportsGitFeatures } from "../helpers/projectGitCapability";
@@ -107,8 +108,8 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
 
     if (!branchSummary) {
       // No source branch configured — fall back to uncommitted-only count.
-      readWorkspaceStoreState().setWorkspaceGitChangesCount(workspaceId, uncommittedCount);
-      readWorkspaceStoreState().setWorkspaceGitChangeTotals(workspaceId, uncommittedTotals);
+      workspaceProjectionStore.getState().setWorkspaceGitChangesCount(workspaceId, uncommittedCount);
+      workspaceProjectionStore.getState().setWorkspaceGitChangeTotals(workspaceId, uncommittedTotals);
       return;
     }
 
@@ -118,8 +119,8 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
       deletions: branchSummary.deletions + uncommittedTotals.deletions,
     };
 
-    readWorkspaceStoreState().setWorkspaceGitChangesCount(workspaceId, combinedCount);
-    readWorkspaceStoreState().setWorkspaceGitChangeTotals(workspaceId, combinedTotals);
+    workspaceProjectionStore.getState().setWorkspaceGitChangesCount(workspaceId, combinedCount);
+    workspaceProjectionStore.getState().setWorkspaceGitChangeTotals(workspaceId, combinedTotals);
   } catch (error) {
     if (isWorkspaceNotFoundError(error)) {
       return;
@@ -150,7 +151,7 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
       workspaceId,
     });
 
-    readWorkspaceStoreState().setWorkspacePullRequest(workspaceId, refreshedWorkspace.pullRequest);
+    workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, refreshedWorkspace.pullRequest);
   } catch (error) {
     console.error("Failed to refresh workspace pull request", error);
     throw error;

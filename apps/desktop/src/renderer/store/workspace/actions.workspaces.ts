@@ -9,16 +9,7 @@ import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetSt
 
 type WorkspaceActions = Pick<
   WorkspaceStoreActions,
-  | "addWorkspace"
-  | "removeWorkspace"
-  | "renameWorkspace"
-  | "renameWorkspaceBranch"
-  | "reorderWorkspace"
-  | "setWorkspaceGitChangesCount"
-  | "setWorkspaceGitChangeTotals"
-  | "setWorkspacePullRequest"
-  | "setWorkspaceCurrentBranch"
-  | "incrementGitRefreshVersion"
+  "addWorkspace" | "removeWorkspace" | "renameWorkspace" | "renameWorkspaceBranch" | "reorderWorkspace"
 >;
 
 /** Creates, renames, and deletes workspaces while keeping selection state in sync. */
@@ -162,56 +153,6 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
 
         const insertionIndex = position === "after" ? nextTargetIndex + 1 : nextTargetIndex;
         state.workspaces.splice(insertionIndex, 0, movedWorkspace);
-      });
-    },
-    setWorkspaceGitChangesCount: (workspaceId, count) => {
-      if (!workspaceId) {
-        return;
-      }
-
-      set((state) => {
-        state.gitChangesCountByWorkspaceId[workspaceId] = count;
-      });
-    },
-    setWorkspaceGitChangeTotals: (workspaceId, totals) => {
-      if (!workspaceId) {
-        return;
-      }
-
-      set((state) => {
-        state.gitChangeTotalsByWorkspaceId[workspaceId] = {
-          additions: Math.max(0, totals.additions),
-          deletions: Math.max(0, totals.deletions),
-        };
-      });
-    },
-    setWorkspacePullRequest: (workspaceId, pullRequest?: DaemonWorkspacePullRequest) => {
-      if (!workspaceId) {
-        return;
-      }
-
-      set((state) => {
-        state.pullRequestByWorkspaceId[workspaceId] = pullRequest;
-      });
-    },
-    setWorkspaceCurrentBranch: (workspaceId, branch) => {
-      if (!workspaceId) {
-        return;
-      }
-
-      set((state) => {
-        state.currentBranchByWorkspaceId[workspaceId] = branch;
-      });
-    },
-    incrementGitRefreshVersion: (workspaceWorktreePath) => {
-      const normalizedWorkspaceWorktreePath = workspaceWorktreePath.trim();
-      if (!normalizedWorkspaceWorktreePath) {
-        return;
-      }
-
-      set((state) => {
-        state.gitRefreshVersionByWorktreePath[normalizedWorkspaceWorktreePath] =
-          (state.gitRefreshVersionByWorktreePath[normalizedWorkspaceWorktreePath] ?? 0) + 1;
       });
     },
   };

@@ -3,6 +3,7 @@ import { ContextMenu } from "@renderer/components/ContextMenu";
 import { FileTree } from "@renderer/components/FileTree";
 import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
+import { workspaceProjectionStore } from "@renderer/features/workspace/model/workspaceProjectionStore";
 import { getRendererPlatform } from "@renderer/helpers/platform";
 import { useCommands } from "@renderer/hooks/useCommands";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
@@ -49,7 +50,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
       return 0;
     }
 
-    return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
+    return workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
   });
   const [fileManagerLastUsed, setFileManagerLastUsed] = useState(false);
   const detectedExternalAppIds = useDetectedExternalAppIds();
