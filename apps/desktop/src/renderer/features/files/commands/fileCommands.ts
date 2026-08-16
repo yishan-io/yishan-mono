@@ -1,5 +1,6 @@
 import type { ExternalAppId, WorkspaceEntryAppId } from "../../../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../../../shared/contracts/rpcRequestTypes";
+import type { FileSearchResult } from "../../../rpc/daemonTypes";
 import { isFileNotFoundError } from "../../../helpers/errorHelpers";
 import { getDaemonClient, getDesktopHostBridge } from "../../../rpc/rpcTransport";
 
@@ -225,3 +226,6 @@ export async function writeFileBase64(params: { absolutePath: string; contentBas
     contentBase64: params.contentBase64,
   });
 }
+
+
+export type { FileSearchResult } from "../../../rpc/daemonTypes";

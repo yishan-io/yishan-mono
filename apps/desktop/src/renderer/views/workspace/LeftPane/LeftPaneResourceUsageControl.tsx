@@ -11,7 +11,7 @@ import { formatCpuPercent, formatMemoryBytes } from "../../../helpers/formatters
 import { isTerminalTabWithSessionId } from "../../../helpers/terminalTabUtils";
 import { useCommands } from "../../../hooks/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../hooks/useSharedTerminalResourceUsageSnapshot";
-import type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
+import type { TerminalResourceUsageSnapshot } from "../../../features/terminal/commands/terminalCommands";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 

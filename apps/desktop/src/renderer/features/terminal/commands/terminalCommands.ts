@@ -144,3 +144,6 @@ export async function subscribeTerminalSessions(params: {
     onError: params.onError,
   });
 }
+
+
+export type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
