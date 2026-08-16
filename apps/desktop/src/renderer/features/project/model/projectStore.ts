@@ -61,7 +61,7 @@ type ProjectStoreState = {
  * One-shot — the legacy fields are dropped from workspaceStore.partialize so
  * they stop being written; this reads whatever was already persisted.
  */
-function readLegacyWorkspacePrefs(): Partial<ProjectStoreState> | undefined {
+export function readLegacyWorkspacePrefs(): Partial<ProjectStoreState> | undefined {
   try {
     const raw = localStorage.getItem("yishan-workspace-store");
     if (!raw) {
