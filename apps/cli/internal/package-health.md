@@ -234,15 +234,21 @@ No production importer (candidates for Phase 30 review; no action in Phase 24):
 
 ```text
 collector.go          # lifecycle and orchestration only (stays ~<300)
-scan.go               # source scan coordination (runScan, scanAgent*, window resolution)
+scan.go               # source scan coordination (runScan, scanAgent*, window resolution, beginScan/finishScan)
 sync.go               # dirty-row cloud sync (syncPending, snapshotDirtyRowsByOrg, syncRowsForOrg)
 backfill.go           # historical cost backfill (maybeBackfillHistoricalCost, reconstructedUncachedInputTokens)
 schedule.go           # timers and trigger behavior (Trigger, startSyncLoop, startHourRolloverLoop, on*)
 debug.go              # DebugState construction
-recovery.go           # recovery policy (already separate: collector_recovery.go)
+recovery.go           # recovery policy (was collector_recovery.go; RequestRecentRecoveryScan, requestRecoveryScan)
 collector_test.go     # lifecycle/orchestration tests (shutdown, concurrent, retry)
 scan_test.go, sync_test.go, backfill_test.go, schedule_test.go, debug_test.go
 ```
+
+Scanner registration (done with Phase 25): `scanner.Scanner` interface +
+`scanner.Registry` (Register/Scanner/Kinds/DefaultRegistry) added; the
+collector dispatches through the registry instead of a hardcoded switch, so
+new providers register in `scanner.DefaultRegistry()` rather than editing
+collection code.
 
 ### Phase 26 — `agent/setup` (resource files, same package)
 
