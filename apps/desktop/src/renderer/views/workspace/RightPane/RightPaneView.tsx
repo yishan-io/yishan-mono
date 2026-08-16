@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { projectStore } from "../../../features/project/model/projectStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
+import { useSelectedWorkspaceWithProject } from "../../../store/selectors";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../store/workspaceUiStore";
 import { ChangesTabView } from "./ChangesTabView";
@@ -19,13 +20,7 @@ export type RightPaneViewProps = {
  * MainPaneView; this view only serves healthy workspaces.
  */
 export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPaneViewProps = {}) {
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const selectedWorkspace = workspaceStore((state) =>
-    state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
-  );
-  const selectedProject = projectStore((state) =>
-    state.projects.find((project) => project.id === (selectedWorkspace?.projectId ?? selectedWorkspace?.repoId)),
-  );
+  const { selectedWorkspaceId, selectedWorkspace, selectedProject } = useSelectedWorkspaceWithProject();
   const activeRightPaneTab = workspaceUiStore(
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );

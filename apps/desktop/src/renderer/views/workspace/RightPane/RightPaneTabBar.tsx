@@ -8,6 +8,7 @@ import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { useSelectedWorkspaceWithProject } from "../../../store/selectors";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab } from "../../../store/workspaceUiStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
@@ -26,13 +27,7 @@ export type RightPaneTabBarProps = {
  */
 export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPane }: RightPaneTabBarProps) {
   const { t } = useTranslation();
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const selectedWorkspace = workspaceStore((state) =>
-    state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
-  );
-  const selectedProject = projectStore((state) =>
-    state.projects.find((project) => project.id === (selectedWorkspace?.projectId ?? selectedWorkspace?.repoId)),
-  );
+  const { selectedWorkspaceId, selectedWorkspace, selectedProject } = useSelectedWorkspaceWithProject();
   const activeRightPaneTab = workspaceUiStore(
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );

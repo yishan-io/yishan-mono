@@ -13,6 +13,7 @@ import { useCommands } from "../hooks/useCommands";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
+import { useSelectedWorkspaceWithProject } from "../store/selectors";
 import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
@@ -320,17 +321,11 @@ export function WorkspaceView() {
   const leftWidth = layoutStore((state) => state.leftWidth);
   const projects = projectStore((state) => state.projects);
   const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const selectedWorkspaceWorktreePath = workspaceStore(
-    (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath,
+  const { selectedWorkspaceId, selectedWorkspace } = useSelectedWorkspaceWithProject();
+  const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
+  const workspaceGitRefreshVersion = workspaceProjectionStore((state) =>
+    selectedWorkspaceWorktreePath ? (state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0) : 0,
   );
-  const workspaceGitRefreshVersion = workspaceStore((state) => {
-    if (!selectedWorkspaceWorktreePath) {
-      return 0;
-    }
-
-    return workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
-  });
   const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
   const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);

@@ -13,6 +13,7 @@ import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { useCommands } from "../../../hooks/useCommands";
+import { useSelectedWorkspaceWithProject } from "../../../store/selectors";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
   type RepoChangesBySection,
@@ -49,25 +50,18 @@ export function useChangesTabState() {
   const retryRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const consecutiveRefreshRetriesRef = useRef(0);
   const loadedWorkspaceRequestKeyRef = useRef<string | null>(null);
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const selectedWorkspace = workspaceStore((state) =>
-    state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId),
-  );
+  const { selectedWorkspaceId, selectedWorkspace, selectedProject } = useSelectedWorkspaceWithProject();
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
-  const selectedWorkspaceSourceBranch = workspaceStore((state) => {
-    const workspace = state.workspaces.find((w) => w.id === state.selectedWorkspaceId);
-    const project = (projectStore.getState().projects ?? []).find(
-      (p) => p.id === (workspace?.projectId ?? workspace?.repoId),
-    );
+  const selectedWorkspaceSourceBranch = useMemo(() => {
     // Folder workspaces and non-git projects have no branches: no source
     // branch means the commit comparison path never fires daemon git RPCs
     // from this mounted tab.
-    if (isFolderWorkspace(workspace) || !supportsGitFeatures(project?.sourceType)) {
+    if (isFolderWorkspace(selectedWorkspace) || !supportsGitFeatures(selectedProject?.sourceType)) {
       return "";
     }
-    const raw = workspace?.sourceBranch?.trim() || project?.defaultBranch?.trim() || "main";
+    const raw = selectedWorkspace?.sourceBranch?.trim() || selectedProject?.defaultBranch?.trim() || "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
-  });
+  }, [selectedWorkspace, selectedProject]);
   const workspaceGitRefreshVersion = workspaceProjectionStore((state) => {
     if (!selectedWorkspaceWorktreePath) {
       return 0;
