@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "apps/relay/**"
+      - "packages/relay-protocol-go/**"
       - ".github/workflows/deploy-relay.yml"
   workflow_dispatch:
 
@@ -36,9 +37,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        working-directory: apps/relay
         run: |
           docker build \
+            -f apps/relay/Dockerfile \
             -t ${{ env.IMAGE }}:${{ github.sha }} \
             -t ${{ env.IMAGE }}:latest \
             .
