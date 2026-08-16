@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOpenTabAutoRefreshRuntime,
+  type OpenTabAutoRefreshCommands,
   type OpenTabAutoRefreshContext,
   type RefreshableOpenTab,
 } from "./openTabAutoRefreshRuntime";
@@ -54,7 +55,7 @@ function emitBackendEvent(name: BackendEventName, event: BackendEvent) {
   }
 }
 
-function createCommands() {
+function createCommands(): OpenTabAutoRefreshCommands {
   return {
     readFile: vi.fn(async () => ({ content: "content" })),
     readDiff: vi.fn(async () => ({ oldContent: "old", newContent: "new" })),
@@ -62,7 +63,7 @@ function createCommands() {
     readBranchComparisonDiff: vi.fn(async () => ({ oldContent: "branch-old", newContent: "branch-new" })),
     refreshFileTabFromDisk: vi.fn(),
     refreshDiffTabContent: vi.fn(),
-  };
+  } as unknown as OpenTabAutoRefreshCommands;
 }
 
 const TAB: RefreshableOpenTab = { id: "file-1", kind: "file", path: "src/a.ts", isDirty: false };
@@ -86,7 +87,7 @@ describe("openTabAutoRefreshRuntime", () => {
     const runtime = createOpenTabAutoRefreshRuntime();
     const context = createContext();
     let releaseFirstRead: (() => void) | undefined;
-    context.commands.readFile.mockImplementationOnce(
+    (context.commands.readFile as ReturnType<typeof vi.fn>).mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           releaseFirstRead = () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REFRESH_THROTTLE_MS, scheduleWorkspaceRefresh } from "./useAllWorkspacesGitSync";
+import { REFRESH_THROTTLE_MS, scheduleWorkspaceRefresh } from "./allWorkspacesGitSyncRuntime";
 
 type WorkspaceRefreshState = {
   inFlight: boolean;

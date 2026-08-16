@@ -62,7 +62,7 @@ vi.mock("../rpc/rpcTransport", () => ({
   })),
 }));
 
-vi.mock("../hooks/useAllWorkspacesGitSync", () => ({
+vi.mock("../features/workspace/ui/hooks/useAllWorkspacesGitSync", () => ({
   useAllWorkspacesGitSync: vi.fn(),
 }));
 

@@ -8,7 +8,7 @@ import { SplitPaneLayout } from "../components/SplitPaneLayout";
 import { subscribeAppActionEvent } from "../events";
 import { projectStore } from "../features/project/model/projectStore";
 import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
-import { useAllWorkspacesGitSync } from "../hooks/useAllWorkspacesGitSync";
+import { useAllWorkspacesGitSync } from "../features/workspace/ui/hooks/useAllWorkspacesGitSync";
 import {
   useAgentCommands,
   useFileCommands,

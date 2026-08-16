@@ -1,10 +1,9 @@
-import { useEffect, useRef } from "react";
-import { projectStore } from "../features/project/model/projectStore";
-import { refreshWorkspaceGitChanges } from "../features/workspace/commands/workspaceCommands";
-import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
-import { isFolderWorkspace } from "../helpers/localFolder";
-import { supportsGitFeatures } from "../helpers/projectGitCapability";
-import { workspaceStore } from "../store/workspaceStore";
+import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
+import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
+import { projectStore } from "../../project/model/projectStore";
+import { workspaceStore } from "../../../store/workspaceStore";
 
 /**
  * Minimum interval (ms) between consecutive refresh calls for one workspace.
@@ -12,7 +11,7 @@ import { workspaceStore } from "../store/workspaceStore";
  */
 export const REFRESH_THROTTLE_MS = 300;
 
-type WorkspaceRefreshState = {
+export type WorkspaceRefreshState = {
   inFlight: boolean;
   queued: boolean;
   lastFinishedAt: number;
@@ -74,38 +73,40 @@ export async function scheduleWorkspaceRefresh(
 }
 
 /**
- * Subscribes to git refresh version changes for ALL workspaces and triggers
- * `refreshWorkspaceGitChanges` for each affected workspace, including those
- * that are not currently selected.
+ * All-workspaces git sync runtime (Phase 13, desktop5.md).
  *
- * Uses per-workspace in-flight + queue guards and a throttle interval to avoid
- * excessive RPC traffic while ensuring every workspace eventually reflects the
- * latest git state.
- *
- * The selected workspace is skipped because it is already handled by the
- * existing `useEffect` in `WorkspaceView`.
+ * Long-lived resource: owns the per-workspace refresh state map (in-flight +
+ * queue + throttle timers) and the last-seen refresh version record, and
+ * subscribes to the workspace projection store so git refresh version bumps
+ * trigger throttled `refreshWorkspaceGitChanges` for every affected
+ * workspace — including non-selected ones. The selected workspace is skipped
+ * because it is already handled by WorkspaceView's own effect.
  */
-export function useAllWorkspacesGitSync() {
-  const refreshStateByWorkspaceId = useRef(new Map<string, WorkspaceRefreshState>());
-  const lastSeenVersionByWorktreePath = useRef<Record<string, number>>({});
+export function createAllWorkspacesGitSyncRuntime() {
+  const refreshStateByWorkspaceId = new Map<string, WorkspaceRefreshState>();
+  const lastSeenVersionByWorktreePath: Record<string, number> = {};
+  let lastVersionMap: Record<string, number> | undefined;
 
-  const gitRefreshVersionByWorktreePath = workspaceProjectionStore((state) => state.gitRefreshVersionByWorktreePath);
+  function onProjectionChanged(versionByWorktreePath: Record<string, number>): void {
+    if (versionByWorktreePath === lastVersionMap) {
+      return;
+    }
+    lastVersionMap = versionByWorktreePath;
 
-  useEffect(() => {
     const state = workspaceStore.getState();
     const workspaces = state.workspaces;
     const selectedWorkspaceId = state.selectedWorkspaceId;
-    const lastSeen = lastSeenVersionByWorktreePath.current;
+    const lastSeen = lastSeenVersionByWorktreePath;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
     const projectByProjectId = new Map(projectStore.getState().projects.map((project) => [project.id, project]));
 
-    for (const workspaceId of refreshStateByWorkspaceId.current.keys()) {
+    for (const workspaceId of refreshStateByWorkspaceId.keys()) {
       if (!activeWorkspaceIds.has(workspaceId)) {
-        const refreshState = refreshStateByWorkspaceId.current.get(workspaceId);
+        const refreshState = refreshStateByWorkspaceId.get(workspaceId);
         if (refreshState?.pendingTimer) {
           clearTimeout(refreshState.pendingTimer);
         }
-        refreshStateByWorkspaceId.current.delete(workspaceId);
+        refreshStateByWorkspaceId.delete(workspaceId);
       }
     }
 
@@ -141,13 +142,28 @@ export function useAllWorkspacesGitSync() {
         continue;
       }
 
-      const currentVersion = gitRefreshVersionByWorktreePath[worktreePath] ?? 0;
+      const currentVersion = versionByWorktreePath[worktreePath] ?? 0;
       const previousVersion = lastSeen[worktreePath] ?? 0;
 
       if (currentVersion > previousVersion) {
         lastSeen[worktreePath] = currentVersion;
-        void scheduleWorkspaceRefresh(workspace.id, worktreePath, refreshStateByWorkspaceId.current);
+        void scheduleWorkspaceRefresh(workspace.id, worktreePath, refreshStateByWorkspaceId);
       }
     }
-  }, [gitRefreshVersionByWorktreePath]);
+  }
+
+  return {
+    /** Subscribes to projection store changes. Returns a stop function. */
+    start(): () => void {
+      const unsubscribe = workspaceProjectionStore.subscribe((state) => {
+        onProjectionChanged(state.gitRefreshVersionByWorktreePath);
+      });
+      onProjectionChanged(workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath);
+      return () => {
+        unsubscribe();
+      };
+    },
+  };
 }
+
+export type AllWorkspacesGitSyncRuntime = ReturnType<typeof createAllWorkspacesGitSyncRuntime>;
