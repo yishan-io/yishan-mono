@@ -27,3 +27,8 @@ export function updateNodeScope(nodeId: string, scope: "private" | "shared") {
 export function unregisterNode(nodeId: string): Promise<void> {
   return wrapNodeCommand((orgId) => api.node.unregister(orgId, nodeId));
 }
+
+/** Lists all nodes for the given organization (project-tree node hierarchy). */
+export async function listOrgNodes(organizationId: string) {
+  return api.node.listByOrg(organizationId);
+}

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../../../api/client";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
+import {
+  listPullRequestHistory,
+  refreshWorkspacePullRequest,
+} from "../../../features/workspace/commands/workspaceCommands";
 import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 export type WorkspacePullRequestState = {
@@ -43,8 +45,7 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     let cancelled = false;
     setIsLoading(true);
 
-    api.workspacePullRequest
-      .list(orgId, projectId, selectedWorkspaceId)
+    listPullRequestHistory(orgId, projectId, selectedWorkspaceId)
       .then((records) => {
         if (!cancelled) {
           setHistoricalPullRequests(records);
@@ -84,22 +85,9 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     // Mark as attempted immediately so concurrent renders don't fire duplicates.
     daemonRefreshAttemptedRef.current = selectedWorkspaceId;
 
-    let cancelled = false;
-
-    getDaemonClient()
-      .then((client) => client.workspace.refreshPullRequest({ workspaceId: selectedWorkspaceId }))
-      .then((daemonWorkspace) => {
-        if (!cancelled && daemonWorkspace.pullRequest) {
-          workspaceProjectionStore.getState().setWorkspacePullRequest(selectedWorkspaceId, daemonWorkspace.pullRequest);
-        }
-      })
-      .catch(() => {
-        // Best-effort — daemon refresh failures are non-fatal.
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    refreshWorkspacePullRequest(selectedWorkspaceId).catch(() => {
+      // Best-effort — daemon refresh failures are non-fatal.
+    });
   }, [enabled, selectedWorkspaceId, worktreePath, pullRequest]);
 
   // Reset the daemon refresh tracker when the workspace changes so a new workspace

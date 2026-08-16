@@ -53,6 +53,14 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-value-api-rpc", file: "views/settings/daemon/daemonSettings/useQuitOnExitSetting.ts", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/settings/daemon/daemonSettings/useDaemonConnectionState.ts", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/settings/daemon/daemonSettings/useDaemonLogDialog.ts", phase: "P8" },
+  // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
+  { rule: "R1-value-api-rpc", file: "views/layout/CreateOrganizationDialogView.tsx", phase: "P8" },
+  { rule: "R1-value-api-rpc", file: "views/layout/ApplicationRouterView.tsx", phase: "P8" },
+  { rule: "R1-value-api-rpc", file: "views/layout/OnboardOrgView.tsx", phase: "P8" },
+  { rule: "R1-value-api-rpc", file: "views/scheduledJob/ScheduledJobRunsSidebar.tsx", phase: "P8" },
+  { rule: "R1-value-api-rpc", file: "views/scheduledJob/ScheduledJobDetailFields.tsx", phase: "P8" },
+  { rule: "R1-value-api-rpc", file: "views/scheduledJob/form/useScheduledJobFormState.ts", phase: "P8" },
+  { rule: "R1-value-api-rpc", file: "views/settings/AccountSettingsView.tsx", phase: "P8" },
   { rule: "R1-value-api-rpc", file: "views/workspace/WorkspacePortsMenuControl.tsx", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListPersistence.ts", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListTreeData.ts", phase: "P4" },
@@ -148,7 +156,10 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       const target = resolveSpecifier(imp.spec, file);
       const relT = target ? relative(RENDERER_ROOT, target).replace(/\\/g, "/") : "";
       const relS = target ? relative(SHARED_ROOT, target).replace(/\\/g, "/") : "";
-      const isTransport = relT.startsWith("api/") || relT.startsWith("rpc/");
+      // Dir-spec imports ("from \"../../api\"") resolve to the dir without a trailing
+      // slash; treat the bare dir as transport too (Phase 4 gap closure).
+      const isTransport =
+        relT.startsWith("api/") || relT.startsWith("rpc/") || relT === "api" || relT === "rpc";
       const isCommands = relT.startsWith("commands/");
       const isViews = relT.startsWith("views/") || relT.startsWith("components/");
       const isMain = relT.startsWith("../main/") || relT.startsWith("main/");

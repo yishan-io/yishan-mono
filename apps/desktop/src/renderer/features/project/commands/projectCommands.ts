@@ -5,6 +5,7 @@ import { projectStore } from "../model/projectStore";
 import { workspaceProjectionStore } from "../../workspace/model/workspaceProjectionStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
+import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { sessionStore } from "../../../store/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { tabStore } from "../../../store/tabStore";
@@ -65,6 +66,21 @@ export async function inspectLocalProjectSource(path: string): Promise<{
     sourceTypeHint: remoteUrl ? "git" : metadata.isGitRepository ? "git-local" : "unknown",
     remoteUrl,
   };
+}
+
+/** Loads one organization's project-list order/fold preferences from the daemon. */
+export async function getProjectListPreferences(organizationId: string) {
+  const client = await getDaemonClient();
+  return client.project.getListPreferences(organizationId);
+}
+
+/** Persists one organization's project-list order/fold preferences to the daemon. */
+export async function setProjectListPreferences(
+  organizationId: string,
+  preferences: ProjectListPreference,
+): Promise<void> {
+  const client = await getDaemonClient();
+  await client.project.setListPreferences(organizationId, preferences);
 }
 
 /** Creates one project in backend, then applies it into the local legacy store shape. */

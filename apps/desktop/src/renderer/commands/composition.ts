@@ -1,5 +1,6 @@
 import type { WorkspaceProjectRecord } from "../store/types";
 import { listActivePiSessions as listActivePiSessionsCommand } from "./agentChatCommands";
+import { listOrgNodes as listOrgNodesCommand } from "./nodeCommands";
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
   listAgentModels as listAgentModelsCommand,
@@ -122,6 +123,7 @@ import {
   resizeTerminal as resizeTerminalCommand,
   retainOpenTerminalTabFocus as retainOpenTerminalTabFocusCommand,
   setActiveWorkspace as setActiveWorkspaceCommand,
+  subscribeDetectedPorts as subscribeDetectedPortsCommand,
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
@@ -169,6 +171,7 @@ export type Commands = {
   setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
   setOverviewProjectId: typeof setOverviewProjectIdCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
+  listOrgNodes: typeof listOrgNodesCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
   setLeftPaneWidth: typeof setLeftPaneWidthCommand;
@@ -232,6 +235,7 @@ export type Commands = {
   resizeTerminal: typeof resizeTerminalCommand;
   readTerminalOutput: typeof readTerminalOutputCommand;
   listDetectedPorts: typeof listDetectedPortsCommand;
+  subscribeDetectedPorts: typeof subscribeDetectedPortsCommand;
   setActiveWorkspace: typeof setActiveWorkspaceCommand;
   getTerminalResourceUsage: typeof getTerminalResourceUsageCommand;
   listTerminalSessions: typeof listTerminalSessionsCommand;
@@ -314,6 +318,7 @@ export function createCommands(): Commands {
     setOverviewTimeRange: setOverviewTimeRangeCommand,
     setOverviewProjectId: setOverviewProjectIdCommand,
     listCLIToolStatuses: listCLIToolStatusesCommand,
+    listOrgNodes: listOrgNodesCommand,
     setDisplayRepoIds: setDisplayRepoIdsCommand,
     setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
     setLeftPaneWidth: setLeftPaneWidthCommand,
@@ -378,6 +383,7 @@ export function createCommands(): Commands {
     resizeTerminal: resizeTerminalCommand,
     readTerminalOutput: readTerminalOutputCommand,
     listDetectedPorts: listDetectedPortsCommand,
+    subscribeDetectedPorts: subscribeDetectedPortsCommand,
     setActiveWorkspace: setActiveWorkspaceCommand,
     getTerminalResourceUsage: getTerminalResourceUsageCommand,
     listTerminalSessions: listTerminalSessionsCommand,

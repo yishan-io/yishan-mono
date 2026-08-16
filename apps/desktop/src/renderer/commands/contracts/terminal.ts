@@ -17,6 +17,7 @@ export type TerminalCommands = {
   closeTerminalSession: typeof terminalCommands.closeTerminalSession;
   killTerminalProcess: typeof terminalCommands.killTerminalProcess;
   listDetectedPorts: typeof terminalCommands.listDetectedPorts;
+  subscribeDetectedPorts: typeof terminalCommands.subscribeDetectedPorts;
   setActiveWorkspace: typeof terminalCommands.setActiveWorkspace;
   getTerminalResourceUsage: typeof terminalCommands.getTerminalResourceUsage;
   listTerminalSessions: typeof terminalCommands.listTerminalSessions;

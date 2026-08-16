@@ -7,7 +7,7 @@ import type {
   TerminalStreamEvent,
 } from "../rpc/daemonTypes";
 import type { TerminalDetectedPort } from "../rpc/daemonTypes";
-import { getDaemonClient } from "../rpc/rpcTransport";
+import { getDaemonClient, subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
 import type { DaemonRpcClient } from "../rpc/types";
 import { terminalFocusStore } from "../store/terminalFocusStore";
 
@@ -80,6 +80,23 @@ export async function killTerminalProcess(params: { pid: number }) {
 export async function listDetectedPorts(): Promise<TerminalDetectedPort[]> {
   const client = await getDaemonClient();
   return await client.terminal.listDetectedPorts();
+}
+
+/** Subscribes one listener to detected-port change events over websocket. */
+export function subscribeDetectedPorts(
+  onData: (ports: TerminalDetectedPort[]) => void,
+  onError?: (error: unknown) => void,
+): () => void {
+  return subscribeDesktopRpcEvent((event) => {
+    if (event.method !== "terminalDetectedPortsChanged") {
+      return;
+    }
+    try {
+      onData((event.payload as { ports?: TerminalDetectedPort[] } | undefined)?.ports ?? []);
+    } catch (error) {
+      onError?.(error);
+    }
+  });
 }
 
 /** Sets daemon active workspace context for background optimizations. */

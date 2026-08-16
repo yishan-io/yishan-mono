@@ -12,6 +12,7 @@ import {
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { api } from "../../../api";
 import { sessionStore } from "../../../store/sessionStore";
 import { layoutStore } from "../../../store/settings/layoutStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -179,6 +180,15 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
     console.error("Failed to refresh workspace pull request", error);
     throw error;
   }
+}
+
+/** Lists historical pull request records for one workspace from the API service. */
+export async function listPullRequestHistory(
+  orgId: string,
+  projectId: string,
+  workspaceId: string,
+) {
+  return api.workspacePullRequest.list(orgId, projectId, workspaceId);
 }
 
 /** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */

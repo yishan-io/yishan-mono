@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { api } from "../../../api/client";
+import { listOrgNodes } from "../../../commands/nodeCommands";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
 import { projectStore } from "../../../features/project/model/projectStore";
@@ -67,7 +67,7 @@ export function useProjectListTreeData(input: {
 
   const nodesQuery = useQuery({
     queryKey: ["org-nodes", selectedOrganizationId],
-    queryFn: () => api.node.listByOrg(selectedOrganizationId as string),
+    queryFn: () => listOrgNodes(selectedOrganizationId as string),
     enabled: Boolean(selectedOrganizationId),
   });
 

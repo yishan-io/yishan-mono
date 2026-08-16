@@ -37,6 +37,8 @@ type _WorkspaceCommandsConforms = Expect<
     WorkspaceCommands,
     | "refreshWorkspaceGitChanges"
     | "refreshWorkspacePullRequest"
+    | "listPullRequestHistory"
+    | "subscribeOpenCreateWorkspaceDialog"
     | "setDisplayRepoIds"
     | "setLastUsedExternalAppId"
     | "setLeftPaneWidth"

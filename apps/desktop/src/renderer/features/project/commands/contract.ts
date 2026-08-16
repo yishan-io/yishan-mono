@@ -1,8 +1,7 @@
 /**
  * ProjectCommands — the public command surface for the Project feature.
  *
- * Phase 1 contract. Owned by `projectCommands` today; moves to
- * `features/project/commands/` in Phases 4+.
+ * Phase 1 contract; now lives in the feature command directory (Phase 4).
  */
 import type * as projectCommands from "./projectCommands";
 
@@ -12,4 +11,6 @@ export type ProjectCommands = {
   createProject: typeof projectCommands.createProject;
   deleteProject: typeof projectCommands.deleteProject;
   updateProjectConfig: typeof projectCommands.updateProjectConfig;
+  getProjectListPreferences: typeof projectCommands.getProjectListPreferences;
+  setProjectListPreferences: typeof projectCommands.setProjectListPreferences;
 };

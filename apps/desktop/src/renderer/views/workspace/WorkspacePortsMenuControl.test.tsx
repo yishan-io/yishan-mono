@@ -12,6 +12,7 @@ const mocked = vi.hoisted(() => ({
   listDetectedPorts: vi.fn(),
   setSelectedWorkspaceId: vi.fn(),
   selectTab: vi.fn(),
+  subscribeDetectedPorts: vi.fn(() => () => {}),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -26,6 +27,7 @@ vi.mock("../../hooks/useCommands", () => ({
     listDetectedPorts: mocked.listDetectedPorts,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
     selectTab: mocked.selectTab,
+    subscribeDetectedPorts: mocked.subscribeDetectedPorts,
   }),
 }));
 
