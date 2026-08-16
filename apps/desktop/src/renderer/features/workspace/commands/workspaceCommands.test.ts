@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../features/project/model/projectStore";
-import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
-import { chatStore } from "../store/chatStore";
-import { sessionStore } from "../store/sessionStore";
-import { layoutStore } from "../store/settings/layoutStore";
-import { tabStore } from "../store/tabStore";
-import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
-import { workspaceStore } from "../store/workspaceStore";
-import { workspaceUiStore } from "../store/workspaceUiStore";
+import { projectStore } from "../../project/model/projectStore";
+import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
+import { chatStore } from "../../../store/chatStore";
+import { sessionStore } from "../../../store/sessionStore";
+import { layoutStore } from "../../../store/settings/layoutStore";
+import { tabStore } from "../../../store/tabStore";
+import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
+import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import {
   OPEN_CREATE_WORKSPACE_DIALOG_EVENT,
   closeWorkspace,
@@ -45,12 +45,12 @@ const rpcMocks = vi.hoisted(() => ({
   deleteLocalFolder: vi.fn(async () => undefined),
 }));
 
-vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings: rpcMocks.enqueueWorkspaceLifecycleWarnings,
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     git: {
       inspectPath: rpcMocks.gitInspect,

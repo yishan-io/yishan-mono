@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../store/sessionStore";
-import { tabStore } from "../store/tabStore";
-import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
-import { workspaceStore } from "../store/workspaceStore";
+import { sessionStore } from "../../../store/sessionStore";
+import { tabStore } from "../../../store/tabStore";
+import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
+import { workspaceStore } from "../../../store/workspaceStore";
 import { loadWorkspaceSnapshot } from "./projectCommands";
 
 const apiMocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),
 }));
 
-vi.mock("../api", () => ({
+vi.mock("../../../api", () => ({
   api: {
     org: {
       list: apiMocks.listOrganizations,
@@ -24,7 +24,7 @@ const rpcMocks = vi.hoisted(() => ({
   listLocalFolders: vi.fn(async () => []),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     workspace: {
       listLocalFolders: rpcMocks.listLocalFolders,

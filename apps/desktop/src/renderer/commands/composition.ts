@@ -79,7 +79,7 @@ import {
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
   loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
   updateProjectConfig as updateProjectConfigCommand,
-} from "./projectCommands";
+} from "../features/project/commands/projectCommands";
 import {
   createScheduledJob as createScheduledJobCommand,
   deleteScheduledJob as deleteScheduledJobCommand,
@@ -89,7 +89,7 @@ import {
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
 } from "./scheduledJobCommands";
-import { setSelectedRepo, setSelectedWorkspace } from "./selectionCommands";
+import { setSelectedRepo, setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
 import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
@@ -147,7 +147,7 @@ import {
   toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "./workspaceCommands";
+} from "../features/workspace/commands/workspaceCommands";
 
 export type Commands = {
   setSelectedRepoId: (repoId: string) => void;

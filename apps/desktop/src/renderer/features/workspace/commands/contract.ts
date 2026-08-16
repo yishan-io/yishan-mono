@@ -1,5 +1,5 @@
-import type * as localFolderCommands from "../localFolderCommands";
-import type * as workspaceCloseCommand from "../workspaceCloseCommand";
+import type * as localFolderCommands from "./localFolderCommands";
+import type * as workspaceCloseCommand from "./workspaceCloseCommand";
 /**
  * WorkspaceCommands — the public command surface for the Workspace feature.
  *
@@ -13,8 +13,8 @@ import type * as workspaceCloseCommand from "../workspaceCloseCommand";
  * is the feature's public entry and will move to `features/workspace/commands/`
  * when the feature directory forms (Phases 4+).
  */
-import type * as workspaceCommands from "../workspaceCommands";
-import type * as workspaceCreateCommand from "../workspaceCreateCommand";
+import type * as workspaceCommands from "./workspaceCommands";
+import type * as workspaceCreateCommand from "./workspaceCreateCommand";
 
 export type WorkspaceCommands = {
   refreshWorkspaceGitChanges: typeof workspaceCommands.refreshWorkspaceGitChanges;

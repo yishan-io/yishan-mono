@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   enqueueWorkspaceLifecycleWarnings: vi.fn(),
 }));
 
-vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceLifecycleWarnings: mocks.enqueueWorkspaceLifecycleWarnings,
 }));
 

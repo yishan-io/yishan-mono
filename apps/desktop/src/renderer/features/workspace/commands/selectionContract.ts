@@ -5,7 +5,7 @@
  * Phase 1 contract. Owned by `selectionCommands` today; moves to
  * `features/workspace/commands/` (selection owner) in Phases 3–4.
  */
-import type * as selectionCommands from "../selectionCommands";
+import type * as selectionCommands from "./selectionCommands";
 
 export type SelectionCommands = {
   setSelectedRepo: typeof selectionCommands.setSelectedRepo;

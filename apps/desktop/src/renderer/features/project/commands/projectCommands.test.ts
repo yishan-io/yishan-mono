@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../features/project/model/projectStore";
-import { chatStore } from "../store/chatStore";
-import { sessionStore } from "../store/sessionStore";
-import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
-import { tabStore } from "../store/tabStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../store/types";
-import { workspaceStore } from "../store/workspaceStore";
-import { workspaceUiStore } from "../store/workspaceUiStore";
+import { projectStore } from "../model/projectStore";
+import { chatStore } from "../../../store/chatStore";
+import { sessionStore } from "../../../store/sessionStore";
+import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
+import { tabStore } from "../../../store/tabStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
+import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { createProject, deleteProject, loadWorkspaceSnapshot, updateProjectConfig } from "./projectCommands";
 
 const apiMocks = vi.hoisted(() => ({
@@ -18,7 +18,7 @@ const apiMocks = vi.hoisted(() => ({
   updateProject: vi.fn(),
 }));
 
-vi.mock("../api", () => ({
+vi.mock("../../../api", () => ({
   api: {
     org: {
       list: apiMocks.listOrganizations,
@@ -48,7 +48,7 @@ const rpcMocks = vi.hoisted(() => ({
   ),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     git: {
       inspectPath: rpcMocks.gitInspect,

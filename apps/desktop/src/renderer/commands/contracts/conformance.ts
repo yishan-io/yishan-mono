@@ -8,24 +8,24 @@
  */
 
 import type { AgentCommands } from "./agent";
-import type { ProjectCommands } from "./project";
-import type { SelectionCommands } from "./selection";
+import type { ProjectCommands } from "../../features/project/commands/contract";
+import type { SelectionCommands } from "../../features/workspace/commands/selectionContract";
 import type { TerminalCommands } from "./terminal";
 import type { WorkbenchCommands } from "./workbench";
-import type { WorkspaceCommands } from "./workspace";
+import type { WorkspaceCommands } from "../../features/workspace/commands/contract";
 
 import type * as agentChatCommands from "../agentChatCommands";
 import type * as agentCommands from "../agentCommands";
 import type * as chatCommands from "../chatCommands";
-import type * as localFolderCommands from "../localFolderCommands";
-import type * as projectCommands from "../projectCommands";
-import type * as selectionCommands from "../selectionCommands";
+import type * as localFolderCommands from "../../features/workspace/commands/localFolderCommands";
+import type * as projectCommands from "../../features/project/commands/projectCommands";
+import type * as selectionCommands from "../../features/workspace/commands/selectionCommands";
 import type * as tabCommands from "../tabCommands";
 import type * as terminalCommands from "../terminalCommands";
 import type * as whiteboardCommands from "../whiteboardCommands";
-import type * as workspaceCloseCommand from "../workspaceCloseCommand";
-import type * as workspaceCommands from "../workspaceCommands";
-import type * as workspaceCreateCommand from "../workspaceCreateCommand";
+import type * as workspaceCloseCommand from "../../features/workspace/commands/workspaceCloseCommand";
+import type * as workspaceCommands from "../../features/workspace/commands/workspaceCommands";
+import type * as workspaceCreateCommand from "../../features/workspace/commands/workspaceCreateCommand";
 import type * as workspaceTabSync from "../workspaceTabSync";
 
 /** Assert a type-level boolean condition; fails typecheck when not true. */

@@ -6,9 +6,9 @@
  * typecheck time. They will move to `features/<feature>/commands/` as each
  * feature directory forms (Phases 4+).
  */
-export type { WorkspaceCommands } from "./workspace";
-export type { ProjectCommands } from "./project";
-export type { SelectionCommands } from "./selection";
+export type { WorkspaceCommands } from "../../features/workspace/commands/contract";
+export type { ProjectCommands } from "../../features/project/commands/contract";
+export type { SelectionCommands } from "../../features/workspace/commands/selectionContract";
 export type { AgentCommands } from "./agent";
 export type { TerminalCommands } from "./terminal";
 export type { WorkbenchCommands } from "./workbench";

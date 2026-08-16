@@ -4,7 +4,7 @@
  * Phase 1 contract. Owned by `projectCommands` today; moves to
  * `features/project/commands/` in Phases 4+.
  */
-import type * as projectCommands from "../projectCommands";
+import type * as projectCommands from "./projectCommands";
 
 export type ProjectCommands = {
   inspectLocalProjectSource: typeof projectCommands.inspectLocalProjectSource;
