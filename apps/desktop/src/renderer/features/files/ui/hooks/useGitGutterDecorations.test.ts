@@ -7,12 +7,12 @@ import { useGitGutterDecorations } from "./useGitGutterDecorations";
 
 // Mock the readDiff command
 const mockReadDiff = vi.fn();
-vi.mock("../features/git/commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   readDiff: (...args: unknown[]) => mockReadDiff(...args),
 }));
 
 // Mock monaco-editor setup module
-vi.mock("../helpers/monacoSetup", () => ({
+vi.mock("../../../helpers/monacoSetup", () => ({
   YISHAN_THEME_DARK: "yishan-dark",
   YISHAN_THEME_LIGHT: "yishan-light",
   ensureEditorThemes: vi.fn(),
