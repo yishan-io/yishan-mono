@@ -42,10 +42,6 @@ type KnownViolation = { rule: RuleName; file: string; phase: string };
 const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Rule 1: UI value-imports of api/rpc (cross-layer index §1) ----
   // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
-  { rule: "R1-value-api-rpc", file: "views/workspace/WorkspacePortsMenuControl.tsx", phase: "P4" },
-  { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListPersistence.ts", phase: "P4" },
-  { rule: "R1-value-api-rpc", file: "views/workspace/LeftPane/useProjectListTreeData.ts", phase: "P4" },
-  { rule: "R1-value-api-rpc", file: "views/workspace/RightPane/useWorkspacePullRequestState.ts", phase: "P4" },
   { rule: "R1-value-api-rpc", file: "views/workspace/useAgentChatSessionLifecycle.ts", phase: "P5" },
   { rule: "R1-value-api-rpc", file: "hooks/useOpenTabAutoRefresh.ts", phase: "P6" },
   { rule: "R1-value-api-rpc", file: "hooks/useShortcuts.ts", phase: "P6" },
