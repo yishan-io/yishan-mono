@@ -321,6 +321,55 @@ export async function fetchAgentMessages(opts: {
   });
 }
 
+/**
+ * Recovers one agent-chat tab after a daemon reconnect: reattaches the live
+ * session, rehydrates state/messages/models/stats, and falls back to a fresh
+ * start when the daemon no longer holds the session. Owned by the Runtime so
+ * React mounts never run the recovery race themselves.
+ */
+export async function recoverAgentSessionAfterReconnect(opts: {
+  tabId: string;
+  workspaceId: string;
+  cwd: string;
+  sessionId: string;
+  sessionView: AgentChatSessionView;
+  paneId?: string;
+}): Promise<void> {
+  try {
+    await reattachPiSession(opts.tabId);
+    // The process survived the connection drop; rows stay live.
+    agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, null);
+    await fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
+    await fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
+    await fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
+    await refreshAgentSessionStats(opts.sessionId);
+  } catch {
+    // The daemon no longer holds the session (e.g. it was re-run and started
+    // fresh). Drop the stale handle and re-start the session so the tab heals
+    // itself instead of staying broken.
+    clearPiSessionHandle(opts.tabId);
+    try {
+      const { attached } = await ensurePiSession({
+        tabId: opts.tabId,
+        workspaceId: opts.workspaceId,
+        cwd: opts.cwd,
+        sessionId: opts.sessionId,
+        sessionView: opts.sessionView,
+        paneId: opts.paneId,
+      });
+      // Fresh start resets the session; classify pre-existing rows as
+      // interrupted when the previous process is gone.
+      agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, attached ? null : Date.now());
+      await fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
+      await fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
+      await fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
+      await refreshAgentSessionStats(opts.sessionId);
+    } catch (recoveryError) {
+      agentChatStore.getState().setSessionError(opts.tabId, getErrorMessage(recoveryError));
+    }
+  }
+}
+
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 function isPiSessionAlreadyRunningError(error: unknown): boolean {

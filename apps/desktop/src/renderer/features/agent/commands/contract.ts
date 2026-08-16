@@ -22,6 +22,8 @@ export type AgentCommands = {
   fetchAgentModels: typeof agentChatCommands.fetchAgentModels;
   fetchAgentState: typeof agentChatCommands.fetchAgentState;
   fetchAgentMessages: typeof agentChatCommands.fetchAgentMessages;
+  startAgentChatSession: typeof agentChatCommands.startAgentChatSession;
+  restartAgentSessionForProvider: typeof agentChatCommands.restartAgentSessionForProvider;
   listAgentDetectionStatuses: typeof agentCommands.listAgentDetectionStatuses;
   listAgentModels: typeof agentCommands.listAgentModels;
   ensureChatSession: typeof chatCommands.ensureChatSession;

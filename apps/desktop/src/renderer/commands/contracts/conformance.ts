@@ -98,6 +98,8 @@ type _AgentChatCommandsConforms = Expect<
     | "fetchAgentModels"
     | "fetchAgentState"
     | "fetchAgentMessages"
+    | "startAgentChatSession"
+    | "restartAgentSessionForProvider"
   >
     ? true
     : false

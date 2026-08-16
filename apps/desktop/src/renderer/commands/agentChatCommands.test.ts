@@ -13,6 +13,7 @@ import {
   registerAgentSession,
   respondToAgentExtensionUiRequest,
   sendAgentPrompt,
+  startAgentChatSession,
   stopPiSession,
 } from "./agentChatCommands";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
@@ -2009,5 +2010,39 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
       name: "Claude Sonnet 4",
       provider: "anthropic",
     });
+  });
+});
+
+describe("agentChatCommands.startAgentChatSession", () => {
+  it("classifies pre-existing history as interrupted after a fresh start", async () => {
+    mocks.start.mockResolvedValue({ sessionId: "session-1" });
+
+    await startAgentChatSession({
+      tabId: "tab-fresh",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "session-1",
+      sessionView: "full",
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-fresh"]?.subagentSessionEndedAtMs).not.toBeNull();
+  });
+
+  it("keeps rows live after an attach to a still-alive process", async () => {
+    mocks.start.mockRejectedValueOnce({
+      code: -32003,
+      message: "agent session already exists",
+    });
+    mocks.attach.mockResolvedValue({ ok: true });
+
+    await startAgentChatSession({
+      tabId: "tab-attach",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "session-1",
+      sessionView: "full",
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-attach"]?.subagentSessionEndedAtMs).toBeNull();
   });
 });
