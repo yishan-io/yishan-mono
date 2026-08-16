@@ -10,7 +10,9 @@ import { projectStore } from "../features/project/model/projectStore";
 import type { WorkspaceProjectRecord } from "../features/project/model/projectTypes";
 import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
 import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
+import { layoutStore } from "./settings/layoutStore";
 import { workspaceStore } from "./workspaceStore";
+import { workspaceUiStore } from "./workspaceUiStore";
 
 /** Resolves a workspace's owning project id (folder workspaces use their repo id). */
 function resolveWorkspaceProjectId(workspace: Pick<WorkspaceItem, "projectId" | "repoId">): string {
@@ -102,4 +104,29 @@ function useWorkspaceSelectedId(): string {
 
 function useProjectStoreSelectedProjectId(): string {
   return workspaceStore((s) => s.selectedProjectId);
+}
+
+/** Pure combine: workspace pane collapsed flags from the three store slices. */
+export function selectWorkspacePaneVisibility(input: {
+  leftHidden: boolean;
+  selectedWorkspaceId: string;
+  rightHiddenByWorkspaceId: Record<string, boolean>;
+}): { leftCollapsed: boolean; rightCollapsed: boolean } {
+  return {
+    leftCollapsed: input.leftHidden,
+    rightCollapsed: input.rightHiddenByWorkspaceId[input.selectedWorkspaceId] ?? true,
+  };
+}
+
+/** React subscription hook: pane collapsed flags + selected workspace, re-renders on any of the three stores. */
+export function useWorkspacePaneVisibilityState(): {
+  leftCollapsed: boolean;
+  rightCollapsed: boolean;
+  selectedWorkspaceId: string;
+} {
+  const leftHidden = layoutStore((s) => s.isLeftPaneManuallyHidden);
+  const selectedWorkspaceId = workspaceStore((s) => s.selectedWorkspaceId);
+  const rightHiddenByWorkspaceId = workspaceUiStore((s) => s.isRightPaneHiddenByWorkspaceId);
+  const collapsed = selectWorkspacePaneVisibility({ leftHidden, selectedWorkspaceId, rightHiddenByWorkspaceId });
+  return { ...collapsed, selectedWorkspaceId };
 }
