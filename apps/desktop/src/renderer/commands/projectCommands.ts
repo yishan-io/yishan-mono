@@ -1,6 +1,6 @@
 import { api } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../features/project/model/projectIconPresets";
 import { projectStore } from "../features/project/model/projectStore";
 import { reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
 import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";

@@ -1,5 +1,5 @@
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../features/project/model/projectIconPresets";
 import { type ProjectStoreSlice, reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
 import { getFileName } from "../store/tabs";
 import type {

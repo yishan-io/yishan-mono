@@ -76,7 +76,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-main", file: "views/workspace/browser/UrlBar.tsx", phase: "P5" },
   { rule: "R1-main", file: "views/workspace/browser/hooks/useBrowserHistory.ts", phase: "P5" },
   // ---- Rule 4: commands importing views/components (cross-layer index) ----
-  { rule: "R4", file: "commands/projectCommands.ts", phase: "P4" },
 ];
 
 const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
@@ -172,7 +171,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       ) {
         violations.push({ rule: "R3", file: rel, target: imp.spec });
       }
-      if (rel.startsWith("commands/") && isViews) {
+      if ((rel.startsWith("commands/") || /^features\/[^/]+\/commands\//.test(rel)) && isViews) {
         violations.push({ rule: "R4", file: rel, target: imp.spec });
       }
     }
