@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
 import { registerPermissionPolicy } from "./security/permissionPolicy";
+import { wireAppLifecycle } from "./lifecycle/appLifecycle";
 import { MainWindow } from "./window/mainWindow";
 export { isPermissionAllowed } from "./security/permissionPolicy";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
@@ -35,7 +36,6 @@ export class DesktopApplication {
     onClosed: () => {},
   });
   private readonly daemonManager = new DaemonManager();
-  private hasProcessedBeforeQuit = false;
   private isQuitting = false;
   private pendingProtocolUrl: string | null = null;
   private pendingUpdateReady: DesktopUpdateEventPayload | null = null;
@@ -126,53 +126,28 @@ export class DesktopApplication {
       },
     });
 
-    app.on("before-quit", (event) => {
-      this.isQuitting = true;
-
-      if (this.hasProcessedBeforeQuit) {
-        return;
-      }
-
-      event.preventDefault();
-
-      void this.confirmQuit().then((shouldQuit) => {
-        if (!shouldQuit) {
-          this.isQuitting = false;
-          return;
+    wireAppLifecycle(app, {
+      confirmQuit: () => this.confirmQuit(),
+      runBeforeQuitCleanup: () => this.runBeforeQuitCleanup(),
+      onProtocolUrl: (callbackUrl) => this.handleProtocolCallbackUrl(callbackUrl),
+      onActivate: () => {
+        if (this.mainWindow.browserWindow && !this.mainWindow.browserWindow.isDestroyed()) {
+          this.mainWindow.focus();
+        } else {
+          this.mainWindow.create();
+          this.mainWindow.loadRenderer();
         }
-
-        this.hasProcessedBeforeQuit = true;
-        void this.runBeforeQuitCleanup().finally(() => {
-          app.quit();
-        });
-      });
+      },
+      isQuitting: () => this.isQuitting,
+      setQuitting: (quitting) => {
+        this.isQuitting = quitting;
+      },
+      takePendingProtocolUrl: () => {
+        const callbackUrl = this.pendingProtocolUrl;
+        this.pendingProtocolUrl = null;
+        return callbackUrl;
+      },
     });
-
-    app.on("activate", () => {
-      if (this.mainWindow.browserWindow && !this.mainWindow.browserWindow.isDestroyed()) {
-        this.mainWindow.focus();
-      } else {
-        this.mainWindow.create();
-        this.mainWindow.loadRenderer();
-      }
-    });
-
-    app.on("open-url", (event, callbackUrl) => {
-      event.preventDefault();
-      this.handleProtocolCallbackUrl(callbackUrl);
-    });
-
-    app.on("window-all-closed", () => {
-      if (process.platform !== "darwin" || this.isQuitting) {
-        app.quit();
-      }
-    });
-
-    if (this.pendingProtocolUrl) {
-      const callbackUrl = this.pendingProtocolUrl;
-      this.pendingProtocolUrl = null;
-      this.handleProtocolCallbackUrl(callbackUrl);
-    }
   }
 
   private extractAuthCallbackUrlFromArgv(argv: string[]): string | null {
@@ -348,10 +323,7 @@ export class DesktopApplication {
       // Mark quit intent before electron-updater closes windows so the
       // macOS close handler does not convert update restart into a hide.
       this.isQuitting = true;
-      if (!this.hasProcessedBeforeQuit) {
-        this.hasProcessedBeforeQuit = true;
-        await this.runBeforeQuitCleanup();
-      }
+      await this.runBeforeQuitCleanup();
       autoUpdater.quitAndInstall(false, true);
       return { ok: true as const };
     });
