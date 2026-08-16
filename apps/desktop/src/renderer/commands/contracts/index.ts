@@ -10,6 +10,7 @@ export type { WorkspaceCommands } from "../../features/workspace/commands/contra
 export type { ProjectCommands } from "../../features/project/commands/contract";
 export type { SelectionCommands } from "../../features/workspace/commands/selectionContract";
 export type { AgentCommands } from "../../features/agent/commands/contract";
-export type { TerminalCommands } from "./terminal";
+export type { TerminalCommands } from "../../features/terminal/commands/contract";
+export type { FileCommands } from "../../features/files/commands/contract";
 export type { WorkbenchCommands } from "../../features/workbench/commands/contract";
 export * from "./conformance";

@@ -13,7 +13,7 @@ vi.mock("@renderer/commands/appCommands", () => ({
   openLink: (options: { url: string }) => openLinkMock(options),
 }));
 
-vi.mock("@renderer/commands/fileCommands", () => ({
+vi.mock("@renderer/features/files/commands/fileCommands", () => ({
   buildWorkspaceFileUrl: (options: { workspaceWorktreePath: string; relativePath: string }) =>
     buildWorkspaceFileUrlMock(options),
 }));

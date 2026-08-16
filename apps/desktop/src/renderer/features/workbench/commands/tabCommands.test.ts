@@ -44,7 +44,7 @@ vi.mock("../../../features/agent/commands/agentChatCommands", () => ({
   stopPiSession: rpcMocks.stopPiSession,
 }));
 
-vi.mock("../../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   resolveChatFilePath: rpcMocks.resolveChatFilePath,
 }));
 

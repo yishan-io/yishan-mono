@@ -1,4 +1,4 @@
-import { copyFiles, renameEntry, writeFileBase64 } from "@renderer/commands/fileCommands";
+import { copyFiles, renameEntry, writeFileBase64 } from "@renderer/features/files/commands/fileCommands";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";

@@ -1,4 +1,4 @@
-import { createFile, listFiles } from "../../../commands/fileCommands";
+import { createFile, listFiles } from "../../../features/files/commands/fileCommands";
 import { openTab } from "./tabCommands";
 
 const WHITEBOARD_BASE_NAME = "whiteboard";

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { buildWorkspaceFileUrl, readFile } from "../../commands/fileCommands";
+import { buildWorkspaceFileUrl, readFile } from "../../features/files/commands/fileCommands";
 import { FileQuickOpenDialog } from "../../components/FileQuickOpenDialog";
 import {
   isAudioFile,

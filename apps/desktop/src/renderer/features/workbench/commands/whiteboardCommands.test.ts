@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   openTab: vi.fn(),
 }));
 
-vi.mock("../../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   listFiles: mocks.listFiles,
   createFile: mocks.createFile,
 }));

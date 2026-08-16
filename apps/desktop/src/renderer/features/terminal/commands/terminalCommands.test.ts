@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => ({
   writeInput: vi.fn(),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     terminal: {
       closeSession: mocks.closeSession,

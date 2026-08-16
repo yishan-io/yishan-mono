@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
-import type { TerminalDetectedPort } from "../../commands/terminalCommands";
+import type { TerminalDetectedPort } from "../../features/terminal/commands/terminalCommands";
 import { PortsTableMenu, type PortsTableMenuRow } from "../../components/PortsTableMenu";
 import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { getErrorMessage } from "../../helpers/errorHelpers";

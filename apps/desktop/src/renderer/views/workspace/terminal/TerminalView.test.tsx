@@ -150,12 +150,12 @@ vi.mock("../../../store/tabStore", () => ({
   tabStore: mocked.tabStore,
 }));
 
-vi.mock("../../../commands/tabCommands", () => ({
+vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   closeTab: mocked.closeTab,
   renameTab: mocked.renameTab,
 }));
 
-vi.mock("../../../commands/terminalCommands", () => ({
+vi.mock("../../../features/terminal/commands/terminalCommands", () => ({
   createTerminalSession: mocked.createTerminalSession,
   listTerminalSessions: mocked.listTerminalSessions,
   readTerminalOutput: mocked.readTerminalOutput,

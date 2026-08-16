@@ -7,7 +7,7 @@ import {
   readFile,
   renameEntry,
   writeClipboardText,
-} from "@renderer/commands/fileCommands";
+} from "@renderer/features/files/commands/fileCommands";
 import {
   isAudioFile,
   isExcalidrawFile,

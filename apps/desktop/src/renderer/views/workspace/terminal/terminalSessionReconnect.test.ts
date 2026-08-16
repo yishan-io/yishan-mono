@@ -59,7 +59,7 @@ const mockSubscribeTerminalOutput = vi.fn();
 const mockWriteTerminalInput = vi.fn();
 const mockCloseTerminalSession = vi.fn();
 
-vi.mock("../../../commands/terminalCommands", () => ({
+vi.mock("../../../features/terminal/commands/terminalCommands", () => ({
   createTerminalSession: (...args: unknown[]) => mockCreateTerminalSession(...args),
   listTerminalSessions: (...args: unknown[]) => mockListTerminalSessions(...args),
   readTerminalOutput: (...args: unknown[]) => mockReadTerminalOutput(...args),

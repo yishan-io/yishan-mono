@@ -5,7 +5,7 @@
  * Phase 1 contract. Owned by `terminalCommands` today; moves to
  * `features/terminal/commands/` in Phase 6.
  */
-import type * as terminalCommands from "../terminalCommands";
+import type * as terminalCommands from "./terminalCommands";
 
 export type TerminalCommands = {
   consumeTerminalTabFocus: typeof terminalCommands.consumeTerminalTabFocus;

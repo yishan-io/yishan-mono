@@ -276,7 +276,7 @@ vi.mock("../../../hooks/useCommands", () => ({
   }),
 }));
 
-vi.mock("../../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),
   listDetectedExternalAppIds: (...args: unknown[]) => mocked.listDetectedExternalAppIds(...args),
 }));

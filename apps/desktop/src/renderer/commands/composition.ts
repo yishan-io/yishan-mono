@@ -68,7 +68,7 @@ import {
   readFile as readFileCommand,
   renameEntry as renameEntryCommand,
   writeFile as writeFileCommand,
-} from "./fileCommands";
+} from "../features/files/commands/fileCommands";
 import {
   commitGitChanges as commitGitChangesCommand,
   getGitAuthorName as getGitAuthorNameCommand,
@@ -149,7 +149,7 @@ import {
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
-} from "./terminalCommands";
+} from "../features/terminal/commands/terminalCommands";
 
 export type Commands = {
   setSelectedRepoId: (repoId: string) => void;

@@ -140,7 +140,7 @@ vi.mock("../../commands/appCommands", () => ({
   getMainWindowFullscreenState: () => mocked.getMainWindowFullscreenState(),
 }));
 
-vi.mock("../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   listDetectedExternalAppIds: vi.fn(async () => []),
   writeFile: vi.fn(),
 }));

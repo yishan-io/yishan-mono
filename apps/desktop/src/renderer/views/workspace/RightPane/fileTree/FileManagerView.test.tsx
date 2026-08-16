@@ -155,7 +155,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@renderer/commands/fileCommands", () => ({
+vi.mock("@renderer/features/files/commands/fileCommands", () => ({
   listFiles: (input: unknown) => mocks.listFiles(input),
   listFilesBatch: (input: ListFilesBatchInput) => mocks.listFilesBatch(input),
   searchFiles: (input: { workspaceId: string; query: string }) => mocks.searchFiles(input),

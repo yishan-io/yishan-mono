@@ -7,7 +7,7 @@ import {
   resizeTerminal,
   subscribeTerminalOutput,
   writeTerminalInput,
-} from "../../../commands/terminalCommands";
+} from "../../../features/terminal/commands/terminalCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { tabStore } from "../../../store/tabStore";

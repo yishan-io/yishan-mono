@@ -1,4 +1,4 @@
-import { listFiles, listFilesBatch } from "@renderer/commands/fileCommands";
+import { listFiles, listFilesBatch } from "@renderer/features/files/commands/fileCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import { useCommands } from "@renderer/hooks/useCommands";
 import { tabStore } from "@renderer/store/tabStore";

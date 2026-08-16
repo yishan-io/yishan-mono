@@ -14,7 +14,7 @@ import { terminalFocusStore } from "../../../store/terminalFocusStore";
 import type { OpenWorkspaceTabInput } from "../../../store/types";
 import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { resolveChatFilePath } from "../../../commands/fileCommands";
+import { resolveChatFilePath } from "../../../features/files/commands/fileCommands";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;

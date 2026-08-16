@@ -2,7 +2,7 @@ import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
-import { searchFiles } from "../../commands/fileCommands";
+import { searchFiles } from "../../features/files/commands/fileCommands";
 import { renameTab } from "../../features/workbench/commands/tabCommands";
 import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
 import { type ComposerAttachment, ComposerAttachmentBlock } from "../../components/ComposerAttachmentBlock";

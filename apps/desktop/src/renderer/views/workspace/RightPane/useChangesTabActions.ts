@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { writeClipboardText } from "../../../commands/fileCommands";
+import { writeClipboardText } from "../../../features/files/commands/fileCommands";
 import type { ProjectGitChangeItem } from "../../../components/ProjectGitChangesList";
 import { useCommands } from "../../../hooks/useCommands";
 import type { DiffFileChangeKind, FileDiffEntry } from "../../../store/types";

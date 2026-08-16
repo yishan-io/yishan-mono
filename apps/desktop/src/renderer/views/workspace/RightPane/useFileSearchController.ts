@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { searchFiles } from "../../../commands/fileCommands";
+import { searchFiles } from "../../../features/files/commands/fileCommands";
 import type { FileSearchResult } from "../../../rpc/daemonTypes";
 
 const MAX_FILE_SEARCH_RESULTS = 100;

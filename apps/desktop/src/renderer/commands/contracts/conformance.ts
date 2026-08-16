@@ -11,7 +11,8 @@ import type { ProjectCommands } from "../../features/project/commands/contract";
 import type { WorkspaceCommands } from "../../features/workspace/commands/contract";
 import type { SelectionCommands } from "../../features/workspace/commands/selectionContract";
 import type { AgentCommands } from "../../features/agent/commands/contract";
-import type { TerminalCommands } from "./terminal";
+import type { TerminalCommands } from "../../features/terminal/commands/contract";
+import type { FileCommands } from "../../features/files/commands/contract";
 import type { WorkbenchCommands } from "../../features/workbench/commands/contract";
 
 import type * as projectCommands from "../../features/project/commands/projectCommands";
@@ -24,7 +25,8 @@ import type * as agentChatCommands from "../../features/agent/commands/agentChat
 import type * as agentCommands from "../../features/agent/commands/agentCommands";
 import type * as chatCommands from "../../features/agent/commands/chatCommands";
 import type * as tabCommands from "../../features/workbench/commands/tabCommands";
-import type * as terminalCommands from "../terminalCommands";
+import type * as terminalCommands from "../../features/terminal/commands/terminalCommands";
+import type * as fileCommands from "../../features/files/commands/fileCommands";
 import type * as whiteboardCommands from "../../features/workbench/commands/whiteboardCommands";
 import type * as workspaceTabSync from "../../features/workbench/commands/workspaceTabSync";
 
@@ -127,6 +129,9 @@ type _ChatCommandsConforms = Expect<
 
 // Terminal: single owning module.
 type _TerminalCommandsConforms = Expect<typeof terminalCommands extends TerminalCommands ? true : false>;
+
+// Files: single owning module.
+type _FileCommandsConforms = Expect<typeof fileCommands extends FileCommands ? true : false>;
 
 // Workbench: three owning modules.
 type _TabCommandsConforms = Expect<

@@ -82,7 +82,7 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
-vi.mock("../../../commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => listFiles(...args),
   listFilesBatch: async (input: {
     workspaceId: string;

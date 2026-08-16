@@ -1,5 +1,5 @@
 import { openLink } from "@renderer/commands/appCommands";
-import { buildWorkspaceFileUrl } from "@renderer/commands/fileCommands";
+import { buildWorkspaceFileUrl } from "@renderer/features/files/commands/fileCommands";
 import { openTabInOppositePane } from "@renderer/features/workbench/commands/tabCommands";
 import { tabStore } from "@renderer/store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "@renderer/store/workspaceLifecycleNoticeStore";
