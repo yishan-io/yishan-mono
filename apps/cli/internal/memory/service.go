@@ -8,11 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog/log"
 )
 
+// Service is the application facade for the memory workflows: index storage
+// (DB), session summarization (summarizer + per-root queue), daily persona
+// batches (persona), and reconciliation/search entry points. It owns the
+// per-root queue map; each queue's lifecycle lives in queue.go, the persona
+// batch orchestration in persona.go, and the session summarization pipeline
+// in summarizer.go.
 type Service struct {
 	db         *DB
 	summarizer *summarizer
@@ -24,52 +29,6 @@ type Service struct {
 
 	// persona holds the daily persona batch extraction state.
 	persona *personaService
-}
-
-// summarizeQueue ensures at most one summarization is in flight per context
-// root while coalescing additional requests into a single pending retry.
-type summarizeQueue struct {
-	mu       sync.Mutex
-	inFlight bool
-	pending  *summarizeRequest // at most one pending; newer replaces older
-}
-
-type summarizeRequest struct {
-	agent        string
-	worktreePath string
-	projectID    string
-}
-
-func (q *summarizeQueue) submit(req summarizeRequest, run func(summarizeRequest)) {
-	q.mu.Lock()
-	if q.inFlight {
-		// A summarization is already running for this root.
-		// Overwrite any pending request with the newer one — the in-flight
-		// summarization will re-read MEMORY.md when it finishes, so the
-		// latest session data is what matters.
-		q.pending = &req
-		q.mu.Unlock()
-		return
-	}
-	q.inFlight = true
-	q.mu.Unlock()
-
-	go func() {
-		for {
-			run(req)
-
-			q.mu.Lock()
-			next := q.pending
-			q.pending = nil
-			if next == nil {
-				q.inFlight = false
-				q.mu.Unlock()
-				return
-			}
-			req = *next
-			q.mu.Unlock()
-		}
-	}()
 }
 
 func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAgentFunc) (*Service, error) {
@@ -268,73 +227,6 @@ func (s *Service) MaybeRunDailyPersonaBatch(agent string) {
 		return
 	}
 	s.persona.maybeRunBatch(agent)
-}
-
-// personaService manages the daily persona batch extraction state.
-type personaService struct {
-	summarizer         *personaSummarizer
-	dbReader           *agentDBReader
-	mu                 sync.Mutex
-	lastExtractionDate string // "YYYY-MM-DD" UTC, empty = never run
-}
-
-func newPersonaService(cfg SummarizerConfig, runAgent RunAgentFunc) *personaService {
-	return &personaService{
-		summarizer: NewPersonaSummarizer(cfg, runAgent),
-		dbReader:   newAgentDBReader(),
-	}
-}
-
-// maybeRunBatch starts the daily batch goroutine when the calendar day has
-// advanced past lastExtractionDate. Guards against concurrent runs with a mutex.
-func (p *personaService) maybeRunBatch(agent string) {
-	today := time.Now().UTC().Format("2006-01-02")
-
-	p.mu.Lock()
-	if today == p.lastExtractionDate {
-		p.mu.Unlock()
-		return
-	}
-	p.lastExtractionDate = today
-	p.mu.Unlock()
-
-	// Skip the goroutine entirely if the summarizer isn't configured, but still
-	// advance the date so we don't re-trigger on every subsequent session stop.
-	if !p.summarizer.Enabled() {
-		return
-	}
-
-	// Extract for yesterday's sessions.
-	yesterday := time.Now().UTC().AddDate(0, 0, -1)
-	go p.runBatch(agent, yesterday)
-}
-
-// runBatch performs the actual extraction for the given date. Runs in a goroutine.
-func (p *personaService) runBatch(agent string, date time.Time) {
-	sessions, err := p.dbReader.ReadSessionsForDate(agent, date)
-	if err != nil {
-		log.Debug().Err(err).Str("agent", agent).Msg("persona batch: read sessions failed")
-		return
-	}
-	if len(sessions) == 0 {
-		log.Debug().Str("agent", agent).Str("date", date.Format("2006-01-02")).Msg("persona batch: no sessions found")
-		return
-	}
-
-	result, err := p.summarizer.SummarizeForPersona(agent, sessions)
-	if err != nil {
-		if errors.Is(err, ErrAgentNotFound) {
-			log.Debug().Err(err).Str("agent", agent).Msg("persona batch: agent binary not found, skipping")
-		} else {
-			log.Warn().Err(err).Str("agent", agent).Msg("persona batch: extraction failed")
-		}
-		return
-	}
-	if result.Skipped {
-		log.Debug().Str("agent", agent).Msg("persona batch: skipped")
-		return
-	}
-	log.Info().Str("agent", agent).Str("path", result.WrittenPath).Msg("persona batch: written")
 }
 
 func GlobalMemoryDir() (string, error) {

@@ -15,6 +15,19 @@ import (
 	agentkind "yishan/apps/cli/internal/agent/kind"
 )
 
+// sessionMessages is one session transcript: its id and the message list.
+type sessionMessages struct {
+	SessionID string
+	Messages  []sessionMessage
+}
+
+// sessionMessage is one message in a session transcript.
+type sessionMessage struct {
+	Role      string
+	Content   string
+	Timestamp time.Time
+}
+
 type agentDBReader struct{}
 
 func newAgentDBReader() *agentDBReader {

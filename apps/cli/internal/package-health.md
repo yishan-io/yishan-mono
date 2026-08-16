@@ -300,14 +300,20 @@ methods_test.go       # → workspaces_test.go (payload shaping + input builders
 ### Phase 28 — `internal/memory`
 
 ```text
-service.go            # facade only (application operations, config)
-queue.go              # summarizeQueue lifecycle (submit/run loop, shutdown)
-summarizer.go         # session summarization (keep)
-persona.go            # persona batch orchestration (maybeRunBatch, runBatch)
-persona_summarizer.go # personaSummarizer (from persona.go)
-agent_reader*.go      # transcript readers (keep)
-db.go / reconcile.go / search.go / budget.go / types.go  # keep
-persona_test.go       # empty stub → remove
+service.go            # facade only (application operations, config, entry points)
+queue.go              # summarizeQueue lifecycle (submit/run loop/drain; new)
+summarizer.go         # session summarization pipeline + its types (extractedKnowledge, memorySection, summarizeResult, summarizeSessionError, sessionReader, builtInSummarizerAgentKind)
+persona.go            # persona batch orchestration (personaService: maybeRunBatch/runBatch) + CLI helpers (personaFilePath, NewAgentDBReaderForCLI, BuildEmptyPersonaMarkdown) + sessionDateReader interface
+persona_summarizer.go # personaSummarizer + SummarizeForPersona + buildCombinedTranscript + stripYishanInjectedContent + prompt (new)
+persona_sections.go   # persona section parse/build/merge/trim + personaSection/extractedPersona/personaSections types + MaxPersonaChars
+agent_reader*.go      # transcript readers + sessionMessages/sessionMessage types
+reconcile.go          # file classification/scan + WorkspaceRef type
+search.go             # SearchInput + SearchMemory + MemorySearchResult type
+budget.go             # budget trim + MaxProjectMemoryChars/MaxGlobalMemoryChars
+service.go            # (see above)
+queue_test.go         # serialization/coalescing/drain/restart tests (new)
+persona_batch_test.go # batch read/extraction/agent-not-found/happy-path tests (new)
+persona_test.go       # empty stub → removed
 ```
 
 ### Phase 29 — `internal/workspace/pr`

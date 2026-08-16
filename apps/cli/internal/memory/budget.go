@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+// MaxProjectMemoryChars is the per-project MEMORY.md size budget.
+const MaxProjectMemoryChars = 5000
+
+// MaxGlobalMemoryChars is the global memory file size budget.
+const MaxGlobalMemoryChars = 1000
+
 type budgetCheck struct {
 	Exceeded       bool
 	CurrentChars   int

@@ -9,6 +9,14 @@ import (
 	"time"
 )
 
+// WorkspaceRef carries the workspace metadata needed for memory indexing.
+// WorktreePath is the git worktree directory that contains the .my-context symlink.
+// ProjectID is the project ID from the Workspace struct (may be empty for unregistered workspaces).
+type WorkspaceRef struct {
+	WorktreePath string
+	ProjectID    string
+}
+
 const (
 	myContextDir    = ".my-context"
 	architectureDir = "architecture"

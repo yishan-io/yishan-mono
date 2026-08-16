@@ -2,6 +2,13 @@ package memory
 
 const defaultSearchLimit = 20
 
+// MemorySearchResult is one search hit returned by SearchMemory.
+type MemorySearchResult struct {
+	Path    string  `json:"path"`
+	Snippet string  `json:"snippet"`
+	Score   float64 `json:"score"`
+}
+
 type SearchInput struct {
 	Query     string
 	ProjectID string

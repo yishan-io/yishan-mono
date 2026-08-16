@@ -12,6 +12,59 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// builtInSummarizerAgentKind is the fixed agent used for post-session memory summarization.
+const builtInSummarizerAgentKind = "pi"
+
+// memorySection identifies a section heading in MEMORY.md.
+type memorySection string
+
+const (
+	SectionLockedDecisions    memorySection = "## Decisions"
+	SectionDurableDiscoveries memorySection = "## Durable Discoveries"
+)
+
+// extractedKnowledge is the structured memory the summarizer LLM extracts
+// from a session transcript.
+type extractedKnowledge struct {
+	LockedDecisions    []string
+	DurableDiscoveries []string
+}
+
+// sessionReader reads one session transcript for summarization.
+type sessionReader interface {
+	ReadRecentSession(agent string, workspacePath string) (*sessionMessages, error)
+}
+
+// summarizeResult is the outcome of one session summarization run.
+type summarizeResult struct {
+	WrittenPaths    []string
+	Skipped         bool
+	SourceAgent     string
+	SummarizerAgent string
+}
+
+// summarizeSessionError wraps a summarization failure with the agent
+// identities involved, so the facade can log them without re-parsing.
+type summarizeSessionError struct {
+	SourceAgent     string
+	SummarizerAgent string
+	Err             error
+}
+
+func (e *summarizeSessionError) Error() string {
+	if e == nil || e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
+}
+
+func (e *summarizeSessionError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
 type summarizer struct {
 	enabled   bool
 	agentKind string // fixed built-in summarizer agent (Pi)

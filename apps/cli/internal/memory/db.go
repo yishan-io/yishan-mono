@@ -11,6 +11,32 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// fileType classifies a memory file by its location inside the context dir.
+type fileType string
+
+const (
+	FileTypeMemory       fileType = "memory"
+	FileTypeArchitecture fileType = "architecture"
+	FileTypeArchive      fileType = "archive"
+	FileTypeTask         fileType = "task"
+	FileTypeFuture       fileType = "future"
+	FileTypeGlobal       fileType = "global"
+)
+
+// memoryFile is one indexed file row in the memory database.
+type memoryFile struct {
+	ID   int64
+	Path string
+	// ProjectPath is the canonical context directory (~/.yishan/contexts/<repoKey>/).
+	// Derived by resolving the .my-context symlink in the worktree.
+	ProjectPath string
+	ProjectID   string
+	Type        fileType
+	Body        string
+	Fingerprint string
+	IndexedAt   int64
+}
+
 type DB struct {
 	mu   sync.RWMutex
 	conn *sql.DB

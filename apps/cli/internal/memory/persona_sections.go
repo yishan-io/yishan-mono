@@ -7,6 +7,38 @@ import (
 	"time"
 )
 
+// MaxPersonaChars is the PERSONA.md size budget.
+const MaxPersonaChars = 2000
+
+// personaSection identifies a section heading in PERSONA.md.
+type personaSection string
+
+const (
+	PersonaSectionCodeStyle       personaSection = "## Code Style"
+	PersonaSectionWorkflowHabits  personaSection = "## Workflow Habits"
+	PersonaSectionDomainExpertise personaSection = "## Domain Expertise"
+	PersonaSectionToolPreferences personaSection = "## Tool Preferences"
+	PersonaSectionCommunication   personaSection = "## Communication Style"
+)
+
+// extractedPersona holds persona signals extracted from session transcripts by the LLM.
+type extractedPersona struct {
+	CodeStyle          []string
+	WorkflowHabits     []string
+	DomainExpertise    []string
+	ToolPreferences    []string
+	CommunicationStyle []string
+}
+
+// personaSections holds the parsed contents of each section in PERSONA.md.
+type personaSections struct {
+	CodeStyle          []string
+	WorkflowHabits     []string
+	DomainExpertise    []string
+	ToolPreferences    []string
+	CommunicationStyle []string
+}
+
 func parsePersonaSections(content string) personaSections {
 	sections := personaSections{}
 	lines := strings.Split(content, "\n")
