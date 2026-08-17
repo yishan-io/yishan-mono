@@ -1,5 +1,6 @@
 import { Box } from "@mui/material";
 import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTerminalCommands } from "../../../app/commands/useCommands";
@@ -34,7 +35,7 @@ function clamp(value: number, min: number, max: number): number {
 export function MainPaneView() {
   const { t } = useTranslation();
   const cmd = useTerminalCommands();
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
   const isErrorWorkspace = selectedWorkspace?.state === "error";

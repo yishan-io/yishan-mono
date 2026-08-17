@@ -1,3 +1,4 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import type {
   AppendBrowserHistoryInput,
   AuthStatusResult,
@@ -8,13 +9,13 @@ import type {
   DesktopUpdateEventPayload,
 } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
-import type { DesktopAgentKind } from "../../helpers/agentSettings";
-import { rendererQueryClient } from "../../queryClient";
-import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
 import { sessionStore } from "../../features/session/state/sessionStore";
 import { type LinkTarget, layoutStore } from "../../features/workbench/state/layoutStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import type { DesktopAgentKind } from "../../helpers/agentSettings";
+import { rendererQueryClient } from "../../queryClient";
+import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
 
 /** Opens one native folder picker and returns a selected directory path when available. */
 export async function openLocalFolderDialog(startingFolder?: string) {
@@ -119,7 +120,7 @@ export async function openLink(options: OpenLinkOptions): Promise<OpenLinkResult
 function resolveActiveWorkspaceId(): string | undefined {
   const state = tabStore.getState();
   const selectedTab = state.tabs.find((tab) => tab.id === state.selectedTabId);
-  return selectedTab?.workspaceId || workspaceStore.getState().selectedWorkspaceId || undefined;
+  return selectedTab?.workspaceId || workbenchNavigationStore.getState().activeWorkspaceId || undefined;
 }
 
 /** Reads current desktop authentication status from main-process IPC. */
@@ -221,7 +222,6 @@ export function downloadDesktopUpdate() {
 export function installDesktopUpdate() {
   return getDesktopHostBridge().installUpdate();
 }
-
 
 export type { DesktopUpdateEventPayload } from "../../../main/ipc";
 

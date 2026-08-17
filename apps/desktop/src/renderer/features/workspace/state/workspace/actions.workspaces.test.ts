@@ -15,8 +15,6 @@ type TestState = {
     summaryId: string;
     worktreePath?: string;
   }>;
-  selectedProjectId: string;
-  selectedWorkspaceId: string;
   pullRequestByWorkspaceId: Record<string, unknown>;
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
@@ -45,8 +43,6 @@ function createHarness() {
         worktreePath: "/tmp/repo-1/.worktrees/existing",
       },
     ],
-    selectedProjectId: "repo-1",
-    selectedWorkspaceId: "workspace-1",
     pullRequestByWorkspaceId: {},
     gitChangesCountByWorkspaceId: {},
     gitChangeTotalsByWorkspaceId: {},
@@ -85,7 +81,6 @@ describe("createWorkspaceActions", () => {
 
     const state = harness.getState();
     expect(state.workspaces.some((workspace) => workspace.id === "workspace-2")).toBe(true);
-    expect(state.selectedWorkspaceId).toBe("workspace-2");
   });
 
   it("renames the matching workspace and updates its title", () => {

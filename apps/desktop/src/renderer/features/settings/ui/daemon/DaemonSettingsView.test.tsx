@@ -23,16 +23,19 @@ vi.mock("./daemonSettings/closeTerminalTabsForDaemonRestart", () => ({
   closeTerminalTabsForDaemonRestart: mocked.closeTerminalTabsForDaemonRestart,
 }));
 
-vi.mock("../../../../rpc/rpcTransport", () => ({
-  getDesktopHostBridge: () => ({
-    getDaemonInfo: mocked.getDaemonInfo,
-    getDaemonQuitOnExit: mocked.getDaemonQuitOnExit,
-    readDaemonLog: mocked.readDaemonLog,
-    restartDaemon: mocked.restartDaemon,
-    setDaemonQuitOnExit: mocked.setDaemonQuitOnExit,
-  }),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-}));
+vi.mock("../../../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDesktopHostBridge: () => ({
+      getDaemonInfo: mocked.getDaemonInfo,
+      getDaemonQuitOnExit: mocked.getDaemonQuitOnExit,
+      readDaemonLog: mocked.readDaemonLog,
+      restartDaemon: mocked.restartDaemon,
+      setDaemonQuitOnExit: mocked.setDaemonQuitOnExit,
+    }),
+  };
+});
 
 describe("DaemonSettingsView", () => {
   beforeEach(() => {

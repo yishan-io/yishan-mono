@@ -108,8 +108,6 @@ export function applyHydratedStateFromApiData(
   });
   state.projects = result.projects;
   state.workspaces = result.workspaces;
-  state.selectedProjectId = result.selectedProjectId;
-  state.selectedWorkspaceId = result.selectedWorkspaceId;
   state.displayProjectIds = result.displayProjectIds;
   state.lastUsedExternalAppId = result.lastUsedExternalAppId;
   state.organizationPreferencesById = result.organizationPreferencesById;
@@ -175,8 +173,6 @@ export function applyCreatedRepoState(
 
   state.projects.push(nextProject);
   state.displayProjectIds = [...(currentDisplayProjectIds ?? []), nextRepoId];
-  state.selectedProjectId = nextRepoId;
-  state.selectedWorkspaceId = "";
 }
 
 /** Removes a repo and all workspace-scoped UI state derived from that repo. */
@@ -233,18 +229,6 @@ export function applyDeletedRepoState(state: ProjectStoreSlice, repoId: string):
   for (const workspaceId of deletedWorkspaceIdSet) {
     delete state.gitChangesCountByWorkspaceId[workspaceId];
     delete state.gitChangeTotalsByWorkspaceId[workspaceId];
-  }
-
-  if (state.selectedProjectId === repoId) {
-    state.selectedProjectId = state.projects[0]?.id ?? "";
-  }
-
-  if (!state.workspaces.some((workspace) => workspace.id === state.selectedWorkspaceId)) {
-    const nextSelectedWorkspaceId =
-      state.workspaces.find((workspace) => (workspace.projectId ?? workspace.repoId) === state.selectedProjectId)?.id ??
-      state.workspaces[0]?.id ??
-      "";
-    state.selectedWorkspaceId = nextSelectedWorkspaceId;
   }
 }
 

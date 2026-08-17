@@ -1,5 +1,6 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
-import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
+import { activateWorkspace } from "../../../features/workbench/commands/navigationCommands";
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
@@ -36,9 +37,6 @@ export async function createLocalFolderImport(input: { path: string; name: strin
   // Select the newly created folder (mirrors the remote create flow setting
   // selection via applyCreatedWorkspaceState) so the tab resolves against the
   // new folder instead of the previous selection.
-  workspaceStore.getState().setSelectedWorkspaceId(folder.id);
-  workspaceStore.getState().setSelectedProjectId(LOCAL_FOLDER_PROJECT_ID);
-
   const folderWorkspace = workspaceStore.getState().workspaces.find((w) => w.id === folder.id);
   const openEntries = buildWorkspaceOpenProjectEntries(folderWorkspace ? [folderWorkspace] : [], "");
   await openWorkspaceEntries(openEntries);
@@ -47,8 +45,9 @@ export async function createLocalFolderImport(input: { path: string; name: strin
     workspaceUiStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
   }
 
-  // Read selection after setting it so the folder's id is what gets resolved.
-  resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
+  // The folder row is already in the store; activate it through the Workbench
+  // navigation command so the active context and tab both update.
+  activateWorkspace({ workspaceId: folder.id, projectId: LOCAL_FOLDER_PROJECT_ID });
 }
 
 /**
@@ -91,7 +90,7 @@ export function restoreFolderSelectionIfNeeded(
   const previousSelected = previousWorkspaces.find((w) => w.id === previousSelectedWorkspaceId);
   if (previousSelectedWorkspaceId && isFolderWorkspace(previousSelected)) {
     if (workspaceStore.getState().workspaces.some((w) => w.id === previousSelectedWorkspaceId)) {
-      workspaceStore.getState().setSelectedWorkspaceId(previousSelectedWorkspaceId);
+      activateWorkspace({ workspaceId: previousSelectedWorkspaceId, projectId: LOCAL_FOLDER_PROJECT_ID });
     }
   }
 }
@@ -113,4 +112,16 @@ export async function deleteLocalFolder(id: string): Promise<void> {
 
   workspaceStore.getState().removeLocalFolder(folderId);
   syncTabStoreWithWorkspace(previousWorkspaces);
+
+  // The deleted folder may have been the active workspace; re-activate the
+  // remaining selection through the Workbench navigation command.
+  const remainingWorkspaces = workspaceStore.getState().workspaces;
+  const activeWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+  if (activeWorkspaceId === folderId) {
+    const nextFolderWorkspace = remainingWorkspaces.find(
+      (workspace) => workspace.projectId === LOCAL_FOLDER_PROJECT_ID,
+    );
+    const nextWorkspaceId = nextFolderWorkspace?.id ?? remainingWorkspaces[0]?.id ?? "";
+    activateWorkspace({ workspaceId: nextWorkspaceId, projectId: LOCAL_FOLDER_PROJECT_ID });
+  }
 }

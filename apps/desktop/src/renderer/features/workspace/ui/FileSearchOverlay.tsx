@@ -1,4 +1,5 @@
 import { useFileSearchController } from "@renderer/features/files";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
@@ -19,9 +20,11 @@ export function FileSearchOverlay() {
   const { t } = useTranslation();
   const selectedWorkspaceWorktreePath = workspaceStore(
     (state) =>
-      state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
+      state.workspaces
+        .find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)
+        ?.worktreePath?.trim() ?? "",
   );
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const openFileSearchRequestKey = workspaceUiStore((state) => state.fileSearchRequestKey);
   const setSelectedEntryPath = workspaceUiStore((state) => state.setSelectedEntryPath);
   const expandedItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);

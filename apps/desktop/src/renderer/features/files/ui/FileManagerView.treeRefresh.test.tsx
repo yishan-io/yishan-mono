@@ -100,6 +100,7 @@ const mocks = vi.hoisted(() => {
   const stateRef: {
     current: {
       selectedWorkspaceId: string;
+      selectedProjectId?: string;
       workspaces: Array<{ id: string; worktreePath: string }>;
       fileTreeRefreshVersion: number;
       fileTreeChangedRelativePathsByWorktreePath: Record<string, string[]>;
@@ -195,6 +196,20 @@ vi.mock("@renderer/features/git/commands/gitCommands", () => ({
 vi.mock("@renderer/features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocks.workspaceStore,
 }));
+
+vi.mock("@renderer/features/workbench", () => {
+  const navState = () => ({
+    activeProjectId: (mocks.stateRef.current.selectedProjectId as string) ?? "",
+    activeWorkspaceId: (mocks.stateRef.current.selectedWorkspaceId as string) ?? "",
+  });
+  const navStore = Object.assign(
+    vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
+      selector(navState()),
+    ),
+    { getState: navState },
+  );
+  return { workbenchNavigationStore: navStore };
+});
 
 vi.mock("@renderer/features/project/state/projectStore", () => {
   const projectStore = (
@@ -347,7 +362,6 @@ function createDeferred<T>() {
 
   return { promise, resolve, reject };
 }
-
 
 describe("FileManagerView external file tree refresh", () => {
   beforeEach(() => {

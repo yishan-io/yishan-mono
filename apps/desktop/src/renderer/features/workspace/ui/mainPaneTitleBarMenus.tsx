@@ -30,7 +30,8 @@ type RepoSelectorMenuProps = {
   localFolderWorkspaces: WorkspaceItem[];
   isLocalFolderSelected: boolean;
   selectedProjectId: string;
-  setSelectedRepoId: (projectId: string) => void;
+  /** Activates one project; the caller resolves the workspace for it. */
+  activateProject: (projectId: string) => void;
   setRepoMenuAnchorEl: (value: HTMLElement | null) => void;
   setWorkspaceMenuAnchorEl: (value: HTMLElement | null) => void;
   setWorkspaceSearchValue: (value: string) => void;
@@ -46,7 +47,7 @@ export function RepoSelectorMenu({
   localFolderWorkspaces,
   isLocalFolderSelected,
   selectedProjectId,
-  setSelectedRepoId,
+  activateProject,
   setRepoMenuAnchorEl,
   setWorkspaceMenuAnchorEl,
   setWorkspaceSearchValue,
@@ -70,7 +71,7 @@ export function RepoSelectorMenu({
           key={repo.id}
           selected={repo.id === selectedProjectId}
           onClick={() => {
-            setSelectedRepoId(repo.id);
+            activateProject(repo.id);
             setRepoMenuAnchorEl(null);
             setWorkspaceMenuAnchorEl(null);
             setRepoSearchValue("");
@@ -89,7 +90,7 @@ export function RepoSelectorMenu({
         <MenuItem
           selected={isLocalFolderSelected}
           onClick={() => {
-            setSelectedRepoId(LOCAL_FOLDER_PROJECT_ID);
+            activateProject(LOCAL_FOLDER_PROJECT_ID);
             setRepoMenuAnchorEl(null);
             setWorkspaceMenuAnchorEl(null);
             setRepoSearchValue("");
@@ -115,7 +116,8 @@ type WorkspaceSelectorMenuProps = {
   setWorkspaceSearchValue: (value: string) => void;
   filteredWorkspaceOptions: WorkspaceItem[];
   selectedWorkspaceId: string;
-  setSelectedWorkspaceId: (workspaceId: string) => void;
+  /** Activates one workspace; the caller resolves the project for it. */
+  activateWorkspace: (workspace: WorkspaceItem) => void;
   setWorkspaceMenuAnchorEl: (value: HTMLElement | null) => void;
   resolveWorkspaceIconColor: (workspaceId: string) => WorkspaceNotificationColor;
   primaryWorkspaceId: string | undefined;
@@ -129,7 +131,7 @@ export function WorkspaceSelectorMenu({
   setWorkspaceSearchValue,
   filteredWorkspaceOptions,
   selectedWorkspaceId,
-  setSelectedWorkspaceId,
+  activateWorkspace,
   setWorkspaceMenuAnchorEl,
   resolveWorkspaceIconColor,
   primaryWorkspaceId,
@@ -154,7 +156,7 @@ export function WorkspaceSelectorMenu({
           key={workspace.id}
           selected={workspace.id === selectedWorkspaceId}
           onClick={() => {
-            setSelectedWorkspaceId(workspace.id);
+            activateWorkspace(workspace);
             setWorkspaceMenuAnchorEl(null);
             setWorkspaceSearchValue("");
           }}

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import { sessionStore } from "../../../features/session/state/sessionStore";
@@ -1161,7 +1162,9 @@ describe("workspaceCommands", () => {
   });
 
   it("shows files pane and focuses file tree when requested", () => {
-    workspaceStore.setState({ selectedWorkspaceId: "ws-test" });
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "ws-test",
+    });
     workspaceUiStore.setState({
       isRightPaneHiddenByWorkspaceId: { "ws-test": true },
       rightPaneTabByWorkspaceId: { "ws-test": "changes" },
@@ -1186,7 +1189,9 @@ describe("workspaceCommands", () => {
   });
 
   it("opens file search without forcing the file tree pane open", () => {
-    workspaceStore.setState({ selectedWorkspaceId: "ws-test" });
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "ws-test",
+    });
     workspaceUiStore.setState({
       isRightPaneHiddenByWorkspaceId: { "ws-test": true },
       rightPaneTabByWorkspaceId: { "ws-test": "changes" },
@@ -1201,8 +1206,8 @@ describe("workspaceCommands", () => {
   });
 
   it("dispatches open-create-workspace event using selected repo context", () => {
-    workspaceStore.setState({
-      selectedProjectId: "repo-1",
+    workbenchNavigationStore.setState({
+      activeProjectId: "repo-1",
     });
 
     const eventListener = vi.fn();
@@ -1218,8 +1223,11 @@ describe("workspaceCommands", () => {
   });
 
   it("does not dispatch open-create-workspace event for a folder workspace", () => {
+    workbenchNavigationStore.setState({
+      activeProjectId: "local-folder",
+      activeWorkspaceId: "folder-workspace-1",
+    });
     workspaceStore.setState({
-      selectedProjectId: "local-folder",
       projects: [],
       workspaces: [
         {
@@ -1235,7 +1243,6 @@ describe("workspaceCommands", () => {
           kind: "folder",
         },
       ],
-      selectedWorkspaceId: "folder-workspace-1",
     });
     projectStore.setState({ projects: [] });
 
@@ -1250,8 +1257,10 @@ describe("workspaceCommands", () => {
   });
 
   it("does not dispatch open-create-workspace event for a non-git project", () => {
+    workbenchNavigationStore.setState({
+      activeProjectId: "project-plain",
+    });
     workspaceStore.setState({
-      selectedProjectId: "project-plain",
       projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
     });
     projectStore.setState({ projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }] });

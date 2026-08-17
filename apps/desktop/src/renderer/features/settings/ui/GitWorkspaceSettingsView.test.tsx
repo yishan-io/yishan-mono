@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../../features/project/state/projectStore";
@@ -13,7 +14,6 @@ const mocked = vi.hoisted(() => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     getGitAuthorName: mocked.getGitAuthorName,
   });
   return {
@@ -34,7 +34,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 const initialWorkspaceSettingsState = workspaceSettingsStore.getState();
 const initialWorkspaceState = workspaceStore.getState();
@@ -77,10 +76,10 @@ describe("GitWorkspaceSettingsView", () => {
             worktreePath: "/tmp/repo-1",
           },
         ],
-        selectedProjectId: "repo-1",
       },
       true,
     );
+    workbenchNavigationStore.setState({ activeProjectId: "repo-1" });
     projectStore.setState({
       projects: [
         {

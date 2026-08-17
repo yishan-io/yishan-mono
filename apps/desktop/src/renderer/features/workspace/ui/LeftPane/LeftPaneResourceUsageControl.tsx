@@ -82,7 +82,7 @@ export function LeftPaneResourceUsageControl() {
   const workspaces = workspaceStore((state) => state.workspaces);
   const tabs = useWorkspaceTabs();
   const { getTerminalResourceUsage } = useTerminalCommands();
-  const { setSelectedRepoId, setSelectedWorkspaceId } = useWorkspaceCommands();
+  const { activateWorkspace } = useWorkspaceCommands();
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const isMenuOpen = Boolean(menuAnchorEl);
 
@@ -161,8 +161,7 @@ export function LeftPaneResourceUsageControl() {
             closeMenu();
             return;
           }
-          setSelectedRepoId(repoId);
-          setSelectedWorkspaceId(workspaceId);
+          activateWorkspace({ workspaceId });
           closeMenu();
         }}
       />

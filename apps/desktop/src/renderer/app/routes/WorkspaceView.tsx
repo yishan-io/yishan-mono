@@ -1,4 +1,6 @@
 import { Box } from "@mui/material";
+import { CreateProjectDialogView } from "@renderer/features/project";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -29,10 +31,10 @@ import { sessionStore } from "../../features/session/state/sessionStore";
 import { TerminalRecoveryCoordinator } from "../../features/terminal/runtime/terminalRecovery";
 import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
+import { resolveWorkspaceProjectId } from "../../features/workspace/model/workspaceTypes";
 import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../features/workspace/state/workspaceUiStore";
-import { CreateProjectDialogView } from "@renderer/features/project";
 import { LeftPaneView } from "../../features/workspace/ui/LeftPane/LeftPaneView";
 import { MainPaneView } from "../../features/workspace/ui/MainPaneView";
 import { OnboardingView } from "../../features/workspace/ui/OnboardingView";
@@ -86,10 +88,10 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
         if (workspaceId) {
           const storeState = workspaceStore.getState();
           const workspace = storeState.workspaces.find((item) => item.id === workspaceId);
-          if (workspace) {
-            cmd.setSelectedRepoId(workspace.repoId);
-          }
-          cmd.setSelectedWorkspaceId(workspaceId);
+          cmd.activateWorkspace({
+            workspaceId,
+            projectId: workspace ? resolveWorkspaceProjectId(workspace) : undefined,
+          });
 
           if (tabId) {
             const tab = tabStore.getState().tabs.find((item) => item.workspaceId === workspaceId && item.id === tabId);
@@ -121,7 +123,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
       }
 
       if (payload.action === ACTIONS.OPEN_TERMINAL_TAB) {
-        const workspaceId = workspaceStore.getState().selectedWorkspaceId;
+        const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
         if (!workspaceId) {
           return;
         }
@@ -131,7 +133,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
       }
 
       if (payload.action === ACTIONS.OPEN_BROWSER_TAB) {
-        const workspaceId = workspaceStore.getState().selectedWorkspaceId;
+        const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
         if (!workspaceId) {
           return;
         }
@@ -141,7 +143,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
       }
 
       if (payload.action === ACTIONS.OPEN_AGENT_CHAT_TAB) {
-        const workspaceId = workspaceStore.getState().selectedWorkspaceId;
+        const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
         const selectedWorkspace = workspaceStore.getState().workspaces.find((w) => w.id === workspaceId);
         if (!workspaceId) {
           return;
@@ -167,7 +169,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
       }
 
       if (payload.action === ACTIONS.WORKSPACE_OPEN_SELECTED_IN_EXTERNAL_APP) {
-        const selectedWorkspaceId = workspaceStore.getState().selectedWorkspaceId;
+        const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
         if (!selectedWorkspaceId) {
           return;
         }
@@ -236,8 +238,8 @@ function useWorkspaceBootstrap(input: {
         restoredAgentChatResult.selectedWorkspaceId ??
         restoredTerminalWorkspaceId ??
         restoredAgentChatResult.fallbackWorkspaceId;
-      if (restoredWorkspaceId && restoredWorkspaceId !== workspaceStore.getState().selectedWorkspaceId) {
-        cmd.setSelectedWorkspaceId(restoredWorkspaceId);
+      if (restoredWorkspaceId && restoredWorkspaceId !== workbenchNavigationStore.getState().activeWorkspaceId) {
+        cmd.activateWorkspace({ workspaceId: restoredWorkspaceId });
       }
 
       if (!disposed) {
@@ -347,8 +349,8 @@ export function WorkspaceView() {
   const workspaceGitRefreshVersion = workspaceProjectionStore((state) =>
     selectedWorkspaceWorktreePath ? (state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0) : 0,
   );
-  const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
-  const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);
+  const overlayPanel = workbenchNavigationStore((state) => state.overlayPanel);
+  const closeOverlayPanel = workbenchNavigationStore((state) => state.closeOverlayPanel);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   // The command surface must stay referentially stable across renders: the
   // bootstrap effect keys on `cmd`, and a fresh object every render would

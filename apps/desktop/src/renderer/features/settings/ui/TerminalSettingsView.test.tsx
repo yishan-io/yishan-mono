@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { TerminalSessionLifecycleEvent } from "../../../rpc/daemonTypes";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import type { TerminalSessionLifecycleEvent } from "../../../rpc/daemonTypes";
 import { TerminalSettingsView } from "./TerminalSettingsView";
 
 const mocked = vi.hoisted(() => {
@@ -32,7 +33,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     closeTerminalSession: mocked.closeTerminalSession,
     listTerminalSessions: mocked.listTerminalSessions,
     subscribeTerminalSessions: mocked.subscribeTerminalSessions,
@@ -55,7 +55,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 describe("TerminalSettingsView", () => {
   beforeEach(() => {
@@ -89,7 +88,9 @@ describe("TerminalSettingsView", () => {
       selectedTabId: "terminal-tab-1",
       selectedTabIdByWorkspaceId: { "workspace-1": "terminal-tab-1" },
     });
-    workspaceStore.setState({ selectedWorkspaceId: "workspace-1" });
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "workspace-1",
+    });
     mocked.listTerminalSessions.mockResolvedValue([
       {
         sessionId: "term_1",

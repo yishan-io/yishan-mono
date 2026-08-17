@@ -80,9 +80,22 @@ vi.mock("../../../features/workspace/state/workspaceStore", () => ({
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),
 }));
 
+vi.mock("@renderer/features/workbench", () => {
+  const navState = () => ({
+    activeProjectId: ((mocks.workspaceState as Record<string, unknown>).selectedProjectId as string) ?? "",
+    activeWorkspaceId: ((mocks.workspaceState as Record<string, unknown>).selectedWorkspaceId as string) ?? "",
+  });
+  const navStore = Object.assign(
+    vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
+      selector(navState()),
+    ),
+    { getState: navState },
+  );
+  return { workbenchNavigationStore: navStore };
+});
+
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     openTab: mocks.openTab,
     listGitChanges: mocks.listGitChanges,
     readBranchComparisonDiff: mocks.readBranchComparisonDiff,
@@ -111,7 +124,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

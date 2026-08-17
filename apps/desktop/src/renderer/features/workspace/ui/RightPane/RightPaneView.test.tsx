@@ -35,9 +35,12 @@ const prTabState = {
   isLoading: false,
 };
 
+const navStoreState: { current: { activeProjectId: string; activeWorkspaceId: string } } = {
+  current: { activeProjectId: "project-1", activeWorkspaceId: "workspace-1" },
+};
+
 const workspaceStoreState: { current: Record<string, unknown> } = {
   current: {
-    selectedWorkspaceId: "workspace-1",
     workspaces: [{ id: "workspace-1", worktreePath: "/tmp/repo" }],
     projects: [],
     gitChangesCountByWorkspaceId: {},
@@ -186,6 +189,16 @@ vi.mock("@renderer/features/git", async (importOriginal) => {
 vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
+
+vi.mock("@renderer/features/workbench", () => {
+  const navStore = Object.assign(
+    vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
+      selector(navStoreState.current),
+    ),
+    { getState: () => navStoreState.current },
+  );
+  return { workbenchNavigationStore: navStore };
+});
 
 vi.mock("../../../../features/project/state/projectStore", () => ({
   projectStore: (selector: (state: Record<string, unknown>) => unknown) =>

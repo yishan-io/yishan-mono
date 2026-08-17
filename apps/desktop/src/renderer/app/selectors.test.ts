@@ -1,16 +1,17 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { describe, expect, it } from "vitest";
 import { projectStore } from "../features/project/state/projectStore";
 import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
+import { workspaceStore } from "../features/workspace/state/workspaceStore";
 import {
-  selectWorkspacePaneVisibility,
   selectLastUsedExternalAppId,
   selectProjectTree,
   selectSelectedWorkspaceWithProject,
+  selectWorkspacePaneVisibility,
   selectWorkspaceProjection,
 } from "./selectors";
-import { workspaceStore } from "../features/workspace/state/workspaceStore";
 
 describe("composed selectors", () => {
   it("joins projects + workspaces", () => {
@@ -28,6 +29,9 @@ describe("composed selectors", () => {
 
   it("resolves the selected workspace with its project", () => {
     projectStore.setState({ projects: [{ id: "repo-1", name: "Repo 1" }] });
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "ws-1",
+    });
     workspaceStore.setState({
       workspaces: [
         {
@@ -41,7 +45,6 @@ describe("composed selectors", () => {
           summaryId: "ws-1",
         },
       ],
-      selectedWorkspaceId: "ws-1",
     });
 
     const model = selectSelectedWorkspaceWithProject();

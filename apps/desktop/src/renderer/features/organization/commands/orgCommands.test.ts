@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sessionStore } from "../../../features/session/state/sessionStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
@@ -20,13 +21,17 @@ vi.mock("../../../api", () => ({
   },
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({
-    context: {
-      setCurrentOrg: rpcMocks.setCurrentOrg,
-    },
-  })),
-}));
+vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDaemonClient: vi.fn(async () => ({
+      context: {
+        setCurrentOrg: rpcMocks.setCurrentOrg,
+      },
+    })),
+  };
+});
 
 const initialSessionStoreState = sessionStore.getState();
 const initialWorkspaceUiStoreState = workspaceUiStore.getState();
@@ -50,11 +55,11 @@ describe("orgCommands", () => {
       ],
       selectedOrganizationId: "org-1",
     });
-    workspaceUiStore.setState({ overlayPanel: "overview" });
+    workbenchNavigationStore.getState().setOverlayPanel("overview");
 
     await switchOrganization("org-2");
 
-    expect(workspaceUiStore.getState().overlayPanel).toBeNull();
+    expect(workbenchNavigationStore.getState().overlayPanel).toBeNull();
     expect(sessionStore.getState().selectedOrganizationId).toBe("org-2");
     expect(rpcMocks.setCurrentOrg).toHaveBeenCalledWith("org-2");
   });

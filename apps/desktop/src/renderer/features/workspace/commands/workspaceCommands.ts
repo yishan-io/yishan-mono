@@ -1,4 +1,5 @@
 import { getIsLeftPaneManuallyHidden } from "@renderer/features/workbench";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { api } from "../../../api";
 import { resizeLeftPane, resizeRightPane, setLeftPaneHidden } from "../../../features/workbench/commands/tabCommands";
@@ -234,7 +235,7 @@ export function toggleLeftPaneVisibility() {
 
 /** Toggles right workspace pane manual visibility state for the selected workspace. */
 export function toggleRightPaneVisibility() {
-  const workspaceId = workspaceStore.getState().selectedWorkspaceId;
+  const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
   const uiState = workspaceUiStore.getState();
   const isHidden = uiState.isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
   uiState.setIsRightPaneHidden(workspaceId, !isHidden);
@@ -247,7 +248,7 @@ export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
     return;
   }
 
-  const workspaceId = workspaceStore.getState().selectedWorkspaceId;
+  const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
   // Folder workspaces have no git state: never open git tabs for them.
   const workspace = workspaceStore.getState().workspaces.find((item) => item.id === workspaceId);
   if ((pane === "changes" || pane === "pr") && isFolderWorkspace(workspace)) {
@@ -273,12 +274,14 @@ export function openCreateWorkspaceDialog() {
   }
 
   const state = workspaceStore.getState();
-  const selectedWorkspace = state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId);
+  const selectedWorkspace = state.workspaces.find(
+    (workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId,
+  );
   // Folder workspaces have no worktrees: never surface the create dialog.
   if (isFolderWorkspace(selectedWorkspace)) {
     return;
   }
-  const selectedProjectId = state.selectedProjectId.trim();
+  const selectedProjectId = workbenchNavigationStore.getState().activeProjectId.trim();
   const selectedWorkspaceProjectId = selectedWorkspace?.projectId;
   const selectedWorkspaceRepoId = selectedWorkspace?.repoId;
   const fallbackProjectId = filterVisibleProjects(selectProjects(), selectProjectDisplayIds())[0]?.id;
@@ -345,7 +348,7 @@ export function openWorkspaceFileSearch() {
 
 /** Requests selecting a folder path in the file tree and ensures the files tab is visible. */
 export function selectFolderInFileTree(path: string) {
-  const workspaceId = workspaceStore.getState().selectedWorkspaceId;
+  const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
   workspaceUiStore.getState().setIsRightPaneHidden(workspaceId, false);
   workspaceUiStore.getState().setRightPaneTab(workspaceId, "files");
   workspaceUiStore.getState().requestSelectFolderInFileTree(path);

@@ -12,8 +12,8 @@
  */
 import type { StateCreator } from "zustand";
 import type { ProjectRecord, WorkspaceRecord } from "../../../api/types";
-import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
+import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { AddWorkspaceInput, WorkspaceItem } from "../model/workspaceTypes";
 
 export type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
@@ -21,12 +21,8 @@ export type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
 export type WorkspaceStoreState = {
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
-  selectedProjectId: string;
-  selectedWorkspaceId: string;
   isProjectsLoaded: boolean;
   orderedWorkspaceIds: string[];
-  setSelectedProjectId: (projectId: string) => void;
-  setSelectedWorkspaceId: (workspaceId: string) => void;
   load: (organizationId: string, projects: ProjectRecord[], workspaces: WorkspaceRecord[]) => void;
   createProject: (input: {
     name: string;
@@ -77,8 +73,6 @@ export type WorkspaceStorePersistedState = Record<string, never>;
 
 export type WorkspaceStoreActions = Pick<
   WorkspaceStoreState,
-  | "setSelectedProjectId"
-  | "setSelectedWorkspaceId"
   | "load"
   | "createProject"
   | "deleteProject"

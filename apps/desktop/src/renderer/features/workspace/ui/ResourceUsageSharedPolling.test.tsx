@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSharedTerminalResourceUsageSnapshotForTests } from "../../../features/terminal/runtime/sharedTerminalResourceUsage";
@@ -31,7 +32,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     getTerminalResourceUsage: mocked.getTerminalResourceUsage,
     setSelectedRepoId: mocked.setSelectedRepoId,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
@@ -55,7 +55,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 const initialWorkspaceState = workspaceStore.getState();
 const initialTabState = tabStore.getState();
@@ -84,6 +83,10 @@ describe("Resource usage shared polling", () => {
       ],
     });
 
+    workbenchNavigationStore.setState({
+      activeProjectId: "repo-1",
+      activeWorkspaceId: "workspace-1",
+    });
     workspaceStore.setState({
       projects: [
         {
@@ -107,8 +110,6 @@ describe("Resource usage shared polling", () => {
           worktreePath: "/tmp/repo-1/workspace-1",
         },
       ],
-      selectedProjectId: "repo-1",
-      selectedWorkspaceId: "workspace-1",
     });
 
     tabStore.setState({

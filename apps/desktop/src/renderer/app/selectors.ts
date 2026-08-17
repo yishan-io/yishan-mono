@@ -1,3 +1,5 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
+import type { WorkspaceProjectRecord } from "../features/project/model/projectTypes";
 /**
  * Composed screen read models.
  *
@@ -7,10 +9,9 @@
  * value; callers wrap in useMemo when subscribing.
  */
 import { projectStore } from "../features/project/state/projectStore";
-import type { WorkspaceProjectRecord } from "../features/project/model/projectTypes";
-import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
-import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
 import { layoutStore } from "../features/workbench/state/layoutStore";
+import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
+import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../features/workspace/state/workspaceUiStore";
 
@@ -52,15 +53,17 @@ export function selectSelectedWorkspaceWithProject(): {
 } {
   const workspaceState = workspaceStore.getState();
   const projectState = projectStore.getState();
-  const selectedWorkspace = workspaceState.workspaces.find((w) => w.id === workspaceState.selectedWorkspaceId);
+  const selectedWorkspace = workspaceState.workspaces.find(
+    (w) => w.id === workbenchNavigationStore.getState().activeWorkspaceId,
+  );
   const selectedProject = selectedWorkspace
     ? projectState.projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
     : undefined;
   return {
     selectedWorkspace,
     selectedProject,
-    selectedProjectId: workspaceState.selectedProjectId,
-    selectedWorkspaceId: workspaceState.selectedWorkspaceId,
+    selectedProjectId: workbenchNavigationStore.getState().activeProjectId,
+    selectedWorkspaceId: workbenchNavigationStore.getState().activeWorkspaceId,
   };
 }
 
@@ -99,11 +102,11 @@ export function useSelectedWorkspaceWithProject(): ReturnType<typeof selectSelec
 }
 
 function useWorkspaceSelectedId(): string {
-  return workspaceStore((s) => s.selectedWorkspaceId);
+  return workbenchNavigationStore((s) => s.activeWorkspaceId);
 }
 
 function useProjectStoreSelectedProjectId(): string {
-  return workspaceStore((s) => s.selectedProjectId);
+  return workbenchNavigationStore((s) => s.activeProjectId);
 }
 
 /** Pure combine: workspace pane collapsed flags from the three store slices. */
@@ -125,7 +128,7 @@ export function useWorkspacePaneVisibilityState(): {
   selectedWorkspaceId: string;
 } {
   const leftHidden = layoutStore((s) => s.isLeftPaneManuallyHidden);
-  const selectedWorkspaceId = workspaceStore((s) => s.selectedWorkspaceId);
+  const selectedWorkspaceId = workbenchNavigationStore((s) => s.activeWorkspaceId);
   const rightHiddenByWorkspaceId = workspaceUiStore((s) => s.isRightPaneHiddenByWorkspaceId);
   const collapsed = selectWorkspacePaneVisibility({ leftHidden, selectedWorkspaceId, rightHiddenByWorkspaceId });
   return { ...collapsed, selectedWorkspaceId };

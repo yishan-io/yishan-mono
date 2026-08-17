@@ -102,6 +102,10 @@ import {
   writeTerminalInput as writeTerminalInputCommand,
 } from "../../features/terminal/commands/terminalCommands";
 import {
+  activateProject as activateProjectCommand,
+  activateWorkspace as activateWorkspaceCommand,
+} from "../../features/workbench/commands/navigationCommands";
+import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
   closeTab as closeTabCommand,
@@ -121,7 +125,6 @@ import {
   toggleTabPinned as toggleTabPinnedCommand,
   updateFileTabContent as updateFileTabContentCommand,
 } from "../../features/workbench/commands/tabCommands";
-import { setSelectedRepo, setSelectedWorkspace } from "../../features/workspace/commands/selectionCommands";
 import {
   activateWorkspacePane as activateWorkspacePaneCommand,
   closeWorkspace as closeWorkspaceCommand,
@@ -187,8 +190,8 @@ export type SessionCommandSurface = {
 
 /** Workspace feature command surface. */
 export type WorkspaceCommandSurface = {
-  setSelectedRepoId: (repoId: string) => void;
-  setSelectedWorkspaceId: (workspaceId: string) => void;
+  activateProject: typeof activateProjectCommand;
+  activateWorkspace: typeof activateWorkspaceCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
   setLeftPaneWidth: typeof setLeftPaneWidthCommand;
@@ -411,8 +414,8 @@ export function createSessionCommands(): SessionCommandSurface {
 
 export function createWorkspaceCommands(): WorkspaceCommandSurface {
   return {
-    setSelectedRepoId: setSelectedRepo,
-    setSelectedWorkspaceId: setSelectedWorkspace,
+    activateProject: activateProjectCommand,
+    activateWorkspace: activateWorkspaceCommand,
     setDisplayRepoIds: setDisplayRepoIdsCommand,
     setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
     setLeftPaneWidth: setLeftPaneWidthCommand,

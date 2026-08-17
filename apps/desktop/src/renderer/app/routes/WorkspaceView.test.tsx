@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
@@ -24,8 +25,8 @@ const commandMocks = {
   selectTab: vi.fn(),
   setActiveWorkspace: vi.fn(async () => undefined),
   setLeftPaneWidth: vi.fn(),
-  setSelectedRepoId: vi.fn(),
-  setSelectedWorkspaceId: vi.fn(),
+  activateProject: vi.fn(),
+  activateWorkspace: vi.fn(),
   toggleLeftPaneVisibility: vi.fn(),
   toggleRightPaneVisibility: vi.fn(),
   undoFileTreeOperation: vi.fn(),
@@ -159,12 +160,10 @@ describe("WorkspaceView", () => {
       isProjectsLoaded: false,
       lastUsedExternalAppId: null,
       projects: [],
-      selectedRepoId: "",
-      selectedWorkspaceId: "",
       workspaces: [],
     });
     projectStore.setState({ projects: [] });
-    workspaceUiStore.setState({ overlayPanel: null });
+    workbenchNavigationStore.getState().closeOverlayPanel();
   });
 
   afterEach(() => {
@@ -214,7 +213,7 @@ describe("WorkspaceView", () => {
     await waitFor(() => {
       expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
       expect(terminalRecoveryMocks.restoreTerminalTabsFromDaemon).toHaveBeenCalledTimes(1);
-      expect(commandMocks.setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
+      expect(commandMocks.activateWorkspace).toHaveBeenCalledWith({ workspaceId: "workspace-2" });
     });
   });
 
@@ -245,7 +244,7 @@ describe("WorkspaceView", () => {
 
   it("returns from the overview overlay to the workspace pane on organization switch", async () => {
     setWorkspaceProjectsLoaded();
-    workspaceUiStore.setState({ overlayPanel: "overview" });
+    workbenchNavigationStore.getState().setOverlayPanel("overview");
 
     render(
       <MemoryRouter>
@@ -272,7 +271,7 @@ describe("WorkspaceView", () => {
 
   it("returns from the scheduled job overlay to the workspace pane on organization switch", async () => {
     setWorkspaceProjectsLoaded();
-    workspaceUiStore.setState({ overlayPanel: "scheduledJob" });
+    workbenchNavigationStore.getState().setOverlayPanel("scheduledJob");
 
     render(
       <MemoryRouter>

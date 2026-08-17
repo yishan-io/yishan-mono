@@ -2,9 +2,12 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WorkspacePaneVisibilityProvider } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
-import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
+import {
+  AGENT_SETTINGS_STORE_STORAGE_KEY,
+  agentSettingsStore,
+} from "../../../features/settings/state/agentSettingsStore";
 import type { SplitPaneNode } from "../../../features/workbench/model/split-pane";
+import { WorkspacePaneVisibilityProvider } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { MainPaneView } from "./MainPaneView";
 
 type MockLeafPane = {
@@ -62,6 +65,37 @@ vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+  const navStore = vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      activeProjectId: mocked.stateRef.current.selectedProjectId ?? "",
+      activeWorkspaceId: mocked.stateRef.current.selectedWorkspaceId ?? "",
+      overlayPanel: null,
+    }),
+  );
+  Object.assign(navStore, {
+    getState: () => ({
+      activeProjectId: mocked.stateRef.current.selectedProjectId ?? "",
+      activeWorkspaceId: mocked.stateRef.current.selectedWorkspaceId ?? "",
+      overlayPanel: null,
+      setActiveProjectId: vi.fn((projectId: string) => {
+        mocked.stateRef.current.selectedProjectId = projectId;
+      }),
+      setActiveWorkspaceId: vi.fn((workspaceId: string) => {
+        mocked.stateRef.current.selectedWorkspaceId = workspaceId;
+      }),
+      setOverlayPanel: vi.fn(),
+      closeOverlayPanel: vi.fn(),
+    }),
+    setState: vi.fn(),
+  });
+  return {
+    ...actual,
+    workbenchNavigationStore: navStore,
+  };
+});
+
 vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[]; displayProjectIds: string[] }) => unknown) =>
     selector({
@@ -103,15 +137,14 @@ vi.mock("../../../features/agent/state/chatStore", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => {
-
     const state = mocked.stateRef.current as Record<string, unknown>;
     return {
       listDetectedPorts: state.listDetectedPorts,
       subscribeDetectedPorts: state.subscribeDetectedPorts ?? mocked.subscribeDetectedPorts,
       getTerminalResourceUsage: state.getTerminalResourceUsage ?? mocked.getTerminalResourceUsage,
       retainOpenTerminalTabFocus: state.retainOpenTerminalTabFocus ?? vi.fn(),
-      setSelectedRepoId: state.setSelectedRepoId,
-      setSelectedWorkspaceId: state.setSelectedWorkspaceId,
+      activateProject: state.activateProject,
+      activateWorkspace: state.activateWorkspace,
       selectTab: state.selectTab,
       createTab: state.createTab,
       openTab: state.openTab,
@@ -149,7 +182,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
@@ -412,8 +444,8 @@ function buildStoreState(isInitializing: boolean) {
     ],
     selectedTabId: "tab-1",
     listDetectedPorts: vi.fn().mockResolvedValue([]),
-    setSelectedRepoId: vi.fn(),
-    setSelectedWorkspaceId: vi.fn(),
+    activateProject: vi.fn(),
+    activateWorkspace: vi.fn(),
     selectTab: vi.fn(),
     createTab: vi.fn(),
     openTab: vi.fn(),
@@ -532,8 +564,8 @@ describe("MainPaneView", () => {
       ],
       selectedTabId: "terminal-tab-1",
       listDetectedPorts: vi.fn().mockResolvedValue([]),
-      setSelectedRepoId: vi.fn(),
-      setSelectedWorkspaceId: vi.fn(),
+      activateProject: vi.fn(),
+      activateWorkspace: vi.fn(),
       selectTab: vi.fn(),
       createTab: vi.fn(),
       openTab: vi.fn(),
@@ -606,8 +638,8 @@ describe("MainPaneView", () => {
       ],
       selectedTabId: "terminal-tab-1",
       listDetectedPorts: vi.fn().mockResolvedValue([]),
-      setSelectedRepoId: vi.fn(),
-      setSelectedWorkspaceId: vi.fn(),
+      activateProject: vi.fn(),
+      activateWorkspace: vi.fn(),
       selectTab: vi.fn(),
       createTab: vi.fn(),
       openTab: vi.fn(),
@@ -678,8 +710,8 @@ describe("MainPaneView", () => {
       ],
       selectedTabId: "terminal-tab-1",
       listDetectedPorts: vi.fn().mockResolvedValue([]),
-      setSelectedRepoId: vi.fn(),
-      setSelectedWorkspaceId: vi.fn(),
+      activateProject: vi.fn(),
+      activateWorkspace: vi.fn(),
       selectTab: vi.fn(),
       createTab: vi.fn(),
       openTab: vi.fn(),
@@ -750,8 +782,8 @@ describe("MainPaneView", () => {
       ],
       selectedTabId: "",
       listDetectedPorts: vi.fn().mockResolvedValue([]),
-      setSelectedRepoId: vi.fn(),
-      setSelectedWorkspaceId: vi.fn(),
+      activateProject: vi.fn(),
+      activateWorkspace: vi.fn(),
       selectTab: vi.fn(),
       createTab: vi.fn(),
       openTab: vi.fn(),
@@ -943,8 +975,8 @@ describe("MainPaneView", () => {
   });
 
   it("shows repo and workspace title dropdowns and allows switching", () => {
-    const setSelectedRepoId = vi.fn();
-    const setSelectedWorkspaceId = vi.fn();
+    const activateProject = vi.fn();
+    const activateWorkspace = vi.fn();
     mocked.stateRef.current = {
       ...buildStoreState(false),
       projects: [
@@ -958,8 +990,8 @@ describe("MainPaneView", () => {
         { id: "workspace-2", repoId: "repo-1", name: "Workspace 2", branch: "feature/a", title: "Workspace 2" },
       ],
       selectedWorkspaceId: "workspace-1",
-      setSelectedRepoId,
-      setSelectedWorkspaceId,
+      activateProject,
+      activateWorkspace,
     };
 
     render(<MainPaneView />);
@@ -967,12 +999,15 @@ describe("MainPaneView", () => {
     fireEvent.click(screen.getByRole("button", { name: "project.selected" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Repo Two" }));
 
-    expect(setSelectedRepoId).toHaveBeenCalledWith("repo-2");
+    expect(activateProject).toHaveBeenCalledWith({ projectId: "repo-2", workspaceId: "" });
 
     fireEvent.click(screen.getByRole("button", { name: "workspace.column" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Workspace 2" }));
 
-    expect(setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
+    expect(activateWorkspace).toHaveBeenCalledWith({
+      workspaceId: "workspace-2",
+      projectId: "repo-1",
+    });
   });
 
   it("keeps a running workspace notification-tinted in the workspace selector", () => {
@@ -1050,7 +1085,7 @@ describe("MainPaneView", () => {
   });
 
   it("shows workspace ports summary and popup entries", async () => {
-    const setSelectedWorkspaceId = vi.fn();
+    const activateWorkspace = vi.fn();
     const selectTab = vi.fn();
     mocked.stateRef.current = {
       ...buildStoreState(false),
@@ -1067,7 +1102,7 @@ describe("MainPaneView", () => {
           },
         },
       ],
-      setSelectedWorkspaceId,
+      activateWorkspace,
       selectTab,
       listDetectedPorts: vi.fn().mockResolvedValue([
         {
@@ -1098,7 +1133,7 @@ describe("MainPaneView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "terminal.ports.toggleLabel" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /node.*3000.*12345/ }));
-    expect(setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-1");
+    expect(activateWorkspace).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
     expect(selectTab).toHaveBeenCalledWith("terminal-tab-1");
   });
 

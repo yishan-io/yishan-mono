@@ -12,10 +12,7 @@ import type { DaemonLocalFolder } from "../workspaceStoreTypes";
 
 type LocalFolderActions = Pick<WorkspaceStoreActions, "loadLocalFolders" | "addLocalFolder" | "removeLocalFolder">;
 
-type FolderStoreSlice = Pick<
-  WorkspaceStoreState,
-  "projects" | "workspaces" | "selectedProjectId" | "selectedWorkspaceId"
-> & {
+type FolderStoreSlice = Pick<WorkspaceStoreState, "projects" | "workspaces"> & {
   gitChangesCountByWorkspaceId?: Record<string, unknown>;
   gitChangeTotalsByWorkspaceId?: Record<string, unknown>;
 };
@@ -116,28 +113,6 @@ export function createLocalFolderActions(
         }
 
         cleanupFolderWorkspaceState(state, folderId);
-
-        if (state.selectedWorkspaceId === folderId) {
-          state.selectedWorkspaceId =
-            state.workspaces.find((workspace) => workspace.projectId === LOCAL_FOLDER_PROJECT_ID)?.id ??
-            state.workspaces[0]?.id ??
-            "";
-        }
-
-        // The sentinel project id is never present in projects[]. If no folder
-        // workspace remains selected, fall back so the left pane never shows the
-        // folder group as "selected" while a real project is active. Mirrors
-        // applyDeletedWorkspaceState's selectedProjectId reset.
-        if (
-          state.selectedProjectId === LOCAL_FOLDER_PROJECT_ID &&
-          !state.workspaces.some(
-            (workspace) =>
-              workspace.id === state.selectedWorkspaceId &&
-              (workspace.projectId ?? workspace.repoId) === LOCAL_FOLDER_PROJECT_ID,
-          )
-        ) {
-          state.selectedProjectId = state.projects[0]?.id ?? "";
-        }
       });
     },
   };

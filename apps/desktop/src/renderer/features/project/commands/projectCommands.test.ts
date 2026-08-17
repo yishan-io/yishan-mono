@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
@@ -275,6 +276,10 @@ describe("projectCommands", () => {
     // load() rebuilds workspaces[] without folder items, selection would
     // otherwise fall back to the first org workspace. It must be restored to
     // the folder after loadLocalFolders re-adds it.
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "folder-1",
+      activeProjectId: LOCAL_FOLDER_PROJECT_ID,
+    });
     workspaceStore.setState({
       workspaces: [
         {
@@ -290,14 +295,12 @@ describe("projectCommands", () => {
           kind: "folder",
         },
       ],
-      selectedWorkspaceId: "folder-1",
-      selectedProjectId: LOCAL_FOLDER_PROJECT_ID,
     });
 
     await loadWorkspaceSnapshot();
 
-    expect(workspaceStore.getState().selectedWorkspaceId).toBe("folder-1");
-    expect(workspaceStore.getState().selectedProjectId).toBe(LOCAL_FOLDER_PROJECT_ID);
+    expect(workbenchNavigationStore.getState().activeWorkspaceId).toBe("folder-1");
+    expect(workbenchNavigationStore.getState().activeProjectId).toBe(LOCAL_FOLDER_PROJECT_ID);
   });
 
   it("creates a non-git local folder on the daemon instead of the backend project api", async () => {
@@ -361,8 +364,8 @@ describe("projectCommands", () => {
       path: "/tmp/new-folder",
     });
 
-    expect(workspaceStore.getState().selectedWorkspaceId).toBe("folder-new");
-    expect(workspaceStore.getState().selectedProjectId).toBe(LOCAL_FOLDER_PROJECT_ID);
+    expect(workbenchNavigationStore.getState().activeWorkspaceId).toBe("folder-new");
+    expect(workbenchNavigationStore.getState().activeProjectId).toBe(LOCAL_FOLDER_PROJECT_ID);
     expect(resolveTabForWorkspace).toHaveBeenCalledWith("folder-new");
   });
 

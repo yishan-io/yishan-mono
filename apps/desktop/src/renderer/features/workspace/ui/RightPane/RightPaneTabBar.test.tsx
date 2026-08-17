@@ -7,11 +7,14 @@ import { RightPaneTabBar } from "./RightPaneTabBar";
 
 const workspaceStoreState: { current: Record<string, unknown> } = {
   current: {
-    selectedWorkspaceId: "workspace-1",
     workspaces: [{ id: "workspace-1", projectId: "project-1", repoId: "project-1", worktreePath: "/tmp/repo" }],
     projects: [],
     gitChangesCountByWorkspaceId: {},
   },
+};
+
+const navStoreState: { current: { activeProjectId: string; activeWorkspaceId: string } } = {
+  current: { activeProjectId: "project-1", activeWorkspaceId: "workspace-1" },
 };
 
 vi.mock("../../../../features/project/state/projectStore", () => ({
@@ -20,6 +23,11 @@ vi.mock("../../../../features/project/state/projectStore", () => ({
 
 vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
+}));
+
+vi.mock("@renderer/features/workbench", () => ({
+  workbenchNavigationStore: (selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
+    selector(navStoreState.current),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -47,6 +55,8 @@ afterEach(() => {
 
 describe("RightPaneTabBar", () => {
   it("shows files, changes, and PR tabs for a git project", () => {
+    navStoreState.current.activeWorkspaceId = "workspace-1";
+    navStoreState.current.activeProjectId = "project-1";
     workspaceStoreState.current.projects = [{ id: "project-1", sourceType: "git" }];
     render(<RightPaneTabBar rightCollapsed={false} />);
 

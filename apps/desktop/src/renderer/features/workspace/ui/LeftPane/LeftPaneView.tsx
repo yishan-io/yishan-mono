@@ -1,4 +1,7 @@
 import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { ProjectFilterPopoverView } from "@renderer/features/project";
+import { ProjectListView } from "@renderer/features/project";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
@@ -11,8 +14,6 @@ import { workspaceUiStore } from "../../../../features/workspace/state/workspace
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../../../../ui/layout/AppMenuView";
-import { ProjectFilterPopoverView } from "@renderer/features/project";
-import { ProjectListView } from "@renderer/features/project";
 
 type LeftPaneViewProps = {
   onCreateRepository?: () => void;
@@ -34,11 +35,11 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       })
     : t("layout.toggleLeftSidebar");
 
-  const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
-  const setOverlayPanel = workspaceUiStore((state) => state.setOverlayPanel);
+  const overlayPanel = workbenchNavigationStore((state) => state.overlayPanel);
+  const setOverlayPanel = workbenchNavigationStore((state) => state.setOverlayPanel);
   const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
   const isOverviewPanelOpen = overlayPanel === "overview";
-  const { setSelectedRepoId, setSelectedWorkspaceId } = useWorkspaceCommands();
+  const { activateProject, activateWorkspace } = useWorkspaceCommands();
   const { loadWorkspaceSnapshot } = useProjectCommands();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -55,19 +56,19 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
     const willOpen = overlayPanel !== "scheduledJob";
     setOverlayPanel(willOpen ? "scheduledJob" : null);
     if (willOpen) {
-      setSelectedRepoId("");
-      setSelectedWorkspaceId("");
+      activateProject({ projectId: "", workspaceId: "" });
+      activateWorkspace({ workspaceId: "" });
     }
-  }, [overlayPanel, setOverlayPanel, setSelectedRepoId, setSelectedWorkspaceId]);
+  }, [overlayPanel, setOverlayPanel, activateProject, activateWorkspace]);
 
   const handleToggleOverview = useCallback(() => {
     const willOpen = overlayPanel !== "overview";
     setOverlayPanel(willOpen ? "overview" : null);
     if (willOpen) {
-      setSelectedRepoId("");
-      setSelectedWorkspaceId("");
+      activateProject({ projectId: "", workspaceId: "" });
+      activateWorkspace({ workspaceId: "" });
     }
-  }, [overlayPanel, setOverlayPanel, setSelectedRepoId, setSelectedWorkspaceId]);
+  }, [overlayPanel, setOverlayPanel, activateProject, activateWorkspace]);
 
   return (
     <Box

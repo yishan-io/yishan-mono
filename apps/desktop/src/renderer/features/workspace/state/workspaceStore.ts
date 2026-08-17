@@ -12,8 +12,6 @@ export const workspaceStore = create<WorkspaceStoreState>()(
     immer((set, get) => ({
       projects: initialWorkspaceState.projects,
       workspaces: initialWorkspaceState.workspaces,
-      selectedProjectId: initialWorkspaceState.selectedProjectId,
-      selectedWorkspaceId: initialWorkspaceState.selectedWorkspaceId,
       isProjectsLoaded: false,
       orderedWorkspaceIds: [],
       ...createWorkspaceStoreActions(set, get),

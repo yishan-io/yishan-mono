@@ -19,6 +19,7 @@ export type ShortContext = {
   isPopupOpen: boolean;
   tabStoreState: TabStoreState;
   workspaceStoreState: WorkspaceStoreState;
+  activeWorkspaceId: string;
   splitPaneStoreState: SplitPaneStoreState;
   terminalTabTitle: string;
   commands: Commands;

@@ -6,19 +6,10 @@ import type { WorkspaceStorePersistedState, WorkspaceStoreState } from "../works
 export function buildWorkspaceStateFromData(input: {
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
-}): Pick<WorkspaceStoreState, "projects" | "workspaces" | "selectedProjectId" | "selectedWorkspaceId"> {
-  const resolveWorkspaceProjectId = (workspace: WorkspaceItem): string => {
-    return workspace.projectId ?? workspace.repoId;
-  };
-  const selectedProjectId = input.projects[0]?.id ?? "";
-  const selectedWorkspaceId =
-    input.workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === selectedProjectId)?.id ?? "";
-
+}): Pick<WorkspaceStoreState, "projects" | "workspaces"> {
   return {
     projects: input.projects,
     workspaces: input.workspaces,
-    selectedProjectId,
-    selectedWorkspaceId,
   };
 }
 

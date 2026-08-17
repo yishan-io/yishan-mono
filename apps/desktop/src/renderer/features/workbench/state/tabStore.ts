@@ -3,7 +3,6 @@ import { immer } from "zustand/middleware/immer";
 import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../features/workbench/model/types";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
-import { selectSelectedWorkspaceId } from "../../workspace/state/workspaceSelectors";
 import { resolveSelectedTabIdForWorkspace } from "../model/tabs";
 import {
   closeAllTabsState,
@@ -24,6 +23,7 @@ import {
   toggleTabPinnedState,
   updateFileTabContentState,
 } from "../model/tabs/index";
+import { workbenchNavigationStore } from "./workbenchNavigationStore";
 
 export type CloseTabOptions = {
   /** Tab to select when the closed tab was the selected one (e.g. the remaining pane's selection). */
@@ -130,8 +130,8 @@ export const tabStore = create<TabStoreState>()(
           .filter((tab: WorkspaceTab) => !workspaceIdSet.has(tab.workspaceId))
           .map((tab: WorkspaceTab) => tab.id);
 
-        // Read selectedWorkspaceId from the single source of truth before set().
-        const selectedWorkspaceId = selectSelectedWorkspaceId();
+        // Read activeWorkspaceId from the single source of truth before set().
+        const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
 
         set((state) => {
           const currentTabs = state.tabs ?? [];
@@ -158,7 +158,7 @@ export const tabStore = create<TabStoreState>()(
         return removedTabIds;
       },
       createTab: async (input) => {
-        const targetWorkspaceId = input?.workspaceId ?? selectSelectedWorkspaceId();
+        const targetWorkspaceId = input?.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
         if (!targetWorkspaceId) {
           return;
         }
@@ -198,7 +198,7 @@ export const tabStore = create<TabStoreState>()(
         set((state) => failSessionTabInitState(state, tabId));
       },
       openTab: (input, options?) => {
-        const selectedWorkspaceId = selectSelectedWorkspaceId();
+        const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
         const nextTabId = input.kind === "terminal" ? (input.tabId ?? createClientTabId()) : createClientTabId();
         set((state) => openTabState(state, input, nextTabId, { ...options, selectedWorkspaceId }) ?? state);
       },
@@ -212,7 +212,7 @@ export const tabStore = create<TabStoreState>()(
         set((state) => closeAllTabsState(state, tabId) ?? state);
       },
       closeAllTerminalTabs: () => {
-        const selectedWorkspaceId = selectSelectedWorkspaceId();
+        const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
         set((state) => closeAllTerminalTabsState(state, selectedWorkspaceId) ?? state);
       },
       setTerminalTabSessionId: (tabId, sessionId) => {

@@ -29,8 +29,10 @@ type ProjectStoreSlice = {
   latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
-  selectedProjectId: string;
-  selectedWorkspaceId: string;
+  // Active context lives in the Workbench navigation Store (W2); previous
+  // values are supplied by the flow, not read from the Workspace Store.
+  selectedProjectId?: string;
+  selectedWorkspaceId?: string;
   displayProjectIds?: string[];
   lastUsedExternalAppId?: ExternalAppId;
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
@@ -114,11 +116,13 @@ function resolveNextDisplayProjectIds(input: {
 
 function resolveHydratedSelection(input: {
   workspaces: WorkspaceItem[];
-  previousSelectedProjectId: string;
-  previousSelectedWorkspaceId: string;
+  previousSelectedProjectId: string | undefined;
+  previousSelectedWorkspaceId: string | undefined;
   mappedProjects: WorkspaceProjectRecord[];
   displayProjectIds: string[];
 }): { selectedProjectId: string; selectedWorkspaceId: string } {
+  const previousSelectedProjectId = input.previousSelectedProjectId ?? "";
+  const previousSelectedWorkspaceId = input.previousSelectedWorkspaceId ?? "";
   const displayedProjectIdSet = new Set(input.displayProjectIds);
   const fallbackSelectedWorkspace = input.workspaces.find((workspace) =>
     displayedProjectIdSet.has(resolveWorkspaceProjectId(workspace)),
@@ -129,13 +133,12 @@ function resolveHydratedSelection(input: {
     "";
   const preservedSelectedWorkspace = input.workspaces.find(
     (workspace) =>
-      workspace.id === input.previousSelectedWorkspaceId &&
-      displayedProjectIdSet.has(resolveWorkspaceProjectId(workspace)),
+      workspace.id === previousSelectedWorkspaceId && displayedProjectIdSet.has(resolveWorkspaceProjectId(workspace)),
   );
   const selectedProjectId = preservedSelectedWorkspace
     ? resolveWorkspaceProjectId(preservedSelectedWorkspace)
-    : displayedProjectIdSet.has(input.previousSelectedProjectId)
-      ? input.previousSelectedProjectId
+    : displayedProjectIdSet.has(previousSelectedProjectId)
+      ? previousSelectedProjectId
       : fallbackSelectedProjectId;
   const selectedWorkspaceId =
     preservedSelectedWorkspace?.id ??
@@ -318,8 +321,8 @@ export function reconcileWorkspaceSnapshot(input: SnapshotReconcilerInput): Snap
     normalizedOrganizationId.length > 0
       ? previousState.organizationPreferencesById?.[normalizedOrganizationId]
       : undefined;
-  const previousSelectedProjectId = previousState.selectedProjectId;
-  const previousSelectedWorkspaceId = previousState.selectedWorkspaceId;
+  const previousSelectedProjectId = previousState.selectedProjectId ?? "";
+  const previousSelectedWorkspaceId = previousState.selectedWorkspaceId ?? "";
   const { projects: mappedProjects, workspaces } = mapApiData(projects, workspacesFromApi);
   const reconciledWorkspaces = preservePendingWorkspaceDisplayMetadata(workspaces, previousState.workspaces);
   const nextBaseState = buildWorkspaceStateFromData({

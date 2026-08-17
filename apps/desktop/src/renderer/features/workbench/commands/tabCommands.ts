@@ -15,8 +15,8 @@ import { layoutStore } from "../../../features/workbench/state/layoutStore";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workbenchNavigationStore } from "../../../features/workbench/state/workbenchNavigationStore";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceActions";
-import { selectSelectedWorkspaceId } from "../../../features/workspace/state/workspaceSelectors";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../../../helpers/tabHelpers";
@@ -266,7 +266,7 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
 export function openTab(input: OpenWorkspaceTabInput, options?: { activePaneTabIds?: string[] }) {
   const snapshot = readTabStoreState();
   const previousTabIds = new Set(snapshot.tabs.map((tab) => tab.id));
-  const workspaceId = input.workspaceId ?? selectSelectedWorkspaceId();
+  const workspaceId = input.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
   snapshot.openTab(input, options ?? { activePaneTabIds: activePane?.tabIds });
   requestFocusForNewTab(previousTabIds);
@@ -323,7 +323,7 @@ export async function openChatFileTab(input: {
  * because it reads the current `activePaneId` after the split is already in place.
  */
 export function openTabInOppositePane(input: OpenWorkspaceTabInput): void {
-  const workspaceId = input.workspaceId ?? selectSelectedWorkspaceId();
+  const workspaceId = input.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
   if (!workspaceId) {
     return;
   }

@@ -1,7 +1,8 @@
 import { removeTabData, removeWorkspaceTaskCounts } from "../../../features/agent/state/chatActions";
 import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workbenchNavigationStore } from "../../../features/workbench/state/workbenchNavigationStore";
 import type { WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
-import { selectSelectedWorkspaceId, selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
+import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 
 /** Reconciles tab/chat state after workspace list changes in workspace store. */
 export function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceItem[]): void {
@@ -13,9 +14,9 @@ export function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceItem[]): 
   const removedTabIds = tabStore.getState().retainWorkspaceTabs(nextWorkspaceIds);
 
   // Re-resolve the tab for the current workspace after the list changes.
-  // workspaceStore is the single source of truth for which workspace is selected;
-  // tabStore only needs to know which tab to show for it.
-  tabStore.getState().resolveTabForWorkspace(selectSelectedWorkspaceId());
+  // workbenchNavigationStore is the single source of truth for which workspace
+  // is active; tabStore only needs to know which tab to show for it.
+  tabStore.getState().resolveTabForWorkspace(workbenchNavigationStore.getState().activeWorkspaceId);
 
   if (removedTabIds.length > 0) {
     removeTabData(removedTabIds);

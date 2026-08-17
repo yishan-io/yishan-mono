@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +22,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     createScheduledJob: mocked.createScheduledJob,
   });
   return {
@@ -42,7 +42,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../api", () => ({
   api: {
@@ -75,8 +74,10 @@ describe("CreateScheduledJobFormView", () => {
 
   it("submits with the selected project default and daemon node default", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "node-daemon" });
+    workbenchNavigationStore.setState({
+      activeProjectId: "project-2",
+    });
     workspaceStore.setState({
-      selectedProjectId: "project-2",
       projects: [
         {
           id: "project-1",

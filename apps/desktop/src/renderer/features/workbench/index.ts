@@ -2,8 +2,19 @@
  * Workbench feature public API (Phase 12, desktop5.md).
  */
 export type { WorkbenchCommands } from "./commands/contract";
+export {
+  activateProject,
+  activateWorkspace,
+  closeOverlayPanel,
+  openOverlayPanel,
+} from "./commands/navigationCommands";
 export type { WorkspaceTab } from "./model/types";
 export type { TabStoreState } from "./state/tabStore";
+export {
+  workbenchNavigationStore,
+  type OverlayPanel,
+  type WorkbenchNavigationState,
+} from "./state/workbenchNavigationStore";
 export {
   getActivePane,
   getIsLeftPaneManuallyHidden,

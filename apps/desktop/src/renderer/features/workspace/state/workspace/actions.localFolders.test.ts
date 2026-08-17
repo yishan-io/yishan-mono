@@ -29,8 +29,6 @@ type TestProject = {
 type TestState = {
   projects: TestProject[];
   workspaces: TestWorkspace[];
-  selectedProjectId: string;
-  selectedWorkspaceId: string;
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
 };
@@ -52,8 +50,6 @@ function createHarness(initial: Partial<TestState> = {}) {
         worktreePath: "/tmp/repo-1/.worktrees/existing",
       },
     ],
-    selectedProjectId: "repo-1",
-    selectedWorkspaceId: "workspace-1",
     gitChangesCountByWorkspaceId: {},
     gitChangeTotalsByWorkspaceId: {},
     ...initial,
@@ -179,8 +175,6 @@ describe("createLocalFolderActions", () => {
           summaryId: "folder-1",
         },
       ],
-      selectedWorkspaceId: "folder-1",
-      selectedProjectId: LOCAL_FOLDER_PROJECT_ID,
       gitChangesCountByWorkspaceId: { "folder-1": 3 },
       gitChangeTotalsByWorkspaceId: { "folder-1": { additions: 5, deletions: 2 } },
     });
@@ -191,10 +185,7 @@ describe("createLocalFolderActions", () => {
     expect(state.workspaces.some((w) => w.id === "folder-1")).toBe(false);
     expect(state.gitChangesCountByWorkspaceId["folder-1"]).toBeUndefined();
     expect(state.gitChangeTotalsByWorkspaceId["folder-1"]).toBeUndefined();
-    // Selection falls back to the next workspace.
-    expect(state.selectedWorkspaceId).toBe("workspace-1");
-    // The sentinel project id is reset to a real project.
-    expect(state.selectedProjectId).toBe("repo-1");
+    // Selection is Workbench-owned (W2); the store action only removes records.
   });
 
   it("keeps the sentinel project id when another folder remains selected", () => {
@@ -221,15 +212,13 @@ describe("createLocalFolderActions", () => {
           summaryId: "folder-2",
         },
       ],
-      selectedWorkspaceId: "folder-1",
-      selectedProjectId: LOCAL_FOLDER_PROJECT_ID,
     });
 
     harness.actions.removeLocalFolder("folder-1");
 
     const state = harness.getState();
-    expect(state.selectedWorkspaceId).toBe("folder-2");
-    expect(state.selectedProjectId).toBe(LOCAL_FOLDER_PROJECT_ID);
+    expect(state.workspaces.some((w) => w.id === "folder-1")).toBe(false);
+    expect(state.workspaces.some((w) => w.id === "folder-2")).toBe(true);
   });
 
   it("does not clear an unrelated selection when removing a folder", () => {
@@ -246,11 +235,9 @@ describe("createLocalFolderActions", () => {
           summaryId: "folder-1",
         },
       ],
-      selectedWorkspaceId: "workspace-1",
     });
 
     harness.actions.removeLocalFolder("folder-1");
-    expect(harness.getState().selectedWorkspaceId).toBe("workspace-1");
-    expect(harness.getState().selectedProjectId).toBe("repo-1");
+    expect(harness.getState().workspaces.some((w) => w.id === "workspace-1")).toBe(true);
   });
 });

@@ -4,8 +4,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
 import { workspaceProjectionStore } from "../../../features/workspace/state/workspaceProjectionStore";
-import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { PullRequestTabView } from "./PullRequestTabView";
 
 const mocked = vi.hoisted(() => ({
@@ -21,6 +21,23 @@ const mocked = vi.hoisted(() => ({
   },
 }));
 
+const navMock = vi.hoisted(() => {
+  const navStoreState: { activeProjectId: string; activeWorkspaceId: string } = {
+    activeProjectId: "",
+    activeWorkspaceId: "",
+  };
+  return {
+    navStoreState,
+    navStore: {
+      getState: () => navStoreState,
+      setState: (s: Record<string, unknown>) => Object.assign(navStoreState, s),
+    },
+  };
+});
+
+vi.mock("@renderer/features/workbench", () => ({
+  workbenchNavigationStore: navMock.navStore,
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -43,7 +60,6 @@ vi.mock("../../../features/git/commands/gitCommands", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,
   });
   return {
@@ -65,7 +81,6 @@ vi.mock("../../../app/commands/useCommands", () => {
   };
 });
 
-
 vi.mock("./useWorkspacePullRequestState", () => ({
   useWorkspacePullRequestState: () => mocked.state,
 }));
@@ -74,8 +89,10 @@ const initialWorkspaceStoreState = workspaceStore.getState();
 const initialProjectionStoreState = workspaceProjectionStore.getState();
 
 function setupSelectedWorkspace() {
+  navMock.navStore.setState({
+    activeWorkspaceId: "workspace-1",
+  });
   workspaceStore.setState({
-    selectedWorkspaceId: "workspace-1",
     workspaces: [{ id: "workspace-1", worktreePath: "/tmp/workspace-1" } as never],
   });
 }
@@ -109,7 +126,6 @@ afterEach(() => {
   mocked.mergePullRequest.mockReset();
   mocked.closePullRequest.mockReset();
   mocked.refreshWorkspacePullRequest.mockReset();
-  mocked.state.selectedWorkspaceId = "workspace-1";
   mocked.state.pullRequest = undefined;
   mocked.state.historicalPullRequests = [];
   mocked.state.isLoading = false;
@@ -240,9 +256,11 @@ describe("PullRequestTabView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "workspace.pr.merge" }));
 
+    navMock.navStore.setState({
+      activeWorkspaceId: "workspace-2",
+    });
     workspaceStore.setState({
       ...workspaceStore.getState(),
-      selectedWorkspaceId: "workspace-2",
     });
 
     await act(async () => {

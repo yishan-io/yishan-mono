@@ -27,26 +27,30 @@ const mocks = vi.hoisted(() => ({
   login: vi.fn(),
 }));
 
-vi.mock("../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({
-    app: {
-      checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
-      ensureAgentGlobalConfigExternalDirectoryPermission: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
-      getDefaultWorktreeLocation: mocks.getDefaultWorktreeLocation,
+vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDaemonClient: vi.fn(async () => ({
+      app: {
+        checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
+        ensureAgentGlobalConfigExternalDirectoryPermission: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
+        getDefaultWorktreeLocation: mocks.getDefaultWorktreeLocation,
+        openLocalFolderDialog: mocks.openLocalFolderDialog,
+        toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
+        checkAuthStatus: mocks.checkAuthStatus,
+      },
+    })),
+    getDesktopHostBridge: vi.fn(() => ({
       openLocalFolderDialog: mocks.openLocalFolderDialog,
+      openExternalUrl: mocks.openExternalUrl,
       toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
-      checkAuthStatus: mocks.checkAuthStatus,
-    },
-  })),
-  getDesktopHostBridge: vi.fn(() => ({
-    openLocalFolderDialog: mocks.openLocalFolderDialog,
-    openExternalUrl: mocks.openExternalUrl,
-    toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
-    getMainWindowFullscreenState: mocks.getMainWindowFullscreenState,
-    getDaemonInfo: mocks.getDaemonInfo,
-    login: mocks.login,
-  })),
-}));
+      getMainWindowFullscreenState: mocks.getMainWindowFullscreenState,
+      getDaemonInfo: mocks.getDaemonInfo,
+      login: mocks.login,
+    })),
+  };
+});
 
 describe("appCommands", () => {
   it("delegates shell commands to app shell service", async () => {

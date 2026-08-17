@@ -1,8 +1,8 @@
 import { getTabs } from "@renderer/features/workbench";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { writeTerminalInput } from "../../../features/terminal/commands/terminalCommands";
 import type { WorkspaceTab } from "../../../features/workbench";
 import { openTab } from "../../../features/workbench/commands/tabCommands";
-import { selectSelectedWorkspaceId } from "../../../features/workspace/state/workspaceSelectors";
 import { DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { delay } from "../../../helpers/delay";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
@@ -85,7 +85,7 @@ export async function removePiProvider(provider: string): Promise<void> {
  * Requires an open workspace (the terminal session is workspace-scoped).
  */
 export async function openPiProviderLogin(params: { providerId: string; tabTitle: string }): Promise<void> {
-  const workspaceId = selectSelectedWorkspaceId();
+  const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
   if (!workspaceId) {
     throw new Error(NO_ACTIVE_WORKSPACE_LOGIN_ERROR);
   }

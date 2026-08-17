@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,8 +11,7 @@ import { LeftPaneResourceUsageControl } from "./LeftPaneResourceUsageControl";
 
 const mocked = vi.hoisted(() => ({
   getTerminalResourceUsage: vi.fn(),
-  setSelectedRepoId: vi.fn(),
-  setSelectedWorkspaceId: vi.fn(),
+  activateWorkspace: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -39,10 +39,8 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     getTerminalResourceUsage: mocked.getTerminalResourceUsage,
-    setSelectedRepoId: mocked.setSelectedRepoId,
-    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
+    activateWorkspace: mocked.activateWorkspace,
   });
   return {
     useAppCommands: commandSurface,
@@ -62,7 +60,6 @@ vi.mock("../../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 const initialWorkspaceState = workspaceStore.getState();
 const initialTabState = tabStore.getState();
@@ -89,8 +86,7 @@ function RouteNavigationHarness() {
 describe("LeftPaneResourceUsageControl", () => {
   beforeEach(() => {
     mocked.getTerminalResourceUsage.mockReset();
-    mocked.setSelectedRepoId.mockReset();
-    mocked.setSelectedWorkspaceId.mockReset();
+    mocked.activateWorkspace.mockReset();
     mocked.getTerminalResourceUsage.mockResolvedValue({
       totalCpuPercent: 20,
       totalMemoryBytes: 320 * 1024 * 1024,
@@ -123,6 +119,10 @@ describe("LeftPaneResourceUsageControl", () => {
       ],
     });
 
+    workbenchNavigationStore.setState({
+      activeProjectId: "repo-1",
+      activeWorkspaceId: "workspace-1",
+    });
     workspaceStore.setState({
       projects: [
         {
@@ -164,8 +164,6 @@ describe("LeftPaneResourceUsageControl", () => {
           worktreePath: "/tmp/repo-2/workspace-2",
         },
       ],
-      selectedProjectId: "repo-1",
-      selectedWorkspaceId: "workspace-1",
     });
     projectStore.setState({
       projects: [
@@ -244,8 +242,7 @@ describe("LeftPaneResourceUsageControl", () => {
     fireEvent.click(screen.getByRole("button", { name: "terminal.resourceUsage.toggleLabel" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Workspace 2/ }));
 
-    expect(mocked.setSelectedRepoId).toHaveBeenCalledWith("repo-2");
-    expect(mocked.setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
+    expect(mocked.activateWorkspace).toHaveBeenCalledWith({ workspaceId: "workspace-2" });
   });
 
   it("does not poll or render when there are no terminal sessions", async () => {

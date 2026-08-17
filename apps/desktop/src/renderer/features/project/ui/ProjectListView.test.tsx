@@ -12,8 +12,8 @@ const mocked = vi.hoisted(() => {
   const renameWorkspaceBranch = vi.fn();
   const closeWorkspace = vi.fn();
   const deleteProject = vi.fn();
-  const setSelectedRepoId = vi.fn();
-  const setSelectedWorkspaceId = vi.fn();
+  const activateProject = vi.fn();
+  const activateWorkspace = vi.fn();
   const setLastUsedExternalAppId = vi.fn();
   const openEntryInExternalApp = vi.fn();
   const listDetectedExternalAppIds = vi.fn();
@@ -54,8 +54,6 @@ const mocked = vi.hoisted(() => {
       currentBranchByWorkspaceId: Record<string, string>;
       setWorkspaceCurrentBranch: (workspaceId: string, branch: string) => void;
       gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
-      setSelectedRepoId: (repoId: string) => void;
-      setSelectedWorkspaceId: (workspaceId: string) => void;
       setLastUsedExternalAppId: (appId: string) => void;
       renameWorkspace: (input: { repoId: string; workspaceId: string; name: string }) => Promise<void>;
       renameWorkspaceBranch: (input: { repoId: string; workspaceId: string; branch: string }) => Promise<void>;
@@ -86,8 +84,6 @@ const mocked = vi.hoisted(() => {
         };
       },
       gitChangeTotalsByWorkspaceId: {},
-      setSelectedRepoId,
-      setSelectedWorkspaceId,
       setLastUsedExternalAppId,
       renameWorkspace: async () => undefined,
       renameWorkspaceBranch: async () => undefined,
@@ -123,8 +119,8 @@ const mocked = vi.hoisted(() => {
     renameWorkspaceBranch,
     closeWorkspace,
     deleteProject,
-    setSelectedRepoId,
-    setSelectedWorkspaceId,
+    activateProject,
+    activateWorkspace,
     setLastUsedExternalAppId,
     openEntryInExternalApp,
     listDetectedExternalAppIds,
@@ -177,6 +173,9 @@ vi.mock("@renderer/features/workspace", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/features/workspace")>();
   return {
     ...actual,
+    useSelectedProjectId: () => mocked.stateRef.current.selectedProjectId ?? "",
+    useSelectedWorkspaceId: () => mocked.stateRef.current.selectedWorkspaceId ?? "",
+    useWorkspaces: () => mocked.stateRef.current.workspaces ?? [],
     CreateWorkspaceDialogView: ({ open, mode }: { open: boolean; mode?: "create" | "rename" }) =>
       open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
   };
@@ -189,6 +188,31 @@ vi.mock("./ProjectConfigDialogView", () => ({
 vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
+
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+  const navState = () => ({
+    activeProjectId: mocked.stateRef.current.selectedProjectId ?? "",
+    activeWorkspaceId: mocked.stateRef.current.selectedWorkspaceId ?? "",
+    overlayPanel: null,
+  });
+  const navStore = Object.assign(
+    vi.fn((selector: (state: Record<string, unknown>) => unknown) => {
+      return selector(navState());
+    }),
+    {
+      getState: navState,
+      subscribe: vi.fn(() => () => {}),
+      setState: vi.fn((partial: Record<string, unknown>) => {
+        Object.assign(mocked.stateRef.current, partial);
+      }),
+    },
+  );
+  return {
+    ...actual,
+    workbenchNavigationStore: navStore,
+  };
+});
 
 vi.mock("../../../features/workspace/state/workspaceProjectionStore", () => {
   const project = (
@@ -269,8 +293,8 @@ vi.mock("../../../features/workspace/state/workspaceCreateProgressStore", () => 
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-    setSelectedRepoId: mocked.setSelectedRepoId,
-    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
+    activateProject: mocked.activateProject,
+    activateWorkspace: mocked.activateWorkspace,
     renameWorkspace: mocked.renameWorkspace,
     renameWorkspaceBranch: mocked.renameWorkspaceBranch,
     closeWorkspace: mocked.closeWorkspace,
@@ -368,8 +392,6 @@ function renderFolderList() {
     currentBranchByWorkspaceId: {},
     setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
     gitChangeTotalsByWorkspaceId: {},
-    setSelectedRepoId: mocked.setSelectedRepoId,
-    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
     setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
     renameWorkspace: mocked.renameWorkspace,
     renameWorkspaceBranch: mocked.renameWorkspaceBranch,
@@ -449,8 +471,6 @@ function renderRepoList(
     gitChangeTotalsByWorkspaceId: {
       "workspace-1": { additions: 12, deletions: 4 },
     },
-    setSelectedRepoId: mocked.setSelectedRepoId,
-    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
     setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
     renameWorkspace: mocked.renameWorkspace,
     renameWorkspaceBranch: mocked.renameWorkspaceBranch,
@@ -607,8 +627,6 @@ describe("ProjectListView", () => {
       gitChangeTotalsByWorkspaceId: {
         "workspace-local-1": { additions: 2, deletions: 1 },
       },
-      setSelectedRepoId: mocked.setSelectedRepoId,
-      setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
       setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
       renameWorkspace: mocked.renameWorkspace,
       renameWorkspaceBranch: mocked.renameWorkspaceBranch,
@@ -639,12 +657,12 @@ describe("ProjectListView", () => {
   it("toggles repository fold without selecting repository", () => {
     const { onRenameWorkspace } = renderRepoList();
 
-    mocked.setSelectedRepoId.mockClear();
+    mocked.activateProject.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: "repo.actions.collapse" }));
 
     expect(screen.queryByText("Workspace 1")).toBeNull();
-    expect(mocked.setSelectedRepoId).not.toHaveBeenCalled();
+    expect(mocked.activateProject).not.toHaveBeenCalled();
     expect(onRenameWorkspace).not.toHaveBeenCalled();
   });
 
@@ -755,12 +773,12 @@ describe("ProjectListView", () => {
 
   it("does not select a project when the Local Folders group row is clicked", () => {
     renderFolderList();
-    mocked.setSelectedRepoId.mockClear();
+    mocked.activateProject.mockClear();
 
     fireEvent.click(screen.getByText("project.list.localFolders"));
 
     // Clicking the group only folds/unfolds it; no project selection occurs.
-    expect(mocked.setSelectedRepoId).not.toHaveBeenCalled();
+    expect(mocked.activateProject).not.toHaveBeenCalled();
   });
 
   it("shows detected external apps directly in workspace context submenu when host detection succeeds", async () => {

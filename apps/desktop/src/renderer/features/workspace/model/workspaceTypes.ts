@@ -52,3 +52,13 @@ export type WorkspaceItem = {
   state?: WorkspaceLifecycleState;
   health?: WorkspaceHealth;
 };
+
+/** Resolves the owning project id for a workspace (folder workspaces use their repo id). */
+export function resolveWorkspaceProjectId(workspace: { projectId?: string; repoId: string }): string {
+  return workspace.projectId ?? workspace.repoId;
+}
+
+/** Resolves the workspace to activate for a project (first workspace of the project, or ""). */
+export function resolveWorkspaceIdForProject(workspaces: WorkspaceItem[], projectId: string): string {
+  return workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === projectId)?.id ?? "";
+}

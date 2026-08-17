@@ -1,4 +1,5 @@
 import { Box, Button, Tooltip, Typography } from "@mui/material";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
@@ -13,6 +14,10 @@ import {
 } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { useDisplayProjectIds, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import {
+  resolveWorkspaceIdForProject,
+  resolveWorkspaceProjectId,
+} from "../../../features/workspace/model/workspaceTypes";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
@@ -40,11 +45,11 @@ export function MainPaneTitleBarView() {
   const projects = useProjects();
   const displayProjectIds = useDisplayProjectIds();
   const workspaces = workspaceStore((state) => state.workspaces);
-  const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
   const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
-  const { setSelectedRepoId, setSelectedWorkspaceId } = useWorkspaceCommands();
+  const { activateProject, activateWorkspace } = useWorkspaceCommands();
   const { openTab } = useWorkbenchCommands();
   const { updateProjectConfig } = useProjectCommands();
   const selectedRepo = projects.find((project) => project.id === selectedProjectId);
@@ -290,7 +295,9 @@ export function MainPaneTitleBarView() {
         localFolderWorkspaces={localFolderWorkspaces}
         isLocalFolderSelected={isLocalFolderSelected}
         selectedProjectId={selectedProjectId}
-        setSelectedRepoId={setSelectedRepoId}
+        activateProject={(projectId) =>
+          activateProject({ projectId, workspaceId: resolveWorkspaceIdForProject(workspaces, projectId) })
+        }
         setRepoMenuAnchorEl={setRepoMenuAnchorEl}
         setWorkspaceMenuAnchorEl={setWorkspaceMenuAnchorEl}
         setWorkspaceSearchValue={setWorkspaceSearchValue}
@@ -319,7 +326,9 @@ export function MainPaneTitleBarView() {
         setWorkspaceSearchValue={setWorkspaceSearchValue}
         filteredWorkspaceOptions={filteredWorkspaceOptions}
         selectedWorkspaceId={selectedWorkspaceId}
-        setSelectedWorkspaceId={setSelectedWorkspaceId}
+        activateWorkspace={(workspace) =>
+          activateWorkspace({ workspaceId: workspace.id, projectId: resolveWorkspaceProjectId(workspace) })
+        }
         setWorkspaceMenuAnchorEl={setWorkspaceMenuAnchorEl}
         resolveWorkspaceIconColor={resolveWorkspaceIconColor}
         primaryWorkspaceId={primaryWorkspaceId}

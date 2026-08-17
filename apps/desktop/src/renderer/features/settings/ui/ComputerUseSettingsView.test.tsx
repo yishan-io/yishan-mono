@@ -19,14 +19,18 @@ vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDaemonClient: async () => ({
-    computer: {
-      permissions: mocked.permissions,
-      openPermissionSettings: mocked.openPermissionSettings,
-    },
-  }),
-}));
+vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDaemonClient: async () => ({
+      computer: {
+        permissions: mocked.permissions,
+        openPermissionSettings: mocked.openPermissionSettings,
+      },
+    }),
+  };
+});
 
 describe("ComputerUseSettingsView", () => {
   beforeEach(() => {

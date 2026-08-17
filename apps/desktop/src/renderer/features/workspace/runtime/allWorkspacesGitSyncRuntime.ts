@@ -1,9 +1,10 @@
-import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
-import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { selectProjects } from "../../project/state/projectSelectors";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
+import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 
 /**
  * Minimum interval (ms) between consecutive refresh calls for one workspace.
@@ -95,7 +96,7 @@ export function createAllWorkspacesGitSyncRuntime() {
 
     const state = workspaceStore.getState();
     const workspaces = state.workspaces;
-    const selectedWorkspaceId = state.selectedWorkspaceId;
+    const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
     const lastSeen = lastSeenVersionByWorktreePath;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
     const projectByProjectId = new Map(selectProjects().map((project) => [project.id, project]));

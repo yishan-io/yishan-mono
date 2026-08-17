@@ -1,3 +1,4 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 /**
  * WorkspaceSnapshotFlow — the shared workspace-snapshot load.
  *
@@ -18,19 +19,19 @@
  */
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
-import { syncTabStoreWithWorkspace } from "../../features/workbench/commands/workspaceTabSync";
 import { projectStore } from "../../features/project/state/projectStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
+import { syncTabStoreWithWorkspace } from "../../features/workbench/commands/workspaceTabSync";
 import {
   openFoldersForSnapshot,
   restoreFolderSelectionIfNeeded,
 } from "../../features/workspace/commands/localFolderCommands";
 import { warmupWorkspacesForProjects } from "../../features/workspace/commands/workspaceWarmupCommand";
 import { reconcileWorkspaceSnapshot } from "../../features/workspace/model/snapshotReconciler";
-import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
-import { getDaemonClient } from "../../rpc/rpcTransport";
-import { sessionStore } from "../../features/session/state/sessionStore";
 import { workspaceCreateProgressStore } from "../../features/workspace/state/workspaceCreateProgressStore";
+import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import { getDaemonClient } from "../../rpc/rpcTransport";
 
 let latestWorkspaceSnapshotRequestId = 0;
 
@@ -42,7 +43,7 @@ function isLatestWorkspaceSnapshotRequest(requestId: number): boolean {
 export async function loadWorkspaceSnapshot(): Promise<void> {
   const requestId = ++latestWorkspaceSnapshotRequestId;
   const previousWorkspaces = workspaceStore.getState().workspaces;
-  const previousSelectedWorkspaceId = workspaceStore.getState().selectedWorkspaceId;
+  const previousSelectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
 
   try {
     const sessionState = sessionStore.getState();
@@ -101,8 +102,8 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         latestPullRequestByWorkspaceId: workspaceProjectionStore.getState().latestPullRequestByWorkspaceId,
         gitChangesCountByWorkspaceId: workspaceProjectionStore.getState().gitChangesCountByWorkspaceId,
         gitChangeTotalsByWorkspaceId: workspaceProjectionStore.getState().gitChangeTotalsByWorkspaceId,
-        selectedProjectId: workspaceStore.getState().selectedProjectId,
-        selectedWorkspaceId: workspaceStore.getState().selectedWorkspaceId,
+        selectedProjectId: workbenchNavigationStore.getState().activeProjectId,
+        selectedWorkspaceId: workbenchNavigationStore.getState().activeWorkspaceId,
         displayProjectIds: projectStore.getState().displayProjectIds,
         lastUsedExternalAppId: projectStore.getState().lastUsedExternalAppId,
         organizationPreferencesById: projectStore.getState().organizationPreferencesById,
@@ -118,11 +119,16 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         reconciled.lastUsedExternalAppId,
       );
 
+    // Active Workspace/Project context lives in the Workbench navigation
+    // Store (desktop6-adjust.md W2); the reconciler resolves it, the flow
+    // applies it to the nav Store after the entity stores hydrate.
+    workbenchNavigationStore.getState().setActiveProjectId(reconciled.selectedProjectId);
+    workbenchNavigationStore.getState().setActiveWorkspaceId(reconciled.selectedWorkspaceId);
+
     // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
     const daemonFolders = await daemonClient.workspace.listLocalFolders();
 
     if (!isLatestWorkspaceSnapshotRequest(requestId)) {
-
       return;
     }
     workspaceStore.getState().loadLocalFolders(daemonFolders);

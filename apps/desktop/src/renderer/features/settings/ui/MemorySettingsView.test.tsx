@@ -33,17 +33,21 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDaemonClient: async () => ({
-    memory: {
-      getConfig: mocked.getConfig,
-      updateConfig: mocked.updateConfig,
-    },
-    agent: {
-      listModels: mocked.listModels,
-    },
-  }),
-}));
+vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDaemonClient: async () => ({
+      memory: {
+        getConfig: mocked.getConfig,
+        updateConfig: mocked.updateConfig,
+      },
+      agent: {
+        listModels: mocked.listModels,
+      },
+    }),
+  };
+});
 
 describe("MemorySettingsView", () => {
   beforeEach(() => {

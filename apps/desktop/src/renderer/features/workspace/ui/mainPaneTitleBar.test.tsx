@@ -108,6 +108,25 @@ vi.mock("../../../features/workspace/state/workspaceStore", () => ({
     selector(mocked.stateRef.current),
 }));
 
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+  return {
+    ...actual,
+    workbenchNavigationStore: (
+      selector: (state: {
+        activeProjectId: string;
+        activeWorkspaceId: string;
+        overlayPanel: unknown;
+      }) => unknown,
+    ) =>
+      selector({
+        activeProjectId: mocked.stateRef.current.selectedProjectId,
+        activeWorkspaceId: mocked.stateRef.current.selectedWorkspaceId,
+        overlayPanel: null,
+      }),
+  };
+});
+
 vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
     selector({ projects: mocked.stateRef.current.projects ?? [] });
@@ -128,11 +147,14 @@ vi.mock("../../../features/agent/state/chatStore", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-    setSelectedRepoId: (projectId: string) => {
+    activateProject: ({ projectId }: { projectId: string }) => {
       mocked.stateRef.current.selectedProjectId = projectId;
     },
-    setSelectedWorkspaceId: (workspaceId: string) => {
+    activateWorkspace: ({ workspaceId, projectId }: { workspaceId: string; projectId?: string }) => {
       mocked.stateRef.current.selectedWorkspaceId = workspaceId;
+      if (projectId) {
+        mocked.stateRef.current.selectedProjectId = projectId;
+      }
     },
     openTab: vi.fn(),
     updateProjectConfig: vi.fn(),
@@ -215,7 +237,7 @@ describe("MainPaneTitleBarView", () => {
 
 describe("mainPaneTitleBarMenus RepoSelectorMenu", () => {
   it("renders the Local Folders entry when folder workspaces exist", () => {
-    const setSelectedRepoId = vi.fn();
+    const activateProject = vi.fn();
     render(
       <RepoSelectorMenu
         open
@@ -226,7 +248,7 @@ describe("mainPaneTitleBarMenus RepoSelectorMenu", () => {
         localFolderWorkspaces={[folderWorkspace]}
         isLocalFolderSelected
         selectedProjectId={LOCAL_FOLDER_PROJECT_ID}
-        setSelectedRepoId={setSelectedRepoId}
+        activateProject={activateProject}
         setRepoMenuAnchorEl={vi.fn()}
         setWorkspaceMenuAnchorEl={vi.fn()}
         setWorkspaceSearchValue={vi.fn()}
@@ -237,7 +259,7 @@ describe("mainPaneTitleBarMenus RepoSelectorMenu", () => {
     const entry = screen.getByRole("menuitem", { name: "project.list.localFolders" });
     expect(entry).toBeTruthy();
     fireEvent.click(entry);
-    expect(setSelectedRepoId).toHaveBeenCalledWith(LOCAL_FOLDER_PROJECT_ID);
+    expect(activateProject).toHaveBeenCalledWith(LOCAL_FOLDER_PROJECT_ID);
   });
 
   it("does not render the Local Folders entry when there are no folder workspaces", () => {
@@ -251,7 +273,7 @@ describe("mainPaneTitleBarMenus RepoSelectorMenu", () => {
         localFolderWorkspaces={[]}
         isLocalFolderSelected={false}
         selectedProjectId=""
-        setSelectedRepoId={vi.fn()}
+        activateProject={vi.fn()}
         setRepoMenuAnchorEl={vi.fn()}
         setWorkspaceMenuAnchorEl={vi.fn()}
         setWorkspaceSearchValue={vi.fn()}

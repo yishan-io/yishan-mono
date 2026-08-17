@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
@@ -19,8 +20,10 @@ afterEach(() => {
 
 describe("workspaceTabSync", () => {
   it("reconciles tab and chat state when workspaces are removed", () => {
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "workspace-2",
+    });
     workspaceStore.setState({
-      selectedWorkspaceId: "workspace-2",
       workspaces: [
         {
           id: "workspace-2",

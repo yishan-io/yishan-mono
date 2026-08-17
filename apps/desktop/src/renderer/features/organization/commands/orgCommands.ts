@@ -1,7 +1,7 @@
 import { api } from "../../../api";
 import { setSelectedOrganizationId } from "../../../features/session/state/sessionActions";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { closeOverlayPanel } from "../../../features/workspace/state/workspaceActions";
+import { closeOverlayPanel } from "../../../features/workbench/commands/navigationCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { rendererQueryClient } from "../../../queryClient";
 import { getDaemonClient } from "../../../rpc/rpcTransport";

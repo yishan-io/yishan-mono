@@ -1,20 +1,20 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../features/session/state/sessionSelectors";
 import { selectIsDefaultContextEnabled } from "../../../features/settings/state/settingsSelectors";
+import { activateProject } from "../../../features/workbench/commands/navigationCommands";
 import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import {
   addWorkspace as applyAddWorkspace,
   deleteProject as applyDeleteProject,
-  setSelectedProjectId as applySetSelectedProjectId,
-  setSelectedWorkspaceId as applySetSelectedWorkspaceId,
   updateProjectConfig as applyUpdateProjectConfig,
   incrementFileTreeRefreshVersion,
 } from "../../../features/workspace/state/workspaceActions";
-import { selectSelectedWorkspaceId, selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
+import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
@@ -202,10 +202,10 @@ export async function createProject(input: {
       createdByUserId: project.createdByUserId,
     },
   });
-  // The project store appends the project + display id; the command selects it
-  // (selection is workspace-store-owned, never project-store-owned).
-  applySetSelectedProjectId(project.id);
-  applySetSelectedWorkspaceId("");
+  // The project store appends the project + display id; the command activates
+  // the new project through the Workbench navigation command (active context
+  // is Workbench-owned, never project-store-owned).
+  activateProject({ projectId: project.id });
 
   for (const workspace of workspaces) {
     const workspaceName = workspace.kind === "primary" ? "local" : workspace.branch?.trim() || "workspace";
@@ -240,7 +240,7 @@ export async function createProject(input: {
     }
   }
 
-  resolveTabForWorkspace(selectSelectedWorkspaceId());
+  resolveTabForWorkspace(workbenchNavigationStore.getState().activeWorkspaceId);
 
   // Ensure the context folder and symlinks are created for the new project's
   // known worktree paths. Without this, the `.my-context` directory is never

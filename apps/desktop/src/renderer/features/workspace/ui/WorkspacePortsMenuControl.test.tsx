@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +24,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     killTerminalProcess: mocked.killTerminalProcess,
     listDetectedPorts: mocked.listDetectedPorts,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
@@ -48,7 +48,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 let navigateToSettings: (() => void) | null = null;
 
@@ -102,6 +101,10 @@ describe("WorkspacePortsMenuControl", () => {
       },
     ]);
 
+    workbenchNavigationStore.setState({
+      activeProjectId: "repo-1",
+      activeWorkspaceId: "workspace-1",
+    });
     workspaceStore.setState({
       projects: [
         {
@@ -125,8 +128,6 @@ describe("WorkspacePortsMenuControl", () => {
           worktreePath: "/tmp/repo-1/workspace-1",
         },
       ],
-      selectedProjectId: "repo-1",
-      selectedWorkspaceId: "workspace-1",
     });
 
     tabStore.setState({

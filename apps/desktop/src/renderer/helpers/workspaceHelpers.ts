@@ -1,10 +1,7 @@
 import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStoreTypes";
 import { resolveExplicitWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
 
-type WorkspaceStoreSlice = Pick<
-  WorkspaceStoreState,
-  "projects" | "workspaces" | "selectedProjectId" | "selectedWorkspaceId"
-> & {
+type WorkspaceStoreSlice = Pick<WorkspaceStoreState, "projects" | "workspaces"> & {
   pullRequestByWorkspaceId?: Record<string, unknown>;
   gitChangesCountByWorkspaceId?: Record<string, unknown>;
   gitChangeTotalsByWorkspaceId?: Record<string, unknown>;
@@ -73,12 +70,10 @@ export function applyCreatedWorkspaceState(
     }
   } else {
     state.workspaces.push(nextWorkspace);
-    state.selectedProjectId = input.projectId;
-    state.selectedWorkspaceId = nextWorkspaceId;
   }
 }
 
-/** Removes one workspace from draft state and recalculates selection. */
+/** Removes one workspace from draft state. */
 export function applyDeletedWorkspaceState(
   state: WorkspaceStoreSlice,
   input: { projectId: string; workspaceId: string },
@@ -91,17 +86,6 @@ export function applyDeletedWorkspaceState(
   delete state.gitChangesCountByWorkspaceId?.[input.workspaceId];
   delete state.gitChangeTotalsByWorkspaceId?.[input.workspaceId];
   delete state.pullRequestByWorkspaceId?.[input.workspaceId];
-
-  if (!state.projects.some((project) => project.id === state.selectedProjectId)) {
-    state.selectedProjectId = state.projects[0]?.id ?? "";
-  }
-
-  if (state.selectedWorkspaceId === input.workspaceId) {
-    state.selectedWorkspaceId =
-      state.workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === input.projectId)?.id ??
-      state.workspaces[0]?.id ??
-      "";
-  }
 }
 
 /** Applies a workspace rename to the matching workspace in draft state. */

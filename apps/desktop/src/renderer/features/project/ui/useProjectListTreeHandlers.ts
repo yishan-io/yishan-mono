@@ -17,8 +17,8 @@ type UseProjectListTreeHandlersInput = {
   setProjectOrderIds: (next: string[]) => void;
   setNodeOrderByParentId: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void;
   setWorkspaceOrderByParentId: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void;
-  setSelectedRepoId: (projectId: string) => void;
-  setSelectedWorkspaceId: (workspaceId: string) => void;
+  activateProject: (input: { projectId: string; workspaceId?: string }) => void;
+  activateWorkspace: (input: { workspaceId: string; projectId?: string }) => void;
   reorderWorkspace: (input: {
     draggedWorkspaceId: string;
     targetWorkspaceId: string;
@@ -51,8 +51,8 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
     setProjectOrderIds,
     setNodeOrderByParentId,
     setWorkspaceOrderByParentId,
-    setSelectedRepoId,
-    setSelectedWorkspaceId,
+    activateProject,
+    activateWorkspace,
     reorderWorkspace,
     closeWorkspaceMenus,
     closeProjectContextMenu,
@@ -171,21 +171,20 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
 
   const onSelectProject = useCallback(
     (projectId: string) => {
-      setSelectedRepoId(projectId);
+      activateProject({ projectId });
       if (workspaceListHierarchyMode === "by_project") {
         setFoldedProjectIds((current) => current.filter((item) => item !== projectId));
       }
     },
-    [setFoldedProjectIds, setSelectedRepoId, workspaceListHierarchyMode],
+    [setFoldedProjectIds, activateProject, workspaceListHierarchyMode],
   );
 
   const onSelectWorkspace = useCallback(
     (workspaceId: string, projectId: string) => {
-      setSelectedRepoId(projectId);
-      setSelectedWorkspaceId(workspaceId);
+      activateWorkspace({ workspaceId, projectId });
       setFoldedProjectIds((current) => current.filter((item) => item !== projectId));
     },
-    [setFoldedProjectIds, setSelectedRepoId, setSelectedWorkspaceId],
+    [setFoldedProjectIds, activateWorkspace],
   );
 
   const onProjectContextMenu = useCallback(
@@ -193,20 +192,20 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
       event.preventDefault();
       event.stopPropagation();
       closeWorkspaceMenus();
-      setSelectedRepoId(projectId);
+      activateProject({ projectId });
       openProjectContextMenu({ repoId: projectId, mouseX: event.clientX, mouseY: event.clientY });
     },
-    [closeWorkspaceMenus, openProjectContextMenu, setSelectedRepoId],
+    [closeWorkspaceMenus, openProjectContextMenu, activateProject],
   );
 
   const onProjectActionsClick = useCallback(
     (event: React.MouseEvent<HTMLElement>, projectId: string) => {
       closeAllContextMenus();
-      setSelectedRepoId(projectId);
+      activateProject({ projectId });
       setProjectActionsAnchorEl(event.currentTarget);
       setProjectActionsProjectId(projectId);
     },
-    [closeAllContextMenus, setProjectActionsAnchorEl, setProjectActionsProjectId, setSelectedRepoId],
+    [closeAllContextMenus, setProjectActionsAnchorEl, setProjectActionsProjectId, activateProject],
   );
 
   const onProjectCreateWorkspaceClick = useCallback(
@@ -214,10 +213,10 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
       event.preventDefault();
       event.stopPropagation();
       closeAllContextMenus();
-      setSelectedRepoId(projectId);
+      activateProject({ projectId });
       handleOpenCreateWorkspace(projectId);
     },
-    [closeAllContextMenus, handleOpenCreateWorkspace, setSelectedRepoId],
+    [closeAllContextMenus, handleOpenCreateWorkspace, activateProject],
   );
 
   const onWorkspaceContextMenu = useCallback(
@@ -226,11 +225,10 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
       event.stopPropagation();
       closeProjectContextMenu();
       closeWorkspaceMenus();
-      setSelectedRepoId(projectId);
-      setSelectedWorkspaceId(workspaceId);
+      activateWorkspace({ workspaceId, projectId });
       openWorkspaceContextMenu({ repoId: projectId, workspaceId, mouseX: event.clientX, mouseY: event.clientY });
     },
-    [closeProjectContextMenu, closeWorkspaceMenus, openWorkspaceContextMenu, setSelectedRepoId, setSelectedWorkspaceId],
+    [closeProjectContextMenu, closeWorkspaceMenus, openWorkspaceContextMenu, activateWorkspace],
   );
 
   const onWorkspaceMouseEnter = useCallback(

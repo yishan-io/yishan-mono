@@ -1,10 +1,17 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
 import { workspaceStore } from "./workspaceStore";
 
 describe("workspaceStore runtime wiring", () => {
   beforeEach(() => {
-    workspaceStore.setState({ workspaces: [], selectedWorkspaceId: "", selectedProjectId: "" });
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "",
+      activeProjectId: "",
+    });
+    workspaceStore.setState({
+      workspaces: [],
+    });
   });
 
   it("has loadLocalFolders wired into the real store", () => {

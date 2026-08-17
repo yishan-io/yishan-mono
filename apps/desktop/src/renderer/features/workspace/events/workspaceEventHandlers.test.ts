@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import {
-  __resetExplicitlyClosedTerminalTabIdsForTests,
-  recordExplicitlyClosedTerminalTabId,
-} from "../../../helpers/terminalCloseTombstones";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import {
+  __resetExplicitlyClosedTerminalTabIdsForTests,
+  recordExplicitlyClosedTerminalTabId,
+} from "../../../helpers/terminalCloseTombstones";
 
 import { createWorkspaceEventHandlers } from "./workspaceEventHandlers";
 
@@ -863,6 +864,9 @@ describe("createWorkspaceEventHandlers", () => {
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "workspace-1",
+    });
     workspaceStore.setState({
       ...workspaceStore.getState(),
       workspaces: [
@@ -879,7 +883,6 @@ describe("createWorkspaceEventHandlers", () => {
           worktreePath: "",
         },
       ],
-      selectedWorkspaceId: "workspace-1",
     });
     tabStore.setState({
       ...tabStore.getState(),

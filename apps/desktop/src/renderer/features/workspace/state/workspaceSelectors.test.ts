@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { selectSelectedWorkspaceId, selectWorkspaces } from "./workspaceSelectors";
+import { selectWorkspaces } from "./workspaceSelectors";
 import { workspaceStore } from "./workspaceStore";
 
 const initialWorkspaceStoreState = workspaceStore.getState();
@@ -9,12 +9,6 @@ afterEach(() => {
 });
 
 describe("workspaceSelectors — Workspace state public read surface (Phase 17)", () => {
-  it("selectSelectedWorkspaceId reads the store selection", () => {
-    workspaceStore.setState({ selectedWorkspaceId: "workspace-1" });
-
-    expect(selectSelectedWorkspaceId()).toBe("workspace-1");
-  });
-
   it("selectWorkspaces reads the workspace list", () => {
     const workspaces = [
       {

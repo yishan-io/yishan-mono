@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../../features/project/state/projectStore";
@@ -9,7 +10,7 @@ import { WorkspaceResourceUsageControl } from "./WorkspaceResourceUsageControl";
 
 const mocked = vi.hoisted(() => ({
   getTerminalResourceUsage: vi.fn(),
-  setSelectedWorkspaceId: vi.fn(),
+  activateWorkspace: vi.fn(),
   selectTab: vi.fn(),
 }));
 
@@ -26,9 +27,8 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     getTerminalResourceUsage: mocked.getTerminalResourceUsage,
-    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
+    activateWorkspace: mocked.activateWorkspace,
     selectTab: mocked.selectTab,
   });
   return {
@@ -50,14 +50,13 @@ vi.mock("../../../app/commands/useCommands", () => {
   };
 });
 
-
 const initialWorkspaceState = workspaceStore.getState();
 const initialTabState = tabStore.getState();
 
 describe("WorkspaceResourceUsageControl", () => {
   beforeEach(() => {
     mocked.getTerminalResourceUsage.mockReset();
-    mocked.setSelectedWorkspaceId.mockReset();
+    mocked.activateWorkspace.mockReset();
     mocked.selectTab.mockReset();
     mocked.getTerminalResourceUsage.mockResolvedValue({
       totalCpuPercent: 20,
@@ -91,6 +90,10 @@ describe("WorkspaceResourceUsageControl", () => {
       ],
     });
 
+    workbenchNavigationStore.setState({
+      activeProjectId: "repo-1",
+      activeWorkspaceId: "workspace-1",
+    });
     workspaceStore.setState({
       projects: [
         {
@@ -114,8 +117,6 @@ describe("WorkspaceResourceUsageControl", () => {
           worktreePath: "/tmp/repo-1/workspace-1",
         },
       ],
-      selectedProjectId: "repo-1",
-      selectedWorkspaceId: "workspace-1",
     });
     projectStore.setState({
       projects: [
@@ -182,7 +183,7 @@ describe("WorkspaceResourceUsageControl", () => {
     fireEvent.click(screen.getByRole("button", { name: "terminal.resourceUsage.toggleLabel" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /node.*6510.*6.0%.*64 MB/ }));
 
-    expect(mocked.setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-1");
+    expect(mocked.activateWorkspace).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
     expect(mocked.selectTab).toHaveBeenCalledWith("terminal-tab-1");
   });
 

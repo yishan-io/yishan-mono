@@ -1,3 +1,4 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
@@ -20,11 +21,11 @@ function buildPortRowId(entry: TerminalDetectedPort): string {
 export function WorkspacePortsMenuControl() {
   const { t } = useTranslation();
   const isInRouterContext = useInRouterContext();
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const tabs = useWorkspaceTabs();
   const { killTerminalProcess, listDetectedPorts, subscribeDetectedPorts } = useTerminalCommands();
   const { selectTab } = useWorkbenchCommands();
-  const { setSelectedWorkspaceId } = useWorkspaceCommands();
+  const { activateWorkspace } = useWorkspaceCommands();
   const [portsMenuAnchorEl, setPortsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [detectedPorts, setDetectedPorts] = useState<TerminalDetectedPort[]>([]);
   const [isKillingByRowId, setIsKillingByRowId] = useState<Record<string, boolean>>({});
@@ -138,7 +139,7 @@ export function WorkspacePortsMenuControl() {
           }
           const targetTab = terminalTabBySessionId.get(sessionId);
           if (targetTab) {
-            setSelectedWorkspaceId(targetTab.workspaceId);
+            activateWorkspace({ workspaceId: targetTab.workspaceId });
             selectTab(targetTab.id);
           }
           closePortsMenu();

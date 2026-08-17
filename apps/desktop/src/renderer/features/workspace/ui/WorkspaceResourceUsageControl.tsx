@@ -1,3 +1,4 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
@@ -22,11 +23,11 @@ function buildResourceUsageRowId(sessionId: string, pid: number): string {
 export function WorkspaceResourceUsageControl() {
   const { t } = useTranslation();
   const isInRouterContext = useInRouterContext();
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const tabs = useWorkspaceTabs();
   const { getTerminalResourceUsage } = useTerminalCommands();
   const { selectTab } = useWorkbenchCommands();
-  const { setSelectedWorkspaceId } = useWorkspaceCommands();
+  const { activateWorkspace } = useWorkspaceCommands();
   const [resourceMenuAnchorEl, setResourceMenuAnchorEl] = useState<null | HTMLElement>(null);
   const closeResourceMenu = useCallback(() => {
     setResourceMenuAnchorEl(null);
@@ -131,7 +132,7 @@ export function WorkspaceResourceUsageControl() {
           }
           const targetTab = terminalTabBySessionId.get(sessionId);
           if (targetTab) {
-            setSelectedWorkspaceId(targetTab.workspaceId);
+            activateWorkspace({ workspaceId: targetTab.workspaceId });
             selectTab(targetTab.id);
           }
           closeResourceMenu();

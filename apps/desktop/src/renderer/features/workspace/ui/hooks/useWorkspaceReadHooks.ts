@@ -1,6 +1,7 @@
+import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { workspaceProjectionStore } from "../../state/workspaceProjectionStore";
 import { selectWorkspaceFileTreeRefreshVersion } from "../../state/workspaceSelectors";
 import { workspaceStore } from "../../state/workspaceStore";
-import { workspaceProjectionStore } from "../../state/workspaceProjectionStore";
 import { workspaceUiStore } from "../../state/workspaceUiStore";
 
 const EMPTY_CHANGED_RELATIVE_PATHS: string[] = [];
@@ -13,14 +14,16 @@ const EMPTY_CHANGED_RELATIVE_PATHS: string[] = [];
 
 /** Subscribes to the selected workspace id. */
 export function useSelectedWorkspaceId() {
-  return workspaceStore((state) => state.selectedWorkspaceId);
+  return workbenchNavigationStore((state) => state.activeWorkspaceId);
 }
 
 /** Subscribes to the worktree path of the selected workspace. */
 export function useSelectedWorkspaceWorktreePath() {
   return workspaceStore(
     (state) =>
-      state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
+      state.workspaces
+        .find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)
+        ?.worktreePath?.trim() ?? "",
   );
 }
 
@@ -96,5 +99,5 @@ export function useWorkspaces() {
 
 /** Subscribes to the selected project id. */
 export function useSelectedProjectId() {
-  return workspaceStore((state) => state.selectedProjectId);
+  return workbenchNavigationStore((state) => state.activeProjectId);
 }

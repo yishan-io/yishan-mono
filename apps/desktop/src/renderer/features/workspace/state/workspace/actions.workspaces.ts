@@ -8,7 +8,12 @@ import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetSt
 
 type WorkspaceActions = Pick<
   WorkspaceStoreActions,
-  "addWorkspace" | "removeWorkspace" | "renameWorkspace" | "renameWorkspaceBranch" | "reorderWorkspace"
+  | "addWorkspace"
+  | "removeWorkspace"
+  | "renameWorkspace"
+  | "renameWorkspaceBranch"
+  | "reorderWorkspace"
+  | "setOrderedWorkspaceIds"
 >;
 
 /** Creates, renames, and deletes workspaces while keeping selection state in sync. */
@@ -153,6 +158,9 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
         const insertionIndex = position === "after" ? nextTargetIndex + 1 : nextTargetIndex;
         state.workspaces.splice(insertionIndex, 0, movedWorkspace);
       });
+    },
+    setOrderedWorkspaceIds: (ids) => {
+      set({ orderedWorkspaceIds: ids });
     },
   };
 }

@@ -1,13 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   addWorkspace,
-  closeOverlayPanel,
   deleteProject,
   incrementFileTreeRefreshVersion,
   setExpandedFileTreeItems,
   setSelectedEntryPath,
-  setSelectedProjectId,
-  setSelectedWorkspaceId,
   updateProjectConfig,
 } from "./workspaceActions";
 import { workspaceStore } from "./workspaceStore";
@@ -22,23 +19,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("workspaceActions — workspace state-change surface extension (Phase 17)", () => {
-  it("selection and workspace-list actions forward to the workspace store", () => {
-    const setSelectedProjectId = vi.fn();
-    const setSelectedWorkspaceId = vi.fn();
+describe("workspaceActions — workspace state-change surface (desktop6-adjust W2)", () => {
+  it("workspace-list actions forward to the workspace store", () => {
     const addWorkspace = vi.fn();
     const deleteProject = vi.fn();
     const updateProjectConfig = vi.fn();
     workspaceStore.setState({
-      setSelectedProjectId,
-      setSelectedWorkspaceId,
       addWorkspace,
       deleteProject,
       updateProjectConfig,
     });
 
-    setSelectedProjectId("project-1");
-    setSelectedWorkspaceId("workspace-1");
     addWorkspace({
       workspaceId: "workspace-1",
       name: "A",
@@ -49,8 +40,6 @@ describe("workspaceActions — workspace state-change surface extension (Phase 1
     deleteProject("project-1");
     updateProjectConfig("project-1", { contextEnabled: true });
 
-    expect(setSelectedProjectId).toHaveBeenCalledWith("project-1");
-    expect(setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-1");
     expect(addWorkspace).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
       name: "A",
@@ -74,15 +63,12 @@ describe("workspaceActions — workspace state-change surface extension (Phase 1
   it("file-tree UI actions forward to the workspace UI store", () => {
     const setSelectedEntryPath = vi.fn();
     const setExpandedFileTreeItems = vi.fn();
-    const closeOverlayPanel = vi.fn();
-    workspaceUiStore.setState({ setSelectedEntryPath, setExpandedFileTreeItems, closeOverlayPanel });
+    workspaceUiStore.setState({ setSelectedEntryPath, setExpandedFileTreeItems });
 
     setSelectedEntryPath("/tmp/a/file.ts");
     setExpandedFileTreeItems("workspace-1", ["/tmp/a"]);
-    closeOverlayPanel();
 
     expect(setSelectedEntryPath).toHaveBeenCalledWith("/tmp/a/file.ts");
     expect(setExpandedFileTreeItems).toHaveBeenCalledWith("workspace-1", ["/tmp/a"]);
-    expect(closeOverlayPanel).toHaveBeenCalledWith();
   });
 });

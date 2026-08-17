@@ -1,4 +1,9 @@
 import { Box } from "@mui/material";
+import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/features/workspace";
+import { WorkspaceDeleteDialogView } from "@renderer/features/workspace";
+import { WorkspaceInfoPopperView } from "@renderer/features/workspace";
+import { useWorkspaceDeletionFlow } from "@renderer/features/workspace";
+import { useWorkspaceInfoHover } from "@renderer/features/workspace";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
@@ -21,22 +26,17 @@ import { useWorkspaceUnreadToneByWorkspaceId } from "../../../features/agent/ui/
 import { useDetectedExternalAppIds } from "../../../features/files/ui/hooks/useDetectedExternalAppIds";
 import { useLastUsedExternalAppId, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import { subscribeOpenCreateWorkspaceDialog } from "../../../features/workspace/commands/workspaceCommands";
-import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/features/workspace";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { useContextMenuState } from "../../../ui/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { ProjectListMenus } from "./ProjectListMenus";
-import { WorkspaceDeleteDialogView } from "@renderer/features/workspace";
-import { WorkspaceInfoPopperView } from "@renderer/features/workspace";
 import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./projectListHelpers";
 import { useProjectDeletionFlow } from "./useProjectDeletionFlow";
 import { useProjectListDialogState } from "./useProjectListDialogState";
 import { useProjectListFoldState } from "./useProjectListFoldState";
 import { useProjectListTreeData } from "./useProjectListTreeData";
 import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
-import { useWorkspaceDeletionFlow } from "@renderer/features/workspace";
-import { useWorkspaceInfoHover } from "@renderer/features/workspace";
 
 /** Renders project rows and nested workspace rows with per-project fold controls. */
 export function ProjectListView() {
@@ -47,8 +47,8 @@ export function ProjectListView() {
   const selectedWorkspaceId = useSelectedWorkspaceId();
   const lastUsedExternalAppId = useLastUsedExternalAppId();
   const {
-    setSelectedRepoId,
-    setSelectedWorkspaceId,
+    activateProject,
+    activateWorkspace,
     reorderWorkspace,
     closeWorkspace,
     deleteLocalFolder,
@@ -354,8 +354,8 @@ export function ProjectListView() {
     setProjectOrderIds,
     setNodeOrderByParentId,
     setWorkspaceOrderByParentId,
-    setSelectedRepoId,
-    setSelectedWorkspaceId,
+    activateProject,
+    activateWorkspace,
     reorderWorkspace,
     closeWorkspaceMenus,
     closeProjectContextMenu,

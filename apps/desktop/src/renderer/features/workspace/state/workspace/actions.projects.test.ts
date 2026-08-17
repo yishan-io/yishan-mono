@@ -39,8 +39,6 @@ type TestState = {
     status?: string;
     worktreePath?: string;
   }>;
-  selectedProjectId: string;
-  selectedWorkspaceId: string;
   displayProjectIds: string[];
   fileTreeRefreshVersion: number;
   fileTreeChangedRelativePathsByWorktreePath: Record<string, string[]>;
@@ -109,8 +107,6 @@ function createHarness(overrides?: Partial<TestState>) {
         worktreePath: "/tmp/repo-2/.worktrees/feature-b",
       },
     ],
-    selectedProjectId: "repo-1",
-    selectedWorkspaceId: "workspace-1",
     displayProjectIds: ["repo-1", "repo-2"],
     fileTreeRefreshVersion: 0,
     fileTreeChangedRelativePathsByWorktreePath: {},
@@ -187,7 +183,6 @@ describe("createWorkspaceRepoActions", () => {
     // Phase 3: org-scoped prefs moved to the project store; the workspace store
     // keeps the entity + selection effects.
     expect(state.projects.map((project) => project.id)).toEqual(["repo-1"]);
-    expect(state.selectedProjectId).toBe("repo-1");
   });
 
   it("deletes one project and all child workspace state", () => {
@@ -197,8 +192,6 @@ describe("createWorkspaceRepoActions", () => {
     const state = harness.getState();
     expect(state.projects.map((repo) => repo.id)).toEqual(["repo-2"]);
     expect(state.workspaces.map((workspace) => workspace.id)).toEqual(["workspace-2"]);
-    expect(state.selectedProjectId).toBe("repo-2");
-    expect(state.selectedWorkspaceId).toBe("workspace-2");
     expect(state.gitChangesCountByWorkspaceId).toEqual({
       "workspace-2": 4,
     });
@@ -351,8 +344,6 @@ describe("createWorkspaceRepoActions", () => {
     const harness = createHarness({
       projects: [],
       workspaces: [],
-      selectedProjectId: "",
-      selectedWorkspaceId: "",
       displayProjectIds: [],
       organizationPreferencesById: {
         "org-1": {
@@ -451,8 +442,6 @@ describe("createWorkspaceRepoActions", () => {
     );
 
     expect(harness.getState().displayProjectIds).toEqual(["repo-2", "repo-3"]);
-    expect(harness.getState().selectedProjectId).toBe("repo-3");
-    expect(harness.getState().selectedWorkspaceId).toBe("workspace-3");
   });
 
   it("discovers new projects on first load after restart when knownProjectIds is persisted", () => {
@@ -566,8 +555,6 @@ describe("createWorkspaceRepoActions", () => {
     const state = harness.getState();
     expect(state.projects.map((repo) => repo.id)).toEqual(["repo-1"]);
     expect(state.workspaces).toEqual([]);
-    expect(state.selectedProjectId).toBe("repo-1");
-    expect(state.selectedWorkspaceId).toBe("");
   });
 
   it("always adds new project to display filter even when some projects are filtered out", () => {
@@ -603,6 +590,5 @@ describe("createWorkspaceRepoActions", () => {
 
     const state = harness.getState();
     expect(state.displayProjectIds).toEqual(["repo-1", "repo-3"]);
-    expect(state.selectedProjectId).toBe("repo-3");
   });
 });

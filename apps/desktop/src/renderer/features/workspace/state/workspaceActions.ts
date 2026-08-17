@@ -16,16 +16,6 @@ export function incrementGitRefreshVersion(workspaceWorktreePath: string): void 
 type AddWorkspaceInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
 type UpdateProjectConfigInput = Parameters<WorkspaceStoreState["updateProjectConfig"]>[1];
 
-/** Selects one project in workspace state. */
-export function setSelectedProjectId(projectId: string): void {
-  workspaceStore.getState().setSelectedProjectId(projectId);
-}
-
-/** Selects one workspace in workspace state. */
-export function setSelectedWorkspaceId(workspaceId: string): void {
-  workspaceStore.getState().setSelectedWorkspaceId(workspaceId);
-}
-
 /** Adds one workspace record. */
 export function addWorkspace(input: AddWorkspaceInput): void {
   workspaceStore.getState().addWorkspace(input);
@@ -62,11 +52,6 @@ export function setWorkspacePullRequest(
 /** Reorders the workspace display ids. */
 export function setOrderedWorkspaceIds(workspaceIds: string[]): void {
   workspaceStore.getState().setOrderedWorkspaceIds(workspaceIds);
-}
-
-/** Closes any overlay panel in workspace UI state. */
-export function closeOverlayPanel(): void {
-  workspaceUiStore.getState().closeOverlayPanel();
 }
 
 /** Bumps the file-tree refresh version for one workspace. */
