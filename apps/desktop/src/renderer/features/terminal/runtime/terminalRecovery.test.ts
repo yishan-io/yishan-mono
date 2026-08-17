@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { TabStoreState } from "../../../store/tabStore";
-import type { WorkspaceStoreState } from "../../../store/types";
+import type { TabStoreState } from "../../../features/workbench/state/tabStore";
+import type { WorkspaceStoreState } from "../../../features/workbench/model/types";
 import { TerminalRecoveryCoordinator } from "./terminalRecovery";
 
 /** Builds an in-memory Storage mock. */

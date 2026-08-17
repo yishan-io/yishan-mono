@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { useCallback, useState } from "react";
 import { PiMusicNotesThin, PiWarningThin } from "react-icons/pi";
-import { getFileName } from "../store/tabs";
+import { getFileName } from "../features/workbench/model/tabs";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 
 type AudioPreviewProps = {

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { sessionStore } from "../../../features/session/state/sessionStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { loadWorkspaceSnapshot } from "./projectCommands";
 
 const apiMocks = vi.hoisted(() => ({

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../../../store/chatStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
 import {
   appendChatMessages,
   closeAgentSession,

@@ -14,14 +14,14 @@ import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
-import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
-import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
+import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;
 const WORKSPACE_SNAPSHOT_REFRESH_DEBOUNCE_MS = 300;
@@ -252,7 +252,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
   },
   loadWorkspaceSnapshot,
-  getSelectedOrganizationId: () => sessionStore.getState().selectedOrganizationId,
+  getSelectedOrganizationId: () => selectSelectedOrganizationId(),
   workspaceExistsLocally: (workspaceId) =>
     workspaceStore.getState().workspaces.some((workspace) => workspace.id === workspaceId),
 };

@@ -1,19 +1,19 @@
 import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
 import { stopPiSession } from "../../../features/agent/commands/agentChatCommands";
-import { clearTerminalAgentStatus } from "../../../features/agent/events/agentEventHandlers";
+import { clearTerminalAgentStatus } from "../../../features/agent/commands/agentSessionLifecycle";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../../../helpers/tabHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../../../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { chatStore } from "../../../store/chatStore";
-import { collectLeaves, findOppositePaneId, removeTabFromPane, splitRootPane } from "../../../store/split-pane";
-import { splitPaneStore } from "../../../store/splitPaneStore";
-import type { CloseTabOptions, TabStoreState } from "../../../store/tabStore";
-import { tabStore } from "../../../store/tabStore";
-import { terminalFocusStore } from "../../../store/terminalFocusStore";
-import type { OpenWorkspaceTabInput } from "../../../store/types";
-import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
+import { collectLeaves, findOppositePaneId, removeTabFromPane, splitRootPane } from "../../../features/workbench/model/split-pane";
+import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
+import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
+import type { OpenWorkspaceTabInput } from "../../../features/workbench/model/types";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { resolveChatFilePath } from "../../../features/files/commands/fileCommands";
 
 type TabStoreFacade = typeof tabStore & {

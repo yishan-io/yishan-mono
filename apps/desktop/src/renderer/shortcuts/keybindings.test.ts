@@ -2,10 +2,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIONS } from "../../shared/contracts/actions";
-import { projectStore } from "../features/project/model/projectStore";
-import type { SplitPaneStoreState } from "../store/splitPaneStore";
-import type { TabStoreState } from "../store/tabStore";
-import type { WorkspaceStoreState } from "../store/workspaceStore";
+import { projectStore } from "../features/project/state/projectStore";
+import type { SplitPaneStoreState } from "../features/workbench/state/splitPaneStore";
+import type { TabStoreState } from "../features/workbench/state/tabStore";
+import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStore";
 
 const initialProjectStoreState = projectStore.getState();
 
@@ -14,7 +14,7 @@ afterEach(() => {
 });
 import { SUPPORTED_KEY_BINDINGS, type ShortContext, getShortcutDefinitions } from "./keybindings";
 
-vi.mock("../views/workspace/browser/webviewRegistry", () => ({
+vi.mock("../features/workspace/ui/browser/webviewRegistry", () => ({
   reloadWebview: vi.fn(),
 }));
 
@@ -342,7 +342,7 @@ describe("getShortcutDefinitions", () => {
   });
 
   it("reloads the active browser tab from Cmd+R shortcut", async () => {
-    const { reloadWebview } = await import("../views/workspace/browser/webviewRegistry");
+    const { reloadWebview } = await import("../features/workspace/ui/browser/webviewRegistry");
     const reloadWebviewMock = vi.mocked(reloadWebview);
     reloadWebviewMock.mockClear();
 
@@ -373,7 +373,7 @@ describe("getShortcutDefinitions", () => {
   });
 
   it("does not reload browser tab when selected tab is not a browser tab", async () => {
-    const { reloadWebview } = await import("../views/workspace/browser/webviewRegistry");
+    const { reloadWebview } = await import("../features/workspace/ui/browser/webviewRegistry");
     const reloadWebviewMock = vi.mocked(reloadWebview);
     reloadWebviewMock.mockClear();
 

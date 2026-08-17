@@ -1,4 +1,4 @@
-import { resetAgentLifecycleState } from "../../features/agent/events/agentEventHandlers";
+import { resetAgentLifecycleState } from "../../features/agent/commands/agentSessionLifecycle";
 /**
  * Event composition — starts all feature event handlers with their default
  * deps and returns a combined teardown. This replaces `backendEventStoreBindings.ts`.

@@ -1,5 +1,5 @@
-import type { WorkspaceTab } from "../../../store/types";
-import { workspaceStore } from "../../../store/workspaceStore";
+import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 const MAX_TERMINAL_COMMAND_TITLE_LENGTH = 32;
 const ASCII_ESCAPE_CODE = 27;

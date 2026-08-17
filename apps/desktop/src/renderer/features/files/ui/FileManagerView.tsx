@@ -3,15 +3,14 @@ import { ContextMenu } from "@renderer/components/ContextMenu";
 import { FileTree } from "@renderer/components/FileTree";
 import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
-import { workspaceProjectionStore } from "@renderer/features/workspace/model/workspaceProjectionStore";
 import { getRendererPlatform } from "@renderer/helpers/platform";
-import { useCommands } from "@renderer/hooks/useCommands";
-import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
-import { useDetectedExternalAppIds } from "@renderer/hooks/useDetectedExternalAppIds";
-import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
-import { tabStore } from "@renderer/store/tabStore";
-import { workspaceStore } from "@renderer/store/workspaceStore";
-import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
+import { useGitCommands } from "@renderer/app/commands/useCommands";
+import { useContextMenuState } from "@renderer/ui/hooks/useContextMenuState";
+import { useDetectedExternalAppIds } from "@renderer/features/files/ui/hooks/useDetectedExternalAppIds";
+import { useSuppressNativeContextMenuWhileOpen } from "@renderer/ui/hooks/useSuppressNativeContextMenuWhileOpen";
+import { tabStore } from "@renderer/features/workbench/state/tabStore";
+import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import {
   findExternalAppPreset,
   getExternalAppMenuEntries,
@@ -21,7 +20,8 @@ import {
 } from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { projectStore } from "../../../features/project/model/projectStore";
+import { useProjectLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectLastUsedExternalAppId";
+import { selectWorkspaceFileTreeRefreshVersion } from "../../../features/workspace/state/workspaceSelectors";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
@@ -37,9 +37,9 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const { t } = useTranslation();
   const ops = useFileTreeOperations();
   const rendererPlatform = getRendererPlatform();
-  const cmd = useCommands();
+  const cmd = useGitCommands();
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
-  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
+  const lastUsedExternalAppId = useProjectLastUsedExternalAppId();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
     (state) =>
@@ -50,7 +50,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
       return 0;
     }
 
-    return workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
+    return selectWorkspaceFileTreeRefreshVersion(selectedWorkspaceWorktreePath);
   });
   const [fileManagerLastUsed, setFileManagerLastUsed] = useState(false);
   const detectedExternalAppIds = useDetectedExternalAppIds();

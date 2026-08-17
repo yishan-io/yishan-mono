@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { useImperativeHandle, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { editorSettingsStore } from "../store/settings/editorSettingsStore";
-import type { FileDiffEntry } from "../store/types";
+import { editorSettingsStore } from "../features/settings/state/editorSettingsStore";
+import type { FileDiffEntry } from "../features/workbench/model/types";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { MultiFileDiffViewer } from "./MultiFileDiffViewer";
 

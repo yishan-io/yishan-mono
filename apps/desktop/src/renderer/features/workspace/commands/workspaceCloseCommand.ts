@@ -1,18 +1,18 @@
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import { projectStore } from "../../project/model/projectStore";
+import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
+import { selectProjectById } from "../../project/state/projectSelectors";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 
 type CloseWorkspaceResponse = {
   workspace: { id: string; status: string };
   workspaceId: string;
-  lifecycleScriptWarnings: import("../../../store/workspaceLifecycleNoticeStore").WorkspaceLifecycleScriptWarning[];
+  lifecycleScriptWarnings: import("../../../features/workspace/state/workspaceLifecycleNoticeStore").WorkspaceLifecycleScriptWarning[];
   terminalCleanupErrors?: string[];
 };
 
@@ -96,7 +96,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   }
 
   const projectId = workspace.projectId ?? workspace.repoId;
-  const project = projectStore.getState().projects.find((item) => item.id === projectId);
+  const project = selectProjectById(projectId);
 
   store.removeWorkspace({
     repoId: projectId,
@@ -115,7 +115,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
     workspaceId,
     workspaceName: workspace.name,
     organizationId:
-      workspace.organizationId?.trim() || sessionStore.getState().selectedOrganizationId?.trim() || undefined,
+      workspace.organizationId?.trim() || selectSelectedOrganizationId()?.trim() || undefined,
     projectId,
     branch: workspace.branch,
     removeBranch: options?.removeBranch,

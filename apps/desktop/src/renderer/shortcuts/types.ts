@@ -1,7 +1,7 @@
-import type { Commands } from "../hooks/useCommands";
-import type { SplitPaneStoreState } from "../store/splitPaneStore";
-import type { TabStoreState } from "../store/tabStore";
-import type { WorkspaceStoreState } from "../store/workspaceStore";
+import type { Commands } from "../app/commands/useCommands";
+import type { SplitPaneStoreState } from "../features/workbench/state/splitPaneStore";
+import type { TabStoreState } from "../features/workbench/state/tabStore";
+import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStore";
 
 export type KeyBindingScope = "global" | "workspace";
 

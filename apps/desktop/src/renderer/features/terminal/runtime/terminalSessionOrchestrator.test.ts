@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { TabStoreState } from "../../../store/tabStore";
+import type { TabStoreState } from "../../../features/workbench/state/tabStore";
 import { TerminalSessionOrchestrator } from "./terminalSessionOrchestrator";
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;

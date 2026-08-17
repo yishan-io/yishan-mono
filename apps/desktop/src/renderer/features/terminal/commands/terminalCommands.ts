@@ -9,7 +9,7 @@ import type {
 import type { TerminalDetectedPort } from "../../../rpc/daemonTypes";
 import { getDaemonClient, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
 import type { DaemonRpcClient } from "../../../rpc/types";
-import { terminalFocusStore } from "../../../store/terminalFocusStore";
+import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
 
 export type { TerminalDetectedPort } from "../../../rpc/daemonTypes";
 

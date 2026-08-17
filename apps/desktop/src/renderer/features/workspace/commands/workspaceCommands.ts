@@ -11,12 +11,15 @@ import {
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { layoutStore } from "../../../store/settings/layoutStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../../../store/workspaceUiStore";
-import { projectStore } from "../../project/model/projectStore";
-import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
+import { layoutStore } from "../../../features/workbench/state/layoutStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
+import { selectProjectById, selectProjectDisplayIds, selectProjects } from "../../project/state/projectSelectors";
+import {
+  setDisplayProjectIds as applyDisplayProjectIds,
+  setLastUsedExternalAppId as applyLastUsedExternalAppId,
+} from "../../project/state/projectActions";
+import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 export { createWorkspace } from "./workspaceCreateCommand";
@@ -99,9 +102,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
   if (isFolderWorkspace(workspace)) {
     return;
   }
-  const project = projectStore
-    .getState()
-    .projects.find((item) => item.id === (workspace.projectId ?? workspace.repoId));
+  const project = selectProjectById(workspace.projectId ?? workspace.repoId);
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }
@@ -189,8 +190,8 @@ export async function listPullRequestHistory(orgId: string, projectId: string, w
 
 /** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */
 export function setDisplayRepoIds(repoIds: string[]) {
-  const previousDisplayIds = projectStore.getState().displayProjectIds;
-  projectStore.getState().setDisplayProjectIds(repoIds);
+  const previousDisplayIds = selectProjectDisplayIds();
+  applyDisplayProjectIds(repoIds);
 
   const repoIdSet = new Set(repoIds);
   const prevSet = new Set(previousDisplayIds);
@@ -208,7 +209,7 @@ export function setDisplayRepoIds(repoIds: string[]) {
 
 /** Stores last used external app id for quick-open actions. */
 export function setLastUsedExternalAppId(appId: ExternalAppId) {
-  projectStore.getState().setLastUsedExternalAppId(appId);
+  applyLastUsedExternalAppId(appId);
 }
 
 /** Sets left pane width in workspace layout state. */
@@ -277,10 +278,7 @@ export function openCreateWorkspaceDialog() {
   const selectedProjectId = state.selectedProjectId.trim();
   const selectedWorkspaceProjectId = selectedWorkspace?.projectId;
   const selectedWorkspaceRepoId = selectedWorkspace?.repoId;
-  const fallbackProjectId = filterVisibleProjects(
-    projectStore.getState().projects,
-    projectStore.getState().displayProjectIds,
-  )[0]?.id;
+  const fallbackProjectId = filterVisibleProjects(selectProjects(), selectProjectDisplayIds())[0]?.id;
   const projectId = selectedProjectId || selectedWorkspaceProjectId || selectedWorkspaceRepoId || fallbackProjectId;
 
   if (!projectId) {
@@ -288,7 +286,7 @@ export function openCreateWorkspaceDialog() {
   }
 
   // Non-git projects have no worktrees: never surface the create dialog.
-  const project = projectStore.getState().projects.find((item) => item.id === projectId);
+  const project = selectProjectById(projectId);
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }

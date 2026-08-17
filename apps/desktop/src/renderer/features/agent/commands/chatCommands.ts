@@ -2,8 +2,8 @@ import type { RpcSchema } from "../../../../shared/contracts/rpcSchema";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { chatStore } from "../../../store/chatStore";
-import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../store/chatTypes";
+import { chatStore } from "../../../features/agent/state/chatStore";
+import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../features/agent/model/chatTypes";
 
 type WorkspaceAgentKind = DesktopAgentKind;
 type EnsureWorkspaceChatSessionResponse = {

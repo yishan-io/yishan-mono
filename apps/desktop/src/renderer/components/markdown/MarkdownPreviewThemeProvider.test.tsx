@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { useTheme } from "@mui/material/styles";
-import { layoutStore } from "@renderer/store/settings/layoutStore";
+import { layoutStore } from "@renderer/features/workbench/state/layoutStore";
 import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
 import { cleanup, screen } from "@testing-library/react";
 import { act } from "react";

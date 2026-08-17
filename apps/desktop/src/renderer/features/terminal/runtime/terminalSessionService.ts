@@ -10,9 +10,9 @@ import {
 } from "../../../features/terminal/commands/terminalCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../store/tabStore";
-import type { WorkspaceTab } from "../../../store/types";
-import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import {
   shouldClearTerminalOutputShortcut,
   shouldReleaseCommandWForTabCloseShortcut,

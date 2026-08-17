@@ -1,14 +1,14 @@
 import { api } from "../../../api";
 import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../../../api/scheduledJobApi";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { scheduledJobStore } from "../../../features/scheduled-job/model/scheduledJobStore";
-import { sessionStore } from "../../session/model/sessionStore";
+import { scheduledJobStore } from "../../../features/scheduled-job/state/scheduledJobStore";
+import { selectSelectedOrganizationId } from "../../session/state/sessionSelectors";
 
 /**
  * Updates an existing scheduled job and refreshes the store entry on success.
  */
 export async function updateScheduledJob(jobId: string, input: UpdateScheduledJobInput): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     return;
   }
@@ -21,7 +21,7 @@ export async function updateScheduledJob(jobId: string, input: UpdateScheduledJo
  * Soft-deletes one scheduled job by ID and removes it from the store on success.
  */
 export async function deleteScheduledJob(jobId: string): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     return;
   }
@@ -40,7 +40,7 @@ export async function deleteScheduledJob(jobId: string): Promise<void> {
  * Creates a new scheduled job and adds it to the scheduled job store.
  */
 export async function createScheduledJob(input: CreateScheduledJobInput): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     return;
   }
@@ -54,7 +54,7 @@ export async function createScheduledJob(input: CreateScheduledJobInput): Promis
  * the store. Manages load state transitions around the request.
  */
 export async function loadScheduledJobs(): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     return;
   }
@@ -75,7 +75,7 @@ export async function loadScheduledJobs(): Promise<void> {
  * request and updates the store entry on success.
  */
 export async function pauseScheduledJob(jobId: string): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     return;
   }
@@ -95,7 +95,7 @@ export async function pauseScheduledJob(jobId: string): Promise<void> {
  * the request and updates the store entry on success.
  */
 export async function resumeScheduledJob(jobId: string): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     return;
   }
@@ -114,7 +114,7 @@ export async function resumeScheduledJob(jobId: string): Promise<void> {
 export async function runScheduledJobNow(
   jobId: string,
 ): Promise<import("../../../api/scheduledJobApi").ScheduledJobRunRecord | null> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
+  const orgId = selectSelectedOrganizationId();
   if (!orgId) {
     return null;
   }

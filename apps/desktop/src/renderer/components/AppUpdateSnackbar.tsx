@@ -8,8 +8,8 @@ import {
   getPendingDesktopUpdate,
   installDesktopUpdate,
   subscribeDesktopUpdates,
-} from "../commands/appCommands";
-import type { DesktopUpdateEventPayload } from "../commands/appCommands";
+} from "../app/commands/appCommands";
+import type { DesktopUpdateEventPayload } from "../app/commands/appCommands";
 
 function isDesktopUpdatePayload(value: unknown): value is DesktopUpdateEventPayload {
   return Boolean(value && typeof value === "object" && "status" in value);

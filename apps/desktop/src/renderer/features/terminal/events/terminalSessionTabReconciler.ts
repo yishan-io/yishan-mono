@@ -5,8 +5,8 @@ import {
   consumeExplicitlyClosedTerminalTabId,
   recordExplicitlyClosedTerminalTabId,
 } from "../../../helpers/terminalCloseTombstones";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 type TerminalTab = Extract<ReturnType<typeof tabStore.getState>["tabs"][number], { kind: "terminal" }>;
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;

@@ -6,8 +6,8 @@ import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
 } from "../../../helpers/terminalCloseTombstones";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;

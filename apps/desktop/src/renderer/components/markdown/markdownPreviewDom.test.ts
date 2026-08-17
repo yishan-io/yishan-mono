@@ -9,7 +9,7 @@ const buildWorkspaceFileUrlMock = vi.fn();
 const openLinkMock = vi.fn();
 const enqueueWorkspaceErrorNoticeMock = vi.fn();
 
-vi.mock("@renderer/commands/appCommands", () => ({
+vi.mock("@renderer/app/commands/appCommands", () => ({
   openLink: (options: { url: string }) => openLinkMock(options),
 }));
 
@@ -18,7 +18,7 @@ vi.mock("@renderer/features/files/commands/fileCommands", () => ({
     buildWorkspaceFileUrlMock(options),
 }));
 
-vi.mock("@renderer/store/tabStore", () => ({
+vi.mock("@renderer/features/workbench/state/tabStore", () => ({
   tabStore: {
     getState: () => ({
       openTab: openTabMock,
@@ -26,7 +26,7 @@ vi.mock("@renderer/store/tabStore", () => ({
   },
 }));
 
-vi.mock("@renderer/store/workspaceLifecycleNoticeStore", () => ({
+vi.mock("@renderer/features/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: (notice: { title: string; message: string }) => enqueueWorkspaceErrorNoticeMock(notice),
 }));
 

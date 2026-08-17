@@ -4,8 +4,8 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { createElement, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n";
-import { editorSettingsStore } from "../store/settings/editorSettingsStore";
-import { layoutStore } from "../store/settings/layoutStore";
+import { editorSettingsStore } from "../features/settings/state/editorSettingsStore";
+import { layoutStore } from "../features/workbench/state/layoutStore";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
 
@@ -129,7 +129,7 @@ vi.mock("../helpers/monacoSetup", () => ({
 }));
 
 // Mock the git commands used by useGitGutterDecorations
-vi.mock("../commands/gitCommands", () => ({
+vi.mock("../features/git/commands/gitCommands", () => ({
   readDiff: vi.fn(() => Promise.resolve({ oldContent: "", newContent: "" })),
 }));
 

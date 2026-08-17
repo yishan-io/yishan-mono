@@ -77,7 +77,7 @@ vi.mock("../../../features/workbench/commands/tabCommands", () => ({
 const mockEnqueueWorkspaceErrorNotice = vi.fn();
 const mockTabStoreCloseTab = vi.fn();
 
-vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: (...args: unknown[]) => mockEnqueueWorkspaceErrorNotice(...args),
 }));
 
@@ -92,7 +92,7 @@ vi.mock("./terminalTitleUtils", () => ({
   resolveTerminalWorkspacePath: vi.fn(() => undefined),
 }));
 
-vi.mock("../../../store/tabStore", () => ({
+vi.mock("../../../features/workbench/state/tabStore", () => ({
   tabStore: {
     getState: () => ({
       // Each test sets sessionIdByTabId before simulating reconnect so the tabStore
@@ -113,7 +113,7 @@ vi.mock("../../../store/tabStore", () => ({
   },
 }));
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: {
     getState: () => ({
       workspaces: [{ id: "ws-1", worktreePath: "/tmp/ws" }],

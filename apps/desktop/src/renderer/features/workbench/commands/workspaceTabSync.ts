@@ -1,7 +1,7 @@
-import { chatStore } from "../../../store/chatStore";
-import { tabStore } from "../../../store/tabStore";
-import type { WorkspaceItem } from "../../../store/types";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import type { WorkspaceItem } from "../../../features/workbench/model/types";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 /** Reconciles tab/chat state after workspace list changes in workspace store. */
 export function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceItem[]): void {

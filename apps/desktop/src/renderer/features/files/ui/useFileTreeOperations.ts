@@ -1,9 +1,9 @@
 import { listFiles, listFilesBatch } from "@renderer/features/files/commands/fileCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import { useCommands } from "@renderer/hooks/useCommands";
-import { tabStore } from "@renderer/store/tabStore";
-import { workspaceStore } from "@renderer/store/workspaceStore";
-import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
+import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/app/commands/useCommands";
+import { tabStore } from "@renderer/features/workbench/state/tabStore";
+import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import type { ExternalAppId } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -241,7 +241,8 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     );
   });
   const fileTreeRefreshVersion = workspaceUiStore((state) => state.fileTreeRefreshVersion);
-  const { openTab, closeTab, renameTabsForEntryRename, setLastUsedExternalAppId } = useCommands();
+  const { openTab, closeTab, renameTabsForEntryRename } = useWorkbenchCommands();
+  const { setLastUsedExternalAppId } = useWorkspaceCommands();
   const tabs = tabStore((state) => state.tabs);
   const {
     fileOperationState,

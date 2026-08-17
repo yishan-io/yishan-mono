@@ -1,4 +1,4 @@
-import type { WorkspaceTab } from "../../../store/types";
+import type { WorkspaceTab } from "../../../features/workbench/model/types";
 
 /**
  * Returns true when deletedPath should be treated as a directory in the current file listing.

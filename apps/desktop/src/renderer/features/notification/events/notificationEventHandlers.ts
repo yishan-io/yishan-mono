@@ -18,13 +18,13 @@ import {
   dispatchNotification,
   getNotificationPreferences,
   playNotificationSound,
-} from "../../../commands/notificationCommands";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../../../store/chatStore";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+} from "../../../features/notification/commands/notificationCommands";
+import { selectProjectById } from "../../../features/project/state/projectSelectors";
+import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../../../features/agent/state/chatStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
-import { parseObserverSessionKey, recordAgentObserverStatus } from "../../agent/events/agentEventHandlers";
+import { parseObserverSessionKey, recordAgentObserverStatus } from "../../agent/commands/agentSessionLifecycle";
 
 const NOTIFICATION_EFFECT_DEDUPE_WINDOW_MS = 1_500;
 
@@ -284,10 +284,7 @@ export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependenc
       return undefined;
     }
 
-    const projectName = projectStore
-      .getState()
-      .projects.find((project) => project.id === workspace?.projectId)
-      ?.name?.trim();
+    const projectName = selectProjectById(workspace?.projectId ?? "")?.name?.trim();
     return projectName ? `${projectName} / ${workspaceName}` : workspaceName;
   },
 };

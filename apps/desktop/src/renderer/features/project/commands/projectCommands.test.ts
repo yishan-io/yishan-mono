@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../../../store/chatStore";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
-import { tabStore } from "../../../store/tabStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import { projectStore } from "../model/projectStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
+import { sessionStore } from "../../../features/session/state/sessionStore";
+import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
+import { projectStore } from "../state/projectStore";
 import { createProject, deleteProject, loadWorkspaceSnapshot, updateProjectConfig } from "./projectCommands";
 
 const apiMocks = vi.hoisted(() => ({
