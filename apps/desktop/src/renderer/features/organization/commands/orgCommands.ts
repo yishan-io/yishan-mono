@@ -1,10 +1,10 @@
 import { api } from "../../../api";
+import { setSelectedOrganizationId } from "../../../features/session/state/sessionActions";
+import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { closeOverlayPanel } from "../../../features/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { rendererQueryClient } from "../../../queryClient";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { setSelectedOrganizationId } from "../../../features/session/state/sessionActions";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 
 const errNoOrgSelected = "No organization selected.";
 
@@ -27,7 +27,7 @@ function wrapOrgCommand<T>(fn: (orgId: string) => Promise<T>): Promise<T> {
  * context, so the CLI and MCP server know which org is active.
  */
 export async function switchOrganization(orgId: string): Promise<void> {
-  workspaceUiStore.getState().closeOverlayPanel();
+  closeOverlayPanel();
   setSelectedOrganizationId(orgId);
 
   try {

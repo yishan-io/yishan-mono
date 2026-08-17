@@ -1,16 +1,31 @@
 import { Alert, Box } from "@mui/material";
+import { useGitCommands } from "@renderer/app/commands/useCommands";
 import { ContextMenu } from "@renderer/components/ContextMenu";
 import { FileTree } from "@renderer/components/FileTree";
 import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
-import { getRendererPlatform } from "@renderer/helpers/platform";
-import { useGitCommands } from "@renderer/app/commands/useCommands";
-import { useContextMenuState } from "@renderer/ui/hooks/useContextMenuState";
 import { useDetectedExternalAppIds } from "@renderer/features/files/ui/hooks/useDetectedExternalAppIds";
+import { useSelectedTabId, useWorkspaceTabs } from "@renderer/features/workbench/ui/hooks/useWorkbenchTabs";
+import { getRendererPlatform } from "@renderer/helpers/platform";
+import { useContextMenuState } from "@renderer/ui/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/ui/hooks/useSuppressNativeContextMenuWhileOpen";
-import { tabStore } from "@renderer/features/workbench/state/tabStore";
-import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
+
+import {
+  setExpandedFileTreeItems as applySetExpandedFileTreeItems,
+  setSelectedEntryPath as applySetSelectedEntryPath,
+} from "@renderer/features/workspace/state/workspaceActions";
+import {
+  useDeleteSelectionRequestId,
+  useExpandedFileTreeItemsByWorkspaceId,
+  useFileTreeRefreshVersion,
+  useSelectFolderInFileTreePath,
+  useSelectFolderInFileTreeRequestId,
+  useSelectedEntryPath,
+  useSelectedWorkspaceId,
+  useSelectedWorkspaceWorktreePath,
+  useUndoRequestId,
+  useWorkspaceGitRefreshVersion,
+} from "@renderer/features/workspace/ui/hooks/useWorkspaceReadHooks";
 import {
   findExternalAppPreset,
   getExternalAppMenuEntries,
@@ -21,10 +36,9 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useProjectLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectLastUsedExternalAppId";
-import { selectWorkspaceFileTreeRefreshVersion } from "../../../features/workspace/state/workspaceSelectors";
-import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
+import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
 import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";
 import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
 import { useFileTreeGitChanges } from "./useFileTreeGitChanges";
@@ -40,18 +54,9 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const cmd = useGitCommands();
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
   const lastUsedExternalAppId = useProjectLastUsedExternalAppId();
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const selectedWorkspaceWorktreePath = workspaceStore(
-    (state) =>
-      state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
-  );
-  const workspaceGitRefreshVersion = workspaceStore((state) => {
-    if (!selectedWorkspaceWorktreePath) {
-      return 0;
-    }
-
-    return selectWorkspaceFileTreeRefreshVersion(selectedWorkspaceWorktreePath);
-  });
+  const selectedWorkspaceId = useSelectedWorkspaceId();
+  const selectedWorkspaceWorktreePath = useSelectedWorkspaceWorktreePath();
+  const workspaceGitRefreshVersion = useWorkspaceGitRefreshVersion(selectedWorkspaceWorktreePath);
   const [fileManagerLastUsed, setFileManagerLastUsed] = useState(false);
   const detectedExternalAppIds = useDetectedExternalAppIds();
 
@@ -96,7 +101,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
     closeMenu: closeContextMenu,
     isOpen: hasOpenContextMenu,
   } = useContextMenuState<FileTreeContextMenuRequest>();
-  const selectedEntryPath = workspaceUiStore((state) => state.selectedEntryPath);
+  const selectedEntryPath = useSelectedEntryPath();
   const selectedEntryIsDirectory = selectedEntryPath ? ops.repoFiles.some((p) => p === `${selectedEntryPath}/`) : false;
   const {
     pendingFileDeletion,
@@ -117,15 +122,15 @@ export function FileManagerView(_props: FileManagerViewProps) {
       ? selectedEntryPath
       : selectedEntryPath.split("/").slice(0, -1).join("/")
     : "";
-  const deleteSelectionRequestId = workspaceUiStore((state) => state.deleteSelectionRequestId);
-  const undoRequestId = workspaceUiStore((state) => state.undoRequestId);
-  const selectFolderInFileTreePath = workspaceUiStore((state) => state.selectFolderInFileTreePath);
-  const selectFolderInFileTreeRequestId = workspaceUiStore((state) => state.selectFolderInFileTreeRequestId);
-  const setSelectedEntryPath = workspaceUiStore((state) => state.setSelectedEntryPath);
-  const expandedItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
-  const setExpandedFileTreeItems = workspaceUiStore((state) => state.setExpandedFileTreeItems);
-  const selectedTabId = tabStore((state) => state.selectedTabId);
-  const tabs = tabStore((state) => state.tabs);
+  const deleteSelectionRequestId = useDeleteSelectionRequestId();
+  const undoRequestId = useUndoRequestId();
+  const selectFolderInFileTreePath = useSelectFolderInFileTreePath();
+  const selectFolderInFileTreeRequestId = useSelectFolderInFileTreeRequestId();
+  const setSelectedEntryPath = applySetSelectedEntryPath;
+  const expandedItemsByWorkspaceId = useExpandedFileTreeItemsByWorkspaceId();
+  const setExpandedFileTreeItems = applySetExpandedFileTreeItems;
+  const selectedTabId = useSelectedTabId();
+  const tabs = useWorkspaceTabs();
   const lastRevealedTabIdRef = useRef("");
   const lastAppliedFolderSelectionRequestIdRef = useRef(0);
 

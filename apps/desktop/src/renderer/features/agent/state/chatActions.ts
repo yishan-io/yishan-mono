@@ -1,5 +1,6 @@
 import { agentChatStore } from "../model/agentChatStore";
 import type { AgentPendingUiAutoResponse } from "../model/agentChatTypes";
+import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./chatStore";
 import { chatStore } from "./chatStore";
 
 /**
@@ -38,4 +39,14 @@ export function clearPendingUiAutoResponse(tabId: string): void {
 /** Records one turn error on an agent session. */
 export function setTurnError(tabId: string, error: string): void {
   agentChatStore.getState().setTurnError(tabId, error);
+}
+
+/** Replaces the agent status snapshot by workspace id. */
+export function setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId: Record<string, WorkspaceAgentStatus>): void {
+  chatStore.getState().setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId);
+}
+
+/** Records one unread agent notification tone for a workspace. */
+export function recordWorkspaceUnreadNotification(workspaceId: string, tone: WorkspaceUnreadTone): void {
+  chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
 }

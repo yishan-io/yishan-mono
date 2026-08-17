@@ -1,20 +1,23 @@
+import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/app/commands/useCommands";
 import { listFiles, listFilesBatch } from "@renderer/features/files/commands/fileCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/app/commands/useCommands";
-import { tabStore } from "@renderer/features/workbench/state/tabStore";
-import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
+
+import { useWorkspaceTabs } from "@renderer/features/workbench/ui/hooks/useWorkbenchTabs";
+import {
+  useChangedRelativePathsForSelectedWorkspace,
+  useExpandedFileTreeItemsByWorkspaceId,
+  useFileTreeRefreshVersion,
+  useSelectedWorkspaceId,
+  useSelectedWorkspaceWorktreePath,
+  useWorkspaces,
+} from "@renderer/features/workspace/ui/hooks/useWorkspaceReadHooks";
 import type { ExternalAppId } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
-import {
-  getFileOperationErrorMessage,
-  mapIgnoredWorkspaceEntryPaths,
-  mapWorkspaceEntryPaths,
-} from "./fileTreeHelpers";
-import { getParentRelativePath, normalizeRelativePath } from "./fileTreePathHelpers";
+import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeHelpers";
 import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";
+import { getParentRelativePath, normalizeRelativePath } from "./fileTreePathHelpers";
 import { type FileOperationState, useFileOperationState } from "./useFileOperationState";
 import { useFileTreeClipboard } from "./useFileTreeClipboard";
 import { useFileTreeCrud } from "./useFileTreeCrud";
@@ -224,26 +227,16 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   const fileTreeSelectionRequestIdRef = useRef(0);
   const loadedDirectoryPathsRef = useRef(new Set<string>());
 
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const workspaces = workspaceStore((state) => state.workspaces);
-  const expandedFileTreeItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
-  const selectedWorkspaceWorktreePath = workspaceStore(
-    (state) =>
-      state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
-  );
-  const changedRelativePathsForSelectedWorkspace = workspaceUiStore((state) => {
-    if (!selectedWorkspaceWorktreePath) {
-      return EMPTY_CHANGED_RELATIVE_PATHS;
-    }
-
-    return (
-      state.fileTreeChangedRelativePathsByWorktreePath?.[selectedWorkspaceWorktreePath] ?? EMPTY_CHANGED_RELATIVE_PATHS
-    );
-  });
-  const fileTreeRefreshVersion = workspaceUiStore((state) => state.fileTreeRefreshVersion);
+  const selectedWorkspaceId = useSelectedWorkspaceId();
+  const workspaces = useWorkspaces();
+  const expandedFileTreeItemsByWorkspaceId = useExpandedFileTreeItemsByWorkspaceId();
+  const selectedWorkspaceWorktreePath = useSelectedWorkspaceWorktreePath();
+  const changedRelativePathsForSelectedWorkspace =
+    useChangedRelativePathsForSelectedWorkspace(selectedWorkspaceWorktreePath);
+  const fileTreeRefreshVersion = useFileTreeRefreshVersion();
   const { openTab, closeTab, renameTabsForEntryRename } = useWorkbenchCommands();
   const { setLastUsedExternalAppId } = useWorkspaceCommands();
-  const tabs = tabStore((state) => state.tabs);
+  const tabs = useWorkspaceTabs();
   const {
     fileOperationState,
     fileOperationError,

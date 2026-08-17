@@ -2,15 +2,14 @@ import { Alert, Box, Button, CircularProgress, Paper, Typography } from "@mui/ma
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar } from "react-icons/lu";
+import { useOverviewCommands } from "../../../app/commands/useCommands";
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
-import { projectStore } from "../../../features/project/state/projectStore";
-import { getRendererPlatform } from "../../../helpers/platform";
-import { useOverviewCommands } from "../../../app/commands/useCommands";
-import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
-import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { overviewStore } from "../../../features/overview/state/overviewStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { AgentKindChartView } from "./AgentKindChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
 import { OverviewFiltersView } from "./OverviewFiltersView";
@@ -44,7 +43,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const agentKindBreakdownLoadError = overviewStore((state) => state.agentKindBreakdownLoadError);
   const workspaceInsightsLoadState = overviewStore((state) => state.workspaceInsightsLoadState);
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
-  const projects = projectStore((state) => state.projects);
+  const projects = useProjects();
 
   const { loadAllOverviewData } = useOverviewCommands();
 

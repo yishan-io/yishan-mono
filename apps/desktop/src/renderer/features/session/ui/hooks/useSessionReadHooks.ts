@@ -7,6 +7,15 @@ import { sessionStore } from "../../state/sessionStore";
  * through these hooks instead of importing the Session Store directly.
  */
 
+/** Subscribes to whether the session data has loaded. */
+export function useSessionLoaded() {
+  return sessionStore((state) => state.loaded);
+}
+
+/** Subscribes to the current user. */
+export function useCurrentUser() {
+  return sessionStore((state) => state.currentUser);
+}
 /** Subscribes to the selected organization id. */
 export function useSelectedOrganizationId() {
   return sessionStore((state) => state.selectedOrganizationId);

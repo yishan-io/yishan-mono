@@ -1,9 +1,10 @@
 import { closeTerminalSession } from "@renderer/features/terminal/commands/terminalCommands";
-import { tabStore } from "@renderer/features/workbench/state/tabStore";
+import { closeAllTerminalTabs } from "@renderer/features/workbench/state/workbenchActions";
+import { selectTabs } from "@renderer/features/workbench/state/workbenchSelectors";
 
 /** Closes all open terminal sessions and tabs before a daemon restart. */
 export async function closeTerminalTabsForDaemonRestart() {
-  const terminalTabs = tabStore.getState().tabs.filter((tab) => tab.kind === "terminal");
+  const terminalTabs = selectTabs().filter((tab) => tab.kind === "terminal");
   const sessionIds = [
     ...new Set(
       terminalTabs
@@ -23,7 +24,7 @@ export async function closeTerminalTabsForDaemonRestart() {
   }
 
   if (terminalTabs.length > 0) {
-    tabStore.getState().closeAllTerminalTabs();
+    closeAllTerminalTabs();
   }
 
   return closeErrors;

@@ -1,15 +1,16 @@
 import { Alert, Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useTerminalCommands } from "../../../app/commands/useCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
 import { StatusIndicator } from "../../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
-import { projectStore } from "../../../features/project/state/projectStore";
+import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import { closeTab } from "../../../features/workbench/state/workbenchActions";
+import { selectTabs } from "../../../features/workbench/state/workbenchSelectors";
+import { useWorkspaces } from "../../../features/workspace/ui/hooks/useWorkspaceReadHooks";
 import { MONOSPACE_SX } from "../../../helpers/styles";
-import { useTerminalCommands } from "../../../app/commands/useCommands";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../../rpc/daemonTypes";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 /** Builds one stable map key for in-flight close action tracking. */
 function buildSessionActionKey(sessionId: string): string {
@@ -42,13 +43,12 @@ function closeTerminalTabsForSession(sessionId: string): void {
     return;
   }
 
-  const tabState = tabStore.getState();
-  const tabIds = tabState.tabs
+  const tabIds = selectTabs()
     .filter((tab) => tab.kind === "terminal" && tab.data.sessionId?.trim() === normalizedSessionId)
     .map((tab) => tab.id);
 
   for (const tabId of tabIds) {
-    tabStore.getState().closeTab(tabId);
+    closeTab(tabId);
   }
 }
 
@@ -82,8 +82,8 @@ function resolveSessionLocationLabel(input: {
 export function TerminalSettingsView() {
   const { t } = useTranslation();
   const { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } = useTerminalCommands();
-  const projects = projectStore((state) => state.projects);
-  const workspaces = workspaceStore((state) => state.workspaces);
+  const projects = useProjects();
+  const workspaces = useWorkspaces();
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [sessions, setSessions] = useState<TerminalSessionSummary[]>([]);

@@ -10,6 +10,15 @@ export function setSelectedOrganizationId(organizationId: string): void {
   sessionStore.getState().setSelectedOrganizationId(organizationId);
 }
 
+/** Replaces the session data snapshot (user, organizations, selection). */
+export function setSessionData(input: {
+  currentUser: SessionUser | null;
+  organizations: SessionOrganization[];
+  selectedOrganizationId?: string;
+}): void {
+  sessionStore.getState().setSessionData(input);
+}
+
 export function setOrganizationVoiceUsage(
   organizationId: string,
   usage: NonNullable<SessionOrganization["voiceUsage"]>,
@@ -18,9 +27,7 @@ export function setOrganizationVoiceUsage(
 }
 
 /** Updates the current user's notification preferences in session state. */
-export function updateCurrentUserNotificationPreferences(
-  preferences: SessionUser["notificationPreferences"],
-): void {
+export function updateCurrentUserNotificationPreferences(preferences: SessionUser["notificationPreferences"]): void {
   const state = sessionStore.getState();
   if (state.currentUser) {
     state.setSessionData({

@@ -1,9 +1,16 @@
 import { Avatar, Box, LinearProgress, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getVoiceUsage } from "../../../features/settings/commands/settingsCommands";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
-import { type SessionUser, sessionStore } from "../../../features/session/state/sessionStore";
+import type { SessionUser } from "../../../features/session";
+import { setOrganizationVoiceUsage as applySetOrganizationVoiceUsage } from "../../../features/session/state/sessionActions";
+import {
+  useCurrentUser,
+  useOrganizations,
+  useSelectedOrganizationId,
+  useSessionLoaded,
+} from "../../../features/session/ui/hooks/useSessionReadHooks";
+import { getVoiceUsage } from "../../../features/settings/commands/settingsCommands";
 
 const PLAN_LABELS = {
   free: "Free",
@@ -46,11 +53,11 @@ function formatVoiceUsageSeconds(seconds: number): string {
 /** Shows the current authenticated user's profile details in settings. */
 export function AccountSettingsView() {
   const { t } = useTranslation();
-  const currentUser = sessionStore((state) => state.currentUser);
-  const organizations = sessionStore((state) => state.organizations);
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
-  const loaded = sessionStore((state) => state.loaded);
-  const setOrganizationVoiceUsage = sessionStore((state) => state.setOrganizationVoiceUsage);
+  const currentUser = useCurrentUser();
+  const organizations = useOrganizations();
+  const selectedOrganizationId = useSelectedOrganizationId();
+  const loaded = useSessionLoaded();
+  const setOrganizationVoiceUsage = applySetOrganizationVoiceUsage;
   const [usageError, setUsageError] = useState<string | null>(null);
   const missingValue = t("settings.account.values.notAvailable");
   const loadUsageErrorText = t("settings.account.usage.loadError");

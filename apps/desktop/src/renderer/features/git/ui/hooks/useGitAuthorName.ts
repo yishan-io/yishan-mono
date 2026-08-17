@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { useGitCommands } from "../../../../app/commands/useCommands";
+import { selectWorkspaces } from "../../../../features/workspace/state/workspaceSelectors";
 
 /**
  * Fetches the git author name for the given workspace path.
@@ -21,9 +21,7 @@ export function useGitAuthorName(worktreePath: string): string {
     let isCancelled = false;
     void (async () => {
       try {
-        const workspaceId = workspaceStore
-          .getState()
-          .workspaces.find((workspace) => workspace.worktreePath?.trim() === worktreePath)?.id;
+        const workspaceId = selectWorkspaces().find((workspace) => workspace.worktreePath?.trim() === worktreePath)?.id;
         if (!workspaceId) {
           if (!isCancelled) {
             setResolvedGitUserName("");

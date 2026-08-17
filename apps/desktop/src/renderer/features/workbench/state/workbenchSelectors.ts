@@ -1,7 +1,7 @@
+import type { WorkspaceTab } from "../model/types";
 import { layoutStore } from "./layoutStore";
 import { splitPaneStore } from "./splitPaneStore";
 import { tabStore } from "./tabStore";
-import type { WorkspaceTab } from "../model/types";
 
 /**
  * Workbench feature selectors — the public read surface for Workbench State
@@ -12,6 +12,11 @@ import type { WorkspaceTab } from "../model/types";
 /** Reads the manual visibility state of the left workspace pane. */
 export function selectIsLeftPaneManuallyHidden(): boolean {
   return layoutStore.getState().isLeftPaneManuallyHidden;
+}
+
+/** Reads the currently selected tab id. */
+export function selectSelectedTabId(): string {
+  return tabStore.getState().selectedTabId;
 }
 
 /** Reads all workspace tabs. */

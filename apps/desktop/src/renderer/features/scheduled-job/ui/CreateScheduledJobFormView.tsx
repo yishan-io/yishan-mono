@@ -2,12 +2,12 @@ import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { CreateScheduledJobInput } from "../../../features/scheduled-job/commands/scheduledJobCommands";
-import { projectStore } from "../../../features/project/state/projectStore";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useScheduledJobCommands } from "../../../app/commands/useCommands";
-import { sessionStore } from "../../../features/session/state/sessionStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import type { CreateScheduledJobInput } from "../../../features/scheduled-job/commands/scheduledJobCommands";
+import { useDaemonId, useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
+import { useSelectedProjectId } from "../../../features/workspace/ui/hooks/useWorkspaceReadHooks";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
 import { useScheduledJobFormState } from "./form/useScheduledJobFormState";
 import { DEFAULT_FORM_DRAFT, SCHEDULED_JOB_AGENT_KIND } from "./scheduledJobFormHelpers";
@@ -25,10 +25,10 @@ const createCustomCronDescriptionSx = { display: "block", mt: 0.75 };
 export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }: CreateScheduledJobFormViewProps) {
   const { t } = useTranslation();
   const { createScheduledJob } = useScheduledJobCommands();
-  const orgId = sessionStore((state) => state.selectedOrganizationId);
-  const daemonId = sessionStore((state) => state.daemonId);
-  const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
-  const projects = projectStore((state) => state.projects);
+  const orgId = useSelectedOrganizationId();
+  const daemonId = useDaemonId();
+  const selectedProjectId = useSelectedProjectId();
+  const projects = useProjects();
   const initialState = useMemo(
     () => ({ draft: { ...DEFAULT_FORM_DRAFT, projectId: selectedProjectId ?? "" }, ...createScheduleState }),
     [selectedProjectId],

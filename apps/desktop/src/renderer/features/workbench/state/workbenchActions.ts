@@ -152,3 +152,33 @@ export function createAdjacentPaneWithTab(
 ): void {
   splitPaneStore.getState().createAdjacentPaneWithTab(workspaceId, input);
 }
+
+/** Closes all terminal tabs. */
+export function closeAllTerminalTabs(): void {
+  tabStore.getState().closeAllTerminalTabs();
+}
+
+/** Sets the link-open target preference. */
+export function setLinkTarget(target: "built-in" | "external"): void {
+  layoutStore.getState().setLinkTarget(target);
+}
+
+/** Sets the markdown theme preference. */
+export function setMarkdownThemePreference(preference: "inherit" | "light" | "dark"): void {
+  layoutStore.getState().setMarkdownThemePreference(preference);
+}
+
+/** Sets the markdown preview font size. */
+export function setMarkdownPreviewFontSize(size: "small" | "medium" | "large"): void {
+  layoutStore.getState().setMarkdownPreviewFontSize(size);
+}
+
+/** Sets the markdown preview width. */
+export function setMarkdownPreviewWidth(width: "readable" | "full"): void {
+  layoutStore.getState().setMarkdownPreviewWidth(width);
+}
+
+/** Sets the markdown outline visibility. */
+export function setIsMarkdownOutlineVisible(visible: boolean): void {
+  layoutStore.getState().setIsMarkdownOutlineVisible(visible);
+}

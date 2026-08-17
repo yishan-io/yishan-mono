@@ -41,6 +41,21 @@ export function updateProjectConfig(projectId: string, config: UpdateProjectConf
   workspaceStore.getState().updateProjectConfig(projectId, config);
 }
 
+/** Selects one entry path in the file tree. */
+export function setSelectedEntryPath(path: string): void {
+  workspaceUiStore.getState().setSelectedEntryPath(path);
+}
+
+/** Sets the expanded file-tree items for one workspace. */
+export function setExpandedFileTreeItems(workspaceId: string, paths: string[]): void {
+  workspaceUiStore.getState().setExpandedFileTreeItems(workspaceId, paths);
+}
+
+/** Closes any overlay panel in workspace UI state. */
+export function closeOverlayPanel(): void {
+  workspaceUiStore.getState().closeOverlayPanel();
+}
+
 /** Bumps the file-tree refresh version for one workspace. */
 export function incrementFileTreeRefreshVersion(workspaceWorktreePath?: string, changedRelativePaths?: string[]): void {
   workspaceUiStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);

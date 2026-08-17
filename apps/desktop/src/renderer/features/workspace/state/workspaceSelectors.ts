@@ -10,6 +10,11 @@ export function selectWorkspaceFileTreeRefreshVersion(workspaceWorktreePath: str
   return workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath?.[workspaceWorktreePath] ?? 0;
 }
 
+/** Reads the currently selected project id. */
+export function selectSelectedProjectId() {
+  return workspaceStore.getState().selectedProjectId;
+}
+
 /** Reads the currently selected workspace id. */
 export function selectSelectedWorkspaceId() {
   return workspaceStore.getState().selectedWorkspaceId;

@@ -1,16 +1,16 @@
 import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeft, LuPanelLeft, LuPause, LuPencil, LuPlay, LuTrash2, LuZap } from "react-icons/lu";
-import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
 import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { SplitPaneLayout } from "../../../components/SplitPaneLayout";
-import { getRendererPlatform } from "../../../helpers/platform";
-import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
-import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../features/scheduled-job/state/scheduledJobStore";
-import { sessionStore } from "../../../features/session/state/sessionStore";
+import { useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
+import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";
 import { ScheduledJobDetailFields } from "./ScheduledJobDetailFields";
 import { ScheduledJobRunsSidebar } from "./ScheduledJobRunsSidebar";
@@ -29,7 +29,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
   const toggleLeftTooltipLabel = `${t("layout.toggleLeftSidebar")} (${toggleLeftShortcutLabel})`;
   const shouldReserveMacInset = getRendererPlatform() === "darwin" && leftCollapsed;
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
-  const orgId = sessionStore((state) => state.selectedOrganizationId ?? "");
+  const orgId = useSelectedOrganizationId() ?? "";
   const {
     runsPaneWidth,
     isEditOpen,
