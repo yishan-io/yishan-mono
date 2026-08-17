@@ -54,7 +54,6 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Phase 14 baseline: view moves exposed pre-existing cross-feature
   // Store/transport imports (views/<f> -> features/<f>/ui). Replace with
   // feature Selectors/Commands per Phase 14 task 8; remove rows as fixed. ----
-  { rule: "R1-value-api-rpc", file: "features/workspace/ui/useAgentChatSessionLifecycle.ts", phase: "P14" },
   { rule: "R5-cross-feature-internal", file: "features/overview/ui/OverviewView.tsx", phase: "P14" },
   { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "P14" },
   { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "P14" },
