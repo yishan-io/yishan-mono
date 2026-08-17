@@ -1,13 +1,13 @@
+import { getTabs } from "@renderer/features/workbench";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import type { WorkspaceTab } from "../../../features/workbench";
 import {
+  bindTerminalTabSession,
   closeTab,
   openTab,
   renameTab,
   setTerminalTabAgentKind,
-  setTerminalTabSessionId,
-} from "../../../features/workbench/state/workbenchActions";
-import { selectTabs } from "../../../features/workbench/state/workbenchSelectors";
+} from "../../../features/workbench/commands/tabCommands";
 import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
@@ -29,7 +29,7 @@ export function reconcileTerminalSessionChanged(
   payload: TerminalSessionChangedPayload,
   dependencies: TerminalSessionTabReconcilerDependencies,
 ): void {
-  const tabs = selectTabs();
+  const tabs = getTabs();
 
   if (payload.action === "created") {
     const existingSessionTab = tabs.find(
@@ -58,7 +58,7 @@ export function reconcileTerminalSessionChanged(
           tab.id === requestedTabId && tab.workspaceId === payload.workspaceId && tab.kind === "terminal",
       );
       if (requestedTerminalTab) {
-        setTerminalTabSessionId(requestedTabId, payload.sessionId);
+        bindTerminalTabSession(requestedTabId, payload.sessionId);
         applyLifecycleMetadataToTerminalTab(requestedTerminalTab, payload);
         return;
       }

@@ -1,6 +1,6 @@
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
 import { selectIsDefaultContextEnabled } from "../../../features/settings/state/settingsSelectors";
-import { resolveTabForWorkspace } from "../../../features/workbench/state/workbenchActions";
+import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
 import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import {

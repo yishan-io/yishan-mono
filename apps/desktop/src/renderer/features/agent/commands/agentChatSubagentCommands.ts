@@ -1,16 +1,19 @@
-import { findOppositePaneId } from "../../../features/workbench/model/split-pane";
+import { getLayout, getPane, getPaneForTab } from "@renderer/features/workbench";
+import { getTabs } from "@renderer/features/workbench";
 import {
   createAdjacentPaneWithTab,
+  moveTabToPane,
   openTab,
+  paneSelectTab,
   registerTabInPane,
-  selectPaneTab,
-  selectTab,
+  reorderPaneTab,
   setActivePane,
   setAgentChatTabSubagentControl,
-  splitPane,
-} from "../../../features/workbench/state/workbenchActions";
-import { selectLayout, selectPane, selectPaneForTab } from "../../../features/workbench/state/workbenchSelectors";
-import { selectTabs } from "../../../features/workbench/state/workbenchSelectors";
+  setSelectedTab,
+  splitWorkspacePane,
+  unregisterTabFromPane,
+} from "../../../features/workbench/commands/tabCommands";
+import { findOppositePaneId } from "../../../features/workbench/model/split-pane";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../model/agentChatStore";
 import { isAgentSessionBusy } from "../model/agentChatTypes";
@@ -41,7 +44,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
   console.debug("[agentChatSubagentCommands] open requested", opts);
   const existingTabId =
     findTabWithSession(opts.childSessionId) ??
-    selectTabs().find((tab) => {
+    getTabs().find((tab) => {
       return (
         tab.workspaceId === opts.workspaceId &&
         tab.kind === "agent-chat" &&
@@ -82,7 +85,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     return;
   }
 
-  const parentPane = selectPane(opts.workspaceId, normalizedParentPaneId);
+  const parentPane = getPane(opts.workspaceId, normalizedParentPaneId);
   if (!parentPane) {
     console.debug("[agentChatSubagentCommands] opening without resolved parent pane", {
       ...opts,
@@ -106,7 +109,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     normalizedParentPaneId,
     parentPane,
   });
-  const previousTabIds = new Set(selectTabs().map((tab) => tab.id));
+  const previousTabIds = new Set(getTabs().map((tab) => tab.id));
   setActivePane(opts.workspaceId, normalizedParentPaneId);
   openTab(
     {
@@ -122,7 +125,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     { activePaneTabIds: parentPane.tabIds },
   );
 
-  const createdTab = selectTabs().find((tab) => {
+  const createdTab = getTabs().find((tab) => {
     return (
       !previousTabIds.has(tab.id) &&
       tab.workspaceId === opts.workspaceId &&
@@ -133,7 +136,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
   if (!createdTab) {
     console.debug("[agentChatSubagentCommands] open failed: tab was not created", {
       ...opts,
-      tabIds: selectTabs().map((tab) => tab.id),
+      tabIds: getTabs().map((tab) => tab.id),
     });
     return;
   }
@@ -143,7 +146,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     normalizedParentPaneId,
   });
   placeUnplacedSubagentTabInOppositePane(opts.workspaceId, normalizedParentPaneId, createdTab.id);
-  selectTab(createdTab.id);
+  setSelectedTab(createdTab.id);
   console.debug("[agentChatSubagentCommands] subagent tab opened", {
     createdTabId: createdTab.id,
     childSessionId: opts.childSessionId,
@@ -162,21 +165,21 @@ function revealSubagentTabInRightSplitPane(opts: { workspaceId: string; parentPa
     return;
   }
 
-  const parentPane = selectPane(opts.workspaceId, normalizedParentPaneId);
+  const parentPane = getPane(opts.workspaceId, normalizedParentPaneId);
   if (!parentPane) {
     console.debug("[agentChatSubagentCommands] reveal selecting without resolved parent pane", opts);
     selectAgentChatTabInPane(opts.workspaceId, opts.tabId);
     return;
   }
 
-  const existingPane = selectPaneForTab(opts.workspaceId, opts.tabId);
+  const existingPane = getPaneForTab(opts.workspaceId, opts.tabId);
   if (existingPane && existingPane.id !== normalizedParentPaneId) {
     console.debug("[agentChatSubagentCommands] reveal selecting tab in existing pane", {
       ...opts,
       existingPaneId: existingPane.id,
     });
-    selectPaneTab(opts.workspaceId, existingPane.id, opts.tabId);
-    selectTab(opts.tabId);
+    paneSelectTab(opts.workspaceId, existingPane.id, opts.tabId);
+    setSelectedTab(opts.tabId);
     return;
   }
 
@@ -186,7 +189,7 @@ function revealSubagentTabInRightSplitPane(opts: { workspaceId: string; parentPa
     existingPaneId: existingPane?.id,
   });
   if (existingPane) {
-    splitPane(opts.workspaceId, {
+    splitWorkspacePane(opts.workspaceId, {
       tabId: opts.tabId,
       targetPaneId: normalizedParentPaneId,
       direction: SUBAGENT_SPLIT_DIRECTION,
@@ -195,7 +198,7 @@ function revealSubagentTabInRightSplitPane(opts: { workspaceId: string; parentPa
   } else {
     placeUnplacedSubagentTabInOppositePane(opts.workspaceId, normalizedParentPaneId, opts.tabId);
   }
-  selectTab(opts.tabId);
+  setSelectedTab(opts.tabId);
 }
 
 /**
@@ -331,7 +334,7 @@ function waitForSubagentRowGone(
 
 /** Places an unplaced subagent tab in the opposite pane, creating one only when absent. */
 function placeUnplacedSubagentTabInOppositePane(workspaceId: string, parentPaneId: string, tabId: string): void {
-  const layout = selectLayout(workspaceId);
+  const layout = getLayout(workspaceId);
   const oppositePaneId = findOppositePaneId(layout.root, parentPaneId);
   if (oppositePaneId) {
     registerTabInPane(workspaceId, tabId, oppositePaneId);
@@ -347,9 +350,9 @@ function placeUnplacedSubagentTabInOppositePane(workspaceId: string, parentPaneI
 }
 
 function selectAgentChatTabInPane(workspaceId: string, tabId: string): void {
-  const pane = selectPaneForTab(workspaceId, tabId);
+  const pane = getPaneForTab(workspaceId, tabId);
   if (pane) {
-    selectPaneTab(workspaceId, pane.id, tabId);
+    paneSelectTab(workspaceId, pane.id, tabId);
   }
-  selectTab(tabId);
+  setSelectedTab(tabId);
 }

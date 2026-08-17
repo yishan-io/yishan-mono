@@ -8,8 +8,8 @@ import { TabPanel } from "../../../components/TabPanel";
 import { retainOpenAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
 import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
 import { disposeTerminalRuntimesForClosedTabs } from "../../../features/terminal";
+import { resizeRightPane } from "../../../features/workbench/commands/tabCommands";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { setRightPaneWidth } from "../../../features/workbench/state/workbenchActions";
 import { useRightPaneWidth } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
 import { useWorkspaceTabs } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
@@ -62,7 +62,7 @@ export function MainPaneView() {
     const { startX, startWidth } = rightDragRef.current;
     const delta = startX - clientX;
     const nextWidth = clamp(startWidth + delta, RIGHT_MIN_WIDTH, 800);
-    setRightPaneWidth(nextWidth);
+    resizeRightPane(nextWidth);
   }, []);
 
   useEffect(() => {

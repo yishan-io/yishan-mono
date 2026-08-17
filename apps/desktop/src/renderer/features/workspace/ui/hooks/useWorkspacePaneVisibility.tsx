@@ -1,7 +1,7 @@
 import { useMediaQuery, useTheme } from "@mui/material";
 import { type ReactNode, createContext, useContext, useMemo } from "react";
 import { useWorkspacePaneVisibilityState } from "../../../../app/selectors";
-import { setIsLeftPaneManuallyHidden } from "../../../../features/workbench/state/workbenchActions";
+import { setLeftPaneHidden } from "../../../../features/workbench/commands/tabCommands";
 import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 
 export type WorkspacePaneVisibilityValue = {
@@ -49,12 +49,12 @@ export function useWorkspacePaneVisibility(): WorkspacePaneVisibilityValue {
       onToggleLeftPane: leftCollapsedByBreakpoint
         ? undefined
         : () => {
-            setIsLeftPaneManuallyHidden(!isLeftPaneManuallyHidden);
+            setLeftPaneHidden(!isLeftPaneManuallyHidden);
           },
       showLeftPane: leftCollapsedByBreakpoint
         ? undefined
         : () => {
-            setIsLeftPaneManuallyHidden(false);
+            setLeftPaneHidden(false);
           },
       onToggleRightPane: rightCollapsedByBreakpoint
         ? undefined

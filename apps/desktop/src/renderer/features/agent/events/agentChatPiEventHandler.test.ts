@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../model/agentChatStore";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
-import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
-import { refreshAgentSessionStats, registerAgentSession } from "../events/agentChatPiEventShared";
 import { compactAgent, respondToAgentExtensionUiRequest } from "../commands/agentChatCommands";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
+import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
+import { refreshAgentSessionStats, registerAgentSession } from "../events/agentChatPiEventShared";
+import { agentChatStore } from "../model/agentChatStore";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -32,6 +32,8 @@ vi.mock("../events/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     pi: {
       start: mocks.start,
@@ -1123,4 +1125,3 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
     });
   });
 });
-

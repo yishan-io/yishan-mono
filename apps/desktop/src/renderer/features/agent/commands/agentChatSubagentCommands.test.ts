@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../model/agentChatStore";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../commands/agentChatSubagentCommands";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
+import { agentChatStore } from "../model/agentChatStore";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -30,6 +30,8 @@ vi.mock("../events/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     pi: {
       start: mocks.start,
@@ -560,4 +562,3 @@ describe("agentChatSubagentCommands subagent helpers", () => {
     vi.useRealTimers();
   });
 });
-

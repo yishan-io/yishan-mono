@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { getTabs } from "@renderer/features/workbench";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTerminalCommands } from "../../../app/commands/useCommands";
@@ -6,8 +7,7 @@ import { CenteredSpinner } from "../../../components/CenteredSpinner";
 import { StatusIndicator } from "../../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
 import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
-import { closeTab } from "../../../features/workbench/state/workbenchActions";
-import { selectTabs } from "../../../features/workbench/state/workbenchSelectors";
+import { closeTab } from "../../../features/workbench/commands/tabCommands";
 import { useWorkspaces } from "../../../features/workspace/ui/hooks/useWorkspaceReadHooks";
 import { MONOSPACE_SX } from "../../../helpers/styles";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../../rpc/daemonTypes";
@@ -43,7 +43,7 @@ function closeTerminalTabsForSession(sessionId: string): void {
     return;
   }
 
-  const tabIds = selectTabs()
+  const tabIds = getTabs()
     .filter((tab) => tab.kind === "terminal" && tab.data.sessionId?.trim() === normalizedSessionId)
     .map((tab) => tab.id);
 

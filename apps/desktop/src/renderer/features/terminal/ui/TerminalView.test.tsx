@@ -2,9 +2,12 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TerminalView } from "./TerminalView";
-import { __resetTerminalRuntimeRegistryForTests, getTerminalRuntime } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
+import {
+  __resetTerminalRuntimeRegistryForTests,
+  getTerminalRuntime,
+} from "../../../features/terminal/runtime/terminalRuntimeRegistry";
 import { __resetTerminalSessionServiceForTests } from "../../../features/terminal/runtime/terminalSessionService";
+import { TerminalView } from "./TerminalView";
 
 type TerminalOutputEvent =
   | { type: "output"; sessionId: string; chunk: string | Uint8Array; nextIndex: number }
@@ -151,6 +154,7 @@ vi.mock("../../../features/workbench/state/tabStore", () => ({
 }));
 
 vi.mock("../../../features/workbench/commands/tabCommands", () => ({
+  bindTerminalTabSession: vi.fn(),
   closeTab: mocked.closeTab,
   renameTab: mocked.renameTab,
 }));
@@ -171,7 +175,6 @@ vi.mock("../../../features/workspace/state/workspaceLifecycleNoticeStore", () =>
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     selectTab: mocked.selectTab,
     closeTab: mocked.closeTab,
     createTerminalSession: mocked.createTerminalSession,
@@ -200,7 +203,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("@xterm/xterm", () => {
   class FakeTerminal {

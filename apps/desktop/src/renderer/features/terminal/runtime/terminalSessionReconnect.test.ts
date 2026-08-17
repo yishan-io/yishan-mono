@@ -18,6 +18,7 @@ import type { TerminalRuntimeEntry } from "./terminalRuntimeRegistry";
 let capturedConnectionStatusListener: ((status: string) => void) | null = null;
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDesktopRpcEvent: () => () => {},
   subscribeDaemonConnectionStatus: (listener: (status: string) => void) => {
     capturedConnectionStatusListener = listener;
     return () => {};
@@ -70,7 +71,7 @@ vi.mock("../../../features/terminal/commands/terminalCommands", () => ({
 }));
 
 vi.mock("../../../features/workbench/commands/tabCommands", () => ({
-  closeTab: vi.fn(),
+  closeTab: (...args: unknown[]) => mockTabStoreCloseTab(...args),
   renameTab: vi.fn(),
 }));
 

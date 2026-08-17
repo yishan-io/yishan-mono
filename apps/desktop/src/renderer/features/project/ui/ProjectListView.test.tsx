@@ -241,6 +241,8 @@ vi.mock("../../../features/session/state/sessionStore", () => ({
 }));
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     project: {
       getListPreferences: vi.fn(async () => ({
@@ -267,7 +269,6 @@ vi.mock("../../../features/workspace/state/workspaceCreateProgressStore", () => 
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     setSelectedRepoId: mocked.setSelectedRepoId,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
     renameWorkspace: mocked.renameWorkspace,
@@ -297,7 +298,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../features/files/commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),

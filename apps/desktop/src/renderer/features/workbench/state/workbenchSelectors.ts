@@ -1,50 +1,58 @@
+import { findLeaf, findLeafByTabId } from "../model/split-pane/operations";
+import type { PaneLeaf, SplitPaneStateSlice } from "../model/split-pane/types";
 import type { WorkspaceTab } from "../model/types";
-import { layoutStore } from "./layoutStore";
-import { splitPaneStore } from "./splitPaneStore";
-import { tabStore } from "./tabStore";
+import type { TabStoreState } from "./tabStore";
 
 /**
- * Workbench feature selectors — the public read surface for Workbench State
- * (Phase 17, desktop6.md). Cross-feature code reads Workbench State through
- * these functions instead of importing the Workbench Stores directly.
+ * Workbench feature selectors — pure functions from Workbench State to values
+ * (desktop-renderer-refactor-rules.md). They take State as an argument and
+ * never call `getState()`. Subscribe in React with `tabStore(selectTabs)` or
+ * read imperatively with `selectTabs(tabStore.getState())`.
  */
 
 /** Reads the manual visibility state of the left workspace pane. */
-export function selectIsLeftPaneManuallyHidden(): boolean {
-  return layoutStore.getState().isLeftPaneManuallyHidden;
-}
+export const selectIsLeftPaneManuallyHidden = (state: {
+  isLeftPaneManuallyHidden: boolean;
+}): boolean => state.isLeftPaneManuallyHidden;
 
 /** Reads the currently selected tab id. */
-export function selectSelectedTabId(): string {
-  return tabStore.getState().selectedTabId;
-}
+export const selectSelectedTabId = (state: TabStoreState): string => state.selectedTabId;
 
 /** Reads all workspace tabs. */
-export function selectTabs(): WorkspaceTab[] {
-  return tabStore.getState().tabs;
-}
+export const selectTabs = (state: TabStoreState): WorkspaceTab[] => state.tabs;
 
 /** Reads one tab by id. */
-export function selectTabById(tabId: string): WorkspaceTab | undefined {
-  return tabStore.getState().tabs.find((tab) => tab.id === tabId);
-}
+export const selectTabById =
+  (tabId: string) =>
+  (state: TabStoreState): WorkspaceTab | undefined =>
+    state.tabs.find((tab) => tab.id === tabId);
 
-/** Reads the split-pane layout for one workspace. */
-export function selectLayout(workspaceId: string) {
-  return splitPaneStore.getState().getLayout(workspaceId);
-}
+/** Reads the split-pane layout of one workspace. */
+export const selectLayoutByWorkspaceId =
+  (workspaceId: string) =>
+  (state: { layoutByWorkspaceId: Record<string, SplitPaneStateSlice> }): SplitPaneStateSlice | undefined =>
+    state.layoutByWorkspaceId[workspaceId];
 
 /** Reads the active pane of one workspace layout. */
-export function selectActivePane(workspaceId: string) {
-  return splitPaneStore.getState().getActivePane(workspaceId);
-}
+export const selectActivePane =
+  (workspaceId: string) =>
+  (state: { layoutByWorkspaceId: Record<string, SplitPaneStateSlice> }): PaneLeaf | null => {
+    const layout = state.layoutByWorkspaceId[workspaceId];
+    return layout ? findLeaf(layout.root, layout.activePaneId) : null;
+  };
 
 /** Reads one pane of a workspace layout. */
-export function selectPane(workspaceId: string, paneId: string) {
-  return splitPaneStore.getState().getPane(workspaceId, paneId);
-}
+export const selectPane =
+  (workspaceId: string, paneId: string) =>
+  (state: { layoutByWorkspaceId: Record<string, SplitPaneStateSlice> }): PaneLeaf | null => {
+    const layout = state.layoutByWorkspaceId[workspaceId];
+    return layout ? findLeaf(layout.root, paneId) : null;
+  };
 
 /** Reads the pane that currently hosts one tab. */
-export function selectPaneForTab(workspaceId: string, tabId: string) {
-  return splitPaneStore.getState().getPaneForTab(workspaceId, tabId);
-}
+export const selectPaneForTab =
+  (workspaceId: string, tabId: string) =>
+  (state: { layoutByWorkspaceId: Record<string, SplitPaneStateSlice> }): PaneLeaf | null => {
+    const layout = state.layoutByWorkspaceId[workspaceId];
+    return layout ? findLeafByTabId(layout.root, tabId) : null;
+  };

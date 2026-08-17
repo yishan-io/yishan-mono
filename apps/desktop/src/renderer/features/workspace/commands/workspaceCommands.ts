@@ -1,11 +1,7 @@
+import { getIsLeftPaneManuallyHidden } from "@renderer/features/workbench";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { api } from "../../../api";
-import {
-  setIsLeftPaneManuallyHidden as applyIsLeftPaneManuallyHidden,
-  setLeftPaneWidth as applyLeftPaneWidth,
-  setRightPaneWidth as applyRightPaneWidth,
-} from "../../../features/workbench/state/workbenchActions";
-import { selectIsLeftPaneManuallyHidden } from "../../../features/workbench/state/workbenchSelectors";
+import { resizeLeftPane, resizeRightPane, setLeftPaneHidden } from "../../../features/workbench/commands/tabCommands";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import {
   DEFAULT_RIGHT_PANE_TAB,
@@ -223,17 +219,17 @@ export function setLastUsedExternalAppId(appId: ExternalAppId) {
 
 /** Sets left pane width in workspace layout state. */
 export function setLeftPaneWidth(width: number) {
-  applyLeftPaneWidth(width);
+  resizeLeftPane(width);
 }
 
 /** Sets right pane width in workspace layout state. */
 export function setRightPaneWidth(width: number) {
-  applyRightPaneWidth(width);
+  resizeRightPane(width);
 }
 
 /** Toggles left workspace pane manual visibility state. */
 export function toggleLeftPaneVisibility() {
-  applyIsLeftPaneManuallyHidden(!selectIsLeftPaneManuallyHidden());
+  setLeftPaneHidden(!getIsLeftPaneManuallyHidden());
 }
 
 /** Toggles right workspace pane manual visibility state for the selected workspace. */
@@ -247,7 +243,7 @@ export function toggleRightPaneVisibility() {
 /** Toggles a workspace pane: opens and switches to it, or collapses if already active. */
 export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
   if (pane === "repo") {
-    applyIsLeftPaneManuallyHidden(!selectIsLeftPaneManuallyHidden());
+    setLeftPaneHidden(!getIsLeftPaneManuallyHidden());
     return;
   }
 

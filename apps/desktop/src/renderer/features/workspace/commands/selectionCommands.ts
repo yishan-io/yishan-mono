@@ -1,4 +1,4 @@
-import { resolveTabForWorkspace } from "../../../features/workbench/state/workbenchActions";
+import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 

@@ -1,9 +1,10 @@
+import { useFileSearchController } from "@renderer/features/files";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
 import { buildWorkspaceFileUrl, readFile } from "../../../features/files/commands/fileCommands";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../../../features/files/ui/fileTreeHelpers";
-import { openTab } from "../../../features/workbench/state/workbenchActions";
+import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import {
@@ -13,7 +14,6 @@ import {
   isUnsupportedFileTab,
   isVideoFile,
 } from "../../../helpers/editorLanguage";
-import { useFileSearchController } from "@renderer/features/files";
 
 export function FileSearchOverlay() {
   const { t } = useTranslation();

@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import { sessionStore } from "../../../features/session/state/sessionStore";
 import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { projectStore } from "../state/projectStore";
@@ -49,6 +49,8 @@ const rpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     git: {
       inspectPath: rpcMocks.gitInspect,

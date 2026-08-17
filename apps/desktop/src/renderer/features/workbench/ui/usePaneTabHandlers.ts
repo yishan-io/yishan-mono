@@ -7,19 +7,13 @@ import type { TabBarCreateOption } from "../../../components/TabBar";
 import { forceFitTerminalRuntimes } from "../../../features/terminal";
 import { createNewWhiteboard } from "../../../features/workbench/commands/whiteboardCommands";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import {
-  moveTabToPane,
-  reorderPaneTab,
-  selectPaneTab,
-  setActivePane,
-  splitPane,
-  unregisterTabFromPane,
-  updateSplitRatio,
-} from "../../../features/workbench/state/workbenchActions";
-import { selectActivePane, selectPane } from "../../../features/workbench/state/workbenchSelectors";
-import { useSelectedTabId } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
+
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
+import { splitPaneStore } from "../state/splitPaneStore";
+import { tabStore } from "../state/tabStore";
+import { selectActivePane, selectPane } from "../state/workbenchSelectors";
+import { selectSelectedTabId } from "../state/workbenchSelectors";
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;
@@ -49,7 +43,7 @@ export function usePaneTabHandlers({
     () => workspaceTabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
     [workspaceTabs],
   );
-  const selectedTabId = useSelectedTabId();
+  const selectedTabId = tabStore(selectSelectedTabId);
 
   useEffect(() => {
     if (terminalTabIds.length === 0 || selectedTabId == null) {
@@ -73,7 +67,7 @@ export function usePaneTabHandlers({
 
   const handleSelectTab = useCallback(
     (paneId: string, tabId: string) => {
-      selectPaneTab(workspaceId, paneId, tabId);
+      splitPaneStore.getState().selectTab(workspaceId, paneId, tabId);
       cmd.selectTab(tabId);
     },
     [workspaceId, cmd],
@@ -81,12 +75,12 @@ export function usePaneTabHandlers({
 
   const handleCloseTab = useCallback(
     (tabId: string) => {
-      unregisterTabFromPane(workspaceId, tabId);
+      splitPaneStore.getState().unregisterTabFromPane(workspaceId, tabId);
       // After unregistering, the surviving/active pane holds the tab the user was
       // viewing. Prefer it over the workspace-wide neighbor so closing a tab in
       // one pane never yanks the other pane's selection (e.g. sub-agent detail
       // tabs closed on the right must leave the left pane's selected tab alone).
-      const activePane = selectActivePane(workspaceId);
+      const activePane = selectActivePane(workspaceId)(splitPaneStore.getState());
       cmd.closeTab(tabId, activePane?.selectedTabId ? { preferredSelectedTabId: activePane.selectedTabId } : undefined);
     },
     [workspaceId, cmd],
@@ -159,7 +153,7 @@ export function usePaneTabHandlers({
 
   const handleReorderTab = useCallback(
     (paneId: string, draggedTabId: string, targetTabId: string, position: "before" | "after") => {
-      reorderPaneTab(workspaceId, paneId, draggedTabId, targetTabId, position);
+      splitPaneStore.getState().reorderTab(workspaceId, paneId, draggedTabId, targetTabId, position);
     },
     [workspaceId],
   );
@@ -170,9 +164,9 @@ export function usePaneTabHandlers({
       if (!result) return;
 
       if ("center" in result) {
-        moveTabToPane(workspaceId, tabId, targetPaneId);
+        splitPaneStore.getState().moveTab(workspaceId, tabId, targetPaneId);
       } else {
-        splitPane(workspaceId, {
+        splitPaneStore.getState().splitPane(workspaceId, {
           tabId,
           targetPaneId,
           direction: result.direction,
@@ -189,8 +183,8 @@ export function usePaneTabHandlers({
 
   const handleFocusPane = useCallback(
     (paneId: string) => {
-      setActivePane(workspaceId, paneId);
-      const pane = selectPane(workspaceId, paneId);
+      splitPaneStore.getState().setActivePane(workspaceId, paneId);
+      const pane = selectPane(workspaceId, paneId)(splitPaneStore.getState());
       if (pane?.selectedTabId) {
         cmd.selectTab(pane.selectedTabId);
       }
@@ -200,10 +194,10 @@ export function usePaneTabHandlers({
 
   const performSplit = useCallback(
     (paneId: string, direction: "horizontal" | "vertical") => {
-      const pane = selectPane(workspaceId, paneId);
+      const pane = selectPane(workspaceId, paneId)(splitPaneStore.getState());
       if (!pane?.selectedTabId || pane.tabIds.length <= 1) return;
       const movedTabId = pane.selectedTabId;
-      splitPane(workspaceId, {
+      splitPaneStore.getState().splitPane(workspaceId, {
         tabId: movedTabId,
         targetPaneId: paneId,
         direction,
@@ -224,7 +218,7 @@ export function usePaneTabHandlers({
 
   const handleSplitRatioChange = useCallback(
     (branchId: string, ratio: number) => {
-      updateSplitRatio(workspaceId, branchId, ratio);
+      splitPaneStore.getState().updateSplitRatio(workspaceId, branchId, ratio);
     },
     [workspaceId],
   );

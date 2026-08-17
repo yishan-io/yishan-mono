@@ -1,6 +1,6 @@
+import { getTabById, getTabs } from "@renderer/features/workbench";
+import { bindAgentChatTabSession } from "../../../features/workbench/commands/tabCommands";
 import type { AgentChatSessionView } from "../../../features/workbench/model/types";
-import { setAgentChatTabSession } from "../../../features/workbench/state/workbenchActions";
-import { selectTabById, selectTabs } from "../../../features/workbench/state/workbenchSelectors";
 import { delay } from "../../../helpers/delay";
 /**
  * AgentSessionRuntime — one owner for Pi session handles and lifecycle races.
@@ -154,7 +154,7 @@ export async function ensurePiSession(opts: {
     })
     .then(async () => {
       handle.startPromise = null;
-      setAgentChatTabSession({
+      bindAgentChatTabSession({
         tabId: opts.tabId,
         sessionId,
       });
@@ -189,7 +189,7 @@ export async function ensurePiSession(opts: {
 
 /** Returns the tabId that currently owns the given agent-chat session, if any. */
 export function findTabWithSession(sessionId: string): string | undefined {
-  const openTabIds = new Set(selectTabs().map((tab) => tab.id));
+  const openTabIds = new Set(getTabs().map((tab) => tab.id));
 
   for (const [tabId, session] of activePiSessions) {
     if (session.sessionId === sessionId && openTabIds.has(tabId)) {
@@ -220,7 +220,7 @@ export async function reattachPiSession(tabId: string): Promise<void> {
     return;
   }
 
-  const tab = selectTabById(tabId);
+  const tab = getTabById(tabId);
   const client = await getDaemonClient();
   await client.pi.attach({
     sessionId: session.sessionId,
@@ -240,7 +240,7 @@ export async function stopPiSession(tabId: string): Promise<void> {
 
   const session = activePiSessions.get(tabId);
   if (!session) {
-    const fallbackTab = selectTabById(tabId);
+    const fallbackTab = getTabById(tabId);
     const isReadOnlySubagentDetail =
       fallbackTab?.kind === "agent-chat" && fallbackTab.data.sessionView === "subagent-detail";
     const fallbackSessionId =

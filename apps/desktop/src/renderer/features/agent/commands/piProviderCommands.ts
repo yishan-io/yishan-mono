@@ -1,7 +1,7 @@
+import { getTabs } from "@renderer/features/workbench";
 import { writeTerminalInput } from "../../../features/terminal/commands/terminalCommands";
 import type { WorkspaceTab } from "../../../features/workbench";
 import { openTab } from "../../../features/workbench/commands/tabCommands";
-import { selectTabs } from "../../../features/workbench/state/workbenchSelectors";
 import { selectSelectedWorkspaceId } from "../../../features/workspace/state/workspaceSelectors";
 import { DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { delay } from "../../../helpers/delay";
@@ -113,7 +113,7 @@ export async function openPiProviderLogin(params: { providerId: string; tabTitle
 async function waitForTerminalSessionId(tabTitle: string, timeoutMs: number): Promise<string | null> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const tab = selectTabs().find(
+    const tab = getTabs().find(
       (candidate): candidate is Extract<WorkspaceTab, { kind: "terminal" }> =>
         candidate.kind === "terminal" && candidate.data.title === tabTitle,
     );

@@ -1,63 +1,60 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createLeaf } from "../model/split-pane";
 import type { SplitPaneStateSlice } from "../model/split-pane/types";
 import type { WorkspaceTab } from "../model/types";
-import { layoutStore } from "./layoutStore";
-import { splitPaneStore } from "./splitPaneStore";
-import { tabStore } from "./tabStore";
 import {
   selectActivePane,
   selectIsLeftPaneManuallyHidden,
-  selectLayout,
+  selectLayoutByWorkspaceId,
   selectPane,
   selectPaneForTab,
+  selectSelectedTabId,
   selectTabById,
   selectTabs,
 } from "./workbenchSelectors";
 
-const initialTabState = tabStore.getState();
-const initialSplitPaneState = splitPaneStore.getState();
-const initialLayoutState = layoutStore.getState();
+/**
+ * Selectors are pure functions from State to values; tests feed State
+ * directly and assert the derived output (desktop-renderer-refactor-rules.md).
+ */
 
-const tabFixture = { id: "tab-1", workspaceId: "workspace-1", title: "T", pinned: false };
-const layoutFixture: SplitPaneStateSlice = {
-  root: createLeaf("pane-1", ["tab-1"], "tab-1"),
-  activePaneId: "pane-1",
-};
+const tabState = {
+  tabs: [{ id: "tab-1", workspaceId: "workspace-1", title: "T", pinned: false }] as unknown as WorkspaceTab[],
+  selectedTabId: "tab-1",
+} as never;
 
-afterEach(() => {
-  tabStore.setState(initialTabState, true);
-  splitPaneStore.setState(initialSplitPaneState, true);
-  layoutStore.setState(initialLayoutState, true);
-});
+const layoutState = {
+  layoutByWorkspaceId: {
+    "workspace-1": {
+      root: createLeaf("pane-1", ["tab-1"], "tab-1"),
+      activePaneId: "pane-1",
+    },
+  } satisfies Record<string, SplitPaneStateSlice>,
+} as never;
 
-describe("workbenchSelectors — Workbench state public read surface (Phase 17)", () => {
-  it("selectTabs reads the tab list", () => {
-    const tabs: WorkspaceTab[] = [{ ...tabFixture, kind: "file", data: { path: "/tmp/a.txt", content: "", savedContent: "", isDirty: false, isTemporary: false } }];
-    tabStore.setState({ tabs });
-
-    expect(selectTabs()).toEqual(tabs);
+describe("workbenchSelectors — pure State read functions (Phase 18 correction)", () => {
+  it("selectTabs reads the tab list from State", () => {
+    expect(selectTabs(tabState).map((tab) => tab.id)).toEqual(["tab-1"]);
   });
 
-  it("selectTabById reads one tab", () => {
-    tabStore.setState({ tabs: [{ ...tabFixture, kind: "file", data: { path: "/tmp/a.txt", content: "", savedContent: "", isDirty: false, isTemporary: false } }] });
-
-    expect(selectTabById("tab-1")?.id).toBe("tab-1");
-    expect(selectTabById("missing")).toBeUndefined();
+  it("selectTabById is curried and returns one tab", () => {
+    expect(selectTabById("tab-1")(tabState)?.id).toBe("tab-1");
+    expect(selectTabById("missing")(tabState)).toBeUndefined();
   });
 
-  it("selectIsLeftPaneManuallyHidden reads the layout visibility state", () => {
-    layoutStore.setState({ isLeftPaneManuallyHidden: true });
-
-    expect(selectIsLeftPaneManuallyHidden()).toBe(true);
+  it("selectSelectedTabId reads the selection from State", () => {
+    expect(selectSelectedTabId(tabState)).toBe("tab-1");
   });
 
-  it("reads pane layout, panes, and tab placement", () => {
-    splitPaneStore.setState({ layoutByWorkspaceId: { "workspace-1": layoutFixture } });
+  it("selectIsLeftPaneManuallyHidden reads the flag from State", () => {
+    expect(selectIsLeftPaneManuallyHidden({ isLeftPaneManuallyHidden: true })).toBe(true);
+  });
 
-    expect(selectLayout("workspace-1")).toEqual(layoutFixture);
-    expect(selectActivePane("workspace-1")?.id).toBe("pane-1");
-    expect(selectPane("workspace-1", "pane-1")?.tabIds).toEqual(["tab-1"]);
-    expect(selectPaneForTab("workspace-1", "tab-1")?.id).toBe("pane-1");
+  it("layout selectors derive panes from State", () => {
+    expect(selectLayoutByWorkspaceId("workspace-1")(layoutState)?.activePaneId).toBe("pane-1");
+    expect(selectActivePane("workspace-1")(layoutState)?.id).toBe("pane-1");
+    expect(selectPane("workspace-1", "pane-1")(layoutState)?.tabIds).toEqual(["tab-1"]);
+    expect(selectPaneForTab("workspace-1", "tab-1")(layoutState)?.id).toBe("pane-1");
+    expect(selectPaneForTab("workspace-1", "missing")(layoutState)).toBeNull();
   });
 });

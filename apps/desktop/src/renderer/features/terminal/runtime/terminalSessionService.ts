@@ -1,3 +1,4 @@
+import { getTabById } from "@renderer/features/workbench";
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -8,12 +9,11 @@ import {
   writeTerminalInput,
 } from "../../../features/terminal/commands/terminalCommands";
 import type { WorkspaceTab } from "../../../features/workbench";
-import { closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
+import { bindTerminalTabSession, closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
 import {
   closeTab as applyCloseTab,
   setTerminalTabSessionId as applySetTerminalTabSessionId,
 } from "../../../features/workbench/state/workbenchActions";
-import { selectTabById } from "../../../features/workbench/state/workbenchSelectors";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
@@ -121,7 +121,7 @@ function handleTerminalSessionFailure(tabId: string, error: unknown): void {
     title: "Failed to create terminal session",
     message,
   });
-  applyCloseTab(tabId);
+  closeTab(tabId);
 }
 
 /**
@@ -288,7 +288,7 @@ async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: st
     },
     {
       readTerminalTab: (tabId) => findTerminalTab(tabId),
-      setTerminalTabSessionId: (tabId, sessionId) => applySetTerminalTabSessionId(tabId, sessionId),
+      setTerminalTabSessionId: (tabId, sessionId) => bindTerminalTabSession(tabId, sessionId),
     },
   );
 
@@ -421,7 +421,7 @@ function isUserRenamed(tabId: string): boolean {
 }
 
 function findTerminalTab(tabId: string): TerminalTab | undefined {
-  const tab = selectTabById(tabId);
+  const tab = getTabById(tabId);
   return tab?.kind === "terminal" ? tab : undefined;
 }
 

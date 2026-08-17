@@ -1,3 +1,4 @@
+import { getSelectedTabId, getTabs } from "@renderer/features/workbench";
 /**
  * Notification event handlers — owns notification.event effects: preference-
  * backed delivery, suppression policy, effect dedupe, system notification copy
@@ -25,7 +26,6 @@ import {
   playNotificationSound,
 } from "../../../features/notification/commands/notificationCommands";
 import { selectProjectById } from "../../../features/project/state/projectSelectors";
-import { selectSelectedTabId, selectTabs } from "../../../features/workbench/state/workbenchSelectors";
 import { selectSelectedWorkspaceId, selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 
 import { parseObserverSessionKey, recordAgentObserverStatus } from "../../agent/commands/agentSessionLifecycle";
@@ -138,11 +138,11 @@ export function isRelevantTerminalFocusedForNotification(payload: NotificationEv
     return false;
   }
 
-  if (selectSelectedWorkspaceId() !== sessionParts.workspaceId || selectSelectedTabId() !== sessionParts.tabId) {
+  if (selectSelectedWorkspaceId() !== sessionParts.workspaceId || getSelectedTabId() !== sessionParts.tabId) {
     return false;
   }
 
-  return selectTabs().some((tab) => tab.id === sessionParts.tabId && tab.kind === "terminal");
+  return getTabs().some((tab) => tab.id === sessionParts.tabId && tab.kind === "terminal");
 }
 
 export function isNormalAgentCliExit(payload: NotificationEventPayload): boolean {

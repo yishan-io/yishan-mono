@@ -4,6 +4,16 @@
 export type { WorkbenchCommands } from "./commands/contract";
 export type { WorkspaceTab } from "./model/types";
 export type { TabStoreState } from "./state/tabStore";
+export {
+  getActivePane,
+  getIsLeftPaneManuallyHidden,
+  getLayout,
+  getPane,
+  getPaneForTab,
+  getSelectedTabId,
+  getTabById,
+  getTabs,
+} from "./state/workbenchGetters";
 export type {
   LinkTarget,
   MarkdownPreviewFontSize,
