@@ -32,6 +32,7 @@ export {
   setLeftPaneHidden,
   setIsRightPaneHidden,
   setRightPaneTab,
+  setFileTabDirty,
   setSelectedTab,
   setTerminalTabAgentKind,
   splitWorkspacePane,

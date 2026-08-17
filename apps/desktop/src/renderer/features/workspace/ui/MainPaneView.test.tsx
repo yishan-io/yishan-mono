@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fileTabContentStore } from "../../../features/files/state/fileTabContentStore";
 import {
   AGENT_SETTINGS_STORE_STORAGE_KEY,
   agentSettingsStore,
@@ -469,6 +470,12 @@ function buildStoreState(isInitializing: boolean) {
 
 describe("MainPaneView", () => {
   it("renders unsupported file view for unsupported file tabs", () => {
+    fileTabContentStore.getState().seed({
+      tabId: "tab-unsupported-1",
+      path: "data/main.sqlite",
+      content: "",
+      isUnsupported: true,
+    });
     mocked.stateRef.current = {
       ...buildStoreState(false),
       tabs: [
@@ -480,11 +487,8 @@ describe("MainPaneView", () => {
           kind: "file",
           data: {
             path: "data/main.sqlite",
-            content: "",
-            savedContent: "",
             isDirty: false,
             isTemporary: false,
-            isUnsupported: true,
           },
         },
       ],
@@ -498,6 +502,13 @@ describe("MainPaneView", () => {
   });
 
   it("renders large-file unsupported hint for large file tabs", () => {
+    fileTabContentStore.getState().seed({
+      tabId: "tab-large-1",
+      path: "logs/big.log",
+      content: "",
+      isUnsupported: true,
+      unsupportedReason: "size",
+    });
     mocked.stateRef.current = {
       ...buildStoreState(false),
       tabs: [
@@ -509,12 +520,8 @@ describe("MainPaneView", () => {
           kind: "file",
           data: {
             path: "logs/big.log",
-            content: "",
-            savedContent: "",
             isDirty: false,
             isTemporary: false,
-            isUnsupported: true,
-            unsupportedReason: "size",
           },
         },
       ],

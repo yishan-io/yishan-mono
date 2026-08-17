@@ -9,16 +9,13 @@ import {
   closeAllTerminalTabsState,
   closeOtherTabsState,
   closeTabState,
-  markFileTabSavedState,
   openTabState,
   promoteTemporaryTabState,
-  refreshDiffTabContentState,
-  refreshFileTabFromDiskState,
   renameTabState,
   renameTabsForEntryRenameState,
   reorderTabState,
+  setFileTabDirtyState,
   toggleTabPinnedState,
-  updateFileTabContentState,
 } from "../model/tabs/index";
 
 export type CloseTabOptions = {
@@ -58,10 +55,8 @@ export type TabStoreState = {
   reorderTab: (draggedTabId: string, targetTabId: string, position: "before" | "after") => void;
   renameTab: (tabId: string, title: string, options?: { userRenamed?: boolean }) => void;
   renameTabsForEntryRename: (workspaceId: string, fromPath: string, toPath: string) => void;
-  updateFileTabContent: (tabId: string, content: string) => void;
-  markFileTabSaved: (tabId: string) => void;
-  refreshFileTabFromDisk: (input: { tabId: string; content: string; deleted: boolean }) => void;
-  refreshDiffTabContent: (input: { tabId: string; oldContent: string; newContent: string }) => void;
+  /** Syncs the dirty presentation flag on one file tab (content lives in Files state). */
+  setFileTabDirty: (tabId: string, isDirty: boolean) => void;
 };
 
 /** Creates a client-only tab id for local UI tab lifecycle. */
@@ -301,17 +296,8 @@ export const tabStore = create<TabStoreState>()(
       renameTabsForEntryRename: (workspaceId, fromPath, toPath) => {
         set((state) => renameTabsForEntryRenameState(state, workspaceId, fromPath, toPath) ?? state);
       },
-      updateFileTabContent: (tabId, content) => {
-        set((state) => updateFileTabContentState(state, tabId, content));
-      },
-      markFileTabSaved: (tabId) => {
-        set((state) => markFileTabSavedState(state, tabId));
-      },
-      refreshFileTabFromDisk: (input) => {
-        set((state) => refreshFileTabFromDiskState(state, input) ?? state);
-      },
-      refreshDiffTabContent: (input) => {
-        set((state) => refreshDiffTabContentState(state, input) ?? state);
+      setFileTabDirty: (tabId, isDirty) => {
+        set((state) => setFileTabDirtyState(state, tabId, isDirty) ?? state);
       },
     };
   }),

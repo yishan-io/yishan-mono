@@ -4,14 +4,11 @@ import {
   closeAllTabsState,
   closeOtherTabsState,
   closeTabState,
-  markFileTabSavedState,
   openTabState,
-  refreshDiffTabContentState,
-  refreshFileTabFromDiskState,
   renameTabState,
   renameTabsForEntryRenameState,
   reorderTabState,
-  updateFileTabContentState,
+  setFileTabDirtyState,
 } from ".";
 
 function createBaseState(): TabStoreStateSlice {
@@ -35,8 +32,6 @@ function createBaseState(): TabStoreStateSlice {
         kind: "file",
         data: {
           path: "src/a.ts",
-          content: "a1",
-          savedContent: "a1",
           isDirty: false,
           isTemporary: false,
         },
@@ -61,7 +56,7 @@ function createBaseState(): TabStoreStateSlice {
 }
 
 describe("tabs-domain open", () => {
-  it("updates existing file tab content and selection", () => {
+  it("selects the existing file tab when reopening the same path", () => {
     const state = createBaseState();
     const patch = openTabState(
       state,
@@ -76,8 +71,6 @@ describe("tabs-domain open", () => {
 
     expect(patch).toBeTruthy();
     expect(patch?.selectedTabId).toBe("file-1");
-    const nextFileTab = patch?.tabs?.find((tab) => tab.id === "file-1");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.content : undefined).toBe("next-content");
   });
 
   it("creates a new tab when there is no match", () => {
@@ -319,7 +312,6 @@ describe("tabs-domain open", () => {
     const previewTab = patch?.tabs?.find((tab) => tab.id === "file-1");
     expect(previewTab?.title).toBe("b.ts");
     expect(previewTab && previewTab.kind === "file" ? previewTab.data.path : "").toBe("src/b.ts");
-    expect(previewTab && previewTab.kind === "file" ? previewTab.data.content : "").toBe("b2");
     expect(previewTab && previewTab.kind === "file" ? previewTab.data.isTemporary : undefined).toBe(true);
   });
 
@@ -404,8 +396,6 @@ describe("tabs-domain open", () => {
           kind: "file",
           data: {
             path: "src/b.ts",
-            content: "b1",
-            savedContent: "b1",
             isDirty: false,
             isTemporary: true,
           },
@@ -489,8 +479,6 @@ describe("tabs-domain close", () => {
           kind: "file",
           data: {
             path: "src/b.ts",
-            content: "b1",
-            savedContent: "b1",
             isDirty: false,
             isTemporary: false,
           },
@@ -531,8 +519,6 @@ describe("tabs-domain close", () => {
           kind: "file",
           data: {
             path: "src/b.ts",
-            content: "b1",
-            savedContent: "b1",
             isDirty: false,
             isTemporary: false,
           },
@@ -560,8 +546,6 @@ describe("tabs-domain close", () => {
           kind: "file",
           data: {
             path: "src/b.ts",
-            content: "b1",
-            savedContent: "b1",
             isDirty: false,
             isTemporary: false,
           },
@@ -589,8 +573,6 @@ describe("tabs-domain close", () => {
           kind: "file",
           data: {
             path: "src/b.ts",
-            content: "b1",
-            savedContent: "b1",
             isDirty: false,
             isTemporary: false,
           },
@@ -673,8 +655,6 @@ describe("tabs-domain layout and session", () => {
           kind: "file",
           data: {
             path: "src/b.ts",
-            content: "b1",
-            savedContent: "b1",
             isDirty: false,
             isTemporary: false,
           },
@@ -692,164 +672,17 @@ describe("tabs-domain layout and session", () => {
     expect(patch?.selectedTabId).toBe("file-2");
   });
 
-  it("marks file tab dirty when editable content diverges", () => {
+  it("syncs the dirty presentation flag on one file tab", () => {
     const state = createBaseState();
 
-    const patch = updateFileTabContentState(state, "file-1", "a2");
-    const nextFileTab = (patch.tabs ?? []).find((tab) => tab.id === "file-1");
-
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.content : undefined).toBe("a2");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(true);
-  });
-
-  it("promotes a temporary file tab to a normal tab when it is edited", () => {
-    const state: TabStoreStateSlice = {
-      ...createBaseState(),
-      tabs: createBaseState().tabs.map((tab) =>
-        tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
-      ),
-    };
-
-    const patch = updateFileTabContentState(state, "file-1", "a2");
-    const nextFileTab = (patch.tabs ?? []).find((tab) => tab.id === "file-1");
-
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(true);
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isTemporary : undefined).toBe(false);
-  });
-
-  it("keeps a temporary file tab temporary when content is re-emitted unchanged", () => {
-    const state: TabStoreStateSlice = {
-      ...createBaseState(),
-      tabs: createBaseState().tabs.map((tab) =>
-        tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
-      ),
-    };
-
-    const patch = updateFileTabContentState(state, "file-1", "a1");
-    const nextFileTab = (patch.tabs ?? []).find((tab) => tab.id === "file-1");
-
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(false);
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isTemporary : undefined).toBe(true);
-  });
-
-  it("clears dirty flag when file tab save is recorded", () => {
-    const state = createBaseState();
-    const edited = {
-      ...state,
-      tabs: state.tabs.map((tab) =>
-        tab.id === "file-1" && tab.kind === "file"
-          ? {
-              ...tab,
-              data: {
-                ...tab.data,
-                content: "a2",
-                savedContent: "a1",
-                isDirty: true,
-                isTemporary: false,
-              },
-            }
-          : tab,
-      ),
-    };
-
-    const patch = markFileTabSavedState(edited, "file-1");
-    const nextFileTab = (patch.tabs ?? []).find((tab) => tab.id === "file-1");
-
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.savedContent : undefined).toBe("a2");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(false);
-  });
-
-  it("refreshes a clean file tab from disk", () => {
-    const state = createBaseState();
-    const patch = refreshFileTabFromDiskState(state, {
-      tabId: "file-1",
-      content: "from-disk",
-      deleted: false,
-    });
-
+    const patch = setFileTabDirtyState(state, "file-1", true);
     const nextFileTab = patch?.tabs?.find((tab) => tab.id === "file-1");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.content : undefined).toBe("from-disk");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.savedContent : undefined).toBe("from-disk");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(false);
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDeleted : undefined).toBe(false);
+    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDirty : undefined).toBe(true);
+
+    // No-op when the flag is unchanged.
+    expect(setFileTabDirtyState(state, "file-1", false)).toBeNull();
   });
 
-  it("marks file tab deleted when disk read reports missing file", () => {
-    const state = createBaseState();
-    const patch = refreshFileTabFromDiskState(state, {
-      tabId: "file-1",
-      content: "",
-      deleted: true,
-    });
-
-    const nextFileTab = patch?.tabs?.find((tab) => tab.id === "file-1");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.isDeleted : undefined).toBe(true);
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.content : undefined).toBe("");
-    expect(nextFileTab && nextFileTab.kind === "file" ? nextFileTab.data.savedContent : undefined).toBe("");
-  });
-
-  it("does not overwrite dirty file tab during disk refresh", () => {
-    const state: TabStoreStateSlice = {
-      ...createBaseState(),
-      tabs: createBaseState().tabs.map((tab) =>
-        tab.id === "file-1" && tab.kind === "file"
-          ? {
-              ...tab,
-              data: {
-                ...tab.data,
-                content: "local-edits",
-                savedContent: "a1",
-                isDirty: true,
-              },
-            }
-          : tab,
-      ),
-    };
-
-    const patch = refreshFileTabFromDiskState(state, {
-      tabId: "file-1",
-      content: "from-disk",
-      deleted: false,
-    });
-
-    expect(patch).toBeNull();
-  });
-
-  it("refreshes diff tab content in place", () => {
-    const state = createBaseState();
-    const withDiff: TabStoreStateSlice = {
-      ...state,
-      tabs: [
-        ...state.tabs,
-        {
-          id: "diff-1",
-          workspaceId: "workspace-1",
-          title: "a.ts",
-          pinned: false,
-          kind: "diff",
-          data: {
-            path: "src/a.ts",
-            oldContent: "old",
-            newContent: "new",
-            isTemporary: false,
-          },
-        },
-      ],
-    };
-
-    const patch = refreshDiffTabContentState(withDiff, {
-      tabId: "diff-1",
-      oldContent: "old-next",
-      newContent: "new-next",
-    });
-
-    const nextDiffTab = patch?.tabs?.find((tab) => tab.id === "diff-1");
-    expect(nextDiffTab && nextDiffTab.kind === "diff" ? nextDiffTab.data.oldContent : undefined).toBe("old-next");
-    expect(nextDiffTab && nextDiffTab.kind === "diff" ? nextDiffTab.data.newContent : undefined).toBe("new-next");
-  });
-});
-
-describe("tabs-domain rename", () => {
   it("renames a tab and returns updated tabs", () => {
     const state = createBaseState();
     const patch = renameTabState(state, "session-1", "New Title");
@@ -954,8 +787,6 @@ describe("tabs-domain rename", () => {
           kind: "diff",
           data: {
             path: "src/a.ts",
-            oldContent: "old",
-            newContent: "new",
             isTemporary: false,
           },
         },
@@ -973,27 +804,8 @@ describe("tabs-domain rename", () => {
   });
 });
 
-describe("tabs-domain isIgnored flag", () => {
-  it("preserves isIgnored: true when opening a new file tab", () => {
-    const state = createBaseState();
-    const patch = openTabState(
-      state,
-      {
-        kind: "file",
-        path: "dist/bundle.js",
-        content: "",
-        isIgnored: true,
-      },
-      "ignored-tab",
-      { selectedWorkspaceId: "workspace-1" },
-    );
-
-    expect(patch).toBeTruthy();
-    const created = patch?.tabs?.find((tab) => tab.id === "ignored-tab");
-    expect(created && created.kind === "file" ? created.data.isIgnored : undefined).toBe(true);
-  });
-
-  it("defaults isIgnored to false when not provided", () => {
+describe("tabs-domain file tab descriptor", () => {
+  it("keeps only path and presentation flags on the tab descriptor", () => {
     const state = createBaseState();
     const patch = openTabState(
       state,
@@ -1001,6 +813,7 @@ describe("tabs-domain isIgnored flag", () => {
         kind: "file",
         path: "src/new.ts",
         content: "hello",
+        isIgnored: true,
       },
       "regular-tab",
       { selectedWorkspaceId: "workspace-1" },
@@ -1008,6 +821,7 @@ describe("tabs-domain isIgnored flag", () => {
 
     expect(patch).toBeTruthy();
     const created = patch?.tabs?.find((tab) => tab.id === "regular-tab");
-    expect(created && created.kind === "file" ? created.data.isIgnored : undefined).toBe(false);
+    expect(created && created.kind === "file" ? created.data.path : undefined).toBe("src/new.ts");
+    expect(created && created.kind === "file" ? created.data.isTemporary : undefined).toBe(false);
   });
 });

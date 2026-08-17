@@ -2,10 +2,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  createOpenTabAutoRefreshRuntime,
   type OpenTabAutoRefreshCommands,
   type OpenTabAutoRefreshContext,
   type RefreshableOpenTab,
+  createOpenTabAutoRefreshRuntime,
 } from "./openTabAutoRefreshRuntime";
 
 type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
@@ -66,7 +66,7 @@ function createCommands(): OpenTabAutoRefreshCommands {
   } as unknown as OpenTabAutoRefreshCommands;
 }
 
-const TAB: RefreshableOpenTab = { id: "file-1", kind: "file", path: "src/a.ts", isDirty: false };
+const TAB: RefreshableOpenTab = { id: "file-1", kind: "file", path: "src/a.ts" };
 
 function createContext(overrides?: Partial<OpenTabAutoRefreshContext>): OpenTabAutoRefreshContext {
   return { workspaceId: "workspace-1", tabs: [TAB], commands: createCommands(), ...overrides };
@@ -145,7 +145,7 @@ describe("openTabAutoRefreshRuntime", () => {
     expect(context.commands.readFile).not.toHaveBeenCalled();
 
     // A new tab is added — only it gets refreshed.
-    const newTab: RefreshableOpenTab = { id: "file-2", kind: "file", path: "src/b.ts", isDirty: false };
+    const newTab: RefreshableOpenTab = { id: "file-2", kind: "file", path: "src/b.ts" };
     context.tabs = [TAB, newTab];
     runtime.refreshNewTabs(() => context);
     await vi.runAllTimersAsync();

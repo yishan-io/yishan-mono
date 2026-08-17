@@ -30,23 +30,13 @@ export type AgentChatSessionView = "full" | "subagent-detail";
 export type WorkbenchTabDataByKind = {
   diff: {
     path: string;
-    oldContent: string;
-    newContent: string;
     source?: DiffTabSource;
     isTemporary: boolean;
-    files?: FileDiffEntry[];
   };
   file: {
     path: string;
-    content: string;
-    savedContent: string;
     isDirty: boolean;
     isTemporary: boolean;
-    isUnsupported?: boolean;
-    unsupportedReason?: "type" | "size";
-    isDeleted?: boolean;
-    /** True when the file is git-ignored; suppresses diff gutter decorations. */
-    isIgnored?: boolean;
   };
   image: { path: string; dataUrl: string; isTemporary: boolean };
   video: { path: string; dataUrl: string; isTemporary: boolean };

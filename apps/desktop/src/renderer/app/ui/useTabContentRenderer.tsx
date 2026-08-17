@@ -1,5 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { AgentChatView } from "@renderer/features/agent";
+import { fileTabContentStore } from "@renderer/features/files";
+import { diffTabContentStore } from "@renderer/features/git";
 import { TerminalView } from "@renderer/features/terminal";
 import { BrowserView } from "@renderer/features/workbench";
 import { useCallback } from "react";
@@ -36,17 +38,23 @@ export function useTabContentRenderer({
   onOpenExternalApp,
 }: TabContentRendererProps): RenderTabContent {
   const { t } = useTranslation();
+  // File/diff content lives in the owning module stores (W6 task 16); the
+  // renderer subscribes here so content updates re-render the active tab.
+  const fileTabContents = fileTabContentStore((state) => state.byTabId);
+  const diffTabContents = diffTabContentStore((state) => state.byTabId);
 
   return useCallback(
     (tab: WorkbenchTab, isSelected: boolean, isInActivePane: boolean) => {
       const shouldFocusContent = isSelected && isInActivePane;
+      const fileContent = fileTabContents[tab.id];
+      const diffContent = diffTabContents[tab.id];
 
       if (tab.kind === "diff") {
-        if (tab.data.files && tab.data.files.length > 0) {
+        if (diffContent?.files && diffContent.files.length > 0) {
           return (
             <TabPanel key={tab.id} active={isSelected}>
               <MultiFileDiffViewer
-                files={tab.data.files}
+                files={diffContent.files}
                 onOpenFile={(filePath) => {
                   // Pre-load the file content so the tab never renders the
                   // placeholder body while the async read completes.
@@ -83,8 +91,8 @@ export function useTabContentRenderer({
           <TabPanel key={tab.id} active={isSelected}>
             <FileDiffViewer
               filePath={tab.data.path}
-              oldContent={tab.data.oldContent ?? ""}
-              newContent={tab.data.newContent ?? ""}
+              oldContent={diffContent?.oldContent ?? ""}
+              newContent={diffContent?.newContent ?? ""}
               onOpenFile={(filePath) => {
                 cmd.openTab({
                   workspaceId: tab.workspaceId,
@@ -99,19 +107,21 @@ export function useTabContentRenderer({
       }
 
       if (tab.kind === "file") {
-        if (tab.data.isUnsupported) {
+        if (fileContent?.isUnsupported) {
           return (
             <TabPanel key={tab.id} active={isSelected}>
               <UnsupportedFileView
                 path={tab.data.path}
                 title={t("files.unsupported.title")}
                 description={
-                  tab.data.unsupportedReason === "size"
+                  fileContent.unsupportedReason === "size"
                     ? t("files.unsupported.descriptionLarge")
                     : t("files.unsupported.description")
                 }
                 hint={
-                  tab.data.unsupportedReason === "size" ? t("files.unsupported.hintLarge") : t("files.unsupported.hint")
+                  fileContent.unsupportedReason === "size"
+                    ? t("files.unsupported.hintLarge")
+                    : t("files.unsupported.hint")
                 }
                 onCopyPath={copyToClipboard}
                 onOpenExternalApp={onOpenExternalApp}
@@ -126,10 +136,10 @@ export function useTabContentRenderer({
             <FileEditor
               workspaceId={tab.workspaceId}
               path={tab.data.path}
-              content={tab.data.content ?? ""}
+              content={fileContent?.content ?? ""}
               worktreePath={workspace?.worktreePath}
-              isDeleted={Boolean(tab.data.isDeleted)}
-              isIgnored={Boolean(tab.data.isIgnored)}
+              isDeleted={Boolean(fileContent?.isDeleted)}
+              isIgnored={Boolean(fileContent?.isIgnored)}
               focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0}
               onContentChange={(nextContent) => cmd.updateFileTabContent(tab.id, nextContent)}
               onSave={async (nextContent) => {
@@ -250,6 +260,6 @@ export function useTabContentRenderer({
 
       return null;
     },
-    [t, cmd, workspace, externalAppLabel, onOpenExternalApp, focusContentRequestKey],
+    [t, cmd, workspace, externalAppLabel, onOpenExternalApp, focusContentRequestKey, fileTabContents, diffTabContents],
   );
 }

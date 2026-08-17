@@ -1,16 +1,14 @@
+import type { Commands } from "../../../app/commands/composition";
 import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events/backendEventPipeline";
+import type { DiffTabSource } from "../../../features/workbench/model/types";
 import { isFileNotFoundError } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
-import type { DiffTabSource } from "../../../features/workbench/model/types";
-import type { Commands } from "../../../app/commands/composition";
 
 export type RefreshableOpenTab =
   | {
       id: string;
       kind: "file";
       path: string;
-      isDirty: boolean;
-      isUnsupported?: boolean;
     }
   | {
       id: string;
@@ -120,14 +118,8 @@ export function createOpenTabAutoRefreshRuntime() {
           }
 
           if (tab.kind === "file") {
-            if (tab.isUnsupported) {
-              return;
-            }
-
-            if (tab.isDirty) {
-              return;
-            }
-
+            // Dirty/unsupported gating happens inside refreshFileTabFromDisk
+            // (the Files store owns file tab content).
             try {
               const response = await commands.readFile({
                 workspaceId,
@@ -223,12 +215,16 @@ export function createOpenTabAutoRefreshRuntime() {
     void runRefresh(getContext, nextChangedRelativePaths, nextRefreshAllDiffTabs, nextRestrictToTabIds);
   }
 
-  async function eagerRefresh(getContext: () => OpenTabAutoRefreshContext, workspaceId: string, tabs: RefreshableOpenTab[]): Promise<void> {
+  async function eagerRefresh(
+    getContext: () => OpenTabAutoRefreshContext,
+    workspaceId: string,
+    tabs: RefreshableOpenTab[],
+  ): Promise<void> {
     const commands = getContext().commands;
 
     await Promise.all(
       tabs.map(async (tab) => {
-        if (tab.kind === "file" && !tab.isDirty && !tab.isUnsupported) {
+        if (tab.kind === "file") {
           try {
             const response = await commands.readFile({
               workspaceId,

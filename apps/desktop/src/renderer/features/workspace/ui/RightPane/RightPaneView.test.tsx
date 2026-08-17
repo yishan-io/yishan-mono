@@ -398,7 +398,7 @@ describe("RightPaneView delete flow", () => {
       clientX: 20,
       clientY: 20,
     });
-    fireEvent.mouseOver(await screen.findByRole("menuitem", { name: "Open in..." }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Open in..." }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Cursor" }));
 
     await waitFor(() => {

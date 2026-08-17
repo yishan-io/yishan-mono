@@ -1,14 +1,11 @@
 import { closeAllTabsState, closeAllTerminalTabsState, closeOtherTabsState, closeTabState } from "./close";
 import {
-  markFileTabSavedState,
   promoteTemporaryTabState,
-  refreshDiffTabContentState,
-  refreshFileTabFromDiskState,
   renameTabState,
   renameTabsForEntryRenameState,
   reorderTabState,
+  setFileTabDirtyState,
   toggleTabPinnedState,
-  updateFileTabContentState,
 } from "./layout";
 import { openTabState } from "./open";
 
@@ -17,16 +14,13 @@ export {
   closeAllTerminalTabsState,
   closeOtherTabsState,
   closeTabState,
-  markFileTabSavedState,
   openTabState,
   promoteTemporaryTabState,
-  refreshDiffTabContentState,
-  refreshFileTabFromDiskState,
   renameTabsForEntryRenameState,
   renameTabState,
   reorderTabState,
+  setFileTabDirtyState,
   toggleTabPinnedState,
-  updateFileTabContentState,
 };
 
 export type { TabStoreStateSlice } from "./types";

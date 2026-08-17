@@ -214,10 +214,15 @@ export function useFileTreeContextMenuItems({
     ],
   );
 
-  const anchorPosition =
-    contextMenu && typeof contextMenu.mouseX === "number" && typeof contextMenu.mouseY === "number"
-      ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-      : undefined;
+  // Memoize so the ContextMenu submenu-reset effect only fires on real position
+  // changes, not on unrelated parent re-renders.
+  const anchorPosition = useMemo(
+    () =>
+      contextMenu && typeof contextMenu.mouseX === "number" && typeof contextMenu.mouseY === "number"
+        ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+        : undefined,
+    [contextMenu?.mouseX, contextMenu?.mouseY],
+  );
 
   return {
     items,

@@ -66,10 +66,8 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       reorderTab: vi.fn(),
       renameTab: vi.fn(),
       renameTabsForEntryRename: vi.fn(),
-      updateFileTabContent: vi.fn(),
-      markFileTabSaved: vi.fn(),
+      setFileTabDirty: vi.fn(),
       refreshFileTabFromDisk: vi.fn(),
-      refreshDiffTabContent: vi.fn(),
     } as TabStoreState,
     activeWorkspaceId: "workspace-1",
     workspaceStoreState: {
@@ -151,10 +149,9 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       promoteTemporaryTab: vi.fn(),
       reorderTab: vi.fn(),
       renameTab: vi.fn(),
-      updateFileTabContent: vi.fn(),
-      markFileTabSaved: vi.fn(),
+      setFileTabDirty: vi.fn(),
       refreshFileTabFromDisk: vi.fn(),
-      refreshDiffTabContent: vi.fn(),
+
       setDisplayRepoIds: vi.fn(),
       setLeftPaneWidth: vi.fn(),
       setRightPaneWidth: vi.fn(),
@@ -442,8 +439,6 @@ describe("getShortcutDefinitions", () => {
             kind: "file",
             data: {
               path: "src/App.tsx",
-              content: "",
-              savedContent: "",
               isDirty: false,
               isTemporary: false,
             },
@@ -498,8 +493,6 @@ describe("getShortcutDefinitions", () => {
             kind: "file",
             data: {
               path: "src/App.tsx",
-              content: "",
-              savedContent: "",
               isDirty: false,
               isTemporary: false,
             },

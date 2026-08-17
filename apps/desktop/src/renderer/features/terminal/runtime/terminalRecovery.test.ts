@@ -139,8 +139,6 @@ describe("TerminalRecoveryCoordinator", () => {
           kind: "file",
           data: {
             path: "README.md",
-            content: "",
-            savedContent: "",
             isDirty: false,
             isTemporary: false,
           },

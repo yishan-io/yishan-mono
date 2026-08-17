@@ -197,128 +197,20 @@ export function renameTabsForEntryRenameState(
   return { tabs };
 }
 
-/** Updates editable content for one file tab and recomputes dirty state. */
-export function updateFileTabContentState(
+/** Syncs the dirty presentation flag on one file tab (content lives in Files state). */
+export function setFileTabDirtyState(
   state: TabStoreStateSlice,
   tabId: string,
-  content: string,
-): Partial<TabStoreStateSlice> {
-  return {
-    tabs: state.tabs.map((tab) => {
-      if (tab.id !== tabId || tab.kind !== "file") {
-        return tab;
-      }
-      const isDirty = content !== tab.data.savedContent;
-      return {
-        ...tab,
-        data: {
-          ...tab.data,
-          content,
-          isDirty,
-          // Editing a temporary (preview) tab promotes it to a normal tab.
-          // Re-emissions of the saved content (e.g. disk sync) keep it temporary.
-          isTemporary: isDirty ? false : tab.data.isTemporary,
-          isDeleted: false,
-        },
-      };
-    }),
-  };
-}
-
-/** Marks one file tab as saved by syncing savedContent and dirty state. */
-export function markFileTabSavedState(state: TabStoreStateSlice, tabId: string): Partial<TabStoreStateSlice> {
-  return {
-    tabs: state.tabs.map((tab) =>
-      tab.id === tabId && tab.kind === "file"
-        ? {
-            ...tab,
-            data: {
-              ...tab.data,
-              savedContent: tab.data.content,
-              isDirty: false,
-              isDeleted: false,
-            },
-          }
-        : tab,
-    ),
-  };
-}
-
-/** Syncs one open file tab with disk state after external changes. */
-export function refreshFileTabFromDiskState(
-  state: TabStoreStateSlice,
-  input: {
-    tabId: string;
-    content: string;
-    deleted: boolean;
-  },
+  isDirty: boolean,
 ): Partial<TabStoreStateSlice> | null {
-  const targetTab = state.tabs.find((tab) => tab.id === input.tabId);
-  if (!targetTab || targetTab.kind !== "file") {
-    return null;
-  }
-
-  if (targetTab.data.isDirty) {
-    return null;
-  }
-
-  const nextContent = input.deleted ? "" : input.content;
-  if (
-    targetTab.data.content === nextContent &&
-    targetTab.data.savedContent === nextContent &&
-    !!targetTab.data.isDeleted === input.deleted
-  ) {
+  const targetTab = state.tabs.find((tab) => tab.id === tabId);
+  if (!targetTab || targetTab.kind !== "file" || targetTab.data.isDirty === isDirty) {
     return null;
   }
 
   return {
     tabs: state.tabs.map((tab) =>
-      tab.id === input.tabId && tab.kind === "file"
-        ? {
-            ...tab,
-            data: {
-              ...tab.data,
-              content: nextContent,
-              savedContent: nextContent,
-              isDirty: false,
-              isDeleted: input.deleted,
-            },
-          }
-        : tab,
-    ),
-  };
-}
-
-/** Syncs one open diff tab content after external changes. */
-export function refreshDiffTabContentState(
-  state: TabStoreStateSlice,
-  input: {
-    tabId: string;
-    oldContent: string;
-    newContent: string;
-  },
-): Partial<TabStoreStateSlice> | null {
-  const targetTab = state.tabs.find((tab) => tab.id === input.tabId);
-  if (!targetTab || targetTab.kind !== "diff") {
-    return null;
-  }
-
-  if (targetTab.data.oldContent === input.oldContent && targetTab.data.newContent === input.newContent) {
-    return null;
-  }
-
-  return {
-    tabs: state.tabs.map((tab) =>
-      tab.id === input.tabId && tab.kind === "diff"
-        ? {
-            ...tab,
-            data: {
-              ...tab.data,
-              oldContent: input.oldContent,
-              newContent: input.newContent,
-            },
-          }
-        : tab,
+      tab.id === tabId && tab.kind === "file" ? { ...tab, data: { ...tab.data, isDirty } } : tab,
     ),
   };
 }

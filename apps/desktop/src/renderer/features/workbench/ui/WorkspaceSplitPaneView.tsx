@@ -162,8 +162,6 @@ export function WorkspaceSplitPane({
             id: tab.id,
             kind: "file",
             path: tab.data.path,
-            isDirty: tab.data.isDirty,
-            isUnsupported: Boolean(tab.data.isUnsupported),
           });
         } else if (tab.kind === "diff") {
           result.push({ id: tab.id, kind: "diff", path: tab.data.path, source: tab.data.source });

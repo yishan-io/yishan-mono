@@ -18,13 +18,11 @@ import {
   closeAllTabs,
   closeOtherTabs,
   closeTab,
-  markFileTabSaved,
   openTab,
   renameTab,
   reorderTab,
   setSelectedTab,
   toggleTabPinned,
-  updateFileTabContent,
 } from "./tabCommands";
 
 const rpcMocks = vi.hoisted(() => ({
@@ -153,17 +151,12 @@ describe("tabCommands", () => {
     const toggleTabPinnedState = vi.fn();
     const reorderTabState = vi.fn();
     const renameTabState = vi.fn();
-    const updateFileTabContentState = vi.fn();
-    const markFileTabSavedState = vi.fn();
-
     tabStore.setState({
       selectTab,
       openTab: openTabState,
       toggleTabPinned: toggleTabPinnedState,
       reorderTab: reorderTabState,
       renameTab: renameTabState,
-      updateFileTabContent: updateFileTabContentState,
-      markFileTabSaved: markFileTabSavedState,
     });
 
     setSelectedTab("tab-1");
@@ -171,8 +164,6 @@ describe("tabCommands", () => {
     toggleTabPinned("tab-1");
     reorderTab("tab-1", "tab-2", "after");
     renameTab("tab-1", "Renamed");
-    updateFileTabContent("tab-1", "next");
-    markFileTabSaved("tab-1");
 
     expect(selectTab).toHaveBeenCalledWith("tab-1");
     expect(openTabState).toHaveBeenCalledWith(
@@ -182,8 +173,6 @@ describe("tabCommands", () => {
     expect(toggleTabPinnedState).toHaveBeenCalledWith("tab-1");
     expect(reorderTabState).toHaveBeenCalledWith("tab-1", "tab-2", "after");
     expect(renameTabState).toHaveBeenCalledWith("tab-1", "Renamed", undefined);
-    expect(updateFileTabContentState).toHaveBeenCalledWith("tab-1", "next");
-    expect(markFileTabSavedState).toHaveBeenCalledWith("tab-1");
   });
 
   it("keeps the remaining pane's selected tab when closing a selected subagent tab in a split layout", () => {

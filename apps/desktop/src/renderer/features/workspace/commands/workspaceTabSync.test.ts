@@ -46,7 +46,7 @@ describe("workspaceTabSync", () => {
           title: "A",
           pinned: false,
           kind: "file",
-          data: { path: "a.ts", content: "", savedContent: "", isDirty: false, isTemporary: false },
+          data: { path: "a.ts", isDirty: false, isTemporary: false },
         },
       ],
       selectedTabId: "",

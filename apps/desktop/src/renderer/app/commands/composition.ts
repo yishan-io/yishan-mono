@@ -1,3 +1,4 @@
+import { tabStore } from "@renderer/features/workbench";
 import { renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand } from "../../features/agent/commands/agentChatCommands";
 import { listActivePiSessions as listActivePiSessionsCommand } from "../../features/agent/commands/agentChatSessionHistory";
 import {
@@ -34,9 +35,20 @@ import {
   writeFile as writeFileCommand,
 } from "../../features/files/commands/fileCommands";
 import {
+  markFileTabSaved as markFileTabSavedCommand,
+  refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
+  seedFileTabContent as seedFileTabContentCommand,
+  updateFileTabContent as updateFileTabContentCommand,
+} from "../../features/files/commands/fileTabContentCommands";
+import {
   createNewWhiteboard as createNewWhiteboardCommand,
   resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
 } from "../../features/files/commands/whiteboardCommands";
+import { createFileTabPlaceholder } from "../../features/files/model/fileTabPlaceholder";
+import {
+  refreshDiffTabContent as refreshDiffTabContentCommand,
+  seedDiffTabContent as seedDiffTabContentCommand,
+} from "../../features/git/commands/diffTabContentCommands";
 import {
   commitGitChanges as commitGitChangesCommand,
   getGitAuthorName as getGitAuthorNameCommand,
@@ -58,6 +70,7 @@ import {
   refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
   refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
 } from "../../features/git/commands/gitProjectionCommands";
+import { createDiffTabPlaceholder } from "../../features/git/model/diffTabPlaceholder";
 import { listOrgNodes as listOrgNodesCommand } from "../../features/node/commands/nodeCommands";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
@@ -119,12 +132,9 @@ import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
   closeTab as closeTabCommand,
-  markFileTabSaved as markFileTabSavedCommand,
   openTab as openTabCommand,
   openTabInOppositePane as openTabInOppositePaneCommand,
   promoteTemporaryTab as promoteTemporaryTabCommand,
-  refreshDiffTabContent as refreshDiffTabContentCommand,
-  refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
   renameTab as renameTabCommand,
   renameTabsForEntryRename as renameTabsForEntryRenameCommand,
   reorderTab as reorderTabCommand,
@@ -132,7 +142,6 @@ import {
   setBrowserTabUrl as setBrowserTabUrlCommand,
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
-  updateFileTabContent as updateFileTabContentCommand,
 } from "../../features/workbench/commands/tabCommands";
 import {
   activateWorkspacePane as activateWorkspacePaneCommand,
@@ -265,6 +274,7 @@ export type GitCommandSurface = {
   refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChangesCommand;
   refreshWorkspacePullRequest: typeof refreshWorkspacePullRequestCommand;
   listPullRequestHistory: typeof listPullRequestHistoryCommand;
+  refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
 /** Node feature command surface. */
@@ -317,6 +327,9 @@ export type FileCommandSurface = {
   readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
   createNewWhiteboard: typeof createNewWhiteboardCommand;
   resolveNextWhiteboardPath: typeof resolveNextWhiteboardPathCommand;
+  updateFileTabContent: typeof updateFileTabContentCommand;
+  markFileTabSaved: typeof markFileTabSavedCommand;
+  refreshFileTabFromDisk: typeof refreshFileTabFromDiskCommand;
 };
 
 /** Project feature command surface. */
@@ -348,10 +361,6 @@ export type WorkbenchCommandSurface = {
   setBrowserTabFaviconUrl: typeof setBrowserTabFaviconUrlCommand;
   setBrowserTabUrl: typeof setBrowserTabUrlCommand;
   renameTabsForEntryRename: typeof renameTabsForEntryRenameCommand;
-  updateFileTabContent: typeof updateFileTabContentCommand;
-  markFileTabSaved: typeof markFileTabSavedCommand;
-  refreshFileTabFromDisk: typeof refreshFileTabFromDiskCommand;
-  refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
 /** Terminal feature command surface. */
@@ -480,6 +489,7 @@ export function createGitCommands(): GitCommandSurface {
     refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
     refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
     listPullRequestHistory: listPullRequestHistoryCommand,
+    refreshDiffTabContent: refreshDiffTabContentCommand,
   };
 }
 
@@ -538,6 +548,9 @@ export function createFileCommands(): FileCommandSurface {
     readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
     createNewWhiteboard: createNewWhiteboardCommand,
     resolveNextWhiteboardPath: resolveNextWhiteboardPathCommand,
+    updateFileTabContent: updateFileTabContentCommand,
+    markFileTabSaved: markFileTabSavedCommand,
+    refreshFileTabFromDisk: refreshFileTabFromDiskCommand,
   };
 }
 
@@ -554,7 +567,34 @@ export function createProjectCommands(): ProjectCommandSurface {
 export function createWorkbenchCommands(): WorkbenchCommandSurface {
   return {
     selectTab: setSelectedTabCommand,
-    openTab: openTabCommand,
+    openTab: (input, options) => {
+      openTabCommand(input, options);
+      const openedTabId = tabStore.getState().selectedTabId;
+      if (input.kind === "file") {
+        seedFileTabContentCommand({
+          tabId: openedTabId,
+          path: input.path,
+          content: input.content ?? createFileTabPlaceholder(input.path),
+          isUnsupported: input.isUnsupported,
+          unsupportedReason: input.unsupportedReason,
+          isIgnored: input.isIgnored,
+        });
+      } else if (input.kind === "diff") {
+        const placeholder = createDiffTabPlaceholder({
+          path: input.path,
+          kind: input.changeKind,
+          additions: input.additions,
+          deletions: input.deletions,
+        });
+        seedDiffTabContentCommand({
+          tabId: openedTabId,
+          path: input.path,
+          oldContent: input.oldContent ?? placeholder.oldContent,
+          newContent: input.newContent ?? placeholder.newContent,
+          files: input.files,
+        });
+      }
+    },
     openTabInOppositePane: openTabInOppositePaneCommand,
     closeTab: closeTabCommand,
     closeOtherTabs: closeOtherTabsCommand,
@@ -572,10 +612,6 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
     setBrowserTabFaviconUrl: setBrowserTabFaviconUrlCommand,
     setBrowserTabUrl: setBrowserTabUrlCommand,
     renameTabsForEntryRename: renameTabsForEntryRenameCommand,
-    updateFileTabContent: updateFileTabContentCommand,
-    markFileTabSaved: markFileTabSavedCommand,
-    refreshFileTabFromDisk: refreshFileTabFromDiskCommand,
-    refreshDiffTabContent: refreshDiffTabContentCommand,
   };
 }
 

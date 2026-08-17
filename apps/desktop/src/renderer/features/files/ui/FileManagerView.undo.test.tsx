@@ -128,7 +128,10 @@ const mocks = vi.hoisted(() => {
     },
   };
 
-  const workspaceStore = vi.fn((selector: (state: typeof stateRef.current) => unknown) => selector(stateRef.current));
+  const workspaceStore = Object.assign(
+    vi.fn((selector: (state: typeof stateRef.current) => unknown) => selector(stateRef.current)),
+    { getState: () => stateRef.current },
+  );
 
   return {
     listFiles,

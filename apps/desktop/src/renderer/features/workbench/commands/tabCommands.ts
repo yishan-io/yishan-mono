@@ -239,24 +239,9 @@ export function renameTabsForEntryRename(workspaceId: string, fromPath: string, 
   readTabStoreState().renameTabsForEntryRename(workspaceId, fromPath, toPath);
 }
 
-/** Updates one file tab content and dirtiness state. */
-export function updateFileTabContent(tabId: string, content: string) {
-  readTabStoreState().updateFileTabContent(tabId, content);
-}
-
-/** Marks one file tab saved by syncing saved content snapshot. */
-export function markFileTabSaved(tabId: string) {
-  readTabStoreState().markFileTabSaved(tabId);
-}
-
-/** Refreshes one non-dirty file tab from disk state. */
-export function refreshFileTabFromDisk(input: { tabId: string; content: string; deleted: boolean }) {
-  readTabStoreState().refreshFileTabFromDisk(input);
-}
-
-/** Refreshes one diff tab content in place. */
-export function refreshDiffTabContent(input: { tabId: string; oldContent: string; newContent: string }) {
-  readTabStoreState().refreshDiffTabContent(input);
+/** Syncs the dirty presentation flag on one file tab (content lives in Files state). */
+export function setFileTabDirty(tabId: string, isDirty: boolean): void {
+  tabStore.getState().setFileTabDirty(tabId, isDirty);
 }
 
 /** Retains only tabs that belong to the provided workspace ids; returns the removed tab ids. */

@@ -92,6 +92,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
     closeMenu: closeContextMenu,
     isOpen: hasOpenContextMenu,
   } = useContextMenuState<FileTreeContextMenuRequest>();
+
   const selectedEntryPath = fileTreeStore((state) => state.selectedEntryPath);
   const selectedEntryIsDirectory = selectedEntryPath ? ops.repoFiles.some((p) => p === `${selectedEntryPath}/`) : false;
   const {

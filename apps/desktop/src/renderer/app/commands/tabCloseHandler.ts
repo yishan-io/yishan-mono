@@ -17,6 +17,8 @@ import { clearAgentChatComposerFocus } from "../../events/agentChatComposerFocus
 import { stopPiSession } from "../../features/agent/commands/agentChatCommands";
 import { clearTerminalAgentStatus } from "../../features/agent/commands/agentSessionLifecycle";
 import { removeTabData } from "../../features/agent/state/chatActions";
+import { removeFileTabContent } from "../../features/files/commands/fileTabContentCommands";
+import { removeDiffTabContent } from "../../features/git/commands/diffTabContentCommands";
 import type { CloseTabOptions } from "../../features/workbench/state/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../../features/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../helpers/errorHelpers";
@@ -57,6 +59,15 @@ function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
   }
 }
 
+/** Releases module-owned tab payloads (file/diff content) with the tab. */
+function removeTabContentStores(tabIds: string[]): void {
+  if (tabIds.length === 0) {
+    return;
+  }
+  removeFileTabContent(tabIds);
+  removeDiffTabContent(tabIds);
+}
+
 /** Releases product resources for one tab, then removes it via Workbench. */
 export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): void {
   const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
@@ -74,6 +85,7 @@ export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): v
     closeTerminalSessionsForTabs([tab]);
   }
   removeTabData([tabId]);
+  removeTabContentStores([tabId]);
   closeTab(tabId, options);
 }
 
@@ -98,6 +110,7 @@ export function closeOtherTabsWithCleanup(tabId: string): void {
   stopAgentChatSessionsForTabs(removedAgentChatTabs);
   if (removedTabIds.length > 0) {
     removeTabData(removedTabIds);
+    removeTabContentStores(removedTabIds);
   }
   closeOtherTabs(tabId);
 }
@@ -123,6 +136,7 @@ export function closeAllTabsWithCleanup(tabId: string): void {
   stopAgentChatSessionsForTabs(removedAgentChatTabs);
   if (removedTabIds.length > 0) {
     removeTabData(removedTabIds);
+    removeTabContentStores(removedTabIds);
   }
   closeAllTabs(tabId);
 }

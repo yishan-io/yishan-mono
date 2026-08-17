@@ -1,10 +1,4 @@
-import type {
-  DiffFileChangeKind,
-  OpenTabInput,
-  WorkbenchTab,
-  WorkbenchTabDataByKind,
-} from "../../../../features/workbench/model/types";
-import { isExcalidrawFile } from "../../../../helpers/editorLanguage";
+import type { OpenTabInput, WorkbenchTab, WorkbenchTabDataByKind } from "../../../../features/workbench/model/types";
 import { findExistingTab } from "./shared";
 import type { TabStoreStateSlice } from "./types";
 
@@ -15,149 +9,23 @@ function getFileName(path: string): string {
   return normalized.split("/").pop() ?? path;
 }
 
-function clampLineCount(value: number): number {
-  return Math.max(1, Math.min(value, 12));
-}
-
-function createDiffContent(input: {
-  path: string;
-  kind: DiffFileChangeKind;
-  additions: number;
-  deletions: number;
-}): { oldContent: string; newContent: string } {
-  const fileName = getFileName(input.path);
-  const normalizedAdditions = clampLineCount(input.additions);
-  const normalizedDeletions = clampLineCount(input.deletions);
-
-  if (input.kind === "added") {
-    const addedLines = Array.from(
-      { length: normalizedAdditions },
-      (_, index) => `const addedLine${index + 1} = "${fileName} line ${index + 1}";`,
-    );
-    return {
-      oldContent: "",
-      newContent: [`// ${input.path}`, ...addedLines].join("\n"),
-    };
-  }
-
-  if (input.kind === "deleted") {
-    const deletedLines = Array.from(
-      { length: normalizedDeletions },
-      (_, index) => `const removedLine${index + 1} = "${fileName} line ${index + 1}";`,
-    );
-    return {
-      oldContent: [`// ${input.path}`, ...deletedLines].join("\n"),
-      newContent: "",
-    };
-  }
-
-  const removedLines = Array.from(
-    { length: normalizedDeletions },
-    (_, index) => `const beforeLine${index + 1} = "${fileName} old ${index + 1}";`,
-  );
-  const addedLines = Array.from(
-    { length: normalizedAdditions },
-    (_, index) => `const afterLine${index + 1} = "${fileName} new ${index + 1}";`,
-  );
-
-  return {
-    oldContent: [`// ${input.path}`, ...removedLines].join("\n"),
-    newContent: [`// ${input.path}`, ...addedLines].join("\n"),
-  };
-}
-
-/**
- * Produces minimal placeholder content for a file tab opened without pre-loaded content.
- *
- * This fallback is intentional: `MarkdownPreview` opens file tabs via link clicks without
- * providing content upfront. The actual file content is loaded asynchronously by
- * `useOpenTabAutoRefresh` and replaces this placeholder via `refreshFileTabFromDisk`.
- */
-function createFileContent(path: string): string {
-  if (isExcalidrawFile(path)) return "";
-  const fileName = getFileName(path);
-  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
-
-  if (extension === "ts" || extension === "tsx") {
-    return [
-      `// ${path}`,
-      "export function example() {",
-      `  return "Open file: ${fileName}";`,
-      "}",
-      "",
-      "console.log(example());",
-    ].join("\n");
-  }
-
-  if (extension === "json") {
-    return ["{", `  "path": "${path}",`, '  "status": "mock-content"', "}"].join("\n");
-  }
-
-  if (extension === "md") {
-    return [
-      `# ${fileName}`,
-      "",
-      `Opened from ${path}`,
-      "",
-      "This is mock file content rendered in Monaco Editor.",
-    ].join("\n");
-  }
-
-  return [`Opened: ${path}`, "", "This tab is backed by a file tab in the workspace store."].join("\n");
-}
-
 /** Builds one tab data payload from a tab-open input. */
 export function buildTabDataByInput<T extends OpenTabInput>(input: T): WorkbenchTabDataByKind[T["kind"]] {
   if (input.kind === "diff") {
-    if (input.files && input.files.length > 0) {
-      return {
-        path: input.path,
-        oldContent: input.oldContent ?? "",
-        newContent: input.newContent ?? "",
-        source: input.diffSource,
-        isTemporary: Boolean(input.temporary),
-        files: input.files,
-      } as WorkbenchTabDataByKind[T["kind"]];
-    }
-
-    if (typeof input.oldContent === "string" && typeof input.newContent === "string") {
-      return {
-        path: input.path,
-        oldContent: input.oldContent,
-        newContent: input.newContent,
-        source: input.diffSource,
-        isTemporary: Boolean(input.temporary),
-      } as WorkbenchTabDataByKind[T["kind"]];
-    }
-
-    const { oldContent, newContent } = createDiffContent({
-      path: input.path,
-      kind: input.changeKind,
-      additions: input.additions,
-      deletions: input.deletions,
-    });
+    // Diff content lives in the Git module (desktop6-adjust.md W6 task 16).
     return {
       path: input.path,
-      oldContent,
-      newContent,
       source: input.diffSource,
       isTemporary: Boolean(input.temporary),
     } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   if (input.kind === "file") {
-    // fire-and-forget: content loaded asynchronously by useOpenTabAutoRefresh
-    const fileContent = input.content ?? createFileContent(input.path);
+    // File content lives in the Files module (desktop6-adjust.md W6 task 16).
     return {
       path: input.path,
-      content: fileContent,
-      savedContent: fileContent,
-      isDirty: false,
       isTemporary: Boolean(input.temporary),
-      ...(input.isUnsupported ? { isUnsupported: true } : {}),
-      ...(input.unsupportedReason ? { unsupportedReason: input.unsupportedReason } : {}),
-      isDeleted: false,
-      isIgnored: input.isIgnored ?? false,
+      isDirty: false,
     } as WorkbenchTabDataByKind[T["kind"]];
   }
 
@@ -369,71 +237,14 @@ export function openTabState(
   const existingTab = findExistingTab(state.tabs, input, targetWorkspaceId);
   if (existingTab) {
     if (input.kind === "diff" && existingTab.kind === "diff") {
-      const nextOldContent = input.oldContent;
-      const nextNewContent = input.newContent;
-
-      if (typeof nextOldContent !== "string" || typeof nextNewContent !== "string") {
-        return {
-          selectedTabId: existingTab.id,
-          selectedTabIdByWorkspaceId: {
-            ...state.selectedTabIdByWorkspaceId,
-            [targetWorkspaceId]: existingTab.id,
-          },
-        };
-      }
-
-      return {
-        tabs: state.tabs.map((tab) =>
-          tab.id === existingTab.id && tab.kind === "diff"
-            ? {
-                ...tab,
-                data: {
-                  ...tab.data,
-                  oldContent: nextOldContent,
-                  newContent: nextNewContent,
-                  source: input.diffSource,
-                },
-              }
-            : tab,
-        ),
-        selectedTabId: existingTab.id,
-        selectedTabIdByWorkspaceId: {
-          ...state.selectedTabIdByWorkspaceId,
-          [targetWorkspaceId]: existingTab.id,
-        },
-      };
+      return selectWorkbenchTab(state, targetWorkspaceId, existingTab.id);
     }
 
     if (input.kind === "file" && existingTab.kind === "file") {
-      const nextContent = input.content;
       // Never demote a permanent tab back to temporary on re-open.
       const isOpeningTemporary = Boolean(input.temporary) && existingTab.data.isTemporary;
-      const isUnsupported = Boolean(input.isUnsupported);
-      const unsupportedReason = input.unsupportedReason;
-      if (typeof nextContent !== "string") {
-        if (
-          existingTab.data.isTemporary === isOpeningTemporary &&
-          Boolean(existingTab.data.isUnsupported) === isUnsupported
-        ) {
-          return selectWorkbenchTab(state, targetWorkspaceId, existingTab.id);
-        }
-
-        return {
-          tabs: state.tabs.map((tab) =>
-            tab.id === existingTab.id && tab.kind === "file"
-              ? {
-                  ...tab,
-                  data: {
-                    ...tab.data,
-                    isTemporary: isOpeningTemporary,
-                    ...(isUnsupported ? { isUnsupported: true } : {}),
-                    ...(unsupportedReason ? { unsupportedReason } : {}),
-                  },
-                }
-              : tab,
-          ),
-          ...selectWorkbenchTab(state, targetWorkspaceId, existingTab.id),
-        };
+      if (existingTab.data.isTemporary === isOpeningTemporary) {
+        return selectWorkbenchTab(state, targetWorkspaceId, existingTab.id);
       }
 
       return {
@@ -443,13 +254,7 @@ export function openTabState(
                 ...tab,
                 data: {
                   ...tab.data,
-                  content: nextContent,
-                  savedContent: nextContent,
-                  isDirty: false,
-                  isDeleted: false,
                   isTemporary: isOpeningTemporary,
-                  ...(isUnsupported ? { isUnsupported: true } : {}),
-                  ...(unsupportedReason ? { unsupportedReason } : {}),
                 },
               }
             : tab,
