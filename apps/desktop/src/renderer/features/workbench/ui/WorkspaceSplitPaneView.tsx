@@ -25,7 +25,7 @@ import {
 } from "../../../features/workbench/ui/hooks/useOpenTabAutoRefresh";
 import { useLayout } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
 import { useSelectedTabId } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { useWorkspaces } from "@renderer/features/workspace";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
 import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
@@ -58,7 +58,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
     [workbenchCommands, fileCommands, gitCommands],
   );
-  const workspaces = workspaceStore((state) => state.workspaces);
+  const workspaces = useWorkspaces();
   const selectedTabId = useSelectedTabId();
   const workspace = workspaces.find((ws) => ws.id === workspaceId);
   const lastUsedExternalAppId = useLastUsedExternalAppId();

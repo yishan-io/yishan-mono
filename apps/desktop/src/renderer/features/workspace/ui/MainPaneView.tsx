@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTerminalCommands } from "../../../app/commands/useCommands";
@@ -15,14 +16,13 @@ import { workspaceStore } from "../../../features/workspace/state/workspaceStore
 import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
 import { DARK_SURFACE_COLORS } from "../../../theme";
+import { WorkspaceSplitPane } from "../../workbench/ui/WorkspaceSplitPaneView";
 import { FileSearchOverlay } from "./FileSearchOverlay";
 import { LaunchView } from "./LaunchView";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { RightPaneTabBar } from "./RightPane/RightPaneTabBar";
 import { RightPaneView } from "./RightPane/RightPaneView";
 import { WorkspaceErrorStateView } from "./WorkspaceErrorStateView";
-import { WorkspaceSplitPane } from "./WorkspaceSplitPaneView";
-import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
 
 const RIGHT_MIN_WIDTH = 280;
 

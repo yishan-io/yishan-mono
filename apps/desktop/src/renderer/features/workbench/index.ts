@@ -14,3 +14,6 @@ export type {
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { BrowserView } from "./ui/browser/BrowserView";
 export { reloadWebview, removeWebviewsForClosedTabs } from "./ui/browser/webviewRegistry";
+export { WorkspaceSplitPane } from "./ui/WorkspaceSplitPaneView";
+export { WorkspaceTabSurfaceLayer } from "./ui/WorkspaceTabSurfaceLayer";
+export { type WorkspaceTabPlacement, useWorkspaceTabPlacements } from "./ui/useWorkspaceTabPlacements";

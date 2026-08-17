@@ -2,7 +2,10 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { requestAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../../events/agentChatComposerFocus";
+import {
+  requestAgentChatComposerFocus,
+  requestNewAgentChatComposerFocus,
+} from "../../../../events/agentChatComposerFocus";
 import { agentChatStore } from "../../model/agentChatStore";
 import type { AgentMessage, AgentModel } from "../../model/agentChatTypes";
 import { AgentChatView } from "./AgentChatView";
@@ -287,6 +290,7 @@ vi.mock("../../../settings/ui/ProviderCredentialDialog", () => ({
 vi.mock("../../../../rpc/rpcTransport", () => ({
   getDaemonClient: mocked.getDaemonClient,
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
 // Keep the provider-visibility poll (useAgentChatProviderAdd) fast in tests.
