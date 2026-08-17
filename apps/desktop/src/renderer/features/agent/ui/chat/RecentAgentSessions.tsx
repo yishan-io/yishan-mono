@@ -2,11 +2,11 @@ import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
-import { fetchSessionHistory } from "../../commands/agentChatSessionHistory";
+import { useWorkbenchCommands } from "../../../../app/commands/useCommands";
 import { formatAgentSessionTitle } from "../../../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { useWorkbenchCommands } from "../../../../app/commands/useCommands";
 import type * as Rpc from "../../../../rpc/daemonTypes";
+import { fetchSessionHistory } from "../../commands/agentChatSessionHistory";
 
 const RECENT_SESSION_LIMIT = 5;
 

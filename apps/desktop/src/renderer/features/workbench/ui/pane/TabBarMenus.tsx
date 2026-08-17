@@ -1,9 +1,8 @@
 import { Box, Divider, Menu, MenuItem, Typography } from "@mui/material";
 import { type ReactNode, useEffect, useState } from "react";
 import { LuColumns2, LuRows2 } from "react-icons/lu";
-import { fetchAgentSessionFilePath } from "../features/agent/commands/agentChatSessionHistory";
-import { copyToClipboard } from "../helpers/clipboard";
-import { getErrorMessage } from "../helpers/errorHelpers";
+import { copyToClipboard } from "../../../../helpers/clipboard";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { TabBarCreateOption } from "./TabBar";
 
 type CreateMenuOption = {
@@ -181,6 +180,8 @@ type TabContextMenuProps = {
   sessionId?: string;
   /** Working directory of the agent session; used to resolve the transcript file path. */
   cwd?: string;
+  /** Resolves one agent transcript file path (supplied by the caller; agent-owned). */
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
 };
 
 export function TabContextMenu({
@@ -203,19 +204,20 @@ export function TabContextMenu({
   onCloseAllTabs,
   sessionId,
   cwd,
+  fetchAgentSessionFilePath: fetchAgentSessionFilePathFromProps,
 }: TabContextMenuProps) {
   const open = Boolean(contextMenu);
   // null while resolving; "" when no transcript exists yet; the path once known.
   const [sessionFilePath, setSessionFilePath] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !sessionId || !cwd) {
+    if (!open || !sessionId || !cwd || !fetchAgentSessionFilePathFromProps) {
       setSessionFilePath(null);
       return;
     }
     let cancelled = false;
     setSessionFilePath(null);
-    fetchAgentSessionFilePath(sessionId, cwd)
+    fetchAgentSessionFilePathFromProps(sessionId, cwd)
       .then((filePath) => {
         if (!cancelled) {
           setSessionFilePath(filePath);
@@ -230,7 +232,7 @@ export function TabContextMenu({
     return () => {
       cancelled = true;
     };
-  }, [open, sessionId, cwd]);
+  }, [open, sessionId, cwd, fetchAgentSessionFilePathFromProps]);
 
   return (
     <Menu
@@ -296,7 +298,7 @@ export function TabContextMenu({
       >
         {closeAllActionLabel}
       </MenuItem>
-      {sessionId && (
+      {sessionId && fetchAgentSessionFilePathFromProps && (
         <>
           <Divider sx={{ my: 0.5 }} />
           <MenuItem

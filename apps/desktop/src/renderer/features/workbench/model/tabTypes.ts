@@ -6,7 +6,7 @@
  * presentation types; resource identifiers live in tab descriptors but the
  * tabs do not own another module's mutable state.
  */
-import type { DesktopAgentKind } from "../../../helpers/agentSettings";
+import type { DesktopAgentKind } from "@renderer/features/agent";
 
 export type DiffFileChangeKind = "added" | "modified" | "deleted" | "renamed";
 

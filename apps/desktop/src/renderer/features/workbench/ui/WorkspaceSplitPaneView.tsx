@@ -3,9 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
-import { AgentIcon } from "../../../components/AgentIcon";
-import { SplitPaneContainer } from "../../../components/SplitPaneContainer";
-import { SplitPaneGroup } from "../../../components/SplitPaneGroup";
 import { SessionHistoryMenu } from "../../../components/agent/session/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../../components/fileTreeIcons";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
@@ -15,12 +12,13 @@ import {
   type RefreshableOpenTab,
   useOpenTabAutoRefresh,
 } from "../../../features/workbench/ui/hooks/useOpenTabAutoRefresh";
-import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { splitPaneStore } from "../state/splitPaneStore";
 import { tabStore } from "../state/tabStore";
 import { selectLayoutByWorkspaceId } from "../state/workbenchSelectors";
 import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
-import { usePaneTabHandlers } from "./usePaneTabHandlers";
+import { SplitPaneContainer } from "./pane/SplitPaneContainer";
+import { SplitPaneGroup } from "./pane/SplitPaneGroup";
+import { type AgentPresetMeta, usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
 import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";
 
@@ -33,7 +31,13 @@ export type WorkspaceSplitPaneProps = {
   /** Worktree path for the workspace backing this pane (App-composed data). */
   worktreePath: string | undefined;
   /** Agent kinds currently in use, resolved by the App composition layer. */
-  enabledAgentKinds: DesktopAgentKind[];
+  enabledAgentKinds: string[];
+  /** Agent terminal preset metadata for the tab create menu (App-composed; agent-owned). */
+  agentPresetMeta: Record<string, AgentPresetMeta>;
+  /** Resolves one agent transcript file path for the tab context menu (App-supplied). */
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
+  /** Renders one agent icon (App-supplied; agent-owned). */
+  renderAgentIcon?: (agentKind: string, label?: string) => React.ReactNode;
   /** Last used external app id for "open in app" actions. */
   lastUsedExternalAppId: ExternalAppId | undefined;
   /** Opens an existing agent-chat tab for a session, or null when absent. */
@@ -70,6 +74,9 @@ export function WorkspaceSplitPane({
   workspaceTabs,
   worktreePath,
   enabledAgentKinds,
+  agentPresetMeta,
+  fetchAgentSessionFilePath,
+  renderAgentIcon,
   lastUsedExternalAppId,
   findTabWithSession,
   formatAgentSessionTitle,
@@ -88,6 +95,19 @@ export function WorkspaceSplitPane({
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = { worktreePath };
   const enabledAgentKindSet = useMemo(() => new Set(enabledAgentKinds), [enabledAgentKinds]);
+  const agentCreateOptions = useMemo(
+    () =>
+      enabledAgentKinds.map((agentKind) => ({
+        option: agentKind,
+        label: agentPresetMeta[agentKind]?.labelKey ?? agentKind,
+        icon: renderAgentIcon ? (
+          renderAgentIcon(agentKind, agentPresetMeta[agentKind]?.labelKey ?? agentKind)
+        ) : (
+          <Box component="span" sx={{ width: 14, height: 14 }} />
+        ),
+      })),
+    [enabledAgentKinds, agentPresetMeta, renderAgentIcon],
+  );
 
   const [focusContentRequestKey, setFocusContentRequestKey] = useState(0);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
@@ -196,7 +216,8 @@ export function WorkspaceSplitPane({
     workspaceId,
     workspaceTabs,
     workspace,
-    enabledAgentKindSet: enabledAgentKindSet as Set<DesktopAgentKind>,
+    enabledAgentKindSet: enabledAgentKindSet,
+    agentPresetMeta: agentPresetMeta,
     cmd,
     setFocusContentRequestKey,
     setIsDraggingSplit,
@@ -209,7 +230,7 @@ export function WorkspaceSplitPane({
       const fullTab = tabById.get(tab.id);
       if (fullTab?.kind === "terminal") {
         if (fullTab.data.agentKind) {
-          return <AgentIcon agentKind={fullTab.data.agentKind} context="tabMenu" decorative />;
+          return renderAgentIcon ? renderAgentIcon(fullTab.data.agentKind) : <LuSquareTerminal size={14} />;
         }
         return <LuSquareTerminal size={14} />;
       }
@@ -233,7 +254,7 @@ export function WorkspaceSplitPane({
       }
       return null;
     },
-    [tabById],
+    [tabById, renderAgentIcon],
   );
 
   // ─── Tab content renderer ───────────────────────────────────────────────────
@@ -278,6 +299,8 @@ export function WorkspaceSplitPane({
           onHistoryClick={(event) => setHistoryMenuAnchor(event.currentTarget)}
           getTabIcon={getTabIcon}
           enabledAgentKinds={enabledAgentKinds}
+          agentCreateOptions={agentCreateOptions}
+          fetchAgentSessionFilePath={fetchAgentSessionFilePath}
           disabled={!workspaceId}
           onContentPlaceholderChange={handleContentPlaceholderChange}
           renderContent={renderPaneContent}
@@ -302,6 +325,8 @@ export function WorkspaceSplitPane({
       handleTabDragEnd,
       getTabIcon,
       enabledAgentKinds,
+      agentCreateOptions,
+      fetchAgentSessionFilePath,
       workspaceId,
       handleContentPlaceholderChange,
       renderPaneContent,

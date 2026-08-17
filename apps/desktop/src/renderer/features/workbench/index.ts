@@ -60,6 +60,25 @@ export { WorkspaceSplitPane } from "./ui/WorkspaceSplitPaneView";
 export { WorkspaceTabSurfaceLayer } from "./ui/WorkspaceTabSurfaceLayer";
 export { RightPaneTabBar, type RightPaneTabDef } from "./ui/RightPaneTabBar";
 export {
+  ColumnSeparator,
+  PaneHeader,
+  PaneLoadingBar,
+  PaneToggleButton,
+  SplitDropZone,
+  SplitPaneContainer,
+  SplitPaneGroup,
+  SplitPaneLayout,
+  TabPanel,
+} from "./ui/pane";
+export {
+  TabBar,
+  type AgentCreateOptionDef,
+  type TabBarCreateOption,
+} from "./ui/pane/TabBar";
+export { TabBarItem } from "./ui/pane/TabBarItem";
+export { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./ui/pane/TabBarMenus";
+export { TabRenameDialog } from "./ui/pane/TabRenameDialog";
+export {
   WorkspacePaneVisibilityProvider,
   type WorkspacePaneVisibilityValue,
   useWorkspacePaneVisibility,

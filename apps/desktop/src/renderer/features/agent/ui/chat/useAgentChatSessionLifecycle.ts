@@ -1,11 +1,8 @@
 import { useEffect, useRef } from "react";
-import {
-  recoverAgentSessionAfterReconnect,
-  startAgentChatSession,
-} from "../../commands/agentChatCommands";
-import { selectAgentChatSession } from "../../state/agentChatSelectors";
-import type { AgentChatSessionView } from "../../../workbench/model/types";
 import { subscribeDaemonConnectionStatus } from "../../../session/commands/sessionCommands";
+import type { AgentChatSessionView } from "../../../workbench/model/types";
+import { recoverAgentSessionAfterReconnect, startAgentChatSession } from "../../commands/agentChatCommands";
+import { selectAgentChatSession } from "../../state/agentChatSelectors";
 
 type UseAgentChatSessionLifecycleOptions = {
   tabId: string;

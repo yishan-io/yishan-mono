@@ -3,9 +3,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchAgentSessionFilePath } from "../features/agent/commands/agentChatSessionHistory";
-import { copyToClipboard } from "../helpers/clipboard";
+import { copyToClipboard } from "../../../../helpers/clipboard";
 import { TabBar } from "./TabBar";
+
+const fetchAgentSessionFilePathMock = vi.fn(async () => "");
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -40,19 +41,15 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../helpers/platform", () => ({
+vi.mock("../../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../helpers/clipboard", () => ({
+vi.mock("../../../../helpers/clipboard", () => ({
   copyToClipboard: vi.fn(),
 }));
 
-vi.mock("../features/agent/commands/agentChatSessionHistory", () => ({
-  fetchAgentSessionFilePath: vi.fn(() => Promise.resolve("")),
-}));
-
-vi.mock("../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: (shortcutId: string) => {
     if (shortcutId === "new-tab") {
       return "⌘+Y";
@@ -148,6 +145,16 @@ function renderTabBar(overrides: Partial<ComponentProps<typeof TabBar>> = {}) {
     onCloseTab: vi.fn(),
     onCreateTab: vi.fn(),
     onPromoteTemporaryTab: vi.fn(),
+    fetchAgentSessionFilePath: fetchAgentSessionFilePathMock,
+    agentCreateOptions: [
+      { option: "opencode", label: "Create: OpenCode", icon: <span /> },
+      { option: "codex", label: "Create: Codex", icon: <span /> },
+      { option: "claude", label: "Create: Claude", icon: <span /> },
+      { option: "gemini", label: "Create: Gemini", icon: <span /> },
+      { option: "pi", label: "Create: Pi", icon: <span /> },
+      { option: "copilot", label: "Create: Copilot", icon: <span /> },
+      { option: "cursor", label: "Create: Cursor", icon: <span /> },
+    ],
   };
 
   const props = { ...baseProps, ...overrides };
@@ -308,23 +315,19 @@ describe("TabBar interactions", () => {
     expect(screen.queryByRole("menuitem", { name: /Create: Codex/ })).toBeNull();
   });
 
-  it("keeps preset create-menu app icons at or below the standard 16px slot size", async () => {
-    renderTabBar();
+  it("renders the caller-supplied agent create-menu icons", async () => {
+    renderTabBar({
+      agentCreateOptions: [
+        { option: "codex", label: "Codex", icon: <img src="codex.svg" width={16} height={16} alt="Codex" /> },
+        { option: "claude", label: "Claude", icon: <img src="claude.svg" width={16} height={16} alt="Claude" /> },
+      ],
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "New tab" }));
     await screen.findByRole("menuitem", { name: /Create: Terminal/ });
 
-    const codexIcon = screen.getByRole("img", { name: "Codex" });
-    const claudeIcon = screen.getByRole("img", { name: "Claude" });
-    const openCodeIcon = screen.getByRole("img", { name: "OpenCode" });
-
-    for (const icon of [codexIcon, claudeIcon, openCodeIcon]) {
-      const iconWidth = Number(icon.getAttribute("width"));
-      const iconHeight = Number(icon.getAttribute("height"));
-
-      expect(iconWidth).toBeLessThanOrEqual(16);
-      expect(iconHeight).toBeLessThanOrEqual(16);
-    }
+    expect(screen.getByRole("img", { name: "Codex" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Claude" })).toBeTruthy();
   });
 
   it("closes tab from close icon", () => {
@@ -423,7 +426,7 @@ describe("TabBar interactions", () => {
 
 describe("TabBar session info context menu", () => {
   beforeEach(() => {
-    vi.mocked(fetchAgentSessionFilePath).mockReset();
+    fetchAgentSessionFilePathMock.mockReset();
     vi.mocked(copyToClipboard).mockReset();
   });
 
@@ -481,7 +484,7 @@ describe("TabBar session info context menu", () => {
   });
 
   it("copies the resolved session file path when available", async () => {
-    vi.mocked(fetchAgentSessionFilePath).mockResolvedValue("/fake/sessions/chat_session-abc.jsonl");
+    fetchAgentSessionFilePathMock.mockResolvedValue("/fake/sessions/chat_session-abc.jsonl");
     renderTabBar({
       tabs: [
         {
@@ -503,12 +506,12 @@ describe("TabBar session info context menu", () => {
     });
     fireEvent.click(pathItem);
 
-    expect(fetchAgentSessionFilePath).toHaveBeenCalledWith("session-abc", "/fake/cwd");
+    expect(fetchAgentSessionFilePathMock).toHaveBeenCalledWith("session-abc", "/fake/cwd");
     expect(copyToClipboard).toHaveBeenCalledWith("/fake/sessions/chat_session-abc.jsonl");
   });
 
   it("keeps Copy Session File Path disabled when no transcript exists yet", async () => {
-    vi.mocked(fetchAgentSessionFilePath).mockResolvedValue("");
+    fetchAgentSessionFilePathMock.mockResolvedValue("");
     renderTabBar({
       tabs: [
         {
@@ -527,7 +530,7 @@ describe("TabBar session info context menu", () => {
     const pathItem = await screen.findByRole("menuitem", { name: /Copy Session File Path/ });
 
     await waitFor(() => {
-      expect(fetchAgentSessionFilePath).toHaveBeenCalled();
+      expect(fetchAgentSessionFilePathMock).toHaveBeenCalled();
     });
     expect(pathItem.getAttribute("aria-disabled")).toBe("true");
   });

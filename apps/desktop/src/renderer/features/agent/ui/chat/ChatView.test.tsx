@@ -150,7 +150,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     ensureChatSession: mocked.ensureChatSession,
     runChatPrompt: mocked.runChatPrompt,
     getChatMessages: (tabId: string) => mockedStore.stateRef.current.getMessages(tabId),
@@ -271,7 +270,6 @@ vi.mock("../../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../../events", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

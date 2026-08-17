@@ -3,10 +3,10 @@ import { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { THINKING_LEVEL_LABELS } from "../../../../components/agent/session/ThinkingLevelControl";
 import { AgentMessageList } from "../../../../components/agent/transcript/AgentMessageList";
+import { formatSupportedThinkingLevels } from "../../../../helpers/agentThinkingLevels";
 import { openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import type { AgentMessage, AgentModel, AgentQueueState } from "../../model/agentChatTypes";
 import { useAgentChatSession, useAgentChatSessions } from "../../ui/hooks/useAgentChatReadHooks";
-import { formatSupportedThinkingLevels } from "../../../../helpers/agentThinkingLevels";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const EMPTY_QUEUE: AgentQueueState = { steering: [], followUp: [] };

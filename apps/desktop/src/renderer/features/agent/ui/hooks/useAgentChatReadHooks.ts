@@ -1,6 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
-import { getCompactContextPercent } from "../../model/agentChatUsageSummary";
 import { agentChatStore } from "../../model/agentChatStore";
+import { getCompactContextPercent } from "../../model/agentChatUsageSummary";
 import { chatStore } from "../../state/chatStore";
 
 /**

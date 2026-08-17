@@ -1,7 +1,7 @@
+import type { DesktopAgentKind } from "@renderer/features/agent";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { OpenTabInput, WorkbenchTab } from "../../../features/workbench/model/types";
-import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
 import { resolveSelectedTabIdForWorkspace } from "../model/tabs";
 import {

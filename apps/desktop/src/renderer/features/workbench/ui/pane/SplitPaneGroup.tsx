@@ -2,7 +2,7 @@ import { Box, darken } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
-import type { PaneLeaf } from "../features/workbench/model/split-pane";
+import type { PaneLeaf } from "../../model/split-pane";
 import { type SplitDropRegion, SplitDropZone } from "./SplitDropZone";
 import { TabBar, type TabBarCreateOption } from "./TabBar";
 
@@ -46,7 +46,9 @@ export type SplitPaneGroupProps = {
   getTabIcon?: (tab: TabDescriptor) => ReactNode;
   /** Called when the user clicks the history button in the tab bar. */
   onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
-  enabledAgentKinds?: Array<import("../helpers/agentSettings").DesktopAgentKind>;
+  enabledAgentKinds?: string[];
+  agentCreateOptions?: Array<import("./TabBar").AgentCreateOptionDef>;
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
   disabled?: boolean;
   onContentPlaceholderChange?: (paneId: string, placeholder: HTMLDivElement | null) => void;
   /** Renders tab content for the selected tab. */
@@ -102,6 +104,8 @@ export function SplitPaneGroup({
   getTabIcon,
   onHistoryClick,
   enabledAgentKinds,
+  agentCreateOptions,
+  fetchAgentSessionFilePath,
   disabled,
   onContentPlaceholderChange,
   renderContent,
@@ -181,6 +185,8 @@ export function SplitPaneGroup({
           onPromoteTemporaryTab={onPromoteTemporaryTab}
           getTabIcon={getTabIcon}
           enabledAgentKinds={enabledAgentKinds}
+          agentCreateOptions={agentCreateOptions}
+          fetchAgentSessionFilePath={fetchAgentSessionFilePath}
           disabled={disabled}
           focused={isActive}
           onRenameTab={onRenameTab}

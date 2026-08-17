@@ -1,8 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  fetchAgentModels,
-  restartAgentSessionForProvider,
-} from "../../commands/agentChatCommands";
+import { fetchAgentModels, restartAgentSessionForProvider } from "../../commands/agentChatCommands";
 import { isAgentSessionBusy } from "../../model/agentChatTypes";
 import type { AgentSessionState } from "../../model/agentChatTypes";
 

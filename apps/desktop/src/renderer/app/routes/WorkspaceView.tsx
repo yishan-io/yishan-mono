@@ -30,7 +30,7 @@ import { useSelectedWorkspaceWithProject } from "../../app/selectors";
 import { popupStore } from "../../app/state/popupStore";
 import { LeftPaneView } from "../../app/ui/LeftPaneView";
 import { MainPaneView } from "../../app/ui/MainPaneView";
-import { SplitPaneLayout } from "../../components/SplitPaneLayout";
+import { SplitPaneLayout } from "@renderer/features/workbench";
 import { subscribeAppActionEvent } from "../../events";
 import { AgentChatRecoveryCoordinator } from "../../features/agent/runtime/agentChatRecovery";
 import { OverviewView } from "../../features/overview/ui/OverviewView";

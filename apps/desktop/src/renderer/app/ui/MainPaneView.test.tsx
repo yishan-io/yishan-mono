@@ -215,7 +215,7 @@ vi.mock("../../components/fileTreeIcons", () => ({
   getFileTreeIcon: () => "",
 }));
 
-vi.mock("../../components/TabBar", () => ({
+vi.mock("../../features/workbench/ui/pane/TabBar", () => ({
   TabBar: ({
     tabs,
     onCreateTab,
@@ -241,7 +241,7 @@ vi.mock("../../components/TabBar", () => ({
   ),
 }));
 
-vi.mock("../../components/SplitPaneGroup", () => ({
+vi.mock("../../features/workbench/ui/pane/SplitPaneGroup", () => ({
   SplitPaneGroup: ({
     pane,
     tabs,
@@ -270,7 +270,7 @@ vi.mock("../../components/SplitPaneGroup", () => ({
   ),
 }));
 
-vi.mock("../../components/SplitPaneContainer", () => ({
+vi.mock("../../features/workbench/ui/pane/SplitPaneContainer", () => ({
   SplitPaneContainer: ({
     node,
     renderPane,
@@ -291,7 +291,7 @@ vi.mock("../../components/SplitPaneContainer", () => ({
   },
 }));
 
-vi.mock("../../components/SplitDropZone", () => ({
+vi.mock("../../features/workbench/ui/pane/SplitDropZone", () => ({
   SplitDropZone: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   resolveDropResult: () => null,
 }));

@@ -62,7 +62,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R6-state-layer": 6,
   "R7-model-layer": 3,
   "R8-infra-layer": 0,
-  "R9-ui-components": 68,
+  "R9-ui-components": 64,
   "R10-workspace-workbench": 0,
   "R11-workbench-product-import": 0,
   "R12-store-action-promise": 0,
@@ -240,9 +240,12 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // ---- Rule 11 (desktop6-adjust.md W8): Workbench must not import
       // product modules at all (not just Model). Workbench is a shared
       // Desktop presentation capability; product modules must call its public
-      // Commands instead. Any import from another feature (through any path,
-      // including the module root API) is a boundary violation. ----
+      // Commands instead. Value imports from another feature (through any
+      // path, including the module root API) are a boundary violation.
+      // Type-only imports of stable model types are allowed (a Workbench Tab
+      // model legitimately references agent kind types). ----
       if (
+        !imp.isTypeOnly &&
         rel.startsWith("features/workbench/") &&
         /^features\/[^/]+/.test(relT) &&
         relT !== "features/workbench" &&

@@ -1,21 +1,29 @@
+import type { DesktopAgentKind } from "@renderer/features/agent";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/commands/useCommands";
-import type { SplitDropRegion } from "../../../components/SplitDropZone";
-import { resolveDropResult } from "../../../components/SplitDropZone";
-import type { TabBarCreateOption } from "../../../components/TabBar";
 import type { WorkbenchTab } from "../../../features/workbench/model/types";
+import type { SplitDropRegion } from "./pane/SplitDropZone";
+import { resolveDropResult } from "./pane/SplitDropZone";
+import type { TabBarCreateOption } from "./pane/TabBar";
 
-import type { DesktopAgentKind } from "../../../helpers/agentSettings";
-import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { splitPaneStore } from "../state/splitPaneStore";
 import { selectActivePane, selectPane } from "../state/workbenchSelectors";
+
+/** Agent terminal preset metadata for the tab create menu (supplied by the caller; agent-owned). */
+export type AgentPresetMeta = {
+  /** i18n key for the preset label. */
+  labelKey: string;
+  /** CLI launch command for the preset. */
+  launchCommand: string;
+};
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;
   workspaceTabs: WorkbenchTab[];
   workspace: { worktreePath?: string } | undefined;
-  enabledAgentKindSet: Set<DesktopAgentKind>;
+  enabledAgentKindSet: Set<string>;
+  agentPresetMeta: Record<string, AgentPresetMeta>;
   cmd: WorkbenchCommandSurface & FileCommandSurface;
   setFocusContentRequestKey: React.Dispatch<React.SetStateAction<number>>;
   setIsDraggingSplit: React.Dispatch<React.SetStateAction<boolean>>;
@@ -29,6 +37,7 @@ export function usePaneTabHandlers({
   workspaceTabs,
   workspace,
   enabledAgentKindSet,
+  agentPresetMeta,
   cmd,
   setFocusContentRequestKey,
   setIsDraggingSplit,
@@ -81,18 +90,20 @@ export function usePaneTabHandlers({
         return;
       }
       if (!enabledAgentKindSet.has(option)) return;
-      const title = t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[option]);
-      const launchCommand = DEFAULT_AGENT_COMMANDS[option];
+      const presetMeta = agentPresetMeta[option];
+      if (!presetMeta) return;
+      const title = t(presetMeta.labelKey);
+      const launchCommand = presetMeta.launchCommand;
       cmd.openTab({
         workspaceId,
         kind: "terminal",
         title,
         launchCommand,
-        agentKind: option,
+        agentKind: option as DesktopAgentKind,
         reuseExisting: false,
       });
     },
-    [cmd, workspaceId, enabledAgentKindSet, t, workspaceWorktreePath],
+    [cmd, workspaceId, enabledAgentKindSet, agentPresetMeta, t, workspaceWorktreePath],
   );
 
   const handleRenameTab = useCallback(

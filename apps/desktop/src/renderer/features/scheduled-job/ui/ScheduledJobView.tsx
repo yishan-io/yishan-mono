@@ -2,8 +2,8 @@ import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material"
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
-import { PaneHeader } from "../../../components/PaneHeader";
-import { PaneToggleButton } from "../../../components/PaneToggleButton";
+import { PaneHeader } from "@renderer/features/workbench";
+import { PaneToggleButton } from "@renderer/features/workbench";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { useScheduledJobCommands } from "../../../app/commands/useCommands";
 import { useWorkspacePaneVisibilityContext } from "@renderer/features/workbench";

@@ -1,5 +1,5 @@
 import { Box, useTheme } from "@mui/material";
-import { type AgentIconContext, type DesktopAgentKind, getAgentIconPresentation } from "../helpers/agentSettings";
+import { type AgentIconContext, type DesktopAgentKind, getAgentIconPresentation } from "../../../helpers/agentSettings";
 
 export type AgentIconProps = {
   agentKind: DesktopAgentKind;

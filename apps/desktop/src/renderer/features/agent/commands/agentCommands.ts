@@ -1,4 +1,8 @@
-import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS, isDesktopAgentKind } from "../../../helpers/agentSettings";
+import {
+  type DesktopAgentKind,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+  isDesktopAgentKind,
+} from "../../../helpers/agentSettings";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 
 export type AgentDetectionStatus = {

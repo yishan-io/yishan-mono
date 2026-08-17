@@ -1,5 +1,6 @@
 import { Badge, Box } from "@mui/material";
-import { WorkspaceAgentChatSurface, findTabWithSession } from "@renderer/features/agent";
+import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/features/agent";
+import { AgentIcon } from "@renderer/features/agent";
 import { FileSearchOverlay } from "@renderer/features/files";
 import { gitProjectionStore } from "@renderer/features/git";
 import { useLastUsedExternalAppId } from "@renderer/features/project";
@@ -19,16 +20,20 @@ import {
 } from "@renderer/features/workbench";
 import type { WorkbenchTab } from "@renderer/features/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/features/workbench";
+import { ColumnSeparator } from "@renderer/features/workbench";
+import { TabPanel } from "@renderer/features/workbench";
 import { workspaceStore } from "@renderer/features/workspace";
 import { WorkspaceErrorStateView } from "@renderer/features/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
-import { ColumnSeparator } from "../../components/ColumnSeparator";
-import { TabPanel } from "../../components/TabPanel";
 import { retainOpenAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
-import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
+import {
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  DEFAULT_AGENT_COMMANDS,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+} from "../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { isFolderWorkspace } from "../../helpers/localFolder";
 import { supportsGitFeatures } from "../../helpers/projectGitCapability";
@@ -113,6 +118,16 @@ export function MainPaneView() {
   const enabledAgentKinds = useMemo(
     () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
     [inUseByAgentKind],
+  );
+  const agentPresetMeta = useMemo(
+    () =>
+      Object.fromEntries(
+        SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => [
+          agentKind,
+          { labelKey: AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind], launchCommand: DEFAULT_AGENT_COMMANDS[agentKind] },
+        ]),
+      ),
+    [],
   );
   const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
   const activeRightPaneTab = layoutStore(
@@ -271,6 +286,11 @@ export function MainPaneView() {
                     workspaceTabs={tabsByWorkspaceId.get(wsId) ?? []}
                     worktreePath={workspaces.find((ws) => ws.id === wsId)?.worktreePath}
                     enabledAgentKinds={enabledAgentKinds}
+                    agentPresetMeta={agentPresetMeta}
+                    fetchAgentSessionFilePath={fetchAgentSessionFilePath}
+                    renderAgentIcon={(agentKind, label) => (
+                      <AgentIcon agentKind={agentKind as never} context="tabMenu" label={label} />
+                    )}
                     lastUsedExternalAppId={lastUsedExternalAppId}
                     findTabWithSession={findTabWithSession}
                     formatAgentSessionTitle={formatAgentSessionTitle}

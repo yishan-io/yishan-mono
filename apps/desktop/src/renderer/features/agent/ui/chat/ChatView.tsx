@@ -5,15 +5,15 @@ import { useAgentCommands } from "../../../../app/commands/useCommands";
 import { MessageList } from "../../../../components/MessageList";
 import { RichComposer } from "../../../../components/RichComposer";
 import { subscribeWorkspaceChatEvent } from "../../../../events";
+import type { DesktopAgentKind } from "../../../../helpers/agentSettings";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import { generateId } from "../../../../helpers/generateId";
+import type { AvailableModel, ChatMessage } from "../../model/chatTypes";
 import {
   useChatAvailableModelsByTabId,
   useChatCurrentModelByTabId,
   useChatMessagesByTabId,
 } from "../../ui/hooks/useAgentChatReadHooks";
-import type { AvailableModel, ChatMessage } from "../../model/chatTypes";
-import type { DesktopAgentKind } from "../../../../helpers/agentSettings";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { generateId } from "../../../../helpers/generateId";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({

@@ -5,6 +5,20 @@
  * surfaces. Internal Stores and Runtime implementations are not exported.
  */
 export type { AgentCommands } from "./commands/contract";
+export {
+  AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  DEFAULT_AGENT_COMMANDS,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+  createDefaultAgentInUseByKind,
+  getAgentIconPresentation,
+  isDesktopAgentKind,
+  type AgentIconContext,
+  type AgentIconPresentation,
+  type AgentIconThemeMode,
+  type DesktopAgentKind,
+} from "./model/agentSettings";
 export type {
   AgentCompactionReason,
   AgentContentBlock,
@@ -33,8 +47,10 @@ export {
 export { AgentChatView } from "./ui/chat/AgentChatView";
 export { RecentAgentSessions } from "./ui/chat/RecentAgentSessions";
 export { WorkspaceAgentChatSurface } from "./ui/chat/WorkspaceAgentChatSurface";
+export { AgentIcon } from "./ui/AgentIcon";
 export {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,
 } from "./ui/hooks/useAgentChatReadHooks";
 export { findTabWithSession } from "./commands/agentChatCommands";
+export { fetchAgentSessionFilePath } from "./commands/agentChatSessionHistory";

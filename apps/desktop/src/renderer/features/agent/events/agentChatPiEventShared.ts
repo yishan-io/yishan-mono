@@ -9,6 +9,12 @@ import type {
   AgentStreamEvent,
 } from "../model/agentChatTypes";
 import {
+  flushAgentChatStreamBuffer,
+  peekAgentChatStreamMessage,
+  queueAgentChatStreamMessage,
+  setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
+} from "../runtime/agentChatStreamBuffer";
+import {
   PER_MESSAGE_UTF8_BYTES,
   isRecord,
   normalizeBoundedDetails,
@@ -16,12 +22,6 @@ import {
   truncateMessageContent,
   truncateUtf8Bytes,
 } from "./agentChatInboundMessage";
-import {
-  flushAgentChatStreamBuffer,
-  peekAgentChatStreamMessage,
-  queueAgentChatStreamMessage,
-  setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
-} from "../runtime/agentChatStreamBuffer";
 import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessageHelpers";
 import {
   applySubagentLifecycleWidget,

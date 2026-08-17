@@ -78,7 +78,8 @@ vi.mock("../../../features/workspace/state/workspaceStore", () => ({
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),
 }));
 
-vi.mock("@renderer/features/workbench", () => {
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
   const navState = () => ({
     activeProjectId: ((mocks.workspaceState as Record<string, unknown>).selectedProjectId as string) ?? "",
     activeWorkspaceId: ((mocks.workspaceState as Record<string, unknown>).selectedWorkspaceId as string) ?? "",
@@ -89,7 +90,7 @@ vi.mock("@renderer/features/workbench", () => {
     ),
     { getState: navState },
   );
-  return { workbenchNavigationStore: navStore };
+  return { ...actual, workbenchNavigationStore: navStore };
 });
 
 vi.mock("../../../app/commands/useCommands", () => {

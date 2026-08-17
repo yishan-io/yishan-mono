@@ -3,14 +3,8 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock, LuColumns2, LuGlobe, LuMessageCircle, LuPencil, LuPlus, LuSquareTerminal } from "react-icons/lu";
-import {
-  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
-  type DesktopAgentKind,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-} from "../helpers/agentSettings";
-import { getRendererPlatform } from "../helpers/platform";
-import { getShortcutDisplayLabelById } from "../shortcuts/shortcutDisplay";
-import { AgentIcon } from "./AgentIcon";
+import { getRendererPlatform } from "../../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { TabBarItem } from "./TabBarItem";
 import { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./TabBarMenus";
 import { TabRenameDialog } from "./TabRenameDialog";
@@ -29,14 +23,21 @@ type WorkbenchTab = {
   cwd?: string;
 };
 
-export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | "whiteboard" | DesktopAgentKind;
+export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | "whiteboard" | string;
 
-type AgentCreateOption = DesktopAgentKind;
+type AgentCreateOption = string;
 
 /** Returns true when one create-menu option targets an agent terminal preset. */
 function isAgentCreateOption(option: TabBarCreateOption): option is AgentCreateOption {
   return option !== "terminal" && option !== "browser" && option !== "agent-chat" && option !== "whiteboard";
 }
+
+/** One agent terminal preset entry in the tab create menu, supplied by the caller. */
+export type AgentCreateOptionDef = {
+  option: string;
+  label: string;
+  icon: ReactNode;
+};
 
 type TabBarProps = {
   tabs: WorkbenchTab[];
@@ -51,6 +52,8 @@ type TabBarProps = {
   onPromoteTemporaryTab?: (tabId: string) => void;
   getTabIcon?: (tab: WorkbenchTab) => ReactNode;
   enabledAgentKinds?: AgentCreateOption[];
+  /** Agent terminal presets shown in the tab create menu (supplied by the caller). */
+  agentCreateOptions?: AgentCreateOptionDef[];
   disabled?: boolean;
   /** Called when a tab drag starts - useful for enabling split drop zones. */
   onTabDragStart?: (tabId: string) => void;
@@ -66,6 +69,8 @@ type TabBarProps = {
   onSplitDown?: () => void;
   /** Called when the user clicks the session history button. */
   onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
+  /** Resolves one agent transcript file path for the tab context menu (supplied by the caller). */
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
 };
 
 /**
@@ -87,6 +92,7 @@ export function TabBar({
   onPromoteTemporaryTab,
   getTabIcon,
   enabledAgentKinds,
+  agentCreateOptions,
   disabled,
   onTabDragStart,
   onTabDragEnd,
@@ -95,6 +101,7 @@ export function TabBar({
   onSplitRight,
   onSplitDown,
   onHistoryClick,
+  fetchAgentSessionFilePath,
 }: TabBarProps) {
   const { t } = useTranslation();
   const untitledLabel = t("tabs.untitled");
@@ -108,12 +115,12 @@ export function TabBar({
       : t("browser.title") !== "browser.title"
         ? t("browser.title")
         : "Browser";
-  const createLabelByAgentKind = SUPPORTED_DESKTOP_AGENT_KINDS.reduce<Record<DesktopAgentKind, string>>(
-    (next, agentKind) => {
-      next[agentKind] = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
+  const createLabelByAgentKind: Record<string, string> = (agentCreateOptions ?? []).reduce<Record<string, string>>(
+    (next, item) => {
+      next[item.option] = item.label;
       return next;
     },
-    {} as Record<DesktopAgentKind, string>,
+    {},
   );
   const whiteboardCreateLabel = t("tabs.createMenu.whiteboard");
   const keepOpenActionLabel = t("tabs.actions.keepOpen");
@@ -226,7 +233,7 @@ export function TabBar({
   // ─── Create menu options ───────────────────────────────────────────────────
 
   const platform = getRendererPlatform();
-  const enabledAgentKindSet = new Set(enabledAgentKinds ?? SUPPORTED_DESKTOP_AGENT_KINDS);
+  const enabledAgentKindSet = new Set(enabledAgentKinds ?? (agentCreateOptions ?? []).map((item) => item.option));
   const allCreateOptions: Array<{
     option: TabBarCreateOption;
     label: string;
@@ -257,15 +264,12 @@ export function TabBar({
       icon: <LuGlobe size={14} />,
       shortcutLabel: getShortcutDisplayLabelById("open-browser", platform),
     },
-    ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => {
-      const label = createLabelByAgentKind[agentKind];
-      return {
-        option: agentKind,
-        label,
-        icon: <AgentIcon agentKind={agentKind} context="tabMenu" label={label} />,
-        shortcutLabel: null,
-      };
-    }),
+    ...(agentCreateOptions ?? []).map(({ option, label, icon }) => ({
+      option,
+      label,
+      icon,
+      shortcutLabel: null,
+    })),
   ];
   const createOptions = allCreateOptions.filter(
     (item) => !isAgentCreateOption(item.option) || enabledAgentKindSet.has(item.option),
@@ -429,6 +433,7 @@ export function TabBar({
         onCloseAllTabs={onCloseAllTabs}
         sessionId={selectedContextTab?.sessionId}
         cwd={selectedContextTab?.cwd}
+        fetchAgentSessionFilePath={fetchAgentSessionFilePath}
       />
 
       <TabRenameDialog

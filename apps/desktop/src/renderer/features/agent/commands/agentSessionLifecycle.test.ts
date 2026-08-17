@@ -2,14 +2,14 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import {
-  __resetExplicitlyClosedTerminalTabIdsForTests,
-  recordExplicitlyClosedTerminalTabId,
-} from "../../../helpers/terminalCloseTombstones";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import {
+  __resetExplicitlyClosedTerminalTabIdsForTests,
+  recordExplicitlyClosedTerminalTabId,
+} from "../../../helpers/terminalCloseTombstones";
 
 import { createNotificationEventHandlers } from "../../notification/events/notificationEventHandlers";
 import { clearTerminalAgentStatus } from "./agentSessionLifecycle";
