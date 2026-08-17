@@ -1,9 +1,7 @@
-import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
-import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
 import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
+import { resolveTabForWorkspace } from "../../../features/workbench/state/workbenchActions";
+import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import {
   type WorkspaceLifecycleScriptWarning,
@@ -11,6 +9,8 @@ import {
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { selectProjectById } from "../../project/state/projectSelectors";
 
 type CreateWorkspaceInput = {
@@ -181,7 +181,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     }),
   );
   workspaceCreateProgressStore.getState().startWorkspaceCreateProgress(workspaceId);
-  tabStore.getState().resolveTabForWorkspace(workspaceId);
+  resolveTabForWorkspace(workspaceId);
 
   return workspaceId;
 }

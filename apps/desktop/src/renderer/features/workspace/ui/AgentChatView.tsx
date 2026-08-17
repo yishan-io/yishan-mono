@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest } from "../../../features/agent/commands/agentChatCommands";
 import { setAgentChatStreamTabVisible } from "../../../features/agent/events/agentChatPiEventShared";
 import { agentChatStore } from "../../../features/agent/model/agentChatStore";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { tabStore } from "../../../features/workbench/state/tabStore";
 import type { AgentChatSessionView } from "../../../features/workbench/model/types";
+import { useTabById } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
@@ -34,11 +34,8 @@ function AgentChatViewComponent({
 }: AgentChatViewProps) {
   const { t } = useTranslation();
   const isReadOnlySubagentDetail = sessionView === "subagent-detail";
-  const agentChatTab = tabStore((state) =>
-    state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
-      return tab.id === tabId && tab.kind === "agent-chat";
-    }),
-  );
+  const foundTab = useTabById(tabId);
+  const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
   const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
   const sessionState = agentChatStore(
     (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),

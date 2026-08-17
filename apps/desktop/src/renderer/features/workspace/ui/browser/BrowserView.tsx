@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { type FormEvent, useCallback, useMemo, useRef } from "react";
 import { LuWrench } from "react-icons/lu";
 import { useWorkbenchCommands } from "../../../../app/commands/useCommands";
-import { tabStore } from "../../../../features/workbench/state/tabStore";
+import { setBrowserTabUrl } from "../../../../features/workbench/state/workbenchActions";
 import { BlankView } from "./BlankView";
 import { ToolsMenu } from "./ToolsMenu";
 import { UrlBar } from "./UrlBar";
@@ -49,7 +49,7 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
   const handleNavigated = useCallback(
     (url: string) => {
       setUrlInput(url);
-      tabStore.getState().setBrowserTabUrl(tabId, url);
+      setBrowserTabUrl(tabId, url);
     },
     [tabId, setUrlInput],
   );
@@ -98,7 +98,7 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
         cmd.setBrowserTabFaviconUrl(tabId, undefined);
         resetForNavigation();
         setActiveUrl("");
-        tabStore.getState().setBrowserTabUrl(tabId, "");
+        setBrowserTabUrl(tabId, "");
         (document.activeElement as HTMLElement)?.blur();
         return;
       }

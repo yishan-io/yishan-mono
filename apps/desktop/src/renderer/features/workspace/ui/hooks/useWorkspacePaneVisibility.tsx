@@ -1,7 +1,7 @@
 import { useMediaQuery, useTheme } from "@mui/material";
 import { type ReactNode, createContext, useContext, useMemo } from "react";
-import { layoutStore } from "../../../../features/workbench/state/layoutStore";
 import { useWorkspacePaneVisibilityState } from "../../../../app/selectors";
+import { setIsLeftPaneManuallyHidden } from "../../../../features/workbench/state/workbenchActions";
 import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 
 export type WorkspacePaneVisibilityValue = {
@@ -32,9 +32,11 @@ export function useWorkspacePaneVisibility(): WorkspacePaneVisibilityValue {
   const theme = useTheme();
   const leftCollapsedByBreakpoint = useMediaQuery(theme.breakpoints.down("md"));
   const rightCollapsedByBreakpoint = useMediaQuery(theme.breakpoints.down("lg"));
-  const { leftCollapsed: isLeftPaneManuallyHidden, rightCollapsed: isRightPaneManuallyHidden, selectedWorkspaceId } =
-    useWorkspacePaneVisibilityState();
-  const setIsLeftPaneManuallyHidden = layoutStore((state) => state.setIsLeftPaneManuallyHidden);
+  const {
+    leftCollapsed: isLeftPaneManuallyHidden,
+    rightCollapsed: isRightPaneManuallyHidden,
+    selectedWorkspaceId,
+  } = useWorkspacePaneVisibilityState();
   const setIsRightPaneHidden = workspaceUiStore((state) => state.setIsRightPaneHidden);
 
   return useMemo(() => {
@@ -71,11 +73,9 @@ export function useWorkspacePaneVisibility(): WorkspacePaneVisibilityValue {
     leftCollapsedByBreakpoint,
     rightCollapsedByBreakpoint,
     selectedWorkspaceId,
-    setIsLeftPaneManuallyHidden,
     setIsRightPaneHidden,
   ]);
 }
-
 
 /**
  * Shares workspace pane visibility and toggle controls with nested workspace views.

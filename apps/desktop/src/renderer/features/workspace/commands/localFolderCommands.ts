@@ -1,12 +1,12 @@
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import { resolveTabForWorkspace } from "../../../features/workbench/state/workbenchActions";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
 /**
@@ -48,7 +48,7 @@ export async function createLocalFolderImport(input: { path: string; name: strin
   }
 
   // Read selection after setting it so the folder's id is what gets resolved.
-  tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
+  resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
 }
 
 /**

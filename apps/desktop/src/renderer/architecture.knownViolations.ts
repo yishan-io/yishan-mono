@@ -97,11 +97,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- R5-cross-feature-internal (Phase 16 baseline) ----
   { rule: "R5-cross-feature-internal", file: "features/git/ui/hooks/useGitAuthorName.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/terminal/ui/hooks/useTerminalTabLookups.ts", phase: "P16" },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/hooks/useWorkspacePaneVisibility.tsx",
-    phase: "P16",
-  },
   { rule: "R5-cross-feature-internal", file: "features/overview/ui/OverviewView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "P16" },
@@ -127,7 +122,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/ChatView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/DaemonVersionWarningControl.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/FileSearchOverlay.tsx", phase: "P16" },
   {
     rule: "R5-cross-feature-internal",
     file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.testUtils.tsx",
@@ -177,10 +171,7 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneTabBar.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/useChangesTabState.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspacePortsMenuControl.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceResourceUsageControl.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceSplitPaneView.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/browser/BrowserView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/TerminalView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalFileDrop.ts", phase: "P16" },
   {
@@ -213,11 +204,7 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionOrchestrator.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionService.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalTitleUtils.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/localFolderCommands.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/selectionCommands.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCommands.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCreateCommand.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/events/workspaceEventHandlers.ts", phase: "P16" },
   {
     rule: "R5-cross-feature-internal",
     file: "features/workspace/state/workspace/actions.localFolders.ts",

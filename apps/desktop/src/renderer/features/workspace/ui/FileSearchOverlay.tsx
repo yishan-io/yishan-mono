@@ -3,6 +3,9 @@ import { useTranslation } from "react-i18next";
 import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
 import { buildWorkspaceFileUrl, readFile } from "../../../features/files/commands/fileCommands";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../../../features/files/ui/fileTreeHelpers";
+import { openTab } from "../../../features/workbench/state/workbenchActions";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import {
   isAudioFile,
   isExcalidrawFile,
@@ -10,9 +13,6 @@ import {
   isUnsupportedFileTab,
   isVideoFile,
 } from "../../../helpers/editorLanguage";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { useFileSearchController } from "./RightPane/useFileSearchController";
 
 export function FileSearchOverlay() {
@@ -53,7 +53,7 @@ export function FileSearchOverlay() {
 
       try {
         if (isUnsupportedFileTab(path)) {
-          tabStore.getState().openTab({
+          openTab({
             workspaceId: selectedWorkspaceId,
             kind: "file",
             path,
@@ -67,7 +67,7 @@ export function FileSearchOverlay() {
         }
 
         if (isImageFile(path)) {
-          tabStore.getState().openTab({
+          openTab({
             workspaceId: selectedWorkspaceId,
             kind: "image",
             path,
@@ -82,7 +82,7 @@ export function FileSearchOverlay() {
         }
 
         if (isVideoFile(path)) {
-          tabStore.getState().openTab({
+          openTab({
             workspaceId: selectedWorkspaceId,
             kind: "video",
             path,
@@ -97,7 +97,7 @@ export function FileSearchOverlay() {
         }
 
         if (isAudioFile(path)) {
-          tabStore.getState().openTab({
+          openTab({
             workspaceId: selectedWorkspaceId,
             kind: "audio",
             path,
@@ -114,7 +114,7 @@ export function FileSearchOverlay() {
         const response = await readFile({ workspaceId: selectedWorkspaceId, relativePath: path });
 
         if (!isExcalidrawFile(path) && getUtf8ByteLength(response.content) > LARGE_FILE_OPEN_THRESHOLD_BYTES) {
-          tabStore.getState().openTab({
+          openTab({
             workspaceId: selectedWorkspaceId,
             kind: "file",
             path,
@@ -127,7 +127,7 @@ export function FileSearchOverlay() {
           return;
         }
 
-        tabStore.getState().openTab({
+        openTab({
           workspaceId: selectedWorkspaceId,
           kind: "file",
           path,

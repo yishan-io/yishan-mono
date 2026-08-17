@@ -1,5 +1,17 @@
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { api } from "../../../api";
+import {
+  setIsLeftPaneManuallyHidden as applyIsLeftPaneManuallyHidden,
+  setLeftPaneWidth as applyLeftPaneWidth,
+  setRightPaneWidth as applyRightPaneWidth,
+} from "../../../features/workbench/state/workbenchActions";
+import { selectIsLeftPaneManuallyHidden } from "../../../features/workbench/state/workbenchSelectors";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import {
+  DEFAULT_RIGHT_PANE_TAB,
+  type WorkspaceRightPaneTab,
+  workspaceUiStore,
+} from "../../../features/workspace/state/workspaceUiStore";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -11,14 +23,11 @@ import {
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { layoutStore } from "../../../features/workbench/state/layoutStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
-import { selectProjectById, selectProjectDisplayIds, selectProjects } from "../../project/state/projectSelectors";
 import {
   setDisplayProjectIds as applyDisplayProjectIds,
   setLastUsedExternalAppId as applyLastUsedExternalAppId,
 } from "../../project/state/projectActions";
+import { selectProjectById, selectProjectDisplayIds, selectProjects } from "../../project/state/projectSelectors";
 import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
@@ -214,18 +223,17 @@ export function setLastUsedExternalAppId(appId: ExternalAppId) {
 
 /** Sets left pane width in workspace layout state. */
 export function setLeftPaneWidth(width: number) {
-  layoutStore.getState().setLeftPaneWidth(width);
+  applyLeftPaneWidth(width);
 }
 
 /** Sets right pane width in workspace layout state. */
 export function setRightPaneWidth(width: number) {
-  layoutStore.getState().setRightPaneWidth(width);
+  applyRightPaneWidth(width);
 }
 
 /** Toggles left workspace pane manual visibility state. */
 export function toggleLeftPaneVisibility() {
-  const state = layoutStore.getState();
-  state.setIsLeftPaneManuallyHidden(!state.isLeftPaneManuallyHidden);
+  applyIsLeftPaneManuallyHidden(!selectIsLeftPaneManuallyHidden());
 }
 
 /** Toggles right workspace pane manual visibility state for the selected workspace. */
@@ -239,8 +247,7 @@ export function toggleRightPaneVisibility() {
 /** Toggles a workspace pane: opens and switches to it, or collapses if already active. */
 export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
   if (pane === "repo") {
-    const state = layoutStore.getState();
-    state.setIsLeftPaneManuallyHidden(!state.isLeftPaneManuallyHidden);
+    applyIsLeftPaneManuallyHidden(!selectIsLeftPaneManuallyHidden());
     return;
   }
 

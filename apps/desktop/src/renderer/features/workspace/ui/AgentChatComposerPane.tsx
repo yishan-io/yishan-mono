@@ -2,8 +2,6 @@ import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
-import { searchFiles } from "../../../features/files/commands/fileCommands";
-import { renameTab } from "../../../features/workbench/commands/tabCommands";
 import { AgentChatVoiceButton } from "../../../components/AgentChatVoiceButton";
 import { type ComposerAttachment, ComposerAttachmentBlock } from "../../../components/ComposerAttachmentBlock";
 import { type DroppedFileEntry, RichComposer } from "../../../components/RichComposer";
@@ -19,13 +17,15 @@ import { abortAgent, compactAgent, sendAgentPrompt } from "../../../features/age
 import { setAgentModel, setAgentThinkingLevel } from "../../../features/agent/events/agentChatPiEventShared";
 import { agentChatStore } from "../../../features/agent/model/agentChatStore";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../features/agent/model/agentChatTypes";
+import { searchFiles } from "../../../features/files/commands/fileCommands";
+import { keybindingSettingsStore } from "../../../features/settings/state/keybindingSettingsStore";
+import { ProviderCredentialDialog } from "../../../features/settings/ui/ProviderCredentialDialog";
+import { renameTab } from "../../../features/workbench/commands/tabCommands";
+import { useTabById } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../../shortcuts/keybindings";
-import { keybindingSettingsStore } from "../../../features/settings/state/keybindingSettingsStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { ProviderCredentialDialog } from "../../../features/settings/ui/ProviderCredentialDialog";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { getCompactContextPercent } from "./agentChatUsageSummary";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
@@ -55,11 +55,8 @@ function AgentChatComposerPaneComponent({
 }: AgentChatComposerPaneProps) {
   const { t } = useTranslation();
   const slashCommands = useAgentChatSlashCommands();
-  const agentChatTab = tabStore((state) =>
-    state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
-      return tab.id === tabId && tab.kind === "agent-chat";
-    }),
-  );
+  const foundTab = useTabById(tabId);
+  const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
   const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
   const { runningSubagents, subagentProgressTargets, subagentCancelStates, handleOpenSubagent, handleCancelSubagent } =
     useAgentChatSubagentActions({ tabId, workspaceId, cwd, paneId, sessionId });

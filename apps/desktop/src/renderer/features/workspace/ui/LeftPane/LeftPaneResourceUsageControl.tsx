@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
+import { useTerminalCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { RouteCloseWatcher } from "../../../../components/RouteCloseWatcher";
 import {
   WorkspaceResourceTableMenu,
   type WorkspaceResourceTableMenuRow,
 } from "../../../../components/WorkspaceResourceTableMenu";
 import { projectStore } from "../../../../features/project/state/projectStore";
+import type { TerminalResourceUsageSnapshot } from "../../../../features/terminal/commands/terminalCommands";
+import { useSharedTerminalResourceUsageSnapshot } from "../../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
+import { useWorkspaceTabs } from "../../../../features/workbench/ui/hooks/useWorkbenchTabs";
+import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
-import { useTerminalCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { useSharedTerminalResourceUsageSnapshot } from "../../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
-import type { TerminalResourceUsageSnapshot } from "../../../../features/terminal/commands/terminalCommands";
-import { tabStore } from "../../../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 
 type WorkspaceResourceUsageRow = {
   workspaceId: string;
@@ -80,7 +80,7 @@ export function LeftPaneResourceUsageControl() {
   const isInRouterContext = useInRouterContext();
   const projects = projectStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
-  const tabs = tabStore((state) => state.tabs);
+  const tabs = useWorkspaceTabs();
   const { getTerminalResourceUsage } = useTerminalCommands();
   const { setSelectedRepoId, setSelectedWorkspaceId } = useWorkspaceCommands();
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);

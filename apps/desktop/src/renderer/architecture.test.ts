@@ -58,7 +58,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R1b-shared-contracts": 21,
   R3: 0,
   R4: 0,
-  "R5-cross-feature-internal": 134,
+  "R5-cross-feature-internal": 115,
   "R6-state-layer": 8,
   "R7-model-layer": 8,
   "R8-infra-layer": 0,

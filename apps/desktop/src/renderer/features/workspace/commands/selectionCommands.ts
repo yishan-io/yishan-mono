@@ -1,4 +1,4 @@
-import { tabStore } from "../../../features/workbench/state/tabStore";
+import { resolveTabForWorkspace } from "../../../features/workbench/state/workbenchActions";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 
@@ -8,7 +8,7 @@ export function setSelectedRepo(projectId: string): void {
     workspaceUiStore.getState().closeOverlayPanel();
   }
   workspaceStore.getState().setSelectedProjectId(projectId);
-  tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
+  resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
 }
 
 /** Selects one workspace and resolves the correct tab for it. */
@@ -17,5 +17,5 @@ export function setSelectedWorkspace(workspaceId: string): void {
     workspaceUiStore.getState().closeOverlayPanel();
   }
   workspaceStore.getState().setSelectedWorkspaceId(workspaceId);
-  tabStore.getState().resolveTabForWorkspace(workspaceId);
+  resolveTabForWorkspace(workspaceId);
 }

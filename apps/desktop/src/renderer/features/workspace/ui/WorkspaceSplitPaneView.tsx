@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
+import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
 import { AgentIcon } from "../../../components/AgentIcon";
 import { SplitPaneContainer } from "../../../components/SplitPaneContainer";
 import { SplitPaneGroup } from "../../../components/SplitPaneGroup";
@@ -9,16 +10,24 @@ import { SessionHistoryMenu } from "../../../components/agent/session/SessionHis
 import { getFileTreeIcon } from "../../../components/fileTreeIcons";
 import { findTabWithSession } from "../../../features/agent/commands/agentChatCommands";
 import { projectStore } from "../../../features/project/state/projectStore";
-import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
-import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
-import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
-import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "../../../features/workbench/ui/hooks/useOpenTabAutoRefresh";
 import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
-import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import {
+  registerTabInPane,
+  selectPaneTab,
+  unregisterTabFromPane,
+} from "../../../features/workbench/state/workbenchActions";
+import { selectPaneForTab } from "../../../features/workbench/state/workbenchSelectors";
+import {
+  type RefreshableOpenTab,
+  useOpenTabAutoRefresh,
+} from "../../../features/workbench/ui/hooks/useOpenTabAutoRefresh";
+import { useLayout } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
+import { useSelectedTabId } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
+import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
 import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
 import { usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useTabContentRenderer } from "./useTabContentRenderer";
@@ -50,7 +59,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     [workbenchCommands, fileCommands, gitCommands],
   );
   const workspaces = workspaceStore((state) => state.workspaces);
-  const selectedTabId = tabStore((state) => state.selectedTabId);
+  const selectedTabId = useSelectedTabId();
   const workspace = workspaces.find((ws) => ws.id === workspaceId);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
@@ -87,7 +96,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     {},
   );
 
-  const layout = splitPaneStore((state) => state.layoutByWorkspaceId[workspaceId]);
+  const layout = useLayout(workspaceId);
   const splitRoot = layout?.root;
   const activePaneId = layout?.activePaneId ?? "";
   const { tabPlacements, handleContentPlaceholderChange } = useWorkspaceTabPlacements({ splitRoot, activePaneId });
@@ -108,16 +117,16 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
 
     for (const tabId of currentTabIds) {
       if (!previousTabIds.has(tabId)) {
-        const existingPane = splitPaneStore.getState().getPaneForTab(workspaceId, tabId);
+        const existingPane = selectPaneForTab(workspaceId, tabId);
         if (!existingPane) {
-          splitPaneStore.getState().registerTabInPane(workspaceId, tabId);
+          registerTabInPane(workspaceId, tabId);
         }
       }
     }
 
     for (const tabId of previousTabIds) {
       if (!currentTabIds.has(tabId)) {
-        splitPaneStore.getState().unregisterTabFromPane(workspaceId, tabId);
+        unregisterTabFromPane(workspaceId, tabId);
       }
     }
 
@@ -135,11 +144,11 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     const tab = tabById.get(selectedTabId);
     if (!tab || tab.workspaceId !== workspaceId) return;
 
-    const pane = splitPaneStore.getState().getPaneForTab(workspaceId, selectedTabId);
+    const pane = selectPaneForTab(workspaceId, selectedTabId);
     if (!pane) return;
 
     if (pane.selectedTabId !== selectedTabId || activePaneId !== pane.id) {
-      splitPaneStore.getState().selectTab(workspaceId, pane.id, selectedTabId);
+      selectPaneTab(workspaceId, pane.id, selectedTabId);
     }
   }, [selectedTabId, isActive, workspaceId, activePaneId, tabById]);
 
