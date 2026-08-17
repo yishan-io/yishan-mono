@@ -20,14 +20,14 @@ const { setThemePreference, openExternalUrl, switchOrganization, logout } = vi.h
   logout: vi.fn(async () => undefined),
 }));
 
-vi.mock("../../hooks/useThemePreference", () => ({
+vi.mock("../../ui/hooks/useThemePreference", () => ({
   useThemePreference: () => ({
     themePreference: "system",
     setThemePreference,
   }),
 }));
 
-vi.mock("../../hooks/useCommands", () => {
+vi.mock("../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     openExternalUrl,

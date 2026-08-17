@@ -7,9 +7,9 @@ import {
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
 } from "../../../../helpers/workspaceBranchNaming";
-import { useGitAuthorName } from "../../../../hooks/useGitAuthorName";
+import { useGitAuthorName } from "../../../../features/git/ui/hooks/useGitAuthorName";
 import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../../features/settings/state/workspaceSettingsStore";
-import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../../store/types";
+import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../../features/workbench/model/types";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 
 type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean };

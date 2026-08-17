@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { inspectGitRepository } from "../../../../features/git/commands/gitCommands";
 import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
-import type { WorkspaceItem } from "../../../../store/types";
+import type { WorkspaceItem } from "../../../../features/workbench/model/types";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 
 type UseWorkspaceInfoHoverInput = {

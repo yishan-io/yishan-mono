@@ -6,7 +6,7 @@ import { StatusIndicator } from "../../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
 import { projectStore } from "../../../features/project/state/projectStore";
 import { MONOSPACE_SX } from "../../../helpers/styles";
-import { useTerminalCommands } from "../../../hooks/useCommands";
+import { useTerminalCommands } from "../../../app/commands/useCommands";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../../rpc/daemonTypes";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";

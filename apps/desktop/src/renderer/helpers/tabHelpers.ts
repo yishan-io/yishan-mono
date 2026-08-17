@@ -1,4 +1,4 @@
-import type { WorkspaceTab } from "../store/types";
+import type { WorkspaceTab } from "../features/workbench/model/types";
 
 /** Extracts normalized model id/name pairs from ensure-session capabilities payloads. */
 export function resolveAvailableModelsFromCapabilities(capabilities: unknown): Array<{ id: string; name: string }> {

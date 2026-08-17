@@ -44,7 +44,7 @@ import {
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "../../features/workspace/commands/workspaceCommands";
-import type { WorkspaceProjectRecord } from "../../store/types";
+import type { WorkspaceProjectRecord } from "../../features/workbench/model/types";
 import {
   appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,

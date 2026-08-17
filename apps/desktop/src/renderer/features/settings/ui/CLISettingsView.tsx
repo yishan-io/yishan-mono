@@ -13,7 +13,7 @@ import {
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { MONOSPACE_SX } from "../../../helpers/styles";
-import { useRefreshableLoader } from "../../../hooks/useRefreshableLoader";
+import { useRefreshableLoader } from "../../../ui/hooks/useRefreshableLoader";
 import { AgentCLISettingsCard } from "./AgentCLISettingsCard";
 import { DaemonCliInstallCard } from "./DaemonCliInstallCard";
 import { PiCliInstallCard } from "./PiCliInstallCard";

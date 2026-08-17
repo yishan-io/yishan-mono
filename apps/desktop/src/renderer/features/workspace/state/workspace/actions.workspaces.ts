@@ -5,7 +5,7 @@ import {
   applyRenamedWorkspaceState,
 } from "../../../../helpers/workspaceHelpers";
 import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
-import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../../../../store/types";
+import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../../../../features/workbench/model/types";
 
 type WorkspaceActions = Pick<
   WorkspaceStoreActions,

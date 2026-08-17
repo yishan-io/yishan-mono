@@ -1,10 +1,10 @@
 import type { StateCreator } from "zustand";
-import type { ExternalAppId } from "../../shared/contracts/externalApps";
-import type { ProjectRecord, WorkspacePullRequestSummary, WorkspaceRecord } from "../api/types";
-import type { WorkspaceProjectRecord } from "../features/project/model/projectTypes";
-import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../features/workspace/model/workspaceTypes";
-import type { DesktopAgentKind } from "../helpers/agentSettings";
-import type { DaemonLocalFolder, DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
+import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
+import type { ProjectRecord, WorkspacePullRequestSummary, WorkspaceRecord } from "../../../api/types";
+import type { WorkspaceProjectRecord } from "../../../features/project/model/projectTypes";
+import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
+import type { DesktopAgentKind } from "../../../helpers/agentSettings";
+import type { DaemonLocalFolder, DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 
 
 /**
@@ -16,15 +16,15 @@ export type {
   WorkspaceProjectCommand,
   WorkspaceProjectRecord,
   WorkspaceStoreOrganizationPreference,
-} from "../features/project/model/projectTypes";
-export { LOCAL_FOLDER_PROJECT_ID } from "../features/project/model/projectTypes";
+} from "../../../features/project/model/projectTypes";
+export { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 
 export type {
   WorkspaceGitChangeTotals,
   WorkspaceItem,
   WorkspaceLifecycleState,
   WorkspaceHealth,
-} from "../features/workspace/model/workspaceTypes";
+} from "../../../features/workspace/model/workspaceTypes";
 
 export type DiffFileChangeKind = "added" | "modified" | "deleted" | "renamed";
 
@@ -319,4 +319,4 @@ export type WorkspaceStoreCreator = StateCreator<
 export type WorkspaceStoreSetState = Parameters<WorkspaceStoreCreator>[0];
 export type WorkspaceStoreGetState = Parameters<WorkspaceStoreCreator>[1];
 
-export type { AvailableModel, ChatMessage } from "../features/agent/model/chatTypes";
+export type { AvailableModel, ChatMessage } from "../../../features/agent/model/chatTypes";

@@ -5,8 +5,8 @@ import type { TerminalDetectedPort } from "../../../features/terminal/commands/t
 import { PortsTableMenu, type PortsTableMenuRow } from "../../../components/PortsTableMenu";
 import { RouteCloseWatcher } from "../../../components/RouteCloseWatcher";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../hooks/useCommands";
-import { useTerminalTabLookups } from "../../../hooks/useTerminalTabLookups";
+import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { useTerminalTabLookups } from "../../../features/terminal/ui/hooks/useTerminalTabLookups";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";

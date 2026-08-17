@@ -1,4 +1,4 @@
-import type { Commands } from "../hooks/useCommands";
+import type { Commands } from "../app/commands/useCommands";
 import type { SplitPaneStoreState } from "../features/workbench/state/splitPaneStore";
 import type { TabStoreState } from "../features/workbench/state/tabStore";
 import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStore";

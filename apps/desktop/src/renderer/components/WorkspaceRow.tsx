@@ -13,7 +13,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuArchive, LuLoaderCircle } from "react-icons/lu";
 import { buildListItemButtonSx } from "../helpers/leftPaneStyles";
-import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../store/types";
+import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../features/workbench/model/types";
 import { workspaceCreateProgressStore } from "../features/workspace/state/workspaceCreateProgressStore";
 import { CliSpinner } from "./CliSpinner";
 import { GitChangeTotals } from "./GitChangeTotals";

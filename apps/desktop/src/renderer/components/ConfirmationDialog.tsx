@@ -1,5 +1,5 @@
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
-import { useDialogRegistration } from "../hooks/useDialogRegistration";
+import { useDialogRegistration } from "../ui/hooks/useDialogRegistration";
 
 export type ConfirmationDialogProps = {
   open: boolean;

@@ -1,4 +1,4 @@
-import type { Commands } from "@renderer/hooks/useCommands";
+import type { Commands } from "@renderer/app/commands/useCommands";
 import {
   NOTIFICATION_PREFERENCES_LOAD_RETRY_ATTEMPTS,
   NOTIFICATION_PREFERENCES_LOAD_RETRY_BASE_DELAY_MS,

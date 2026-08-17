@@ -5,18 +5,18 @@ import {
   MAX_DETAILS_ITEMS,
   MAX_DETAILS_STRING_UTF8_BYTES,
   PER_MESSAGE_UTF8_BYTES,
-} from "../features/agent/events/agentChatInboundMessage";
-import { handleAgentPiEvent } from "../features/agent/events/agentChatPiEventHandler";
-import { agentChatStore } from "../features/agent/model/agentChatStore";
-import type { AgentMessage } from "../features/agent/model/agentChatTypes";
+} from "./agentChatInboundMessage";
+import { handleAgentPiEvent } from "./agentChatPiEventHandler";
+import { agentChatStore } from "../model/agentChatStore";
+import type { AgentMessage } from "../model/agentChatTypes";
 import {
   flushAgentChatStreamBuffer,
   setAgentChatStreamTabVisible,
-} from "../features/agent/runtime/agentChatStreamBuffer";
+} from "../runtime/agentChatStreamBuffer";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
-vi.mock("../helpers/generateId", () => ({
+vi.mock("../../../helpers/generateId", () => ({
   generateId: vi.fn(() => "generated-id"),
 }));
 

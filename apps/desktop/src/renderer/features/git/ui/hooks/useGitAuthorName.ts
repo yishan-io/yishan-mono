@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { workspaceStore } from "../features/workspace/state/workspaceStore";
-import { useGitCommands } from "./useCommands";
+import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+import { useGitCommands } from "../../../../app/commands/useCommands";
 
 /**
  * Fetches the git author name for the given workspace path.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentMessage } from "../features/agent/model/agentChatTypes";
-import { applyStreamDelta, cloneContentBlock } from "../features/agent/events/agentChatStreamMessageHelpers";
+import type { AgentMessage } from "../model/agentChatTypes";
+import { applyStreamDelta, cloneContentBlock } from "./agentChatStreamMessageHelpers";
 
 describe("agentChatStreamMessageHelpers", () => {
   it("preserves thinking signature summaries when cloning thinking blocks", () => {

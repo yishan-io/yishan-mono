@@ -7,7 +7,7 @@ import type {
   WorkspaceProjectRecord,
   WorkspaceStoreOrganizationPreference,
   WorkspaceStoreState,
-} from "../store/types";
+} from "../features/workbench/model/types";
 import { resolveHydratedWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
 
 export type RepoConfigUpdate = Pick<

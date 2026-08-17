@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { memo } from "react";
 import type { MutableRefObject } from "react";
-import type { WorkspaceTab } from "../../../store/types";
+import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { AgentChatView } from "./AgentChatView";
 import type { WorkspaceTabPlacement } from "./useWorkspaceTabPlacements";
 

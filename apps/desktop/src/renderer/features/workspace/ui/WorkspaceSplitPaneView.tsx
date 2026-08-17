@@ -11,13 +11,13 @@ import { findTabWithSession } from "../../../features/agent/commands/agentChatCo
 import { projectStore } from "../../../features/project/state/projectStore";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
-import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../hooks/useCommands";
+import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
 import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "../../../features/workbench/ui/hooks/useOpenTabAutoRefresh";
 import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { WorkspaceTab } from "../../../store/types";
+import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
 import { usePaneTabHandlers } from "./usePaneTabHandlers";

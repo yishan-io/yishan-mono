@@ -1,4 +1,4 @@
-import type { WorkspaceTab } from "../../../store/types";
+import type { WorkspaceTab } from "../../../features/workbench/model/types";
 
 export function getFileName(path: string): string {
   const normalized = path.replace(/\\/g, "/");

@@ -1,5 +1,5 @@
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { WorkspaceProjectRecord } from "../../../store/types";
+import type { WorkspaceProjectRecord } from "../../../features/workbench/model/types";
 import type { ProjectStoreState } from "./projectStore";
 import { projectStore } from "./projectStore";
 

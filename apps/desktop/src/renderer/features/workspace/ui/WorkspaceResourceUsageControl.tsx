@@ -5,9 +5,9 @@ import { ResourceUsageMenu, type ResourceUsageMenuRow } from "../../../component
 import { RouteCloseWatcher } from "../../../components/RouteCloseWatcher";
 import { formatCpuPercent, formatMemoryBytes } from "../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../helpers/terminalTabUtils";
-import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../hooks/useCommands";
+import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
-import { useTerminalTabLookups } from "../../../hooks/useTerminalTabLookups";
+import { useTerminalTabLookups } from "../../../features/terminal/ui/hooks/useTerminalTabLookups";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 

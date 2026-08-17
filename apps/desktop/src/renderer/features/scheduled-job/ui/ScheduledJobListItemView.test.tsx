@@ -30,7 +30,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../../hooks/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => mocked;
   return {
     useAppCommands: commandSurface,

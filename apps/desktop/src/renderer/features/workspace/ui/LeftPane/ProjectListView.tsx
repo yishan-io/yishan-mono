@@ -18,10 +18,10 @@ import type { WorkspaceTreeRow } from "../../../../components/WorkspaceTree/type
 import { projectStore } from "../../../../features/project/state/projectStore";
 import { subscribeOpenCreateWorkspaceDialog } from "../../../../features/workspace/commands/workspaceCommands";
 import { getRendererPlatform } from "../../../../helpers/platform";
-import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../../hooks/useCommands";
-import { useContextMenuState } from "../../../../hooks/useContextMenuState";
-import { useDetectedExternalAppIds } from "../../../../hooks/useDetectedExternalAppIds";
-import { useSuppressNativeContextMenuWhileOpen } from "../../../../hooks/useSuppressNativeContextMenuWhileOpen";
+import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
+import { useContextMenuState } from "../../../../ui/hooks/useContextMenuState";
+import { useDetectedExternalAppIds } from "../../../../features/files/ui/hooks/useDetectedExternalAppIds";
+import { useSuppressNativeContextMenuWhileOpen } from "../../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../../../features/agent/state/chatStore";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";

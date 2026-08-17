@@ -169,7 +169,7 @@ vi.mock("../../../../features/workspace/state/workspaceLifecycleNoticeStore", ()
   enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 
-vi.mock("../../../../hooks/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     selectTab: mocked.selectTab,

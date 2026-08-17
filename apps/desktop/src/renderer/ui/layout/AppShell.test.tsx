@@ -16,7 +16,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../hooks/useDaemonConnectionMonitor", () => ({
+vi.mock("../../app/runtime/useDaemonConnectionMonitor", () => ({
   useDaemonConnectionMonitor: mocks.useDaemonConnectionMonitor,
 }));
 

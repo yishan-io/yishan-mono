@@ -2,8 +2,8 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
-import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../features/workbench/model/types";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 import { RepoSelectorMenu } from "./mainPaneTitleBarMenus";
@@ -125,7 +125,7 @@ vi.mock("../../../features/agent/state/chatStore", () => ({
   ) => selector({ workspaceAgentStatusByWorkspaceId: {}, workspaceUnreadToneByWorkspaceId: {} }),
 }));
 
-vi.mock("../../../hooks/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     setSelectedRepoId: (projectId: string) => {
@@ -165,7 +165,7 @@ vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../hooks/useWorkspacePaneVisibility", () => ({
+vi.mock("../../../features/workspace/ui/hooks/useWorkspacePaneVisibility", () => ({
   useWorkspacePaneVisibilityContext: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
 }));
 

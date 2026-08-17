@@ -6,8 +6,8 @@ import type { PiProviderStatus } from "../../../features/agent/commands/piProvid
 import { ProviderMark } from "../../../components/ProviderMark";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
 import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../../helpers/piProviders";
-import { useAgentCommands } from "../../../hooks/useCommands";
-import { useRefreshableLoader } from "../../../hooks/useRefreshableLoader";
+import { useAgentCommands } from "../../../app/commands/useCommands";
+import { useRefreshableLoader } from "../../../ui/hooks/useRefreshableLoader";
 import { ProviderCredentialDialog } from "./ProviderCredentialDialog";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 

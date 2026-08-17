@@ -10,7 +10,7 @@ import {
 import type { WorkspacePullRequestSummary } from "../../../../api/types";
 import { ContextMenu, type ContextMenuEntry } from "../../../../components/ContextMenu";
 import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
-import type { WorkspaceItem } from "../../../../store/types";
+import type { WorkspaceItem } from "../../../../features/workbench/model/types";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";

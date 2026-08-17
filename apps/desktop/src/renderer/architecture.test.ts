@@ -39,7 +39,11 @@ type RuleName =
   | "R2"
   | "R3"
   | "R4"
-  | "R5-cross-feature-internal";
+  | "R5-cross-feature-internal"
+  | "R6-state-layer"
+  | "R7-model-layer"
+  | "R8-infra-layer"
+  | "R9-ui-components";
 type KnownViolation = { rule: RuleName; file: string; phase: string };
 
 /**
@@ -51,6 +55,85 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
   // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
   // ---- Rule 4: commands importing views/components (cross-layer index) ----
+  // ---- Phase 15 baseline: hook moves (hooks/ -> ui/hooks + feature ui hooks). ----
+  // ---- Phase 15 baseline: strict state/model/infra/ui-component rules (pre-existing). ----
+  { rule: "R6-state-layer", file: "features/agent/state/chatStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/overview/state/overviewStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/project/state/projectStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/scheduled-job/state/scheduledJobStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/session/state/sessionStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/settings/state/agentSettingsStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/settings/state/editorSettingsStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/settings/state/keybindingSettingsStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/settings/state/workspaceSettingsStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/terminal/state/terminalFocusStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workbench/state/layoutStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workbench/state/splitPaneStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workbench/state/tabStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.localFolders.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.selection.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.workspaces.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspaceCreateProgressStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspaceLifecycleNoticeStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspaceProjectionStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspaceStore.ts", phase: "P15" },
+  { rule: "R6-state-layer", file: "features/workspace/state/workspaceUiStore.ts", phase: "P15" },
+  { rule: "R7-model-layer", file: "features/agent/model/agentChatStore.ts", phase: "P15" },
+  { rule: "R7-model-layer", file: "features/workbench/model/types.ts", phase: "P15" },
+  { rule: "R7-model-layer", file: "features/workspace/model/snapshotReconciler.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/AppUpdateSnackbar.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/AudioPreview.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/AuthSessionExpiredSnackbar.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/FileDiffViewer.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/FileEditor.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/ImagePreview.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/MessageList.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/MultiFileDiffViewer.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/ProjectRow.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/SplitDropZone.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/SplitPaneContainer.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/SplitPaneGroup.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/TabBarMenus.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/VideoPreview.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/WorkspaceRow.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/WorkspaceTree/types.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/WorkspaceTree/useVisibleWorkspaceTree.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/session/AgentChatSubagentRow.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/session/AgentChatUsageSummaryLabel.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/session/AgentModelSelector.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/session/AgentModelSelectorMenu.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/session/SessionHistoryMenu.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/session/helpers.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/tool-calls/DiffToolCard.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/tool-calls/helpers.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/transcript/AgentMarkdownContent.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/transcript/AgentMessageList.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/transcript/ThinkingBlock.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/transcript/ToolResultMessageContent.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/transcript/UserMessageRow.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/transcript/helpers.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/agent/transcript/turnModel.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/fileEditor/VditorFileEditor.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/fileEditor/useMonacoFileEditor.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/markdown/MarkdownPreviewRenderer.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/markdown/MarkdownPreviewThemeProvider.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/markdown/markdownPreviewDom.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/multiFileDiffViewer/multiFileDiffViewerHelpers.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/projectIcons.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "components/useVoiceRecording.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/hooks/useCodeTheme.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/hooks/useDialogRegistration.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/hooks/useRemoteHealthQuery.ts", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/hooks/useThemePreference.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/layout/AppMenuOrganizationSubmenu.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/layout/AppMenuView.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/layout/AppShell.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/layout/CreateOrganizationDialogView.tsx", phase: "P15" },
+  { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "P15" },
+
+  { rule: "R5-cross-feature-internal", file: "features/git/ui/hooks/useGitAuthorName.ts", phase: "P15" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/ui/hooks/useTerminalTabLookups.ts", phase: "P15" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/hooks/useWorkspacePaneVisibility.tsx", phase: "P15" },
   // ---- Phase 14 baseline: view moves exposed pre-existing cross-feature
   // Store/transport imports (views/<f> -> features/<f>/ui). Replace with
   // feature Selectors/Commands per Phase 14 task 8; remove rows as fixed. ----
@@ -250,6 +333,49 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // commands/ modules (the declared command surface) or its index.ts.
       const crossFeature = /^features\/([^/]+)\//.exec(rel);
       const crossTarget = /^features\/([^/]+)\//.exec(relT);
+      // ---- Rule 6: state/ must not import commands, transport, another feature's
+      // state, or runtime (Phase 15). Selectors/Actions public surface excluded. ----
+      if (/^features\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
+        const isOwnFeature = crossTarget && crossFeature && crossTarget[1] === crossFeature[1];
+        const isPublicStateSurface = /\/state\/[^/]+(Selectors|Actions)(\.ts)?$/.test(relT);
+        if (!isPublicStateSurface && (isTransport || imp.spec === "electron" || imp.spec === "zustand")) {
+          violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
+        }
+        if (!isPublicStateSurface && relT.includes("/commands/")) {
+          violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
+        }
+        if (!isOwnFeature && !isPublicStateSurface && relT.includes("/state/")) {
+          violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
+        }
+        if (!isOwnFeature && !isPublicStateSurface && relT.includes("/runtime/")) {
+          violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
+        }
+      }
+      // ---- Rule 7: model/ must not import React, Zustand, Electron, transport, runtime. ----
+      if (/^features\/[^/]+\/model\//.test(rel) && !rel.includes(".test.")) {
+        if (
+          imp.spec === "react" ||
+          imp.spec === "zustand" ||
+          imp.spec === "electron" ||
+          isTransport ||
+          relT.includes("/runtime/") ||
+          relT.includes("/state/")
+        ) {
+          violations.push({ rule: "R7-model-layer", file: rel, target: imp.spec });
+        }
+      }
+      // ---- Rule 8: infrastructure (api/, rpc/) must not import feature UI or app routes. ----
+      if ((rel.startsWith("api/") || rel.startsWith("rpc/")) && !rel.includes(".test.")) {
+        if (/^features\/[^/]+\/ui\//.test(relT) || relT.startsWith("app/routes/") || relT.startsWith("ui/")) {
+          violations.push({ rule: "R8-infra-layer", file: rel, target: imp.spec });
+        }
+      }
+      // ---- Rule 9: domain-free ui/components must not import feature internals or app. ----
+      if ((rel.startsWith("ui/") || rel.startsWith("components/")) && !rel.includes(".test.")) {
+        if (/^features\//.test(relT) || relT.startsWith("app/")) {
+          violations.push({ rule: "R9-ui-components", file: rel, target: imp.spec });
+        }
+      }
       if (crossFeature && crossTarget && crossFeature[1] !== crossTarget[1]) {
         // The owning feature's public state surface (Selectors = read models,
         // Actions = state-change surface) is importable; the Store itself is not.

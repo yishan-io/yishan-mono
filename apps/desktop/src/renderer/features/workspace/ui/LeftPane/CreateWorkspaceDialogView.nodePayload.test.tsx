@@ -17,7 +17,7 @@ const listAgentModels = vi.fn();
 const setIsCreatingWorkspace = vi.fn();
 const resetDraftInputs = vi.fn();
 
-vi.mock("../../../../hooks/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     createWorkspace,
@@ -46,7 +46,7 @@ vi.mock("../../../../hooks/useCommands", () => {
 });
 
 
-vi.mock("../../../../hooks/useDialogRegistration", () => ({
+vi.mock("../../../../ui/hooks/useDialogRegistration", () => ({
   useDialogRegistration: () => {},
 }));
 

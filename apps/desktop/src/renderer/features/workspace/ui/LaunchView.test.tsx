@@ -42,7 +42,7 @@ vi.mock("../../../features/workbench/commands/whiteboardCommands", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
 }));
 
-vi.mock("../../../hooks/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     openTab: mocks.openTab,

@@ -1,4 +1,4 @@
-import type { WorkspaceTab } from "../../../../store/types";
+import type { WorkspaceTab } from "../../../../features/workbench/model/types";
 import type { WorkspaceTabStateSlice } from "./types";
 
 function remapPathByRename(path: string, fromPath: string, toPath: string): string | null {

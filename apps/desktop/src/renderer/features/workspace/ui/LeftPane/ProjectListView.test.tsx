@@ -261,7 +261,7 @@ vi.mock("../../../../features/workspace/state/workspaceCreateProgressStore", () 
   ),
 }));
 
-vi.mock("../../../../hooks/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     setSelectedRepoId: mocked.setSelectedRepoId,

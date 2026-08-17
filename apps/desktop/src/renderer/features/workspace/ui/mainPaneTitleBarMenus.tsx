@@ -15,8 +15,8 @@ import { useTranslation } from "react-i18next";
 import { LuFolder, LuPlay } from "react-icons/lu";
 import { renderProjectIcon } from "../../../components/projectIcons";
 import type { WorkspaceNotificationColor } from "../../../helpers/workspaceNotification";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
-import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../features/workbench/model/types";
 import { MenuSearchField, renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 
 type RepoSelectorMenuProps = {

@@ -22,8 +22,8 @@ import {
   type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
-} from "../../hooks/useCommands";
-import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../../hooks/useWorkspacePaneVisibility";
+} from "../../app/commands/useCommands";
+import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";

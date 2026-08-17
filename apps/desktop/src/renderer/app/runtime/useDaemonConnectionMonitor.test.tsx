@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../features/session/state/sessionStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
 import { useDaemonConnectionMonitor } from "./useDaemonConnectionMonitor";
 
 type RawEventListener = (event: { method: string; payload?: unknown }) => void;
@@ -22,7 +22,7 @@ const mocked = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../rpc/rpcTransport", () => ({
+vi.mock("../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: mocked.subscribeDaemonConnectionStatus,
   subscribeDesktopRpcEvent: mocked.subscribeDesktopRpcEvent,
 }));

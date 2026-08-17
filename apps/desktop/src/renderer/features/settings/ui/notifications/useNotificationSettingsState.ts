@@ -1,4 +1,4 @@
-import { useNotificationCommands } from "@renderer/hooks/useCommands";
+import { useNotificationCommands } from "@renderer/app/commands/useCommands";
 import { useState } from "react";
 import type { NotificationPreviewStatus, NotificationSettingsErrorKey } from "./notificationSettingsState.types";
 import { useNotificationSettingsMutations } from "./useNotificationSettingsMutations";

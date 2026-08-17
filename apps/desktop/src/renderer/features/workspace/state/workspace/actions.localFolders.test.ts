@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { DaemonLocalFolder } from "../../../../rpc/daemonTypes";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
 import { createLocalFolderActions } from "./actions.localFolders";
 
 type TestWorkspace = {

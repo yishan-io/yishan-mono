@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WorkspacePaneVisibilityProvider } from "../../../hooks/useWorkspacePaneVisibility";
+import { WorkspacePaneVisibilityProvider } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
 import type { SplitPaneNode } from "../../../features/workbench/model/split-pane";
 import { MainPaneView } from "./MainPaneView";
@@ -101,7 +101,7 @@ vi.mock("../../../features/agent/state/chatStore", () => ({
     }),
 }));
 
-vi.mock("../../../hooks/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => {
 
     const state = mocked.stateRef.current as Record<string, unknown>;

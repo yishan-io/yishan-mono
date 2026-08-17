@@ -24,7 +24,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../hooks/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     getTerminalResourceUsage: mocked.getTerminalResourceUsage,

@@ -22,7 +22,7 @@ import {
   toggleTabPinnedState,
   updateFileTabContentState,
 } from "../model/tabs/index";
-import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../store/types";
+import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../workspace/state/workspaceStore";
 
 export type CloseTabOptions = {

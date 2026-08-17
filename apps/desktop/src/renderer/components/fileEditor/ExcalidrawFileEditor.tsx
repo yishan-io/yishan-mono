@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { useEffect, useRef } from "react";
-import { useCodeTheme } from "../../hooks/useCodeTheme";
+import { useCodeTheme } from "../../ui/hooks/useCodeTheme";
 import { FileViewerToolbar } from "../FileViewerToolbar";
 import { ExcalidrawFilePane } from "./ExcalidrawFilePane";
 import { useExcalidrawSceneSync } from "./useExcalidrawSceneSync";

@@ -1,4 +1,4 @@
-import type { Commands } from "@renderer/hooks/useCommands";
+import type { Commands } from "@renderer/app/commands/useCommands";
 import { NOTIFICATION_PREVIEW_STATUS_AUTO_HIDE_MS } from "@shared/notifications/notificationConstants";
 import type {
   NotificationEventType,

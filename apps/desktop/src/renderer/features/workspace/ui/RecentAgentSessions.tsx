@@ -5,7 +5,7 @@ import { LuHistory } from "react-icons/lu";
 import { fetchSessionHistory } from "../../../features/agent/commands/agentChatSessionHistory";
 import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { useWorkbenchCommands } from "../../../hooks/useCommands";
+import { useWorkbenchCommands } from "../../../app/commands/useCommands";
 import type * as Rpc from "../../../rpc/daemonTypes";
 
 const RECENT_SESSION_LIMIT = 5;

@@ -21,7 +21,7 @@ import {
   type DesktopAgentKind,
 } from "../../../helpers/agentSettings";
 import { getRendererPlatform } from "../../../helpers/platform";
-import { useWorkbenchCommands, useWorkspaceCommands } from "../../../hooks/useCommands";
+import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import {
   type WorkspaceCreateProgressStep,

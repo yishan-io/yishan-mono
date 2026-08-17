@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { readDiff } from "../../../git/commands/gitCommands";
+import { readDiff } from "../../../../features/git/commands/gitCommands";
 import {
   type GitLineChange,
   type GitLineChangeKind,

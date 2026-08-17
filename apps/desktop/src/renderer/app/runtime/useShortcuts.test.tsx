@@ -95,7 +95,7 @@ vi.mock("../../features/workbench/state/tabStore", () => ({
   tabStore: (selector: (state: typeof mocks.tabStoreState) => unknown) => selector(mocks.tabStoreState),
 }));
 
-vi.mock("../../hooks/useCommands", () => {
+vi.mock("../../app/commands/useCommands", () => {
   const commandSurface = () => mocks.commandHandlers;
   return {
     useCommands: commandSurface,

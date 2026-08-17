@@ -9,7 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { useDialogRegistration } from "../../../../hooks/useDialogRegistration";
+import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";
 
 type WorkspaceDeleteDialogViewProps = {
   open: boolean;

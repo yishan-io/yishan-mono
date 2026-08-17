@@ -6,7 +6,7 @@ import {
 } from "@renderer/components/markdown/markdownHelpers";
 import { markdownService } from "@renderer/components/markdown/markdownService";
 import { useMarkdownStyles } from "@renderer/components/markdown/markdownStyles";
-import { useCodeTheme } from "@renderer/hooks/useCodeTheme";
+import { useCodeTheme } from "@renderer/ui/hooks/useCodeTheme";
 import { editorSettingsStore } from "@renderer/features/settings/state/editorSettingsStore";
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../app/commands/appCommands";

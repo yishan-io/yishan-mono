@@ -20,7 +20,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../hooks/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     updateScheduledJob: mocked.updateScheduledJob,
@@ -45,7 +45,7 @@ vi.mock("../../../hooks/useCommands", () => {
 });
 
 
-vi.mock("../../../hooks/useDialogRegistration", () => ({
+vi.mock("../../../ui/hooks/useDialogRegistration", () => ({
   useDialogRegistration: () => {},
 }));
 

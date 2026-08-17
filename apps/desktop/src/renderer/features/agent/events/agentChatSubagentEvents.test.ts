@@ -1,19 +1,19 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../features/agent/model/agentChatStore";
-import { tabStore } from "../features/workbench/state/tabStore";
+import { agentChatStore } from "../model/agentChatStore";
+import { tabStore } from "../../workbench/state/tabStore";
 import {
   applySubagentLifecycleWidget,
   applySubagentLiveTranscripts,
   parseSubagentLifecycleWidget,
   parseSubagentLiveTranscripts,
-} from "../features/agent/events/agentChatSubagentEvents";
+} from "./agentChatSubagentEvents";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
 
-vi.mock("../helpers/generateId", () => ({
+vi.mock("../../../helpers/generateId", () => ({
   generateId: vi.fn(() => "generated-id"),
 }));
 

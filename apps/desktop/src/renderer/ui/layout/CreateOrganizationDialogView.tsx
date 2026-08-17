@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createOrganization, listOrganizations } from "../../features/organization/commands/orgCommands";
 import { switchOrganization } from "../../features/organization/commands/orgCommands";
-import { useDialogRegistration } from "../../hooks/useDialogRegistration";
+import { useDialogRegistration } from "../../ui/hooks/useDialogRegistration";
 import { sessionStore } from "../../features/session/state/sessionStore";
 
 type CreateOrganizationDialogViewProps = {

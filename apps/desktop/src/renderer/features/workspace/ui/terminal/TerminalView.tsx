@@ -3,7 +3,7 @@ import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { memo, useEffect, useRef } from "react";
-import { useTerminalCommands, useWorkbenchCommands } from "../../../../hooks/useCommands";
+import { useTerminalCommands, useWorkbenchCommands } from "../../../../app/commands/useCommands";
 import { terminalFocusStore } from "../../../../features/terminal/state/terminalFocusStore";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import {

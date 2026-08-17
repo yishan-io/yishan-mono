@@ -7,7 +7,7 @@ import { openLink } from "../app/commands/appCommands";
 import { AppUpdateSnackbar } from "../components/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "../components/AuthSessionExpiredSnackbar";
 import { startBackendEventHandlers, startBackendEventPipeline } from "../events";
-import { AppThemePreferenceProvider, useThemePreference } from "../hooks/useThemePreference";
+import { AppThemePreferenceProvider, useThemePreference } from "../ui/hooks/useThemePreference";
 import { i18n } from "../i18n";
 import { rendererQueryClient } from "../queryClient";
 import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";

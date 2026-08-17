@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { FileDiffEntry } from "../../store/types";
+import type { FileDiffEntry } from "../../features/workbench/model/types";
 import {
   createCodeViewItems,
   createFileMetaByPath,

@@ -1,4 +1,4 @@
-import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../../store/types";
+import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../../features/workbench/model/types";
 
 /** Returns a tab in the target workspace that matches the open request identity. */
 export function findExistingTab(

@@ -15,7 +15,7 @@ import type { WorkspacePullRequestSummary } from "../../../api/types";
 import { resolveHydratedWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { getFileName } from "../../../features/workbench/model/tabs";
-import type { WorkspaceItem, WorkspaceStoreOrganizationPreference, WorkspaceStoreState } from "../../../store/types";
+import type { WorkspaceItem, WorkspaceStoreOrganizationPreference, WorkspaceStoreState } from "../../../features/workbench/model/types";
 import { buildWorkspaceStateFromData } from "../../../features/workspace/state/workspace/state";
 import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { WorkspaceGitChangeTotals } from "./workspaceTypes";

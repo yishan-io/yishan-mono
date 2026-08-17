@@ -6,7 +6,7 @@ import { PaneHeader } from "../../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../../components/PaneToggleButton";
 import { projectStore } from "../../../../features/project/state/projectStore";
 import { getRendererPlatform } from "../../../../helpers/platform";
-import { useProjectCommands, useWorkspaceCommands } from "../../../../hooks/useCommands";
+import { useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";

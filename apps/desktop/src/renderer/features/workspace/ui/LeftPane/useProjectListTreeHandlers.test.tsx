@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
 import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
 
 function makeSetters() {

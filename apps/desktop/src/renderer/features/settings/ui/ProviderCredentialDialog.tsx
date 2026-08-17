@@ -26,7 +26,7 @@ import {
   isPiProviderOAuthCapable,
   isPiProviderSubscriptionCapable,
 } from "../../../helpers/piProviders";
-import { useAgentCommands } from "../../../hooks/useCommands";
+import { useAgentCommands } from "../../../app/commands/useCommands";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 

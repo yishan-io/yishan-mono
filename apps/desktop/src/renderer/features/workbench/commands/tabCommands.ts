@@ -11,7 +11,7 @@ import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore
 import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
-import type { OpenWorkspaceTabInput } from "../../../store/types";
+import type { OpenWorkspaceTabInput } from "../../../features/workbench/model/types";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { resolveChatFilePath } from "../../../features/files/commands/fileCommands";

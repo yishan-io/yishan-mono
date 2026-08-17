@@ -1,5 +1,5 @@
 import { createFile, deleteEntry, renameEntry } from "@renderer/features/files/commands/fileCommands";
-import type { WorkspaceTab } from "@renderer/store/types";
+import type { WorkspaceTab } from "@renderer/features/workbench/model/types";
 import { useCallback, useRef } from "react";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 

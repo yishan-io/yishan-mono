@@ -7,7 +7,7 @@ import { subscribeWorkspaceChatEvent } from "../../../events";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
-import { useAgentCommands } from "../../../hooks/useCommands";
+import { useAgentCommands } from "../../../app/commands/useCommands";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import type { AvailableModel, ChatMessage } from "../../../features/workspace/state/workspaceStore";
 

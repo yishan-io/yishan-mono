@@ -9,7 +9,7 @@ import {
 import { projectStore } from "../../../../features/project/state/projectStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
-import { useTerminalCommands, useWorkspaceCommands } from "../../../../hooks/useCommands";
+import { useTerminalCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import type { TerminalResourceUsageSnapshot } from "../../../../features/terminal/commands/terminalCommands";
 import { tabStore } from "../../../../features/workbench/state/tabStore";

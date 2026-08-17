@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isMarkdownFile } from "../../helpers/editorLanguage";
 import { monaco } from "../../helpers/monacoSetup";
-import { useCodeTheme } from "../../hooks/useCodeTheme";
+import { useCodeTheme } from "../../ui/hooks/useCodeTheme";
 import { editorSettingsStore } from "../../features/settings/state/editorSettingsStore";
 import { createMonacoFileEditor, replaceEditorContentPreservingViewState } from "./createMonacoFileEditor";
 

@@ -5,7 +5,7 @@ import {
   applyUpdatedRepoConfigState,
   normalizeCreateRepoInput,
 } from "../../../../helpers/projectHelpers";
-import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../../../../store/types";
+import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../../../../features/workbench/model/types";
 
 type WorkspaceRepoActions = Pick<
   WorkspaceStoreActions,

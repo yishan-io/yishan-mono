@@ -1,7 +1,7 @@
 import { Box, Dialog, DialogContent, InputAdornment, TextField, Typography } from "@mui/material";
 import { type KeyboardEvent as ReactKeyboardEvent, useRef } from "react";
 import { BiSearch } from "react-icons/bi";
-import { useDialogRegistration } from "../hooks/useDialogRegistration";
+import { useDialogRegistration } from "../ui/hooks/useDialogRegistration";
 import type { FileSearchResult } from "../search/fileSearch";
 import { buildHighlightedPathSegments, splitFilePathForDisplay } from "./filePathDisplayHelpers";
 import { getFileTreeIcon } from "./fileTreeIcons";

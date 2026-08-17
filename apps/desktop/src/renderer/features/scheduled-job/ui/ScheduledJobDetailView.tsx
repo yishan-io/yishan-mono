@@ -7,7 +7,7 @@ import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { SplitPaneLayout } from "../../../components/SplitPaneLayout";
 import { getRendererPlatform } from "../../../helpers/platform";
-import { useWorkspacePaneVisibilityContext } from "../../../hooks/useWorkspacePaneVisibility";
+import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { scheduledJobStore } from "../../../features/scheduled-job/state/scheduledJobStore";
 import { sessionStore } from "../../../features/session/state/sessionStore";

@@ -1,5 +1,5 @@
 import { isExcalidrawFile } from "../../../../helpers/editorLanguage";
-import type { DiffFileChangeKind, OpenWorkspaceTabInput, WorkspaceTab, WorkspaceTabDataByKind } from "../../../../store/types";
+import type { DiffFileChangeKind, OpenWorkspaceTabInput, WorkspaceTab, WorkspaceTabDataByKind } from "../../../../features/workbench/model/types";
 import { findExistingTab } from "./shared";
 import type { WorkspaceTabStateSlice } from "./types";
 

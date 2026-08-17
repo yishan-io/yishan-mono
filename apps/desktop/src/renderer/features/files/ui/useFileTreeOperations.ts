@@ -1,6 +1,6 @@
 import { listFiles, listFilesBatch } from "@renderer/features/files/commands/fileCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/hooks/useCommands";
+import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/app/commands/useCommands";
 import { tabStore } from "@renderer/features/workbench/state/tabStore";
 import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";

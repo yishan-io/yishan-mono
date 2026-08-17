@@ -52,7 +52,7 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
-vi.mock("../../../../hooks/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     createWorkspace: getMockedCommands().createWorkspace,

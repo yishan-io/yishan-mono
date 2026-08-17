@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "../../../components/settings";
 import { projectStore } from "../../../features/project/state/projectStore";
-import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
+import { useGitAuthorName } from "../../../features/git/ui/hooks/useGitAuthorName";
 import {
   type GitBranchPrefixMode,
   resolveGitBranchPrefix,

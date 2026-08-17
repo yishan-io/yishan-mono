@@ -2,7 +2,7 @@ import { Avatar, Box, IconButton, ListItem, ListItemButton, Tooltip, Typography,
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { LuChevronDown, LuChevronRight, LuPlus } from "react-icons/lu";
 import { buildListItemButtonSx } from "../helpers/leftPaneStyles";
-import type { WorkspaceProjectRecord } from "../store/types";
+import type { WorkspaceProjectRecord } from "../features/workbench/model/types";
 import { renderProjectIcon } from "./projectIcons";
 
 type ProjectRowProps = {

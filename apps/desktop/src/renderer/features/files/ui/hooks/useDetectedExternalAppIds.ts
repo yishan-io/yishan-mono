@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { ExternalAppId } from "../../shared/contracts/externalApps";
-import { useFileCommands } from "./useCommands";
+import type { ExternalAppId } from "../../../../../shared/contracts/externalApps";
+import { useFileCommands } from "../../../../app/commands/useCommands";
 
 /** Resolves detected external-app ids from the desktop host bridge. */
 export function useDetectedExternalAppIds(): readonly ExternalAppId[] | null | undefined {

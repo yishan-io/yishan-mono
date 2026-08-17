@@ -8,7 +8,7 @@ import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { splitPaneStore } from "../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
-import { useCommands } from "../../hooks/useCommands";
+import { useCommands } from "../../app/commands/useCommands";
 import { startShortcutRuntime } from "./shortcutRuntime";
 
 const WORKSPACE_ROUTE = "/";

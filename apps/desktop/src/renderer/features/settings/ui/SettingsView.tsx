@@ -20,7 +20,7 @@ import { SearchInput } from "../../../components/SearchInput";
 import { SettingsErrorBoundary, SettingsPageLayout, SettingsSectionHeader } from "../../../components/settings";
 import { ThemePreferencePicker } from "../../../components/settings/ThemePreferencePicker";
 import { getRendererPlatform } from "../../../helpers/platform";
-import { useThemePreference } from "../../../hooks/useThemePreference";
+import { useThemePreference } from "../../../ui/hooks/useThemePreference";
 import { AccountSettingsView } from "./AccountSettingsView";
 import { AgentProviderSettingsView } from "./AgentProviderSettingsView";
 import { CLISettingsView } from "./CLISettingsView";

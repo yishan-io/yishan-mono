@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { PiProviderStatus } from "../../../features/agent/commands/piProviderCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getPiProviderDisplayName } from "../../../helpers/piProviders";
-import { useAgentCommands } from "../../../hooks/useCommands";
+import { useAgentCommands } from "../../../app/commands/useCommands";
 
 export function RemoveProviderDialog({
   open,

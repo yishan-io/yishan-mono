@@ -41,7 +41,7 @@ vi.mock("../../../../features/git/commands/gitCommands", () => ({
   closePullRequest: (options: { workspaceId: string; prNumber: number }) => mocked.closePullRequest(options),
 }));
 
-vi.mock("../../../../hooks/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,

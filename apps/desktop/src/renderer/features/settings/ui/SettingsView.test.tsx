@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AppThemePreferenceProvider } from "../../../hooks/useThemePreference";
+import { AppThemePreferenceProvider } from "../../../ui/hooks/useThemePreference";
 import { sessionStore } from "../../../features/session/state/sessionStore";
 import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../../../features/workbench/state/layoutStore";
 import { SettingsView } from "./SettingsView";

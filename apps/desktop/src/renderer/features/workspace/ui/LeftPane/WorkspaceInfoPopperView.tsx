@@ -6,7 +6,7 @@ import { PullRequestIcon } from "../../../../components/PullRequestIcon";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { livePrStatus } from "../../../../helpers/pullRequestUtils";
 import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
-import type { WorkspaceItem } from "../../../../store/types";
+import type { WorkspaceItem } from "../../../../features/workbench/model/types";
 
 type WorkspaceInfoPopperViewProps = {
   open: boolean;

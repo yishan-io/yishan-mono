@@ -5,7 +5,7 @@
  * Lives in the Workspace model so both Commands and Events can import it
  * without depending on a command module.
  */
-import type { WorkspaceStoreState } from "../../../store/types";
+import type { WorkspaceStoreState } from "../../../features/workbench/model/types";
 
 export type WorkspaceCreatePlaceholderInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
 

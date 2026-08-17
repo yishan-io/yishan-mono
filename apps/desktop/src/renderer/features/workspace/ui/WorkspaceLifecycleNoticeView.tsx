@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { MONOSPACE_SX } from "../../../helpers/styles";
-import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
+import { useDialogRegistration } from "../../../ui/hooks/useDialogRegistration";
 import { workspaceLifecycleNoticeStore } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 
 /** Renders in-app snackbar and detail dialog for lifecycle script warnings. */

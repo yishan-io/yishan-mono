@@ -18,7 +18,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
 import { projectStore } from "../../../../features/project/state/projectStore";
-import { useWorkspaceCommands } from "../../../../hooks/useCommands";
+import { useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 
 /** Returns true when a repository row matches the quick-search keyword. */

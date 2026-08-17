@@ -1,5 +1,5 @@
 /**
- * Project feature vocabulary (Phase 3 split of store/types.ts).
+ * Project feature vocabulary (Phase 3 split of features/workbench/model/types.ts).
  */
 export type WorkspaceProjectCommand = {
   name: string;

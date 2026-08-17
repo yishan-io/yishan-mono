@@ -1,7 +1,7 @@
 import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events/backendEventPipeline";
 import { isFileNotFoundError } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
-import type { DiffTabSource } from "../../../store/types";
+import type { DiffTabSource } from "../../../features/workbench/model/types";
 import type { Commands } from "../../../app/commands/composition";
 
 export type RefreshableOpenTab =

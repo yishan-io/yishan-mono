@@ -1,6 +1,6 @@
 import { parseDiffFromFile } from "@pierre/diffs";
 import type { CodeViewDiffItem } from "@pierre/diffs";
-import type { FileDiffEntry } from "../../store/types";
+import type { FileDiffEntry } from "../../features/workbench/model/types";
 
 /** Metadata displayed in each multi-file diff header. */
 export type MultiFileDiffMeta = {

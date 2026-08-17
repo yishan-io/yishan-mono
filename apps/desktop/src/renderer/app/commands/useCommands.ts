@@ -32,7 +32,7 @@ import {
   type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
-} from "../app/commands/composition";
+} from "./composition";
 
 /**
  * UI-facing command hooks (Phase 12, desktop5.md).
@@ -123,4 +123,4 @@ export type {
   TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
-} from "../app/commands/composition";
+} from "./composition";

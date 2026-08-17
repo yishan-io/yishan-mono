@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { CreateScheduledJobInput } from "../../../features/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../../features/project/state/projectStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { useScheduledJobCommands } from "../../../hooks/useCommands";
+import { useScheduledJobCommands } from "../../../app/commands/useCommands";
 import { sessionStore } from "../../../features/session/state/sessionStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";

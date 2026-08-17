@@ -14,11 +14,11 @@ import {
   resolveWorkspaceNotificationColor,
   resolveWorkspaceNotificationTone,
 } from "../../../helpers/workspaceNotification";
-import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../hooks/useCommands";
-import { useWorkspacePaneVisibilityContext } from "../../../hooks/useWorkspacePaneVisibility";
+import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../../features/agent/state/chatStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { DaemonVersionWarningControl } from "./DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";

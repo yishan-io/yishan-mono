@@ -1,6 +1,6 @@
 import { Box, Stack } from "@mui/material";
 import { PaneLoadingBar } from "@renderer/components/PaneLoadingBar";
-import { useWorkspaceCommands } from "@renderer/hooks/useCommands";
+import { useWorkspaceCommands } from "@renderer/app/commands/useCommands";
 import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
 import { useMemo, useState } from "react";
 import PullRequestChecksSection from "./pullRequestTab/PullRequestChecksSection";

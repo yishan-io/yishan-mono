@@ -14,7 +14,7 @@ const mocked = vi.hoisted(() => ({
   openLocalFolderDialog: vi.fn(),
 }));
 
-vi.mock("../../../../hooks/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     updateProjectConfig: mocked.updateProjectConfig,

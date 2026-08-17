@@ -1,4 +1,4 @@
-import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../../../../store/types";
+import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../../../../features/workbench/model/types";
 import { createLocalFolderActions } from "./actions.localFolders";
 import { createWorkspaceRepoActions } from "./actions.projects";
 import { createWorkspaceSelectionActions } from "./actions.selection";

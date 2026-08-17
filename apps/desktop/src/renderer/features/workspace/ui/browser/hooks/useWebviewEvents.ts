@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useWorkbenchCommands } from "../../../../../hooks/useCommands";
+import { useWorkbenchCommands } from "../../../../../app/commands/useCommands";
 
 export function useWebviewEvents(args: {
   tabId: string;

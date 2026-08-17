@@ -12,7 +12,7 @@ import { workspaceProjectionStore } from "../../../../features/workspace/state/w
 import { isWorkspaceNotFoundError } from "../../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
-import { useGitCommands } from "../../../../hooks/useCommands";
+import { useGitCommands } from "../../../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import {

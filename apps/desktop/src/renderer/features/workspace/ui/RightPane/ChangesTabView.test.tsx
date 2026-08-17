@@ -80,7 +80,7 @@ vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),
 }));
 
-vi.mock("../../../../hooks/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     openTab: mocks.openTab,

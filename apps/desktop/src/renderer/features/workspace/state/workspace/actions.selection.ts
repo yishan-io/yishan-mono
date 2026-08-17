@@ -4,7 +4,7 @@ import type {
   WorkspaceStoreGetState,
   WorkspaceStoreSetState,
   WorkspaceStoreState,
-} from "../../../../store/types";
+} from "../../../../features/workbench/model/types";
 
 type WorkspaceSelectionActions = Pick<
   WorkspaceStoreActions,

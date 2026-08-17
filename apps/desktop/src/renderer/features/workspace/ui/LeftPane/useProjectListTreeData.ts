@@ -11,7 +11,7 @@ import { resolveWorkspaceListDisplayName } from "../../../../helpers/workspaceDi
 import { resolveWorkspaceNotificationTone } from "../../../../helpers/workspaceNotification";
 import { chatStore } from "../../../../features/agent/state/chatStore";
 import { sessionStore } from "../../../../features/session/state/sessionStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { reconcileOrder } from "./projectListHelpers";
 

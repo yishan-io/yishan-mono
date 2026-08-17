@@ -1,7 +1,7 @@
 import { Alert, Box, LinearProgress, Snackbar } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
-import { useDaemonConnectionMonitor } from "../../hooks/useDaemonConnectionMonitor";
+import { useDaemonConnectionMonitor } from "../../app/runtime/useDaemonConnectionMonitor";
 import { useShortcuts } from "../../app/runtime/useShortcuts";
 
 /** Renders the app frame and route content. */

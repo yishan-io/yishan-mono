@@ -5,7 +5,7 @@ import { chatStore } from "../../../features/agent/state/chatStore";
 import { sessionStore } from "../../../features/session/state/sessionStore";
 import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { projectStore } from "../state/projectStore";

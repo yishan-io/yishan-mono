@@ -1,4 +1,4 @@
-import { LOCAL_FOLDER_PROJECT_ID } from "../store/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../features/workbench/model/types";
 
 /** A minimal duck-typed workspace row sufficient to identify a folder. */
 type FolderCandidate =

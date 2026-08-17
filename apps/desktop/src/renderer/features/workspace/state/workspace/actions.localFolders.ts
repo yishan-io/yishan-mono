@@ -9,8 +9,8 @@ import type {
   WorkspaceStoreGetState,
   WorkspaceStoreSetState,
   WorkspaceStoreState,
-} from "../../../../store/types";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../store/types";
+} from "../../../../features/workbench/model/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
 
 type LocalFolderActions = Pick<WorkspaceStoreActions, "loadLocalFolders" | "addLocalFolder" | "removeLocalFolder">;
 

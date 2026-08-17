@@ -3,7 +3,7 @@ import type {
   WorkspaceProjectRecord,
   WorkspaceStorePersistedState,
   WorkspaceStoreState,
-} from "../../../../store/types";
+} from "../../../../features/workbench/model/types";
 
 /** Builds workspace store state from backend snapshot data without creating implicit tabs. */
 export function buildWorkspaceStateFromData(input: {

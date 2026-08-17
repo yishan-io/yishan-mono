@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAppCommands, useOrganizationCommands } from "../../hooks/useCommands";
+import { useAppCommands, useOrganizationCommands } from "../../app/commands/useCommands";
 
 /** Owns local app menu state and behavior while preserving the public AppMenuView API. */
 export function useAppMenuViewState() {
