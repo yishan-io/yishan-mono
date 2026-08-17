@@ -8,7 +8,7 @@ import {
 } from "../../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
 import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { sessionStore } from "../../../../features/session/state/sessionStore";
+import { useSelectedOrganizationId } from "../../../../features/session/ui/hooks/useSessionReadHooks";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
 import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
@@ -66,7 +66,7 @@ export function useProjectListTreeData(input: {
   const gitChangeTotalsByWorkspaceId = workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
   const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
+  const selectedOrganizationId = useSelectedOrganizationId();
 
   const nodesQuery = useQuery({
     queryKey: ["org-nodes", selectedOrganizationId],

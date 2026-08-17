@@ -37,7 +37,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R6-state-layer", file: "features/overview/state/overviewStore.ts", phase: "P16" },
   { rule: "R6-state-layer", file: "features/scheduled-job/state/scheduledJobStore.ts", phase: "P16" },
   { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.localFolders.ts", phase: "P16" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.selection.ts", phase: "P16" },
   { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.workspaces.ts", phase: "P16" },
   { rule: "R6-state-layer", file: "features/workspace/state/workspaceProjectionStore.ts", phase: "P16" },
   // ---- R7-model-layer (Phase 16 baseline) ----
@@ -117,20 +116,7 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     phase: "P16",
   },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRuntimeRegistry.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/DaemonVersionWarningControl.tsx", phase: "P16" },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.tsx",
-    phase: "P16",
-  },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/useProjectListFoldState.ts",
-    phase: "P16",
-  },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListTreeData.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneView.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/OnboardingView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/TerminalView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalFileDrop.ts", phase: "P16" },
   {
@@ -161,10 +147,4 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionOrchestrator.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionService.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalTitleUtils.ts", phase: "P16" },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/state/workspace/actions.localFolders.ts",
-    phase: "P16",
-  },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/state/workspace/actions.selection.ts", phase: "P16" },
 ];

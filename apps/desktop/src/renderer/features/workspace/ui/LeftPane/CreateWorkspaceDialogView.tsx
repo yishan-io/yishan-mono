@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { sessionStore } from "../../../../features/session/state/sessionStore";
+import { useDaemonId, useSelectedOrganizationId } from "../../../../features/session/ui/hooks/useSessionReadHooks";
 import { useWorkspaceBranchPrefixSettings } from "../../../../features/settings/ui/hooks/useSettingsReadHooks";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
@@ -39,8 +39,8 @@ export function CreateWorkspaceDialogView({
 }: CreateWorkspaceDialogViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const organizationId = sessionStore((state) => state.selectedOrganizationId);
-  const daemonId = sessionStore((state) => state.daemonId);
+  const organizationId = useSelectedOrganizationId();
+  const daemonId = useDaemonId();
   const projects = useProjects();
   const displayProjectIds = useDisplayProjectIds();
   const workspaces = workspaceStore((state) => state.workspaces);

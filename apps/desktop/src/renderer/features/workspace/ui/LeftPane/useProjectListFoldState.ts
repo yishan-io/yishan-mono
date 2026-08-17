@@ -3,7 +3,7 @@ import {
   useDisplayProjectIds,
   useWorkspaceListHierarchyMode,
 } from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { sessionStore } from "../../../../features/session/state/sessionStore";
+import { useSelectedOrganizationId } from "../../../../features/session/ui/hooks/useSessionReadHooks";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import {
   EMPTY_FOLD_STATE,
@@ -43,7 +43,7 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
   const displayProjectIds = useDisplayProjectIds();
   const workspaceListHierarchyMode = useWorkspaceListHierarchyMode();
   const activeHierarchyMode: HierarchyMode = workspaceListHierarchyMode === "by_node" ? "by_node" : "by_project";
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId) ?? "";
+  const selectedOrganizationId = useSelectedOrganizationId() ?? "";
 
   const [foldStateByMode, setFoldStateByMode] = useState<Record<HierarchyMode, FoldState>>({
     by_project: EMPTY_FOLD_STATE,

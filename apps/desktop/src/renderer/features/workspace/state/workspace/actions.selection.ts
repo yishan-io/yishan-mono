@@ -1,4 +1,3 @@
-import { sessionStore } from "../../../../features/session/state/sessionStore";
 import type {
   WorkspaceStoreActions,
   WorkspaceStoreGetState,
