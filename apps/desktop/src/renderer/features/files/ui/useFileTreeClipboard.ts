@@ -7,12 +7,12 @@ import {
   type FileTreeClipboardState,
   resolveClipboardSource,
 } from "./clipboardSourceResolvers";
-import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeHelpers";
-import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePathHelpers";
 import {
   captureNativeExternalClipboardSourcePathsSnapshot,
   resolveExternalClipboardSourcePaths,
 } from "./fileTreeClipboardResolvers";
+import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeHelpers";
+import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePathHelpers";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 
 type UseFileTreeClipboardInput = {

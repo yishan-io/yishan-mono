@@ -1,39 +1,44 @@
-import { Box } from "@mui/material";
-import { WorkspaceAgentChatSurface } from "@renderer/features/agent";
-import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
-import { workbenchNavigationStore } from "@renderer/features/workbench";
-import { resizeRightPane } from "@renderer/features/workbench";
-import { layoutStore, tabStore } from "@renderer/features/workbench";
+import { Badge, Box } from "@mui/material";
+import { WorkspaceAgentChatSurface, findTabWithSession } from "@renderer/features/agent";
+import { FileSearchOverlay } from "@renderer/features/files";
+import { gitProjectionStore } from "@renderer/features/git";
+import { useLastUsedExternalAppId } from "@renderer/features/project";
+import { useAgentKindsInUse } from "@renderer/features/settings";
+import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/features/terminal";
+import {
+  DEFAULT_RIGHT_PANE_TAB,
+  RightPaneTabBar,
+  type RightPaneTabDef,
+  WorkspaceSplitPane,
+  layoutStore,
+  removeWebviewsForClosedTabs,
+  resizeRightPane,
+  setRightPaneTab,
+  tabStore,
+  workbenchNavigationStore,
+} from "@renderer/features/workbench";
+import type { WorkbenchTab } from "@renderer/features/workbench";
+import { useWorkspacePaneVisibilityContext } from "@renderer/features/workbench";
+import { workspaceStore } from "@renderer/features/workspace";
+import { WorkspaceErrorStateView } from "@renderer/features/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
-import {
-  useFileCommands,
-  useGitCommands,
-  useTerminalCommands,
-  useWorkbenchCommands,
-} from "../../../app/commands/useCommands";
-import { useTabContentRenderer } from "../../../app/ui/useTabContentRenderer";
-import { ColumnSeparator } from "../../../components/ColumnSeparator";
-import { TabPanel } from "../../../components/TabPanel";
-import { retainOpenAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
-import { findTabWithSession } from "../../../features/agent/commands/agentChatCommands";
-import { useLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectReadHooks";
-import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
-import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "../../../features/terminal";
-import type { WorkbenchTab } from "../../../features/workbench/model/types";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
-import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
-import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
-import { DARK_SURFACE_COLORS } from "../../../theme";
-import { WorkspaceSplitPane } from "../../workbench/ui/WorkspaceSplitPaneView";
-import { FileSearchOverlay } from "./FileSearchOverlay";
+import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
+import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
+import { ColumnSeparator } from "../../components/ColumnSeparator";
+import { TabPanel } from "../../components/TabPanel";
+import { retainOpenAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
+import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
+import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
+import { isFolderWorkspace } from "../../helpers/localFolder";
+import { supportsGitFeatures } from "../../helpers/projectGitCapability";
+import { DARK_SURFACE_COLORS } from "../../theme";
+import { useFileCommands, useGitCommands, useTerminalCommands, useWorkbenchCommands } from "../commands/useCommands";
+import { useSelectedWorkspaceWithProject } from "../selectors";
 import { LaunchView } from "./LaunchView";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
-import { RightPaneTabBar } from "./RightPane/RightPaneTabBar";
-import { RightPaneView } from "./RightPane/RightPaneView";
-import { WorkspaceErrorStateView } from "./WorkspaceErrorStateView";
+import { RightPaneView } from "./RightPaneView";
+import { useTabContentRenderer } from "./useTabContentRenderer";
 
 const RIGHT_MIN_WIDTH = 280;
 
@@ -51,6 +56,7 @@ export function MainPaneView() {
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
+  const { selectedProject } = useSelectedWorkspaceWithProject();
   const isErrorWorkspace = selectedWorkspace?.state === "error";
   const tabs = tabStore((state) => state.tabs);
   const selectedTabId = tabStore((state) => state.selectedTabId);
@@ -108,6 +114,55 @@ export function MainPaneView() {
     () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
     [inUseByAgentKind],
   );
+  const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
+  const activeRightPaneTab = layoutStore(
+    (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
+  );
+  const changesCount = gitProjectionStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
+  const rightPaneTabs: RightPaneTabDef[] = useMemo(() => {
+    const tabs: RightPaneTabDef[] = [
+      {
+        value: "files",
+        label: t("files.files"),
+        shortcutId: "activate-files-pane",
+        icon: <LuFolderTree size={18} />,
+      },
+    ];
+    if (gitCapable) {
+      tabs.push(
+        {
+          value: "changes",
+          label: t("files.changes"),
+          shortcutId: "activate-changes-pane",
+          icon: (
+            <Badge
+              badgeContent={changesCount}
+              color="primary"
+              max={99}
+              invisible={changesCount <= 0}
+              sx={{
+                "& .MuiBadge-badge": {
+                  minWidth: 14,
+                  height: 14,
+                  fontSize: 9,
+                  lineHeight: 1,
+                },
+              }}
+            >
+              <LuGitBranch size={18} />
+            </Badge>
+          ),
+        },
+        {
+          value: "pr",
+          label: t("workspace.pr.tab"),
+          shortcutId: "activate-pr-pane",
+          icon: <LuGitPullRequest size={18} />,
+        },
+      );
+    }
+    return tabs;
+  }, [gitCapable, changesCount, t]);
 
   // ── right-pane resize ────────────────────────────────────────────────────
   const rightDragRef = useRef({ startX: 0, startWidth: 0 });
@@ -259,9 +314,12 @@ export function MainPaneView() {
         {/* Vertical tab bar — hidden for broken workspaces (no tabs allowed) */}
         {isErrorWorkspace ? null : (
           <RightPaneTabBar
+            tabs={rightPaneTabs}
+            activeRightPaneTab={activeRightPaneTab}
             rightCollapsed={rightCollapsed}
             onToggleRightPane={onToggleRightPane}
             showRightPane={showRightPane}
+            onSelectTab={(tab) => setRightPaneTab(selectedWorkspaceId, tab)}
           />
         )}
       </Box>

@@ -72,7 +72,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../features/project/state/projectStore", () => {
+vi.mock("../../features/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: {
       projects: unknown[];
@@ -101,11 +101,11 @@ vi.mock("../../../../features/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../../helpers/platform", () => ({
+vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
@@ -113,7 +113,7 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-vi.mock("../../../../ui/layout/AppMenuView", () => ({
+vi.mock("../../ui/layout/AppMenuView", () => ({
   AppMenuView: () => <div data-testid="app-menu-view" />,
 }));
 

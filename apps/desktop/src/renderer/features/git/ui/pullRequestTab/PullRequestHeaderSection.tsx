@@ -17,10 +17,10 @@ import {
 import { openLink } from "@renderer/app/commands/appCommands";
 import { BranchBadge } from "@renderer/components/BranchBadge";
 import { PullRequestIcon } from "@renderer/components/PullRequestIcon";
-import type { MergeMethod } from "./pullRequestTabHelpers";
-import type { PullRequestTabActionsState } from "./usePullRequestTabActions";
 import { useTranslation } from "react-i18next";
 import { LuArrowRight, LuChevronDown, LuRefreshCw } from "react-icons/lu";
+import type { MergeMethod } from "./pullRequestTabHelpers";
+import type { PullRequestTabActionsState } from "./usePullRequestTabActions";
 
 const refreshIconSx = {
   display: "inline-flex",

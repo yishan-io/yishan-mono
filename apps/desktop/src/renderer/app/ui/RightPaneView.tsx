@@ -1,12 +1,11 @@
 import { Box } from "@mui/material";
+import { FileManagerView } from "@renderer/features/files";
 import { ChangesTabView } from "@renderer/features/git";
 import { PullRequestTabView } from "@renderer/features/git";
 import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/features/workbench";
-import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
-import { FileManagerView } from "../../../../features/files/ui/FileManagerView";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { isFolderWorkspace } from "../../../../helpers/localFolder";
-import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
+import { isFolderWorkspace } from "../../helpers/localFolder";
+import { supportsGitFeatures } from "../../helpers/projectGitCapability";
+import { useSelectedWorkspaceWithProject } from "../selectors";
 
 export type RightPaneViewProps = {
   onToggleRightPane?: () => void;

@@ -1,8 +1,10 @@
 import { Box } from "@mui/material";
 import { gitProjectionStore } from "@renderer/features/git";
+import { useAllWorkspacesGitSync } from "@renderer/features/git";
 import { CreateProjectDialogView } from "@renderer/features/project";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { resizeLeftPane } from "@renderer/features/workbench";
+import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/features/workbench";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -26,6 +28,8 @@ import {
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
 import { popupStore } from "../../app/state/popupStore";
+import { LeftPaneView } from "../../app/ui/LeftPaneView";
+import { MainPaneView } from "../../app/ui/MainPaneView";
 import { SplitPaneLayout } from "../../components/SplitPaneLayout";
 import { subscribeAppActionEvent } from "../../events";
 import { AgentChatRecoveryCoordinator } from "../../features/agent/runtime/agentChatRecovery";
@@ -38,17 +42,10 @@ import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
 import { resolveWorkspaceProjectId } from "../../features/workspace/model/workspaceTypes";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
-import { LeftPaneView } from "../../features/workspace/ui/LeftPane/LeftPaneView";
-import { MainPaneView } from "../../features/workspace/ui/MainPaneView";
-import { OnboardingView } from "../../features/workspace/ui/OnboardingView";
 import { WorkspaceLifecycleNoticeView } from "../../features/workspace/ui/WorkspaceLifecycleNoticeView";
-import { useAllWorkspacesGitSync } from "../../features/workspace/ui/hooks/useAllWorkspacesGitSync";
-import {
-  WorkspacePaneVisibilityProvider,
-  useWorkspacePaneVisibility,
-} from "../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";
+import { OnboardingView } from "./OnboardingView";
 
 const LEFT_MIN_WIDTH = 240;
 const MAIN_MIN_WIDTH = 520;

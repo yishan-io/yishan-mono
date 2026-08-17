@@ -2,9 +2,9 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
-import type { WorkspaceProjectRecord } from "../../../features/project/model/projectTypes";
-import type { WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../features/project/model/projectTypes";
+import type { WorkspaceProjectRecord } from "../../features/project/model/projectTypes";
+import type { WorkspaceItem } from "../../features/workspace/model/workspaceTypes";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 import { RepoSelectorMenu } from "./mainPaneTitleBarMenus";
@@ -98,12 +98,12 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../../features/session/state/sessionStore", () => ({
+vi.mock("../../features/session/state/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
 
-vi.mock("../../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: (typeof mocked.stateRef)["current"]) => unknown) =>
     selector(mocked.stateRef.current),
 }));
@@ -124,10 +124,11 @@ vi.mock("@renderer/features/workbench", async (importOriginal) => {
         activeWorkspaceId: mocked.stateRef.current.selectedWorkspaceId,
         overlayPanel: null,
       }),
+    useWorkspacePaneVisibilityContext: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
   };
 });
 
-vi.mock("../../../features/project/state/projectStore", () => {
+vi.mock("../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
     selector({ projects: mocked.stateRef.current.projects ?? [] });
   (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
@@ -136,7 +137,7 @@ vi.mock("../../../features/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../features/agent/state/chatStore", () => ({
+vi.mock("../../features/agent/state/chatStore", () => ({
   chatStore: (
     selector: (state: {
       workspaceAgentStatusByWorkspaceId: Record<string, unknown>;
@@ -145,7 +146,7 @@ vi.mock("../../../features/agent/state/chatStore", () => ({
   ) => selector({ workspaceAgentStatusByWorkspaceId: {}, workspaceUnreadToneByWorkspaceId: {} }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
+vi.mock("../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     activateProject: ({ projectId }: { projectId: string }) => {
       mocked.stateRef.current.selectedProjectId = projectId;
@@ -178,28 +179,28 @@ vi.mock("../../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../../app/commands/appCommands", () => ({
+vi.mock("../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => Promise.resolve({ isFullscreen: false }),
 }));
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../features/workspace/ui/hooks/useWorkspacePaneVisibility", () => ({
-  useWorkspacePaneVisibilityContext: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
-}));
-
-vi.mock("../../../components/PaneToggleButton", () => ({
+vi.mock("../../components/PaneToggleButton", () => ({
   PaneToggleButton: () => null,
 }));
 
-vi.mock("../../../components/projectIcons", () => ({
-  renderProjectIcon: (iconId: string | undefined, size: number) => {
-    const { LuFolder } = require("react-icons/lu") as typeof import("react-icons/lu");
-    return <LuFolder size={size} data-testid={iconId ? `project-icon-${iconId}` : "project-icon-default"} />;
-  },
-}));
+vi.mock("../../components/projectIcons", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../components/projectIcons")>();
+  return {
+    ...actual,
+    renderProjectIcon: (iconId: string | undefined, size: number) => {
+      const { LuFolder } = require("react-icons/lu") as typeof import("react-icons/lu");
+      return <LuFolder size={size} data-testid={iconId ? `project-icon-${iconId}` : "project-icon-default"} />;
+    },
+  };
+});
 
 beforeEach(() => {
   mocked.stateRef.current = {

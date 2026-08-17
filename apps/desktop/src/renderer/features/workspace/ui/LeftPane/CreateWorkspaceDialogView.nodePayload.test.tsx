@@ -19,7 +19,6 @@ const resetDraftInputs = vi.fn();
 
 vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     createWorkspace,
     renameWorkspace,
     renameWorkspaceBranch,
@@ -44,7 +43,6 @@ vi.mock("../../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../../ui/hooks/useDialogRegistration", () => ({
   useDialogRegistration: () => {},

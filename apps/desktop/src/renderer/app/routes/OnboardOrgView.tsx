@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBuilding2 } from "react-icons/lu";
 import { createOrganization } from "../../features/organization/commands/orgCommands";
-import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../features/session/state/sessionStore";
+import { rendererQueryClient } from "../../queryClient";
 import { AppMenuView } from "../../ui/layout/AppMenuView";
 
 /** Renders the required first-organization setup for signed-in users without organizations. */

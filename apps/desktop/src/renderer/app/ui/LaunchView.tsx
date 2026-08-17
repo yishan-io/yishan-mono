@@ -1,6 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { RecentAgentSessions } from "@renderer/features/agent";
 import { createNewWhiteboard } from "@renderer/features/files";
+import { workspaceCreateProgressStore } from "@renderer/features/workspace";
+import { useWorkspaces } from "@renderer/features/workspace";
+import type { WorkspaceCreateProgressStep } from "@renderer/features/workspace";
 import { useTranslation } from "react-i18next";
 import {
   LuCircle,
@@ -14,21 +17,16 @@ import {
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
-import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { AgentIcon } from "../../../components/AgentIcon";
-import {
-  type WorkspaceCreateProgressStep,
-  workspaceCreateProgressStore,
-} from "../../../features/workspace/state/workspaceCreateProgressStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { useWorkbenchCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
+import { AgentIcon } from "../../components/AgentIcon";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   DEFAULT_AGENT_COMMANDS,
   type DesktopAgentKind,
-} from "../../../helpers/agentSettings";
-import { getRendererPlatform } from "../../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+} from "../../helpers/agentSettings";
+import { getRendererPlatform } from "../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
   if (step.status === "completed") {
@@ -74,11 +72,11 @@ export type LaunchViewProps = {
 /** Renders quick actions when no tab is open in the selected workspace. */
 export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) {
   const { t } = useTranslation();
-  const workspace = workspaceStore((state) => state.workspaces.find((item) => item.id === workspaceId));
+  const workspaces = useWorkspaces();
+  const workspace = workspaces.find((item) => item.id === workspaceId);
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab } = useWorkbenchCommands();
   const { openWorkspaceFileSearch } = useWorkspaceCommands();
-  const workspaces = workspaceStore((state) => state.workspaces);
   const platform = getRendererPlatform();
   const isPreparingWorkspace = workspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
   const selectedWorkspace = workspaces.find((w) => w.id === workspaceId);

@@ -26,6 +26,8 @@ export {
   type WorkspaceRefreshState,
 } from "./runtime/allWorkspacesGitSyncRuntime";
 
+export { useAllWorkspacesGitSync } from "./ui/hooks/useAllWorkspacesGitSync";
+
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { ChangesTabView } from "./ui/ChangesTabView";
 export { PullRequestTabView } from "./ui/PullRequestTabView";

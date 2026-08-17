@@ -1,3 +1,4 @@
+import { selectWorkspaces } from "@renderer/features/workspace";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
  *
@@ -8,18 +9,17 @@
  * projections to its own Store.
  */
 import { api } from "../../../api";
-import { gitProjectionStore } from "../state/gitProjectionStore";
-import { selectWorkspaces } from "@renderer/features/workspace";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
-import { selectProjectById } from "../../project/state/projectSelectors";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { selectProjectById } from "../../project/state/projectSelectors";
+import { gitProjectionStore } from "../state/gitProjectionStore";
 
 /**
  * Resolves the normalized target branch (origin-prefixed) for a workspace,

@@ -33,3 +33,8 @@ export {
 export { AgentChatView } from "./ui/chat/AgentChatView";
 export { RecentAgentSessions } from "./ui/chat/RecentAgentSessions";
 export { WorkspaceAgentChatSurface } from "./ui/chat/WorkspaceAgentChatSurface";
+export {
+  useWorkspaceAgentStatusByWorkspaceId,
+  useWorkspaceUnreadToneByWorkspaceId,
+} from "./ui/hooks/useAgentChatReadHooks";
+export { findTabWithSession } from "./commands/agentChatCommands";

@@ -2,11 +2,11 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate } from "react-router-dom";
 import { sessionStore } from "../../features/session/state/sessionStore";
+import { AppBootstrapLoadingView } from "../../ui/layout/AppBootstrapLoadingView";
 import { useSessionBootstrap } from "../runtime/sessionBootstrap";
 import { LoginView } from "./LoginView";
-import { WorkspaceView } from "./WorkspaceView";
-import { AppBootstrapLoadingView } from "../../ui/layout/AppBootstrapLoadingView";
 import { OnboardOrgView } from "./OnboardOrgView";
+import { WorkspaceView } from "./WorkspaceView";
 
 const WORKSPACE_ROUTE = "/";
 

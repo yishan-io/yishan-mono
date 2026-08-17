@@ -105,28 +105,3 @@ function useWorkspaceSelectedId(): string {
 function useProjectStoreSelectedProjectId(): string {
   return workbenchNavigationStore((s) => s.activeProjectId);
 }
-
-/** Pure combine: workspace pane collapsed flags from the three store slices. */
-export function selectWorkspacePaneVisibility(input: {
-  leftHidden: boolean;
-  selectedWorkspaceId: string;
-  rightHiddenByWorkspaceId: Record<string, boolean>;
-}): { leftCollapsed: boolean; rightCollapsed: boolean } {
-  return {
-    leftCollapsed: input.leftHidden,
-    rightCollapsed: input.rightHiddenByWorkspaceId[input.selectedWorkspaceId] ?? true,
-  };
-}
-
-/** React subscription hook: pane collapsed flags + selected workspace, re-renders on any of the three stores. */
-export function useWorkspacePaneVisibilityState(): {
-  leftCollapsed: boolean;
-  rightCollapsed: boolean;
-  selectedWorkspaceId: string;
-} {
-  const leftHidden = layoutStore((s) => s.isLeftPaneManuallyHidden);
-  const selectedWorkspaceId = workbenchNavigationStore((s) => s.activeWorkspaceId);
-  const rightHiddenByWorkspaceId = layoutStore((s) => s.isRightPaneHiddenByWorkspaceId);
-  const collapsed = selectWorkspacePaneVisibility({ leftHidden, selectedWorkspaceId, rightHiddenByWorkspaceId });
-  return { ...collapsed, selectedWorkspaceId };
-}

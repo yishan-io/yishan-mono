@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { gitProjectionStore } from "@renderer/features/git";
-import { workspaceStore } from "../../workspace/state/workspaceStore";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../project/state/projectStore";
-import {
-  refreshWorkspaceGitChanges,
-  refreshWorkspacePullRequest,
-} from "./gitProjectionCommands";
+import { workspaceStore } from "../../workspace/state/workspaceStore";
+import { refreshWorkspaceGitChanges, refreshWorkspacePullRequest } from "./gitProjectionCommands";
 
 const rpcMocks = vi.hoisted(() => ({
   refreshWorkspacePullRequest: vi.fn(),

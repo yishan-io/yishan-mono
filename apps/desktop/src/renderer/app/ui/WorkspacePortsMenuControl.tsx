@@ -3,14 +3,14 @@ import { tabStore } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
-import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { PortsTableMenu, type PortsTableMenuRow } from "../../../components/PortsTableMenu";
-import { RouteCloseWatcher } from "../../../components/RouteCloseWatcher";
-import type { TerminalDetectedPort } from "../../../features/terminal/commands/terminalCommands";
-import { useTerminalTabLookups } from "../../../features/terminal/ui/hooks/useTerminalTabLookups";
-import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
+import { PortsTableMenu, type PortsTableMenuRow } from "../../components/PortsTableMenu";
+import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
+import type { TerminalDetectedPort } from "../../features/terminal/commands/terminalCommands";
+import { useTerminalTabLookups } from "../../features/terminal/ui/hooks/useTerminalTabLookups";
+import { enqueueWorkspaceErrorNotice } from "../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 
 /** Builds one stable row id for port-menu rendering and selection mapping. */
 function buildPortRowId(entry: TerminalDetectedPort): string {

@@ -6,7 +6,11 @@
  */
 export type { ProjectCommands } from "./commands/contract";
 export { LOCAL_FOLDER_PROJECT_ID } from "./model/projectTypes";
-export type { WorkspaceProjectCommand, WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "./model/projectTypes";
+export type {
+  WorkspaceProjectCommand,
+  WorkspaceProjectRecord,
+  WorkspaceStoreOrganizationPreference,
+} from "./model/projectTypes";
 export {
   selectProjectById,
   selectProjectDisplayIds,
@@ -24,3 +28,4 @@ export { ProjectDeleteDialogView } from "./ui/ProjectDeleteDialogView";
 export { ProjectFilterPopoverView } from "./ui/ProjectFilterPopoverView";
 export { ProjectListMenus } from "./ui/ProjectListMenus";
 export { ProjectListView } from "./ui/ProjectListView";
+export { useDisplayProjectIds, useProjects, useLastUsedExternalAppId } from "./ui/hooks/useProjectReadHooks";

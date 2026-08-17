@@ -1,9 +1,9 @@
 import { Box, Paper, Stack, Typography } from "@mui/material";
+import { CreateProjectFormView } from "@renderer/features/project";
 import { useTranslation } from "react-i18next";
 import { LuFolderGit2 } from "react-icons/lu";
-import { useOrganizations, useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
-import { AppMenuView } from "../../../ui/layout/AppMenuView";
-import { CreateProjectFormView } from "@renderer/features/project";
+import { useOrganizations, useSelectedOrganizationId } from "../../features/session/ui/hooks/useSessionReadHooks";
+import { AppMenuView } from "../../ui/layout/AppMenuView";
 
 /** Renders the first-run project creation view for organizations without projects. */
 export function OnboardingView() {

@@ -1,8 +1,8 @@
 import { useCallback } from "react";
+import { useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
 import type { ProjectGitChangeItem } from "../../../components/ProjectGitChangesList";
 import { writeClipboardText } from "../../../features/files/commands/fileCommands";
 import { resolveWorkspaceAbsolutePath } from "../../../features/files/ui/fileTreeHelpers";
-import { useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
 import type { DiffFileChangeKind, FileDiffEntry } from "../../../features/workbench/model/types";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 
@@ -18,14 +18,8 @@ export function useChangesTabActions({
   refreshChanges,
 }: UseChangesTabActionsInput) {
   const { openTab } = useWorkbenchCommands();
-  const {
-    readBranchComparisonDiff,
-    readCommitDiff,
-    readDiff,
-    revertGitChanges,
-    trackGitChanges,
-    unstageGitChanges,
-  } = useGitCommands();
+  const { readBranchComparisonDiff, readCommitDiff, readDiff, revertGitChanges, trackGitChanges, unstageGitChanges } =
+    useGitCommands();
 
   const trackPaths = useCallback(
     async (relativePaths: string[]) => {

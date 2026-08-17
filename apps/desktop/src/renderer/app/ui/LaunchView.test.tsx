@@ -34,7 +34,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../features/agent/commands/agentChatSessionHistory", () => ({
+vi.mock("../../features/agent/commands/agentChatSessionHistory", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 
@@ -42,7 +42,7 @@ vi.mock("@renderer/features/files", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
+vi.mock("../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     openTab: mocks.openTab,
     openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
@@ -66,11 +66,11 @@ vi.mock("../../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: (id: string) => {
     if (id === "open-terminal") {
       return "⌘+T";
@@ -86,17 +86,17 @@ vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../../../features/workspace/state/workspaceCreateProgressStore", () => ({
+vi.mock("../../features/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: (selector: (state: { progressByWorkspaceId: Record<string, unknown> }) => unknown) =>
     selector({ progressByWorkspaceId: mocks.progressByWorkspaceId }),
 }));
 
-vi.mock("../../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: { workspaces: Array<{ id: string; status?: string }> }) => unknown) =>
     selector({ workspaces: mocks.workspaces }),
 }));
 
-vi.mock("../../../features/settings/state/agentSettingsStore", () => ({
+vi.mock("../../features/settings/state/agentSettingsStore", () => ({
   agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
     selector({ customCommandByAgentKind: {} }),
 }));

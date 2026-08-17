@@ -1,6 +1,6 @@
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
 
 type WorkspaceOpenProjectEntry = {
   workspaceId: string;

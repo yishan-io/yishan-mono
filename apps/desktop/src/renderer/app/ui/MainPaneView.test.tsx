@@ -1,14 +1,11 @@
 // @vitest-environment jsdom
 
+import { WorkspacePaneVisibilityProvider } from "@renderer/features/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fileTabContentStore } from "../../../features/files/state/fileTabContentStore";
-import {
-  AGENT_SETTINGS_STORE_STORAGE_KEY,
-  agentSettingsStore,
-} from "../../../features/settings/state/agentSettingsStore";
-import type { SplitPaneNode } from "../../../features/workbench/model/split-pane";
-import { WorkspacePaneVisibilityProvider } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
+import { fileTabContentStore } from "../../features/files/state/fileTabContentStore";
+import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../features/settings/state/agentSettingsStore";
+import type { SplitPaneNode } from "../../features/workbench/model/split-pane";
 import { MainPaneView } from "./MainPaneView";
 
 type MockLeafPane = {
@@ -57,12 +54,12 @@ vi.mock("react-router-dom", () => ({
   useInRouterContext: () => false,
 }));
 
-vi.mock("../../../features/session/state/sessionStore", () => ({
+vi.mock("../../features/session/state/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
 
-vi.mock("../../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
@@ -94,10 +91,23 @@ vi.mock("@renderer/features/workbench", async (importOriginal) => {
   return {
     ...actual,
     workbenchNavigationStore: navStore,
+    RightPaneTabBar: () => (
+      <div data-testid="mock-right-pane-tab-bar">
+        <button type="button" aria-label="files.files">
+          files
+        </button>
+        <button type="button" aria-label="files.changes">
+          changes
+        </button>
+        <button type="button" aria-label="workspace.pr.tab">
+          pr
+        </button>
+      </div>
+    ),
   };
 });
 
-vi.mock("../../../features/project/state/projectStore", () => {
+vi.mock("../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[]; displayProjectIds: string[] }) => unknown) =>
     selector({
       projects: (mocked.stateRef.current.projects as unknown[] | undefined) ?? [],
@@ -114,11 +124,11 @@ vi.mock("../../../features/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../features/workbench/state/tabStore", () => ({
+vi.mock("../../features/workbench/state/tabStore", () => ({
   tabStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../features/agent/state/chatStore", () => ({
+vi.mock("../../features/agent/state/chatStore", () => ({
   chatStore: (
     selector: (state: {
       workspaceUnreadToneByWorkspaceId: Record<string, "success" | "error">;
@@ -136,7 +146,7 @@ vi.mock("../../../features/agent/state/chatStore", () => ({
     }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
+vi.mock("../../app/commands/useCommands", () => {
   const commandSurface = () => {
     const state = mocked.stateRef.current as Record<string, unknown>;
     return {
@@ -184,28 +194,28 @@ vi.mock("../../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../app/commands/appCommands", () => ({
+vi.mock("../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => mocked.getMainWindowFullscreenState(),
 }));
 
-vi.mock("../../../features/files/commands/fileCommands", () => ({
+vi.mock("../../features/files/commands/fileCommands", () => ({
   listDetectedExternalAppIds: vi.fn(async () => []),
   writeFile: vi.fn(),
 }));
 
-vi.mock("../../../components/FileDiffViewer", () => ({
+vi.mock("../../components/FileDiffViewer", () => ({
   FileDiffViewer: () => <div data-testid="repo-diff-viewer" />,
 }));
 
-vi.mock("../../../components/fileTreeIcons", () => ({
+vi.mock("../../components/fileTreeIcons", () => ({
   getFileTreeIcon: () => "",
 }));
 
-vi.mock("../../../components/TabBar", () => ({
+vi.mock("../../components/TabBar", () => ({
   TabBar: ({
     tabs,
     onCreateTab,
@@ -231,7 +241,7 @@ vi.mock("../../../components/TabBar", () => ({
   ),
 }));
 
-vi.mock("../../../components/SplitPaneGroup", () => ({
+vi.mock("../../components/SplitPaneGroup", () => ({
   SplitPaneGroup: ({
     pane,
     tabs,
@@ -260,7 +270,7 @@ vi.mock("../../../components/SplitPaneGroup", () => ({
   ),
 }));
 
-vi.mock("../../../components/SplitPaneContainer", () => ({
+vi.mock("../../components/SplitPaneContainer", () => ({
   SplitPaneContainer: ({
     node,
     renderPane,
@@ -281,32 +291,16 @@ vi.mock("../../../components/SplitPaneContainer", () => ({
   },
 }));
 
-vi.mock("../../../components/SplitDropZone", () => ({
+vi.mock("../../components/SplitDropZone", () => ({
   SplitDropZone: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   resolveDropResult: () => null,
 }));
 
-vi.mock("./RightPane/RightPaneView", () => ({
+vi.mock("./RightPaneView", () => ({
   RightPaneView: () => <div data-testid="mock-right-pane-view" />,
 }));
 
-vi.mock("./RightPane/RightPaneTabBar", () => ({
-  RightPaneTabBar: () => (
-    <div data-testid="mock-right-pane-tab-bar">
-      <button type="button" aria-label="files.files">
-        files
-      </button>
-      <button type="button" aria-label="files.changes">
-        changes
-      </button>
-      <button type="button" aria-label="workspace.pr.tab">
-        pr
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("../../../features/workbench/state/splitPaneStore", () => {
+vi.mock("../../features/workbench/state/splitPaneStore", () => {
   // Builds a root pane for a given workspace from the current test state.
   function buildRootPaneForWorkspace(workspaceId: string): MockLeafPane {
     const state = mocked.stateRef.current as Record<string, unknown>;
@@ -366,13 +360,13 @@ vi.mock("../../../features/workbench/state/splitPaneStore", () => {
   };
 });
 
-vi.mock("../../../components/FileEditor", () => ({
+vi.mock("../../components/FileEditor", () => ({
   FileEditor: ({ isDeleted }: { isDeleted?: boolean }) => (
     <div data-testid="file-editor-view" data-is-deleted={isDeleted ? "true" : "false"} />
   ),
 }));
 
-vi.mock("../../../components/UnsupportedFileView", () => ({
+vi.mock("../../components/UnsupportedFileView", () => ({
   UnsupportedFileView: ({ path, hint }: { path: string; hint?: string }) => (
     <div data-testid="unsupported-file-view" data-hint={hint ?? ""}>
       {path}
@@ -380,7 +374,7 @@ vi.mock("../../../components/UnsupportedFileView", () => ({
   ),
 }));
 
-vi.mock("./LaunchView", () => ({
+vi.mock("../../app/ui/LaunchView", () => ({
   LaunchView: () => <div data-testid="launch-view" />,
 }));
 

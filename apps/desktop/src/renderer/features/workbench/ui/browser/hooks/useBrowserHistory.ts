@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BrowserHistoryGroup } from "@renderer/app/commands/appCommands";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppCommands } from "../../../../../app/commands/useCommands";
 
 export function useBrowserHistory() {

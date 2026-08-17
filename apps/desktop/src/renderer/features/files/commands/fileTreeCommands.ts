@@ -19,10 +19,7 @@ export function setExpandedFileTreeItems(workspaceId: string, paths: string[]): 
 }
 
 /** Bumps the file-tree refresh version for one workspace. */
-export function incrementFileTreeRefreshVersion(
-  workspaceWorktreePath?: string,
-  changedRelativePaths?: string[],
-): void {
+export function incrementFileTreeRefreshVersion(workspaceWorktreePath?: string, changedRelativePaths?: string[]): void {
   fileTreeStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
 }
 

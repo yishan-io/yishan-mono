@@ -1,21 +1,26 @@
-import { Badge, Box, IconButton, Tooltip } from "@mui/material";
-import { gitProjectionStore } from "@renderer/features/git";
-import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, layoutStore } from "@renderer/features/workbench";
+import { Box, IconButton, Tooltip } from "@mui/material";
+import type { WorkspaceRightPaneTab } from "@renderer/features/workbench";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
-import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
-import { PANE_HEADER_MIN_HEIGHT } from "../../../../components/PaneHeader";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { isFolderWorkspace } from "../../../../helpers/localFolder";
-import { getRendererPlatform } from "../../../../helpers/platform";
-import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
-import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
-import { DARK_SURFACE_COLORS } from "../../../../theme";
+import { PANE_HEADER_MIN_HEIGHT } from "../../../components/PaneHeader";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { DARK_SURFACE_COLORS } from "../../../theme";
+
+export type RightPaneTabDef = {
+  value: WorkspaceRightPaneTab;
+  label: string;
+  shortcutId: string;
+  icon: ReactNode;
+};
 
 export type RightPaneTabBarProps = {
+  tabs: RightPaneTabDef[];
+  activeRightPaneTab: WorkspaceRightPaneTab;
   rightCollapsed: boolean;
   onToggleRightPane?: () => void;
   showRightPane?: () => void;
+  onSelectTab: (tab: WorkspaceRightPaneTab) => void;
 };
 
 /**
@@ -23,71 +28,28 @@ export type RightPaneTabBarProps = {
  * Always visible regardless of whether the right pane content is expanded or collapsed.
  * Clicking a tab opens the right pane to that tab, or toggles it closed if already active.
  */
-export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPane }: RightPaneTabBarProps) {
+export function RightPaneTabBar({
+  tabs,
+  activeRightPaneTab,
+  rightCollapsed,
+  onToggleRightPane,
+  showRightPane,
+  onSelectTab,
+}: RightPaneTabBarProps) {
   const { t } = useTranslation();
-  const { selectedWorkspaceId, selectedWorkspace, selectedProject } = useSelectedWorkspaceWithProject();
-  const activeRightPaneTab = layoutStore(
-    (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
-  );
-  const setRightPaneTab = layoutStore((state) => state.setRightPaneTab);
-  const changesCount = gitProjectionStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
-  // Folder workspaces have no real project (undefined): never show git tabs.
-  const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
 
   const handleTabClick = (tab: WorkspaceRightPaneTab) => {
     if (rightCollapsed) {
-      setRightPaneTab(selectedWorkspaceId, tab);
+      onSelectTab(tab);
       showRightPane?.();
     } else if (activeRightPaneTab === tab) {
       onToggleRightPane?.();
     } else {
-      setRightPaneTab(selectedWorkspaceId, tab);
+      onSelectTab(tab);
     }
   };
 
   const platform = getRendererPlatform();
-
-  const tabs: Array<{ value: WorkspaceRightPaneTab; label: string; shortcutId: string; icon: React.ReactNode }> = [
-    {
-      value: "files",
-      label: t("files.files"),
-      shortcutId: "activate-files-pane",
-      icon: <LuFolderTree size={18} />,
-    },
-    ...(gitCapable
-      ? [
-          {
-            value: "changes" as const,
-            label: t("files.changes"),
-            shortcutId: "activate-changes-pane",
-            icon: (
-              <Badge
-                badgeContent={changesCount}
-                color="primary"
-                max={99}
-                invisible={changesCount <= 0}
-                sx={{
-                  "& .MuiBadge-badge": {
-                    minWidth: 14,
-                    height: 14,
-                    fontSize: 9,
-                    lineHeight: 1,
-                  },
-                }}
-              >
-                <LuGitBranch size={18} />
-              </Badge>
-            ),
-          },
-          {
-            value: "pr" as const,
-            label: t("workspace.pr.tab"),
-            shortcutId: "activate-pr-pane",
-            icon: <LuGitPullRequest size={18} />,
-          },
-        ]
-      : []),
-  ];
 
   return (
     <Box

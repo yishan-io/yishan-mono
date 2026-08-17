@@ -9,7 +9,6 @@ import {
   selectLastUsedExternalAppId,
   selectProjectTree,
   selectSelectedWorkspaceWithProject,
-  selectWorkspacePaneVisibility,
   selectWorkspaceProjection,
 } from "./selectors";
 
@@ -69,24 +68,5 @@ describe("composed selectors", () => {
   it("reads the last-used external app id from the project store", () => {
     projectStore.setState({ lastUsedExternalAppId: "cursor" });
     expect(selectLastUsedExternalAppId()).toBe("cursor");
-  });
-
-  it("composes workspace pane collapsed flags from the three store slices", () => {
-    expect(
-      selectWorkspacePaneVisibility({
-        leftHidden: true,
-        selectedWorkspaceId: "ws-1",
-        rightHiddenByWorkspaceId: { "ws-1": false },
-      }),
-    ).toEqual({ leftCollapsed: true, rightCollapsed: false });
-
-    // Unknown workspace defaults to collapsed right pane.
-    expect(
-      selectWorkspacePaneVisibility({
-        leftHidden: false,
-        selectedWorkspaceId: "ws-missing",
-        rightHiddenByWorkspaceId: {},
-      }),
-    ).toEqual({ leftCollapsed: false, rightCollapsed: true });
   });
 });

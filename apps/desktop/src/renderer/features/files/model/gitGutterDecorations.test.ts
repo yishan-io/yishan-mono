@@ -40,10 +40,7 @@ describe("gitGutterDecorations model", () => {
 
   it("builds whole-line decorations for added and modified changes with ruler metadata", () => {
     const decorations = changesToDecorations(
-      [
-        change({ lineNumber: 3, kind: "added" }),
-        change({ lineNumber: 7, kind: "modified" }),
-      ],
+      [change({ lineNumber: 3, kind: "added" }), change({ lineNumber: 7, kind: "modified" })],
       false,
     );
 
@@ -52,7 +49,9 @@ describe("gitGutterDecorations model", () => {
     expect(first.range.startLineNumber).toBe(3);
     expect(first.options.isWholeLine).toBe(true);
     expect(first.options.linesDecorationsClassName).toBe(GUTTER_ADDED_CLASS);
-    expect((first.options as { overviewRulerColor?: string }).overviewRulerColor).toBe(SEMANTIC_COLOR_TOKENS.light.gitDiff.added);
+    expect((first.options as { overviewRulerColor?: string }).overviewRulerColor).toBe(
+      SEMANTIC_COLOR_TOKENS.light.gitDiff.added,
+    );
     expect(second.options.linesDecorationsClassName).toBe(GUTTER_MODIFIED_CLASS);
   });
 
@@ -62,6 +61,8 @@ describe("gitGutterDecorations model", () => {
     const decoration = decorations[0]!;
     expect(decoration.options.isWholeLine).toBe(false);
     expect(decoration.options.linesDecorationsClassName).toBe(GUTTER_DELETED_CLASS);
-    expect((decoration.options as { overviewRulerColor?: string }).overviewRulerColor).toBe(SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted);
+    expect((decoration.options as { overviewRulerColor?: string }).overviewRulerColor).toBe(
+      SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted,
+    );
   });
 });

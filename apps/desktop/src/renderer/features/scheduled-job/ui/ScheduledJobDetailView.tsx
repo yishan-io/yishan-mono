@@ -8,7 +8,7 @@ import { SplitPaneLayout } from "../../../components/SplitPaneLayout";
 import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../features/scheduled-job/state/scheduledJobStore";
 import { useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
-import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
+import { useWorkspacePaneVisibilityContext } from "@renderer/features/workbench";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";

@@ -1,7 +1,8 @@
 import { useMediaQuery, useTheme } from "@mui/material";
+import { layoutStore } from "@renderer/features/workbench";
+import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { setIsRightPaneHidden, setLeftPaneHidden } from "@renderer/features/workbench";
 import { type ReactNode, createContext, useContext, useMemo } from "react";
-import { useWorkspacePaneVisibilityState } from "../../../../app/selectors";
 
 export type WorkspacePaneVisibilityValue = {
   leftCollapsed: boolean;
@@ -23,19 +24,19 @@ const WorkspacePaneVisibilityContext = createContext<WorkspacePaneVisibilityValu
 
 /**
  * Computes workspace pane collapsed/expanded state from breakpoints and manual
- * toggles. The cross-store join lives in the Selector
- * (`useWorkspacePaneVisibilityState`); this hook adds the MUI breakpoint logic
- * and the toggle actions (React/UI-local).
+ * toggles. The cross-store join reads the Workbench layout and navigation
+ * Stores; this hook adds the MUI breakpoint logic and the toggle actions
+ * (React/UI-local).
  */
 export function useWorkspacePaneVisibility(): WorkspacePaneVisibilityValue {
   const theme = useTheme();
   const leftCollapsedByBreakpoint = useMediaQuery(theme.breakpoints.down("md"));
   const rightCollapsedByBreakpoint = useMediaQuery(theme.breakpoints.down("lg"));
-  const {
-    leftCollapsed: isLeftPaneManuallyHidden,
-    rightCollapsed: isRightPaneManuallyHidden,
-    selectedWorkspaceId,
-  } = useWorkspacePaneVisibilityState();
+  const leftHidden = layoutStore((state) => state.isLeftPaneManuallyHidden);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
+  const rightHiddenByWorkspaceId = layoutStore((state) => state.isRightPaneHiddenByWorkspaceId);
+  const isLeftPaneManuallyHidden = leftHidden;
+  const isRightPaneManuallyHidden = rightHiddenByWorkspaceId[selectedWorkspaceId] ?? true;
 
   return useMemo(() => {
     const leftCollapsed = leftCollapsedByBreakpoint || isLeftPaneManuallyHidden;

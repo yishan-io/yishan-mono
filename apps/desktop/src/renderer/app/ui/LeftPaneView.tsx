@@ -1,18 +1,18 @@
 import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { ProjectFilterPopoverView } from "@renderer/features/project";
 import { ProjectListView } from "@renderer/features/project";
+import { useDisplayProjectIds, useProjects } from "@renderer/features/project";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { workspaceStore } from "@renderer/features/workspace";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
-import { useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { PaneHeader } from "../../../../components/PaneHeader";
-import { PaneToggleButton } from "../../../../components/PaneToggleButton";
-import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { getRendererPlatform } from "../../../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
-import { AppMenuView } from "../../../../ui/layout/AppMenuView";
+import { useProjectCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
+import { PaneHeader } from "../../components/PaneHeader";
+import { PaneToggleButton } from "../../components/PaneToggleButton";
+import { getRendererPlatform } from "../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
+import { AppMenuView } from "../../ui/layout/AppMenuView";
 
 type LeftPaneViewProps = {
   onCreateRepository?: () => void;

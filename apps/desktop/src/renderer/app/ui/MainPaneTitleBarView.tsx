@@ -1,33 +1,28 @@
 import { Box, Button, Tooltip, Typography } from "@mui/material";
+import { useWorkspaceAgentStatusByWorkspaceId } from "@renderer/features/agent";
+import { useWorkspaceUnreadToneByWorkspaceId } from "@renderer/features/agent";
+import { useDisplayProjectIds, useProjects } from "@renderer/features/project";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { useWorkspacePaneVisibilityContext } from "@renderer/features/workbench";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
-import { getMainWindowFullscreenState } from "../../../app/commands/appCommands";
-import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { PaneHeader } from "../../../components/PaneHeader";
-import { PaneToggleButton } from "../../../components/PaneToggleButton";
-import { renderProjectIcon } from "../../../components/projectIcons";
-import {
-  useWorkspaceAgentStatusByWorkspaceId,
-  useWorkspaceUnreadToneByWorkspaceId,
-} from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
-import { useDisplayProjectIds, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
-import {
-  resolveWorkspaceIdForProject,
-  resolveWorkspaceProjectId,
-} from "../../../features/workspace/model/workspaceTypes";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
-import { getRendererPlatform } from "../../../helpers/platform";
-import { filterVisibleProjects } from "../../../helpers/projectHelpers";
+import { getMainWindowFullscreenState } from "../../app/commands/appCommands";
+import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
+import { PaneHeader } from "../../components/PaneHeader";
+import { PaneToggleButton } from "../../components/PaneToggleButton";
+import { renderProjectIcon } from "../../components/projectIcons";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../features/project/model/projectTypes";
+import { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "../../features/workspace/model/workspaceTypes";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import { isFolderWorkspace } from "../../helpers/localFolder";
+import { getRendererPlatform } from "../../helpers/platform";
+import { filterVisibleProjects } from "../../helpers/projectHelpers";
 import {
   resolveWorkspaceNotificationColor,
   resolveWorkspaceNotificationTone,
-} from "../../../helpers/workspaceNotification";
-import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+} from "../../helpers/workspaceNotification";
+import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { DaemonVersionWarningControl } from "./DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";

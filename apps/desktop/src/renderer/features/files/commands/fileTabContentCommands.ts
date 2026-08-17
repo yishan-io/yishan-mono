@@ -1,5 +1,5 @@
 import { setFileTabDirty } from "@renderer/features/workbench";
-import { fileTabContentStore, type SeedFileTabContentInput } from "../state/fileTabContentStore";
+import { type SeedFileTabContentInput, fileTabContentStore } from "../state/fileTabContentStore";
 
 /**
  * Files commands that own editable file tab content (desktop6-adjust.md W6

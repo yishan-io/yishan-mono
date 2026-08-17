@@ -6,12 +6,12 @@ import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api";
 import { RestApiError } from "../../api/restClient";
+import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
+import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import { createOrganization } from "../../features/organization/commands/orgCommands";
 import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
-import { listOrgNodes } from "../../features/node/commands/nodeCommands";
-import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
-import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../features/session/state/sessionStore";
+import { rendererQueryClient } from "../../queryClient";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
 vi.mock("react-i18next", () => ({
@@ -432,5 +432,4 @@ describe("ApplicationRouterView", () => {
     expect(await screen.findByTestId("workspace-input")).toBeTruthy();
     expect(screen.queryByText("routing.notFound.title")).toBeNull();
   });
-
 });

@@ -23,3 +23,5 @@ export {
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { useFileSearchController } from "./ui/useFileSearchController";
+export { FileSearchOverlay } from "./ui/FileSearchOverlay";
+export { FileManagerView } from "./ui/FileManagerView";

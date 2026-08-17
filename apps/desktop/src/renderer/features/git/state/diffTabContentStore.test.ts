@@ -9,9 +9,7 @@ afterEach(() => {
 
 describe("diffTabContentStore", () => {
   it("seeds diff content and multi-file entries", () => {
-    diffTabContentStore
-      .getState()
-      .seed({ tabId: "tab-1", path: "src/a.ts", oldContent: "old", newContent: "new" });
+    diffTabContentStore.getState().seed({ tabId: "tab-1", path: "src/a.ts", oldContent: "old", newContent: "new" });
 
     expect(diffTabContentStore.getState().byTabId["tab-1"]).toMatchObject({
       path: "src/a.ts",
@@ -21,9 +19,7 @@ describe("diffTabContentStore", () => {
   });
 
   it("updates diff content in place", () => {
-    diffTabContentStore
-      .getState()
-      .seed({ tabId: "tab-1", path: "src/a.ts", oldContent: "old", newContent: "new" });
+    diffTabContentStore.getState().seed({ tabId: "tab-1", path: "src/a.ts", oldContent: "old", newContent: "new" });
 
     diffTabContentStore.getState().update("tab-1", { oldContent: "old-next", newContent: "new-next" });
 
@@ -34,12 +30,8 @@ describe("diffTabContentStore", () => {
   });
 
   it("removes tab data when tabs close", () => {
-    diffTabContentStore
-      .getState()
-      .seed({ tabId: "tab-1", path: "src/a.ts", oldContent: "old", newContent: "new" });
-    diffTabContentStore
-      .getState()
-      .seed({ tabId: "tab-2", path: "src/b.ts", oldContent: "old", newContent: "new" });
+    diffTabContentStore.getState().seed({ tabId: "tab-1", path: "src/a.ts", oldContent: "old", newContent: "new" });
+    diffTabContentStore.getState().seed({ tabId: "tab-2", path: "src/b.ts", oldContent: "old", newContent: "new" });
 
     diffTabContentStore.getState().removeTabData(["tab-1"]);
 

@@ -13,7 +13,14 @@ export type {
   WorkspaceStatus,
 } from "./model/workspaceTypes";
 export { selectWorkspaces } from "./state/workspaceSelectors";
+export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
 export { setOrderedWorkspaceIds } from "./state/workspaceActions";
+export {
+  workspaceCreateProgressStore,
+  type WorkspaceCreateProgressEntry,
+  type WorkspaceCreateProgressStep,
+  type WorkspaceCreateProgressStatus,
+} from "./state/workspaceCreateProgressStore";
 export {
   useSelectedProjectId,
   useSelectedWorkspaceId,
@@ -27,3 +34,5 @@ export { WorkspaceDeleteDialogView } from "./ui/LeftPane/WorkspaceDeleteDialogVi
 export { WorkspaceInfoPopperView } from "./ui/LeftPane/WorkspaceInfoPopperView";
 export { type PendingWorkspaceDeletion, useWorkspaceDeletionFlow } from "./ui/LeftPane/useWorkspaceDeletionFlow";
 export { useWorkspaceInfoHover } from "./ui/LeftPane/useWorkspaceInfoHover";
+export { WorkspaceErrorStateView } from "./ui/WorkspaceErrorStateView";
+export { WorkspaceLifecycleNoticeView } from "./ui/WorkspaceLifecycleNoticeView";

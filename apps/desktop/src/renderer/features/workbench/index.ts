@@ -58,4 +58,11 @@ export { BrowserView } from "./ui/browser/BrowserView";
 export { reloadWebview, removeWebviewsForClosedTabs } from "./ui/browser/webviewRegistry";
 export { WorkspaceSplitPane } from "./ui/WorkspaceSplitPaneView";
 export { WorkspaceTabSurfaceLayer } from "./ui/WorkspaceTabSurfaceLayer";
+export { RightPaneTabBar, type RightPaneTabDef } from "./ui/RightPaneTabBar";
+export {
+  WorkspacePaneVisibilityProvider,
+  type WorkspacePaneVisibilityValue,
+  useWorkspacePaneVisibility,
+  useWorkspacePaneVisibilityContext,
+} from "./ui/hooks/useWorkspacePaneVisibility";
 export { type WorkspaceTabPlacement, useWorkspaceTabPlacements } from "./ui/useWorkspaceTabPlacements";

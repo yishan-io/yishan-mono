@@ -1,3 +1,4 @@
+import { type OverlayPanel, workbenchNavigationStore } from "../state/workbenchNavigationStore";
 /**
  * Workbench navigation Commands (desktop6-adjust.md W2).
  *
@@ -7,7 +8,6 @@
  * The active Tab is resolved by Workbench (`resolveTabForWorkspace`).
  */
 import { resolveTabForWorkspace } from "./tabCommands";
-import { workbenchNavigationStore, type OverlayPanel } from "../state/workbenchNavigationStore";
 
 /**
  * Activates one workspace: sets the active context, closes the overlay, and

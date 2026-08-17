@@ -64,9 +64,13 @@ vi.mock("../../rpc/rpcTransport", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../features/workspace/ui/hooks/useAllWorkspacesGitSync", () => ({
-  useAllWorkspacesGitSync: vi.fn(),
-}));
+vi.mock("@renderer/features/git", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/git")>();
+  return {
+    ...actual,
+    useAllWorkspacesGitSync: vi.fn(),
+  };
+});
 
 vi.mock("../../app/commands/useCommands", () => {
   const commandSurface = () => commandMocks;
@@ -89,10 +93,14 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../features/workspace/ui/hooks/useWorkspacePaneVisibility", () => ({
-  WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
-  useWorkspacePaneVisibility: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
-}));
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+  return {
+    ...actual,
+    WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+    useWorkspacePaneVisibility: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
+  };
+});
 
 vi.mock("../../features/overview/ui/OverviewView", () => ({
   OverviewView: () => <div data-testid="overview-view" />,
@@ -106,15 +114,15 @@ vi.mock("../../features/workspace/ui/LeftPane/CreateProjectDialogView", () => ({
   CreateProjectDialogView: () => null,
 }));
 
-vi.mock("../../features/workspace/ui/LeftPane/LeftPaneView", () => ({
+vi.mock("../../app/ui/LeftPaneView", () => ({
   LeftPaneView: () => <div data-testid="left-pane-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/MainPaneView", () => ({
+vi.mock("../../app/ui/MainPaneView", () => ({
   MainPaneView: () => <div data-testid="main-pane-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/OnboardingView", () => ({
+vi.mock("./OnboardingView", () => ({
   OnboardingView: () => <div data-testid="onboarding-view" />,
 }));
 

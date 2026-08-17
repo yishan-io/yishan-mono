@@ -3,10 +3,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaGoogle } from "react-icons/fa";
 import logo from "../../../assets/images/yishan-transparent.png";
-import { resetAuthExpiredState } from "../../features/session/commands/sessionCommands";
 import { login } from "../../app/commands/appCommands";
 import { AppBackgroundContainer } from "../../components/AppBackgroundContainer";
 import { CenteredContentLayout } from "../../components/CenteredContentLayout";
+import { resetAuthExpiredState } from "../../features/session/commands/sessionCommands";
 import { sessionStore } from "../../features/session/state/sessionStore";
 
 /** Renders one pre-authentication entry screen with Google sign-in action. */

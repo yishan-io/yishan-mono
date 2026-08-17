@@ -54,7 +54,6 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     createWorkspace: getMockedCommands().createWorkspace,
     renameWorkspace: getMockedCommands().renameWorkspace,
     renameWorkspaceBranch: getMockedCommands().renameWorkspaceBranch,
@@ -80,7 +79,6 @@ vi.mock("../../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../../api", () => ({
   api: {
