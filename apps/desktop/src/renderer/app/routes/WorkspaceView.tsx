@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ACTIONS } from "../../../shared/contracts/actions";
@@ -347,14 +347,27 @@ export function WorkspaceView() {
   const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
   const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
-  const cmd: WorkspaceViewCommands = {
-    ...useWorkspaceCommands(),
-    ...useWorkbenchCommands(),
-    ...useAgentCommands(),
-    ...useTerminalCommands(),
-    ...useProjectCommands(),
-    ...useFileCommands(),
-  };
+  // The command surface must stay referentially stable across renders: the
+  // bootstrap effect keys on `cmd`, and a fresh object every render would
+  // re-trigger workspace snapshot loads (which race and skip the local-folder
+  // merge). Each per-feature hook already memoizes its surface.
+  const workspaceCommands = useWorkspaceCommands();
+  const workbenchCommands = useWorkbenchCommands();
+  const agentCommands = useAgentCommands();
+  const terminalCommands = useTerminalCommands();
+  const projectCommands = useProjectCommands();
+  const fileCommands = useFileCommands();
+  const cmd: WorkspaceViewCommands = useMemo(
+    () => ({
+      ...workspaceCommands,
+      ...workbenchCommands,
+      ...agentCommands,
+      ...terminalCommands,
+      ...projectCommands,
+      ...fileCommands,
+    }),
+    [workspaceCommands, workbenchCommands, agentCommands, terminalCommands, projectCommands, fileCommands],
+  );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
   const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator());

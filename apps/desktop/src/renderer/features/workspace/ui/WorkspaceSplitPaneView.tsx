@@ -40,7 +40,15 @@ export type WorkspaceSplitPaneProps = {
  * `display: none` when inactive, so terminals/editors preserve their state.
  */
 export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceSplitPaneProps) {
-  const cmd = { ...useWorkbenchCommands(), ...useFileCommands(), ...useGitCommands() };
+  const workbenchCommands = useWorkbenchCommands();
+  const fileCommands = useFileCommands();
+  const gitCommands = useGitCommands();
+  // Stable identity: passed to tab handlers + open-tab auto-refresh; a fresh
+  // object every render would re-run their effects on each render.
+  const cmd = useMemo(
+    () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
+    [workbenchCommands, fileCommands, gitCommands],
+  );
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = workspaces.find((ws) => ws.id === workspaceId);

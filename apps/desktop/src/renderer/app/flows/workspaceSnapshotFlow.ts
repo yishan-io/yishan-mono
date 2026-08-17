@@ -120,7 +120,9 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
     // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
     const daemonFolders = await daemonClient.workspace.listLocalFolders();
+
     if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+
       return;
     }
     workspaceStore.getState().loadLocalFolders(daemonFolders);

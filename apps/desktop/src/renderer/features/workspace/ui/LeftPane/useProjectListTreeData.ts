@@ -184,6 +184,7 @@ export function useProjectListTreeData(input: {
     const folderWorkspaces = workspaces.filter(
       (workspace) => workspace.projectId === LOCAL_FOLDER_PROJECT_ID || workspace.kind === "folder",
     );
+
     for (const workspace of folderWorkspaces) {
       rows.push({
         id: workspace.id,
