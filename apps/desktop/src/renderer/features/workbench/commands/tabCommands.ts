@@ -6,7 +6,7 @@ import {
   removeTabFromPane,
   splitRootPane,
 } from "../../../features/workbench/model/split-pane";
-import type { OpenWorkspaceTabInput } from "../../../features/workbench/model/types";
+import type { OpenTabInput } from "../../../features/workbench/model/types";
 import { type WorkspaceRightPaneTab, layoutStore } from "../../../features/workbench/state/layoutStore";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
@@ -134,7 +134,7 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
 }
 
 /** Opens one tab from one normalized tab input payload. */
-export function openTab(input: OpenWorkspaceTabInput, options?: { activePaneTabIds?: string[] }) {
+export function openTab(input: OpenTabInput, options?: { activePaneTabIds?: string[] }) {
   const snapshot = readTabStoreState();
   const previousTabIds = new Set(snapshot.tabs.map((tab) => tab.id));
   const workspaceId = resolveActiveWorkspaceId(input);
@@ -155,7 +155,7 @@ export function openTab(input: OpenWorkspaceTabInput, options?: { activePaneTabI
  * The auto-registration in `WorkspaceSplitPaneView` picks up the correct target pane
  * because it reads the current `activePaneId` after the split is already in place.
  */
-export function openTabInOppositePane(input: OpenWorkspaceTabInput): void {
+export function openTabInOppositePane(input: OpenTabInput): void {
   const workspaceId = input.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
   if (!workspaceId) {
     return;

@@ -4,7 +4,7 @@ import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/c
 import type { SplitDropRegion } from "../../../components/SplitDropZone";
 import { resolveDropResult } from "../../../components/SplitDropZone";
 import type { TabBarCreateOption } from "../../../components/TabBar";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
@@ -13,7 +13,7 @@ import { selectActivePane, selectPane } from "../state/workbenchSelectors";
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;
-  workspaceTabs: WorkspaceTab[];
+  workspaceTabs: WorkbenchTab[];
   workspace: { worktreePath?: string } | undefined;
   enabledAgentKindSet: Set<DesktopAgentKind>;
   cmd: WorkbenchCommandSurface & FileCommandSurface;

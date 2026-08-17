@@ -1,5 +1,5 @@
 import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/features/workbench";
-import type { WorkspaceTab } from "@renderer/features/workbench";
+import type { WorkbenchTab } from "@renderer/features/workbench";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
  *
@@ -23,8 +23,8 @@ import { getErrorMessage } from "../../helpers/errorHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 
-type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
-type AgentChatTab = Extract<WorkspaceTab, { kind: "agent-chat" }>;
+type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
+type AgentChatTab = Extract<WorkbenchTab, { kind: "agent-chat" }>;
 
 /** Releases agent-chat sessions for tabs that are being closed. */
 function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {

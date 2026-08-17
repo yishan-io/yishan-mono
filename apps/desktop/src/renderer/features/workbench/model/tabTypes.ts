@@ -27,7 +27,7 @@ export type FileDiffEntry = {
 /** Visual mode for one agent-chat tab/session attachment. */
 export type AgentChatSessionView = "full" | "subagent-detail";
 
-export type WorkspaceTabDataByKind = {
+export type WorkbenchTabDataByKind = {
   diff: {
     path: string;
     oldContent: string;
@@ -77,48 +77,48 @@ export type WorkspaceTabDataByKind = {
   };
 };
 
-export type WorkspaceTabBase = {
+export type WorkbenchTabBase = {
   id: string;
   workspaceId: string;
   title: string;
   pinned: boolean;
 };
 
-export type WorkspaceTab =
-  | (WorkspaceTabBase & {
+export type WorkbenchTab =
+  | (WorkbenchTabBase & {
       kind: "diff";
-      data: WorkspaceTabDataByKind["diff"];
+      data: WorkbenchTabDataByKind["diff"];
     })
-  | (WorkspaceTabBase & {
+  | (WorkbenchTabBase & {
       kind: "file";
-      data: WorkspaceTabDataByKind["file"];
+      data: WorkbenchTabDataByKind["file"];
     })
-  | (WorkspaceTabBase & {
+  | (WorkbenchTabBase & {
       kind: "image";
-      data: WorkspaceTabDataByKind["image"];
+      data: WorkbenchTabDataByKind["image"];
     })
-  | (WorkspaceTabBase & {
+  | (WorkbenchTabBase & {
       kind: "video";
-      data: WorkspaceTabDataByKind["video"];
+      data: WorkbenchTabDataByKind["video"];
     })
-  | (WorkspaceTabBase & {
+  | (WorkbenchTabBase & {
       kind: "audio";
-      data: WorkspaceTabDataByKind["audio"];
+      data: WorkbenchTabDataByKind["audio"];
     })
-  | (WorkspaceTabBase & {
+  | (WorkbenchTabBase & {
       kind: "terminal";
-      data: WorkspaceTabDataByKind["terminal"];
+      data: WorkbenchTabDataByKind["terminal"];
     })
-  | (WorkspaceTabBase & {
+  | (WorkbenchTabBase & {
       kind: "browser";
-      data: WorkspaceTabDataByKind["browser"];
+      data: WorkbenchTabDataByKind["browser"];
     })
-  | (WorkspaceTabBase & {
+  | (WorkbenchTabBase & {
       kind: "agent-chat";
-      data: WorkspaceTabDataByKind["agent-chat"];
+      data: WorkbenchTabDataByKind["agent-chat"];
     });
 
-export type OpenWorkspaceTabInput =
+export type OpenTabInput =
   | {
       workspaceId?: string;
       kind: "diff";

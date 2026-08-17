@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../features/workbench/model/types";
+import type { OpenTabInput, WorkbenchTab } from "../../../features/workbench/model/types";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
 import { resolveSelectedTabIdForWorkspace } from "../model/tabs";
@@ -27,16 +27,16 @@ export type CloseTabOptions = {
 };
 
 export type TabStoreState = {
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
   selectedTabId: string;
   selectedTabIdByWorkspaceId: Record<string, string>;
   /** Returns workspace tabs sorted with pinned entries first. */
-  getWorkspaceTabs: (workspaceId: string) => WorkspaceTab[];
+  getWorkspaceTabs: (workspaceId: string) => WorkbenchTab[];
   /** Resolves and applies the correct selectedTabId for the given workspace. */
   resolveTabForWorkspace: (workspaceId: string) => void;
   selectTab: (tabId: string) => void;
   retainWorkspaceTabs: (workspaceIds: string[], activeWorkspaceId: string) => string[];
-  openTab: (input: OpenWorkspaceTabInput, options: { workspaceId: string; activePaneTabIds?: string[] }) => void;
+  openTab: (input: OpenTabInput, options: { workspaceId: string; activePaneTabIds?: string[] }) => void;
   closeTab: (tabId: string, options?: CloseTabOptions) => void;
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: (tabId: string) => void;
@@ -78,8 +78,8 @@ export const tabStore = create<TabStoreState>()(
       selectedTabIdByWorkspaceId: {},
       getWorkspaceTabs: (workspaceId) => {
         return get()
-          .tabs.filter((tab: WorkspaceTab) => tab.workspaceId === workspaceId)
-          .sort((leftTab: WorkspaceTab, rightTab: WorkspaceTab) => {
+          .tabs.filter((tab: WorkbenchTab) => tab.workspaceId === workspaceId)
+          .sort((leftTab: WorkbenchTab, rightTab: WorkbenchTab) => {
             if (leftTab.pinned === rightTab.pinned) {
               return 0;
             }
@@ -99,7 +99,7 @@ export const tabStore = create<TabStoreState>()(
         set((state) => {
           const tabs = state.tabs ?? [];
           const selectedTabIdByWorkspaceId = state.selectedTabIdByWorkspaceId ?? {};
-          const nextTab = tabs.find((tab: WorkspaceTab) => tab.id === tabId);
+          const nextTab = tabs.find((tab: WorkbenchTab) => tab.id === tabId);
           if (!nextTab) {
             return { selectedTabId: tabId };
           }
@@ -118,8 +118,8 @@ export const tabStore = create<TabStoreState>()(
         const previous = get();
         const previousTabs = previous.tabs ?? [];
         const removedTabIds = previousTabs
-          .filter((tab: WorkspaceTab) => !workspaceIdSet.has(tab.workspaceId))
-          .map((tab: WorkspaceTab) => tab.id);
+          .filter((tab: WorkbenchTab) => !workspaceIdSet.has(tab.workspaceId))
+          .map((tab: WorkbenchTab) => tab.id);
 
         // The active workspace id is supplied by the owning Command (the Store
         // Action never reads navigation state).
@@ -128,8 +128,8 @@ export const tabStore = create<TabStoreState>()(
         set((state) => {
           const currentTabs = state.tabs ?? [];
           const currentSelectedByWorkspaceId = state.selectedTabIdByWorkspaceId ?? {};
-          const nextTabs = currentTabs.filter((tab: WorkspaceTab) => workspaceIdSet.has(tab.workspaceId));
-          const nextTabIdSet = new Set(nextTabs.map((tab: WorkspaceTab) => tab.id));
+          const nextTabs = currentTabs.filter((tab: WorkbenchTab) => workspaceIdSet.has(tab.workspaceId));
+          const nextTabIdSet = new Set(nextTabs.map((tab: WorkbenchTab) => tab.id));
           const nextSelectedTabIdByWorkspaceId = Object.fromEntries(
             Object.entries(currentSelectedByWorkspaceId).filter(
               ([workspaceId, tabId]) => workspaceIdSet.has(workspaceId) && nextTabIdSet.has(tabId),
@@ -179,7 +179,7 @@ export const tabStore = create<TabStoreState>()(
         }
 
         set((state) => ({
-          tabs: state.tabs.map((tab: WorkspaceTab) =>
+          tabs: state.tabs.map((tab: WorkbenchTab) =>
             tab.id === normalizedTabId && tab.kind === "terminal"
               ? {
                   ...tab,
@@ -200,7 +200,7 @@ export const tabStore = create<TabStoreState>()(
         }
 
         set((state) => ({
-          tabs: state.tabs.map((tab: WorkspaceTab) =>
+          tabs: state.tabs.map((tab: WorkbenchTab) =>
             tab.id === normalizedTabId && tab.kind === "agent-chat"
               ? {
                   ...tab,
@@ -220,7 +220,7 @@ export const tabStore = create<TabStoreState>()(
         }
 
         set((state) => ({
-          tabs: state.tabs.map((tab: WorkspaceTab) =>
+          tabs: state.tabs.map((tab: WorkbenchTab) =>
             tab.id === normalizedTabId && tab.kind === "agent-chat"
               ? {
                   ...tab,
@@ -241,7 +241,7 @@ export const tabStore = create<TabStoreState>()(
         }
 
         set((state) => ({
-          tabs: state.tabs.map((tab: WorkspaceTab) =>
+          tabs: state.tabs.map((tab: WorkbenchTab) =>
             tab.id === normalizedTabId && tab.kind === "terminal" ? { ...tab, data: { ...tab.data, agentKind } } : tab,
           ),
         }));
@@ -254,7 +254,7 @@ export const tabStore = create<TabStoreState>()(
         }
 
         set((state) => ({
-          tabs: state.tabs.map((tab: WorkspaceTab) =>
+          tabs: state.tabs.map((tab: WorkbenchTab) =>
             tab.id === normalizedTabId && tab.kind === "browser"
               ? (() => {
                   const nextData = { ...tab.data };
@@ -280,7 +280,7 @@ export const tabStore = create<TabStoreState>()(
         }
 
         set((state) => {
-          const tab = state.tabs.find((t: WorkspaceTab) => t.id === normalizedTabId && t.kind === "browser");
+          const tab = state.tabs.find((t: WorkbenchTab) => t.id === normalizedTabId && t.kind === "browser");
           if (tab && tab.kind === "browser") {
             tab.data.url = url;
           }

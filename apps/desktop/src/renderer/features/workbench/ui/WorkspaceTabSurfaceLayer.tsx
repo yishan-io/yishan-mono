@@ -2,22 +2,22 @@ import { Box } from "@mui/material";
 import { useCallback } from "react";
 import { createPortal } from "react-dom";
 import { getOrCreateRuntimeRoot } from "../../../app/runtime/runtimeRoot";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 import type { WorkspaceTabPlacement } from "./useWorkspaceTabPlacements";
 
 type WorkspaceTabSurfaceLayerProps = {
   isActive: boolean;
   isDraggingSplit: boolean;
-  workspaceTabs: WorkspaceTab[];
+  workspaceTabs: WorkbenchTab[];
   tabPlacements: Map<string, WorkspaceTabPlacement>;
   lastKnownRectByTabIdRef: React.MutableRefObject<
     Record<string, { left: number; top: number; width: number; height: number }>
   >;
   handleFocusPane: (paneId: string) => void;
-  renderTabContent: (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
+  renderTabContent: (tab: WorkbenchTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
   /** App-composed portal surface for agent-chat tabs (product UI). */
   renderAgentChatSurface: (input: {
-    tab: Extract<WorkspaceTab, { kind: "agent-chat" }>;
+    tab: Extract<WorkbenchTab, { kind: "agent-chat" }>;
     isWorkspaceActive: boolean;
     isDraggingSplit: boolean;
     isSelected: boolean;
@@ -44,7 +44,7 @@ export function WorkspaceTabSurfaceLayer({
 }: WorkspaceTabSurfaceLayerProps) {
   const renderTabSurface = useCallback(
     (
-      tab: WorkspaceTab,
+      tab: WorkbenchTab,
       isSelected: boolean,
       isInActivePane: boolean,
       rect: { left: number; top: number; width: number; height: number } | null,

@@ -8,6 +8,7 @@ import {
   renameEntry,
   writeClipboardText,
 } from "@renderer/features/files/commands/fileCommands";
+import type { OpenTabInput, WorkbenchTab } from "@renderer/features/workbench/model/types";
 import {
   isAudioFile,
   isExcalidrawFile,
@@ -15,7 +16,6 @@ import {
   isUnsupportedFileTab,
   isVideoFile,
 } from "@renderer/helpers/editorLanguage";
-import type { OpenWorkspaceTabInput, WorkspaceTab } from "@renderer/features/workbench/model/types";
 import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useRef } from "react";
@@ -26,13 +26,13 @@ import type { FileTreeUndoAction } from "./useFileTreeUndo";
 type UseFileTreeCrudInput = {
   selectedWorkspaceWorktreePath: string | undefined;
   selectedWorkspaceId: string | undefined;
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
   repoFiles: string[];
   /** Full entry list from the daemon — used to look up isIgnored at tab-open time. */
   repoEntries: WorkspaceFileEntry[];
   closeTab: (tabId: string) => void;
   renameTabsForEntryRename: (workspaceId: string, fromPath: string, toPath: string) => void;
-  openTab: (tab: OpenWorkspaceTabInput) => void;
+  openTab: (tab: OpenTabInput) => void;
   setLastUsedExternalAppId: (id: ExternalAppId) => void;
   loadAllRepoFiles: () => Promise<string[]>;
   pushUndoAction: (action: FileTreeUndoAction) => void;

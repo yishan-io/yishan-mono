@@ -10,7 +10,7 @@
  *   - API and RPC client types (no transport imports in Workbench Model)
  *   - Agent chat type re-exports (import from features/agent/model/chatTypes)
  *
- * Removal wave: W6 (WorkspaceTab → WorkbenchTab rename; callers import tab
+ * Removal wave: W6 (WorkbenchTab → WorkbenchTab rename; callers import tab
  * types from the Workbench root API).
  */
 export type {
@@ -18,8 +18,8 @@ export type {
   DiffFileChangeKind,
   DiffTabSource,
   FileDiffEntry,
-  OpenWorkspaceTabInput,
-  WorkspaceTab,
-  WorkspaceTabBase,
-  WorkspaceTabDataByKind,
+  OpenTabInput,
+  WorkbenchTab,
+  WorkbenchTabBase,
+  WorkbenchTabDataByKind,
 } from "./tabTypes";

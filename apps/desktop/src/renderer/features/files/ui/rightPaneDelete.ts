@@ -1,4 +1,4 @@
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 
 /**
  * Returns true when deletedPath should be treated as a directory in the current file listing.
@@ -17,7 +17,7 @@ export function isDeletedPathDirectory(files: string[], deletedPath: string): bo
  * Resolves tab ids that should close after deleting a file or directory path.
  */
 export function resolveTabIdsToCloseAfterDelete(
-  tabs: WorkspaceTab[],
+  tabs: WorkbenchTab[],
   deletedPath: string,
   isDirectory: boolean,
 ): string[] {

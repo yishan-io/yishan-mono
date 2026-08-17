@@ -1,7 +1,7 @@
-import type { WorkspaceTab } from "../../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../../features/workbench/model/types";
 
-export type WorkspaceTabStateSlice = {
-  tabs: WorkspaceTab[];
+export type TabStoreStateSlice = {
+  tabs: WorkbenchTab[];
   selectedTabId: string;
   selectedTabIdByWorkspaceId: Record<string, string>;
 };

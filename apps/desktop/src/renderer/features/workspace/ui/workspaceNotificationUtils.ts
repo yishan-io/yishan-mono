@@ -1,5 +1,5 @@
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import type { WorkspaceTab } from "../../../features/workbench/model/tabTypes";
+import type { WorkbenchTab } from "../../../features/workbench/model/tabTypes";
 
 export type InAppWorkspaceNotificationPayload = RpcFrontendMessagePayload<"notificationEvent">;
 
@@ -9,7 +9,7 @@ export type InAppWorkspaceNotificationPayload = RpcFrontendMessagePayload<"notif
 export function resolveFocusedWorkspaceSession(input: {
   selectedWorkspaceId: string;
   selectedTabId: string;
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
 }): { workspaceId: string; sessionId: string } | null {
   const selectedWorkspaceId = input.selectedWorkspaceId.trim();
   if (!selectedWorkspaceId) {
@@ -39,7 +39,7 @@ export function isNotificationForFocusedSession(input: {
   notification: InAppWorkspaceNotificationPayload;
   selectedWorkspaceId: string;
   selectedTabId: string;
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
 }): boolean {
   const workspaceId = input.notification.workspaceId;
   const sessionId = input.notification.sessionId;

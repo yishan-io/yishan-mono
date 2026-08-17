@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-type WorkspaceTab = {
+type WorkbenchTab = {
   id: string;
   title: string;
   pinned: boolean;
@@ -43,7 +43,7 @@ export function useTabRename({ selectedTabId, untitledLabel, onSelectTab, onRena
     selection.addRange(range);
   }, [editingTabId]);
 
-  const beginRename = (tab: WorkspaceTab) => {
+  const beginRename = (tab: WorkbenchTab) => {
     setEditingTabId(tab.id);
     editingDraftRef.current = tab.title || untitledLabel;
     if (tab.id !== selectedTabId) {
@@ -51,7 +51,7 @@ export function useTabRename({ selectedTabId, untitledLabel, onSelectTab, onRena
     }
   };
 
-  const commitRename = (tab: WorkspaceTab) => {
+  const commitRename = (tab: WorkbenchTab) => {
     const nextTitle = editingDraftRef.current.trim();
     if (nextTitle && nextTitle !== tab.title) {
       onRenameTab(tab.id, nextTitle);
@@ -67,7 +67,7 @@ export function useTabRename({ selectedTabId, untitledLabel, onSelectTab, onRena
     editingDraftRef.current = "";
   };
 
-  const handleRenameBlur = (tab: WorkspaceTab) => {
+  const handleRenameBlur = (tab: WorkbenchTab) => {
     if (renameCancelledRef.current) {
       renameCancelledRef.current = false;
       return;
@@ -75,7 +75,7 @@ export function useTabRename({ selectedTabId, untitledLabel, onSelectTab, onRena
     commitRename(tab);
   };
 
-  const handleRenameKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, tab: WorkspaceTab) => {
+  const handleRenameKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, tab: WorkbenchTab) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
       event.preventDefault();
       const selection = window.getSelection();

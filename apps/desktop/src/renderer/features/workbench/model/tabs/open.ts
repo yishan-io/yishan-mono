@@ -1,7 +1,12 @@
+import type {
+  DiffFileChangeKind,
+  OpenTabInput,
+  WorkbenchTab,
+  WorkbenchTabDataByKind,
+} from "../../../../features/workbench/model/types";
 import { isExcalidrawFile } from "../../../../helpers/editorLanguage";
-import type { DiffFileChangeKind, OpenWorkspaceTabInput, WorkspaceTab, WorkspaceTabDataByKind } from "../../../../features/workbench/model/types";
 import { findExistingTab } from "./shared";
-import type { WorkspaceTabStateSlice } from "./types";
+import type { TabStoreStateSlice } from "./types";
 
 // ─── Tab-data builder (moved from features/workbench/model/tabs.ts) ──────────────────────────────
 
@@ -102,7 +107,7 @@ function createFileContent(path: string): string {
 }
 
 /** Builds one tab data payload from a tab-open input. */
-export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): WorkspaceTabDataByKind[T["kind"]] {
+export function buildTabDataByInput<T extends OpenTabInput>(input: T): WorkbenchTabDataByKind[T["kind"]] {
   if (input.kind === "diff") {
     if (input.files && input.files.length > 0) {
       return {
@@ -112,7 +117,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
         source: input.diffSource,
         isTemporary: Boolean(input.temporary),
         files: input.files,
-      } as WorkspaceTabDataByKind[T["kind"]];
+      } as WorkbenchTabDataByKind[T["kind"]];
     }
 
     if (typeof input.oldContent === "string" && typeof input.newContent === "string") {
@@ -122,7 +127,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
         newContent: input.newContent,
         source: input.diffSource,
         isTemporary: Boolean(input.temporary),
-      } as WorkspaceTabDataByKind[T["kind"]];
+      } as WorkbenchTabDataByKind[T["kind"]];
     }
 
     const { oldContent, newContent } = createDiffContent({
@@ -137,7 +142,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
       newContent,
       source: input.diffSource,
       isTemporary: Boolean(input.temporary),
-    } as WorkspaceTabDataByKind[T["kind"]];
+    } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   if (input.kind === "file") {
@@ -153,7 +158,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
       ...(input.unsupportedReason ? { unsupportedReason: input.unsupportedReason } : {}),
       isDeleted: false,
       isIgnored: input.isIgnored ?? false,
-    } as WorkspaceTabDataByKind[T["kind"]];
+    } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   if (input.kind === "image") {
@@ -161,7 +166,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
       path: input.path,
       dataUrl: input.dataUrl,
       isTemporary: Boolean(input.temporary),
-    } as WorkspaceTabDataByKind[T["kind"]];
+    } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   if (input.kind === "video") {
@@ -169,7 +174,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
       path: input.path,
       dataUrl: input.dataUrl,
       isTemporary: Boolean(input.temporary),
-    } as WorkspaceTabDataByKind[T["kind"]];
+    } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   if (input.kind === "audio") {
@@ -177,13 +182,13 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
       path: input.path,
       dataUrl: input.dataUrl,
       isTemporary: Boolean(input.temporary),
-    } as WorkspaceTabDataByKind[T["kind"]];
+    } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   if (input.kind === "browser") {
     return {
       url: input.url?.trim() || "",
-    } as WorkspaceTabDataByKind[T["kind"]];
+    } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   if (input.kind === "agent-chat") {
@@ -193,7 +198,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
       sessionView: input.sessionView ?? "full",
       subagentAgentId: input.subagentAgentId || undefined,
       subagentParentSessionId: input.subagentParentSessionId || undefined,
-    } as WorkspaceTabDataByKind[T["kind"]];
+    } as WorkbenchTabDataByKind[T["kind"]];
   }
 
   return {
@@ -201,12 +206,12 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
     sessionId: input.sessionId?.trim() || undefined,
     launchCommand: input.launchCommand?.trim() || undefined,
     agentKind: input.agentKind,
-  } as WorkspaceTabDataByKind[T["kind"]];
+  } as WorkbenchTabDataByKind[T["kind"]];
 }
 
 // ─── Tab state operations ─────────────────────────────────────────────────────
 
-function isTemporaryTab(tab: WorkspaceTab): boolean {
+function isTemporaryTab(tab: WorkbenchTab): boolean {
   return (
     (tab.kind === "file" && tab.data.isTemporary) ||
     (tab.kind === "image" && tab.data.isTemporary) ||
@@ -222,11 +227,11 @@ function isTemporaryTab(tab: WorkspaceTab): boolean {
  * (i.e. only reuse a temp tab that belongs to the active pane).
  */
 function findTemporaryTab(
-  tabs: WorkspaceTab[],
+  tabs: WorkbenchTab[],
   workspaceId: string,
   restrictToTabIds?: string[],
-  kind?: WorkspaceTab["kind"],
-): WorkspaceTab | null {
+  kind?: WorkbenchTab["kind"],
+): WorkbenchTab | null {
   const restrictSet = restrictToTabIds ? new Set(restrictToTabIds) : null;
   for (const tab of tabs) {
     if (tab.workspaceId === workspaceId && isTemporaryTab(tab)) {
@@ -243,11 +248,11 @@ function findTemporaryTab(
 }
 
 /** Returns one state patch that selects one tab in one workspace. */
-function selectWorkspaceTab(
-  state: WorkspaceTabStateSlice,
+function selectWorkbenchTab(
+  state: TabStoreStateSlice,
   workspaceId: string,
   tabId: string,
-): Partial<WorkspaceTabStateSlice> {
+): Partial<TabStoreStateSlice> {
   return {
     selectedTabId: tabId,
     selectedTabIdByWorkspaceId: {
@@ -258,7 +263,7 @@ function selectWorkspaceTab(
 }
 
 /** Builds a new tab entity from a tab-open payload. */
-function createTabFromOpenInput(input: OpenWorkspaceTabInput, workspaceId: string, tabId: string): WorkspaceTab {
+function createTabFromOpenInput(input: OpenTabInput, workspaceId: string, tabId: string): WorkbenchTab {
   if (input.kind === "diff") {
     return {
       id: tabId,
@@ -351,11 +356,11 @@ function createTabFromOpenInput(input: OpenWorkspaceTabInput, workspaceId: strin
 
 /** Opens or focuses a tab using workspace+path/title identity rules. */
 export function openTabState(
-  state: WorkspaceTabStateSlice,
-  input: OpenWorkspaceTabInput,
+  state: TabStoreStateSlice,
+  input: OpenTabInput,
   nextTabId: string,
   options?: { activePaneTabIds?: string[]; selectedWorkspaceId?: string },
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   const targetWorkspaceId = input.workspaceId ?? options?.selectedWorkspaceId ?? "";
   if (!targetWorkspaceId) {
     return null;
@@ -410,7 +415,7 @@ export function openTabState(
           existingTab.data.isTemporary === isOpeningTemporary &&
           Boolean(existingTab.data.isUnsupported) === isUnsupported
         ) {
-          return selectWorkspaceTab(state, targetWorkspaceId, existingTab.id);
+          return selectWorkbenchTab(state, targetWorkspaceId, existingTab.id);
         }
 
         return {
@@ -427,7 +432,7 @@ export function openTabState(
                 }
               : tab,
           ),
-          ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+          ...selectWorkbenchTab(state, targetWorkspaceId, existingTab.id),
         };
       }
 
@@ -449,7 +454,7 @@ export function openTabState(
               }
             : tab,
         ),
-        ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+        ...selectWorkbenchTab(state, targetWorkspaceId, existingTab.id),
       };
     }
 
@@ -469,7 +474,7 @@ export function openTabState(
               }
             : tab,
         ),
-        ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+        ...selectWorkbenchTab(state, targetWorkspaceId, existingTab.id),
       };
     }
 
@@ -488,7 +493,7 @@ export function openTabState(
               }
             : tab,
         ),
-        ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+        ...selectWorkbenchTab(state, targetWorkspaceId, existingTab.id),
       };
     }
 
@@ -507,14 +512,14 @@ export function openTabState(
               }
             : tab,
         ),
-        ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+        ...selectWorkbenchTab(state, targetWorkspaceId, existingTab.id),
       };
     }
 
     if (input.kind === "browser" && existingTab.kind === "browser") {
       const nextUrl = input.url?.trim();
       if (!nextUrl || nextUrl === existingTab.data.url) {
-        return selectWorkspaceTab(state, targetWorkspaceId, existingTab.id);
+        return selectWorkbenchTab(state, targetWorkspaceId, existingTab.id);
       }
 
       return {
@@ -529,11 +534,11 @@ export function openTabState(
               }
             : tab,
         ),
-        ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+        ...selectWorkbenchTab(state, targetWorkspaceId, existingTab.id),
       };
     }
 
-    return selectWorkspaceTab(state, targetWorkspaceId, existingTab.id);
+    return selectWorkbenchTab(state, targetWorkspaceId, existingTab.id);
   }
 
   if (
@@ -549,7 +554,7 @@ export function openTabState(
       const replacement = createTabFromOpenInput(input, targetWorkspaceId, existing.id);
       return {
         tabs: state.tabs.map((tab) => (tab.id === existing.id ? replacement : tab)),
-        ...selectWorkspaceTab(state, targetWorkspaceId, existing.id),
+        ...selectWorkbenchTab(state, targetWorkspaceId, existing.id),
       };
     }
   }

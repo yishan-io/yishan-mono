@@ -1,11 +1,11 @@
-import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../../features/workbench/model/types";
+import type { OpenTabInput, WorkbenchTab } from "../../../../features/workbench/model/types";
 
 /** Returns a tab in the target workspace that matches the open request identity. */
 export function findExistingTab(
-  tabs: WorkspaceTab[],
-  input: OpenWorkspaceTabInput,
+  tabs: WorkbenchTab[],
+  input: OpenTabInput,
   targetWorkspaceId: string,
-): WorkspaceTab | undefined {
+): WorkbenchTab | undefined {
   if (input.kind === "diff") {
     return tabs.find(
       (tab) => tab.workspaceId === targetWorkspaceId && tab.kind === "diff" && tab.data.path === input.path,

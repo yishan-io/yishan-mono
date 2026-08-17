@@ -1,8 +1,8 @@
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 
 export function resolveSelectedTabIdForWorkspace(input: {
   workspaceId: string;
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
   selectedTabIdByWorkspaceId: Record<string, string>;
 }): string {
   const workspaceTabs = input.tabs.filter((tab) => tab.workspaceId === input.workspaceId);

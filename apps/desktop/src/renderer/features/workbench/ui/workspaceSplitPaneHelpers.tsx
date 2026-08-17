@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { useState } from "react";
 import { LuGlobe } from "react-icons/lu";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 
 export function FaviconIcon({ url, size }: { url?: string; size: number }) {
   const [failed, setFailed] = useState(false);
@@ -43,8 +43,8 @@ export type TabBarDescriptor = {
   cwd?: string;
 };
 
-/** Converts a full WorkspaceTab to the lightweight descriptor used by TabBar/SplitPaneGroup. */
-export function toTabBarDescriptor(tab: WorkspaceTab): TabBarDescriptor {
+/** Converts a full WorkbenchTab to the lightweight descriptor used by TabBar/SplitPaneGroup. */
+export function toTabBarDescriptor(tab: WorkbenchTab): TabBarDescriptor {
   return {
     id: tab.id,
     title: tab.title,

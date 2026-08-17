@@ -1,4 +1,4 @@
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 
 const MAX_TERMINAL_COMMAND_TITLE_LENGTH = 32;
@@ -6,7 +6,7 @@ const ASCII_ESCAPE_CODE = 27;
 
 /** Resolves one terminal tab's workspace root for the default terminal title. */
 export function resolveTerminalWorkspacePath(
-  tab: Extract<WorkspaceTab, { kind: "terminal" }> | undefined,
+  tab: Extract<WorkbenchTab, { kind: "terminal" }> | undefined,
 ): string | undefined {
   if (!tab) {
     return undefined;

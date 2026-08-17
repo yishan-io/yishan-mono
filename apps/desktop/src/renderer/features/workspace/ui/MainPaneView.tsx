@@ -21,7 +21,7 @@ import { findTabWithSession } from "../../../features/agent/commands/agentChatCo
 import { useLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
 import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "../../../features/terminal";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
@@ -85,7 +85,7 @@ export function MainPaneView() {
   });
   const renderAgentChatSurface = useCallback(
     (input: {
-      tab: Extract<WorkspaceTab, { kind: "agent-chat" }>;
+      tab: Extract<WorkbenchTab, { kind: "agent-chat" }>;
       isWorkspaceActive: boolean;
       isDraggingSplit: boolean;
       isSelected: boolean;
@@ -166,7 +166,7 @@ export function MainPaneView() {
   }, [tabs]);
 
   const tabsByWorkspaceId = useMemo(() => {
-    const map = new Map<string, WorkspaceTab[]>();
+    const map = new Map<string, WorkbenchTab[]>();
     for (const tab of tabs) {
       let list = map.get(tab.workspaceId);
       if (!list) {
@@ -178,7 +178,7 @@ export function MainPaneView() {
     return map;
   }, [tabs]);
 
-  const hasSelectedWorkspaceTabs = workspaceIdsWithTabs.has(selectedWorkspaceId);
+  const hasSelectedWorkbenchTabs = workspaceIdsWithTabs.has(selectedWorkspaceId);
 
   return (
     <Box
@@ -224,7 +224,7 @@ export function MainPaneView() {
                   />
                 </Box>
               ))}
-              {!hasSelectedWorkspaceTabs && (
+              {!hasSelectedWorkbenchTabs && (
                 <TabPanel active>
                   <LaunchView workspaceId={selectedWorkspaceId} enabledAgentKinds={enabledAgentKinds} />
                 </TabPanel>

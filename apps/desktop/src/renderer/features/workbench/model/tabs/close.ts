@@ -1,11 +1,11 @@
-import type { WorkspaceTabStateSlice } from "./types";
+import type { TabStoreStateSlice } from "./types";
 
 /** Closes one tab and updates selected-tab pointers and per-tab metadata maps. */
 export function closeTabState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   tabId: string,
   options?: { preferredSelectedTabId?: string },
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   const currentTab = state.tabs.find((tab) => tab.id === tabId);
   if (!currentTab) {
     return null;
@@ -37,10 +37,7 @@ export function closeTabState(
 }
 
 /** Closes all unpinned sibling tabs in the same workspace and keeps one tab focused. */
-export function closeOtherTabsState(
-  state: WorkspaceTabStateSlice,
-  tabId: string,
-): Partial<WorkspaceTabStateSlice> | null {
+export function closeOtherTabsState(state: TabStoreStateSlice, tabId: string): Partial<TabStoreStateSlice> | null {
   const currentTab = state.tabs.find((tab) => tab.id === tabId);
   if (!currentTab) {
     return null;
@@ -60,9 +57,9 @@ export function closeOtherTabsState(
 
 /** Closes every terminal tab across all workspaces and resets selection pointers. */
 export function closeAllTerminalTabsState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   selectedWorkspaceId?: string,
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   const terminalTabIds = new Set(state.tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
   if (terminalTabIds.size === 0) {
     return null;
@@ -88,10 +85,7 @@ export function closeAllTerminalTabsState(
 }
 
 /** Closes all unpinned tabs for a workspace and selects the nearest pinned tab when needed. */
-export function closeAllTabsState(
-  state: WorkspaceTabStateSlice,
-  tabId: string,
-): Partial<WorkspaceTabStateSlice> | null {
+export function closeAllTabsState(state: TabStoreStateSlice, tabId: string): Partial<TabStoreStateSlice> | null {
   const currentTab = state.tabs.find((tab) => tab.id === tabId);
   if (!currentTab) {
     return null;

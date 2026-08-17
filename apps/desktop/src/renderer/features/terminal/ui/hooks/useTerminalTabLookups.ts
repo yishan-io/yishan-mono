@@ -1,9 +1,9 @@
 import { tabStore } from "@renderer/features/workbench";
 import { useMemo } from "react";
-import type { WorkspaceTab } from "../../../../features/workbench";
+import type { WorkbenchTab } from "../../../../features/workbench";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
 
-type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
+type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type TerminalTabWithSessionId = TerminalTab & { data: TerminalTab["data"] & { sessionId: string } };
 
 /**

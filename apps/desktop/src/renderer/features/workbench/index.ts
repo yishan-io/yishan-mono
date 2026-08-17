@@ -37,7 +37,7 @@ export {
   splitWorkspacePane,
   unregisterTabFromPane,
 } from "./commands/tabCommands";
-export type { WorkspaceTab } from "./model/types";
+export type { WorkbenchTab } from "./model/types";
 export {
   workbenchNavigationStore,
   type OverlayPanel,

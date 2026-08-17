@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  type WorkspaceTabStateSlice,
+  type TabStoreStateSlice,
   closeAllTabsState,
   closeOtherTabsState,
   closeTabState,
@@ -14,7 +14,7 @@ import {
   updateFileTabContentState,
 } from ".";
 
-function createBaseState(): WorkspaceTabStateSlice {
+function createBaseState(): TabStoreStateSlice {
   return {
     tabs: [
       {
@@ -118,7 +118,7 @@ describe("tabs-domain open", () => {
   });
 
   it("focuses the existing agent-chat tab when reopening the same history session", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: [
         ...createBaseState().tabs,
@@ -170,7 +170,7 @@ describe("tabs-domain open", () => {
   });
 
   it("always creates a new tab for fresh agent chats without a session id", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: [
         ...createBaseState().tabs,
@@ -201,7 +201,7 @@ describe("tabs-domain open", () => {
   });
 
   it("does not dedupe a history open against a subagent-detail tab of the same session", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: [
         ...createBaseState().tabs,
@@ -233,7 +233,7 @@ describe("tabs-domain open", () => {
   });
 
   it("dedupes subagent-detail opens within the same view kind", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: [
         ...createBaseState().tabs,
@@ -287,7 +287,7 @@ describe("tabs-domain open", () => {
 
   it("reuses an existing temporary file tab for single-click previews", () => {
     const state = createBaseState();
-    const previewState: WorkspaceTabStateSlice = {
+    const previewState: TabStoreStateSlice = {
       ...state,
       tabs: state.tabs.map((tab) =>
         tab.id === "file-1" && tab.kind === "file"
@@ -325,7 +325,7 @@ describe("tabs-domain open", () => {
 
   it("opens explicit file actions in a new persistent tab", () => {
     const state = createBaseState();
-    const previewState: WorkspaceTabStateSlice = {
+    const previewState: TabStoreStateSlice = {
       ...state,
       tabs: state.tabs.map((tab) =>
         tab.id === "file-1" && tab.kind === "file"
@@ -358,7 +358,7 @@ describe("tabs-domain open", () => {
 
   it("promotes matching temporary file tabs on explicit open", () => {
     const state = createBaseState();
-    const previewState: WorkspaceTabStateSlice = {
+    const previewState: TabStoreStateSlice = {
       ...state,
       tabs: state.tabs.map((tab) =>
         tab.id === "file-1" && tab.kind === "file"
@@ -390,7 +390,7 @@ describe("tabs-domain open", () => {
   it("reuses a temporary tab only when it belongs to the active pane", () => {
     const state = createBaseState();
     // Two temp tabs: file-1 is in "pane A", file-2 is a temp tab in "pane B"
-    const multiPaneState: WorkspaceTabStateSlice = {
+    const multiPaneState: TabStoreStateSlice = {
       ...state,
       tabs: [
         ...state.tabs.map((tab) =>
@@ -450,7 +450,7 @@ describe("tabs-domain open", () => {
   it("falls back to global temp tab search when no active pane info is provided", () => {
     const state = createBaseState();
     // file-1 is a temp tab
-    const previewState: WorkspaceTabStateSlice = {
+    const previewState: TabStoreStateSlice = {
       ...state,
       tabs: state.tabs.map((tab) =>
         tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
@@ -477,7 +477,7 @@ describe("tabs-domain close", () => {
   });
 
   it("selects the next tab when closing the selected tab", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: [
         ...createBaseState().tabs,
@@ -505,7 +505,7 @@ describe("tabs-domain close", () => {
   });
 
   it("selects the previous tab when closing the last selected tab", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       selectedTabId: "file-1",
       tabs: createBaseState().tabs.filter((tab) => tab.id !== "terminal-1"),
@@ -518,7 +518,7 @@ describe("tabs-domain close", () => {
   });
 
   it("prefers preferredSelectedTabId when closing the selected tab", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       selectedTabId: "file-2",
       tabs: [
@@ -547,7 +547,7 @@ describe("tabs-domain close", () => {
   });
 
   it("falls back to the neighbor rule when preferredSelectedTabId no longer exists", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       selectedTabId: "file-2",
       tabs: [
@@ -576,7 +576,7 @@ describe("tabs-domain close", () => {
   });
 
   it("ignores preferredSelectedTabId when the closed tab was not selected", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       selectedTabId: "session-1",
       tabs: [
@@ -606,7 +606,7 @@ describe("tabs-domain close", () => {
 
   it("keeps target and pinned tabs while removing siblings in closeOtherTabsState", () => {
     const state = createBaseState();
-    const expanded: WorkspaceTabStateSlice = {
+    const expanded: TabStoreStateSlice = {
       ...state,
       tabs: [
         ...state.tabs,
@@ -632,7 +632,7 @@ describe("tabs-domain close", () => {
   });
 
   it("removes all unpinned workspace tabs and keeps pinned tabs in closeAllTabsState", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: [
         ...createBaseState().tabs,
@@ -661,7 +661,7 @@ describe("tabs-domain close", () => {
 describe("tabs-domain layout and session", () => {
   it("reorders tabs within same workspace and pin group", () => {
     const state = createBaseState();
-    const expanded: WorkspaceTabStateSlice = {
+    const expanded: TabStoreStateSlice = {
       ...state,
       tabs: [
         ...state.tabs,
@@ -703,7 +703,7 @@ describe("tabs-domain layout and session", () => {
   });
 
   it("promotes a temporary file tab to a normal tab when it is edited", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: createBaseState().tabs.map((tab) =>
         tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
@@ -718,7 +718,7 @@ describe("tabs-domain layout and session", () => {
   });
 
   it("keeps a temporary file tab temporary when content is re-emitted unchanged", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: createBaseState().tabs.map((tab) =>
         tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
@@ -789,7 +789,7 @@ describe("tabs-domain layout and session", () => {
   });
 
   it("does not overwrite dirty file tab during disk refresh", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: createBaseState().tabs.map((tab) =>
         tab.id === "file-1" && tab.kind === "file"
@@ -817,7 +817,7 @@ describe("tabs-domain layout and session", () => {
 
   it("refreshes diff tab content in place", () => {
     const state = createBaseState();
-    const withDiff: WorkspaceTabStateSlice = {
+    const withDiff: TabStoreStateSlice = {
       ...state,
       tabs: [
         ...state.tabs,
@@ -893,7 +893,7 @@ describe("tabs-domain rename", () => {
   });
 
   it("sets userRenamed on agent-chat tabs when option is provided", () => {
-    const state: WorkspaceTabStateSlice = {
+    const state: TabStoreStateSlice = {
       ...createBaseState(),
       tabs: [
         ...createBaseState().tabs,
@@ -942,7 +942,7 @@ describe("tabs-domain rename", () => {
 
   it("updates open file and diff tabs when a file-tree path is renamed", () => {
     const state = createBaseState();
-    const expanded: WorkspaceTabStateSlice = {
+    const expanded: TabStoreStateSlice = {
       ...state,
       tabs: [
         ...state.tabs,

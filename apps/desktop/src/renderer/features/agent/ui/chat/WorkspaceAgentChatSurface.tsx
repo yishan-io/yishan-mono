@@ -2,10 +2,10 @@ import { Box } from "@mui/material";
 import type { WorkspaceTabPlacement } from "@renderer/features/workbench/ui/useWorkspaceTabPlacements";
 import { memo } from "react";
 import type { MutableRefObject } from "react";
-import type { WorkspaceTab } from "../../../workbench/model/types";
+import type { WorkbenchTab } from "../../../workbench/model/types";
 import { AgentChatView } from "./AgentChatView";
 
-type AgentChatTab = Extract<WorkspaceTab, { kind: "agent-chat" }>;
+type AgentChatTab = Extract<WorkbenchTab, { kind: "agent-chat" }>;
 type SurfaceRect = NonNullable<WorkspaceTabPlacement["rect"]>;
 
 type WorkspaceAgentChatSurfaceProps = {

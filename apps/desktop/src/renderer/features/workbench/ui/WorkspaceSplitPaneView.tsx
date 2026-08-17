@@ -9,7 +9,7 @@ import { SplitPaneGroup } from "../../../components/SplitPaneGroup";
 import { SessionHistoryMenu } from "../../../components/agent/session/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../../components/fileTreeIcons";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../../features/workbench/model/types";
 import { selectPaneForTab } from "../../../features/workbench/state/workbenchSelectors";
 import {
   type RefreshableOpenTab,
@@ -29,7 +29,7 @@ import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";
 export type WorkspaceSplitPaneProps = {
   workspaceId: string;
   isActive: boolean;
-  workspaceTabs: WorkspaceTab[];
+  workspaceTabs: WorkbenchTab[];
   /** Worktree path for the workspace backing this pane (App-composed data). */
   worktreePath: string | undefined;
   /** Agent kinds currently in use, resolved by the App composition layer. */
@@ -41,10 +41,10 @@ export type WorkspaceSplitPaneProps = {
   /** Formats an agent session title for the tab bar. */
   formatAgentSessionTitle: (title: string) => string;
   /** App-composed tab content renderer (product UI). */
-  renderTabContent: (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
+  renderTabContent: (tab: WorkbenchTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
   /** App-composed agent-chat surface renderer (product UI). */
   renderAgentChatSurface: (input: {
-    tab: Extract<WorkspaceTab, { kind: "agent-chat" }>;
+    tab: Extract<WorkbenchTab, { kind: "agent-chat" }>;
     isWorkspaceActive: boolean;
     isDraggingSplit: boolean;
     isSelected: boolean;
@@ -103,7 +103,7 @@ export function WorkspaceSplitPane({
   const { tabPlacements, handleContentPlaceholderChange } = useWorkspaceTabPlacements({ splitRoot, activePaneId });
 
   const tabById = useMemo(() => {
-    const map = new Map<string, WorkspaceTab>();
+    const map = new Map<string, WorkbenchTab>();
     for (const tab of workspaceTabs) {
       map.set(tab.id, tab);
     }
@@ -248,7 +248,7 @@ export function WorkspaceSplitPane({
     (pane: PaneLeaf) => {
       const paneTabs = pane.tabIds
         .map((tabId) => tabById.get(tabId))
-        .filter((tab): tab is WorkspaceTab => tab != null)
+        .filter((tab): tab is WorkbenchTab => tab != null)
         .sort((a, b) => {
           if (a.pinned === b.pinned) return 0;
           return a.pinned ? -1 : 1;

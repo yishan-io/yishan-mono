@@ -29,4 +29,4 @@ export {
   updateFileTabContentState,
 };
 
-export type { WorkspaceTabStateSlice } from "./types";
+export type { TabStoreStateSlice } from "./types";

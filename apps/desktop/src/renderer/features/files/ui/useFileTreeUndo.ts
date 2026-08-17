@@ -1,5 +1,5 @@
 import { createFile, deleteEntry, renameEntry } from "@renderer/features/files/commands/fileCommands";
-import type { WorkspaceTab } from "@renderer/features/workbench/model/types";
+import type { WorkbenchTab } from "@renderer/features/workbench/model/types";
 import { useCallback, useRef } from "react";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 
@@ -15,7 +15,7 @@ export type { FileTreeUndoAction };
 type UseFileTreeUndoInput = {
   selectedWorkspaceWorktreePath: string | undefined;
   selectedWorkspaceId: string | undefined;
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
   closeTab: (tabId: string) => void;
   renameTabsForEntryRename: (workspaceId: string, fromPath: string, toPath: string) => void;
   loadAllRepoFiles: () => Promise<string[]>;

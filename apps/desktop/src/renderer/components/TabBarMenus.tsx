@@ -19,7 +19,7 @@ type TabContextMenuState = {
   tabId: string;
 } | null;
 
-type WorkspaceTab = {
+type WorkbenchTab = {
   id: string;
   title: string;
   pinned: boolean;
@@ -161,7 +161,7 @@ export function SplitPaneMenu({
 
 type TabContextMenuProps = {
   contextMenu: TabContextMenuState;
-  selectedContextTab: WorkspaceTab | null;
+  selectedContextTab: WorkbenchTab | null;
   keepOpenActionLabel: string;
   pinTabActionLabel: string;
   unpinTabActionLabel: string;

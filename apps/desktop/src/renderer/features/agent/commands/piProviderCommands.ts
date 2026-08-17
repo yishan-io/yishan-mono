@@ -2,7 +2,7 @@ import { tabStore } from "@renderer/features/workbench";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { openTab } from "@renderer/features/workbench";
 import { writeTerminalInput } from "../../../features/terminal/commands/terminalCommands";
-import type { WorkspaceTab } from "../../../features/workbench";
+import type { WorkbenchTab } from "../../../features/workbench";
 import { DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { delay } from "../../../helpers/delay";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
@@ -116,7 +116,7 @@ async function waitForTerminalSessionId(tabTitle: string, timeoutMs: number): Pr
     const tab = tabStore
       .getState()
       .tabs.find(
-        (candidate): candidate is Extract<WorkspaceTab, { kind: "terminal" }> =>
+        (candidate): candidate is Extract<WorkbenchTab, { kind: "terminal" }> =>
           candidate.kind === "terminal" && candidate.data.title === tabTitle,
       );
     if (tab?.data.sessionId) {

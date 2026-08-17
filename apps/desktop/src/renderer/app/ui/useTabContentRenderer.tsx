@@ -12,7 +12,7 @@ import { MultiFileDiffViewer } from "../../components/MultiFileDiffViewer";
 import { TabPanel } from "../../components/TabPanel";
 import { UnsupportedFileView } from "../../components/UnsupportedFileView";
 import { VideoPreview } from "../../components/VideoPreview";
-import type { WorkspaceTab } from "../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../features/workbench/model/types";
 import { copyToClipboard } from "../../helpers/clipboard";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../commands/useCommands";
@@ -25,7 +25,7 @@ type TabContentRendererProps = {
   onOpenExternalApp: (filePath: string) => Promise<void>;
 };
 
-type RenderTabContent = (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
+type RenderTabContent = (tab: WorkbenchTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
 
 /** Returns a stable callback that renders the content panel for one workspace tab. */
 export function useTabContentRenderer({
@@ -38,7 +38,7 @@ export function useTabContentRenderer({
   const { t } = useTranslation();
 
   return useCallback(
-    (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => {
+    (tab: WorkbenchTab, isSelected: boolean, isInActivePane: boolean) => {
       const shouldFocusContent = isSelected && isInActivePane;
 
       if (tab.kind === "diff") {

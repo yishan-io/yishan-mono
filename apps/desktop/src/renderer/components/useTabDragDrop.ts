@@ -1,13 +1,13 @@
 import type { DragEvent } from "react";
 import { useState } from "react";
 
-type WorkspaceTab = {
+type WorkbenchTab = {
   id: string;
   pinned: boolean;
 };
 
 type UseTabDragDropOptions = {
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
   canDragTabs: boolean;
   onReorderTab?: (draggedTabId: string, targetTabId: string, position: "before" | "after") => void;
   onTabDragStart?: (tabId: string) => void;
@@ -61,7 +61,7 @@ export function useTabDragDrop({
     };
   };
 
-  const handleTabDragStart = (event: DragEvent<HTMLDivElement>, tab: WorkspaceTab, editingTabId: string) => {
+  const handleTabDragStart = (event: DragEvent<HTMLDivElement>, tab: WorkbenchTab, editingTabId: string) => {
     if (!canDragTabs || editingTabId) {
       event.preventDefault();
       return;
@@ -74,7 +74,7 @@ export function useTabDragDrop({
     onTabDragStart?.(tab.id);
   };
 
-  const handleTabDragOver = (event: DragEvent<HTMLDivElement>, tab: WorkspaceTab) => {
+  const handleTabDragOver = (event: DragEvent<HTMLDivElement>, tab: WorkbenchTab) => {
     if (!canDragTabs) {
       return;
     }
@@ -93,7 +93,7 @@ export function useTabDragDrop({
     event.dataTransfer.dropEffect = "move";
   };
 
-  const handleTabDrop = (event: DragEvent<HTMLDivElement>, tab: WorkspaceTab) => {
+  const handleTabDrop = (event: DragEvent<HTMLDivElement>, tab: WorkbenchTab) => {
     if (!canDragTabs) {
       return;
     }

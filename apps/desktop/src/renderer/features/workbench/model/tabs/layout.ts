@@ -1,5 +1,5 @@
-import type { WorkspaceTab } from "../../../../features/workbench/model/types";
-import type { WorkspaceTabStateSlice } from "./types";
+import type { WorkbenchTab } from "../../../../features/workbench/model/types";
+import type { TabStoreStateSlice } from "./types";
 
 function remapPathByRename(path: string, fromPath: string, toPath: string): string | null {
   if (path === fromPath) {
@@ -12,7 +12,7 @@ function remapPathByRename(path: string, fromPath: string, toPath: string): stri
   return `${toPath}/${path.slice(prefix.length)}`;
 }
 
-function clearTemporaryOnPin(tab: WorkspaceTab): WorkspaceTab {
+function clearTemporaryOnPin(tab: WorkbenchTab): WorkbenchTab {
   if (tab.kind === "file" && tab.data.isTemporary) {
     return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
   }
@@ -32,10 +32,7 @@ function clearTemporaryOnPin(tab: WorkspaceTab): WorkspaceTab {
 }
 
 /** Promotes one temporary tab to permanent (non-temporary) state. No-op if not temporary. */
-export function promoteTemporaryTabState(
-  state: WorkspaceTabStateSlice,
-  tabId: string,
-): Partial<WorkspaceTabStateSlice> | null {
+export function promoteTemporaryTabState(state: TabStoreStateSlice, tabId: string): Partial<TabStoreStateSlice> | null {
   const tab = state.tabs.find((t) => t.id === tabId);
   if (!tab) return null;
   if (
@@ -47,7 +44,7 @@ export function promoteTemporaryTabState(
     tab.data.isTemporary
   ) {
     return {
-      tabs: state.tabs.map((t): WorkspaceTab => {
+      tabs: state.tabs.map((t): WorkbenchTab => {
         if (t.id !== tabId) return t;
         if (t.kind === "file") return { ...t, data: { ...t.data, isTemporary: false } };
         if (t.kind === "image") return { ...t, data: { ...t.data, isTemporary: false } };
@@ -62,7 +59,7 @@ export function promoteTemporaryTabState(
 }
 
 /** Toggles pinned state for one tab id. */
-export function toggleTabPinnedState(state: WorkspaceTabStateSlice, tabId: string): Partial<WorkspaceTabStateSlice> {
+export function toggleTabPinnedState(state: TabStoreStateSlice, tabId: string): Partial<TabStoreStateSlice> {
   return {
     tabs: state.tabs.map((tab) => (tab.id === tabId ? clearTemporaryOnPin(tab) : tab)),
   };
@@ -70,11 +67,11 @@ export function toggleTabPinnedState(state: WorkspaceTabStateSlice, tabId: strin
 
 /** Renames one tab id while preserving all other tab fields. */
 export function renameTabState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   tabId: string,
   title: string,
   options?: { userRenamed?: boolean },
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   const targetTab = state.tabs.find((tab) => tab.id === tabId);
   if (!targetTab || targetTab.title === title) {
     return null;
@@ -108,11 +105,11 @@ export function renameTabState(
 
 /** Applies one file-tree rename to open file and diff tabs in one workspace. */
 export function renameTabsForEntryRenameState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   workspaceId: string,
   fromPath: string,
   toPath: string,
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   if (!workspaceId || !fromPath || !toPath || fromPath === toPath) {
     return null;
   }
@@ -202,10 +199,10 @@ export function renameTabsForEntryRenameState(
 
 /** Updates editable content for one file tab and recomputes dirty state. */
 export function updateFileTabContentState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   tabId: string,
   content: string,
-): Partial<WorkspaceTabStateSlice> {
+): Partial<TabStoreStateSlice> {
   return {
     tabs: state.tabs.map((tab) => {
       if (tab.id !== tabId || tab.kind !== "file") {
@@ -229,7 +226,7 @@ export function updateFileTabContentState(
 }
 
 /** Marks one file tab as saved by syncing savedContent and dirty state. */
-export function markFileTabSavedState(state: WorkspaceTabStateSlice, tabId: string): Partial<WorkspaceTabStateSlice> {
+export function markFileTabSavedState(state: TabStoreStateSlice, tabId: string): Partial<TabStoreStateSlice> {
   return {
     tabs: state.tabs.map((tab) =>
       tab.id === tabId && tab.kind === "file"
@@ -249,13 +246,13 @@ export function markFileTabSavedState(state: WorkspaceTabStateSlice, tabId: stri
 
 /** Syncs one open file tab with disk state after external changes. */
 export function refreshFileTabFromDiskState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   input: {
     tabId: string;
     content: string;
     deleted: boolean;
   },
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   const targetTab = state.tabs.find((tab) => tab.id === input.tabId);
   if (!targetTab || targetTab.kind !== "file") {
     return null;
@@ -294,13 +291,13 @@ export function refreshFileTabFromDiskState(
 
 /** Syncs one open diff tab content after external changes. */
 export function refreshDiffTabContentState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   input: {
     tabId: string;
     oldContent: string;
     newContent: string;
   },
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   const targetTab = state.tabs.find((tab) => tab.id === input.tabId);
   if (!targetTab || targetTab.kind !== "diff") {
     return null;
@@ -328,11 +325,11 @@ export function refreshDiffTabContentState(
 
 /** Reorders tabs inside one workspace and pin-group while preserving global list shape. */
 export function reorderTabState(
-  state: WorkspaceTabStateSlice,
+  state: TabStoreStateSlice,
   draggedTabId: string,
   targetTabId: string,
   position: "before" | "after",
-): Partial<WorkspaceTabStateSlice> | null {
+): Partial<TabStoreStateSlice> | null {
   if (draggedTabId === targetTabId) {
     return null;
   }

@@ -16,7 +16,7 @@ import { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./TabBarMenus";
 import { TabRenameDialog } from "./TabRenameDialog";
 import { useTabDragDrop } from "./useTabDragDrop";
 
-type WorkspaceTab = {
+type WorkbenchTab = {
   id: string;
   title: string;
   pinned: boolean;
@@ -39,7 +39,7 @@ function isAgentCreateOption(option: TabBarCreateOption): option is AgentCreateO
 }
 
 type TabBarProps = {
-  tabs: WorkspaceTab[];
+  tabs: WorkbenchTab[];
   selectedTabId: string;
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
@@ -49,7 +49,7 @@ type TabBarProps = {
   onReorderTab?: (draggedTabId: string, targetTabId: string, position: "before" | "after") => void;
   onCreateTab: (option: TabBarCreateOption) => void;
   onPromoteTemporaryTab?: (tabId: string) => void;
-  getTabIcon?: (tab: WorkspaceTab) => ReactNode;
+  getTabIcon?: (tab: WorkbenchTab) => ReactNode;
   enabledAgentKinds?: AgentCreateOption[];
   disabled?: boolean;
   /** Called when a tab drag starts - useful for enabling split drop zones. */
@@ -153,9 +153,9 @@ export function TabBar({
   // ─── Tab rename dialog ────────────────────────────────────────────────────
 
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
-  const [renameDialogTab, setRenameDialogTab] = useState<WorkspaceTab | null>(null);
+  const [renameDialogTab, setRenameDialogTab] = useState<WorkbenchTab | null>(null);
 
-  const handleBeginRename = (tab: WorkspaceTab) => {
+  const handleBeginRename = (tab: WorkbenchTab) => {
     // Only agent-chat tabs support rename for now.
     if (tab.kind !== "agent-chat") {
       return;
@@ -277,7 +277,7 @@ export function TabBar({
     setContextMenu(null);
   };
 
-  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>, tab: WorkspaceTab) => {
+  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>, tab: WorkbenchTab) => {
     event.preventDefault();
     event.stopPropagation();
     if (tab.id !== selectedTabId) {
@@ -294,7 +294,7 @@ export function TabBar({
 
   // ─── Tab item renderer ────────────────────────────────────────────────────
 
-  const renderTabItem = (tab: WorkspaceTab) => (
+  const renderTabItem = (tab: WorkbenchTab) => (
     <TabBarItem
       key={tab.id}
       tab={tab}

@@ -7,7 +7,7 @@ import {
   setTerminalTabAgentKind,
 } from "@renderer/features/workbench";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import type { WorkspaceTab } from "../../../features/workbench";
+import type { WorkbenchTab } from "../../../features/workbench";
 import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
@@ -16,7 +16,7 @@ import {
   recordExplicitlyClosedTerminalTabId,
 } from "../../../helpers/terminalCloseTombstones";
 
-type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
+type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;
 
 type TerminalSessionTabReconcilerDependencies = {

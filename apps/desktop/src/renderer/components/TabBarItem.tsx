@@ -2,7 +2,7 @@ import { Box, ButtonBase, IconButton } from "@mui/material";
 import type { ReactNode } from "react";
 import { LuPin, LuX } from "react-icons/lu";
 
-type WorkspaceTab = {
+type WorkbenchTab = {
   id: string;
   title: string;
   pinned: boolean;
@@ -33,7 +33,7 @@ function TabDirtyDot({ tabId, isDirty }: { tabId: string; isDirty?: boolean }) {
 }
 
 type TabBarItemProps = {
-  tab: WorkspaceTab;
+  tab: WorkbenchTab;
   active: boolean;
   canDrag: boolean;
   draggedTabId: string | null;
@@ -42,17 +42,17 @@ type TabBarItemProps = {
   untitledLabel: string;
   unpinTabActionLabel: string;
   closeTabActionLabel: string;
-  getTabIcon?: (tab: WorkspaceTab) => ReactNode;
+  getTabIcon?: (tab: WorkbenchTab) => ReactNode;
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onTogglePinTab?: (tabId: string) => void;
   onPromoteTemporaryTab?: (tabId: string) => void;
   /** Called when the user double-clicks a non-temporary tab to rename it. */
-  onBeginRename?: (tab: WorkspaceTab) => void;
-  onContextMenu: (event: React.MouseEvent<HTMLDivElement>, tab: WorkspaceTab) => void;
-  onDragStart: (event: React.DragEvent<HTMLDivElement>, tab: WorkspaceTab, paneId: string) => void;
-  onDragOver: (event: React.DragEvent<HTMLDivElement>, tab: WorkspaceTab) => void;
-  onDrop: (event: React.DragEvent<HTMLDivElement>, tab: WorkspaceTab) => void;
+  onBeginRename?: (tab: WorkbenchTab) => void;
+  onContextMenu: (event: React.MouseEvent<HTMLDivElement>, tab: WorkbenchTab) => void;
+  onDragStart: (event: React.DragEvent<HTMLDivElement>, tab: WorkbenchTab, paneId: string) => void;
+  onDragOver: (event: React.DragEvent<HTMLDivElement>, tab: WorkbenchTab) => void;
+  onDrop: (event: React.DragEvent<HTMLDivElement>, tab: WorkbenchTab) => void;
   onDragEnd: () => void;
   itemRef: (element: HTMLDivElement | null) => void;
 };
