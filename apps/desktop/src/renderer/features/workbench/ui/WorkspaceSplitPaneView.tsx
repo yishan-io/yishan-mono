@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
-import { SessionHistoryMenu } from "../../../components/agent/session/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../../components/fileTreeIcons";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
 import type { WorkbenchTab } from "../../../features/workbench/model/types";
@@ -38,6 +37,13 @@ export type WorkspaceSplitPaneProps = {
   fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
   /** Renders one agent icon (App-supplied; agent-owned). */
   renderAgentIcon?: (agentKind: string, label?: string) => React.ReactNode;
+  /** Renders the session-history menu for the tab bar (App-supplied; agent-owned). */
+  renderSessionHistoryMenu?: (input: {
+    cwd: string;
+    anchorEl: HTMLElement | null;
+    onClose: () => void;
+    onSelectSession: (session: { sessionId: string; cwd?: string | null }, title: string) => void;
+  }) => React.ReactNode;
   /** Last used external app id for "open in app" actions. */
   lastUsedExternalAppId: ExternalAppId | undefined;
   /** Opens an existing agent-chat tab for a session, or null when absent. */
@@ -77,6 +83,7 @@ export function WorkspaceSplitPane({
   agentPresetMeta,
   fetchAgentSessionFilePath,
   renderAgentIcon,
+  renderSessionHistoryMenu,
   lastUsedExternalAppId,
   findTabWithSession,
   formatAgentSessionTitle,
@@ -348,12 +355,12 @@ export function WorkspaceSplitPane({
         renderTabContent={renderTabContent}
         renderAgentChatSurface={renderAgentChatSurface}
       />
-      {workspace?.worktreePath && (
-        <SessionHistoryMenu
-          cwd={workspace.worktreePath}
-          anchorEl={historyMenuAnchor}
-          onClose={() => setHistoryMenuAnchor(null)}
-          onSelectSession={(session, title) => {
+      {workspace?.worktreePath &&
+        renderSessionHistoryMenu?.({
+          cwd: workspace.worktreePath,
+          anchorEl: historyMenuAnchor,
+          onClose: () => setHistoryMenuAnchor(null),
+          onSelectSession: (session, title) => {
             // Check if this Pi session is already active in a full agent-chat
             // tab (subagent-detail tabs are read-only and not candidates).
             const existingTabId =
@@ -375,9 +382,8 @@ export function WorkspaceSplitPane({
               cwd: session.cwd?.trim() || workspace.worktreePath,
               sessionId: session.sessionId,
             });
-          }}
-        />
-      )}
+          },
+        })}
     </Box>
   );
 }

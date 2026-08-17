@@ -247,11 +247,11 @@ vi.mock("../../../../components/RichComposer", () => ({
   },
 }));
 
-vi.mock("../../../../components/agent/transcript/AgentMessageList", () => ({
+vi.mock("@renderer/features/agent/ui/transcript/AgentMessageList", () => ({
   AgentMessageList: mocked.agentMessageList,
 }));
 
-vi.mock("../../../../components/agent/session/AgentModelSelector", () => ({
+vi.mock("@renderer/features/agent/ui/session/AgentModelSelector", () => ({
   AgentModelSelector: ({
     onModelChange,
     onAddProvider,

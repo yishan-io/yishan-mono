@@ -2,13 +2,13 @@ import { Alert, Box, Button, Stack } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
-import { ModelPickerMenu } from "../../../components/ModelPickerMenu";
-import { ProviderMark } from "../../../components/ProviderMark";
+import { ModelPickerMenu } from "@renderer/features/agent";
+import { ProviderMark } from "@renderer/features/agent";
 import {
   buildModelPickerOption,
   groupModelPickerOptionsByProvider,
   stripProviderPrefix,
-} from "../../../components/modelPicker";
+} from "@renderer/features/agent";
 import {
   SettingsCard,
   SettingsControlRow,

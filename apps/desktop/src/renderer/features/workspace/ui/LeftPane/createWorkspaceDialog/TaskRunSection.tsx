@@ -1,11 +1,11 @@
 import { Box, Button, Stack, TextField, Typography } from "@mui/material";
-import { ModelPickerMenu } from "@renderer/components/ModelPickerMenu";
-import { ProviderMark } from "@renderer/components/ProviderMark";
+import { ModelPickerMenu } from "@renderer/features/agent";
+import { ProviderMark } from "@renderer/features/agent";
 import {
   buildModelPickerOption,
   groupModelPickerOptionsByProvider,
   stripProviderPrefix,
-} from "@renderer/components/modelPicker";
+} from "@renderer/features/agent";
 import type { AgentModelInfo } from "@renderer/features/agent/commands/agentCommands";
 import type { DesktopAgentKind } from "@renderer/helpers/agentSettings";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";

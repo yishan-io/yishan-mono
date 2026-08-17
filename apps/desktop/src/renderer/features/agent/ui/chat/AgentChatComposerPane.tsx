@@ -7,9 +7,9 @@ import { setAgentModel, setAgentThinkingLevel } from "../..";
 import { AgentChatVoiceButton } from "../../../../components/AgentChatVoiceButton";
 import { type ComposerAttachment, ComposerAttachmentBlock } from "../../../../components/ComposerAttachmentBlock";
 import { type DroppedFileEntry, RichComposer } from "../../../../components/RichComposer";
-import { AgentChatSubagentRow } from "../../../../components/agent/session/AgentChatSubagentRow";
-import { AgentChatUsageSummaryLabel } from "../../../../components/agent/session/AgentChatUsageSummaryLabel";
-import { AgentModelSelector } from "../../../../components/agent/session/AgentModelSelector";
+import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
+import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
+import { AgentModelSelector } from "../session/AgentModelSelector";
 import {
   AGENT_CHAT_COMPOSER_FOCUS_EVENT,
   consumeAgentChatComposerFocus,

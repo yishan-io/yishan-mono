@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
 import type { PiProviderStatus } from "../../../features/agent/commands/piProviderCommands";
-import { ProviderMark } from "../../../components/ProviderMark";
+import { ProviderMark } from "@renderer/features/agent";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
 import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../../helpers/piProviders";
 import { useAgentCommands } from "../../../app/commands/useCommands";

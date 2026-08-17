@@ -1,6 +1,6 @@
 import { Badge, Box } from "@mui/material";
 import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/features/agent";
-import { AgentIcon } from "@renderer/features/agent";
+import { AgentIcon, SessionHistoryMenu } from "@renderer/features/agent";
 import { FileSearchOverlay } from "@renderer/features/files";
 import { gitProjectionStore } from "@renderer/features/git";
 import { useLastUsedExternalAppId } from "@renderer/features/project";
@@ -290,6 +290,14 @@ export function MainPaneView() {
                     fetchAgentSessionFilePath={fetchAgentSessionFilePath}
                     renderAgentIcon={(agentKind, label) => (
                       <AgentIcon agentKind={agentKind as never} context="tabMenu" label={label} />
+                    )}
+                    renderSessionHistoryMenu={({ cwd, anchorEl, onClose, onSelectSession }) => (
+                      <SessionHistoryMenu
+                        cwd={cwd}
+                        anchorEl={anchorEl}
+                        onClose={onClose}
+                        onSelectSession={onSelectSession}
+                      />
                     )}
                     lastUsedExternalAppId={lastUsedExternalAppId}
                     findTabWithSession={findTabWithSession}

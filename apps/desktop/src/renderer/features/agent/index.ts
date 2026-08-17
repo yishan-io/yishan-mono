@@ -48,6 +48,18 @@ export { AgentChatView } from "./ui/chat/AgentChatView";
 export { RecentAgentSessions } from "./ui/chat/RecentAgentSessions";
 export { WorkspaceAgentChatSurface } from "./ui/chat/WorkspaceAgentChatSurface";
 export { AgentIcon } from "./ui/AgentIcon";
+export { AgentModelSelector } from "./ui/session/AgentModelSelector";
+export { SessionHistoryMenu } from "./ui/session/SessionHistoryMenu";
+export { ThinkingLevelControl, THINKING_LEVEL_LABELS } from "./ui/session/ThinkingLevelControl";
+export {
+  ModelPickerMenu,
+  ProviderMark,
+  buildModelPickerOption,
+  groupModelPickerOptionsByProvider,
+  splitModelId,
+  stripProviderPrefix,
+  type ModelPickerOption,
+} from "./ui/model-picker";
 export {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,

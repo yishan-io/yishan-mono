@@ -62,7 +62,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R6-state-layer": 6,
   "R7-model-layer": 3,
   "R8-infra-layer": 0,
-  "R9-ui-components": 64,
+  "R9-ui-components": 40,
   "R10-workspace-workbench": 0,
   "R11-workbench-product-import": 0,
   "R12-store-action-promise": 0,

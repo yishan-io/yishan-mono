@@ -3,3 +3,7 @@
  */
 export type { SettingsCommands } from "./commands/contract";
 export { useAgentKindsInUse } from "./ui/hooks/useSettingsReadHooks";
+export {
+  editorSettingsStore,
+  type EditorSettingsStoreState,
+} from "./state/editorSettingsStore";
