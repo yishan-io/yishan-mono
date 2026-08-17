@@ -1,11 +1,15 @@
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
+import type { WorkspaceTab } from "../../../features/workbench";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { TabStoreState } from "../../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
-type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
+type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
+
+/** Narrow tab-access port injected by the terminal composition boundary. */
+export type TerminalTabPort = {
+  readTerminalTab: (tabId: string) => TerminalTab | undefined;
+  setTerminalTabSessionId: (tabId: string, sessionId: string) => void;
+};
 type TerminalSnapshot = {
   nextIndex: number;
   chunks: string[];
@@ -38,14 +42,7 @@ export class TerminalSessionOrchestrator {
       resizeTerminal: (params: { sessionId: string; cols: number; rows: number }) => Promise<{ ok: true }>;
       closeTerminalSession?: (params: { sessionId: string }) => Promise<unknown>;
     },
-    private readonly tabStoreAccess: {
-      getState: () => Pick<TabStoreState, "tabs" | "setTerminalTabSessionId">;
-    } = tabStore,
-    private readonly workspaceStoreAccess: {
-      getState: () => {
-        workspaces: Array<{ id: string; worktreePath?: string }>;
-      };
-    } = workspaceStore,
+    private readonly tabPort: TerminalTabPort,
   ) {}
 
   /**
@@ -56,11 +53,7 @@ export class TerminalSessionOrchestrator {
     terminal: Pick<Terminal, "write" | "cols" | "rows">;
     fitAddon: Pick<FitAddon, "fit">;
   }): Promise<{ sessionId: string; nextIndex: number; exited: boolean } | null> {
-    const tab = this.tabStoreAccess
-      .getState()
-      .tabs.find(
-        (candidate): candidate is TerminalTab => candidate.id === input.tabId && candidate.kind === "terminal",
-      );
+    const tab = this.tabPort.readTerminalTab(input.tabId);
     if (!tab) {
       return null;
     }
@@ -160,9 +153,7 @@ export class TerminalSessionOrchestrator {
       });
       sessionId = created.sessionId;
 
-      const stillExists = this.tabStoreAccess
-        .getState()
-        .tabs.some((candidate) => candidate.id === tab.id && candidate.kind === "terminal");
+      const stillExists = this.tabPort.readTerminalTab(tab.id) !== undefined;
       if (!stillExists) {
         await this.commands.closeTerminalSession?.({ sessionId }).catch(() => {});
         throw new Error("Terminal tab was closed before session could be attached");
@@ -173,7 +164,7 @@ export class TerminalSessionOrchestrator {
     }
 
     if (tab.data.sessionId !== sessionId) {
-      this.tabStoreAccess.getState().setTerminalTabSessionId(tab.id, sessionId);
+      this.tabPort.setTerminalTabSessionId(tab.id, sessionId);
     }
 
     if (isNewSession) {

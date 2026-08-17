@@ -1,4 +1,3 @@
-import { closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -8,11 +7,16 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../features/terminal/commands/terminalCommands";
+import type { WorkspaceTab } from "../../../features/workbench";
+import { closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
+import {
+  closeTab as applyCloseTab,
+  setTerminalTabSessionId as applySetTerminalTabSessionId,
+} from "../../../features/workbench/state/workbenchActions";
+import { selectTabById } from "../../../features/workbench/state/workbenchSelectors";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import {
   shouldClearTerminalOutputShortcut,
   shouldReleaseCommandWForTabCloseShortcut,
@@ -117,7 +121,7 @@ function handleTerminalSessionFailure(tabId: string, error: unknown): void {
     title: "Failed to create terminal session",
     message,
   });
-  tabStore.getState().closeTab(tabId);
+  applyCloseTab(tabId);
 }
 
 /**
@@ -273,14 +277,20 @@ function setupTitleTracking(entry: TerminalRuntimeEntry, tabId: string): void {
 }
 
 async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: string): Promise<void> {
-  const orchestrator = new TerminalSessionOrchestrator({
-    createTerminalSession,
-    listTerminalSessions,
-    readTerminalOutput,
-    resizeTerminal,
-    writeTerminalInput,
-    closeTerminalSession,
-  });
+  const orchestrator = new TerminalSessionOrchestrator(
+    {
+      createTerminalSession,
+      listTerminalSessions,
+      readTerminalOutput,
+      resizeTerminal,
+      writeTerminalInput,
+      closeTerminalSession,
+    },
+    {
+      readTerminalTab: (tabId) => findTerminalTab(tabId),
+      setTerminalTabSessionId: (tabId, sessionId) => applySetTerminalTabSessionId(tabId, sessionId),
+    },
+  );
 
   const restored = await orchestrator.attachOrCreateAndRestore({
     tabId,
@@ -411,9 +421,8 @@ function isUserRenamed(tabId: string): boolean {
 }
 
 function findTerminalTab(tabId: string): TerminalTab | undefined {
-  return tabStore
-    .getState()
-    .tabs.find((candidate): candidate is TerminalTab => candidate.id === tabId && candidate.kind === "terminal");
+  const tab = selectTabById(tabId);
+  return tab?.kind === "terminal" ? tab : undefined;
 }
 
 function reportTerminalOutputPerf(tabId: string, chunkBytes: number): void {

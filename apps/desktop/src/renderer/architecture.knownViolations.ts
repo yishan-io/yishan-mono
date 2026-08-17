@@ -95,7 +95,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "P16" },
   // ---- R5-cross-feature-internal (Phase 16 baseline) ----
   { rule: "R5-cross-feature-internal", file: "features/git/ui/hooks/useGitAuthorName.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/ui/hooks/useTerminalTabLookups.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/overview/ui/OverviewView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "P16" },
@@ -115,7 +114,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     file: "features/settings/ui/daemon/daemonSettings/closeTerminalTabsForDaemonRestart.ts",
     phase: "P16",
   },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRuntimeRegistry.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/agent/commands/agentChatCommands.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/agent/commands/agentChatSubagentCommands.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/agent/commands/piProviderCommands.ts", phase: "P16" },
@@ -132,10 +130,4 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   },
   { rule: "R5-cross-feature-internal", file: "features/organization/commands/orgCommands.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/project/commands/projectCommands.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/events/terminalEventHandlers.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/events/terminalSessionTabReconciler.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRecovery.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionOrchestrator.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionService.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalTitleUtils.ts", phase: "P16" },
 ];

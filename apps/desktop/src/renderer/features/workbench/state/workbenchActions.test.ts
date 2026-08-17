@@ -3,15 +3,19 @@ import { layoutStore } from "./layoutStore";
 import { splitPaneStore } from "./splitPaneStore";
 import { tabStore } from "./tabStore";
 import {
+  closeTab,
   moveTabToPane,
   openTab,
   registerTabInPane,
+  renameTab,
   reorderPaneTab,
   resolveTabForWorkspace,
   selectPaneTab,
   setActivePane,
   setBrowserTabUrl,
   setIsLeftPaneManuallyHidden,
+  setTerminalTabAgentKind,
+  setTerminalTabSessionId,
   setLeftPaneWidth,
   setRightPaneWidth,
   splitPane,
@@ -118,5 +122,24 @@ describe("workbenchActions — Workbench state public change surface (Phase 17)"
     expect(reorderTab).toHaveBeenCalledWith("workspace-1", "pane-1", "tab-1", "tab-2", "before");
     expect(setActivePane).toHaveBeenCalledWith("workspace-1", "pane-1");
     expect(updateSplitRatio).toHaveBeenCalledWith("workspace-1", "branch-1", 0.5);
+  });
+
+
+  it("terminal tab actions forward to the tab store", () => {
+    const setTerminalTabSessionId = vi.fn();
+    const setTerminalTabAgentKind = vi.fn();
+    const renameTab = vi.fn();
+    const closeTab = vi.fn();
+    tabStore.setState({ setTerminalTabSessionId, setTerminalTabAgentKind, renameTab, closeTab });
+
+    setTerminalTabSessionId("tab-1", "session-1");
+    setTerminalTabAgentKind("tab-1", "opencode");
+    renameTab("tab-1", "New title", { userRenamed: true });
+    closeTab("tab-1");
+
+    expect(setTerminalTabSessionId).toHaveBeenCalledWith("tab-1", "session-1");
+    expect(setTerminalTabAgentKind).toHaveBeenCalledWith("tab-1", "opencode");
+    expect(renameTab).toHaveBeenCalledWith("tab-1", "New title", { userRenamed: true });
+    expect(closeTab).toHaveBeenCalledWith("tab-1");
   });
 });

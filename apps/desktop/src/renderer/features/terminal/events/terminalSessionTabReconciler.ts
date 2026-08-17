@@ -1,14 +1,22 @@
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
+import type { WorkspaceTab } from "../../../features/workbench";
+import {
+  closeTab,
+  openTab,
+  renameTab,
+  setTerminalTabAgentKind,
+  setTerminalTabSessionId,
+} from "../../../features/workbench/state/workbenchActions";
+import { selectTabs } from "../../../features/workbench/state/workbenchSelectors";
+import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   consumeExplicitlyClosedTerminalTabId,
   recordExplicitlyClosedTerminalTabId,
 } from "../../../helpers/terminalCloseTombstones";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
-type TerminalTab = Extract<ReturnType<typeof tabStore.getState>["tabs"][number], { kind: "terminal" }>;
+type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;
 
 type TerminalSessionTabReconcilerDependencies = {
@@ -21,10 +29,10 @@ export function reconcileTerminalSessionChanged(
   payload: TerminalSessionChangedPayload,
   dependencies: TerminalSessionTabReconcilerDependencies,
 ): void {
-  const tabState = tabStore.getState();
+  const tabs = selectTabs();
 
   if (payload.action === "created") {
-    const existingSessionTab = tabState.tabs.find(
+    const existingSessionTab = tabs.find(
       (tab): tab is TerminalTab => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId,
     );
     if (existingSessionTab) {
@@ -45,23 +53,23 @@ export function reconcileTerminalSessionChanged(
         return;
       }
 
-      const requestedTerminalTab = tabState.tabs.find(
+      const requestedTerminalTab = tabs.find(
         (tab): tab is TerminalTab =>
           tab.id === requestedTabId && tab.workspaceId === payload.workspaceId && tab.kind === "terminal",
       );
       if (requestedTerminalTab) {
-        tabState.setTerminalTabSessionId(requestedTabId, payload.sessionId);
+        setTerminalTabSessionId(requestedTabId, payload.sessionId);
         applyLifecycleMetadataToTerminalTab(requestedTerminalTab, payload);
         return;
       }
     }
 
-    const workspaces = workspaceStore.getState().workspaces;
+    const workspaces = selectWorkspaces();
     if (!workspaces.some((workspace) => workspace.id === payload.workspaceId)) {
       return;
     }
 
-    tabState.openTab({
+    openTab({
       workspaceId: payload.workspaceId,
       kind: "terminal",
       title: normalizeOptionalText(payload.title) ?? "Terminal",
@@ -74,25 +82,25 @@ export function reconcileTerminalSessionChanged(
     return;
   }
 
-  const matchingTab = tabState.tabs.find(
+  const matchingTab = tabs.find(
     (tab): tab is TerminalTab => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId,
   );
   if (matchingTab) {
     recordExplicitlyClosedTerminalTabId(matchingTab.id);
     dependencies.clearTerminalAgentStatus(matchingTab.id);
-    tabState.closeTab(matchingTab.id);
+    closeTab(matchingTab.id);
   }
 }
 
 function applyLifecycleMetadataToTerminalTab(tab: TerminalTab, payload: TerminalSessionChangedPayload): void {
   const nextTitle = normalizeOptionalText(payload.title);
   if (nextTitle && !tab.data.userRenamed && tab.title !== nextTitle) {
-    tabStore.getState().renameTab(tab.id, nextTitle);
+    renameTab(tab.id, nextTitle);
   }
 
   const nextAgentKind = resolveDesktopAgentKind(payload.agentKind);
   if (tab.data.agentKind !== nextAgentKind) {
-    tabStore.getState().setTerminalTabAgentKind(tab.id, nextAgentKind);
+    setTerminalTabAgentKind(tab.id, nextAgentKind);
   }
 }
 

@@ -1,9 +1,7 @@
+import type { TabStoreState } from "../../../features/workbench";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
 import type { TerminalSessionSummary } from "../../../rpc/daemonTypes";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { TabStoreState } from "../../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
 
@@ -33,8 +31,14 @@ const EMPTY_PERSISTED_TERMINAL_PAYLOAD: PersistedTerminalTabPayload = {
  */
 export class TerminalRecoveryCoordinator {
   constructor(
-    private readonly tabStoreAccess: Pick<typeof tabStore, "getState" | "setState" | "subscribe"> = tabStore,
-    private readonly workspaceStoreAccess: Pick<typeof workspaceStore, "getState"> = workspaceStore,
+    private readonly tabStoreAccess: {
+      getState: () => TabStoreState;
+      setState: (partial: Partial<TabStoreState>) => void;
+      subscribe: (listener: (state: TabStoreState) => void) => () => void;
+    },
+    private readonly workspaceStoreAccess: {
+      getState: () => { workspaces: Array<{ id: string }> };
+    },
     private readonly storage: Storage | undefined = resolveBrowserStorage(),
   ) {}
 

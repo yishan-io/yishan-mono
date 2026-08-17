@@ -1,6 +1,8 @@
+import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import type { OpenWorkspaceTabInput, WorkspaceTab } from "../model/types";
 import { layoutStore } from "./layoutStore";
 import { splitPaneStore } from "./splitPaneStore";
+import type { CloseTabOptions } from "./tabStore";
 import { tabStore } from "./tabStore";
 
 /**
@@ -93,4 +95,28 @@ export function setActivePane(workspaceId: string, paneId: string): void {
 /** Updates the split ratio of one pane branch in a workspace layout. */
 export function updateSplitRatio(workspaceId: string, branchId: string, ratio: number): void {
   splitPaneStore.getState().updateSplitRatio(workspaceId, branchId, ratio);
+}
+
+/** Records the bound backend session id on one terminal tab. */
+export function setTerminalTabSessionId(tabId: string, sessionId: string): void {
+  tabStore.getState().setTerminalTabSessionId(tabId, sessionId);
+}
+
+/** Records the agent kind bound to one terminal tab. */
+export function setTerminalTabAgentKind(tabId: string, agentKind: DesktopAgentKind | undefined): void {
+  tabStore.getState().setTerminalTabAgentKind(tabId, agentKind);
+}
+
+/** Renames one tab title. */
+export function renameTab(tabId: string, title: string, options?: { userRenamed?: boolean }): void {
+  tabStore.getState().renameTab(tabId, title, options);
+}
+
+/** Closes one tab. */
+export function closeTab(tabId: string, options?: CloseTabOptions): void {
+  if (options) {
+    tabStore.getState().closeTab(tabId, options);
+  } else {
+    tabStore.getState().closeTab(tabId);
+  }
 }
