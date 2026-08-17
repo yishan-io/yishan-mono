@@ -3,8 +3,8 @@ import type {
   ProjectCommitComparisonData,
   ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
-} from "../../../../components/ProjectCommitComparison";
-import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../../components/ProjectGitChangesList";
+} from "../../../components/ProjectCommitComparison";
+import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
 
 // ---------------------------------------------------------------------------
 // Types

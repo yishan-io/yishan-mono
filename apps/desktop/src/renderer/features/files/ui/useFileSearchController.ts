@@ -6,8 +6,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { searchFiles } from "../../../../features/files/commands/fileCommands";
-import type { FileSearchResult } from "../../../../features/files/commands/fileCommands";
+import { searchFiles } from "../../../features/files/commands/fileCommands";
+import type { FileSearchResult } from "../../../features/files/commands/fileCommands";
 
 const MAX_FILE_SEARCH_RESULTS = 100;
 

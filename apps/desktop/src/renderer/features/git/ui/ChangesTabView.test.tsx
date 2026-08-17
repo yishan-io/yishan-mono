@@ -36,7 +36,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../../../features/git/commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   listGitChanges: (...args: unknown[]) => mocks.listGitChanges(...args),
   readBranchComparisonDiff: (...args: unknown[]) => mocks.readBranchComparisonDiff(...args),
   readDiff: (...args: unknown[]) => mocks.readDiff(...args),
@@ -50,7 +50,7 @@ vi.mock("../../../../features/git/commands/gitCommands", () => ({
     mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
-vi.mock("../../../../features/workspace/state/workspaceProjectionStore", () => {
+vi.mock("../../../features/workspace/state/workspaceProjectionStore", () => {
   const project = (selector: (state: { gitRefreshVersionByWorktreePath: Record<string, number> }) => unknown) =>
     selector({
       gitRefreshVersionByWorktreePath:
@@ -66,7 +66,7 @@ vi.mock("../../../../features/workspace/state/workspaceProjectionStore", () => {
   return { workspaceProjectionStore: project };
 });
 
-vi.mock("../../../../features/project/state/projectStore", () => {
+vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
     selector({ projects: (mocks.workspaceState as { projects?: unknown[] }).projects ?? [] });
   (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
@@ -75,12 +75,12 @@ vi.mock("../../../../features/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     openTab: mocks.openTab,

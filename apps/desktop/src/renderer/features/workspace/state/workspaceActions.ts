@@ -51,6 +51,14 @@ export function setExpandedFileTreeItems(workspaceId: string, paths: string[]): 
   workspaceUiStore.getState().setExpandedFileTreeItems(workspaceId, paths);
 }
 
+/** Stores one workspace pull request in the projection store. */
+export function setWorkspacePullRequest(
+  workspaceId: string,
+  pullRequest: Parameters<ReturnType<typeof workspaceProjectionStore.getState>["setWorkspacePullRequest"]>[1],
+): void {
+  workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
+}
+
 /** Reorders the workspace display ids. */
 export function setOrderedWorkspaceIds(workspaceIds: string[]): void {
   workspaceStore.getState().setOrderedWorkspaceIds(workspaceIds);

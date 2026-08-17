@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ProjectCommitComparisonFile } from "../../../../components/ProjectCommitComparison";
+import type { ProjectCommitComparisonFile } from "../../../components/ProjectCommitComparison";
 import { buildAllCommitChangesSection, buildCommitChangesSection, toCommitFile } from "./changesTabHelpers";
 
 describe("toCommitFile", () => {

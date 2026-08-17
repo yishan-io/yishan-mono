@@ -79,6 +79,11 @@ export function useSelectFolderInFileTreeRequestId() {
   return workspaceUiStore((state) => state.selectFolderInFileTreeRequestId);
 }
 
+/** Subscribes to the pull request map by workspace id. */
+export function useWorkspacePullRequestByWorkspaceId() {
+  return workspaceProjectionStore((state) => state.pullRequestByWorkspaceId);
+}
+
 /** Subscribes to the git change totals map by workspace id. */
 export function useWorkspaceGitChangeTotalsByWorkspaceId() {
   return workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);

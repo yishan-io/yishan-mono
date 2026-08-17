@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useGitCommands } from "../../../../app/commands/useCommands";
-import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
+import { useGitCommands } from "../../../app/commands/useCommands";
+import { useSelectedWorkspaceWithProject } from "../../../app/selectors";
+import { useWorkspaceGitRefreshVersion } from "@renderer/features/workspace";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
   ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
-} from "../../../../components/ProjectCommitComparison";
-import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../../components/ProjectGitChangesList";
-import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { isWorkspaceNotFoundError } from "../../../../helpers/errorHelpers";
-import { isFolderWorkspace } from "../../../../helpers/localFolder";
-import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
+} from "../../../components/ProjectCommitComparison";
+import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
+import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import {
   type RepoChangesBySection,
   buildAllCommitChangesSection,
@@ -61,12 +60,7 @@ export function useChangesTabState() {
     const raw = selectedWorkspace?.sourceBranch?.trim() || selectedProject?.defaultBranch?.trim() || "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
   }, [selectedWorkspace, selectedProject]);
-  const workspaceGitRefreshVersion = workspaceProjectionStore((state) => {
-    if (!selectedWorkspaceWorktreePath) {
-      return 0;
-    }
-    return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
-  });
+  const workspaceGitRefreshVersion = useWorkspaceGitRefreshVersion(selectedWorkspaceWorktreePath ?? "");
   const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}`;
   const selectedWorkspaceRequestKeyRef = useRef(selectedWorkspaceRequestKey);
   selectedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;

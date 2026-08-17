@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import type { WorkspacePullRequestRecord } from "../../../../api/types";
+import type { WorkspacePullRequestRecord } from "../../../api/types";
 import {
   listPullRequestHistory,
   refreshWorkspacePullRequest,
-} from "../../../../features/workspace/commands/workspaceCommands";
-import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
-import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+} from "../../../features/workspace/commands/workspaceCommands";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import {
+  useSelectedWorkspaceId,
+  useWorkspacePullRequestByWorkspaceId,
+  useWorkspaces,
+} from "@renderer/features/workspace";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;
@@ -19,11 +22,9 @@ export type WorkspacePullRequestState = {
 
 /** Returns live and historical pull request state for the currently selected workspace. */
 export function useWorkspacePullRequestState(enabled = true): WorkspacePullRequestState {
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const pullRequest = workspaceProjectionStore(
-    (state) => state.pullRequestByWorkspaceId[workspaceStore.getState().selectedWorkspaceId],
-  );
-  const workspace = workspaceStore((state) => state.workspaces.find((w) => w.id === state.selectedWorkspaceId));
+  const selectedWorkspaceId = useSelectedWorkspaceId();
+  const pullRequest = useWorkspacePullRequestByWorkspaceId()[selectedWorkspaceId];
+  const workspace = useWorkspaces().find((w) => w.id === selectedWorkspaceId);
 
   const [historicalPullRequests, setHistoricalPullRequests] = useState<WorkspacePullRequestRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);

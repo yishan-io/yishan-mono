@@ -1,7 +1,7 @@
 import { Box, Stack } from "@mui/material";
 import { PaneLoadingBar } from "@renderer/components/PaneLoadingBar";
 import { useWorkspaceCommands } from "@renderer/app/commands/useCommands";
-import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
+import { useSelectedWorkspaceWorktreePath } from "@renderer/features/workspace";
 import { useMemo, useState } from "react";
 import PullRequestChecksSection from "./pullRequestTab/PullRequestChecksSection";
 import PullRequestDeploymentsSection from "./pullRequestTab/PullRequestDeploymentsSection";
@@ -16,9 +16,7 @@ import { useWorkspacePullRequestState } from "./useWorkspacePullRequestState";
 export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const { refreshWorkspacePullRequest } = useWorkspaceCommands();
   const { selectedWorkspaceId, pullRequest, historicalPullRequests, isLoading } = useWorkspacePullRequestState(active);
-  const worktreePath = workspaceStore(
-    (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath,
-  );
+  const worktreePath = useSelectedWorkspaceWorktreePath() || undefined;
 
   const [mergeMethod, setMergeMethod] = useState<MergeMethod>("merge");
   const derivedState = useMemo(

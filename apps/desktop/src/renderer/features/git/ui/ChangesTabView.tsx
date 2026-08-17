@@ -1,9 +1,9 @@
 import { Box, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
-import { PaneLoadingBar } from "../../../../components/PaneLoadingBar";
-import { ProjectCommitComparison } from "../../../../components/ProjectCommitComparison";
-import { ProjectGitChangesList } from "../../../../components/ProjectGitChangesList";
+import { PaneLoadingBar } from "../../../components/PaneLoadingBar";
+import { ProjectCommitComparison } from "../../../components/ProjectCommitComparison";
+import { ProjectGitChangesList } from "../../../components/ProjectGitChangesList";
 import { useChangesTabActions } from "./useChangesTabActions";
 import { useChangesTabState } from "./useChangesTabState";
 

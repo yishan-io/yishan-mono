@@ -3,7 +3,7 @@ import {
   buildMoveUndoEntries,
   normalizeRelativePath,
   resolvePreferredImportedPath,
-} from "../../../../features/files/ui/fileTreePathHelpers";
+} from "../../../features/files/ui/fileTreePathHelpers";
 
 describe("normalizeRelativePath", () => {
   it("normalizes separators and surrounding slashes", () => {

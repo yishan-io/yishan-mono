@@ -1,8 +1,7 @@
 import { closePullRequest, mergePullRequest } from "@renderer/features/git/commands/gitCommands";
-import { workspaceProjectionStore } from "@renderer/features/workspace/state/workspaceProjectionStore";
+import { setWorkspacePullRequest } from "@renderer/features/workspace";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import type { DaemonWorkspacePullRequest } from "@renderer/rpc/daemonTypes";
-import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
 import { type MouseEvent, useCallback, useState } from "react";
 import type { MergeMethod } from "./pullRequestTabHelpers";
 
@@ -62,7 +61,7 @@ export function usePullRequestTabActions(params: UsePullRequestTabActionsParams)
 
   const updateWorkspacePullRequest = useCallback(
     (status: PullRequestActionStatus) => {
-      workspaceProjectionStore.getState().setWorkspacePullRequest(
+      setWorkspacePullRequest(
         params.selectedWorkspaceId,
         params.hasLivePr && params.pullRequest
           ? {

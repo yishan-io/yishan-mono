@@ -13,7 +13,7 @@ import {
   isUnsupportedFileTab,
   isVideoFile,
 } from "../../../helpers/editorLanguage";
-import { useFileSearchController } from "./RightPane/useFileSearchController";
+import { useFileSearchController } from "@renderer/features/files";
 
 export function FileSearchOverlay() {
   const { t } = useTranslation();

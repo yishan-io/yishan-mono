@@ -163,30 +163,25 @@ vi.mock("../../../../features/files/ui/FileManagerView", async () => {
   };
 });
 
-vi.mock("./ChangesTabView", () => {
-  function TrackedChangesTabView() {
-    useEffect(() => {
-      changesMountTracker();
-      return () => {
-        changesUnmountTracker();
-      };
-    }, []);
+function TrackedChangesTabView() {
+  useEffect(() => {
+    changesMountTracker();
+    return () => {
+      changesUnmountTracker();
+    };
+  }, []);
+  return <div data-testid="mock-changes-tab" />;
+}
 
-    return <div data-testid="mock-changes-tab" />;
-  }
-
+vi.mock("@renderer/features/git", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/git")>();
   return {
+    ...actual,
     ChangesTabView: TrackedChangesTabView,
+    PullRequestTabView: () => <div data-testid="mock-pr-tab" />,
+    useWorkspacePullRequestState: () => prTabState,
   };
 });
-
-vi.mock("./PullRequestTabView", () => ({
-  PullRequestTabView: () => <div data-testid="mock-pr-tab" />,
-}));
-
-vi.mock("./useWorkspacePullRequestState", () => ({
-  useWorkspacePullRequestState: () => prTabState,
-}));
 
 vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),

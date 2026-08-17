@@ -2,10 +2,10 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { WorkspacePullRequestRecord } from "../../../../api/types";
-import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
-import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+import type { WorkspacePullRequestRecord } from "../../../api/types";
+import { workspaceProjectionStore } from "../../../features/workspace/state/workspaceProjectionStore";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { PullRequestTabView } from "./PullRequestTabView";
 
 const mocked = vi.hoisted(() => ({
@@ -27,11 +27,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../app/commands/appCommands", () => ({
+vi.mock("../../../app/commands/appCommands", () => ({
   openLink: (options: { url: string }) => mocked.openLink(options),
 }));
 
-vi.mock("../../../../features/git/commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   mergePullRequest: (options: {
     workspaceId: string;
     prNumber: number;
@@ -41,7 +41,7 @@ vi.mock("../../../../features/git/commands/gitCommands", () => ({
   closePullRequest: (options: { workspaceId: string; prNumber: number }) => mocked.closePullRequest(options),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,

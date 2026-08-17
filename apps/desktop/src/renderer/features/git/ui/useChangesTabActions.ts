@@ -1,9 +1,9 @@
 import { useCallback } from "react";
-import type { ProjectGitChangeItem } from "../../../../components/ProjectGitChangesList";
-import { writeClipboardText } from "../../../../features/files/commands/fileCommands";
-import { resolveWorkspaceAbsolutePath } from "../../../../features/files/ui/fileTreeHelpers";
-import { useGitCommands, useWorkbenchCommands } from "../../../../app/commands/useCommands";
-import type { DiffFileChangeKind, FileDiffEntry } from "../../../../features/workbench/model/types";
+import type { ProjectGitChangeItem } from "../../../components/ProjectGitChangesList";
+import { writeClipboardText } from "../../../features/files/commands/fileCommands";
+import { resolveWorkspaceAbsolutePath } from "../../../features/files/ui/fileTreeHelpers";
+import { useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
+import type { DiffFileChangeKind, FileDiffEntry } from "../../../features/workbench/model/types";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 
 type UseChangesTabActionsInput = {

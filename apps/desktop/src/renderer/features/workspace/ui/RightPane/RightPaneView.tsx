@@ -5,8 +5,8 @@ import { workspaceStore } from "../../../../features/workspace/state/workspaceSt
 import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
-import { ChangesTabView } from "./ChangesTabView";
-import { PullRequestTabView } from "./PullRequestTabView";
+import { ChangesTabView } from "@renderer/features/git";
+import { PullRequestTabView } from "@renderer/features/git";
 
 export type RightPaneViewProps = {
   onToggleRightPane?: () => void;
