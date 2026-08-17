@@ -23,7 +23,6 @@ const copyFiles = vi.fn();
 const writeFileBase64 = vi.fn();
 const writeClipboardText = vi.fn();
 const readWorkspaceDiff = vi.fn();
-
 const openTab = vi.fn();
 const closeTab = vi.fn();
 const setLastUsedExternalAppId = vi.fn();
@@ -105,6 +104,10 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
+vi.mock("../../helpers/clipboard", () => ({
+  writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
+}));
+
 vi.mock("../../features/files/commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => listFiles(...args),
   listFilesBatch: async (input: {
@@ -135,7 +138,6 @@ vi.mock("../../features/files/commands/fileCommands", () => ({
   readExternalClipboardSourcePaths: (...args: unknown[]) => readExternalClipboardSourcePaths(...args),
   copyFiles: (...args: unknown[]) => copyFiles(...args),
   writeFileBase64: (...args: unknown[]) => writeFileBase64(...args),
-  writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
 }));
 
 vi.mock("../../features/git/commands/gitCommands", () => ({

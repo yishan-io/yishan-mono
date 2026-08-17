@@ -1,3 +1,4 @@
+import { setWorkspaceCurrentBranch } from "@renderer/features/git";
 import { gitProjectionStore } from "@renderer/features/git";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { inspectGitRepository } from "../../../../features/git/commands/gitCommands";
@@ -90,7 +91,7 @@ export function useWorkspaceInfoHover({
           return;
         }
 
-        gitProjectionStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, result.currentBranch ?? "");
+        setWorkspaceCurrentBranch(hoveredWorkspaceId, result.currentBranch ?? "");
       })
       .catch(() => {});
 

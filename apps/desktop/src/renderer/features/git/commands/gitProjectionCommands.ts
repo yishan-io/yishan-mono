@@ -158,6 +158,11 @@ export function setWorkspacePullRequest(
   gitProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
 }
 
+/** Stores the current branch for one workspace in the git projection store. */
+export function setWorkspaceCurrentBranch(workspaceId: string, branch: string): void {
+  gitProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, branch);
+}
+
 /** Bumps the git refresh version for one worktree path. */
 export function incrementGitRefreshVersion(workspaceWorktreePath: string): void {
   gitProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);

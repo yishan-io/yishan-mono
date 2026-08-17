@@ -11,7 +11,7 @@
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 
 import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
-import { gitProjectionStore } from "@renderer/features/git";
+import { incrementGitRefreshVersion, setWorkspaceCurrentBranch, setWorkspacePullRequest } from "@renderer/features/git";
 import { openTab } from "@renderer/features/workbench";
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
@@ -162,13 +162,13 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
   },
   refreshWorkspaceCurrentBranch: async (workspaceId, currentBranch) => {
     if (currentBranch !== undefined) {
-      gitProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, currentBranch);
+      setWorkspaceCurrentBranch(workspaceId, currentBranch);
       return;
     }
     try {
       const client = await getDaemonClient();
       const result = await client.git.inspect({ workspaceId });
-      gitProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
+      setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
     } catch {
       // Non-fatal: cache stays stale until the next gitChanged event.
     }
@@ -177,7 +177,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
   },
   incrementGitRefreshVersion: (workspaceWorktreePath) => {
-    gitProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
+    incrementGitRefreshVersion(workspaceWorktreePath);
   },
   applyWorkspaceCreateStartedEvent: (payload) => {
     workspaceStore.getState().addWorkspace(
@@ -249,7 +249,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     });
   },
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
-    gitProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
+    setWorkspacePullRequest(workspaceId, pullRequest);
   },
   loadWorkspaceSnapshot,
   getSelectedOrganizationId: () => selectSelectedOrganizationId(),

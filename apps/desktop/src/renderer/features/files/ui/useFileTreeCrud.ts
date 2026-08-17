@@ -6,7 +6,6 @@ import {
   openEntryInExternalApp,
   readFile,
   renameEntry,
-  writeClipboardText,
 } from "@renderer/features/files/commands/fileCommands";
 import type { OpenTabInput, WorkbenchTab } from "@renderer/features/workbench/model/types";
 import {
@@ -19,6 +18,7 @@ import {
 import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useRef } from "react";
+import { writeClipboardText } from "../../../helpers/clipboard";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";

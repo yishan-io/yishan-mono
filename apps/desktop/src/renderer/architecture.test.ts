@@ -64,6 +64,9 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R8-infra-layer": 0,
   "R9-ui-components": 68,
   "R10-workspace-workbench": 0,
+  "R11-workbench-product-import": 0,
+  "R12-store-action-promise": 0,
+  "R13-getter-forwarding-action-file": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -234,6 +237,19 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       if (/^features\/workbench\/model\//.test(rel) && relT.startsWith("features/workspace/")) {
         violations.push({ rule: "R10-workspace-workbench", file: rel, target: imp.spec });
       }
+      // ---- Rule 11 (desktop6-adjust.md W8): Workbench must not import
+      // product modules at all (not just Model). Workbench is a shared
+      // Desktop presentation capability; product modules must call its public
+      // Commands instead. Any import from another feature (through any path,
+      // including the module root API) is a boundary violation. ----
+      if (
+        rel.startsWith("features/workbench/") &&
+        /^features\/[^/]+/.test(relT) &&
+        relT !== "features/workbench" &&
+        !relT.startsWith("features/workbench/")
+      ) {
+        violations.push({ rule: "R11-workbench-product-import", file: rel, target: imp.spec });
+      }
       // ---- Rule 5 (cont.): the owning Feature's public State surface
       // (Selectors = read models, Actions = state-change surface) is
       // importable; the Store itself and other internals are not. ----
@@ -248,6 +264,45 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
         if (targetInternal) {
           violations.push({ rule: "R5-cross-feature-internal", file: rel, target: imp.spec });
         }
+      }
+    }
+    // ---- Rule 12 (desktop6-adjust.md W8): Store Actions must stay
+    // synchronous. A Store Action changes one owning Store synchronously; it
+    // must not return a Promise. Scan Store State files for async method
+    // definitions or Promise-returning action signatures. ----
+    if (/^features\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
+      const source = readFileSync(file, "utf8");
+      const scriptKind = file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+      const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, scriptKind);
+      const isStoreDef = /create<|create\(/.test(source) && !/Selectors(\.ts)?$/.test(rel);
+      if (isStoreDef) {
+        const visitAction = (node: ts.Node) => {
+          if (
+            (ts.isMethodDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isArrowFunction(node)) &&
+            node.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)
+          ) {
+            violations.push({ rule: "R12-store-action-promise", file: rel, target: "async store action" });
+          }
+          if (ts.isPropertySignature(node) || ts.isPropertyAssignment(node)) {
+            const typeText = ts.isPropertySignature(node) && node.type ? node.type.getText(sf) : "";
+            const initText = ts.isPropertyAssignment(node) && node.initializer ? node.initializer.getText(sf) : "";
+            if (/^Promise<|=> Promise<|: Promise</.test(typeText) || /=> Promise</.test(initText)) {
+              violations.push({ rule: "R12-store-action-promise", file: rel, target: "Promise-typed action" });
+            }
+          }
+          ts.forEachChild(node, visitAction);
+        };
+        visitAction(sf);
+      }
+    }
+    // ---- Rule 13 (desktop6-adjust.md W8): no new Getter layers. A Getter
+    // that only wraps store.getState() is banned (W6 removed workbenchGetters;
+    // this rule prevents new ones). The public Selectors/Actions State surface
+    // is allowed (Rule 5), so only *Getters* file names are rejected. ----
+    if (/^features\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
+      const baseName = rel.split("/").pop() ?? "";
+      if (/(?:Getter|Getters)\.ts$/.test(baseName)) {
+        violations.push({ rule: "R13-getter-forwarding-action-file", file: rel, target: baseName });
       }
     }
   }
@@ -351,6 +406,27 @@ describe("renderer architecture dependency rules", () => {
   describe("R10: Workspace Model/State must not import Workbench (desktop6-adjust W1)", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R10-workspace-workbench"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R11: Workbench must not import product modules (desktop6-adjust W8)", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R11-workbench-product-import"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R12: Store Actions must stay synchronous (desktop6-adjust W8)", () => {
+    it("reports no async or Promise-returning Store Actions", () => {
+      const messages = failureMessages(unbaselined(violations, "R12-store-action-promise"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R13: no Getter layers in Feature State (desktop6-adjust W8)", () => {
+    it("reports no new Getter files", () => {
+      const messages = failureMessages(unbaselined(violations, "R13-getter-forwarding-action-file"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });

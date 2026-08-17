@@ -1,4 +1,9 @@
-import { writeClipboardText } from "../features/files/commands/fileCommands";
+import { getDesktopHostBridge } from "../rpc/rpcTransport";
+
+/** Writes text to the system clipboard via the main process (works in file:// contexts). */
+export async function writeClipboardText(text: string): Promise<void> {
+  await getDesktopHostBridge().writeClipboardText(text);
+}
 
 /**
  * Copies text to the system clipboard via the Electron main process.

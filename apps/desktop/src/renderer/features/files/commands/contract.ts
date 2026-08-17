@@ -22,7 +22,6 @@ export type FileCommands = {
   openEntryInExternalApp: typeof fileCommands.openEntryInExternalApp;
   listDetectedExternalAppIds: typeof fileCommands.listDetectedExternalAppIds;
   readExternalClipboardSourcePaths: typeof fileCommands.readExternalClipboardSourcePaths;
-  writeClipboardText: typeof fileCommands.writeClipboardText;
   buildWorkspaceFileUrl: typeof fileCommands.buildWorkspaceFileUrl;
   copyFiles: typeof fileCommands.copyFiles;
   writeFileBase64: typeof fileCommands.writeFileBase64;

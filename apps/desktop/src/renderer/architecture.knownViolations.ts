@@ -22,7 +22,10 @@ export type RuleName =
   | "R7-model-layer"
   | "R8-infra-layer"
   | "R9-ui-components"
-  | "R10-workspace-workbench";
+  | "R10-workspace-workbench"
+  | "R11-workbench-product-import"
+  | "R12-store-action-promise"
+  | "R13-getter-forwarding-action-file";
 
 export type KnownViolation = { rule: RuleName; file: string; phase: string };
 

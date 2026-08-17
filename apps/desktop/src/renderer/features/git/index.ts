@@ -9,6 +9,7 @@ export {
   listPullRequestHistory,
   refreshWorkspaceGitChanges,
   refreshWorkspacePullRequest,
+  setWorkspaceCurrentBranch,
   setWorkspacePullRequest,
 } from "./commands/gitProjectionCommands";
 export {
