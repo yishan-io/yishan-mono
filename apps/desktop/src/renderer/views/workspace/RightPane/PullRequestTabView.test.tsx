@@ -3,9 +3,9 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
-import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
+import { workspaceProjectionStore } from "../../../features/workspace/state/workspaceProjectionStore";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { PullRequestTabView } from "./PullRequestTabView";
 
 const mocked = vi.hoisted(() => ({

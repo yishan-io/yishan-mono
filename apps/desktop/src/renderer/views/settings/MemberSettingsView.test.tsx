@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api/client";
 import { listOrganizationMembers, removeOrgMember } from "../../features/organization/commands/orgCommands";
-import { sessionStore } from "../../features/session/model/sessionStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
 import { MemberSettingsView } from "./MemberSettingsView";
 
 vi.mock("react-i18next", () => ({

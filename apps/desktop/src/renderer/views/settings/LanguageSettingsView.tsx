@@ -9,7 +9,7 @@ import {
   SettingsSectionHeader,
 } from "../../components/settings";
 import { SUPPORTED_LANGUAGE_CODES, type SupportedLanguageCode, i18n, setAppLanguage } from "../../i18n";
-import { sessionStore } from "../../features/session/model/sessionStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
 
 /**
  * Renders language selection and persists profile preference.

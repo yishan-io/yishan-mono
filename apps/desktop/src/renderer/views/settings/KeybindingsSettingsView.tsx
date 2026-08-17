@@ -6,7 +6,7 @@ import { SettingsSectionHeader } from "../../components/settings";
 import { getRendererPlatform } from "../../helpers/platform";
 import { detectShortcutConflicts, normalizeKeysString } from "../../shortcuts/customKeybindings";
 import { getShortcutDefinitions, getSupportedKeyBindings } from "../../shortcuts/keybindings";
-import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
+import { keybindingSettingsStore } from "../../features/settings/state/keybindingSettingsStore";
 
 type EditingState = {
   shortcutId: string;

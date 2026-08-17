@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { type FormEvent, useCallback, useMemo, useRef } from "react";
 import { LuWrench } from "react-icons/lu";
 import { useWorkbenchCommands } from "../../../hooks/useCommands";
-import { tabStore } from "../../../store/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import { BlankView } from "./BlankView";
 import { ToolsMenu } from "./ToolsMenu";
 import { UrlBar } from "./UrlBar";

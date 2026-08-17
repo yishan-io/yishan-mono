@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { RightPaneView } from "./RightPaneView";
 
 const listFiles = vi.fn();
@@ -188,11 +188,11 @@ vi.mock("./useWorkspacePullRequestState", () => ({
   useWorkspacePullRequestState: () => prTabState,
 }));
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 
-vi.mock("../../../features/project/model/projectStore", () => ({
+vi.mock("../../../features/project/state/projectStore", () => ({
   projectStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ projects: workspaceStoreState.current.projects ?? [] }),
 }));

@@ -2,9 +2,9 @@ import { api } from "../../../api";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { rendererQueryClient } from "../../../queryClient";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
-import { setSelectedOrganizationId } from "../../../features/session/model/sessionActions";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { setSelectedOrganizationId } from "../../../features/session/state/sessionActions";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 
 const errNoOrgSelected = "No organization selected.";
 

@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next";
 import { LuPause, LuPlay } from "react-icons/lu";
 import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { renderProjectIcon } from "../../components/projectIcons";
-import { projectStore } from "../../features/project/model/projectStore";
+import { projectStore } from "../../features/project/state/projectStore";
 import { useScheduledJobCommands } from "../../hooks/useCommands";
-import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { scheduledJobStore } from "../../features/scheduled-job/state/scheduledJobStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";
 import { ScheduledJobStatusIndicator } from "./ScheduledJobStatusIndicator";
 

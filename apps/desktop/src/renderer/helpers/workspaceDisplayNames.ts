@@ -1,5 +1,5 @@
 import type { WorkspaceRecord } from "../api/types";
-import { getFileName } from "../store/tabs";
+import { getFileName } from "../features/workbench/model/tabs";
 import type { WorkspaceItem } from "../store/types";
 
 export const LOCAL_WORKSPACE_DISPLAY_NAME = "local";

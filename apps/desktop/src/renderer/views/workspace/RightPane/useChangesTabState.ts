@@ -7,14 +7,14 @@ import type {
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
+import { projectStore } from "../../../features/project/state/projectStore";
+import { workspaceProjectionStore } from "../../../features/workspace/state/workspaceProjectionStore";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { useGitCommands } from "../../../hooks/useCommands";
-import { useSelectedWorkspaceWithProject } from "../../../store/selectors";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { useSelectedWorkspaceWithProject } from "../../../app/selectors";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import {
   type RepoChangesBySection,
   buildAllCommitChangesSection,

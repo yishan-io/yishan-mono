@@ -8,7 +8,7 @@
 import { render, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { layoutStore } from "../../store/settings/layoutStore";
+import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { VditorFileEditor } from "./VditorFileEditor";
 
 // ---------------------------------------------------------------------------

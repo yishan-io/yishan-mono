@@ -3,10 +3,10 @@ import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../store/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
 /**

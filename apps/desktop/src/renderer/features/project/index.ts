@@ -12,6 +12,6 @@ export {
   selectProjectDisplayIds,
   selectProjectLastUsedExternalAppIdFromState,
   selectProjects,
-} from "./model/projectSelectors";
-export { setDisplayProjectIds, setLastUsedExternalAppId } from "./model/projectActions";
+} from "./state/projectSelectors";
+export { setDisplayProjectIds, setLastUsedExternalAppId } from "./state/projectActions";
 export { useProjectLastUsedExternalAppId } from "./ui/hooks/useProjectLastUsedExternalAppId";

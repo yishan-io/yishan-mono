@@ -8,7 +8,7 @@ import { findDiffMatches } from "../helpers/diffSearch";
 import type { DiffMatch } from "../helpers/diffSearch";
 import { getDiffCssVariablesForPalette } from "../helpers/diffTheme";
 import { useCodeTheme } from "../hooks/useCodeTheme";
-import { editorSettingsStore } from "../store/settings/editorSettingsStore";
+import { editorSettingsStore } from "../features/settings/state/editorSettingsStore";
 import type { FileDiffEntry } from "../store/types";
 import { DiffSearchPanel } from "./DiffSearchPanel";
 import { MultiFileDiffViewerHeader } from "./multiFileDiffViewer/MultiFileDiffViewerHeader";

@@ -1,17 +1,17 @@
 import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
-import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
+import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import {
   type WorkspaceLifecycleScriptWarning,
   enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings,
-} from "../../../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { selectProjectById } from "../../project/model/projectSelectors";
+} from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { selectProjectById } from "../../project/state/projectSelectors";
 
 type CreateWorkspaceInput = {
   projectId: string;

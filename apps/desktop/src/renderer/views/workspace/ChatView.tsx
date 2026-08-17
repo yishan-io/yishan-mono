@@ -8,8 +8,8 @@ import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
 import { useAgentCommands } from "../../hooks/useCommands";
-import { chatStore } from "../../store/chatStore";
-import type { AvailableModel, ChatMessage } from "../../store/workspaceStore";
+import { chatStore } from "../../features/agent/state/chatStore";
+import type { AvailableModel, ChatMessage } from "../../features/workspace/state/workspaceStore";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({

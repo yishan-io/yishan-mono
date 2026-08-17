@@ -1,6 +1,6 @@
 import type React from "react";
 import type { WorkspaceNotificationTone } from "../../helpers/workspaceNotification";
-import type { WorkspaceAgentStatus } from "../../store/chatStore";
+import type { WorkspaceAgentStatus } from "../../features/agent/state/chatStore";
 
 export type WorkspaceTreeProject = {
   id: string;

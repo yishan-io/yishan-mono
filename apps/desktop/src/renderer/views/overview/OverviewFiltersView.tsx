@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { OverviewTimeRange } from "../../features/overview/commands/overviewCommands";
 import { setOverviewProjectId, setOverviewTimeRange } from "../../features/overview/commands/overviewCommands";
-import { overviewStore } from "../../features/overview/model/overviewStore";
+import { overviewStore } from "../../features/overview/state/overviewStore";
 import type { WorkspaceProjectRecord } from "../../store/types";
 
 const TIME_RANGE_OPTIONS: { value: OverviewTimeRange; label: string }[] = [

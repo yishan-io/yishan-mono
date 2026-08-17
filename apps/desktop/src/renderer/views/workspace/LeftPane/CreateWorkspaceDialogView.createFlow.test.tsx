@@ -4,11 +4,11 @@ import "./CreateWorkspaceDialogView.testSetup";
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
-import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { projectStore } from "../../../features/project/state/projectStore";
+import { sessionStore } from "../../../features/session/state/sessionStore";
+import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
+import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 import {
   getMockedCommands,

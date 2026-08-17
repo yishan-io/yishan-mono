@@ -7,11 +7,11 @@ import { retainOpenAgentChatComposerFocus } from "../../events/agentChatComposer
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import { useTerminalCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
-import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
-import { DEFAULT_RIGHT_WIDTH, layoutStore } from "../../store/settings/layoutStore";
-import { tabStore } from "../../store/tabStore";
+import { agentSettingsStore } from "../../features/settings/state/agentSettingsStore";
+import { DEFAULT_RIGHT_WIDTH, layoutStore } from "../../features/workbench/state/layoutStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
 import type { WorkspaceTab } from "../../store/types";
-import { workspaceStore } from "../../store/workspaceStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { DARK_SURFACE_COLORS } from "../../theme";
 import { FileSearchOverlay } from "./FileSearchOverlay";
 import { LaunchView } from "./LaunchView";

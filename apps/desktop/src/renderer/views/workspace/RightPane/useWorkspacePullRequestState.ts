@@ -4,9 +4,9 @@ import {
   listPullRequestHistory,
   refreshWorkspacePullRequest,
 } from "../../../features/workspace/commands/workspaceCommands";
-import { workspaceProjectionStore } from "../../../features/workspace/model/workspaceProjectionStore";
+import { workspaceProjectionStore } from "../../../features/workspace/state/workspaceProjectionStore";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;

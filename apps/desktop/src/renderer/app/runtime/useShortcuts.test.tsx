@@ -86,12 +86,12 @@ vi.mock("../../shortcuts/keybindings", () => ({
   getShortcutDefinitions: mocks.getShortcutDefinitions,
 }));
 
-vi.mock("../../store/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: typeof mocks.workspaceStoreState) => unknown) =>
     selector(mocks.workspaceStoreState),
 }));
 
-vi.mock("../../store/tabStore", () => ({
+vi.mock("../../features/workbench/state/tabStore", () => ({
   tabStore: (selector: (state: typeof mocks.tabStoreState) => unknown) => selector(mocks.tabStoreState),
 }));
 

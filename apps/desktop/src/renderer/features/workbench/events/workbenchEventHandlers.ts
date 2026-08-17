@@ -6,7 +6,7 @@
  * default deps subscribe via the router selectors.
  */
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
-import { tabStore } from "../../../store/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 
 export type WorkbenchEventDependencies = {
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;

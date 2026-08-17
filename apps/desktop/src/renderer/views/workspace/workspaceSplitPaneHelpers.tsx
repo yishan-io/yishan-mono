@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { useState } from "react";
 import { LuGlobe } from "react-icons/lu";
-import type { PaneLeaf, SplitPaneNode } from "../../store/split-pane";
+import type { PaneLeaf, SplitPaneNode } from "../../features/workbench/model/split-pane";
 import type { WorkspaceTab } from "../../store/types";
 
 export function FaviconIcon({ url, size }: { url?: string; size: number }) {

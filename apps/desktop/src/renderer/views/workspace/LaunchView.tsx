@@ -26,8 +26,8 @@ import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import {
   type WorkspaceCreateProgressStep,
   workspaceCreateProgressStore,
-} from "../../store/workspaceCreateProgressStore";
-import { workspaceStore } from "../../store/workspaceStore";
+} from "../../features/workspace/state/workspaceCreateProgressStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { RecentAgentSessions } from "./RecentAgentSessions";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {

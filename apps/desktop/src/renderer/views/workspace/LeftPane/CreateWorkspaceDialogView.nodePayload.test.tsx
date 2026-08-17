@@ -3,10 +3,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
-import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { projectStore } from "../../../features/project/state/projectStore";
+import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
+import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 
 const createWorkspace = vi.fn();

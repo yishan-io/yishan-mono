@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isMarkdownFile } from "../../helpers/editorLanguage";
 import { monaco } from "../../helpers/monacoSetup";
 import { useCodeTheme } from "../../hooks/useCodeTheme";
-import { editorSettingsStore } from "../../store/settings/editorSettingsStore";
+import { editorSettingsStore } from "../../features/settings/state/editorSettingsStore";
 import { createMonacoFileEditor, replaceEditorContentPreservingViewState } from "./createMonacoFileEditor";
 
 /** Props for creating and syncing the Monaco editor used by FileEditor. */

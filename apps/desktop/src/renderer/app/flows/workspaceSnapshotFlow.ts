@@ -19,18 +19,18 @@
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
 import { syncTabStoreWithWorkspace } from "../../features/workbench/commands/workspaceTabSync";
-import { projectStore } from "../../features/project/model/projectStore";
+import { projectStore } from "../../features/project/state/projectStore";
 import {
   openFoldersForSnapshot,
   restoreFolderSelectionIfNeeded,
 } from "../../features/workspace/commands/localFolderCommands";
 import { warmupWorkspacesForProjects } from "../../features/workspace/commands/workspaceWarmupCommand";
 import { reconcileWorkspaceSnapshot } from "../../features/workspace/model/snapshotReconciler";
-import { workspaceProjectionStore } from "../../features/workspace/model/workspaceProjectionStore";
+import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
 import { getDaemonClient } from "../../rpc/rpcTransport";
-import { sessionStore } from "../../features/session/model/sessionStore";
-import { workspaceCreateProgressStore } from "../../store/workspaceCreateProgressStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
+import { workspaceCreateProgressStore } from "../../features/workspace/state/workspaceCreateProgressStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 
 let latestWorkspaceSnapshotRequestId = 0;
 

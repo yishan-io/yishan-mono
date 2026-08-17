@@ -1,8 +1,8 @@
 import { closePullRequest, mergePullRequest } from "@renderer/features/git/commands/gitCommands";
-import { workspaceProjectionStore } from "@renderer/features/workspace/model/workspaceProjectionStore";
+import { workspaceProjectionStore } from "@renderer/features/workspace/state/workspaceProjectionStore";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import type { DaemonWorkspacePullRequest } from "@renderer/rpc/daemonTypes";
-import { workspaceStore } from "@renderer/store/workspaceStore";
+import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
 import { type MouseEvent, useCallback, useState } from "react";
 import type { MergeMethod } from "./pullRequestTabHelpers";
 

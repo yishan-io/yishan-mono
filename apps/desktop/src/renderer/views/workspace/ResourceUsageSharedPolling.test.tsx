@@ -3,8 +3,8 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSharedTerminalResourceUsageSnapshotForTests } from "../../features/terminal/runtime/sharedTerminalResourceUsage";
-import { tabStore } from "../../store/tabStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { LeftPaneResourceUsageControl } from "./LeftPane/LeftPaneResourceUsageControl";
 import { WorkspaceResourceUsageControl } from "./WorkspaceResourceUsageControl";
 

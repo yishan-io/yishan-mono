@@ -12,7 +12,7 @@
  *     surface for Phases 3/6/7. Not failing yet.
  *   - Rule 2 (store → transport/commands): store/ must not VALUE-import
  *     rpc/, api/, electron, or commands/.
- *   - Rule 3 (pure domain → framework): store/tabs/ and store/split-pane/ must
+ *   - Rule 3 (pure domain → framework): features/workbench/model/tabs/ and features/workbench/model/split-pane/ must
  *     not import react, zustand, rpc/, api/, commands/, or electron.
  *   - Rule 4 (commands → views): commands/ must not import views/ or components/.
  *
@@ -52,6 +52,37 @@ const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R1-value-api-rpc", file: "views/workspace/useAgentChatSessionLifecycle.ts", phase: "P5" },
   // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
   // ---- Rule 4: commands importing views/components (cross-layer index) ----
+  // ---- Rule 5 baseline (Phase 14): pre-existing cross-feature Store imports
+  // (store/ root moved to features/<feature>/state). Replace with feature
+  // Selectors/Commands per Phase 14 task 8; remove rows as fixed. ----
+  { rule: "R5-cross-feature-internal", file: "features/agent/commands/agentChatCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/agent/commands/agentChatSubagentCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/agent/commands/piProviderCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/agent/events/agentChatSubagentEvents.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/agent/runtime/agentChatRecovery.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/agent/runtime/agentSessionRuntime.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/files/ui/FileManagerView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/files/ui/useFileTreeOperations.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/git/commands/gitCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/notification/events/notificationEventHandlers.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/organization/commands/orgCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/project/commands/projectCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/events/terminalEventHandlers.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/events/terminalSessionTabReconciler.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRecovery.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionOrchestrator.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionService.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalTitleUtils.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workbench/commands/tabCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workbench/commands/workspaceTabSync.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workbench/state/tabStore.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/localFolderCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/selectionCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCommands.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCreateCommand.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/events/workspaceEventHandlers.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/state/workspace/actions.localFolders.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/state/workspace/actions.selection.ts", phase: "P14" },
 ];
 
 const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
@@ -122,7 +153,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       rel.startsWith("components/") ||
       rel.startsWith("hooks/") ||
       rel.startsWith("app/routes/");
-    const isPureDomain = rel.startsWith("store/tabs/") || rel.startsWith("store/split-pane/");
+    const isPureDomain = rel.startsWith("features/workbench/model/tabs/") || rel.startsWith("features/workbench/model/split-pane/");
 
     for (const imp of extractImports(file)) {
       const target = resolveSpecifier(imp.spec, file);
@@ -163,11 +194,15 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       const crossFeature = /^features\/([^/]+)\//.exec(rel);
       const crossTarget = /^features\/([^/]+)\//.exec(relT);
       if (crossFeature && crossTarget && crossFeature[1] !== crossTarget[1]) {
+        // The owning feature's public state surface (Selectors = read models,
+        // Actions = state-change surface) is importable; the Store itself is not.
+        const isPublicStateSurface = /\/state\/[^/]+(Selectors|Actions)(\.ts)?$/.test(relT);
         const targetInternal =
-          relT.includes("/events/") ||
-          relT.includes("/runtime/") ||
-          relT.includes("/state/") ||
-          /\/model\/[^/]*Store(\.ts)?$/.test(relT);
+          !isPublicStateSurface &&
+          (relT.includes("/state/") ||
+            relT.includes("/events/") ||
+            relT.includes("/runtime/") ||
+            /\/model\/[^/]*Store(\.ts)?$/.test(relT));
         if (targetInternal) {
           violations.push({ rule: "R5-cross-feature-internal", file: rel, target: imp.spec });
         }

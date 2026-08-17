@@ -3,9 +3,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../features/project/model/projectStore";
-import { sessionStore } from "../../features/session/model/sessionStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { projectStore } from "../../features/project/state/projectStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { CreateScheduledJobFormView } from "./CreateScheduledJobFormView";
 
 const mocked = vi.hoisted(() => ({

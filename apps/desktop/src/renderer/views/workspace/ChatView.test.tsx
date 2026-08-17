@@ -281,7 +281,7 @@ vi.mock("../../events", async (importOriginal) => {
   };
 });
 
-vi.mock("../../store/workspaceStore", async (importOriginal) => {
+vi.mock("../../features/workspace/state/workspaceStore", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
@@ -289,7 +289,7 @@ vi.mock("../../store/workspaceStore", async (importOriginal) => {
   };
 });
 
-vi.mock("../../store/chatStore", () => ({
+vi.mock("../../features/agent/state/chatStore", () => ({
   chatStore: mockedStore.workspaceStore,
 }));
 

@@ -11,7 +11,7 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
 } from "../../helpers/agentSettings";
-import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
+import { agentSettingsStore } from "../../features/settings/state/agentSettingsStore";
 
 type AgentCLISettingsCardProps = {
   statuses: CLIToolStatus[];

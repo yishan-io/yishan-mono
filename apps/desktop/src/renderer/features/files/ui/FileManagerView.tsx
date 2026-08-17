@@ -8,9 +8,9 @@ import { useGitCommands } from "@renderer/hooks/useCommands";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
 import { useDetectedExternalAppIds } from "@renderer/hooks/useDetectedExternalAppIds";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
-import { tabStore } from "@renderer/store/tabStore";
-import { workspaceStore } from "@renderer/store/workspaceStore";
-import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
+import { tabStore } from "@renderer/features/workbench/state/tabStore";
+import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import {
   findExternalAppPreset,
   getExternalAppMenuEntries,
@@ -21,7 +21,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useProjectLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectLastUsedExternalAppId";
-import { selectWorkspaceFileTreeRefreshVersion } from "../../../features/workspace/model/workspaceSelectors";
+import { selectWorkspaceFileTreeRefreshVersion } from "../../../features/workspace/state/workspaceSelectors";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";

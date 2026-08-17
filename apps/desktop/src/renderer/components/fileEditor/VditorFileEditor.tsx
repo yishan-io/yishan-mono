@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import type Vditor from "vditor";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { i18n } from "../../i18n";
-import { layoutStore } from "../../store/settings/layoutStore";
+import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
 import { attachMermaidZoomButtons, rethemeMermaidDiagrams } from "./mermaidZoomButton";
 import { type VditorEditorHandle, createVditorEditor, resolveVditorLang } from "./vditorEditor";

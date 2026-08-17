@@ -2,7 +2,7 @@ import { delay } from "../../../helpers/delay";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../store/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import type { AgentChatSessionView } from "../../../store/types";
 import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
 import { agentChatStore } from "../model/agentChatStore";

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { setSelectedRepo, setSelectedWorkspace } from "./selectionCommands";
 
 const initialWorkspaceStoreState = workspaceStore.getState();

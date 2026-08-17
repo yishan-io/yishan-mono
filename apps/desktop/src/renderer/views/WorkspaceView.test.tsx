@@ -5,12 +5,12 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { switchOrganization } from "../features/organization/commands/orgCommands";
-import { projectStore } from "../features/project/model/projectStore";
-import { sessionStore } from "../features/session/model/sessionStore";
-import { layoutStore } from "../store/settings/layoutStore";
-import { tabStore } from "../store/tabStore";
-import { workspaceStore } from "../store/workspaceStore";
-import { workspaceUiStore } from "../store/workspaceUiStore";
+import { projectStore } from "../features/project/state/projectStore";
+import { sessionStore } from "../features/session/state/sessionStore";
+import { layoutStore } from "../features/workbench/state/layoutStore";
+import { tabStore } from "../features/workbench/state/tabStore";
+import { workspaceStore } from "../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../features/workspace/state/workspaceUiStore";
 import { WorkspaceView } from "./WorkspaceView";
 
 const commandMocks = {

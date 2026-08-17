@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { isTerminalTabWithSessionId } from "../helpers/terminalTabUtils";
-import type { TabStoreState } from "../store/tabStore";
-import { tabStore } from "../store/tabStore";
+import type { TabStoreState } from "../features/workbench/state/tabStore";
+import { tabStore } from "../features/workbench/state/tabStore";
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
 type TerminalTabWithSessionId = TerminalTab & { data: TerminalTab["data"] & { sessionId: string } };

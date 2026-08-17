@@ -8,7 +8,7 @@ import {
   SettingsSectionHeader,
 } from "../../components/settings";
 import { CODE_THEME_FAMILIES, type CodeThemeFamilyId } from "../../helpers/codeThemes";
-import { editorSettingsStore } from "../../store/settings/editorSettingsStore";
+import { editorSettingsStore } from "../../features/settings/state/editorSettingsStore";
 
 const FONT_SIZE_OPTIONS: number[] = Array.from(
   { length: TYPOGRAPHY_TOKENS.editorFontSizeMaxPx - TYPOGRAPHY_TOKENS.editorFontSizeMinPx + 1 },

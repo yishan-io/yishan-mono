@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TerminalSessionLifecycleEvent } from "../../rpc/daemonTypes";
-import { tabStore } from "../../store/tabStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { TerminalSettingsView } from "./TerminalSettingsView";
 
 const mocked = vi.hoisted(() => {

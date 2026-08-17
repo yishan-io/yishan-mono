@@ -4,7 +4,7 @@ import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { memo, useEffect, useRef } from "react";
 import { useTerminalCommands, useWorkbenchCommands } from "../../../hooks/useCommands";
-import { terminalFocusStore } from "../../../store/terminalFocusStore";
+import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import {
   attachTerminalRuntime,

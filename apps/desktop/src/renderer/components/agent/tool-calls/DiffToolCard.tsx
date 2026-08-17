@@ -5,7 +5,7 @@ import { LuFilePlus2, LuPencil } from "react-icons/lu";
 import { MONO_FONT_FAMILY } from "../../../helpers/codeThemes";
 import { getDiffCssVariablesForPalette } from "../../../helpers/diffTheme";
 import { useCodeTheme } from "../../../hooks/useCodeTheme";
-import { editorSettingsStore } from "../../../store/settings/editorSettingsStore";
+import { editorSettingsStore } from "../../../features/settings/state/editorSettingsStore";
 import { ToolDiffStats } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";

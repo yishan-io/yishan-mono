@@ -29,13 +29,13 @@ const mocked = vi.hoisted(() => {
   return { getListPreferences, setListPreferences, sessionState, workspaceState };
 });
 
-vi.mock("../../../features/session/model/sessionStore", () => ({
+vi.mock("../../../features/session/state/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector(mocked.sessionState),
   ),
 }));
 
-vi.mock("../../../features/project/model/projectStore", () => {
+vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: {
       projects: unknown[];
@@ -59,7 +59,7 @@ vi.mock("../../../features/project/model/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: vi.fn((selector: (state: typeof mocked.workspaceState) => unknown) =>
     selector(mocked.workspaceState),
   ),

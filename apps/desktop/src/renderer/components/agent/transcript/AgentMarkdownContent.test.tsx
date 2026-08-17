@@ -26,7 +26,7 @@ vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   openChatFileTab: mocked.openChatFileTab,
 }));
 
-vi.mock("../../../store/workspaceStore", () => {
+vi.mock("../../../features/workspace/state/workspaceStore", () => {
   const selectorMock = (selector: (state: typeof mocked.workspaceState) => unknown) => selector(mocked.workspaceState);
   return {
     workspaceStore: Object.assign(selectorMock, {

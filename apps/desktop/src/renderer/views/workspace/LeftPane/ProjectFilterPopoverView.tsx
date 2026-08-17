@@ -17,9 +17,9 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
-import { projectStore } from "../../../features/project/model/projectStore";
+import { projectStore } from "../../../features/project/state/projectStore";
 import { useWorkspaceCommands } from "../../../hooks/useCommands";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 /** Returns true when a repository row matches the quick-search keyword. */
 function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: string): boolean {

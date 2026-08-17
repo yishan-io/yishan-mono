@@ -3,9 +3,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
-import { projectStore } from "../../features/project/model/projectStore";
-import { scheduledJobStore } from "../../features/scheduled-job/model/scheduledJobStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { projectStore } from "../../features/project/state/projectStore";
+import { scheduledJobStore } from "../../features/scheduled-job/state/scheduledJobStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";
 
 vi.mock("@mui/material", async (importOriginal) => {

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { layoutStore } from "../store/settings/layoutStore";
+import { layoutStore } from "../features/workbench/state/layoutStore";
 
 export function useDialogRegistration(open: boolean): void {
   useEffect(() => {

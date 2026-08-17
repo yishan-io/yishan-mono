@@ -1,5 +1,5 @@
 import type { RpcFrontendMessagePayload } from "../../../shared/contracts/rpcSchema";
-import type { WorkspaceTab } from "../../store/workspaceStore";
+import type { WorkspaceTab } from "../../features/workspace/state/workspaceStore";
 
 export type InAppWorkspaceNotificationPayload = RpcFrontendMessagePayload<"notificationEvent">;
 

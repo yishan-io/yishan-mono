@@ -142,11 +142,11 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../store/tabStore", () => ({
+vi.mock("../../../features/workbench/state/tabStore", () => ({
   tabStore: mocked.tabStore,
 }));
 
@@ -165,7 +165,7 @@ vi.mock("../../../features/terminal/commands/terminalCommands", () => ({
   closeTerminalSession: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 

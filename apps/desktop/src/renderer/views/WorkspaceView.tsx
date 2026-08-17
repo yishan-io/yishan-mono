@@ -6,8 +6,8 @@ import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
 import { SplitPaneLayout } from "../components/SplitPaneLayout";
 import { subscribeAppActionEvent } from "../events";
-import { projectStore } from "../features/project/model/projectStore";
-import { workspaceProjectionStore } from "../features/workspace/model/workspaceProjectionStore";
+import { projectStore } from "../features/project/state/projectStore";
+import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
 import { useAllWorkspacesGitSync } from "../features/workspace/ui/hooks/useAllWorkspacesGitSync";
 import {
   useAgentCommands,
@@ -26,12 +26,12 @@ import {
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
-import { useSelectedWorkspaceWithProject } from "../store/selectors";
-import { sessionStore } from "../features/session/model/sessionStore";
-import { layoutStore } from "../store/settings/layoutStore";
-import { tabStore } from "../store/tabStore";
-import { workspaceStore } from "../store/workspaceStore";
-import { workspaceUiStore } from "../store/workspaceUiStore";
+import { useSelectedWorkspaceWithProject } from "../app/selectors";
+import { sessionStore } from "../features/session/state/sessionStore";
+import { layoutStore } from "../features/workbench/state/layoutStore";
+import { tabStore } from "../features/workbench/state/tabStore";
+import { workspaceStore } from "../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../features/workspace/state/workspaceUiStore";
 import { OverviewView } from "./overview/OverviewView";
 import { ScheduledJobView } from "./scheduledJob/ScheduledJobView";
 import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialogView";

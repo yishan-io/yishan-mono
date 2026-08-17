@@ -1,5 +1,5 @@
 import { api } from "../../../api";
-import { setOrganizationVoiceUsage } from "../../../features/session/model/sessionActions";
+import { setOrganizationVoiceUsage } from "../../../features/session/state/sessionActions";
 
 export async function transcribeVoiceForOrganization(input: {
   organizationId: string;

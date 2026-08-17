@@ -5,14 +5,14 @@
  * surfaces (selectors + actions). The Session Store itself is internal.
  */
 export type { SessionCommands } from "./commands/contract";
-export type { SessionOrganization, SessionUser } from "./model/sessionStore";
+export type { SessionOrganization, SessionUser } from "./state/sessionStore";
 export {
   selectCurrentUserNotificationPreferences,
   selectSelectedOrganizationId,
   selectSessionDaemonId,
-} from "./model/sessionSelectors";
+} from "./state/sessionSelectors";
 export {
   setOrganizationVoiceUsage,
   setSelectedOrganizationId,
   updateCurrentUserNotificationPreferences,
-} from "./model/sessionActions";
+} from "./state/sessionActions";

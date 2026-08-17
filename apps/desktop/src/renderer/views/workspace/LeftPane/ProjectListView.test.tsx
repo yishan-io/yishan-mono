@@ -182,11 +182,11 @@ vi.mock("./ProjectConfigDialogView", () => ({
   ProjectConfigDialogView: ({ open }: { open: boolean }) => (open ? <div data-testid="repo-config-dialog" /> : null),
 }));
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../features/workspace/model/workspaceProjectionStore", () => {
+vi.mock("../../../features/workspace/state/workspaceProjectionStore", () => {
   const project = (
     selector: (state: {
       pullRequestByWorkspaceId: Record<string, unknown>;
@@ -209,7 +209,7 @@ vi.mock("../../../features/workspace/model/workspaceProjectionStore", () => {
   return { workspaceProjectionStore: project };
 });
 
-vi.mock("../../../features/project/model/projectStore", () => {
+vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string }) => unknown,
   ) =>
@@ -230,7 +230,7 @@ vi.mock("../../../features/project/model/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../features/session/model/sessionStore", () => ({
+vi.mock("../../../features/session/state/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector({ selectedOrganizationId: "" }),
   ),
@@ -250,11 +250,11 @@ vi.mock("../../../rpc/rpcTransport", () => ({
   })),
 }));
 
-vi.mock("../../../store/chatStore", () => ({
+vi.mock("../../../features/agent/state/chatStore", () => ({
   chatStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../store/workspaceCreateProgressStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: vi.fn(
     (selector: (state: { progressByWorkspaceId: Record<string, { isComplete: boolean }> }) => unknown) =>
       selector({ progressByWorkspaceId: mocked.stateRef.current.progressByWorkspaceId }),

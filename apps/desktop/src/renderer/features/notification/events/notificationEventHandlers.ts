@@ -19,10 +19,10 @@ import {
   getNotificationPreferences,
   playNotificationSound,
 } from "../../../features/notification/commands/notificationCommands";
-import { selectProjectById } from "../../../features/project/model/projectSelectors";
-import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../../../store/chatStore";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { selectProjectById } from "../../../features/project/state/projectSelectors";
+import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../../../features/agent/state/chatStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 import { parseObserverSessionKey, recordAgentObserverStatus } from "../../agent/commands/agentSessionLifecycle";
 

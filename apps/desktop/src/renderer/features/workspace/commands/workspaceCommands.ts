@@ -11,15 +11,15 @@ import {
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { layoutStore } from "../../../store/settings/layoutStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../../../store/workspaceUiStore";
-import { selectProjectById, selectProjectDisplayIds, selectProjects } from "../../project/model/projectSelectors";
+import { layoutStore } from "../../../features/workbench/state/layoutStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
+import { selectProjectById, selectProjectDisplayIds, selectProjects } from "../../project/state/projectSelectors";
 import {
   setDisplayProjectIds as applyDisplayProjectIds,
   setLastUsedExternalAppId as applyLastUsedExternalAppId,
-} from "../../project/model/projectActions";
-import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
+} from "../../project/state/projectActions";
+import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 export { createWorkspace } from "./workspaceCreateCommand";

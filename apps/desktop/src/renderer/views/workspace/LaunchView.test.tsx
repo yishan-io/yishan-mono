@@ -88,17 +88,17 @@ vi.mock("../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../../store/workspaceCreateProgressStore", () => ({
+vi.mock("../../features/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: (selector: (state: { progressByWorkspaceId: Record<string, unknown> }) => unknown) =>
     selector({ progressByWorkspaceId: mocks.progressByWorkspaceId }),
 }));
 
-vi.mock("../../store/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: { workspaces: Array<{ id: string; status?: string }> }) => unknown) =>
     selector({ workspaces: mocks.workspaces }),
 }));
 
-vi.mock("../../store/settings/agentSettingsStore", () => ({
+vi.mock("../../features/settings/state/agentSettingsStore", () => ({
   agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
     selector({ customCommandByAgentKind: {} }),
 }));

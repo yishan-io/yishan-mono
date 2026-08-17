@@ -1,9 +1,9 @@
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../model/agentChatStore";
 import { isAgentSessionBusy } from "../model/agentChatTypes";
-import { findOppositePaneId } from "../../../store/split-pane";
-import { splitPaneStore } from "../../../store/splitPaneStore";
-import { tabStore } from "../../../store/tabStore";
+import { findOppositePaneId } from "../../../features/workbench/model/split-pane";
+import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import { findTabWithSession } from "./agentChatCommands";
 
 const SUBAGENT_SPLIT_DIRECTION = "horizontal";

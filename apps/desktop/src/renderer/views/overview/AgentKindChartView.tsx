@@ -3,7 +3,7 @@ import { PieChart } from "@mui/x-charts/PieChart";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { formatTokens } from "../../helpers/formatters";
-import { overviewStore } from "../../features/overview/model/overviewStore";
+import { overviewStore } from "../../features/overview/state/overviewStore";
 
 const AGENT_KIND_COLORS: Record<string, string> = {
   opencode: "#6366F1",

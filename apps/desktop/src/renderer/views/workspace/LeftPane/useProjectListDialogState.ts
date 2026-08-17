@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import { projectStore } from "../../../features/project/model/projectStore";
+import { projectStore } from "../../../features/project/state/projectStore";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 export function useProjectListDialogState() {
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);

@@ -3,9 +3,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { projectStore } from "../../../features/project/state/projectStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { LeftPaneResourceUsageControl } from "./LeftPaneResourceUsageControl";
 
 const mocked = vi.hoisted(() => ({

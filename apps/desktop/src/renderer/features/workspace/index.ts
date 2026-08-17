@@ -12,5 +12,5 @@ export type {
   WorkspaceLifecycleState,
   WorkspaceStatus,
 } from "./model/workspaceTypes";
-export { selectWorkspaceFileTreeRefreshVersion } from "./model/workspaceSelectors";
-export { incrementGitRefreshVersion } from "./model/workspaceActions";
+export { selectWorkspaceFileTreeRefreshVersion } from "./state/workspaceSelectors";
+export { incrementGitRefreshVersion } from "./state/workspaceActions";

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   WORKSPACE_SETTINGS_STORE_STORAGE_KEY,
   workspaceSettingsStore,
-} from "../../store/settings/workspaceSettingsStore";
+} from "../../features/settings/state/workspaceSettingsStore";
 import { WorkspaceSettingsView } from "./WorkspaceSettingsView";
 
 describe("WorkspaceSettingsView", () => {

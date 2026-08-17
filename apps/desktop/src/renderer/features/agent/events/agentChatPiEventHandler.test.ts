@@ -2,8 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../model/agentChatStore";
-import { splitPaneStore } from "../../../store/splitPaneStore";
-import { tabStore } from "../../../store/tabStore";
+import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import { refreshAgentSessionStats, registerAgentSession } from "../events/agentChatPiEventShared";
 import { compactAgent, respondToAgentExtensionUiRequest } from "../commands/agentChatCommands";

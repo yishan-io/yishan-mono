@@ -7,9 +7,9 @@ import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../hooks/useCommands";
 import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
-import { tabStore } from "../../store/tabStore";
-import { enqueueWorkspaceErrorNotice } from "../../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
+import { enqueueWorkspaceErrorNotice } from "../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 
 /** Builds one stable row id for port-menu rendering and selection mapping. */
 function buildPortRowId(entry: TerminalDetectedPort): string {

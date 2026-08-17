@@ -6,7 +6,7 @@ import { RestApiError } from "../../api/restClient";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
 import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
-import { sessionStore } from "../../features/session/model/sessionStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
 import { rendererQueryClient } from "../../queryClient";
 import { useSessionBootstrap } from "./sessionBootstrap";
 

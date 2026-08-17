@@ -8,7 +8,7 @@ import {
   suggestTargetBranchName,
 } from "../../../helpers/workspaceBranchNaming";
 import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
-import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../store/settings/workspaceSettingsStore";
+import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../features/settings/state/workspaceSettingsStore";
 import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../store/types";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 

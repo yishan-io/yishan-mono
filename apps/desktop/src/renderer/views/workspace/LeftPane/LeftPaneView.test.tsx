@@ -72,7 +72,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../features/project/model/projectStore", () => {
+vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: {
       projects: unknown[];
@@ -101,7 +101,7 @@ vi.mock("../../../features/project/model/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 

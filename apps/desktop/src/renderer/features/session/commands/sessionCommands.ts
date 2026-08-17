@@ -10,7 +10,7 @@ import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../../../
 import { onAuthExpired, resetAuthExpiredState as resetAuthExpiredStateFromApi, RestApiError } from "../../../api/restClient";
 import { getSessionBootstrapData as getSessionBootstrapDataFromApi } from "../../../api/sessionApi";
 import { subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromRpc, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
-import { sessionStore } from "../../../features/session/model/sessionStore";
+import { sessionStore } from "../../../features/session/state/sessionStore";
 
 /** Loads the session bootstrap payload (user, orgs, preferences). */
 export function getSessionBootstrapData() {

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { projectStore } from "@renderer/features/project/model/projectStore";
-import { workspaceProjectionStore } from "@renderer/features/workspace/model/workspaceProjectionStore";
-import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
+import { projectStore } from "@renderer/features/project/state/projectStore";
+import { workspaceProjectionStore } from "@renderer/features/workspace/state/workspaceProjectionStore";
+import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";
@@ -192,11 +192,11 @@ vi.mock("@renderer/features/git/commands/gitCommands", () => ({
   subscribeWorkspaceGitChanged: (listener: unknown) => mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
-vi.mock("@renderer/store/workspaceStore", () => ({
+vi.mock("@renderer/features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocks.workspaceStore,
 }));
 
-vi.mock("@renderer/features/project/model/projectStore", () => {
+vi.mock("@renderer/features/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: { lastUsedExternalAppId?: string; setLastUsedExternalAppId: (id: string) => void }) => unknown,
   ) =>
@@ -215,7 +215,7 @@ vi.mock("@renderer/features/project/model/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("@renderer/store/tabStore", () => ({
+vi.mock("@renderer/features/workbench/state/tabStore", () => ({
   tabStore: mocks.workspaceStore,
 }));
 

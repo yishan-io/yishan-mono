@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { workspaceSettingsStore } from "../../store/settings/workspaceSettingsStore";
+import { workspaceSettingsStore } from "../../features/settings/state/workspaceSettingsStore";
 import { GitWorkspaceSettingsView } from "./GitWorkspaceSettingsView";
 
 /** Renders workspace-level preferences and workspace creation defaults. */

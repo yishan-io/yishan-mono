@@ -3,8 +3,8 @@
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createElement, forwardRef, useImperativeHandle } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { editorSettingsStore } from "../store/settings/editorSettingsStore";
-import { layoutStore } from "../store/settings/layoutStore";
+import { editorSettingsStore } from "../features/settings/state/editorSettingsStore";
+import { layoutStore } from "../features/workbench/state/layoutStore";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
 

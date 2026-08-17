@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { workspaceStore } from "../store/workspaceStore";
+import { workspaceStore } from "../features/workspace/state/workspaceStore";
 import { useGitCommands } from "./useCommands";
 
 /**

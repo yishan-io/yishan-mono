@@ -2,10 +2,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIONS } from "../../shared/contracts/actions";
-import { projectStore } from "../features/project/model/projectStore";
-import type { SplitPaneStoreState } from "../store/splitPaneStore";
-import type { TabStoreState } from "../store/tabStore";
-import type { WorkspaceStoreState } from "../store/workspaceStore";
+import { projectStore } from "../features/project/state/projectStore";
+import type { SplitPaneStoreState } from "../features/workbench/state/splitPaneStore";
+import type { TabStoreState } from "../features/workbench/state/tabStore";
+import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStore";
 
 const initialProjectStoreState = projectStore.getState();
 

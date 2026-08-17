@@ -1,8 +1,8 @@
 import { api } from "../../../api";
 import type { OverviewTimeRange } from "../../../api/overviewApi.types";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { overviewStore } from "../../../features/overview/model/overviewStore";
-import { selectSelectedOrganizationId } from "../../session/model/sessionSelectors";
+import { overviewStore } from "../../../features/overview/state/overviewStore";
+import { selectSelectedOrganizationId } from "../../session/state/sessionSelectors";
 
 function selectedOrganizationId(): string {
   const organizationId = selectSelectedOrganizationId()?.trim() || "";

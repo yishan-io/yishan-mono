@@ -1,9 +1,9 @@
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { tabStore } from "../../../store/tabStore";
-import type { TabStoreState } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import type { TabStoreState } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
 type TerminalSnapshot = {

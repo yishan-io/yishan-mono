@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { RightPaneTabBar } from "./RightPaneTabBar";
 
 const workspaceStoreState: { current: Record<string, unknown> } = {
@@ -14,11 +14,11 @@ const workspaceStoreState: { current: Record<string, unknown> } = {
   },
 };
 
-vi.mock("../../../features/project/model/projectStore", () => ({
+vi.mock("../../../features/project/state/projectStore", () => ({
   projectStore: (selector: (state: { projects: unknown[] }) => unknown) => selector({ projects: [] }),
 }));
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 

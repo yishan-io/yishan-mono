@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LuTriangleAlert } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { isDaemonVersionOutdated } from "../../helpers/versionHelpers";
-import { sessionStore } from "../../features/session/model/sessionStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
 
 /** Renders a warning icon button in the header bar when the daemon version is outdated. */
 export function DaemonVersionWarningControl() {

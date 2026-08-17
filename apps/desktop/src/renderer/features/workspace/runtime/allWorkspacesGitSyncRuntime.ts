@@ -1,9 +1,9 @@
 import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
-import { workspaceProjectionStore } from "../model/workspaceProjectionStore";
+import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
-import { selectProjects } from "../../project/model/projectSelectors";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { selectProjects } from "../../project/state/projectSelectors";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 /**
  * Minimum interval (ms) between consecutive refresh calls for one workspace.

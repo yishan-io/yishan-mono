@@ -11,7 +11,7 @@ import { getSessionBootstrapData } from "../../features/session/commands/session
 import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
 import { rendererQueryClient } from "../../queryClient";
-import { sessionStore } from "../../features/session/model/sessionStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
 vi.mock("react-i18next", () => ({

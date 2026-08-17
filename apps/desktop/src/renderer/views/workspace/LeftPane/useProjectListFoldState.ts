@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { projectStore } from "../../../features/project/state/projectStore";
+import { sessionStore } from "../../../features/session/state/sessionStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import {
   EMPTY_FOLD_STATE,
   EMPTY_ORDER_STATE,

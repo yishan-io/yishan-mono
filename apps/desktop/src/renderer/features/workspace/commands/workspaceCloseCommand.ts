@@ -1,18 +1,18 @@
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
-import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import { selectProjectById } from "../../project/model/projectSelectors";
+import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
+import { selectProjectById } from "../../project/state/projectSelectors";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 
 type CloseWorkspaceResponse = {
   workspace: { id: string; status: string };
   workspaceId: string;
-  lifecycleScriptWarnings: import("../../../store/workspaceLifecycleNoticeStore").WorkspaceLifecycleScriptWarning[];
+  lifecycleScriptWarnings: import("../../../features/workspace/state/workspaceLifecycleNoticeStore").WorkspaceLifecycleScriptWarning[];
   terminalCleanupErrors?: string[];
 };
 

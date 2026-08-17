@@ -5,20 +5,20 @@ import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectSessionDaemonId, selectSelectedOrganizationId } from "../../../features/session/model/sessionSelectors";
-import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
-import { tabStore } from "../../../store/tabStore";
+import { selectSessionDaemonId, selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../store/types";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { createLocalFolderImport } from "../../workspace/commands/localFolderCommands";
 import {
   buildWorkspaceOpenProjectEntries,
   openWorkspaceEntries,
 } from "../../workspace/commands/workspaceWarmupCommand";
-import { incrementGitRefreshVersion } from "../../workspace/model/workspaceActions";
+import { incrementGitRefreshVersion } from "../../workspace/state/workspaceActions";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
-import { projectStore } from "../model/projectStore";
+import { projectStore } from "../state/projectStore";
 
 /** Loads the latest workspace snapshot (shared Flow owned by Events + Commands). */
 export function loadWorkspaceSnapshot(): Promise<void> {

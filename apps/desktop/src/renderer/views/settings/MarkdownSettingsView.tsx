@@ -11,7 +11,7 @@ import {
   type MarkdownPreviewWidth,
   type MarkdownThemePreference,
   layoutStore,
-} from "../../store/settings/layoutStore";
+} from "../../features/workbench/state/layoutStore";
 
 /** Renders markdown editor preference controls. */
 export function MarkdownSettingsView() {

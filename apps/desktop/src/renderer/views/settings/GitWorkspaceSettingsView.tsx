@@ -2,14 +2,14 @@ import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "../../components/settings";
-import { projectStore } from "../../features/project/model/projectStore";
+import { projectStore } from "../../features/project/state/projectStore";
 import { useGitAuthorName } from "../../hooks/useGitAuthorName";
 import {
   type GitBranchPrefixMode,
   resolveGitBranchPrefix,
   workspaceSettingsStore,
-} from "../../store/settings/workspaceSettingsStore";
-import { workspaceStore } from "../../store/workspaceStore";
+} from "../../features/settings/state/workspaceSettingsStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 
 const GIT_WORKSPACE_PREFIX_SELECT_WIDTH = 200;
 const GIT_WORKSPACE_CUSTOM_PREFIX_WIDTH = 140;

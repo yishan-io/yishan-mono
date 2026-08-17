@@ -1,7 +1,7 @@
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate } from "react-router-dom";
-import { sessionStore } from "../../features/session/model/sessionStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
 import { useSessionBootstrap } from "../runtime/sessionBootstrap";
 import { LoginView } from "./LoginView";
 import { WorkspaceView } from "../../views/WorkspaceView";

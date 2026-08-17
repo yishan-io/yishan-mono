@@ -4,11 +4,11 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, vi } from "vitest";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
-import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { projectStore } from "../../../features/project/state/projectStore";
+import { sessionStore } from "../../../features/session/state/sessionStore";
+import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
+import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 import { getMockedCommands, resetMockedCommands } from "./CreateWorkspaceDialogView.testSetup";
 

@@ -20,7 +20,7 @@ import { delay } from "../../../helpers/delay";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../model/agentChatStore";
-import { tabStore } from "../../../store/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import type { AgentChatSessionView } from "../../../store/types";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";

@@ -10,9 +10,9 @@ import {
   isUnsupportedFileTab,
   isVideoFile,
 } from "../../helpers/editorLanguage";
-import { tabStore } from "../../store/tabStore";
-import { workspaceStore } from "../../store/workspaceStore";
-import { workspaceUiStore } from "../../store/workspaceUiStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import { workspaceUiStore } from "../../features/workspace/state/workspaceUiStore";
 import { useFileSearchController } from "./RightPane/useFileSearchController";
 
 export function FileSearchOverlay() {

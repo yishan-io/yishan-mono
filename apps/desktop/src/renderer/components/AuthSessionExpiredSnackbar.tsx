@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { subscribeAuthExpired } from "../features/session/commands/sessionCommands";
 import { rendererQueryClient } from "../queryClient";
-import { sessionStore } from "../features/session/model/sessionStore";
+import { sessionStore } from "../features/session/state/sessionStore";
 
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;

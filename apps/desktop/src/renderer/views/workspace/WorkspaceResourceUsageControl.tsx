@@ -8,8 +8,8 @@ import { isTerminalTabWithSessionId } from "../../helpers/terminalTabUtils";
 import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../hooks/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
-import { tabStore } from "../../store/tabStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 
 const MAX_VISIBLE_PROCESSES = 20;
 

@@ -7,8 +7,8 @@ import type { TabBarCreateOption } from "../../components/TabBar";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, DEFAULT_AGENT_COMMANDS } from "../../helpers/agentSettings";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../../hooks/useCommands";
-import { splitPaneStore } from "../../store/splitPaneStore";
-import { tabStore } from "../../store/tabStore";
+import { splitPaneStore } from "../../features/workbench/state/splitPaneStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
 import type { WorkspaceTab } from "../../store/types";
 import { forceFitTerminalRuntimes } from "../../features/terminal/runtime/terminalRuntimeRegistry";
 

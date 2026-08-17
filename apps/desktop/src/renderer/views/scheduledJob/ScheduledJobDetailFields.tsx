@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import type { ScheduledJobRecord } from "../../features/scheduled-job/commands/scheduledJobCommands";
 import { renderProjectIcon } from "../../components/projectIcons";
-import { projectStore } from "../../features/project/model/projectStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { projectStore } from "../../features/project/state/projectStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { ScheduledJobStatusIndicator } from "./ScheduledJobStatusIndicator";
 import { describeCronExpression } from "./scheduledJobDetailHelpers";
 

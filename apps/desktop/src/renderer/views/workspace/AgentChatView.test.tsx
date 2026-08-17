@@ -306,7 +306,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../store/tabStore", () => ({
+vi.mock("../../features/workbench/state/tabStore", () => ({
   tabStore: (
     selector: (state: {
       tabs: Array<{

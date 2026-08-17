@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EDITOR_SETTINGS_STORE_STORAGE_KEY, editorSettingsStore } from "../../store/settings/editorSettingsStore";
+import { EDITOR_SETTINGS_STORE_STORAGE_KEY, editorSettingsStore } from "../../features/settings/state/editorSettingsStore";
 import { EditorSettingsView } from "./EditorSettingsView";
 
 vi.mock("react-i18next", () => ({

@@ -1,8 +1,8 @@
 import { DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { delay } from "../../../helpers/delay";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { type TabStoreState, tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { type TabStoreState, tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { writeTerminalInput } from "../../../features/terminal/commands/terminalCommands";
 

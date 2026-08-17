@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePaneVisibilityProvider } from "../../hooks/useWorkspacePaneVisibility";
-import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/settings/agentSettingsStore";
-import type { SplitPaneNode } from "../../store/split-pane";
+import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../features/settings/state/agentSettingsStore";
+import type { SplitPaneNode } from "../../features/workbench/model/split-pane";
 import { MainPaneView } from "./MainPaneView";
 
 type MockLeafPane = {
@@ -53,16 +53,16 @@ vi.mock("react-router-dom", () => ({
   useInRouterContext: () => false,
 }));
 
-vi.mock("../../features/session/model/sessionStore", () => ({
+vi.mock("../../features/session/state/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
 
-vi.mock("../../store/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../features/project/model/projectStore", () => {
+vi.mock("../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[]; displayProjectIds: string[] }) => unknown) =>
     selector({
       projects: (mocked.stateRef.current.projects as unknown[] | undefined) ?? [],
@@ -79,11 +79,11 @@ vi.mock("../../features/project/model/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../store/tabStore", () => ({
+vi.mock("../../features/workbench/state/tabStore", () => ({
   tabStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../store/chatStore", () => ({
+vi.mock("../../features/agent/state/chatStore", () => ({
   chatStore: (
     selector: (state: {
       workspaceUnreadToneByWorkspaceId: Record<string, "success" | "error">;
@@ -273,7 +273,7 @@ vi.mock("./RightPane/RightPaneTabBar", () => ({
   ),
 }));
 
-vi.mock("../../store/splitPaneStore", () => {
+vi.mock("../../features/workbench/state/splitPaneStore", () => {
   // Builds a root pane for a given workspace from the current test state.
   function buildRootPaneForWorkspace(workspaceId: string): MockLeafPane {
     const state = mocked.stateRef.current as Record<string, unknown>;

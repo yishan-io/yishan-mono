@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../../features/project/model/projectStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { projectStore } from "../../../features/project/state/projectStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import {
   commitGitChanges,
   getGitAuthorName,

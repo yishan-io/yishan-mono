@@ -97,17 +97,17 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../features/session/model/sessionStore", () => ({
+vi.mock("../../features/session/state/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
 
-vi.mock("../../store/workspaceStore", () => ({
+vi.mock("../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: (typeof mocked.stateRef)["current"]) => unknown) =>
     selector(mocked.stateRef.current),
 }));
 
-vi.mock("../../features/project/model/projectStore", () => {
+vi.mock("../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
     selector({ projects: mocked.stateRef.current.projects ?? [] });
   (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
@@ -116,7 +116,7 @@ vi.mock("../../features/project/model/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../store/chatStore", () => ({
+vi.mock("../../features/agent/state/chatStore", () => ({
   chatStore: (
     selector: (state: {
       workspaceAgentStatusByWorkspaceId: Record<string, unknown>;

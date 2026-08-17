@@ -319,4 +319,4 @@ export type WorkspaceStoreCreator = StateCreator<
 export type WorkspaceStoreSetState = Parameters<WorkspaceStoreCreator>[0];
 export type WorkspaceStoreGetState = Parameters<WorkspaceStoreCreator>[1];
 
-export type { AvailableModel, ChatMessage } from "./chatTypes";
+export type { AvailableModel, ChatMessage } from "../features/agent/model/chatTypes";

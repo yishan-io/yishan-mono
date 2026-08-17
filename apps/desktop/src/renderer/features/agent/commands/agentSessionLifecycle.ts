@@ -7,8 +7,8 @@
  * consume this surface instead of importing Agent event internals.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import type { WorkspaceAgentStatus } from "../../../store/chatStore";
-import { chatStore } from "../../../store/chatStore";
+import type { WorkspaceAgentStatus } from "../../../features/agent/state/chatStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
 
 type NotificationEventPayload = RpcFrontendMessagePayload<"notificationEvent">;
 type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatus"]>;

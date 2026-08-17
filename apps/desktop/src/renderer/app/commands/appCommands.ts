@@ -11,10 +11,10 @@ import { resetAuthExpiredState } from "../../api/restClient";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { rendererQueryClient } from "../../queryClient";
 import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
-import { sessionStore } from "../../features/session/model/sessionStore";
-import { type LinkTarget, layoutStore } from "../../store/settings/layoutStore";
-import { tabStore } from "../../store/tabStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { sessionStore } from "../../features/session/state/sessionStore";
+import { type LinkTarget, layoutStore } from "../../features/workbench/state/layoutStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 
 /** Opens one native folder picker and returns a selected directory path when available. */
 export async function openLocalFolderDialog(startingFolder?: string) {

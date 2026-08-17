@@ -5,11 +5,11 @@ import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
 } from "../../../helpers/terminalCloseTombstones";
-import { chatStore } from "../../../store/chatStore";
-import { createLeaf } from "../../../store/split-pane";
-import { splitPaneStore } from "../../../store/splitPaneStore";
-import { tabStore } from "../../../store/tabStore";
-import { terminalFocusStore } from "../../../store/terminalFocusStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
+import { createLeaf } from "../../../features/workbench/model/split-pane";
+import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
 import {
   closeAllTabs,
   closeOtherTabs,
@@ -48,7 +48,7 @@ vi.mock("../../../features/files/commands/fileCommands", () => ({
   resolveChatFilePath: rpcMocks.resolveChatFilePath,
 }));
 
-vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
 

@@ -1,5 +1,5 @@
 import { closeTerminalSession } from "@renderer/features/terminal/commands/terminalCommands";
-import { tabStore } from "@renderer/store/tabStore";
+import { tabStore } from "@renderer/features/workbench/state/tabStore";
 
 /** Closes all open terminal sessions and tabs before a daemon restart. */
 export async function closeTerminalTabsForDaemonRestart() {

@@ -17,7 +17,7 @@ import { MONO_FONT_FAMILY } from "../helpers/codeThemes";
 import { findDiffMatches } from "../helpers/diffSearch";
 import { getDiffCssVariablesForPalette } from "../helpers/diffTheme";
 import { useCodeTheme } from "../hooks/useCodeTheme";
-import { editorSettingsStore } from "../store/settings/editorSettingsStore";
+import { editorSettingsStore } from "../features/settings/state/editorSettingsStore";
 import { DiffSearchPanel } from "./DiffSearchPanel";
 
 type FileDiffViewerProps = {

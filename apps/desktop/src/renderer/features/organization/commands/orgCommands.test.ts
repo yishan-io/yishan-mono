@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../../../features/session/model/sessionStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { sessionStore } from "../../../features/session/state/sessionStore";
+import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { switchOrganization } from "./orgCommands";
 
 const rpcMocks = vi.hoisted(() => ({

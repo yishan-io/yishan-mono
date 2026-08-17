@@ -6,10 +6,10 @@ import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
 } from "../../../helpers/terminalCloseTombstones";
-import { chatStore } from "../../../store/chatStore";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
-import { workspaceStore } from "../../../store/workspaceStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 
 import { createNotificationEventHandlers } from "../../notification/events/notificationEventHandlers";
 import { clearTerminalAgentStatus } from "./agentSessionLifecycle";

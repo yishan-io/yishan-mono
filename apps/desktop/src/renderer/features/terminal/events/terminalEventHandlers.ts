@@ -10,7 +10,7 @@ import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpc
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../store/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
 import { clearTerminalAgentStatus } from "../../agent/commands/agentSessionLifecycle";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 

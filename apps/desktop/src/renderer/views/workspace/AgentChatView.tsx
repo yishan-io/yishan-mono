@@ -5,7 +5,7 @@ import { respondToAgentExtensionUiRequest } from "../../features/agent/commands/
 import { setAgentChatStreamTabVisible } from "../../features/agent/events/agentChatPiEventShared";
 import { agentChatStore } from "../../features/agent/model/agentChatStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { tabStore } from "../../store/tabStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
 import type { AgentChatSessionView } from "../../store/types";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";

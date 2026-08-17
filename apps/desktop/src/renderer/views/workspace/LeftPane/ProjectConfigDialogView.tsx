@@ -1,8 +1,8 @@
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
-import { projectStore } from "@renderer/features/project/model/projectStore";
+import { projectStore } from "@renderer/features/project/state/projectStore";
 import { useAppCommands } from "@renderer/hooks/useCommands";
 import { useDialogRegistration } from "@renderer/hooks/useDialogRegistration";
-import { workspaceStore } from "@renderer/store/workspaceStore";
+import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ProjectConfigCommandsSection } from "./projectConfigDialog/ProjectConfigCommandsSection";

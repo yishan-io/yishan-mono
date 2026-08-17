@@ -4,12 +4,12 @@ import { useTranslation } from "react-i18next";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
-import { projectStore } from "../../features/project/model/projectStore";
+import { projectStore } from "../../features/project/state/projectStore";
 import { MONOSPACE_SX } from "../../helpers/styles";
 import { useTerminalCommands } from "../../hooks/useCommands";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../rpc/daemonTypes";
-import { tabStore } from "../../store/tabStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { tabStore } from "../../features/workbench/state/tabStore";
+import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 
 /** Builds one stable map key for in-flight close action tracking. */
 function buildSessionActionKey(sessionId: string): string {

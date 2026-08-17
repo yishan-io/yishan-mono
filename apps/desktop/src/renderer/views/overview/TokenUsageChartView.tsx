@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { OverviewTimeRange } from "../../features/overview/commands/overviewCommands";
 import { formatTokens } from "../../helpers/formatters";
-import { overviewStore } from "../../features/overview/model/overviewStore";
+import { overviewStore } from "../../features/overview/state/overviewStore";
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
