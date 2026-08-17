@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { THINKING_LEVEL_LABELS } from "../../../components/agent/session/ThinkingLevelControl";
 import { AgentMessageList } from "../../../components/agent/transcript/AgentMessageList";
 import { openSubagentSessionInRightSplitPane } from "../../../features/agent/commands/agentChatSubagentCommands";
-import { agentChatStore } from "../../../features/agent/model/agentChatStore";
 import type { AgentMessage, AgentModel, AgentQueueState } from "../../../features/agent/model/agentChatTypes";
+import { useAgentChatSession, useAgentChatSessions } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { formatSupportedThinkingLevels } from "../../../helpers/agentThinkingLevels";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
@@ -76,26 +76,25 @@ function AgentChatTranscriptPane({
   emptyHelpPrefix,
 }: AgentChatTranscriptPaneProps) {
   const { t } = useTranslation();
-  const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
-  const trailingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
-  const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
-  const compactionReason = agentChatStore((state) => state.sessionsByTabId[tabId]?.compactionReason ?? null);
-  const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId);
-  const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
-  const parentModel = agentChatStore((state) => {
+  const session = useAgentChatSession(tabId);
+  const sessions = useAgentChatSessions();
+  const messages = session?.messages ?? EMPTY_MESSAGES;
+  const trailingMessage = session?.streamingMessage ?? null;
+  const sessionState = session?.state ?? "starting";
+  const compactionReason = session?.compactionReason ?? null;
+  const sessionId = session?.sessionId;
+  const currentModel = session?.currentModel ?? null;
+  const parentModel = (() => {
     if (!parentSessionId) {
       return null;
     }
 
-    return (
-      Object.values(state.sessionsByTabId).find((session) => session.sessionId === parentSessionId)?.currentModel ??
-      null
-    );
-  });
-  const queue = agentChatStore((state) => state.sessionsByTabId[tabId]?.queue ?? EMPTY_QUEUE);
-  const isTurnActive = agentChatStore((state) => state.sessionsByTabId[tabId]?.isTurnActive ?? false);
+    return Object.values(sessions).find((candidate) => candidate.sessionId === parentSessionId)?.currentModel ?? null;
+  })();
+  const queue = session?.queue ?? EMPTY_QUEUE;
+  const isTurnActive = session?.isTurnActive ?? false;
   const footerModel = currentModel ?? parentModel;
-  const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? null);
+  const thinkingLevel = session?.thinkingLevel ?? null;
   const latestUsage = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const usage = messages[index]?.usage;

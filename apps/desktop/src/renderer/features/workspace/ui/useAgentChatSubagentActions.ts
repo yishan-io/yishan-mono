@@ -4,11 +4,12 @@ import {
   cancelSubagentRun,
   openSubagentSessionInRightSplitPane,
 } from "../../../features/agent/commands/agentChatSubagentCommands";
-import { agentChatStore } from "../../../features/agent/model/agentChatStore";
 import {
   type RunningSubagentSummary,
   findMatchingRunningSubagent,
 } from "../../../features/agent/model/agentChatSubagents";
+import { selectAgentChatSession } from "../../../features/agent/state/agentChatSelectors";
+import { useAgentChatSubagentState } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 
 type UseAgentChatSubagentActionsOptions = {
   tabId: string;
@@ -26,10 +27,7 @@ export function useAgentChatSubagentActions({
   paneId,
   sessionId,
 }: UseAgentChatSubagentActionsOptions) {
-  const runningSubagents = agentChatStore((state) => state.sessionsByTabId[tabId]?.runningSubagents ?? []);
-  const subagentProgressTargets = agentChatStore(
-    (state) => state.sessionsByTabId[tabId]?.subagentProgressTargets ?? [],
-  );
+  const { runningSubagents, subagentProgressTargets, subagentCancelStates } = useAgentChatSubagentState(tabId);
   const handleOpenSubagent = useCallback(
     async (subagent: RunningSubagentSummary) => {
       console.debug("[AgentChatView] subagent open requested", {
@@ -43,7 +41,7 @@ export function useAgentChatSubagentActions({
       let title = subagent.title;
       if (!childSessionId && sessionId) {
         await fetchAgentMessages({ tabId, sessionId });
-        const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
+        const refreshedRunningSubagents = selectAgentChatSession(tabId)?.runningSubagents ?? [];
         const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
         childSessionId = refreshedSubagent?.childSessionId;
         title = refreshedSubagent?.title ?? title;
@@ -123,7 +121,7 @@ export function useAgentChatSubagentActions({
     },
     [sessionId, subagentProgressTargets, tabId],
   );
-  const subagentCancelStates = agentChatStore((state) => state.sessionsByTabId[tabId]?.subagentCancelStates ?? {});
+
   return {
     runningSubagents,
     subagentProgressTargets,

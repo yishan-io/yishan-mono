@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "../../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../../components/WorkspaceTree/types";
-import { chatStore } from "../../../../features/agent/state/chatStore";
+import {
+  useWorkspaceAgentStatusByWorkspaceId,
+  useWorkspaceUnreadToneByWorkspaceId,
+} from "../../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
 import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import { sessionStore } from "../../../../features/session/state/sessionStore";
@@ -61,8 +64,8 @@ export function useProjectListTreeData(input: {
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const displayProjectIds = useDisplayProjectIds();
   const gitChangeTotalsByWorkspaceId = workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
-  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
+  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({

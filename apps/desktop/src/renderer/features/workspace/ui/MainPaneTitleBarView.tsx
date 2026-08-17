@@ -7,7 +7,10 @@ import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../../components/projectIcons";
-import { chatStore } from "../../../features/agent/state/chatStore";
+import {
+  useWorkspaceAgentStatusByWorkspaceId,
+  useWorkspaceUnreadToneByWorkspaceId,
+} from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { useDisplayProjectIds, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
@@ -39,8 +42,8 @@ export function MainPaneTitleBarView() {
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
-  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
+  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
   const { setSelectedRepoId, setSelectedWorkspaceId } = useWorkspaceCommands();
   const { openTab } = useWorkbenchCommands();
   const { updateProjectConfig } = useProjectCommands();

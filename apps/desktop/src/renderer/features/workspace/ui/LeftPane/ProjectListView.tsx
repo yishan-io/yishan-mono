@@ -16,7 +16,8 @@ import { ContextMenu, type ContextMenuEntry } from "../../../../components/Conte
 import { WorkspaceTree } from "../../../../components/WorkspaceTree";
 import type { WorkspaceTreeWorkspace } from "../../../../components/WorkspaceTree";
 import type { WorkspaceTreeRow } from "../../../../components/WorkspaceTree/types";
-import { chatStore } from "../../../../features/agent/state/chatStore";
+import { markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead } from "../../../../features/agent/state/chatActions";
+import { useWorkspaceUnreadToneByWorkspaceId } from "../../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { useDetectedExternalAppIds } from "../../../../features/files/ui/hooks/useDetectedExternalAppIds";
 import { useLastUsedExternalAppId, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import { subscribeOpenCreateWorkspaceDialog } from "../../../../features/workspace/commands/workspaceCommands";
@@ -55,8 +56,8 @@ export function ProjectListView() {
   } = useWorkspaceCommands();
   const { deleteProject } = useProjectCommands();
   const { openEntryInExternalApp } = useFileCommands();
-  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
-  const markWorkspaceNotificationsRead = chatStore((state) => state.markWorkspaceNotificationsRead);
+  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
+  const markWorkspaceNotificationsRead = applyMarkWorkspaceNotificationsRead;
   const {
     menu: projectContextMenu,
     openMenu: openProjectContextMenu,

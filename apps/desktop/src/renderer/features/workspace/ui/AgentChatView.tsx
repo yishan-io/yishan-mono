@@ -1,9 +1,14 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { setAgentChatStreamTabVisible } from "../../../features/agent";
 import { respondToAgentExtensionUiRequest } from "../../../features/agent/commands/agentChatCommands";
-import { setAgentChatStreamTabVisible } from "../../../features/agent/events/agentChatPiEventShared";
-import { agentChatStore } from "../../../features/agent/model/agentChatStore";
+import {
+  clearPendingUiAutoResponse,
+  setPendingUiAutoResponse,
+  setTurnError,
+} from "../../../features/agent/state/chatActions";
+import { useAgentChatSession } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import type { AgentChatSessionView } from "../../../features/workbench/model/types";
 import { useTabById } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
@@ -36,19 +41,18 @@ function AgentChatViewComponent({
   const isReadOnlySubagentDetail = sessionView === "subagent-detail";
   const foundTab = useTabById(tabId);
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
-  const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
-  const sessionState = agentChatStore(
-    (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),
-  );
-  const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
-  const hasLoadedMessages = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedMessages ?? false);
-  const hasLoadedModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedModels ?? false);
-  const hasLoadedState = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedState ?? false);
-  const error = agentChatStore((state) => state.sessionsByTabId[tabId]?.error ?? null);
-  const turnError = agentChatStore((state) => state.sessionsByTabId[tabId]?.turnError ?? null);
-  const pendingUiRequest = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiRequest ?? null);
-  const pendingUiAutoResponse = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiAutoResponse ?? null);
-  const liveSessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
+  const session = useAgentChatSession(tabId);
+  const hasSession = Boolean(session);
+  const sessionState = session?.state ?? (hasSession ? "idle" : "starting");
+  const messageCount = session?.messages.length ?? 0;
+  const hasLoadedMessages = session?.hasLoadedMessages ?? false;
+  const hasLoadedModels = session?.hasLoadedModels ?? false;
+  const hasLoadedState = session?.hasLoadedState ?? false;
+  const error = session?.error ?? null;
+  const turnError = session?.turnError ?? null;
+  const pendingUiRequest = session?.pendingUiRequest ?? null;
+  const pendingUiAutoResponse = session?.pendingUiAutoResponse ?? null;
+  const liveSessionId = session?.sessionId ?? null;
   const subagentParentSessionId =
     agentChatTab?.data.sessionView === "subagent-detail" ? agentChatTab.data.subagentParentSessionId : undefined;
   const isInitialHistoryLoadPending =
@@ -77,7 +81,7 @@ function AgentChatViewComponent({
       return;
     }
 
-    agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+    clearPendingUiAutoResponse(tabId);
 
     await respondToAgentExtensionUiRequest({
       tabId,
@@ -110,7 +114,7 @@ function AgentChatViewComponent({
         return;
       }
 
-      agentChatStore.getState().setPendingUiAutoResponse(tabId, {
+      setPendingUiAutoResponse(tabId, {
         sourceRequestId: pendingUiRequest.id,
         targetMethod: "input",
         value,
@@ -136,7 +140,7 @@ function AgentChatViewComponent({
     }
 
     if (pendingUiRequest.method !== pendingUiAutoResponse.targetMethod) {
-      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      clearPendingUiAutoResponse(tabId);
       return;
     }
 
@@ -148,10 +152,10 @@ function AgentChatViewComponent({
           requestId: pendingUiRequest.id,
           value: pendingUiAutoResponse.value,
         });
-        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+        clearPendingUiAutoResponse(tabId);
       } catch (error) {
-        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
-        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+        clearPendingUiAutoResponse(tabId);
+        setTurnError(tabId, getErrorMessage(error));
       }
     })();
   }, [liveSessionId, pendingUiAutoResponse, pendingUiRequest, tabId]);

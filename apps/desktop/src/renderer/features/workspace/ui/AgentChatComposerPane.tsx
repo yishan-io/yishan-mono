@@ -13,10 +13,11 @@ import {
   consumeAgentChatComposerFocus,
   getAgentChatComposerFocusRequest,
 } from "../../../events/agentChatComposerFocus";
+import { setAgentModel, setAgentThinkingLevel } from "../../../features/agent";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../features/agent/commands/agentChatCommands";
-import { setAgentModel, setAgentThinkingLevel } from "../../../features/agent/events/agentChatPiEventShared";
-import { agentChatStore } from "../../../features/agent/model/agentChatStore";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../features/agent/model/agentChatTypes";
+import { setTurnError } from "../../../features/agent/state/chatActions";
+import { useAgentChatSessionMeta } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { searchFiles } from "../../../features/files/commands/fileCommands";
 import { keybindingSettingsStore } from "../../../features/settings/state/keybindingSettingsStore";
 import { ProviderCredentialDialog } from "../../../features/settings/ui/ProviderCredentialDialog";
@@ -27,13 +28,10 @@ import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../../shortcuts/keybindings";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
-import { getCompactContextPercent } from "./agentChatUsageSummary";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";
 
-const EMPTY_MODELS: AgentModel[] = [];
-const EMPTY_MESSAGES: AgentMessage[] = [];
 const MAX_FILE_MENTION_RESULTS = 50;
 
 type AgentChatComposerPaneProps = {
@@ -57,17 +55,20 @@ function AgentChatComposerPaneComponent({
   const slashCommands = useAgentChatSlashCommands();
   const foundTab = useTabById(tabId);
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
-  const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
+  const {
+    sessionId,
+    sessionState,
+    subagentSessionEndedAtMs,
+    compactionReason,
+    availableModels,
+    currentModel,
+    thinkingLevel,
+    messageCount,
+    hasStreamingMessage,
+    contextPercent,
+  } = useAgentChatSessionMeta(tabId);
   const { runningSubagents, subagentProgressTargets, subagentCancelStates, handleOpenSubagent, handleCancelSubagent } =
     useAgentChatSubagentActions({ tabId, workspaceId, cwd, paneId, sessionId });
-  const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
-  const subagentSessionEndedAtMs = agentChatStore(
-    (state) => state.sessionsByTabId[tabId]?.subagentSessionEndedAtMs ?? null,
-  );
-  const compactionReason = agentChatStore((state) => state.sessionsByTabId[tabId]?.compactionReason ?? null);
-  const availableModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.availableModels ?? EMPTY_MODELS);
-  const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
-  const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? "medium");
   const shortcutOverrides = keybindingSettingsStore((state) => state.overridesById);
   const focusShortcutHint = useMemo(() => {
     const focusShortcutBinding = getSupportedKeyBindings(shortcutOverrides).find(
@@ -78,19 +79,6 @@ function AgentChatComposerPaneComponent({
     const shortcutLabel = shortcutKeys?.join(" + ");
     return shortcutLabel ? t("agentChat.composer.focusShortcut", { shortcut: shortcutLabel }) : undefined;
   }, [shortcutOverrides, t]);
-  const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
-  const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
-  // Primitive selector: falls back to the committed-messages estimate when the stats
-  // snapshot is absent (e.g. mid-turn or after a failed refresh), so the compact
-  // button keeps a usable threshold at idle without re-rendering on stream deltas.
-  const contextPercent = agentChatStore((state) => {
-    const session = state.sessionsByTabId[tabId];
-    return getCompactContextPercent(
-      session?.messages ?? EMPTY_MESSAGES,
-      session?.currentModel ?? null,
-      session?.sessionStats ?? null,
-    );
-  });
   const isSessionBusy = isAgentSessionBusy(sessionState);
   const canManuallyCompact = contextPercent >= 50;
   const [draft, setDraft] = useState("");
@@ -164,7 +152,7 @@ function AgentChatComposerPaneComponent({
       try {
         await sendAgentPrompt({ tabId, sessionId, message: finalMessage });
       } catch (error) {
-        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+        setTurnError(tabId, getErrorMessage(error));
         return false;
       }
       setAttachments([]);
@@ -219,7 +207,7 @@ function AgentChatComposerPaneComponent({
     try {
       await abortAgent({ tabId, sessionId });
     } catch (error) {
-      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+      setTurnError(tabId, getErrorMessage(error));
     }
   }, [sessionId, tabId]);
 
@@ -230,7 +218,7 @@ function AgentChatComposerPaneComponent({
     try {
       await compactAgent({ sessionId });
     } catch (error) {
-      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+      setTurnError(tabId, getErrorMessage(error));
       setIsManualCompactPending(false);
     }
   }, [isManualCompactPending, sessionId, tabId]);
@@ -263,7 +251,7 @@ function AgentChatComposerPaneComponent({
       try {
         await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
       } catch (error) {
-        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+        setTurnError(tabId, getErrorMessage(error));
       }
     },
     [sessionId, tabId],
@@ -284,7 +272,7 @@ function AgentChatComposerPaneComponent({
       try {
         await setAgentThinkingLevel({ tabId, sessionId, level });
       } catch (error) {
-        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+        setTurnError(tabId, getErrorMessage(error));
       }
     },
     [sessionId, tabId],

@@ -19,3 +19,10 @@ export type {
   AgentThinkingSignatureSummary,
 } from "./model/agentChatTypes";
 export { isAgentSessionBusy } from "./model/agentChatTypes";
+// Agent event-pipeline entry points required by cross-feature composition.
+// Re-exported through the public API instead of the events module (Phase 17).
+export {
+  setAgentChatStreamTabVisible,
+  setAgentModel,
+  setAgentThinkingLevel,
+} from "./events/agentChatPiEventShared";

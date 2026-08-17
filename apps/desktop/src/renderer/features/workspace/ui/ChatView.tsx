@@ -1,15 +1,19 @@
 import { Autocomplete, Box, TextField, Typography, createFilterOptions } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAgentCommands } from "../../../app/commands/useCommands";
 import { MessageList } from "../../../components/MessageList";
 import { RichComposer } from "../../../components/RichComposer";
 import { subscribeWorkspaceChatEvent } from "../../../events";
+import {
+  useChatAvailableModelsByTabId,
+  useChatCurrentModelByTabId,
+  useChatMessagesByTabId,
+} from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
+import type { AvailableModel, ChatMessage } from "../../../features/workspace/state/workspaceStore";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
-import { useAgentCommands } from "../../../app/commands/useCommands";
-import { chatStore } from "../../../features/agent/state/chatStore";
-import type { AvailableModel, ChatMessage } from "../../../features/workspace/state/workspaceStore";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({
@@ -65,10 +69,10 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
     setChatCurrentModel,
     updateChatMessage,
   } = useAgentCommands();
-  const messagesByTabId = chatStore((state) => state.messagesByTabId);
+  const messagesByTabId = useChatMessagesByTabId();
   const messages = messagesByTabId[tabId] ?? EMPTY_MESSAGES;
-  const availableModelsByTabId = chatStore((state) => state.availableModelsByTabId);
-  const currentModelByTabId = chatStore((state) => state.currentModelByTabId);
+  const availableModelsByTabId = useChatAvailableModelsByTabId();
+  const currentModelByTabId = useChatCurrentModelByTabId();
   const [isSending, setIsSending] = useState(false);
   const [resolvedSessionId, setResolvedSessionId] = useState(sessionId);
   const activeAssistantMessageIdRef = useRef<string | null>(null);
