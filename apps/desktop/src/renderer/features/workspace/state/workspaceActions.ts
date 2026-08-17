@@ -1,7 +1,6 @@
 import { workspaceProjectionStore } from "./workspaceProjectionStore";
 import { workspaceStore } from "./workspaceStore";
 import type { WorkspaceStoreState } from "./workspaceStoreTypes";
-import { workspaceUiStore } from "./workspaceUiStore";
 
 /**
  * Workspace feature state actions — the public state-change surface for
@@ -31,16 +30,6 @@ export function updateProjectConfig(projectId: string, config: UpdateProjectConf
   workspaceStore.getState().updateProjectConfig(projectId, config);
 }
 
-/** Selects one entry path in the file tree. */
-export function setSelectedEntryPath(path: string): void {
-  workspaceUiStore.getState().setSelectedEntryPath(path);
-}
-
-/** Sets the expanded file-tree items for one workspace. */
-export function setExpandedFileTreeItems(workspaceId: string, paths: string[]): void {
-  workspaceUiStore.getState().setExpandedFileTreeItems(workspaceId, paths);
-}
-
 /** Stores one workspace pull request in the projection store. */
 export function setWorkspacePullRequest(
   workspaceId: string,
@@ -52,11 +41,6 @@ export function setWorkspacePullRequest(
 /** Reorders the workspace display ids. */
 export function setOrderedWorkspaceIds(workspaceIds: string[]): void {
   workspaceStore.getState().setOrderedWorkspaceIds(workspaceIds);
-}
-
-/** Bumps the file-tree refresh version for one workspace. */
-export function incrementFileTreeRefreshVersion(workspaceWorktreePath?: string, changedRelativePaths?: string[]): void {
-  workspaceUiStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
 }
 
 // Workspace lifecycle notices are display-state: cross-feature code enqueues

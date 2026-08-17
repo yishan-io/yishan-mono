@@ -1,3 +1,4 @@
+import { fileTreeStore, setExpandedFileTreeItems, setSelectedEntryPath } from "@renderer/features/files";
 import { useFileSearchController } from "@renderer/features/files";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { useCallback, useState } from "react";
@@ -7,7 +8,6 @@ import { buildWorkspaceFileUrl, readFile } from "../../../features/files/command
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../../../features/files/ui/fileTreeHelpers";
 import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import {
   isAudioFile,
   isExcalidrawFile,
@@ -25,13 +25,11 @@ export function FileSearchOverlay() {
         ?.worktreePath?.trim() ?? "",
   );
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
-  const openFileSearchRequestKey = workspaceUiStore((state) => state.fileSearchRequestKey);
-  const setSelectedEntryPath = workspaceUiStore((state) => state.setSelectedEntryPath);
-  const expandedItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
-  const setExpandedFileTreeItems = workspaceUiStore((state) => state.setExpandedFileTreeItems);
+  const openFileSearchRequestKey = fileTreeStore((state) => state.fileSearchRequestKey);
+  const expandedItemsByWorkspaceId = fileTreeStore((state) => state.expandedFileTreeItemsByWorkspaceId);
 
   const [lastHandledFileSearchRequestKey, setLastHandledFileSearchRequestKey] = useState(
-    () => workspaceUiStore.getState().fileSearchRequestKey,
+    () => fileTreeStore.getState().fileSearchRequestKey,
   );
 
   const openSearchResult = useCallback(
@@ -142,13 +140,7 @@ export function FileSearchOverlay() {
         console.error("Failed to open workspace file via quick-open", error);
       }
     },
-    [
-      selectedWorkspaceId,
-      selectedWorkspaceWorktreePath,
-      expandedItemsByWorkspaceId,
-      setExpandedFileTreeItems,
-      setSelectedEntryPath,
-    ],
+    [selectedWorkspaceId, selectedWorkspaceWorktreePath, expandedItemsByWorkspaceId],
   );
 
   const {

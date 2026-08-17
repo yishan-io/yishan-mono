@@ -34,7 +34,6 @@ import { tabStore } from "../../features/workbench/state/tabStore";
 import { resolveWorkspaceProjectId } from "../../features/workspace/model/workspaceTypes";
 import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../features/workspace/state/workspaceUiStore";
 import { LeftPaneView } from "../../features/workspace/ui/LeftPane/LeftPaneView";
 import { MainPaneView } from "../../features/workspace/ui/MainPaneView";
 import { OnboardingView } from "../../features/workspace/ui/OnboardingView";

@@ -1,3 +1,4 @@
+import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
@@ -12,7 +13,6 @@ import {
   addWorkspace as applyAddWorkspace,
   deleteProject as applyDeleteProject,
   updateProjectConfig as applyUpdateProjectConfig,
-  incrementFileTreeRefreshVersion,
 } from "../../../features/workspace/state/workspaceActions";
 import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 import { getErrorMessage } from "../../../helpers/errorHelpers";

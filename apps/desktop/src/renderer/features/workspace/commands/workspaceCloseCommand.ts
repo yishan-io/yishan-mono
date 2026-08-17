@@ -1,10 +1,11 @@
+import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
+import { removeRightPaneStateForWorkspace } from "../../../features/workbench/commands/tabCommands";
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
+import type { WorkspaceLifecycleScriptWarning } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { selectProjectById } from "../../project/state/projectSelectors";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
@@ -12,7 +13,7 @@ import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 type CloseWorkspaceResponse = {
   workspace: { id: string; status: string };
   workspaceId: string;
-  lifecycleScriptWarnings: import("../../../features/workspace/state/workspaceLifecycleNoticeStore").WorkspaceLifecycleScriptWarning[];
+  lifecycleScriptWarnings: WorkspaceLifecycleScriptWarning[];
   terminalCleanupErrors?: string[];
 };
 
@@ -81,10 +82,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   // path). Route the selected-folder close (Cmd+W or menu) through the delete
   // path so the folder + its tabs are removed cleanly.
   if (isFolderWorkspace(workspace)) {
-    workspaceUiStore.setState((state) => {
-      delete state.rightPaneTabByWorkspaceId[workspaceId];
-      delete state.isRightPaneHiddenByWorkspaceId[workspaceId];
-    });
+    removeRightPaneStateForWorkspace(workspaceId);
     void deleteLocalFolder(workspaceId).catch((error) => {
       console.error("Failed to delete local folder workspace", error);
       notifyWorkspaceCloseFailure({
@@ -103,19 +101,15 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
     workspaceId,
   });
 
-  // Cleanup per-workspace UI signals to avoid accumulating stale entries.
-  workspaceUiStore.setState((state) => {
-    delete state.rightPaneTabByWorkspaceId[workspaceId];
-    delete state.isRightPaneHiddenByWorkspaceId[workspaceId];
-  });
+  // Cleanup per-workspace right-pane signals to avoid accumulating stale entries.
+  removeRightPaneStateForWorkspace(workspaceId);
 
   syncTabStoreWithWorkspace(previousWorkspaces);
 
   void removeWorkspaceInBackground({
     workspaceId,
     workspaceName: workspace.name,
-    organizationId:
-      workspace.organizationId?.trim() || selectSelectedOrganizationId()?.trim() || undefined,
+    organizationId: workspace.organizationId?.trim() || selectSelectedOrganizationId()?.trim() || undefined,
     projectId,
     branch: workspace.branch,
     removeBranch: options?.removeBranch,

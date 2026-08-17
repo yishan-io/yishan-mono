@@ -1,12 +1,12 @@
 import { Box } from "@mui/material";
+import { ChangesTabView } from "@renderer/features/git";
+import { PullRequestTabView } from "@renderer/features/git";
+import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/features/workbench";
 import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
 import { FileManagerView } from "../../../../features/files/ui/FileManagerView";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
-import { ChangesTabView } from "@renderer/features/git";
-import { PullRequestTabView } from "@renderer/features/git";
 
 export type RightPaneViewProps = {
   onToggleRightPane?: () => void;
@@ -20,7 +20,7 @@ export type RightPaneViewProps = {
  */
 export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPaneViewProps = {}) {
   const { selectedWorkspaceId, selectedWorkspace, selectedProject } = useSelectedWorkspaceWithProject();
-  const activeRightPaneTab = workspaceUiStore(
+  const activeRightPaneTab = layoutStore(
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );
 

@@ -1,9 +1,9 @@
+import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { activateWorkspace } from "../../../features/workbench/commands/navigationCommands";
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
@@ -42,7 +42,7 @@ export async function createLocalFolderImport(input: { path: string; name: strin
   await openWorkspaceEntries(openEntries);
   // Refresh only the file tree (folders have no git changes to refresh).
   for (const entry of openEntries) {
-    workspaceUiStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
+    incrementFileTreeRefreshVersion(entry.worktreePath, []);
   }
 
   // The folder row is already in the store; activate it through the Workbench

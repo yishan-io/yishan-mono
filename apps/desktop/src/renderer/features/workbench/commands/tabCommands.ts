@@ -11,7 +11,7 @@ import {
   splitRootPane,
 } from "../../../features/workbench/model/split-pane";
 import type { OpenWorkspaceTabInput } from "../../../features/workbench/model/types";
-import { layoutStore } from "../../../features/workbench/state/layoutStore";
+import { type WorkspaceRightPaneTab, layoutStore } from "../../../features/workbench/state/layoutStore";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
@@ -551,4 +551,19 @@ export function resizeRightPane(width: number): void {
 /** Sets the manual visibility state of the left workspace pane. */
 export function setLeftPaneHidden(hidden: boolean): void {
   layoutStore.getState().setIsLeftPaneManuallyHidden(hidden);
+}
+
+/** Sets the selected right-pane tab for one workspace. */
+export function setRightPaneTab(workspaceId: string, tab: WorkspaceRightPaneTab): void {
+  layoutStore.getState().setRightPaneTab(workspaceId, tab);
+}
+
+/** Sets the manual visibility state of the right pane for one workspace. */
+export function setIsRightPaneHidden(workspaceId: string, hidden: boolean): void {
+  layoutStore.getState().setIsRightPaneHidden(workspaceId, hidden);
+}
+
+/** Removes per-workspace right-pane state when a workspace closes. */
+export function removeRightPaneStateForWorkspace(workspaceId: string): void {
+  layoutStore.getState().removeRightPaneStateForWorkspace(workspaceId);
 }

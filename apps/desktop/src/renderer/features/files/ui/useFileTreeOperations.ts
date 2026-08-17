@@ -1,12 +1,10 @@
 import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/app/commands/useCommands";
 import { listFiles, listFilesBatch } from "@renderer/features/files/commands/fileCommands";
+import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 
 import { useWorkspaceTabs } from "@renderer/features/workbench/ui/hooks/useWorkbenchTabs";
 import {
-  useChangedRelativePathsForSelectedWorkspace,
-  useExpandedFileTreeItemsByWorkspaceId,
-  useFileTreeRefreshVersion,
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
   useWorkspaces,
@@ -229,11 +227,15 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
 
   const selectedWorkspaceId = useSelectedWorkspaceId();
   const workspaces = useWorkspaces();
-  const expandedFileTreeItemsByWorkspaceId = useExpandedFileTreeItemsByWorkspaceId();
+  const expandedFileTreeItemsByWorkspaceId = fileTreeStore((state) => state.expandedFileTreeItemsByWorkspaceId);
   const selectedWorkspaceWorktreePath = useSelectedWorkspaceWorktreePath();
-  const changedRelativePathsForSelectedWorkspace =
-    useChangedRelativePathsForSelectedWorkspace(selectedWorkspaceWorktreePath);
-  const fileTreeRefreshVersion = useFileTreeRefreshVersion();
+  const changedRelativePathsForSelectedWorkspace = fileTreeStore((state) =>
+    selectedWorkspaceWorktreePath
+      ? (state.fileTreeChangedRelativePathsByWorktreePath?.[selectedWorkspaceWorktreePath] ??
+        EMPTY_CHANGED_RELATIVE_PATHS)
+      : EMPTY_CHANGED_RELATIVE_PATHS,
+  );
+  const fileTreeRefreshVersion = fileTreeStore((state) => state.fileTreeRefreshVersion);
   const { openTab, closeTab, renameTabsForEntryRename } = useWorkbenchCommands();
   const { setLastUsedExternalAppId } = useWorkspaceCommands();
   const tabs = useWorkspaceTabs();

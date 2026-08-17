@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
+import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
 import { projectStore } from "@renderer/features/project/state/projectStore";
 import { workspaceProjectionStore } from "@renderer/features/workspace/state/workspaceProjectionStore";
-import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";
@@ -382,7 +382,7 @@ describe("FileManagerView external file tree refresh", () => {
     // fileLoading describes ran first and left this exact store state. Reproduce
     // it so the mount fires exactly one load (the refresh tests then drive
     // additional loads via version increments).
-    workspaceUiStore.setState({
+    fileTreeStore.setState({
       fileTreeRefreshVersion: 7,
       fileTreeChangedRelativePathsByWorktreePath: { "/tmp/repo": ["src/foo.ts"] },
       expandedFileTreeItemsByWorkspaceId: {},
@@ -528,7 +528,7 @@ describe("FileManagerView external file tree refresh", () => {
       expect(mocks.listFiles).toHaveBeenCalledTimes(1);
     });
 
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
     expect(screen.getByTestId("repo-file-tree").textContent).toBe("1");
 
@@ -553,14 +553,14 @@ describe("FileManagerView external file tree refresh", () => {
       expect(mocks.listFiles).toHaveBeenCalledTimes(1);
     });
 
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {
       expect(mocks.listFiles).toHaveBeenCalledTimes(2);
     });
 
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {

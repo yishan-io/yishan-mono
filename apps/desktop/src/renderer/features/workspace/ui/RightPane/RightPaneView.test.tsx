@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
+import { fileTreeStore } from "@renderer/features/files";
+import { layoutStore } from "@renderer/features/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { RightPaneView } from "./RightPaneView";
 
 const listFiles = vi.fn();
@@ -33,6 +34,25 @@ const changesUnmountTracker = vi.fn();
 const prTabState = {
   pullRequest: undefined as unknown,
   isLoading: false,
+};
+
+const layoutStoreState: { current: Record<string, unknown> } = {
+  current: {
+    rightPaneTabByWorkspaceId: {},
+    isRightPaneHiddenByWorkspaceId: {},
+    setRightPaneTab: (workspaceId: string, tab: string) => {
+      layoutStoreState.current.rightPaneTabByWorkspaceId = {
+        ...(layoutStoreState.current.rightPaneTabByWorkspaceId as Record<string, string>),
+        [workspaceId]: tab,
+      };
+    },
+    setIsRightPaneHidden: (workspaceId: string, hidden: boolean) => {
+      layoutStoreState.current.isRightPaneHiddenByWorkspaceId = {
+        ...(layoutStoreState.current.isRightPaneHiddenByWorkspaceId as Record<string, boolean>),
+        [workspaceId]: hidden,
+      };
+    },
+  },
 };
 
 const navStoreState: { current: { activeProjectId: string; activeWorkspaceId: string } } = {
@@ -197,7 +217,16 @@ vi.mock("@renderer/features/workbench", () => {
     ),
     { getState: () => navStoreState.current },
   );
-  return { workbenchNavigationStore: navStore };
+  return {
+    workbenchNavigationStore: navStore,
+    layoutStore: Object.assign(
+      (selector: (state: Record<string, unknown>) => unknown) => selector(layoutStoreState.current),
+      {
+        getState: () => layoutStoreState.current,
+        setState: (partial: Record<string, unknown>) => Object.assign(layoutStoreState.current, partial),
+      },
+    ),
+  };
 });
 
 vi.mock("../../../../features/project/state/projectStore", () => ({
@@ -276,11 +305,11 @@ describe("RightPaneView delete flow", () => {
     changesUnmountTracker.mockReset();
     prTabState.pullRequest = undefined;
     prTabState.isLoading = false;
-    workspaceUiStore.setState({
+    layoutStore.setState({
       rightPaneTabByWorkspaceId: { "workspace-1": "files" },
       isRightPaneHiddenByWorkspaceId: {},
-      fileSearchRequestKey: 0,
     });
+    fileTreeStore.setState({ fileSearchRequestKey: 0 });
   });
 
   afterEach(() => {
@@ -497,25 +526,25 @@ describe("RightPaneView delete flow", () => {
   it("renders PR content when PR pane is active", async () => {
     render(<RightPaneView />);
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "pr");
+    layoutStore.getState().setRightPaneTab("workspace-1", "pr");
     expect(await screen.findByTestId("mock-pr-tab")).toBeTruthy();
   });
 
   it("activates the PR pane from store state", async () => {
     render(<RightPaneView />);
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "pr");
+    layoutStore.getState().setRightPaneTab("workspace-1", "pr");
     expect(screen.getByTestId("mock-pr-tab")).toBeTruthy();
   });
 
   it("opens quick-open search when file-search request key increments without switching tabs", async () => {
     render(<RightPaneView />);
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
+    layoutStore.getState().setRightPaneTab("workspace-1", "changes");
     expect(await screen.findByTestId("mock-changes-tab")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Search files..." })).toBeNull();
 
-    workspaceUiStore.getState().requestFileSearch();
+    fileTreeStore.getState().requestFileSearch();
 
     expect(screen.queryByRole("textbox", { name: "Search files..." })).toBeNull();
     expect(screen.getByTestId("mock-changes-tab")).toBeTruthy();
@@ -524,19 +553,19 @@ describe("RightPaneView delete flow", () => {
   it("activates files pane from store state", async () => {
     render(<RightPaneView />);
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
+    layoutStore.getState().setRightPaneTab("workspace-1", "changes");
     expect(await screen.findByTestId("mock-changes-tab")).toBeTruthy();
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "files");
+    layoutStore.getState().setRightPaneTab("workspace-1", "files");
     await waitFor(() => {
-      expect(workspaceUiStore.getState().rightPaneTabByWorkspaceId["workspace-1"]).toBe("files");
+      expect(layoutStore.getState().rightPaneTabByWorkspaceId["workspace-1"]).toBe("files");
     });
   });
 
   it("activates changes pane from store state", async () => {
     render(<RightPaneView />);
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
+    layoutStore.getState().setRightPaneTab("workspace-1", "changes");
     expect(await screen.findByTestId("mock-changes-tab")).toBeTruthy();
   });
 
@@ -548,7 +577,7 @@ describe("RightPaneView delete flow", () => {
 
     render(<RightPaneView />);
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
+    layoutStore.getState().setRightPaneTab("workspace-1", "changes");
     // The persisted tab points at the git-only changes pane, but the files pane
     // is what renders for a non-git workspace: files visible, changes hidden.
     const fileManager = screen.getByTestId("mock-file-manager");
@@ -585,7 +614,7 @@ describe("RightPaneView delete flow", () => {
 
     render(<RightPaneView />);
 
-    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
+    layoutStore.getState().setRightPaneTab("workspace-1", "changes");
     const fileManager = screen.getByTestId("mock-file-manager");
     expect(fileManager.parentElement && window.getComputedStyle(fileManager.parentElement).visibility).toBe("visible");
     const changesTab = screen.getByTestId("mock-changes-tab");

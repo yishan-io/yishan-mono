@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
+import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
 import { projectStore } from "@renderer/features/project/state/projectStore";
-import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
+import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
 import { projectStore } from "@renderer/features/project/state/projectStore";
-import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";
@@ -604,16 +604,16 @@ describe("FileManagerView file search", () => {
       });
 
       const markerChangedPaths = ["src/changed.ts"];
-      // The changed-paths selector lives on the real workspaceUiStore. Drive it
+      // The changed-paths selector lives on the real fileTreeStore. Drive it
       // through the real store and assert the composed read stays stable.
-      workspaceUiStore.getState().setExpandedFileTreeItems("workspace-1", []);
-      workspaceUiStore.getState().incrementFileTreeRefreshVersion("/tmp/repo", markerChangedPaths);
-      expect(workspaceUiStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"]).toEqual(
+      fileTreeStore.getState().setExpandedFileTreeItems("workspace-1", []);
+      fileTreeStore.getState().incrementFileTreeRefreshVersion("/tmp/repo", markerChangedPaths);
+      expect(fileTreeStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"]).toEqual(
         markerChangedPaths,
       );
 
-      const firstResult = workspaceUiStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"];
-      const secondResult = workspaceUiStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"];
+      const firstResult = fileTreeStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"];
+      const secondResult = fileTreeStore.getState().fileTreeChangedRelativePathsByWorktreePath["/tmp/repo"];
       expect(firstResult).toEqual(markerChangedPaths);
       expect(firstResult).toBe(secondResult);
     } finally {

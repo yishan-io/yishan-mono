@@ -2,9 +2,6 @@ import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { workspaceProjectionStore } from "../../state/workspaceProjectionStore";
 import { selectWorkspaceFileTreeRefreshVersion } from "../../state/workspaceSelectors";
 import { workspaceStore } from "../../state/workspaceStore";
-import { workspaceUiStore } from "../../state/workspaceUiStore";
-
-const EMPTY_CHANGED_RELATIVE_PATHS: string[] = [];
 
 /**
  * Workspace feature read-only hooks — the stable read surface for Workspace
@@ -35,51 +32,6 @@ export function useWorkspaceGitRefreshVersion(worktreePath: string) {
     }
     return selectWorkspaceFileTreeRefreshVersion(worktreePath);
   });
-}
-
-/** Subscribes to the selected entry path in the file tree. */
-export function useSelectedEntryPath() {
-  return workspaceUiStore((state) => state.selectedEntryPath);
-}
-
-/** Subscribes to the expanded file-tree items map by workspace id. */
-export function useExpandedFileTreeItemsByWorkspaceId() {
-  return workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
-}
-
-/** Subscribes to the file-tree refresh version. */
-export function useFileTreeRefreshVersion() {
-  return workspaceUiStore((state) => state.fileTreeRefreshVersion);
-}
-
-/** Subscribes to the changed relative paths for the selected workspace. */
-export function useChangedRelativePathsForSelectedWorkspace(worktreePath: string) {
-  return workspaceUiStore((state) => {
-    if (!worktreePath) {
-      return EMPTY_CHANGED_RELATIVE_PATHS;
-    }
-    return state.fileTreeChangedRelativePathsByWorktreePath?.[worktreePath] ?? EMPTY_CHANGED_RELATIVE_PATHS;
-  });
-}
-
-/** Subscribes to the delete-selection request id. */
-export function useDeleteSelectionRequestId() {
-  return workspaceUiStore((state) => state.deleteSelectionRequestId);
-}
-
-/** Subscribes to the undo request id. */
-export function useUndoRequestId() {
-  return workspaceUiStore((state) => state.undoRequestId);
-}
-
-/** Subscribes to the select-folder-in-file-tree path. */
-export function useSelectFolderInFileTreePath() {
-  return workspaceUiStore((state) => state.selectFolderInFileTreePath);
-}
-
-/** Subscribes to the select-folder-in-file-tree request id. */
-export function useSelectFolderInFileTreeRequestId() {
-  return workspaceUiStore((state) => state.selectFolderInFileTreeRequestId);
 }
 
 /** Subscribes to the pull request map by workspace id. */

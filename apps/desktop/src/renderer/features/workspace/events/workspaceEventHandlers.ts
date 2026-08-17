@@ -10,6 +10,7 @@
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 
+import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
@@ -17,7 +18,6 @@ import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
@@ -174,7 +174,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     }
   },
   incrementFileTreeRefreshVersion: (workspaceWorktreePath, changedRelativePaths) => {
-    workspaceUiStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
+    incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
   },
   incrementGitRefreshVersion: (workspaceWorktreePath) => {
     workspaceProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);

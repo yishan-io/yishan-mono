@@ -10,20 +10,11 @@ import { getRendererPlatform } from "@renderer/helpers/platform";
 import { useContextMenuState } from "@renderer/ui/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/ui/hooks/useSuppressNativeContextMenuWhileOpen";
 
+import { setExpandedFileTreeItems, setSelectedEntryPath } from "@renderer/features/files";
+import { fileTreeStore } from "@renderer/features/files";
 import {
-  setExpandedFileTreeItems as applySetExpandedFileTreeItems,
-  setSelectedEntryPath as applySetSelectedEntryPath,
-} from "@renderer/features/workspace/state/workspaceActions";
-import {
-  useDeleteSelectionRequestId,
-  useExpandedFileTreeItemsByWorkspaceId,
-  useFileTreeRefreshVersion,
-  useSelectFolderInFileTreePath,
-  useSelectFolderInFileTreeRequestId,
-  useSelectedEntryPath,
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
-  useUndoRequestId,
   useWorkspaceGitRefreshVersion,
 } from "@renderer/features/workspace/ui/hooks/useWorkspaceReadHooks";
 import {
@@ -101,7 +92,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
     closeMenu: closeContextMenu,
     isOpen: hasOpenContextMenu,
   } = useContextMenuState<FileTreeContextMenuRequest>();
-  const selectedEntryPath = useSelectedEntryPath();
+  const selectedEntryPath = fileTreeStore((state) => state.selectedEntryPath);
   const selectedEntryIsDirectory = selectedEntryPath ? ops.repoFiles.some((p) => p === `${selectedEntryPath}/`) : false;
   const {
     pendingFileDeletion,
@@ -122,13 +113,11 @@ export function FileManagerView(_props: FileManagerViewProps) {
       ? selectedEntryPath
       : selectedEntryPath.split("/").slice(0, -1).join("/")
     : "";
-  const deleteSelectionRequestId = useDeleteSelectionRequestId();
-  const undoRequestId = useUndoRequestId();
-  const selectFolderInFileTreePath = useSelectFolderInFileTreePath();
-  const selectFolderInFileTreeRequestId = useSelectFolderInFileTreeRequestId();
-  const setSelectedEntryPath = applySetSelectedEntryPath;
-  const expandedItemsByWorkspaceId = useExpandedFileTreeItemsByWorkspaceId();
-  const setExpandedFileTreeItems = applySetExpandedFileTreeItems;
+  const deleteSelectionRequestId = fileTreeStore((state) => state.deleteSelectionRequestId);
+  const undoRequestId = fileTreeStore((state) => state.undoRequestId);
+  const selectFolderInFileTreePath = fileTreeStore((state) => state.selectFolderInFileTreePath);
+  const selectFolderInFileTreeRequestId = fileTreeStore((state) => state.selectFolderInFileTreeRequestId);
+  const expandedItemsByWorkspaceId = fileTreeStore((state) => state.expandedFileTreeItemsByWorkspaceId);
   const selectedTabId = useSelectedTabId();
   const tabs = useWorkspaceTabs();
   const lastRevealedTabIdRef = useRef("");
@@ -145,14 +134,14 @@ export function FileManagerView(_props: FileManagerViewProps) {
 
       setExpandedFileTreeItems(selectedWorkspaceId, items);
     },
-    [selectedWorkspaceId, setExpandedFileTreeItems],
+    [selectedWorkspaceId],
   );
 
   useEffect(() => {
     return () => {
       setSelectedEntryPath("");
     };
-  }, [setSelectedEntryPath]);
+  }, []);
 
   useSuppressNativeContextMenuWhileOpen(hasOpenContextMenu);
 
@@ -170,7 +159,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
     }
 
     setSelectedEntryPath(ops.fileTreeSelectionRequest.path);
-  }, [ops.fileTreeSelectionRequest, setSelectedEntryPath]);
+  }, [ops.fileTreeSelectionRequest]);
 
   useEffect(() => {
     const selectedTab = tabs.find((tab) => tab.id === selectedTabId && tab.workspaceId === selectedWorkspaceId);

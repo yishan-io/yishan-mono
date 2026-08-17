@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { fileTreeStore } from "@renderer/features/files";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../features/agent/state/chatStore";
@@ -8,7 +9,6 @@ import { layoutStore } from "../../../features/workbench/state/layoutStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { projectStore } from "../../project/state/projectStore";
 import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 import {
@@ -81,7 +81,6 @@ const initialLayoutStoreState = layoutStore.getState();
 const initialSessionStoreState = sessionStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialWorkspaceCreateProgressStoreState = workspaceCreateProgressStore.getState();
-const initialWorkspacePaneStoreState = workspaceUiStore.getState();
 const initialChatStoreState = chatStore.getState();
 
 afterEach(() => {
@@ -92,7 +91,6 @@ afterEach(() => {
   sessionStore.setState(initialSessionStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   workspaceCreateProgressStore.setState(initialWorkspaceCreateProgressStoreState, true);
-  workspaceUiStore.setState(initialWorkspacePaneStoreState, true);
   chatStore.setState(initialChatStoreState, true);
   vi.clearAllMocks();
 });
@@ -1165,7 +1163,7 @@ describe("workspaceCommands", () => {
     workbenchNavigationStore.setState({
       activeWorkspaceId: "ws-test",
     });
-    workspaceUiStore.setState({
+    layoutStore.setState({
       isRightPaneHiddenByWorkspaceId: { "ws-test": true },
       rightPaneTabByWorkspaceId: { "ws-test": "changes" },
     });
@@ -1181,8 +1179,8 @@ describe("workspaceCommands", () => {
 
     focusWorkspaceFileTree();
 
-    expect(workspaceUiStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(false);
-    expect(workspaceUiStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("files");
+    expect(layoutStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(false);
+    expect(layoutStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("files");
     expect(document.activeElement).toBe(treeItem);
 
     treeArea.remove();
@@ -1192,17 +1190,17 @@ describe("workspaceCommands", () => {
     workbenchNavigationStore.setState({
       activeWorkspaceId: "ws-test",
     });
-    workspaceUiStore.setState({
+    layoutStore.setState({
       isRightPaneHiddenByWorkspaceId: { "ws-test": true },
       rightPaneTabByWorkspaceId: { "ws-test": "changes" },
-      fileSearchRequestKey: 4,
     });
+    fileTreeStore.setState({ fileSearchRequestKey: 4 });
 
     openWorkspaceFileSearch();
 
-    expect(workspaceUiStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(true);
-    expect(workspaceUiStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("changes");
-    expect(workspaceUiStore.getState().fileSearchRequestKey).toBe(5);
+    expect(layoutStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(true);
+    expect(layoutStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("changes");
+    expect(fileTreeStore.getState().fileSearchRequestKey).toBe(5);
   });
 
   it("dispatches open-create-workspace event using selected repo context", () => {

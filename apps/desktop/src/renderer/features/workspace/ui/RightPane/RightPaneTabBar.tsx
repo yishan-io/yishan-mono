@@ -1,15 +1,11 @@
 import { Badge, Box, IconButton, Tooltip } from "@mui/material";
+import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, layoutStore } from "@renderer/features/workbench";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../../components/PaneHeader";
 import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import {
-  DEFAULT_RIGHT_PANE_TAB,
-  type WorkspaceRightPaneTab,
-} from "../../../../features/workspace/state/workspaceUiStore";
-import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
@@ -30,10 +26,10 @@ export type RightPaneTabBarProps = {
 export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPane }: RightPaneTabBarProps) {
   const { t } = useTranslation();
   const { selectedWorkspaceId, selectedWorkspace, selectedProject } = useSelectedWorkspaceWithProject();
-  const activeRightPaneTab = workspaceUiStore(
+  const activeRightPaneTab = layoutStore(
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );
-  const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
+  const setRightPaneTab = layoutStore((state) => state.setRightPaneTab);
   const changesCount = workspaceProjectionStore(
     (state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0,
   );

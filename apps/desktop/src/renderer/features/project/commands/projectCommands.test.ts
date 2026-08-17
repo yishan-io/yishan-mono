@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../features/agent/state/chatStore";
@@ -8,7 +9,6 @@ import { sessionStore } from "../../../features/session/state/sessionStore";
 import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { projectStore } from "../state/projectStore";
 import { createProject, deleteProject, loadWorkspaceSnapshot, updateProjectConfig } from "./projectCommands";
 
@@ -1083,7 +1083,9 @@ describe("projectCommands", () => {
       ],
       updateProjectConfig: applyProjectConfig,
     });
-    workspaceUiStore.setState({ incrementFileTreeRefreshVersion: bumpRefreshVersion });
+    const incrementFileTreeRefreshVersionSpy = vi
+      .spyOn(fileTreeStore.getState(), "incrementFileTreeRefreshVersion")
+      .mockImplementation(bumpRefreshVersion);
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     apiMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
@@ -1198,7 +1200,9 @@ describe("projectCommands", () => {
         },
       ],
     });
-    workspaceUiStore.setState({ incrementFileTreeRefreshVersion: bumpRefreshVersion });
+    const incrementFileTreeRefreshVersionSpy = vi
+      .spyOn(fileTreeStore.getState(), "incrementFileTreeRefreshVersion")
+      .mockImplementation(bumpRefreshVersion);
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     apiMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
@@ -1275,7 +1279,9 @@ describe("projectCommands", () => {
         },
       ],
     });
-    workspaceUiStore.setState({ incrementFileTreeRefreshVersion: bumpRefreshVersion });
+    const incrementFileTreeRefreshVersionSpy = vi
+      .spyOn(fileTreeStore.getState(), "incrementFileTreeRefreshVersion")
+      .mockImplementation(bumpRefreshVersion);
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     apiMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",

@@ -11,7 +11,6 @@ import { sessionStore } from "../../features/session/state/sessionStore";
 import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../features/workspace/state/workspaceUiStore";
 import { WorkspaceView } from "./WorkspaceView";
 
 const commandMocks = {

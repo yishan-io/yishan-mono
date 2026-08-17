@@ -43,6 +43,9 @@ export type WorkbenchCommands = {
   resizeLeftPane: typeof tabCommands.resizeLeftPane;
   resizeRightPane: typeof tabCommands.resizeRightPane;
   setLeftPaneHidden: typeof tabCommands.setLeftPaneHidden;
+  setRightPaneTab: typeof tabCommands.setRightPaneTab;
+  setIsRightPaneHidden: typeof tabCommands.setIsRightPaneHidden;
+  removeRightPaneStateForWorkspace: typeof tabCommands.removeRightPaneStateForWorkspace;
   renameTabsForEntryRename: typeof tabCommands.renameTabsForEntryRename;
   updateFileTabContent: typeof tabCommands.updateFileTabContent;
   markFileTabSaved: typeof tabCommands.markFileTabSaved;

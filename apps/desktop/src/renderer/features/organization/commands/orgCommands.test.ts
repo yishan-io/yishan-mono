@@ -3,7 +3,6 @@
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sessionStore } from "../../../features/session/state/sessionStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { switchOrganization } from "./orgCommands";
 
 const rpcMocks = vi.hoisted(() => ({
@@ -34,11 +33,9 @@ vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
 });
 
 const initialSessionStoreState = sessionStore.getState();
-const initialWorkspaceUiStoreState = workspaceUiStore.getState();
 
 afterEach(() => {
   sessionStore.setState(initialSessionStoreState, true);
-  workspaceUiStore.setState(initialWorkspaceUiStoreState, true);
   vi.clearAllMocks();
 });
 

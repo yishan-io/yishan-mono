@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
+import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
 import { projectStore } from "@renderer/features/project/state/projectStore";
-import { workspaceUiStore } from "@renderer/features/workspace/state/workspaceUiStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";
@@ -436,12 +436,12 @@ describe("FileManagerView file loading", () => {
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/", "src/new-name.ts"]);
     });
 
-    workspaceUiStore.setState({
+    fileTreeStore.setState({
       fileTreeChangedRelativePathsByWorktreePath: {
         "/tmp/repo": ["src/old-name.ts", "src/new-name.ts"],
       },
     });
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 
@@ -493,12 +493,12 @@ describe("FileManagerView file loading", () => {
       ]);
     });
 
-    workspaceUiStore.setState({
+    fileTreeStore.setState({
       fileTreeChangedRelativePathsByWorktreePath: {
         "/tmp/repo": [".my-context", ".my-context/sub"],
       },
     });
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 
@@ -548,7 +548,7 @@ describe("FileManagerView file loading", () => {
       ]);
     });
 
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {
@@ -630,7 +630,7 @@ describe("FileManagerView file loading", () => {
       expect(getFileTreeProps().ignoredPaths ?? []).toContain(".opencode/");
     });
 
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
     rerender(<FileManagerView />);
 
     await waitFor(() => {
@@ -678,12 +678,12 @@ describe("FileManagerView file loading", () => {
     // After mv a.txt -> b.txt: daemon now returns b.txt on shallow read.
     recursiveLeafName = "b.txt";
     loadedLeafName = "b.txt";
-    workspaceUiStore.setState({
+    fileTreeStore.setState({
       fileTreeChangedRelativePathsByWorktreePath: {
         "/tmp/repo": ["src/a.txt", "src/b.txt"],
       },
     });
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 
@@ -732,12 +732,12 @@ describe("FileManagerView file loading", () => {
     // "src" was never explicitly loaded (no onEnsurePathLoaded call), so the
     // refresh resolves to the root directory.
     deleted = true;
-    workspaceUiStore.setState({
+    fileTreeStore.setState({
       fileTreeChangedRelativePathsByWorktreePath: {
         "/tmp/repo": ["src/foo.ts"],
       },
     });
-    workspaceUiStore.setState({ fileTreeRefreshVersion: workspaceUiStore.getState().fileTreeRefreshVersion + 1 });
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
 
     rerender(<FileManagerView />);
 

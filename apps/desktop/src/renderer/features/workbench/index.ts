@@ -8,6 +8,11 @@ export {
   closeOverlayPanel,
   openOverlayPanel,
 } from "./commands/navigationCommands";
+export {
+  removeRightPaneStateForWorkspace,
+  setIsRightPaneHidden,
+  setRightPaneTab,
+} from "./commands/tabCommands";
 export type { WorkspaceTab } from "./model/types";
 export type { TabStoreState } from "./state/tabStore";
 export {
@@ -15,6 +20,12 @@ export {
   type OverlayPanel,
   type WorkbenchNavigationState,
 } from "./state/workbenchNavigationStore";
+export {
+  layoutStore,
+  type WorkspaceRightPaneTab,
+  DEFAULT_RIGHT_PANE_TAB,
+  type LayoutStoreState,
+} from "./state/layoutStore";
 export {
   getActivePane,
   getIsLeftPaneManuallyHidden,

@@ -13,7 +13,6 @@ import { layoutStore } from "../features/workbench/state/layoutStore";
 import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
 import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../features/workspace/state/workspaceUiStore";
 
 /** Resolves a workspace's owning project id (folder workspaces use their repo id). */
 function resolveWorkspaceProjectId(workspace: Pick<WorkspaceItem, "projectId" | "repoId">): string {
@@ -129,7 +128,7 @@ export function useWorkspacePaneVisibilityState(): {
 } {
   const leftHidden = layoutStore((s) => s.isLeftPaneManuallyHidden);
   const selectedWorkspaceId = workbenchNavigationStore((s) => s.activeWorkspaceId);
-  const rightHiddenByWorkspaceId = workspaceUiStore((s) => s.isRightPaneHiddenByWorkspaceId);
+  const rightHiddenByWorkspaceId = layoutStore((s) => s.isRightPaneHiddenByWorkspaceId);
   const collapsed = selectWorkspacePaneVisibility({ leftHidden, selectedWorkspaceId, rightHiddenByWorkspaceId });
   return { ...collapsed, selectedWorkspaceId };
 }

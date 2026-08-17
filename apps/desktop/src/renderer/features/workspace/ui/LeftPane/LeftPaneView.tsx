@@ -10,7 +10,6 @@ import { PaneHeader } from "../../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../../components/PaneToggleButton";
 import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../../../../ui/layout/AppMenuView";

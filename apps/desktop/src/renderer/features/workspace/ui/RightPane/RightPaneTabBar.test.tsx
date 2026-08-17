@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
 
+import { layoutStore } from "@renderer/features/workbench";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { RightPaneTabBar } from "./RightPaneTabBar";
+
+const layoutStoreState: { current: Record<string, unknown> } = {
+  current: {
+    rightPaneTabByWorkspaceId: {},
+    isRightPaneHiddenByWorkspaceId: {},
+  },
+};
 
 const workspaceStoreState: { current: Record<string, unknown> } = {
   current: {
@@ -25,10 +32,21 @@ vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 
-vi.mock("@renderer/features/workbench", () => ({
-  workbenchNavigationStore: (selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
-    selector(navStoreState.current),
-}));
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+  return {
+    ...actual,
+    workbenchNavigationStore: (selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
+      selector(navStoreState.current),
+    layoutStore: Object.assign(
+      (selector: (state: Record<string, unknown>) => unknown) => selector(layoutStoreState.current),
+      {
+        getState: () => layoutStoreState.current,
+        setState: (partial: Record<string, unknown>) => Object.assign(layoutStoreState.current, partial),
+      },
+    ),
+  };
+});
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -47,7 +65,7 @@ vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
 
 afterEach(() => {
   cleanup();
-  workspaceUiStore.setState({
+  layoutStore.setState({
     rightPaneTabByWorkspaceId: {},
     isRightPaneHiddenByWorkspaceId: {},
   });

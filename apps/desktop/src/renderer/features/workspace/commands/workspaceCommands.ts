@@ -1,14 +1,22 @@
+import {
+  requestDeleteSelection,
+  requestFileSearch,
+  requestSelectFolderInFileTree,
+  requestUndo,
+} from "@renderer/features/files";
 import { getIsLeftPaneManuallyHidden } from "@renderer/features/workbench";
-import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { type WorkspaceRightPaneTab, workbenchNavigationStore } from "@renderer/features/workbench";
+import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/features/workbench";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { api } from "../../../api";
-import { resizeLeftPane, resizeRightPane, setLeftPaneHidden } from "../../../features/workbench/commands/tabCommands";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import {
-  DEFAULT_RIGHT_PANE_TAB,
-  type WorkspaceRightPaneTab,
-  workspaceUiStore,
-} from "../../../features/workspace/state/workspaceUiStore";
+  resizeLeftPane,
+  resizeRightPane,
+  setIsRightPaneHidden,
+  setLeftPaneHidden,
+  setRightPaneTab,
+} from "../../../features/workbench/commands/tabCommands";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -236,9 +244,8 @@ export function toggleLeftPaneVisibility() {
 /** Toggles right workspace pane manual visibility state for the selected workspace. */
 export function toggleRightPaneVisibility() {
   const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
-  const uiState = workspaceUiStore.getState();
-  const isHidden = uiState.isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
-  uiState.setIsRightPaneHidden(workspaceId, !isHidden);
+  const isHidden = layoutStore.getState().isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
+  setIsRightPaneHidden(workspaceId, !isHidden);
 }
 
 /** Toggles a workspace pane: opens and switches to it, or collapses if already active. */
@@ -255,15 +262,14 @@ export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
     return;
   }
 
-  const uiState = workspaceUiStore.getState();
-  const currentTab = uiState.rightPaneTabByWorkspaceId[workspaceId] ?? DEFAULT_RIGHT_PANE_TAB;
-  const isHidden = uiState.isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
+  const currentTab = layoutStore.getState().rightPaneTabByWorkspaceId[workspaceId] ?? DEFAULT_RIGHT_PANE_TAB;
+  const isHidden = layoutStore.getState().isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
 
   if (!isHidden && currentTab === pane) {
-    uiState.setIsRightPaneHidden(workspaceId, true);
+    setIsRightPaneHidden(workspaceId, true);
   } else {
-    uiState.setIsRightPaneHidden(workspaceId, false);
-    uiState.setRightPaneTab(workspaceId, pane);
+    setIsRightPaneHidden(workspaceId, false);
+    setRightPaneTab(workspaceId, pane);
   }
 }
 
@@ -343,25 +349,25 @@ export function focusWorkspaceFileTree() {
 
 /** Opens workspace file search without changing file-tree pane visibility state. */
 export function openWorkspaceFileSearch() {
-  workspaceUiStore.getState().requestFileSearch();
+  requestFileSearch();
 }
 
 /** Requests selecting a folder path in the file tree and ensures the files tab is visible. */
 export function selectFolderInFileTree(path: string) {
   const workspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
-  workspaceUiStore.getState().setIsRightPaneHidden(workspaceId, false);
-  workspaceUiStore.getState().setRightPaneTab(workspaceId, "files");
-  workspaceUiStore.getState().requestSelectFolderInFileTree(path);
+  setIsRightPaneHidden(workspaceId, false);
+  setRightPaneTab(workspaceId, "files");
+  requestSelectFolderInFileTree(path);
 }
 
 /** Requests deletion of the currently selected file-tree entry. */
 export function deleteSelectedFileTreeEntry() {
-  workspaceUiStore.getState().requestDeleteSelection();
+  requestDeleteSelection();
 }
 
 /** Requests undo of the latest file-tree operation. */
 export function undoFileTreeOperation() {
-  workspaceUiStore.getState().requestUndo();
+  requestUndo();
 }
 
 /** Renames one workspace in renderer store state. */

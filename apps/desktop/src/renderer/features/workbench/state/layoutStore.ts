@@ -12,7 +12,13 @@ export type MarkdownThemePreference = "inherit" | "light" | "dark";
 export type MarkdownPreviewFontSize = "small" | "medium" | "large";
 export type MarkdownPreviewWidth = "readable" | "full";
 
-type LayoutStoreState = {
+/** Selected right-pane tab per workspace. Owned by Workbench layout (W3). */
+export type WorkspaceRightPaneTab = "files" | "changes" | "pr";
+
+/** Default right-pane tab when no per-workspace preference has been set. */
+export const DEFAULT_RIGHT_PANE_TAB: WorkspaceRightPaneTab = "files";
+
+export type LayoutStoreState = {
   // ── persisted layout ───────────────────────────────────────────────────────
   leftWidth: number;
   rightWidth: number;
@@ -27,6 +33,11 @@ type LayoutStoreState = {
   // ── transient popup tracking (from former popupStore) ─────────────────────
   popupCount: number;
   isPopupOpen: boolean;
+  // ── right-pane state (per-workspace, desktop6-adjust.md W3) ────────────────
+  /** Selected right-pane tab per workspace. Falls back to `DEFAULT_RIGHT_PANE_TAB`. */
+  rightPaneTabByWorkspaceId: Record<string, WorkspaceRightPaneTab>;
+  /** Whether the right pane is manually hidden per workspace. Falls back to `true` (hidden). */
+  isRightPaneHiddenByWorkspaceId: Record<string, boolean>;
 
   setLeftPaneWidth: (width: number) => void;
   setRightPaneWidth: (width: number) => void;
@@ -39,6 +50,10 @@ type LayoutStoreState = {
   setLinkTarget: (target: LinkTarget) => void;
   registerPopup: () => void;
   unregisterPopup: () => void;
+  setRightPaneTab: (workspaceId: string, tab: WorkspaceRightPaneTab) => void;
+  setIsRightPaneHidden: (workspaceId: string, hidden: boolean) => void;
+  /** Removes per-workspace right-pane state when a workspace closes. */
+  removeRightPaneStateForWorkspace: (workspaceId: string) => void;
 };
 
 /** Stores persisted desktop layout preferences, link-open setting, and popup tracking. */
@@ -56,6 +71,8 @@ export const layoutStore = create<LayoutStoreState>()(
       linkTarget: "built-in" as LinkTarget,
       popupCount: 0,
       isPopupOpen: false,
+      rightPaneTabByWorkspaceId: {},
+      isRightPaneHiddenByWorkspaceId: {},
 
       setLeftPaneWidth: (leftWidth) => {
         set({ leftWidth });
@@ -96,6 +113,22 @@ export const layoutStore = create<LayoutStoreState>()(
           const nextCount = Math.max(0, state.popupCount - 1);
           state.popupCount = nextCount;
           state.isPopupOpen = nextCount > 0;
+        });
+      },
+      setRightPaneTab: (workspaceId, tab) => {
+        set((state) => {
+          state.rightPaneTabByWorkspaceId[workspaceId] = tab;
+        });
+      },
+      setIsRightPaneHidden: (workspaceId, hidden) => {
+        set((state) => {
+          state.isRightPaneHiddenByWorkspaceId[workspaceId] = hidden;
+        });
+      },
+      removeRightPaneStateForWorkspace: (workspaceId) => {
+        set((state) => {
+          delete state.rightPaneTabByWorkspaceId[workspaceId];
+          delete state.isRightPaneHiddenByWorkspaceId[workspaceId];
         });
       },
     })),
