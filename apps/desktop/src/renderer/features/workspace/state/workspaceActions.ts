@@ -9,3 +9,7 @@ import { workspaceProjectionStore } from "./workspaceProjectionStore";
 export function incrementGitRefreshVersion(workspaceWorktreePath: string): void {
   workspaceProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
 }
+
+// Workspace lifecycle notices are display-state: cross-feature code enqueues
+// them through this public surface instead of importing the notice store.
+export { enqueueWorkspaceErrorNotice } from "./workspaceLifecycleNoticeStore";

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
+import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -8,6 +9,7 @@ import {
   listDetectedPorts,
   listTerminalSessions,
   readTerminalOutput,
+  requestTerminalFocus,
   resizeTerminal,
   subscribeTerminalOutput,
   subscribeTerminalSessions,
@@ -90,5 +92,16 @@ describe("terminalCommands", () => {
     );
     expect(mocks.closeSession).toHaveBeenCalledWith({ sessionId: "session-1" });
     expect(mocks.killProcess).toHaveBeenCalledWith({ pid: 1234 });
+  });
+
+  describe("terminal focus surface (Phase 17)", () => {
+    it("requestTerminalFocus records pending focus on the focus store", () => {
+      const requestFocus = vi.fn();
+      terminalFocusStore.setState({ requestFocus });
+
+      requestTerminalFocus("tab-terminal-1");
+
+      expect(requestFocus).toHaveBeenCalledWith("tab-terminal-1");
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
 import type {
   TerminalCreateSessionInput,
   TerminalListSessionsInput,
@@ -9,7 +10,6 @@ import type {
 import type { TerminalDetectedPort } from "../../../rpc/daemonTypes";
 import { getDaemonClient, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
 import type { DaemonRpcClient } from "../../../rpc/types";
-import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
 
 export type { TerminalDetectedPort } from "../../../rpc/daemonTypes";
 
@@ -20,6 +20,11 @@ export type TerminalOutputEvent = TerminalStreamEvent;
 /** Consumes one pending auto-focus request for a mounted terminal tab. */
 export function consumeTerminalTabFocus(tabId: string): boolean {
   return terminalFocusStore.getState().consumeFocus(tabId);
+}
+
+/** Records one pending auto-focus request for a new terminal tab. */
+export function requestTerminalFocus(tabId: string): void {
+  terminalFocusStore.getState().requestFocus(tabId);
 }
 
 /** Removes pending auto-focus requests for terminal tabs that are no longer open. */
@@ -144,6 +149,5 @@ export async function subscribeTerminalSessions(params: {
     onError: params.onError,
   });
 }
-
 
 export type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
