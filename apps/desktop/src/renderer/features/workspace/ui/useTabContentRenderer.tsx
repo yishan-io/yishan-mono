@@ -14,7 +14,7 @@ import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/commands/useCommands";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { AgentChatView } from "@renderer/features/agent";
-import { BrowserView } from "./browser/BrowserView";
+import { BrowserView } from "@renderer/features/workbench";
 import { TerminalView } from "@renderer/features/terminal";
 
 type TabContentRendererProps = {

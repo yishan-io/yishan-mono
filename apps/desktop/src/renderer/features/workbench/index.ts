@@ -10,3 +10,7 @@ export type {
   MarkdownPreviewWidth,
   MarkdownThemePreference,
 } from "./state/layoutStore";
+
+// Stable UI entry points for cross-feature composition (Phase 18).
+export { BrowserView } from "./ui/browser/BrowserView";
+export { reloadWebview, removeWebviewsForClosedTabs } from "./ui/browser/webviewRegistry";

@@ -22,7 +22,7 @@ import { RightPaneTabBar } from "./RightPane/RightPaneTabBar";
 import { RightPaneView } from "./RightPane/RightPaneView";
 import { WorkspaceErrorStateView } from "./WorkspaceErrorStateView";
 import { WorkspaceSplitPane } from "./WorkspaceSplitPaneView";
-import { removeWebviewsForClosedTabs } from "./browser/webviewRegistry";
+import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
 
 const RIGHT_MIN_WIDTH = 280;
 
