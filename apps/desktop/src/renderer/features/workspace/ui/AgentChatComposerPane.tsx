@@ -19,8 +19,8 @@ import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../..
 import { setTurnError } from "../../../features/agent/state/chatActions";
 import { useAgentChatSessionMeta } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { searchFiles } from "../../../features/files/commands/fileCommands";
-import { keybindingSettingsStore } from "../../../features/settings/state/keybindingSettingsStore";
 import { ProviderCredentialDialog } from "../../../features/settings/ui/ProviderCredentialDialog";
+import { useKeybindingOverrides } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
 import { renameTab } from "../../../features/workbench/commands/tabCommands";
 import { useTabById } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
@@ -69,7 +69,7 @@ function AgentChatComposerPaneComponent({
   } = useAgentChatSessionMeta(tabId);
   const { runningSubagents, subagentProgressTargets, subagentCancelStates, handleOpenSubagent, handleCancelSubagent } =
     useAgentChatSubagentActions({ tabId, workspaceId, cwd, paneId, sessionId });
-  const shortcutOverrides = keybindingSettingsStore((state) => state.overridesById);
+  const shortcutOverrides = useKeybindingOverrides();
   const focusShortcutHint = useMemo(() => {
     const focusShortcutBinding = getSupportedKeyBindings(shortcutOverrides).find(
       (binding) => binding.id === "focus-agent-chat-composer",

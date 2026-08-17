@@ -10,7 +10,7 @@ import { SessionHistoryMenu } from "../../../components/agent/session/SessionHis
 import { getFileTreeIcon } from "../../../components/fileTreeIcons";
 import { findTabWithSession } from "../../../features/agent/commands/agentChatCommands";
 import { useLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectReadHooks";
-import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
+import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import {
@@ -81,7 +81,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     }
   };
 
-  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
+  const inUseByAgentKind = useAgentKindsInUse();
   const enabledAgentKinds = useMemo(
     () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
     [inUseByAgentKind],

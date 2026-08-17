@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import { sessionStore } from "../../../../features/session/state/sessionStore";
-import { workspaceSettingsStore } from "../../../../features/settings/state/workspaceSettingsStore";
+import { useWorkspaceBranchPrefixSettings } from "../../../../features/settings/ui/hooks/useSettingsReadHooks";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
@@ -47,8 +47,7 @@ export function CreateWorkspaceDialogView({
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch } = useWorkspaceCommands();
   const { listGitBranches } = useGitCommands();
   const { listAgentModels } = useAgentCommands();
-  const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
-  const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
+  const { prefixMode, customPrefix } = useWorkspaceBranchPrefixSettings();
 
   useDialogRegistration(open);
 

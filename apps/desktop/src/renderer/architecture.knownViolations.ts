@@ -117,16 +117,10 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     phase: "P16",
   },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRuntimeRegistry.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatComposerPane.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/DaemonVersionWarningControl.tsx", phase: "P16" },
   {
     rule: "R5-cross-feature-internal",
     file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.tsx",
-    phase: "P16",
-  },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/useCreateWorkspaceDialogState.ts",
     phase: "P16",
   },
   {
@@ -137,7 +131,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListTreeData.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/OnboardingView.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceSplitPaneView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/TerminalView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalFileDrop.ts", phase: "P16" },
   {
@@ -168,7 +161,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionOrchestrator.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionService.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalTitleUtils.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCreateCommand.ts", phase: "P16" },
   {
     rule: "R5-cross-feature-internal",
     file: "features/workspace/state/workspace/actions.localFolders.ts",

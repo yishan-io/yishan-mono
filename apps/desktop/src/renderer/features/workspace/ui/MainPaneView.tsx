@@ -5,7 +5,7 @@ import { useTerminalCommands } from "../../../app/commands/useCommands";
 import { ColumnSeparator } from "../../../components/ColumnSeparator";
 import { TabPanel } from "../../../components/TabPanel";
 import { retainOpenAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
-import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
+import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
 import { disposeTerminalRuntimesForClosedTabs } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { setRightPaneWidth } from "../../../features/workbench/state/workbenchActions";
@@ -39,7 +39,7 @@ export function MainPaneView() {
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
   const isErrorWorkspace = selectedWorkspace?.state === "error";
   const tabs = useWorkspaceTabs();
-  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
+  const inUseByAgentKind = useAgentKindsInUse();
   const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
   const rightWidth = useRightPaneWidth();
   const enabledAgentKinds = useMemo(

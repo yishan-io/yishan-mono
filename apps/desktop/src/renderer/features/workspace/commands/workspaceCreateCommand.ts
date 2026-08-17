@@ -1,5 +1,5 @@
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
+import { selectIsDefaultContextEnabled } from "../../../features/settings/state/settingsSelectors";
 import { resolveTabForWorkspace } from "../../../features/workbench/state/workbenchActions";
 import { buildWorkspaceCreatePlaceholder } from "../../../features/workspace/model/workspaceCreatePlaceholder";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
@@ -141,7 +141,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       sourcePath,
       sourceBranch,
       targetBranch,
-      contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
+      contextEnabled: project?.contextEnabled ?? selectIsDefaultContextEnabled(),
       setupHook: project?.setupScript?.trim() || undefined,
       taskRun: input.taskRun,
     })) as Record<string, unknown>;
