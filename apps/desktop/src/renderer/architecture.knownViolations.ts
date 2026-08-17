@@ -123,5 +123,4 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     phase: "P16",
   },
   { rule: "R5-cross-feature-internal", file: "features/organization/commands/orgCommands.ts", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/project/commands/projectCommands.ts", phase: "P16" },
 ];

@@ -1,4 +1,7 @@
+import type { WorkspaceStoreState } from "../../workbench/model/types";
 import { workspaceProjectionStore } from "./workspaceProjectionStore";
+import { workspaceStore } from "./workspaceStore";
+import { workspaceUiStore } from "./workspaceUiStore";
 
 /**
  * Workspace feature state actions — the public state-change surface for
@@ -8,6 +11,39 @@ import { workspaceProjectionStore } from "./workspaceProjectionStore";
  */
 export function incrementGitRefreshVersion(workspaceWorktreePath: string): void {
   workspaceProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
+}
+
+type AddWorkspaceInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
+type UpdateProjectConfigInput = Parameters<WorkspaceStoreState["updateProjectConfig"]>[1];
+
+/** Selects one project in workspace state. */
+export function setSelectedProjectId(projectId: string): void {
+  workspaceStore.getState().setSelectedProjectId(projectId);
+}
+
+/** Selects one workspace in workspace state. */
+export function setSelectedWorkspaceId(workspaceId: string): void {
+  workspaceStore.getState().setSelectedWorkspaceId(workspaceId);
+}
+
+/** Adds one workspace record. */
+export function addWorkspace(input: AddWorkspaceInput): void {
+  workspaceStore.getState().addWorkspace(input);
+}
+
+/** Deletes one project (and its workspaces) from workspace state. */
+export function deleteProject(projectId: string): void {
+  workspaceStore.getState().deleteProject(projectId);
+}
+
+/** Updates one project config in workspace state. */
+export function updateProjectConfig(projectId: string, config: UpdateProjectConfigInput): void {
+  workspaceStore.getState().updateProjectConfig(projectId, config);
+}
+
+/** Bumps the file-tree refresh version for one workspace. */
+export function incrementFileTreeRefreshVersion(workspaceWorktreePath?: string, changedRelativePaths?: string[]): void {
+  workspaceUiStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
 }
 
 // Workspace lifecycle notices are display-state: cross-feature code enqueues
