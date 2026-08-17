@@ -1,5 +1,5 @@
+import { setWorkspacePullRequest } from "@renderer/features/git";
 import { closePullRequest, mergePullRequest } from "@renderer/features/git/commands/gitCommands";
-import { setWorkspacePullRequest } from "@renderer/features/workspace";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import type { DaemonWorkspacePullRequest } from "@renderer/rpc/daemonTypes";
 import { type MouseEvent, useCallback, useState } from "react";

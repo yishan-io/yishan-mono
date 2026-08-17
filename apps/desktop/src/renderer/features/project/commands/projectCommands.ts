@@ -1,4 +1,5 @@
 import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
+import { incrementGitRefreshVersion } from "@renderer/features/git";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
@@ -23,7 +24,6 @@ import {
   buildWorkspaceOpenProjectEntries,
   openWorkspaceEntries,
 } from "../../workspace/commands/workspaceWarmupCommand";
-import { incrementGitRefreshVersion } from "../../workspace/state/workspaceActions";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../state/projectStore";
 

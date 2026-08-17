@@ -1,3 +1,4 @@
+import { gitProjectionStore } from "@renderer/features/git";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import type { WorkspaceProjectRecord } from "../features/project/model/projectTypes";
 /**
@@ -11,7 +12,6 @@ import type { WorkspaceProjectRecord } from "../features/project/model/projectTy
 import { projectStore } from "../features/project/state/projectStore";
 import { layoutStore } from "../features/workbench/state/layoutStore";
 import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
-import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../features/workspace/state/workspaceStore";
 
 /** Resolves a workspace's owning project id (folder workspaces use their repo id). */
@@ -68,14 +68,12 @@ export function selectSelectedWorkspaceWithProject(): {
 
 /** One workspace's projection slice (PR + branch + git totals + refresh version). */
 export function selectWorkspaceProjection(workspaceId: string): {
-  pullRequest: ReturnType<typeof workspaceProjectionStore.getState>["pullRequestByWorkspaceId"][string];
+  pullRequest: ReturnType<typeof gitProjectionStore.getState>["pullRequestByWorkspaceId"][string];
   currentBranch: string;
-  gitChangeTotals:
-    | ReturnType<typeof workspaceProjectionStore.getState>["gitChangeTotalsByWorkspaceId"][string]
-    | undefined;
+  gitChangeTotals: ReturnType<typeof gitProjectionStore.getState>["gitChangeTotalsByWorkspaceId"][string] | undefined;
   gitRefreshVersionByWorktreePath: Record<string, number>;
 } {
-  const state = workspaceProjectionStore.getState();
+  const state = gitProjectionStore.getState();
   return {
     pullRequest: state.pullRequestByWorkspaceId[workspaceId],
     currentBranch: state.currentBranchByWorkspaceId[workspaceId] ?? "",

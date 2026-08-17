@@ -32,6 +32,14 @@ vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 
+vi.mock("@renderer/features/git", () => ({
+  gitProjectionStore: (selector: (state: { gitChangesCountByWorkspaceId: Record<string, number> }) => unknown) =>
+    selector({
+      gitChangesCountByWorkspaceId:
+        (workspaceStoreState.current.gitChangesCountByWorkspaceId as Record<string, number>) ?? {},
+    }),
+}));
+
 vi.mock("@renderer/features/workbench", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
   return {

@@ -1,4 +1,5 @@
 import type * as gitCommands from "./gitCommands";
+import type * as gitProjectionCommands from "./gitProjectionCommands";
 
 /**
  * GitCommands — the public command surface for the Git feature (Phase 12,
@@ -23,4 +24,7 @@ export type GitCommands = {
   getGitAuthorName: typeof gitCommands.getGitAuthorName;
   mergePullRequest: typeof gitCommands.mergePullRequest;
   closePullRequest: typeof gitCommands.closePullRequest;
+  refreshWorkspaceGitChanges: typeof gitProjectionCommands.refreshWorkspaceGitChanges;
+  refreshWorkspacePullRequest: typeof gitProjectionCommands.refreshWorkspacePullRequest;
+  listPullRequestHistory: typeof gitProjectionCommands.listPullRequestHistory;
 };

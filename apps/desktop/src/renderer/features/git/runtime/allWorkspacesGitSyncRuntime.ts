@@ -1,10 +1,20 @@
+/**
+ * All-workspaces git sync runtime (desktop6-adjust.md W4).
+ *
+ * Long-lived resource: owns the per-workspace refresh state map (in-flight +
+ * queue + throttle timers) and the last-seen refresh version record, and
+ * subscribes to the Git projection store so git refresh version bumps
+ * trigger throttled `refreshWorkspaceGitChanges` for every affected
+ * workspace — including non-selected ones. The selected workspace is skipped
+ * because it is already handled by WorkspaceView's own effect.
+ */
 import { workbenchNavigationStore } from "@renderer/features/workbench";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { selectWorkspaces } from "@renderer/features/workspace";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { selectProjects } from "../../project/state/projectSelectors";
-import { refreshWorkspaceGitChanges } from "../commands/workspaceCommands";
-import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
+import { refreshWorkspaceGitChanges } from "../commands/gitProjectionCommands";
+import { gitProjectionStore } from "../state/gitProjectionStore";
 
 /**
  * Minimum interval (ms) between consecutive refresh calls for one workspace.
@@ -74,14 +84,8 @@ export async function scheduleWorkspaceRefresh(
 }
 
 /**
- * All-workspaces git sync runtime (Phase 13, desktop5.md).
- *
- * Long-lived resource: owns the per-workspace refresh state map (in-flight +
- * queue + throttle timers) and the last-seen refresh version record, and
- * subscribes to the workspace projection store so git refresh version bumps
- * trigger throttled `refreshWorkspaceGitChanges` for every affected
- * workspace — including non-selected ones. The selected workspace is skipped
- * because it is already handled by WorkspaceView's own effect.
+ * Creates the all-workspaces git sync runtime. Owns the per-workspace refresh
+ * state and subscribes to Git projection store version bumps.
  */
 export function createAllWorkspacesGitSyncRuntime() {
   const refreshStateByWorkspaceId = new Map<string, WorkspaceRefreshState>();
@@ -94,8 +98,7 @@ export function createAllWorkspacesGitSyncRuntime() {
     }
     lastVersionMap = versionByWorktreePath;
 
-    const state = workspaceStore.getState();
-    const workspaces = state.workspaces;
+    const workspaces = selectWorkspaces();
     const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
     const lastSeen = lastSeenVersionByWorktreePath;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
@@ -156,10 +159,10 @@ export function createAllWorkspacesGitSyncRuntime() {
   return {
     /** Subscribes to projection store changes. Returns a stop function. */
     start(): () => void {
-      const unsubscribe = workspaceProjectionStore.subscribe((state) => {
+      const unsubscribe = gitProjectionStore.subscribe((state) => {
         onProjectionChanged(state.gitRefreshVersionByWorktreePath);
       });
-      onProjectionChanged(workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath);
+      onProjectionChanged(gitProjectionStore.getState().gitRefreshVersionByWorktreePath);
       return () => {
         unsubscribe();
       };

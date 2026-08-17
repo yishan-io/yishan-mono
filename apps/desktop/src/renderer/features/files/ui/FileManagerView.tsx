@@ -12,10 +12,10 @@ import { useSuppressNativeContextMenuWhileOpen } from "@renderer/ui/hooks/useSup
 
 import { setExpandedFileTreeItems, setSelectedEntryPath } from "@renderer/features/files";
 import { fileTreeStore } from "@renderer/features/files";
+import { useWorkspaceGitRefreshVersion } from "@renderer/features/git";
 import {
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
-  useWorkspaceGitRefreshVersion,
 } from "@renderer/features/workspace/ui/hooks/useWorkspaceReadHooks";
 import {
   findExternalAppPreset,

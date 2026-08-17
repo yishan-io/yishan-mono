@@ -40,11 +40,6 @@ type TestState = {
     worktreePath?: string;
   }>;
   displayProjectIds: string[];
-  fileTreeRefreshVersion: number;
-  fileTreeChangedRelativePathsByWorktreePath: Record<string, string[]>;
-  pullRequestByWorkspaceId: Record<string, unknown>;
-  gitChangesCountByWorkspaceId: Record<string, number>;
-  gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
 };
 
 /** Creates a minimal state harness for repo store actions with immer-style mutation. */
@@ -108,17 +103,6 @@ function createHarness(overrides?: Partial<TestState>) {
       },
     ],
     displayProjectIds: ["repo-1", "repo-2"],
-    fileTreeRefreshVersion: 0,
-    fileTreeChangedRelativePathsByWorktreePath: {},
-    pullRequestByWorkspaceId: {},
-    gitChangesCountByWorkspaceId: {
-      "workspace-1": 3,
-      "workspace-2": 4,
-    },
-    gitChangeTotalsByWorkspaceId: {
-      "workspace-1": { additions: 5, deletions: 2 },
-      "workspace-2": { additions: 9, deletions: 4 },
-    },
     ...overrides,
   };
 
@@ -192,13 +176,6 @@ describe("createWorkspaceRepoActions", () => {
     const state = harness.getState();
     expect(state.projects.map((repo) => repo.id)).toEqual(["repo-2"]);
     expect(state.workspaces.map((workspace) => workspace.id)).toEqual(["workspace-2"]);
-    expect(state.gitChangesCountByWorkspaceId).toEqual({
-      "workspace-2": 4,
-    });
-    expect(state.gitChangeTotalsByWorkspaceId).toEqual({
-      "workspace-2": { additions: 9, deletions: 4 },
-    });
-    expect(state.pullRequestByWorkspaceId).toEqual({});
   });
 
   it("keeps the backend sourceType on created projects so git gates apply", () => {
@@ -284,12 +261,6 @@ describe("createWorkspaceRepoActions", () => {
     expect(state.projects).toHaveLength(1);
     expect(state.projects[0]?.gitUrl).toBe("https://example.com/acme/repo.git");
     expect(state.displayProjectIds).toEqual(["repo-1"]);
-    expect(state.gitChangesCountByWorkspaceId).toEqual({
-      "workspace-1": 3,
-    });
-    expect(state.gitChangeTotalsByWorkspaceId).toEqual({
-      "workspace-1": { additions: 5, deletions: 2 },
-    });
   });
 
   it("makes newly discovered backend projects visible after refresh", () => {

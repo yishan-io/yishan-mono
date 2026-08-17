@@ -1,10 +1,10 @@
 import { Badge, Box, IconButton, Tooltip } from "@mui/material";
+import { gitProjectionStore } from "@renderer/features/git";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, layoutStore } from "@renderer/features/workbench";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../../components/PaneHeader";
-import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../../helpers/platform";
@@ -30,9 +30,7 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );
   const setRightPaneTab = layoutStore((state) => state.setRightPaneTab);
-  const changesCount = workspaceProjectionStore(
-    (state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0,
-  );
+  const changesCount = gitProjectionStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
   // Folder workspaces have no real project (undefined): never show git tabs.
   const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
 

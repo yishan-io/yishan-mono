@@ -29,7 +29,6 @@ import {
 import { warmupWorkspacesForProjects } from "../../features/workspace/commands/workspaceWarmupCommand";
 import { reconcileWorkspaceSnapshot } from "../../features/workspace/model/snapshotReconciler";
 import { workspaceCreateProgressStore } from "../../features/workspace/state/workspaceCreateProgressStore";
-import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 
@@ -98,10 +97,6 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       previousState: {
         projects: projectStore.getState().projects,
         workspaces: workspaceStore.getState().workspaces,
-        pullRequestByWorkspaceId: workspaceProjectionStore.getState().pullRequestByWorkspaceId,
-        latestPullRequestByWorkspaceId: workspaceProjectionStore.getState().latestPullRequestByWorkspaceId,
-        gitChangesCountByWorkspaceId: workspaceProjectionStore.getState().gitChangesCountByWorkspaceId,
-        gitChangeTotalsByWorkspaceId: workspaceProjectionStore.getState().gitChangeTotalsByWorkspaceId,
         selectedProjectId: workbenchNavigationStore.getState().activeProjectId,
         selectedWorkspaceId: workbenchNavigationStore.getState().activeWorkspaceId,
         displayProjectIds: projectStore.getState().displayProjectIds,

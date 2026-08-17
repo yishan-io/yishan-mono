@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
+import { gitProjectionStore } from "@renderer/features/git";
 import { projectStore } from "@renderer/features/project/state/projectStore";
-import { workspaceProjectionStore } from "@renderer/features/workspace/state/workspaceProjectionStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";
@@ -387,7 +387,7 @@ describe("FileManagerView external file tree refresh", () => {
       fileTreeChangedRelativePathsByWorktreePath: { "/tmp/repo": ["src/foo.ts"] },
       expandedFileTreeItemsByWorkspaceId: {},
     });
-    workspaceProjectionStore.setState({ gitRefreshVersionByWorktreePath: {} });
+    gitProjectionStore.setState({ gitRefreshVersionByWorktreePath: {} });
   });
 
   afterEach(() => {

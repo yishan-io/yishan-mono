@@ -111,10 +111,6 @@ export function applyHydratedStateFromApiData(
   state.displayProjectIds = result.displayProjectIds;
   state.lastUsedExternalAppId = result.lastUsedExternalAppId;
   state.organizationPreferencesById = result.organizationPreferencesById;
-  state.gitChangesCountByWorkspaceId = result.projectionCleanup.gitChangesCountByWorkspaceId;
-  state.gitChangeTotalsByWorkspaceId = result.projectionCleanup.gitChangeTotalsByWorkspaceId;
-  state.pullRequestByWorkspaceId = result.projectionCleanup.pullRequestByWorkspaceId;
-  state.latestPullRequestByWorkspaceId = result.projectionCleanup.latestPullRequestByWorkspaceId;
 }
 
 export function normalizeCreateRepoInput(input: {
@@ -225,11 +221,6 @@ export function applyDeletedRepoState(state: ProjectStoreSlice, repoId: string):
   );
   state.workspaces = state.workspaces.filter((workspace) => (workspace.projectId ?? workspace.repoId) !== repoId);
   state.displayProjectIds = (state.displayProjectIds ?? []).filter((id) => id !== repoId);
-
-  for (const workspaceId of deletedWorkspaceIdSet) {
-    delete state.gitChangesCountByWorkspaceId[workspaceId];
-    delete state.gitChangeTotalsByWorkspaceId[workspaceId];
-  }
 }
 
 /** Applies repo config updates to local state after save attempts. */

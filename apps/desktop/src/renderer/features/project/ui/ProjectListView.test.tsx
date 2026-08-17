@@ -214,7 +214,12 @@ vi.mock("@renderer/features/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../features/workspace/state/workspaceProjectionStore", () => {
+vi.mock("@renderer/features/git", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/git")>();
+  return { ...actual };
+});
+
+vi.mock("../../../features/git/state/gitProjectionStore", () => {
   const project = (
     selector: (state: {
       pullRequestByWorkspaceId: Record<string, unknown>;
@@ -229,12 +234,8 @@ vi.mock("../../../features/workspace/state/workspaceProjectionStore", () => {
       gitChangeTotalsByWorkspaceId: mocked.stateRef.current.gitChangeTotalsByWorkspaceId,
       setWorkspaceCurrentBranch: mocked.stateRef.current.setWorkspaceCurrentBranch,
     });
-  (
-    project as unknown as {
-      getState: () => typeof mocked.stateRef.current;
-    }
-  ).getState = () => mocked.stateRef.current;
-  return { workspaceProjectionStore: project };
+  (project as unknown as { getState: () => typeof mocked.stateRef.current }).getState = () => mocked.stateRef.current;
+  return { gitProjectionStore: project };
 });
 
 vi.mock("../../../features/project/state/projectStore", () => {

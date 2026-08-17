@@ -50,21 +50,19 @@ vi.mock("../../../features/git/commands/gitCommands", () => ({
     mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
-vi.mock("../../../features/workspace/state/workspaceProjectionStore", () => {
-  const project = (selector: (state: { gitRefreshVersionByWorktreePath: Record<string, number> }) => unknown) =>
+vi.mock("@renderer/features/git", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/git")>();
+  return { ...actual };
+});
+
+vi.mock("../../../features/git/state/gitProjectionStore", () => ({
+  gitProjectionStore: (selector: (state: { gitRefreshVersionByWorktreePath: Record<string, number> }) => unknown) =>
     selector({
       gitRefreshVersionByWorktreePath:
         (mocks.workspaceState as { gitRefreshVersionByWorktreePath?: Record<string, number> })
           .gitRefreshVersionByWorktreePath ?? {},
-    });
-  (project as unknown as { getState: () => { gitRefreshVersionByWorktreePath: Record<string, number> } }).getState =
-    () => ({
-      gitRefreshVersionByWorktreePath:
-        (mocks.workspaceState as { gitRefreshVersionByWorktreePath?: Record<string, number> })
-          .gitRefreshVersionByWorktreePath ?? {},
-    });
-  return { workspaceProjectionStore: project };
-});
+    }),
+}));
 
 vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>

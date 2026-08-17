@@ -1,9 +1,6 @@
+import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/features/git";
 import type { WorkspaceItem } from "@renderer/features/workspace";
-import {
-  setOrderedWorkspaceIds,
-  useWorkspaceGitChangeTotalsByWorkspaceId,
-  useWorkspaces,
-} from "@renderer/features/workspace";
+import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/features/workspace";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";

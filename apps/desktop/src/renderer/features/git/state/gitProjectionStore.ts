@@ -1,18 +1,18 @@
 /**
- * Workspace projection store — owns PR/branch/git-totals/refresh-version
- * projections for open workspaces.
+ * Git feature projection Store (desktop6-adjust.md W4).
  *
- * Phase 3: projections leave workspaceStore entity state. Holds view-model
- * types only (WorkspacePullRequestViewModel, feature-owned status); transport
- * DTOs are mapped in the model layer.
+ * Owns Git and pull-request projections for open workspaces: live PR, latest
+ * PR summary, current branch, git change counts/totals, and the git refresh
+ * version per worktree path. Previously these lived in the Workspace feature
+ * (`workspaceProjectionStore`); Git owns Git polling and projection updates.
  */
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import type { WorkspaceGitChangeTotals } from "../model/workspaceTypes";
+import type { WorkspaceGitChangeTotals } from "../../workspace/model/workspaceTypes";
 
-type ProjectionStoreState = {
+export type GitProjectionStoreState = {
   pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
   latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
   currentBranchByWorkspaceId: Record<string, string>;
@@ -33,8 +33,8 @@ type ProjectionStoreState = {
   }) => void;
 };
 
-/** Stores workspace-scoped projections (PR, branch, git totals, refresh versions). */
-export const workspaceProjectionStore = create<ProjectionStoreState>()(
+/** Stores workspace-scoped Git projections (PR, branch, git totals, refresh versions). */
+export const gitProjectionStore = create<GitProjectionStoreState>()(
   immer((set) => ({
     pullRequestByWorkspaceId: {},
     latestPullRequestByWorkspaceId: {},

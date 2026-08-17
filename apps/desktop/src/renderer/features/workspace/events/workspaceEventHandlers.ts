@@ -11,6 +11,7 @@
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 
 import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
+import { gitProjectionStore } from "@renderer/features/git";
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
@@ -21,7 +22,6 @@ import { workspaceStore } from "../../../features/workspace/state/workspaceStore
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
-import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;
 const WORKSPACE_SNAPSHOT_REFRESH_DEBOUNCE_MS = 300;
@@ -162,13 +162,13 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
   },
   refreshWorkspaceCurrentBranch: async (workspaceId, currentBranch) => {
     if (currentBranch !== undefined) {
-      workspaceProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, currentBranch);
+      gitProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, currentBranch);
       return;
     }
     try {
       const client = await getDaemonClient();
       const result = await client.git.inspect({ workspaceId });
-      workspaceProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
+      gitProjectionStore.getState().setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
     } catch {
       // Non-fatal: cache stays stale until the next gitChanged event.
     }
@@ -177,7 +177,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
   },
   incrementGitRefreshVersion: (workspaceWorktreePath) => {
-    workspaceProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
+    gitProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
   },
   applyWorkspaceCreateStartedEvent: (payload) => {
     workspaceStore.getState().addWorkspace(
@@ -249,7 +249,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     });
   },
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
-    workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
+    gitProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
   },
   loadWorkspaceSnapshot,
   getSelectedOrganizationId: () => selectSelectedOrganizationId(),

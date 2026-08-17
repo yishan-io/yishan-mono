@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
+import { gitProjectionStore } from "@renderer/features/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
-import { workspaceProjectionStore } from "../../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { PullRequestTabView } from "./PullRequestTabView";
@@ -86,7 +86,7 @@ vi.mock("./useWorkspacePullRequestState", () => ({
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();
-const initialProjectionStoreState = workspaceProjectionStore.getState();
+const initialProjectionStoreState = gitProjectionStore.getState();
 
 function setupSelectedWorkspace() {
   navMock.navStore.setState({
@@ -120,7 +120,7 @@ function buildHistoricalPullRequest(
 
 afterEach(() => {
   cleanup();
-  workspaceProjectionStore.setState(initialProjectionStoreState, true);
+  gitProjectionStore.setState(initialProjectionStoreState, true);
   workspaceStore.setState(initialWorkspaceStoreState, true);
   mocked.openLink.mockReset();
   mocked.mergePullRequest.mockReset();
@@ -232,7 +232,7 @@ describe("PullRequestTabView", () => {
         { id: "workspace-2", worktreePath: "/tmp/workspace-2" } as never,
       ],
     });
-    workspaceProjectionStore.setState({ pullRequestByWorkspaceId: {} });
+    gitProjectionStore.setState({ pullRequestByWorkspaceId: {} });
     mocked.state.pullRequest = {
       number: 42,
       title: "Add PR tab",
@@ -268,10 +268,10 @@ describe("PullRequestTabView", () => {
       await Promise.resolve();
     });
 
-    expect(workspaceProjectionStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual(
+    expect(gitProjectionStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual(
       expect.objectContaining({ number: 42, complete: true, status: "merged" }),
     );
-    expect(workspaceProjectionStore.getState().pullRequestByWorkspaceId["workspace-2"]).toBeUndefined();
+    expect(gitProjectionStore.getState().pullRequestByWorkspaceId["workspace-2"]).toBeUndefined();
   });
 
   it("renders the open historical PR fallback and past history entries", () => {

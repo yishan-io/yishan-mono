@@ -37,18 +37,24 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- R6-state-layer (Phase 16 baseline) ----
   { rule: "R6-state-layer", file: "features/overview/state/overviewStore.ts", phase: "P16" },
   { rule: "R6-state-layer", file: "features/scheduled-job/state/scheduledJobStore.ts", phase: "P16" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspaceProjectionStore.ts", phase: "P16" },
   // desktop6-adjust W1: Workspace Store types moved to Workspace State; the
   // store boundary keeps transport DTO references (baselined like the other
   // workspace projection store rows). actions.localFolders/actions.workspaces
   // rows removed — those files no longer import transport directly.
   { rule: "R6-state-layer", file: "features/workspace/state/workspaceStoreTypes.ts", phase: "P16" },
+  // desktop6-adjust W4: git projections moved from the Workspace feature to
+  // the Git feature; the transport-DTO boundary on the store keeps the same
+  // baselined R6 row (was features/workspace/state/workspaceProjectionStore.ts).
+  { rule: "R6-state-layer", file: "features/git/state/gitProjectionStore.ts", phase: "P16" },
   // ---- R7-model-layer (Phase 16 baseline) ----
   { rule: "R7-model-layer", file: "features/agent/model/agentChatStore.ts", phase: "P16" },
-  { rule: "R7-model-layer", file: "features/workspace/model/snapshotReconciler.ts", phase: "P16" },
   // desktop6-adjust W1: workbench/model/types.ts row removed — the generic
   // types file no longer imports transport/zustand (tab types moved to
   // tabTypes.ts, Workspace Store types moved to Workspace State).
+  // desktop6-adjust W4: snapshotReconciler no longer imports git transport
+  // types; it remains the workspace/project DTO boundary (api/types +
+  // workspace state import), so its R7 row stays.
+  { rule: "R7-model-layer", file: "features/workspace/model/snapshotReconciler.ts", phase: "P16" },
   // ---- R9-ui-components (Phase 16 baseline) ----
   { rule: "R9-ui-components", file: "components/AppUpdateSnackbar.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/AuthSessionExpiredSnackbar.tsx", phase: "P16" },

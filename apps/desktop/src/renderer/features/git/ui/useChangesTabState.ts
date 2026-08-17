@@ -1,8 +1,8 @@
+import { useWorkspaceGitRefreshVersion } from "@renderer/features/git";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGitCommands } from "../../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../../app/selectors";
-import { useWorkspaceGitRefreshVersion } from "@renderer/features/workspace";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
+import { gitProjectionStore } from "@renderer/features/git";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { describe, expect, it } from "vitest";
 import { projectStore } from "../features/project/state/projectStore";
-import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../features/workspace/state/workspaceStore";
 import {
   selectLastUsedExternalAppId,
@@ -53,7 +53,7 @@ describe("composed selectors", () => {
   });
 
   it("returns the projection slice for one workspace", () => {
-    workspaceProjectionStore.setState({
+    gitProjectionStore.setState({
       pullRequestByWorkspaceId: { "ws-1": { number: 42 } },
       currentBranchByWorkspaceId: { "ws-1": "feature/a" },
       gitChangeTotalsByWorkspaceId: { "ws-1": { additions: 1, deletions: 2 } },

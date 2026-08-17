@@ -11,11 +11,9 @@
  */
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspaceRecord } from "../../../api/types";
-import type { WorkspacePullRequestSummary } from "../../../api/types";
 import { buildWorkspaceStateFromData } from "../../../features/workspace/state/workspace/state";
 import { getFileName } from "../../../helpers/pathHelpers";
 import { resolveHydratedWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
-import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import type { WorkspaceStoreOrganizationPreference } from "../../project/model/projectTypes";
 import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { WorkspaceItem } from "./workspaceTypes";
@@ -25,12 +23,9 @@ import type { WorkspaceStatus } from "./workspaceTypes";
 type ProjectStoreSlice = {
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
-  pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
-  latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
-  gitChangesCountByWorkspaceId: Record<string, number>;
-  gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
   // Active context lives in the Workbench navigation Store (W2); previous
   // values are supplied by the flow, not read from the Workspace Store.
+  // Git projections are owned by the Git feature (desktop6-adjust.md W4).
   selectedProjectId?: string;
   selectedWorkspaceId?: string;
   displayProjectIds?: string[];
@@ -53,28 +48,10 @@ export type SnapshotReconcilerResult = {
   displayProjectIds: string[];
   lastUsedExternalAppId?: ExternalAppId;
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
-  /** Projection records to prune after reconciliation (workspace-scoped). */
-  projectionCleanup: {
-    gitChangesCountByWorkspaceId: Record<string, number>;
-    gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
-    pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
-    latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
-  };
 };
 
 function resolveWorkspaceProjectId(workspace: Pick<WorkspaceItem, "projectId" | "repoId">): string {
   return workspace.projectId ?? workspace.repoId;
-}
-
-/** Returns only entries keyed by workspace ids that still exist after snapshot reconciliation. */
-function filterWorkspaceScopedRecord<T>(record: Record<string, T>, workspaceIdSet: Set<string>): Record<string, T> {
-  const next: Record<string, T> = {};
-  for (const [workspaceId, value] of Object.entries(record)) {
-    if (workspaceIdSet.has(workspaceId)) {
-      next[workspaceId] = value;
-    }
-  }
-  return next;
 }
 
 function resolveNextDisplayProjectIds(input: {
@@ -218,18 +195,6 @@ function resolvePreservedHydrationWorkspaces(
   });
 }
 
-function buildLatestPullRequestByWorkspaceId(
-  workspacesFromApi: WorkspaceRecord[],
-): Record<string, WorkspacePullRequestSummary | undefined> {
-  const nextLatestPrByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined> = {};
-  for (const workspace of workspacesFromApi) {
-    if (workspace.latestPullRequest) {
-      nextLatestPrByWorkspaceId[workspace.id] = workspace.latestPullRequest;
-    }
-  }
-  return nextLatestPrByWorkspaceId;
-}
-
 /** Maps backend API data into workspace projects and open workspaces. */
 function mapApiData(
   projects: ProjectRecord[],
@@ -344,8 +309,6 @@ export function reconcileWorkspaceSnapshot(input: SnapshotReconcilerInput): Snap
     displayProjectIds: nextDisplayProjectIds,
   });
 
-  const nextWorkspaceIdSet = new Set(nextWorkspaces.map((workspace) => workspace.id));
-
   return {
     projects: nextBaseState.projects,
     workspaces: nextWorkspaces,
@@ -364,21 +327,6 @@ export function reconcileWorkspaceSnapshot(input: SnapshotReconcilerInput): Snap
             },
           }
         : previousState.organizationPreferencesById,
-    projectionCleanup: {
-      gitChangesCountByWorkspaceId: filterWorkspaceScopedRecord(
-        { ...(previousState.gitChangesCountByWorkspaceId ?? {}) },
-        nextWorkspaceIdSet,
-      ),
-      gitChangeTotalsByWorkspaceId: filterWorkspaceScopedRecord(
-        { ...(previousState.gitChangeTotalsByWorkspaceId ?? {}) },
-        nextWorkspaceIdSet,
-      ),
-      pullRequestByWorkspaceId: filterWorkspaceScopedRecord(
-        { ...(previousState.pullRequestByWorkspaceId ?? {}) },
-        nextWorkspaceIdSet,
-      ),
-      latestPullRequestByWorkspaceId: buildLatestPullRequestByWorkspaceId(workspacesFromApi),
-    },
   };
 }
 

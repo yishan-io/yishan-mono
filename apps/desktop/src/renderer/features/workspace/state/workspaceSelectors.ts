@@ -1,4 +1,3 @@
-import { workspaceProjectionStore } from "./workspaceProjectionStore";
 import { workspaceStore } from "./workspaceStore";
 
 /**
@@ -9,10 +8,6 @@ import { workspaceStore } from "./workspaceStore";
  * Active Workspace/Project context lives in the Workbench navigation Store
  * (desktop6-adjust.md W2); callers read `workbenchNavigationStore` directly.
  */
-export function selectWorkspaceFileTreeRefreshVersion(workspaceWorktreePath: string): number {
-  return workspaceProjectionStore.getState().gitRefreshVersionByWorktreePath?.[workspaceWorktreePath] ?? 0;
-}
-
 /** Reads the full workspace list. */
 export function selectWorkspaces() {
   return workspaceStore.getState().workspaces;

@@ -1,4 +1,3 @@
-import { workspaceProjectionStore } from "./workspaceProjectionStore";
 import { workspaceStore } from "./workspaceStore";
 import type { WorkspaceStoreState } from "./workspaceStoreTypes";
 
@@ -8,10 +7,6 @@ import type { WorkspaceStoreState } from "./workspaceStoreTypes";
  * workspace state changes through these functions instead of importing the
  * Workspace Store directly.
  */
-export function incrementGitRefreshVersion(workspaceWorktreePath: string): void {
-  workspaceProjectionStore.getState().incrementGitRefreshVersion(workspaceWorktreePath);
-}
-
 type AddWorkspaceInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
 type UpdateProjectConfigInput = Parameters<WorkspaceStoreState["updateProjectConfig"]>[1];
 
@@ -28,14 +23,6 @@ export function deleteProject(projectId: string): void {
 /** Updates one project config in workspace state. */
 export function updateProjectConfig(projectId: string, config: UpdateProjectConfigInput): void {
   workspaceStore.getState().updateProjectConfig(projectId, config);
-}
-
-/** Stores one workspace pull request in the projection store. */
-export function setWorkspacePullRequest(
-  workspaceId: string,
-  pullRequest: Parameters<ReturnType<typeof workspaceProjectionStore.getState>["setWorkspacePullRequest"]>[1],
-): void {
-  workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
 }
 
 /** Reorders the workspace display ids. */

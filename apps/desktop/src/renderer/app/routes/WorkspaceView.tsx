@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import { gitProjectionStore } from "@renderer/features/git";
 import { CreateProjectDialogView } from "@renderer/features/project";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,12 +10,14 @@ import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../shared/contracts/externalAp
 import {
   type AgentCommandSurface,
   type FileCommandSurface,
+  type GitCommandSurface,
   type ProjectCommandSurface,
   type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
   useAgentCommands,
   useFileCommands,
+  useGitCommands,
   useProjectCommands,
   useTerminalCommands,
   useWorkbenchCommands,
@@ -32,7 +35,6 @@ import { TerminalRecoveryCoordinator } from "../../features/terminal/runtime/ter
 import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
 import { resolveWorkspaceProjectId } from "../../features/workspace/model/workspaceTypes";
-import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { LeftPaneView } from "../../features/workspace/ui/LeftPane/LeftPaneView";
 import { MainPaneView } from "../../features/workspace/ui/MainPaneView";
@@ -59,7 +61,8 @@ type WorkspaceViewCommands = WorkspaceCommandSurface &
   AgentCommandSurface &
   TerminalCommandSurface &
   ProjectCommandSurface &
-  FileCommandSurface;
+  FileCommandSurface &
+  GitCommandSurface;
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
 function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: ReturnType<typeof useNavigate> }) {
@@ -345,7 +348,7 @@ export function WorkspaceView() {
   const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
   const { selectedWorkspaceId, selectedWorkspace } = useSelectedWorkspaceWithProject();
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
-  const workspaceGitRefreshVersion = workspaceProjectionStore((state) =>
+  const workspaceGitRefreshVersion = gitProjectionStore((state) =>
     selectedWorkspaceWorktreePath ? (state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0) : 0,
   );
   const overlayPanel = workbenchNavigationStore((state) => state.overlayPanel);
@@ -361,6 +364,7 @@ export function WorkspaceView() {
   const terminalCommands = useTerminalCommands();
   const projectCommands = useProjectCommands();
   const fileCommands = useFileCommands();
+  const gitCommands = useGitCommands();
   const cmd: WorkspaceViewCommands = useMemo(
     () => ({
       ...workspaceCommands,
@@ -369,8 +373,9 @@ export function WorkspaceView() {
       ...terminalCommands,
       ...projectCommands,
       ...fileCommands,
+      ...gitCommands,
     }),
-    [workspaceCommands, workbenchCommands, agentCommands, terminalCommands, projectCommands, fileCommands],
+    [workspaceCommands, workbenchCommands, agentCommands, terminalCommands, projectCommands, fileCommands, gitCommands],
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));

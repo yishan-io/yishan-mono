@@ -8,7 +8,6 @@ import { getIsLeftPaneManuallyHidden } from "@renderer/features/workbench";
 import { type WorkspaceRightPaneTab, workbenchNavigationStore } from "@renderer/features/workbench";
 import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/features/workbench";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import { api } from "../../../api";
 import {
   resizeLeftPane,
   resizeRightPane,
@@ -17,23 +16,16 @@ import {
   setRightPaneTab,
 } from "../../../features/workbench/commands/tabCommands";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
-import {
-  computeUniqueGitChangeFileCount,
-  countWorkspaceGitChanges,
-  normalizeCreateWorkspaceInput,
-  summarizeReconciledWorkspaceGitChangeTotals,
-} from "../../../helpers/workspaceHelpers";
+import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import {
   setDisplayProjectIds as applyDisplayProjectIds,
   setLastUsedExternalAppId as applyLastUsedExternalAppId,
 } from "../../project/state/projectActions";
 import { selectProjectById, selectProjectDisplayIds, selectProjects } from "../../project/state/projectSelectors";
-import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 export { createWorkspace } from "./workspaceCreateCommand";
@@ -70,136 +62,6 @@ export function subscribeOpenCreateWorkspaceDialog(
   return () => {
     window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, handleEvent);
   };
-}
-
-/**
- * Resolves the normalized target branch (origin-prefixed) for a workspace,
- * matching the convention used by the Changes tab comparison.
- */
-function resolveWorkspaceTargetBranch(workspaceId: string): string | undefined {
-  const workspace = workspaceStore.getState().workspaces.find((ws) => ws.id === workspaceId);
-  const sourceBranch = workspace?.sourceBranch?.trim();
-  if (!sourceBranch) {
-    return undefined;
-  }
-  if (sourceBranch.startsWith("origin/") || sourceBranch.includes("/")) {
-    return sourceBranch;
-  }
-  return `origin/${sourceBranch}`;
-}
-
-/** Loads workspace git change sections and stores the aggregated count.
- *
- * The count combines:
- * 1. Uncommitted working-tree changes (staged + unstaged + untracked file count).
- * 2. Committed branch-diff changes against the workspace's source branch
- *    (files changed between merge-base and HEAD).
- *
- * The two sets are merged by unique file path so a file that appears in both
- * the branch diff and the working tree is only counted once.
- *
- * The totals (additions/deletions) similarly combine both sources.
- */
-export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<void> {
-  if (!workspaceId) {
-    return;
-  }
-
-  const store = workspaceStore.getState();
-  const workspace = store.workspaces.find((workspace) => workspace.id === workspaceId);
-  if (!workspace) {
-    return;
-  }
-
-  // Folder workspaces (kind="folder"/sentinel project id) and non-git
-  // projects have no git state to poll.
-  if (isFolderWorkspace(workspace)) {
-    return;
-  }
-  const project = selectProjectById(workspace.projectId ?? workspace.repoId);
-  if (!supportsGitFeatures(project?.sourceType)) {
-    return;
-  }
-
-  if (workspace.state && workspace.state !== "active") {
-    return;
-  }
-
-  const workspaceWorktreePath = workspace.worktreePath?.trim();
-  if (!workspaceWorktreePath) {
-    return;
-  }
-
-  try {
-    const client = await getDaemonClient();
-    const targetBranch = resolveWorkspaceTargetBranch(workspaceId);
-
-    // Fetch uncommitted changes and (optionally) branch diff summary in parallel.
-    const [sections, branchSummary] = await Promise.all([
-      client.git.listChanges({ workspaceId }),
-      targetBranch
-        ? client.git.getBranchDiffSummary({ workspaceId, targetBranch }).catch(() => null)
-        : Promise.resolve(null),
-    ]);
-
-    const uncommittedCount = countWorkspaceGitChanges(sections);
-    const uncommittedTotals = summarizeReconciledWorkspaceGitChangeTotals(sections);
-
-    if (!branchSummary) {
-      // No source branch configured — fall back to uncommitted-only count.
-      workspaceProjectionStore.getState().setWorkspaceGitChangesCount(workspaceId, uncommittedCount);
-      workspaceProjectionStore.getState().setWorkspaceGitChangeTotals(workspaceId, uncommittedTotals);
-      return;
-    }
-
-    const combinedCount = computeUniqueGitChangeFileCount(branchSummary.files ?? [], sections);
-    const combinedTotals = {
-      additions: branchSummary.additions + uncommittedTotals.additions,
-      deletions: branchSummary.deletions + uncommittedTotals.deletions,
-    };
-
-    workspaceProjectionStore.getState().setWorkspaceGitChangesCount(workspaceId, combinedCount);
-    workspaceProjectionStore.getState().setWorkspaceGitChangeTotals(workspaceId, combinedTotals);
-  } catch (error) {
-    if (isWorkspaceNotFoundError(error)) {
-      return;
-    }
-    console.error("Failed to refresh workspace git changes", error);
-  }
-}
-
-/** Re-queries the daemon for the selected workspace pull request state. */
-export async function refreshWorkspacePullRequest(workspaceId: string): Promise<void> {
-  if (!workspaceId) {
-    return;
-  }
-
-  const workspace = workspaceStore.getState().workspaces.find((candidate) => candidate.id === workspaceId);
-  if (!workspace) {
-    return;
-  }
-
-  // Folder workspaces have no git state nor pull requests: never query the daemon.
-  if (isFolderWorkspace(workspace)) {
-    return;
-  }
-
-  try {
-    const client = await getDaemonClient();
-    const refreshedWorkspace = await client.workspace.refreshPullRequest({
-      workspaceId,
-    });
-
-    workspaceProjectionStore.getState().setWorkspacePullRequest(workspaceId, refreshedWorkspace.pullRequest);
-  } catch (error) {
-    console.error("Failed to refresh workspace pull request", error);
-    throw error;
-  }
-}
-
-/** Lists historical pull request records for one workspace from the API service. */
-export async function listPullRequestHistory(orgId: string, projectId: string, workspaceId: string) {
-  return api.workspacePullRequest.list(orgId, projectId, workspaceId);
 }
 
 /** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */

@@ -48,6 +48,11 @@ import {
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
 } from "../../features/git/commands/gitCommands";
+import {
+  listPullRequestHistory as listPullRequestHistoryCommand,
+  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
+  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
+} from "../../features/git/commands/gitProjectionCommands";
 import { listOrgNodes as listOrgNodesCommand } from "../../features/node/commands/nodeCommands";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
@@ -134,8 +139,6 @@ import {
   focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
   openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
   openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
-  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
-  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
   renameWorkspaceBranch as renameWorkspaceBranchCommand,
   renameWorkspace as renameWorkspaceCommand,
   reorderWorkspace as reorderWorkspaceCommand,
@@ -221,8 +224,6 @@ export type WorkspaceCommandSurface = {
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
   deleteLocalFolder: typeof deleteLocalFolderCommand;
-  refreshWorkspacePullRequest: (workspaceId: string) => Promise<void>;
-  refreshWorkspaceGitChanges: (workspaceId: string) => Promise<void>;
 };
 
 /** Agent feature command surface. */
@@ -261,6 +262,9 @@ export type GitCommandSurface = {
   getGitAuthorName: typeof getGitAuthorNameCommand;
   pushGitBranch: typeof pushGitBranchCommand;
   publishGitBranch: typeof publishGitBranchCommand;
+  refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChangesCommand;
+  refreshWorkspacePullRequest: typeof refreshWorkspacePullRequestCommand;
+  listPullRequestHistory: typeof listPullRequestHistoryCommand;
 };
 
 /** Node feature command surface. */
@@ -434,8 +438,6 @@ export function createWorkspaceCommands(): WorkspaceCommandSurface {
     createWorkspace: createWorkspaceCommand,
     closeWorkspace: closeWorkspaceCommand,
     deleteLocalFolder: deleteLocalFolderCommand,
-    refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
-    refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
   };
 }
 
@@ -476,6 +478,9 @@ export function createGitCommands(): GitCommandSurface {
     getGitAuthorName: getGitAuthorNameCommand,
     pushGitBranch: pushGitBranchCommand,
     publishGitBranch: publishGitBranchCommand,
+    refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
+    refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
+    listPullRequestHistory: listPullRequestHistoryCommand,
   };
 }
 

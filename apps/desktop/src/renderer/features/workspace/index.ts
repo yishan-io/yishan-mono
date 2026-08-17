@@ -12,15 +12,12 @@ export type {
   WorkspaceLifecycleState,
   WorkspaceStatus,
 } from "./model/workspaceTypes";
-export { selectWorkspaceFileTreeRefreshVersion } from "./state/workspaceSelectors";
-export { incrementGitRefreshVersion, setOrderedWorkspaceIds, setWorkspacePullRequest } from "./state/workspaceActions";
+export { selectWorkspaces } from "./state/workspaceSelectors";
+export { setOrderedWorkspaceIds } from "./state/workspaceActions";
 export {
   useSelectedProjectId,
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
-  useWorkspaceGitChangeTotalsByWorkspaceId,
-  useWorkspacePullRequestByWorkspaceId,
-  useWorkspaceGitRefreshVersion,
   useWorkspaces,
 } from "./ui/hooks/useWorkspaceReadHooks";
 

@@ -17,9 +17,6 @@ import type * as workspaceCommands from "./workspaceCommands";
 import type * as workspaceCreateCommand from "./workspaceCreateCommand";
 
 export type WorkspaceCommands = {
-  refreshWorkspaceGitChanges: typeof workspaceCommands.refreshWorkspaceGitChanges;
-  refreshWorkspacePullRequest: typeof workspaceCommands.refreshWorkspacePullRequest;
-  listPullRequestHistory: typeof workspaceCommands.listPullRequestHistory;
   subscribeOpenCreateWorkspaceDialog: typeof workspaceCommands.subscribeOpenCreateWorkspaceDialog;
   setDisplayRepoIds: typeof workspaceCommands.setDisplayRepoIds;
   setLastUsedExternalAppId: typeof workspaceCommands.setLastUsedExternalAppId;
