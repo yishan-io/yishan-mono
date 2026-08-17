@@ -1,15 +1,8 @@
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
-import type { WorkspaceTab } from "../../../features/workbench";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-
-type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
-
-/** Narrow tab-access port injected by the terminal composition boundary. */
-export type TerminalTabPort = {
-  readTerminalTab: (tabId: string) => TerminalTab | undefined;
-  setTerminalTabSessionId: (tabId: string, sessionId: string) => void;
-};
+import { getTerminalRuntime } from "./terminalRuntimeRegistry";
+import type { TerminalTabData } from "./terminalRuntimeTypes";
 type TerminalSnapshot = {
   nextIndex: number;
   chunks: string[];
@@ -42,7 +35,8 @@ export class TerminalSessionOrchestrator {
       resizeTerminal: (params: { sessionId: string; cols: number; rows: number }) => Promise<{ ok: true }>;
       closeTerminalSession?: (params: { sessionId: string }) => Promise<unknown>;
     },
-    private readonly tabPort: TerminalTabPort,
+    private readonly tabData: TerminalTabData,
+    private readonly onSessionBound: (tabId: string, sessionId: string) => void = () => {},
   ) {}
 
   /**
@@ -53,12 +47,12 @@ export class TerminalSessionOrchestrator {
     terminal: Pick<Terminal, "write" | "cols" | "rows">;
     fitAddon: Pick<FitAddon, "fit">;
   }): Promise<{ sessionId: string; nextIndex: number; exited: boolean } | null> {
-    const tab = this.tabPort.readTerminalTab(input.tabId);
-    if (!tab) {
+    const tab = this.tabData;
+    if (!tab.workspaceId) {
       return null;
     }
 
-    const resolvedSession = await this.resolveSessionSnapshot(tab);
+    const resolvedSession = await this.resolveSessionSnapshot(input.tabId);
 
     try {
       input.fitAddon.fit();
@@ -99,19 +93,19 @@ export class TerminalSessionOrchestrator {
   /**
    * Resolves one stable terminal session snapshot per tab and deduplicates concurrent creation requests.
    */
-  private async resolveSessionSnapshot(tab: TerminalTab): Promise<TerminalResolvedSession> {
-    const existing = inFlightSessionResolutionByTabId.get(tab.id);
+  private async resolveSessionSnapshot(tabId: string): Promise<TerminalResolvedSession> {
+    const existing = inFlightSessionResolutionByTabId.get(tabId);
     if (existing) {
       return await existing;
     }
 
-    const resolution = this.resolveSessionSnapshotUncached(tab);
-    inFlightSessionResolutionByTabId.set(tab.id, resolution);
+    const resolution = this.resolveSessionSnapshotUncached(tabId);
+    inFlightSessionResolutionByTabId.set(tabId, resolution);
     try {
       return await resolution;
     } finally {
-      if (inFlightSessionResolutionByTabId.get(tab.id) === resolution) {
-        inFlightSessionResolutionByTabId.delete(tab.id);
+      if (inFlightSessionResolutionByTabId.get(tabId) === resolution) {
+        inFlightSessionResolutionByTabId.delete(tabId);
       }
     }
   }
@@ -119,8 +113,8 @@ export class TerminalSessionOrchestrator {
   /**
    * Resolves one terminal session snapshot by reusing one existing session or creating a replacement when missing.
    */
-  private async resolveSessionSnapshotUncached(tab: TerminalTab): Promise<TerminalResolvedSession> {
-    let sessionId = normalizeOptionalText(tab.data.sessionId);
+  private async resolveSessionSnapshotUncached(tabId: string): Promise<TerminalResolvedSession> {
+    let sessionId = normalizeOptionalText(getTerminalRuntime(tabId)?.sessionId ?? undefined);
     let snapshot: TerminalSnapshot | undefined;
     let isNewSession = false;
 
@@ -147,13 +141,13 @@ export class TerminalSessionOrchestrator {
 
     if (!sessionId || !snapshot) {
       const created = await this.commands.createTerminalSession({
-        workspaceId: tab.workspaceId,
-        tabId: tab.id,
-        paneId: resolveTerminalPaneId(tab.id, tab.data.paneId),
+        workspaceId: this.tabData.workspaceId,
+        tabId,
+        paneId: resolveTerminalPaneId(tabId, this.tabData.paneId),
       });
       sessionId = created.sessionId;
 
-      const stillExists = this.tabPort.readTerminalTab(tab.id) !== undefined;
+      const stillExists = getTerminalRuntime(tabId) != null;
       if (!stillExists) {
         await this.commands.closeTerminalSession?.({ sessionId }).catch(() => {});
         throw new Error("Terminal tab was closed before session could be attached");
@@ -163,16 +157,16 @@ export class TerminalSessionOrchestrator {
       isNewSession = true;
     }
 
-    if (tab.data.sessionId !== sessionId) {
-      this.tabPort.setTerminalTabSessionId(tab.id, sessionId);
+    if (getTerminalRuntime(tabId)?.sessionId !== sessionId) {
+      this.onSessionBound(tabId, sessionId);
     }
 
     if (isNewSession) {
-      const launchCommand = normalizeOptionalText(tab.data.launchCommand);
+      const launchCommand = normalizeOptionalText(this.tabData.launchCommand);
       if (launchCommand) {
         await this.commands.writeTerminalInput({
           sessionId,
-          data: `${buildTerminalLaunchCommand(launchCommand, Boolean(tab.data.agentKind))}\r`,
+          data: `${buildTerminalLaunchCommand(launchCommand, Boolean(this.tabData.agentKind))}\r`,
         });
       }
     }

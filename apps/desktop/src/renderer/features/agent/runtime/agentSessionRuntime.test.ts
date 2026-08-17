@@ -45,7 +45,6 @@ vi.mock("../../../rpc/rpcTransport", () => ({
       listActiveSessions: mocks.listActiveSessions,
     },
   })),
-  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
 }));
 
 afterEach(() => {

@@ -1,6 +1,10 @@
 import { Box, Typography } from "@mui/material";
+import { AgentChatView } from "@renderer/features/agent";
+import { TerminalView } from "@renderer/features/terminal";
+import { BrowserView } from "@renderer/features/workbench";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/commands/useCommands";
 import { AudioPreview } from "../../../components/AudioPreview";
 import { FileDiffViewer } from "../../../components/FileDiffViewer";
 import { FileEditor } from "../../../components/FileEditor";
@@ -9,13 +13,9 @@ import { MultiFileDiffViewer } from "../../../components/MultiFileDiffViewer";
 import { TabPanel } from "../../../components/TabPanel";
 import { UnsupportedFileView } from "../../../components/UnsupportedFileView";
 import { VideoPreview } from "../../../components/VideoPreview";
+import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { copyToClipboard } from "../../../helpers/clipboard";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/commands/useCommands";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { AgentChatView } from "@renderer/features/agent";
-import { BrowserView } from "@renderer/features/workbench";
-import { TerminalView } from "@renderer/features/terminal";
 
 type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;
@@ -245,7 +245,17 @@ export function useTabContentRenderer({
         }
         return (
           <Box key={tab.id} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-            <TerminalView tabId={tab.id} focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0} />
+            <TerminalView
+              tabId={tab.id}
+              tabData={{
+                workspaceId: tab.workspaceId,
+                worktreePath: workspace?.worktreePath,
+                paneId: tab.data.paneId,
+                launchCommand: tab.data.launchCommand,
+                agentKind: tab.data.agentKind,
+              }}
+              focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0}
+            />
           </Box>
         );
       }

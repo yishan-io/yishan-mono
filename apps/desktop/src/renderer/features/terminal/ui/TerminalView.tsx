@@ -20,6 +20,13 @@ import { useTerminalWakeRecovery } from "./useTerminalWakeRecovery";
 
 type TerminalViewProps = {
   tabId: string;
+  tabData: {
+    workspaceId: string;
+    worktreePath?: string;
+    paneId?: string;
+    launchCommand?: string;
+    agentKind?: string;
+  };
   focusRequestKey?: number;
 };
 
@@ -32,7 +39,7 @@ type TerminalViewProps = {
  * 3. Detaches on unmount (terminal stays alive in offscreen parking area).
  * 4. Manages UI-only concerns: search panel, drag/drop overlay, focus, keyboard shortcuts.
  */
-export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) {
+export const TerminalView = memo(function TerminalView({ tabId, tabData, focusRequestKey = 0 }: TerminalViewProps) {
   const terminalCommands = useTerminalCommands();
   const workbenchCommands = useWorkbenchCommands();
   // Stable identity: effects below key on `cmd`; a fresh object every render
@@ -65,8 +72,8 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
     }
 
     // Ensure runtime exists and session lifecycle is initialized.
-    const runtime = ensureTerminalRuntime(tabId);
-    initTerminalSessionLifecycle(tabId);
+    const runtime = ensureTerminalRuntime(tabId, tabData);
+    initTerminalSessionLifecycle(tabId, tabData);
 
     // Sync refs after ensure (in case this is the first render).
     xtermRef.current = runtime.terminal;

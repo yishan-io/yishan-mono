@@ -20,8 +20,19 @@ import type { TerminalWriteQueue } from "./terminalWriteQueue";
  */
 export type TerminalRuntimeState = "idle" | "attaching" | "attached" | "detached" | "disposing" | "disposed";
 
+/** The terminal-relevant tab fields owned by the caller (workbench renders the tab). */
+export type TerminalTabData = {
+  workspaceId: string;
+  worktreePath?: string;
+  paneId?: string;
+  launchCommand?: string;
+  agentKind?: string;
+};
+
 export type TerminalRuntimeEntry = {
   tabId: string;
+  /** Tab data passed in by the caller at init; the runtime owns it afterwards. */
+  tabData: TerminalTabData;
   state: TerminalRuntimeState;
   /** Monotonically increasing version — used to reject stale async completions. */
   version: number;

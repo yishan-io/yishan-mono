@@ -80,6 +80,16 @@ export function renameTabState(
     return null;
   }
 
+  // A programmatic title update (e.g. terminal output title) must not overwrite
+  // a name the user explicitly set.
+  if (
+    !options?.userRenamed &&
+    (targetTab.kind === "terminal" || targetTab.kind === "agent-chat") &&
+    targetTab.data.userRenamed
+  ) {
+    return null;
+  }
+
   return {
     tabs: state.tabs.map((tab) => {
       if (tab.id !== tabId) {

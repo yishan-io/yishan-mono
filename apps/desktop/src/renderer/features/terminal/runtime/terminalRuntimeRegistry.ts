@@ -8,13 +8,14 @@ import {
   TERMINAL_OPTIONS,
   type TerminalRuntimeEntry,
   type TerminalRuntimeState,
+  type TerminalTabData,
   canTransition,
   transitionState,
 } from "./terminalRuntimeTypes";
 import { createTerminalWriteQueue } from "./terminalWriteQueue";
 import type { TerminalWriteQueue } from "./terminalWriteQueue";
 
-export type { TerminalRuntimeEntry, TerminalRuntimeState } from "./terminalRuntimeTypes";
+export type { TerminalRuntimeEntry, TerminalRuntimeState, TerminalTabData } from "./terminalRuntimeTypes";
 
 // ─── Resize Callback ───────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ type TerminalHostRect = Pick<DOMRectReadOnly, "width" | "height">;
  * visible placeholder yet — it renders into an offscreen host element managed
  * by the runtime layer.
  */
-export function ensureTerminalRuntime(tabId: string): TerminalRuntimeEntry {
+export function ensureTerminalRuntime(tabId: string, tabData?: TerminalTabData): TerminalRuntimeEntry {
   const existing = runtimesByTabId.get(tabId);
   if (existing && existing.state !== "disposed") {
     return existing;
@@ -100,6 +101,7 @@ export function ensureTerminalRuntime(tabId: string): TerminalRuntimeEntry {
 
   const entry: TerminalRuntimeEntry = {
     tabId,
+    tabData: tabData ?? { workspaceId: "" },
     state: "idle",
     version: 0,
     terminal,

@@ -418,7 +418,12 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -452,7 +457,12 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalledWith({
         workspaceId: "workspace-1",
@@ -506,7 +516,7 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-2" />);
+    render(<TerminalView tabId="terminal-tab-2" tabData={{ workspaceId: "workspace-1", launchCommand: "codex" }} />);
     await waitFor(() => {
       expect(mocked.writeTerminalInput).toHaveBeenCalledWith({
         sessionId: "session-2",
@@ -535,7 +545,12 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -564,7 +579,12 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -593,7 +613,12 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -621,7 +646,12 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.subscribeTerminalOutput).toHaveBeenCalled();
     });
@@ -655,7 +685,12 @@ describe("TerminalView", () => {
 
     const animationFrames = stubAsyncTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     while (animationFrames.length > 0) {
       animationFrames.shift()?.(0);
     }
@@ -710,7 +745,12 @@ describe("TerminalView", () => {
       completeFirstWrite = callback;
     });
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     while (animationFrames.length > 0) {
       animationFrames.shift()?.(0);
     }
@@ -774,8 +814,8 @@ describe("TerminalView", () => {
 
     render(
       <>
-        <TerminalView tabId="terminal-tab-1" />
-        <TerminalView tabId="terminal-tab-2" />
+        <TerminalView tabId="terminal-tab-1" tabData={{ workspaceId: "workspace-1" }} />
+        <TerminalView tabId="terminal-tab-2" tabData={{ workspaceId: "workspace-1" }} />
       </>,
     );
     await waitFor(() => {
@@ -815,7 +855,12 @@ describe("TerminalView", () => {
 
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
 
-    const view = render(<TerminalView tabId="terminal-tab-1" />);
+    const view = render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -846,7 +891,12 @@ describe("TerminalView", () => {
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(errorSpy).toHaveBeenCalledWith(
         "[TerminalRegistry] Failed to init terminal session lifecycle",
@@ -881,7 +931,12 @@ describe("TerminalView", () => {
 
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     const terminalInput = document.querySelector("textarea");
     terminalInput?.focus();
     fireEvent.keyDown(document, { key: "f", ctrlKey: true });
@@ -949,10 +1004,12 @@ describe("TerminalView", () => {
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-    const view = render(<TerminalView tabId="terminal-tab-1" focusRequestKey={0} />);
+    const view = render(
+      <TerminalView tabId="terminal-tab-1" tabData={{ workspaceId: "workspace-1" }} focusRequestKey={0} />,
+    );
     expect(mocked.xtermFocus).not.toHaveBeenCalled();
 
-    view.rerender(<TerminalView tabId="terminal-tab-1" focusRequestKey={1} />);
+    view.rerender(<TerminalView tabId="terminal-tab-1" tabData={{ workspaceId: "workspace-1" }} focusRequestKey={1} />);
 
     expect(mocked.xtermFocus).toHaveBeenCalledTimes(1);
   });
@@ -976,7 +1033,12 @@ describe("TerminalView", () => {
 
     const animationFrames = stubAsyncTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.subscribeTerminalOutput).toHaveBeenCalled();
     });
@@ -1055,7 +1117,12 @@ describe("TerminalView", () => {
 
     const animationFrames = stubAsyncTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.subscribeTerminalOutput).toHaveBeenCalled();
     });
@@ -1108,7 +1175,12 @@ describe("TerminalView", () => {
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)");
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -1141,7 +1213,12 @@ describe("TerminalView", () => {
 
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -1175,7 +1252,12 @@ describe("TerminalView", () => {
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
     vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)");
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -1212,7 +1294,12 @@ describe("TerminalView", () => {
 
     vi.stubGlobal("ResizeObserver", MockResizeObserver);
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });
@@ -1259,7 +1346,12 @@ describe("TerminalView", () => {
 
     stubTerminalBrowserApis();
 
-    render(<TerminalView tabId="terminal-tab-1" />);
+    render(
+      <TerminalView
+        tabId="terminal-tab-1"
+        tabData={{ workspaceId: "workspace-1", worktreePath: "/tmp/workspace-1" }}
+      />,
+    );
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalled();
     });

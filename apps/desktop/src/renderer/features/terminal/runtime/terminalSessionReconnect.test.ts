@@ -144,6 +144,7 @@ function buildOutputSubscription() {
 function buildStubRuntime(tabId: string, overrides?: Partial<TerminalRuntimeEntry>): TerminalRuntimeEntry {
   return {
     tabId,
+    tabData: { workspaceId: "ws-1" },
     state: "attached",
     version: 1,
     terminal: {
