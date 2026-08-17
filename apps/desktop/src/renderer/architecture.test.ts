@@ -49,9 +49,61 @@ type KnownViolation = { rule: RuleName; file: string; phase: string };
 const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- Rule 1: UI value-imports of api/rpc (cross-layer index §1) ----
   // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
-  { rule: "R1-value-api-rpc", file: "views/workspace/useAgentChatSessionLifecycle.ts", phase: "P5" },
   // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
   // ---- Rule 4: commands importing views/components (cross-layer index) ----
+  // ---- Phase 14 baseline: view moves exposed pre-existing cross-feature
+  // Store/transport imports (views/<f> -> features/<f>/ui). Replace with
+  // feature Selectors/Commands per Phase 14 task 8; remove rows as fixed. ----
+  { rule: "R1-value-api-rpc", file: "features/workspace/ui/useAgentChatSessionLifecycle.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/overview/ui/OverviewView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/ScheduledJobDetailFields.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/ScheduledJobDetailView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/ScheduledJobListItemView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/AccountSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/GitWorkspaceSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/LanguageSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/LinkSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/MarkdownSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/MemberSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/NodesSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/TerminalSettingsView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/settings/ui/daemon/daemonSettings/closeTerminalTabsForDaemonRestart.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRuntimeRegistry.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatComposerPane.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatTranscriptPane.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/ChatView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/DaemonVersionWarningControl.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/FileSearchOverlay.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.testUtils.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/LeftPaneResourceUsageControl.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/LeftPaneView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/ProjectConfigDialogView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/ProjectFilterPopoverView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/ProjectListView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useCreateWorkspaceDialogState.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListDialogState.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListFoldState.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListTreeData.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneTitleBarView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/OnboardingView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneTabBar.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/useChangesTabState.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspacePortsMenuControl.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceResourceUsageControl.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceSplitPaneView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/browser/BrowserView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/TerminalView.tsx", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalFileDrop.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalWakeRecovery.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/useAgentChatSessionLifecycle.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/useAgentChatSubagentActions.ts", phase: "P14" },
+  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/usePaneTabHandlers.ts", phase: "P14" },
   // ---- Rule 5 baseline (Phase 14): pre-existing cross-feature Store imports
   // (store/ root moved to features/<feature>/state). Replace with feature
   // Selectors/Commands per Phase 14 task 8; remove rows as fixed. ----
@@ -152,7 +204,9 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       rel.startsWith("views/") ||
       rel.startsWith("components/") ||
       rel.startsWith("hooks/") ||
-      rel.startsWith("app/routes/");
+      rel.startsWith("app/routes/") ||
+      rel.startsWith("ui/") ||
+      (/^features\/[^/]+\/ui\//.test(rel));
     const isPureDomain = rel.startsWith("features/workbench/model/tabs/") || rel.startsWith("features/workbench/model/split-pane/");
 
     for (const imp of extractImports(file)) {
@@ -163,7 +217,11 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // slash; treat the bare dir as transport too (Phase 4 gap closure).
       const isTransport = relT.startsWith("api/") || relT.startsWith("rpc/") || relT === "api" || relT === "rpc";
       const isCommands = relT.startsWith("commands/");
-      const isViews = relT.startsWith("views/") || relT.startsWith("components/");
+      const isViews =
+        relT.startsWith("views/") ||
+        relT.startsWith("components/") ||
+        relT.startsWith("ui/") ||
+        /^features\/[^/]+\/ui\//.test(relT);
       const isMain = relT.startsWith("../main/") || relT.startsWith("main/");
 
       if (isUi && !imp.isTypeOnly && isTransport) {

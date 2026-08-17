@@ -4,8 +4,8 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { sessionStore } from "../../features/session/state/sessionStore";
 import { useSessionBootstrap } from "../runtime/sessionBootstrap";
 import { LoginView } from "./LoginView";
-import { WorkspaceView } from "../../views/WorkspaceView";
-import { AppBootstrapLoadingView } from "../../views/layout/AppBootstrapLoadingView";
+import { WorkspaceView } from "./WorkspaceView";
+import { AppBootstrapLoadingView } from "../../ui/layout/AppBootstrapLoadingView";
 import { OnboardOrgView } from "./OnboardOrgView";
 
 const WORKSPACE_ROUTE = "/";

@@ -9,7 +9,7 @@ import {
   buildAgentChatUsageSummary,
   formatDetailedTokenCount,
   roundContextPercent,
-} from "../../../views/workspace/agentChatUsageSummary";
+} from "../../../features/workspace/ui/agentChatUsageSummary";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const USAGE_SUMMARY_FONT_SIZE_PX = 12;

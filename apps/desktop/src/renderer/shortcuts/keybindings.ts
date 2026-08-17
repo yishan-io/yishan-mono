@@ -4,7 +4,7 @@ import { createNewWhiteboard } from "../features/workbench/commands/whiteboardCo
 import { requestAgentChatComposerFocus } from "../events/agentChatComposerFocus";
 import { projectStore } from "../features/project/state/projectStore";
 import { setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
-import { reloadWebview } from "../views/workspace/browser/webviewRegistry";
+import { reloadWebview } from "../features/workspace/ui/browser/webviewRegistry";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
 import { toSupportedKeyBinding } from "./shortcutMetadata";

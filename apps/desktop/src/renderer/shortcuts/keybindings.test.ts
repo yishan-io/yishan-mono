@@ -14,7 +14,7 @@ afterEach(() => {
 });
 import { SUPPORTED_KEY_BINDINGS, type ShortContext, getShortcutDefinitions } from "./keybindings";
 
-vi.mock("../views/workspace/browser/webviewRegistry", () => ({
+vi.mock("../features/workspace/ui/browser/webviewRegistry", () => ({
   reloadWebview: vi.fn(),
 }));
 
@@ -342,7 +342,7 @@ describe("getShortcutDefinitions", () => {
   });
 
   it("reloads the active browser tab from Cmd+R shortcut", async () => {
-    const { reloadWebview } = await import("../views/workspace/browser/webviewRegistry");
+    const { reloadWebview } = await import("../features/workspace/ui/browser/webviewRegistry");
     const reloadWebviewMock = vi.mocked(reloadWebview);
     reloadWebviewMock.mockClear();
 
@@ -373,7 +373,7 @@ describe("getShortcutDefinitions", () => {
   });
 
   it("does not reload browser tab when selected tab is not a browser tab", async () => {
-    const { reloadWebview } = await import("../views/workspace/browser/webviewRegistry");
+    const { reloadWebview } = await import("../features/workspace/ui/browser/webviewRegistry");
     const reloadWebviewMock = vi.mocked(reloadWebview);
     reloadWebviewMock.mockClear();
 
