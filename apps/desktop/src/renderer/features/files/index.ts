@@ -25,3 +25,33 @@ export {
 export { useFileSearchController } from "./ui/useFileSearchController";
 export { FileSearchOverlay } from "./ui/FileSearchOverlay";
 export { FileManagerView } from "./ui/FileManagerView";
+export {
+  FILETREE_DRAG_MIME,
+  extractInternalDragRelativePaths,
+  extractSourcePathsFromDataTransfer,
+  extractSourcePathsFromDataTransferAsync,
+  hasExternalFileDragIntent,
+  hasInternalFileTreeDragIntent,
+  resolveInternalFileTreeDragEntries,
+  resolveInternalFileTreeDragPaths,
+  type FileTreeDragEntry,
+} from "./ui/file-tree/dataTransfer";
+export { getFileTreeIcon } from "./ui/fileTreeIcons";
+export { FileTree, type FileTreeProps } from "./ui/file-tree";
+export {
+  buildHighlightedPathSegments,
+  splitFilePathForDisplay,
+  type FilePathDisplayParts,
+  type HighlightedPathSegment,
+} from "./ui/filePathDisplayHelpers";
+export {
+  AudioPreview,
+  DiffSearchPanel,
+  FileDiffViewer,
+  FileEditor,
+  FileQuickOpenDialog,
+  ImagePreview,
+  MultiFileDiffViewer,
+  UnsupportedFileView,
+  VideoPreview,
+} from "./ui/editors";

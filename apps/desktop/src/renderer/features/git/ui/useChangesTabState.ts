@@ -9,7 +9,7 @@ import type {
   ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
-import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
+import type { ProjectGitChangeKind, ProjectGitChangesSection } from "./ProjectGitChangesList";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";

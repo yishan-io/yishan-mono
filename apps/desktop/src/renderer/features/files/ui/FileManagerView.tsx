@@ -1,14 +1,14 @@
 import { Alert, Box } from "@mui/material";
 import { useGitCommands } from "@renderer/app/commands/useCommands";
 import { ContextMenu } from "@renderer/components/ContextMenu";
-import { FileTree } from "@renderer/components/FileTree";
-import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
-import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
 import { useDetectedExternalAppIds } from "@renderer/features/files/ui/hooks/useDetectedExternalAppIds";
 import { tabStore } from "@renderer/features/workbench";
 import { getRendererPlatform } from "@renderer/helpers/platform";
 import { useContextMenuState } from "@renderer/ui/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/ui/hooks/useSuppressNativeContextMenuWhileOpen";
+import { FileTree } from "./file-tree";
+import { FileTreeToolbar } from "./file-tree/FileTreeToolbar";
+import type { FileTreeContextMenuRequest } from "./file-tree/types";
 
 import { setExpandedFileTreeItems, setSelectedEntryPath } from "@renderer/features/files";
 import { fileTreeStore } from "@renderer/features/files";

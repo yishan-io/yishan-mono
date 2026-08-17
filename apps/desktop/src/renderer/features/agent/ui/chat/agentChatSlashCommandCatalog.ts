@@ -4,7 +4,7 @@ import exploreAgentMarkdown from "../../../../../../../../packages/pi-subagents/
 import generalAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/general.md?raw";
 import planReviewerAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/plan-reviewer.md?raw";
 import taskReviewerAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/task-reviewer.md?raw";
-import type { RichComposerSlashCommand } from "../../../../components/RichComposer";
+import type { RichComposerSlashCommand } from "./composer/RichComposer";
 
 const SUBAGENT_DEFINITION_MARKDOWNS = [
   builderAgentMarkdown,

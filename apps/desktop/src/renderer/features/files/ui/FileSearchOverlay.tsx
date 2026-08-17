@@ -3,7 +3,7 @@ import { openTab } from "@renderer/features/workbench";
 import { useSelectedWorkspaceWorktreePath } from "@renderer/features/workspace";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
+import { FileQuickOpenDialog } from "@renderer/features/files";
 import {
   isAudioFile,
   isExcalidrawFile,

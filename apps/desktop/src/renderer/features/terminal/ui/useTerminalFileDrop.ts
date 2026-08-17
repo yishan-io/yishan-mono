@@ -7,7 +7,7 @@ import {
   extractSourcePathsFromDataTransfer,
   hasExternalFileDragIntent,
   resolveInternalFileTreeDragPaths,
-} from "../../../components/FileTree/dataTransfer";
+} from "@renderer/features/files";
 import { getTerminalRuntime } from "../../../features/terminal";
 import { escapePathsForShell } from "./terminalPathEscape";
 

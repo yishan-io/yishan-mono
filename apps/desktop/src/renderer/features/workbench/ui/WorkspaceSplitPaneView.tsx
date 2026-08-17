@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
-import { getFileTreeIcon } from "../../../components/fileTreeIcons";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
 import type { WorkbenchTab } from "../../../features/workbench/model/types";
 import { selectPaneForTab } from "../../../features/workbench/state/workbenchSelectors";
@@ -37,6 +36,8 @@ export type WorkspaceSplitPaneProps = {
   fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
   /** Renders one agent icon (App-supplied; agent-owned). */
   renderAgentIcon?: (agentKind: string, label?: string) => React.ReactNode;
+  /** Resolves one file tab icon src (App-supplied; files-owned). */
+  resolveFileTabIcon?: (path: string) => string;
   /** Renders the session-history menu for the tab bar (App-supplied; agent-owned). */
   renderSessionHistoryMenu?: (input: {
     cwd: string;
@@ -83,6 +84,7 @@ export function WorkspaceSplitPane({
   agentPresetMeta,
   fetchAgentSessionFilePath,
   renderAgentIcon,
+  resolveFileTabIcon,
   renderSessionHistoryMenu,
   lastUsedExternalAppId,
   findTabWithSession,
@@ -253,7 +255,7 @@ export function WorkspaceSplitPane({
         return (
           <Box
             component="img"
-            src={getFileTreeIcon(fullTab.data.path, false)}
+            src={resolveFileTabIcon ? resolveFileTabIcon(fullTab.data.path) : ""}
             alt=""
             sx={{ width: 14, height: 14, flexShrink: 0 }}
           />
@@ -261,7 +263,7 @@ export function WorkspaceSplitPane({
       }
       return null;
     },
-    [tabById, renderAgentIcon],
+    [tabById, renderAgentIcon, resolveFileTabIcon],
   );
 
   // ─── Tab content renderer ───────────────────────────────────────────────────

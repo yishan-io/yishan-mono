@@ -291,7 +291,7 @@ vi.mock("../../state/chatStore", () => ({
   chatStore: mockedStore.workspaceStore,
 }));
 
-vi.mock("../../../../components/RichComposer", () => ({
+vi.mock("./composer/RichComposer", () => ({
   RichComposer: ({
     onSubmit,
     disabled,

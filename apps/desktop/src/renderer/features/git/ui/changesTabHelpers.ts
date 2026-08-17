@@ -4,7 +4,7 @@ import type {
   ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
-import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
+import type { ProjectGitChangeKind, ProjectGitChangesSection } from "./ProjectGitChangesList";
 
 // ---------------------------------------------------------------------------
 // Types

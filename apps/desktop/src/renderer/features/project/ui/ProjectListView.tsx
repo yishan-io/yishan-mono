@@ -18,9 +18,9 @@ import {
 } from "../../../../shared/contracts/externalApps";
 import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
-import { WorkspaceTree } from "../../../components/WorkspaceTree";
-import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
-import type { WorkspaceTreeRow } from "../../../components/WorkspaceTree/types";
+import { WorkspaceTree } from "./workspace-tree";
+import type { WorkspaceTreeWorkspace } from "./workspace-tree";
+import type { WorkspaceTreeRow } from "./workspace-tree/types";
 import { markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead } from "../../../features/agent/state/chatActions";
 import { useWorkspaceUnreadToneByWorkspaceId } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { useDetectedExternalAppIds } from "../../../features/files/ui/hooks/useDetectedExternalAppIds";

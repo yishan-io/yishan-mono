@@ -16,7 +16,7 @@ import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../features/worksp
 import { workspaceCreateProgressStore } from "../features/workspace/state/workspaceCreateProgressStore";
 import { buildListItemButtonSx } from "../helpers/leftPaneStyles";
 import { CliSpinner } from "./CliSpinner";
-import { GitChangeTotals } from "./GitChangeTotals";
+import { GitChangeTotals } from "@renderer/features/git";
 
 export type WorkspaceRowIndicator = "running" | "waiting_input" | "done" | "failed" | "none";
 type WorkspaceBadgeIndicator = Extract<WorkspaceRowIndicator, "waiting_input" | "failed" | "done">;

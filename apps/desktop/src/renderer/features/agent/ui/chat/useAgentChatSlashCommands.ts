@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { RichComposerSlashCommand } from "../../../../components/RichComposer";
+import type { RichComposerSlashCommand } from "./composer/RichComposer";
 import { getCachedAgentChatSlashCommands, loadAgentChatSlashCommands } from "./agentChatSlashCommandCache";
 
 /** Loads slash command suggestions for agent chat skills and sub-agents. */

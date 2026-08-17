@@ -229,7 +229,7 @@ vi.mock("../../../workbench/commands/tabCommands", () => ({
   readTabStoreState: () => ({ tabs: mocked.stateRef.current.tabs }),
 }));
 
-vi.mock("../../../../components/RichComposer", () => ({
+vi.mock("./composer/RichComposer", () => ({
   RichComposer: (props: {
     value?: string;
     onChange?: (value: string) => void;

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
 import { PaneLoadingBar } from "@renderer/features/workbench";
 import { ProjectCommitComparison } from "../../../components/ProjectCommitComparison";
-import { ProjectGitChangesList } from "../../../components/ProjectGitChangesList";
+import { ProjectGitChangesList } from "./ProjectGitChangesList";
 import { useChangesTabActions } from "./useChangesTabActions";
 import { useChangesTabState } from "./useChangesTabState";
 

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
-import type { ProjectGitChangeItem } from "../../../components/ProjectGitChangesList";
+import type { ProjectGitChangeItem } from "./ProjectGitChangesList";
 import { resolveWorkspaceAbsolutePath } from "../../../features/files/ui/fileTreeHelpers";
 import type { DiffFileChangeKind, FileDiffEntry } from "../../../features/workbench/model/types";
 import { writeClipboardText } from "../../../helpers/clipboard";

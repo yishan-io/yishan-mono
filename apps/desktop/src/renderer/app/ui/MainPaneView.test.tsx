@@ -207,14 +207,6 @@ vi.mock("../../features/files/commands/fileCommands", () => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock("../../components/FileDiffViewer", () => ({
-  FileDiffViewer: () => <div data-testid="repo-diff-viewer" />,
-}));
-
-vi.mock("../../components/fileTreeIcons", () => ({
-  getFileTreeIcon: () => "",
-}));
-
 vi.mock("../../features/workbench/ui/pane/TabBar", () => ({
   TabBar: ({
     tabs,
@@ -360,19 +352,21 @@ vi.mock("../../features/workbench/state/splitPaneStore", () => {
   };
 });
 
-vi.mock("../../components/FileEditor", () => ({
-  FileEditor: ({ isDeleted }: { isDeleted?: boolean }) => (
-    <div data-testid="file-editor-view" data-is-deleted={isDeleted ? "true" : "false"} />
-  ),
-}));
-
-vi.mock("../../components/UnsupportedFileView", () => ({
-  UnsupportedFileView: ({ path, hint }: { path: string; hint?: string }) => (
-    <div data-testid="unsupported-file-view" data-hint={hint ?? ""}>
-      {path}
-    </div>
-  ),
-}));
+vi.mock("@renderer/features/files", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/files")>();
+  return {
+    ...actual,
+    FileDiffViewer: () => <div data-testid="repo-diff-viewer" />,
+    FileEditor: ({ isDeleted }: { isDeleted?: boolean }) => (
+      <div data-testid="file-editor-view" data-is-deleted={isDeleted ? "true" : "false"} />
+    ),
+    UnsupportedFileView: ({ path, hint }: { path: string; hint?: string }) => (
+      <div data-testid="unsupported-file-view" data-hint={hint ?? ""}>
+        {path}
+      </div>
+    ),
+  };
+});
 
 vi.mock("../../app/ui/LaunchView", () => ({
   LaunchView: () => <div data-testid="launch-view" />,

@@ -241,7 +241,7 @@ vi.mock("@renderer/helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("@renderer/components/FileTree", () => ({
+vi.mock("./file-tree", () => ({
   FileTree: (props: Record<string, unknown> & { files: string[] }) => {
     mocks.repoFileTreePropsRef.current = props;
     return <div data-testid="repo-file-tree">{props.files.length}</div>;

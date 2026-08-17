@@ -1,4 +1,4 @@
-import type { FileTreeGitChangeKind } from "@renderer/components/FileTree/types";
+import type { FileTreeGitChangeKind } from "./file-tree/types";
 import { isWorkspaceNotFoundError } from "@renderer/helpers/errorHelpers";
 import { useEffect, useRef, useState } from "react";
 

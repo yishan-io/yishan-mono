@@ -3,8 +3,8 @@ import type { WorkspaceItem } from "@renderer/features/workspace";
 import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/features/workspace";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
-import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
+import type { WorkspaceTreeWorkspace } from "./workspace-tree";
+import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
 import {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,

@@ -7,3 +7,4 @@ export {
   editorSettingsStore,
   type EditorSettingsStoreState,
 } from "./state/editorSettingsStore";
+export { displaySettingsStore } from "./state/displaySettingsStore";
