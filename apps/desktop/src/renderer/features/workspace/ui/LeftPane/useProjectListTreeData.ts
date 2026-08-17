@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
 import type { WorkspaceTreeWorkspace } from "../../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../../components/WorkspaceTree/types";
-import { projectStore } from "../../../../features/project/state/projectStore";
+import { chatStore } from "../../../../features/agent/state/chatStore";
+import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
+import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
+import { sessionStore } from "../../../../features/session/state/sessionStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
 import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
+import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../../helpers/workspaceDisplayNames";
 import { resolveWorkspaceNotificationTone } from "../../../../helpers/workspaceNotification";
-import { chatStore } from "../../../../features/agent/state/chatStore";
-import { sessionStore } from "../../../../features/session/state/sessionStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { reconcileOrder } from "./projectListHelpers";
 
 type TreeProject = WorkspaceTreeProject;
@@ -57,9 +57,9 @@ export function useProjectListTreeData(input: {
     workspaceListHierarchyMode,
   } = input;
 
-  const projects = projectStore((state) => state.projects) ?? [];
+  const projects = useProjects();
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
-  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
+  const displayProjectIds = useDisplayProjectIds();
   const gitChangeTotalsByWorkspaceId = workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);

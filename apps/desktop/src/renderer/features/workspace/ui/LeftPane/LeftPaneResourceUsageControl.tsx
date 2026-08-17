@@ -7,7 +7,7 @@ import {
   WorkspaceResourceTableMenu,
   type WorkspaceResourceTableMenuRow,
 } from "../../../../components/WorkspaceResourceTableMenu";
-import { projectStore } from "../../../../features/project/state/projectStore";
+import { useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import type { TerminalResourceUsageSnapshot } from "../../../../features/terminal/commands/terminalCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import { useWorkspaceTabs } from "../../../../features/workbench/ui/hooks/useWorkbenchTabs";
@@ -78,7 +78,7 @@ function buildWorkspaceRows(
 export function LeftPaneResourceUsageControl() {
   const { t } = useTranslation();
   const isInRouterContext = useInRouterContext();
-  const projects = projectStore((state) => state.projects);
+  const projects = useProjects();
   const workspaces = workspaceStore((state) => state.workspaces);
   const tabs = useWorkspaceTabs();
   const { getTerminalResourceUsage } = useTerminalCommands();

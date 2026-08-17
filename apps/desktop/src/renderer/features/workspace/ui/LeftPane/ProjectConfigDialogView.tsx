@@ -1,8 +1,8 @@
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
-import { projectStore } from "@renderer/features/project/state/projectStore";
 import { useAppCommands } from "@renderer/app/commands/useCommands";
-import { useDialogRegistration } from "@renderer/ui/hooks/useDialogRegistration";
+import { useProjects } from "@renderer/features/project/ui/hooks/useProjectReadHooks";
 import { workspaceStore } from "@renderer/features/workspace/state/workspaceStore";
+import { useDialogRegistration } from "@renderer/ui/hooks/useDialogRegistration";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ProjectConfigCommandsSection } from "./projectConfigDialog/ProjectConfigCommandsSection";
@@ -25,7 +25,7 @@ type ProjectConfigDialogViewProps = {
 
 export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfigDialogViewProps) {
   const { t } = useTranslation();
-  const projects = projectStore((state) => state.projects);
+  const projects = useProjects();
   const { getDefaultWorktreeLocation } = useAppCommands();
   const {
     repo,

@@ -3,10 +3,15 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
 import { getMainWindowFullscreenState } from "../../../app/commands/appCommands";
+import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../../components/projectIcons";
-import { projectStore } from "../../../features/project/state/projectStore";
+import { chatStore } from "../../../features/agent/state/chatStore";
+import { useDisplayProjectIds, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
@@ -14,12 +19,7 @@ import {
   resolveWorkspaceNotificationColor,
   resolveWorkspaceNotificationTone,
 } from "../../../helpers/workspaceNotification";
-import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
-import { chatStore } from "../../../features/agent/state/chatStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { DaemonVersionWarningControl } from "./DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
@@ -34,8 +34,8 @@ import {
 export function MainPaneTitleBarView() {
   const { t } = useTranslation();
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
-  const projects = projectStore((state) => state.projects);
-  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
+  const projects = useProjects();
+  const displayProjectIds = useDisplayProjectIds();
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);

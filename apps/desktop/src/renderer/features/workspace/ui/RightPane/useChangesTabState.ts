@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useGitCommands } from "../../../../app/commands/useCommands";
+import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
@@ -7,14 +9,11 @@ import type {
   ProjectCommitComparisonSelection,
 } from "../../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../../components/ProjectGitChangesList";
-import { projectStore } from "../../../../features/project/state/projectStore";
 import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
+import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { isWorkspaceNotFoundError } from "../../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
-import { useGitCommands } from "../../../../app/commands/useCommands";
-import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import {
   type RepoChangesBySection,
   buildAllCommitChangesSection,

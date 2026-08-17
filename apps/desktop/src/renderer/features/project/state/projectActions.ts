@@ -13,3 +13,8 @@ export function setDisplayProjectIds(projectIds: string[]): void {
 export function setLastUsedExternalAppId(appId: ExternalAppId): void {
   projectStore.getState().setLastUsedExternalAppId(appId);
 }
+
+/** Sets the workspace list hierarchy mode (by project or by node). */
+export function setWorkspaceListHierarchyMode(mode: "by_project" | "by_node"): void {
+  projectStore.getState().setWorkspaceListHierarchyMode(mode);
+}

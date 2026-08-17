@@ -17,8 +17,13 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
-import { projectStore } from "../../../../features/project/state/projectStore";
 import { useWorkspaceCommands } from "../../../../app/commands/useCommands";
+import { setWorkspaceListHierarchyMode as applyWorkspaceListHierarchyMode } from "../../../../features/project/state/projectActions";
+import {
+  useDisplayProjectIds,
+  useProjects,
+  useWorkspaceListHierarchyMode,
+} from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 
 /** Returns true when a repository row matches the quick-search keyword. */
@@ -34,13 +39,13 @@ function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: str
 /** Renders the repo filter trigger and popover with select-all control and quick search. */
 export function ProjectFilterPopoverView() {
   const { t } = useTranslation();
-  const repos = projectStore((state) => state.projects);
-  const displayRepoIds = projectStore((state) => state.displayProjectIds);
+  const repos = useProjects();
+  const displayRepoIds = useDisplayProjectIds();
   const { setDisplayRepoIds } = useWorkspaceCommands();
   const [repoFilterAnchor, setRepoFilterAnchor] = useState<HTMLElement | null>(null);
   const [repoQuickSearch, setRepoQuickSearch] = useState("");
-  const workspaceListHierarchyMode = projectStore((state) => state.workspaceListHierarchyMode);
-  const setWorkspaceListHierarchyMode = projectStore((state) => state.setWorkspaceListHierarchyMode);
+  const workspaceListHierarchyMode = useWorkspaceListHierarchyMode();
+  const setWorkspaceListHierarchyMode = applyWorkspaceListHierarchyMode;
 
   const handleSelectAll = () => {
     setDisplayRepoIds(repos.map((repo) => repo.id));

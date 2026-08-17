@@ -9,7 +9,7 @@ import { SplitPaneGroup } from "../../../components/SplitPaneGroup";
 import { SessionHistoryMenu } from "../../../components/agent/session/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../../components/fileTreeIcons";
 import { findTabWithSession } from "../../../features/agent/commands/agentChatCommands";
-import { projectStore } from "../../../features/project/state/projectStore";
+import { useLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
@@ -61,7 +61,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedTabId = useSelectedTabId();
   const workspace = workspaces.find((ws) => ws.id === workspaceId);
-  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
+  const lastUsedExternalAppId = useLastUsedExternalAppId();
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
   const externalAppLabel = lastUsedExternalAppPreset
     ? `Open in ${lastUsedExternalAppPreset.label}`

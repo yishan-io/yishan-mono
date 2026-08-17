@@ -11,20 +11,20 @@ import {
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
 } from "../../../../../shared/contracts/externalApps";
+import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../../components/ContextMenu";
 import { WorkspaceTree } from "../../../../components/WorkspaceTree";
 import type { WorkspaceTreeWorkspace } from "../../../../components/WorkspaceTree";
 import type { WorkspaceTreeRow } from "../../../../components/WorkspaceTree/types";
-import { projectStore } from "../../../../features/project/state/projectStore";
-import { subscribeOpenCreateWorkspaceDialog } from "../../../../features/workspace/commands/workspaceCommands";
-import { getRendererPlatform } from "../../../../helpers/platform";
-import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { useContextMenuState } from "../../../../ui/hooks/useContextMenuState";
-import { useDetectedExternalAppIds } from "../../../../features/files/ui/hooks/useDetectedExternalAppIds";
-import { useSuppressNativeContextMenuWhileOpen } from "../../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
-import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../../../features/agent/state/chatStore";
+import { useDetectedExternalAppIds } from "../../../../features/files/ui/hooks/useDetectedExternalAppIds";
+import { useLastUsedExternalAppId, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
+import { subscribeOpenCreateWorkspaceDialog } from "../../../../features/workspace/commands/workspaceCommands";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+import { getRendererPlatform } from "../../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
+import { useContextMenuState } from "../../../../ui/hooks/useContextMenuState";
+import { useSuppressNativeContextMenuWhileOpen } from "../../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { ProjectListMenus } from "./ProjectListMenus";
 import { WorkspaceDeleteDialogView } from "./WorkspaceDeleteDialogView";
 import { WorkspaceInfoPopperView } from "./WorkspaceInfoPopperView";
@@ -40,13 +40,19 @@ import { useWorkspaceInfoHover } from "./useWorkspaceInfoHover";
 /** Renders project rows and nested workspace rows with per-project fold controls. */
 export function ProjectListView() {
   const { t } = useTranslation();
-  const projects = projectStore((state) => state.projects) ?? [];
+  const projects = useProjects();
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
-  const { setSelectedRepoId, setSelectedWorkspaceId, reorderWorkspace, closeWorkspace, deleteLocalFolder, setLastUsedExternalAppId } =
-    useWorkspaceCommands();
+  const lastUsedExternalAppId = useLastUsedExternalAppId();
+  const {
+    setSelectedRepoId,
+    setSelectedWorkspaceId,
+    reorderWorkspace,
+    closeWorkspace,
+    deleteLocalFolder,
+    setLastUsedExternalAppId,
+  } = useWorkspaceCommands();
   const { deleteProject } = useProjectCommands();
   const { openEntryInExternalApp } = useFileCommands();
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);

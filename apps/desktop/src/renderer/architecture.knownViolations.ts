@@ -124,39 +124,13 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/DaemonVersionWarningControl.tsx", phase: "P16" },
   {
     rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.testUtils.tsx",
-    phase: "P16",
-  },
-  {
-    rule: "R5-cross-feature-internal",
     file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.tsx",
-    phase: "P16",
-  },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/LeftPaneResourceUsageControl.tsx",
-    phase: "P16",
-  },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/LeftPaneView.tsx", phase: "P16" },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/ProjectConfigDialogView.tsx",
-    phase: "P16",
-  },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/ProjectFilterPopoverView.tsx",
     phase: "P16",
   },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/ProjectListView.tsx", phase: "P16" },
   {
     rule: "R5-cross-feature-internal",
     file: "features/workspace/ui/LeftPane/useCreateWorkspaceDialogState.ts",
-    phase: "P16",
-  },
-  {
-    rule: "R5-cross-feature-internal",
-    file: "features/workspace/ui/LeftPane/useProjectListDialogState.ts",
     phase: "P16",
   },
   {
@@ -168,9 +142,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneTitleBarView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/OnboardingView.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneTabBar.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneView.tsx", phase: "P16" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/useChangesTabState.ts", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceSplitPaneView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/TerminalView.tsx", phase: "P16" },
   { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalFileDrop.ts", phase: "P16" },

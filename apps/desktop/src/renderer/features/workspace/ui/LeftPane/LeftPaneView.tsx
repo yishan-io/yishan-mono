@@ -2,14 +2,14 @@ import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography }
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
+import { useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { PaneHeader } from "../../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../../components/PaneToggleButton";
-import { projectStore } from "../../../../features/project/state/projectStore";
-import { getRendererPlatform } from "../../../../helpers/platform";
-import { useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
+import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
+import { getRendererPlatform } from "../../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../../../../ui/layout/AppMenuView";
 import { ProjectFilterPopoverView } from "./ProjectFilterPopoverView";
 import { ProjectListView } from "./ProjectListView";
@@ -22,8 +22,8 @@ type LeftPaneViewProps = {
 /** Renders repo/workspace navigation and top-level left pane chrome. */
 export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneViewProps = {}) {
   const { t } = useTranslation();
-  const repos = projectStore((state) => state.projects);
-  const displayRepoIds = projectStore((state) => state.displayProjectIds);
+  const repos = useProjects();
+  const displayRepoIds = useDisplayProjectIds();
   const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
   const filteredRepos = repos.filter((repo) => displayRepoIds.includes(repo.id));
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());
