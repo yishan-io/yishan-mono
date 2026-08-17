@@ -4,7 +4,7 @@ import type { WorkspaceTab } from "../../../features/workbench/model/tabTypes";
 export type InAppWorkspaceNotificationPayload = RpcFrontendMessagePayload<"notificationEvent">;
 
 /**
- * Resolves the currently selected workspace session when one session tab is active.
+ * Resolves the currently selected workspace session when one agent-chat tab is active.
  */
 export function resolveFocusedWorkspaceSession(input: {
   selectedWorkspaceId: string;
@@ -17,7 +17,7 @@ export function resolveFocusedWorkspaceSession(input: {
   }
 
   const selectedTab = input.tabs.find((tab) => tab.id === input.selectedTabId);
-  if (!selectedTab || selectedTab.kind !== "session") {
+  if (!selectedTab || selectedTab.kind !== "agent-chat") {
     return null;
   }
 

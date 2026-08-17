@@ -4,7 +4,6 @@ import { TerminalView } from "@renderer/features/terminal";
 import { BrowserView } from "@renderer/features/workbench";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { FileCommandSurface, WorkbenchCommandSurface } from "../commands/useCommands";
 import { AudioPreview } from "../../components/AudioPreview";
 import { FileDiffViewer } from "../../components/FileDiffViewer";
 import { FileEditor } from "../../components/FileEditor";
@@ -16,6 +15,7 @@ import { VideoPreview } from "../../components/VideoPreview";
 import type { WorkspaceTab } from "../../features/workbench/model/types";
 import { copyToClipboard } from "../../helpers/clipboard";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import type { FileCommandSurface, WorkbenchCommandSurface } from "../commands/useCommands";
 
 type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;
@@ -193,32 +193,6 @@ export function useTabContentRenderer({
               onOpenExternalApp={onOpenExternalApp}
               openExternalAppLabel={externalAppLabel}
             />
-          </TabPanel>
-        );
-      }
-
-      if (tab.kind === "session") {
-        return (
-          <TabPanel key={tab.id} active={isSelected}>
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1.5,
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "text.secondary",
-                }}
-              >
-                Chat is currently disabled.
-              </Typography>
-            </Box>
           </TabPanel>
         );
       }

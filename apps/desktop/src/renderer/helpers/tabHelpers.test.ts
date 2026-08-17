@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  collectSessionIdsToCloseAllTabs,
-  collectSessionIdsToCloseOtherTabs,
-  resolveAvailableModelsFromCapabilities,
-  resolveCurrentModelFromCapabilities,
-} from "./tabHelpers";
+import { resolveAvailableModelsFromCapabilities, resolveCurrentModelFromCapabilities } from "./tabHelpers";
 
 describe("tabHelpers capability parsing", () => {
   it("extracts available and current model ids from capabilities payload", () => {
@@ -26,55 +21,5 @@ describe("tabHelpers capability parsing", () => {
       { id: "anthropic/claude-4", name: "anthropic/claude-4" },
     ]);
     expect(resolveCurrentModelFromCapabilities(capabilities)).toBe("openai/o3");
-  });
-});
-
-describe("tabHelpers session collection", () => {
-  it("collects backend session ids for close operations", () => {
-    const tabs = [
-      {
-        id: "tab-1",
-        workspaceId: "workspace-1",
-        title: "One",
-        pinned: false,
-        kind: "session",
-        data: { sessionId: "session-1" },
-      },
-      {
-        id: "tab-2",
-        workspaceId: "workspace-1",
-        title: "Two",
-        pinned: false,
-        kind: "session",
-        data: { sessionId: "session-2" },
-      },
-      {
-        id: "tab-pinned",
-        workspaceId: "workspace-1",
-        title: "Pinned",
-        pinned: true,
-        kind: "session",
-        data: { sessionId: "session-pinned" },
-      },
-      {
-        id: "terminal-1",
-        workspaceId: "workspace-1",
-        title: "Terminal",
-        pinned: false,
-        kind: "terminal",
-        data: { title: "Terminal" },
-      },
-      {
-        id: "tab-3",
-        workspaceId: "workspace-2",
-        title: "Elsewhere",
-        pinned: false,
-        kind: "session",
-        data: { sessionId: "session-3" },
-      },
-    ] as const;
-
-    expect(collectSessionIdsToCloseOtherTabs(tabs, "tab-1")).toEqual(["session-2"]);
-    expect(collectSessionIdsToCloseAllTabs(tabs, "tab-1")).toEqual(["session-1", "session-2"]);
   });
 });

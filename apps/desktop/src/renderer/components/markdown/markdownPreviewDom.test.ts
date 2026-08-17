@@ -18,12 +18,9 @@ vi.mock("@renderer/features/files/commands/fileCommands", () => ({
     buildWorkspaceFileUrlMock(options),
 }));
 
-vi.mock("@renderer/features/workbench/state/tabStore", () => ({
-  tabStore: {
-    getState: () => ({
-      openTab: openTabMock,
-    }),
-  },
+vi.mock("@renderer/features/workbench", () => ({
+  openTab: (input: unknown) => openTabMock(input),
+  openTabInOppositePane: (input: unknown) => openTabMock(input),
 }));
 
 vi.mock("@renderer/features/workspace/state/workspaceLifecycleNoticeStore", () => ({

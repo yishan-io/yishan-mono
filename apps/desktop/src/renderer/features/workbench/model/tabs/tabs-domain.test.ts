@@ -4,7 +4,6 @@ import {
   closeAllTabsState,
   closeOtherTabsState,
   closeTabState,
-  createSessionTabOptimisticState,
   markFileTabSavedState,
   openTabState,
   refreshDiffTabContentState,
@@ -12,7 +11,6 @@ import {
   renameTabState,
   renameTabsForEntryRenameState,
   reorderTabState,
-  resolveSessionTabState,
   updateFileTabContentState,
 } from ".";
 
@@ -24,10 +22,9 @@ function createBaseState(): WorkspaceTabStateSlice {
         workspaceId: "workspace-1",
         title: "Untitled 1",
         pinned: false,
-        kind: "session",
+        kind: "browser",
         data: {
-          sessionId: "s1",
-          agentKind: "opencode",
+          url: "https://other.example",
         },
       },
       {
@@ -618,10 +615,9 @@ describe("tabs-domain close", () => {
           workspaceId: "workspace-1",
           title: "Pinned",
           pinned: true,
-          kind: "session",
+          kind: "browser",
           data: {
-            sessionId: "pinned-session",
-            agentKind: "opencode",
+            url: "https://example.com",
           },
         },
       ],
@@ -645,10 +641,9 @@ describe("tabs-domain close", () => {
           workspaceId: "workspace-1",
           title: "Pinned",
           pinned: true,
-          kind: "session",
+          kind: "browser",
           data: {
-            sessionId: "pinned-session",
-            agentKind: "opencode",
+            url: "https://example.com",
           },
         },
       ],
@@ -695,37 +690,6 @@ describe("tabs-domain layout and session", () => {
       .map((tab) => tab.id);
     expect(workspaceOneNonPinned[0]).toBe("file-2");
     expect(patch?.selectedTabId).toBe("file-2");
-  });
-
-  it("handles optimistic and resolved session lifecycle", () => {
-    const state = createBaseState();
-
-    const optimistic = createSessionTabOptimisticState({
-      state,
-      workspaceId: "workspace-1",
-      tabId: "session-2",
-      title: "Untitled 2",
-      agentKind: "opencode",
-    });
-    expect(optimistic).toBeTruthy();
-    expect(optimistic.selectedTabId).toBe("session-2");
-
-    const nextState = {
-      ...state,
-      ...optimistic,
-    };
-
-    const resolved = resolveSessionTabState({
-      state: nextState,
-      tabId: "session-2",
-      sessionId: "resolved-session-2",
-    });
-
-    expect(resolved).toBeTruthy();
-    const resolvedTab = resolved.tabs?.find((tab) => tab.id === "session-2");
-    expect(resolvedTab && resolvedTab.kind === "session" ? resolvedTab.data.sessionId : undefined).toBe(
-      "resolved-session-2",
-    );
   });
 
   it("marks file tab dirty when editable content diverges", () => {

@@ -41,7 +41,12 @@ export function createWorkbenchEventHandlers(dependencies: WorkbenchEventDepende
   return function startWorkbenchEventHandlers() {
     const unsubscribeOpenBrowserUrl =
       resolvedDependencies.subscribeOpenBrowserUrl?.((payload) => {
-        tabStore.getState().openTab({ kind: "browser", workspaceId: payload.workspaceId, url: payload.url });
+        tabStore
+          .getState()
+          .openTab(
+            { kind: "browser", workspaceId: payload.workspaceId, url: payload.url },
+            { workspaceId: payload.workspaceId },
+          );
       }) ?? (() => {});
 
     return () => {

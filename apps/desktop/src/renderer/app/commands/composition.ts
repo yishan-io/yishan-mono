@@ -1,3 +1,4 @@
+import { renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand } from "../../features/agent/commands/agentChatCommands";
 import { listActivePiSessions as listActivePiSessionsCommand } from "../../features/agent/commands/agentChatSessionHistory";
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
@@ -118,7 +119,6 @@ import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
   closeTab as closeTabCommand,
-  createTab as createTabCommand,
   markFileTabSaved as markFileTabSavedCommand,
   openTab as openTabCommand,
   openTabInOppositePane as openTabInOppositePaneCommand,
@@ -336,7 +336,6 @@ export type ProjectCommandSurface = {
 /** Workbench feature command surface. */
 export type WorkbenchCommandSurface = {
   selectTab: typeof setSelectedTabCommand;
-  createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;
   openTabInOppositePane: typeof openTabInOppositePaneCommand;
   closeTab: typeof closeTabCommand;
@@ -555,7 +554,6 @@ export function createProjectCommands(): ProjectCommandSurface {
 export function createWorkbenchCommands(): WorkbenchCommandSurface {
   return {
     selectTab: setSelectedTabCommand,
-    createTab: createTabCommand,
     openTab: openTabCommand,
     openTabInOppositePane: openTabInOppositePaneCommand,
     closeTab: closeTabCommand,
@@ -564,7 +562,13 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
     toggleTabPinned: toggleTabPinnedCommand,
     promoteTemporaryTab: promoteTemporaryTabCommand,
     reorderTab: reorderTabCommand,
-    renameTab: renameTabCommand,
+    renameTab: (tabId, title, options) => {
+      renameTabCommand(tabId, title, options);
+      // The pi-session rename side effect belongs to Agent (desktop6-adjust.md W6).
+      void renameAgentChatSessionByTabCommand(tabId, title).catch((error) => {
+        console.error("Failed to rename pi session", error);
+      });
+    },
     setBrowserTabFaviconUrl: setBrowserTabFaviconUrlCommand,
     setBrowserTabUrl: setBrowserTabUrlCommand,
     renameTabsForEntryRename: renameTabsForEntryRenameCommand,

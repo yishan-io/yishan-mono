@@ -18,7 +18,6 @@ import {
   closeAllTabs,
   closeOtherTabs,
   closeTab,
-  createTab,
   markFileTabSaved,
   openTab,
   renameTab,
@@ -93,35 +92,6 @@ afterEach(() => {
 });
 
 describe("tabCommands", () => {
-  it("creates tab and resolves backend session", async () => {
-    const createTabState = vi.fn().mockResolvedValue({
-      tabId: "tab-1",
-      workspaceId: "workspace-1",
-      title: "Untitled 1",
-    });
-    const resolveSessionTab = vi.fn();
-    tabStore.setState({
-      createTab: createTabState,
-      resolveSessionTab,
-    });
-    rpcMocks.ensureWorkspaceChatSession.mockResolvedValueOnce({
-      workspaceId: "workspace-1",
-      sessionId: "session-1",
-      title: "Untitled 1",
-      agentKind: "opencode",
-    });
-
-    await createTab({ workspaceId: "workspace-1" });
-
-    expect(createTabState).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
-    expect(rpcMocks.ensureWorkspaceChatSession).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
-      sessionId: "tab-1",
-      title: "Untitled 1",
-    });
-    expect(resolveSessionTab).toHaveBeenCalledWith("tab-1", "session-1");
-  });
-
   it("requests terminal focus on the next frame only for a newly created terminal tab", () => {
     let focusFrame: FrameRequestCallback | undefined;
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
@@ -207,73 +177,13 @@ describe("tabCommands", () => {
     expect(selectTab).toHaveBeenCalledWith("tab-1");
     expect(openTabState).toHaveBeenCalledWith(
       { workspaceId: "workspace-1", kind: "file", path: "a.ts", content: "x" },
-      { activePaneTabIds: undefined },
+      { workspaceId: "workspace-1", activePaneTabIds: undefined },
     );
     expect(toggleTabPinnedState).toHaveBeenCalledWith("tab-1");
     expect(reorderTabState).toHaveBeenCalledWith("tab-1", "tab-2", "after");
     expect(renameTabState).toHaveBeenCalledWith("tab-1", "Renamed", undefined);
     expect(updateFileTabContentState).toHaveBeenCalledWith("tab-1", "next");
     expect(markFileTabSavedState).toHaveBeenCalledWith("tab-1");
-  });
-
-  it("forwards agent-chat rename to pi.rename RPC", async () => {
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-chat",
-          workspaceId: "ws-1",
-          title: "Old Chat",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/tmp", sessionId: "sess-123" },
-        },
-      ],
-    });
-
-    renameTab("tab-chat", "New Chat Name");
-
-    // pi.rename is fire-and-forget; wait for the promise.
-    await vi.waitFor(() => {
-      expect(rpcMocks.piRename).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
-    });
-  });
-
-  it("skips pi.rename for agent-chat tabs without a sessionId", () => {
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-chat",
-          workspaceId: "ws-1",
-          title: "No Session",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/tmp" },
-        },
-      ],
-    });
-
-    renameTab("tab-chat", "New Name");
-
-    expect(rpcMocks.piRename).not.toHaveBeenCalled();
-  });
-
-  it("skips pi.rename for non-agent-chat tabs", () => {
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-term",
-          workspaceId: "ws-1",
-          title: "Terminal",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal", sessionId: "sess-456" },
-        },
-      ],
-    });
-
-    renameTab("tab-term", "New Terminal");
-
-    expect(rpcMocks.piRename).not.toHaveBeenCalled();
   });
 
   it("keeps the remaining pane's selected tab when closing a selected subagent tab in a split layout", () => {
@@ -299,24 +209,24 @@ describe("tabCommands", () => {
           workspaceId: "workspace-1",
           title: "A",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-b",
           workspaceId: "workspace-1",
           title: "B",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-c",
           workspaceId: "workspace-1",
           title: "C",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-d",
@@ -362,24 +272,24 @@ describe("tabCommands", () => {
           workspaceId: "workspace-1",
           title: "A",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-b",
           workspaceId: "workspace-1",
           title: "B",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-c",
           workspaceId: "workspace-1",
           title: "C",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-d",
@@ -429,24 +339,24 @@ describe("tabCommands", () => {
           workspaceId: "workspace-1",
           title: "A",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-b",
           workspaceId: "workspace-1",
           title: "B",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-c",
           workspaceId: "workspace-1",
           title: "C",
           pinned: false,
-          kind: "session",
-          data: {},
+          kind: "browser",
+          data: { url: "" },
         },
         {
           id: "tab-d",

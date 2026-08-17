@@ -4,6 +4,7 @@ import { layoutStore } from "./layoutStore";
 import { splitPaneStore } from "./splitPaneStore";
 import type { CloseTabOptions } from "./tabStore";
 import { tabStore } from "./tabStore";
+import { workbenchNavigationStore } from "./workbenchNavigationStore";
 
 /**
  * Workbench feature state actions — the public state-change surface for
@@ -20,7 +21,14 @@ export function resolveTabForWorkspace(workspaceId: string): void {
 
 /** Opens one tab from a normalized tab input payload. */
 export function openTab(input: OpenWorkspaceTabInput, options?: { activePaneTabIds?: string[] }): void {
-  tabStore.getState().openTab(input, options);
+  const workspaceId = input.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
+  if (!workspaceId) {
+    return;
+  }
+  tabStore.getState().openTab(input, {
+    workspaceId,
+    activePaneTabIds: options?.activePaneTabIds,
+  });
 }
 
 /** Stores one browser tab navigated URL. */
@@ -154,8 +162,9 @@ export function createAdjacentPaneWithTab(
 }
 
 /** Closes all terminal tabs. */
-export function closeAllTerminalTabs(): void {
-  tabStore.getState().closeAllTerminalTabs();
+export function closeAllTerminalTabs(workspaceId?: string): void {
+  const targetWorkspaceId = workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
+  tabStore.getState().closeAllTerminalTabs(targetWorkspaceId);
 }
 
 /** Sets the link-open target preference. */

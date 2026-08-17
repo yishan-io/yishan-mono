@@ -1,4 +1,4 @@
-import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { openTab, workbenchNavigationStore } from "@renderer/features/workbench";
 import type {
   AppendBrowserHistoryInput,
   AuthStatusResult,
@@ -11,7 +11,6 @@ import type {
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../features/session/state/sessionStore";
 import { type LinkTarget, layoutStore } from "../../features/workbench/state/layoutStore";
-import { tabStore } from "../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { rendererQueryClient } from "../../queryClient";
@@ -101,7 +100,7 @@ export async function openLink(options: OpenLinkOptions): Promise<OpenLinkResult
   if (linkTarget === "built-in" && isHttpUrl(url)) {
     const resolvedWorkspaceId = workspaceId ?? resolveActiveWorkspaceId();
     if (resolvedWorkspaceId) {
-      tabStore.getState().openTab({ kind: "browser", workspaceId: resolvedWorkspaceId, url });
+      openTab({ kind: "browser", workspaceId: resolvedWorkspaceId, url });
       return { opened: true };
     }
   }
@@ -118,9 +117,7 @@ export async function openLink(options: OpenLinkOptions): Promise<OpenLinkResult
 }
 
 function resolveActiveWorkspaceId(): string | undefined {
-  const state = tabStore.getState();
-  const selectedTab = state.tabs.find((tab) => tab.id === state.selectedTabId);
-  return selectedTab?.workspaceId || workbenchNavigationStore.getState().activeWorkspaceId || undefined;
+  return workbenchNavigationStore.getState().activeWorkspaceId || undefined;
 }
 
 /** Reads current desktop authentication status from main-process IPC. */

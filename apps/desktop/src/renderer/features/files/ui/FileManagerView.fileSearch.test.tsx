@@ -454,7 +454,7 @@ describe("FileManagerView file search", () => {
           temporary: true,
           isIgnored: false,
         },
-        { activePaneTabIds: undefined },
+        { workspaceId: "workspace-1", activePaneTabIds: undefined },
       );
     });
   });
@@ -481,7 +481,7 @@ describe("FileManagerView file search", () => {
           temporary: false,
           isIgnored: false,
         },
-        { activePaneTabIds: undefined },
+        { workspaceId: "workspace-1", activePaneTabIds: undefined },
       );
     });
   });
@@ -510,7 +510,7 @@ describe("FileManagerView file search", () => {
           unsupportedReason: "type",
           isIgnored: false,
         },
-        { activePaneTabIds: undefined },
+        { workspaceId: "workspace-1", activePaneTabIds: undefined },
       );
       expect(mocks.readFile).not.toHaveBeenCalledWith({
         workspaceId: "workspace-1",
@@ -546,7 +546,7 @@ describe("FileManagerView file search", () => {
           unsupportedReason: "size",
           isIgnored: false,
         },
-        { activePaneTabIds: undefined },
+        { workspaceId: "workspace-1", activePaneTabIds: undefined },
       );
     });
   });

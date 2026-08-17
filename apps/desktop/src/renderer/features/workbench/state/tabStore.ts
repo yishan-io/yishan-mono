@@ -9,8 +9,6 @@ import {
   closeAllTerminalTabsState,
   closeOtherTabsState,
   closeTabState,
-  createSessionTabOptimisticState,
-  failSessionTabInitState,
   markFileTabSavedState,
   openTabState,
   promoteTemporaryTabState,
@@ -19,11 +17,9 @@ import {
   renameTabState,
   renameTabsForEntryRenameState,
   reorderTabState,
-  resolveSessionTabState,
   toggleTabPinnedState,
   updateFileTabContentState,
 } from "../model/tabs/index";
-import { workbenchNavigationStore } from "./workbenchNavigationStore";
 
 export type CloseTabOptions = {
   /** Tab to select when the closed tab was the selected one (e.g. the remaining pane's selection). */
@@ -39,18 +35,13 @@ export type TabStoreState = {
   /** Resolves and applies the correct selectedTabId for the given workspace. */
   resolveTabForWorkspace: (workspaceId: string) => void;
   selectTab: (tabId: string) => void;
-  retainWorkspaceTabs: (workspaceIds: string[]) => string[];
-  createTab: (input?: { workspaceId?: string }) => Promise<
-    { tabId: string; workspaceId: string; title: string } | undefined
-  >;
-  resolveSessionTab: (tabId: string, sessionId: string) => void;
-  failSessionTabInit: (tabId: string) => void;
-  openTab: (input: OpenWorkspaceTabInput, options?: { activePaneTabIds?: string[] }) => void;
+  retainWorkspaceTabs: (workspaceIds: string[], activeWorkspaceId: string) => string[];
+  openTab: (input: OpenWorkspaceTabInput, options: { workspaceId: string; activePaneTabIds?: string[] }) => void;
   closeTab: (tabId: string, options?: CloseTabOptions) => void;
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: (tabId: string) => void;
   /** Closes every terminal tab across all workspaces (used before daemon restart). */
-  closeAllTerminalTabs: () => void;
+  closeAllTerminalTabs: (workspaceId: string) => void;
   /** Persists one backend terminal session id on one terminal tab. */
   setTerminalTabSessionId: (tabId: string, sessionId: string) => void;
   /** Persists the single agent-chat session identity on one tab. */
@@ -122,7 +113,7 @@ export const tabStore = create<TabStoreState>()(
           };
         });
       },
-      retainWorkspaceTabs: (workspaceIds) => {
+      retainWorkspaceTabs: (workspaceIds, activeWorkspaceId) => {
         const workspaceIdSet = new Set(workspaceIds);
         const previous = get();
         const previousTabs = previous.tabs ?? [];
@@ -130,8 +121,9 @@ export const tabStore = create<TabStoreState>()(
           .filter((tab: WorkspaceTab) => !workspaceIdSet.has(tab.workspaceId))
           .map((tab: WorkspaceTab) => tab.id);
 
-        // Read activeWorkspaceId from the single source of truth before set().
-        const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+        // The active workspace id is supplied by the owning Command (the Store
+        // Action never reads navigation state).
+        const selectedWorkspaceId = activeWorkspaceId;
 
         set((state) => {
           const currentTabs = state.tabs ?? [];
@@ -157,50 +149,15 @@ export const tabStore = create<TabStoreState>()(
 
         return removedTabIds;
       },
-      createTab: async (input) => {
-        const targetWorkspaceId = input?.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
-        if (!targetWorkspaceId) {
-          return;
-        }
-
-        const tabNumber =
-          get().tabs.filter((tab: WorkspaceTab) => tab.workspaceId === targetWorkspaceId && tab.kind === "session")
-            .length + 1;
-        const nextTabTitle = `Untitled ${tabNumber}`;
-        const nextTabId = createClientTabId();
-
-        set((state) =>
-          createSessionTabOptimisticState({
-            state,
-            workspaceId: targetWorkspaceId,
-            tabId: nextTabId,
-            title: nextTabTitle,
-            agentKind: "opencode",
-          }),
-        );
-
-        return {
-          tabId: nextTabId,
-          workspaceId: targetWorkspaceId,
-          title: nextTabTitle,
-        };
-      },
-      resolveSessionTab: (tabId, sessionId) => {
-        set((state) =>
-          resolveSessionTabState({
-            state,
-            tabId,
-            sessionId,
-          }),
-        );
-      },
-      failSessionTabInit: (tabId) => {
-        set((state) => failSessionTabInitState(state, tabId));
-      },
-      openTab: (input, options?) => {
-        const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+      openTab: (input, options) => {
         const nextTabId = input.kind === "terminal" ? (input.tabId ?? createClientTabId()) : createClientTabId();
-        set((state) => openTabState(state, input, nextTabId, { ...options, selectedWorkspaceId }) ?? state);
+        set(
+          (state) =>
+            openTabState(state, input, nextTabId, {
+              ...options,
+              selectedWorkspaceId: options.workspaceId,
+            }) ?? state,
+        );
       },
       closeTab: (tabId, options) => {
         set((state) => closeTabState(state, tabId, options) ?? state);
@@ -211,9 +168,8 @@ export const tabStore = create<TabStoreState>()(
       closeAllTabs: (tabId) => {
         set((state) => closeAllTabsState(state, tabId) ?? state);
       },
-      closeAllTerminalTabs: () => {
-        const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
-        set((state) => closeAllTerminalTabsState(state, selectedWorkspaceId) ?? state);
+      closeAllTerminalTabs: (workspaceId) => {
+        set((state) => closeAllTerminalTabsState(state, workspaceId) ?? state);
       },
       setTerminalTabSessionId: (tabId, sessionId) => {
         const normalizedTabId = tabId.trim();

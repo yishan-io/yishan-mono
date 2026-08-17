@@ -1,7 +1,6 @@
 import { openLink } from "@renderer/app/commands/appCommands";
 import { buildWorkspaceFileUrl } from "@renderer/features/files/commands/fileCommands";
-import { openTabInOppositePane } from "@renderer/features/workbench";
-import { tabStore } from "@renderer/features/workbench/state/tabStore";
+import { openTab, openTabInOppositePane } from "@renderer/features/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/features/workspace/state/workspaceLifecycleNoticeStore";
 import { getTaskListItemChecked, isAbsoluteUrl, resolveRelativePath, toggleTaskListItem } from "./markdownHelpers";
 import { type MarkdownOutlineData, extractMarkdownOutline } from "./markdownOutlineTree";
@@ -120,7 +119,7 @@ function attachLinkHandlers(container: HTMLElement, worktreePath: string | undef
         const cleanPath = href.replace(/[?#].*$/, "");
         const resolvedPath = resolveRelativePath(fileDir, cleanPath);
         if (resolvedPath) {
-          tabStore.getState().openTab({ kind: "file", path: resolvedPath });
+          openTab({ kind: "file", path: resolvedPath });
         }
       }
     });

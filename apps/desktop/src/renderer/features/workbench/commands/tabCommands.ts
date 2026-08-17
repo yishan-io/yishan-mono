@@ -13,8 +13,6 @@ import type { CloseTabOptions, TabStoreState } from "../../../features/workbench
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workbenchNavigationStore } from "../../../features/workbench/state/workbenchNavigationStore";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;
@@ -32,25 +30,9 @@ export function readTabStoreState(): TabStoreState {
   );
 }
 
-/** Creates one tab optimistically, then initializes its backend chat session. */
-export async function createTab(input?: { workspaceId?: string }): Promise<void> {
-  const created = await readTabStoreState().createTab(input);
-  if (!created) {
-    return;
-  }
-
-  try {
-    const client = await getDaemonClient();
-    const ensured = await client.chat.ensureWorkspaceChatSession({
-      workspaceId: created.workspaceId,
-      sessionId: created.tabId,
-      title: created.title,
-    });
-    readTabStoreState().resolveSessionTab(created.tabId, ensured.sessionId);
-  } catch (error) {
-    console.error("Failed to create chat session for new tab", error);
-    readTabStoreState().failSessionTabInit(created.tabId);
-  }
+/** Resolves the active workspace id when a command does not carry one. */
+function resolveActiveWorkspaceId(input?: { workspaceId?: string }): string | undefined {
+  return input?.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
 }
 
 /**
@@ -155,9 +137,12 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
 export function openTab(input: OpenWorkspaceTabInput, options?: { activePaneTabIds?: string[] }) {
   const snapshot = readTabStoreState();
   const previousTabIds = new Set(snapshot.tabs.map((tab) => tab.id));
-  const workspaceId = input.workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
+  const workspaceId = resolveActiveWorkspaceId(input);
+  if (!workspaceId) {
+    return;
+  }
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
-  snapshot.openTab(input, options ?? { activePaneTabIds: activePane?.tabIds });
+  snapshot.openTab(input, { workspaceId, activePaneTabIds: options?.activePaneTabIds ?? activePane?.tabIds });
   requestFocusForNewTab(previousTabIds);
 }
 
@@ -215,7 +200,7 @@ export function openTabInOppositePane(input: OpenWorkspaceTabInput): void {
 
   // Step 2: Open the tab — WorkspaceSplitPaneView's auto-registration effect will
   // place it in the current active pane (which is now the target opposite pane)
-  readTabStoreState().openTab(input, { activePaneTabIds: activePane?.tabIds });
+  readTabStoreState().openTab(input, { workspaceId, activePaneTabIds: activePane?.tabIds });
   requestFocusForNewTab(previousTabIds);
 }
 
@@ -234,20 +219,9 @@ export function reorderTab(draggedTabId: string, targetTabId: string, position: 
   readTabStoreState().reorderTab(draggedTabId, targetTabId, position);
 }
 
-/** Renames one tab title. For agent-chat tabs, also forwards the rename to the pi session. */
+/** Renames one tab title. */
 export function renameTab(tabId: string, title: string, options?: { userRenamed?: boolean }) {
   readTabStoreState().renameTab(tabId, title, options);
-
-  // Forward the rename to the pi session via daemon RPC.
-  const tab = readTabStoreState().tabs.find((t) => t.id === tabId);
-  const sessionId = tab?.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
-  if (sessionId) {
-    void getDaemonClient()
-      .then((client) => client.pi.rename({ sessionId, title }))
-      .catch((error) => {
-        console.error("Failed to rename pi session", error);
-      });
-  }
 }
 
 /** Stores one browser tab favicon URL. */
@@ -287,7 +261,8 @@ export function refreshDiffTabContent(input: { tabId: string; oldContent: string
 
 /** Retains only tabs that belong to the provided workspace ids; returns the removed tab ids. */
 export function retainWorkspaceTabs(workspaceIds: string[]): string[] {
-  return tabStore.getState().retainWorkspaceTabs(workspaceIds);
+  const activeWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+  return tabStore.getState().retainWorkspaceTabs(workspaceIds, activeWorkspaceId);
 }
 
 /** Re-resolves the tab shown for one workspace after the selected workspace changed. */
@@ -320,8 +295,9 @@ export function setAgentChatTabSubagentControl(input: {
 }
 
 /** Closes all terminal tabs. */
-export function closeAllTerminalTabs(): void {
-  tabStore.getState().closeAllTerminalTabs();
+export function closeAllTerminalTabs(workspaceId?: string): void {
+  const targetWorkspaceId = workspaceId ?? workbenchNavigationStore.getState().activeWorkspaceId;
+  tabStore.getState().closeAllTerminalTabs(targetWorkspaceId);
 }
 
 /** Selects one tab inside one pane of a workspace layout. */

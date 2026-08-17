@@ -25,18 +25,31 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
     isWorkspaceRoute: true,
     isPopupOpen: false,
     tabStoreState: {
-      tabs: [{ id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} }],
+      tabs: [
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Tab 1",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal" },
+        },
+      ],
       selectedTabId: "tab-1",
       selectedTabIdByWorkspaceId: {},
       getWorkspaceTabs: vi.fn(() => [
-        { id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} },
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Tab 1",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal" },
+        },
       ]),
       resolveTabForWorkspace: vi.fn(),
       selectTab: vi.fn(),
       retainWorkspaceTabs: vi.fn(() => []),
-      createTab: vi.fn(async () => undefined),
-      resolveSessionTab: vi.fn(),
-      failSessionTabInit: vi.fn(),
       openTab: vi.fn(),
       closeTab: vi.fn(),
       closeOtherTabs: vi.fn(),
@@ -798,8 +811,22 @@ describe("getShortcutDefinitions", () => {
       tabStoreState: {
         ...createShortcutContext().tabStoreState,
         getWorkspaceTabs: vi.fn<(workspaceId: string) => TabStoreState["tabs"]>(() => [
-          { id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} },
-          { id: "tab-2", workspaceId: "workspace-1", title: "Tab 2", pinned: false, kind: "session", data: {} },
+          {
+            id: "tab-1",
+            workspaceId: "workspace-1",
+            title: "Tab 1",
+            pinned: false,
+            kind: "browser",
+            data: { url: "" },
+          },
+          {
+            id: "tab-2",
+            workspaceId: "workspace-1",
+            title: "Tab 2",
+            pinned: false,
+            kind: "browser",
+            data: { url: "" },
+          },
         ]),
       },
       splitPaneStoreState: {
@@ -842,8 +869,22 @@ describe("getShortcutDefinitions", () => {
       tabStoreState: {
         ...createShortcutContext().tabStoreState,
         getWorkspaceTabs: vi.fn<(workspaceId: string) => TabStoreState["tabs"]>(() => [
-          { id: "tab-1", workspaceId: "workspace-1", title: "Pinned", pinned: true, kind: "session", data: {} },
-          { id: "tab-2", workspaceId: "workspace-1", title: "Regular", pinned: false, kind: "session", data: {} },
+          {
+            id: "tab-1",
+            workspaceId: "workspace-1",
+            title: "Pinned",
+            pinned: true,
+            kind: "browser",
+            data: { url: "" },
+          },
+          {
+            id: "tab-2",
+            workspaceId: "workspace-1",
+            title: "Regular",
+            pinned: false,
+            kind: "browser",
+            data: { url: "" },
+          },
         ]),
       },
       splitPaneStoreState: {

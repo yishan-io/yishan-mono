@@ -307,3 +307,18 @@ export async function openChatFileTab(input: {
     openTab(tabInput);
   }
 }
+
+/**
+ * Renames the daemon-side pi session that backs one agent-chat tab.
+ * Workbench Tab renames stay presentation-only; the session rename side effect
+ * belongs to the Agent module (desktop6-adjust.md W6 task 2).
+ */
+export async function renameAgentChatSessionByTab(tabId: string, title: string): Promise<void> {
+  const tab = getTabById(tabId);
+  const sessionId = tab?.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
+  if (!sessionId) {
+    return;
+  }
+  const client = await getDaemonClient();
+  await client.pi.rename({ sessionId, title });
+}

@@ -101,15 +101,6 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
             if (tab) {
               cmd.selectTab(tab.id);
             }
-          } else if (sessionId) {
-            const sessionTab = tabStore
-              .getState()
-              .tabs.find(
-                (tab) => tab.workspaceId === workspaceId && tab.kind === "session" && tab.data.sessionId === sessionId,
-              );
-            if (sessionTab) {
-              cmd.selectTab(sessionTab.id);
-            }
           }
         }
 

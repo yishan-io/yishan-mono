@@ -3,8 +3,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../model/agentChatStore";
-import { openChatFileTab, startAgentChatSession } from "./agentChatCommands";
+import { openChatFileTab, renameAgentChatSessionByTab, startAgentChatSession } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -157,5 +158,100 @@ describe("agentChatCommands.startAgentChatSession", () => {
     await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
 
     expect(openChatMocks.openTab).not.toHaveBeenCalled();
+  });
+});
+
+describe("renameAgentChatSessionByTab", () => {
+  it("renames the pi session that backs an agent-chat tab", async () => {
+    const rename = vi.fn(async () => ({ ok: true }));
+    vi.mocked(getDaemonClient).mockResolvedValueOnce({
+      pi: {
+        start: mocks.start,
+        attach: mocks.attach,
+        stop: mocks.stop,
+        send: mocks.send,
+        listSessions: mocks.listSessions,
+        listActiveSessions: mocks.listActiveSessions,
+        rename,
+      },
+    } as never);
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-chat",
+          workspaceId: "ws-1",
+          title: "Old Chat",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp", sessionId: "sess-123" },
+        },
+      ],
+    });
+
+    await renameAgentChatSessionByTab("tab-chat", "New Chat Name");
+
+    expect(rename).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
+  });
+
+  it("does nothing for non-agent-chat tabs", async () => {
+    const rename = vi.fn(async () => ({ ok: true }));
+    vi.mocked(getDaemonClient).mockResolvedValueOnce({
+      pi: {
+        start: mocks.start,
+        attach: mocks.attach,
+        stop: mocks.stop,
+        send: mocks.send,
+        listSessions: mocks.listSessions,
+        listActiveSessions: mocks.listActiveSessions,
+        rename,
+      },
+    } as never);
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-term",
+          workspaceId: "ws-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal", sessionId: "sess-456" },
+        },
+      ],
+    });
+
+    await renameAgentChatSessionByTab("tab-term", "New Terminal");
+
+    expect(rename).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when the agent-chat tab has no session id", async () => {
+    const rename = vi.fn(async () => ({ ok: true }));
+    vi.mocked(getDaemonClient).mockResolvedValueOnce({
+      pi: {
+        start: mocks.start,
+        attach: mocks.attach,
+        stop: mocks.stop,
+        send: mocks.send,
+        listSessions: mocks.listSessions,
+        listActiveSessions: mocks.listActiveSessions,
+        rename,
+      },
+    } as never);
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-chat",
+          workspaceId: "ws-1",
+          title: "No Session",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp" },
+        },
+      ],
+    });
+
+    await renameAgentChatSessionByTab("tab-chat", "New Name");
+
+    expect(rename).not.toHaveBeenCalled();
   });
 });

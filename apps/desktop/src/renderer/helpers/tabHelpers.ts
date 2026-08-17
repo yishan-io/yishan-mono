@@ -1,5 +1,3 @@
-import type { WorkspaceTab } from "../features/workbench/model/types";
-
 /** Extracts normalized model id/name pairs from ensure-session capabilities payloads. */
 export function resolveAvailableModelsFromCapabilities(capabilities: unknown): Array<{ id: string; name: string }> {
   if (!capabilities || typeof capabilities !== "object") {
@@ -49,33 +47,4 @@ export function resolveCurrentModelFromCapabilities(capabilities: unknown): stri
   return typeof modelsRecord?.current === "string" && modelsRecord.current.trim().length > 0
     ? modelsRecord.current
     : undefined;
-}
-
-/** Returns session ids for unpinned tabs that should be closed by close-other action. */
-export function collectSessionIdsToCloseOtherTabs(tabs: ReadonlyArray<WorkspaceTab>, activeTabId: string): string[] {
-  const current = tabs.find((tab) => tab.id === activeTabId);
-  if (!current) {
-    return [];
-  }
-
-  return tabs
-    .filter(
-      (tab) =>
-        tab.workspaceId === current.workspaceId && tab.id !== activeTabId && !tab.pinned && tab.kind === "session",
-    )
-    .map((tab) => (tab.kind === "session" ? tab.data.sessionId : undefined))
-    .filter((sessionId): sessionId is string => Boolean(sessionId));
-}
-
-/** Returns session ids for unpinned tabs that should be closed by close-all action. */
-export function collectSessionIdsToCloseAllTabs(tabs: ReadonlyArray<WorkspaceTab>, activeTabId: string): string[] {
-  const current = tabs.find((tab) => tab.id === activeTabId);
-  if (!current) {
-    return [];
-  }
-
-  return tabs
-    .filter((tab) => tab.workspaceId === current.workspaceId && !tab.pinned && tab.kind === "session")
-    .map((tab) => (tab.kind === "session" ? tab.data.sessionId : undefined))
-    .filter((sessionId): sessionId is string => Boolean(sessionId));
 }

@@ -56,7 +56,7 @@ describe("workbenchActions — Workbench state public change surface (Phase 17)"
 
     expect(spy).toHaveBeenCalledWith(
       { workspaceId: "workspace-1", kind: "file", path: "/tmp/a.txt", content: "" },
-      undefined,
+      { workspaceId: "workspace-1", activePaneTabIds: undefined },
     );
   });
 

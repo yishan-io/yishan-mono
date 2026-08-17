@@ -434,11 +434,11 @@ function buildStoreState(isInitializing: boolean) {
         workspaceId: "workspace-1",
         title: "Chat A",
         pinned: false,
-        kind: "session",
+        kind: "agent-chat",
         data: {
+          cwd: "/tmp/project",
           sessionId: isInitializing ? "" : "session-1",
-          isInitializing,
-          agentKind: "opencode",
+          sessionView: "full",
         },
       },
     ],
@@ -468,15 +468,6 @@ function buildStoreState(isInitializing: boolean) {
 }
 
 describe("MainPaneView", () => {
-  it("shows chat-disabled placeholder for session tabs", () => {
-    mocked.stateRef.current = buildStoreState(true);
-
-    render(<MainPaneView />);
-
-    expect(screen.getByTestId("tab-bar").textContent).toContain("Chat A");
-    expect(screen.getByText("Chat is currently disabled.")).toBeTruthy();
-  });
-
   it("renders unsupported file view for unsupported file tabs", () => {
     mocked.stateRef.current = {
       ...buildStoreState(false),
@@ -1147,11 +1138,11 @@ describe("MainPaneView", () => {
           workspaceId: "workspace-1",
           title: "Chat",
           pinned: false,
-          kind: "session",
+          kind: "agent-chat",
           data: {
+            cwd: "/tmp/project",
             sessionId: "chat-session-1",
-            agentKind: "opencode",
-            isInitializing: false,
+            sessionView: "full",
           },
         },
       ],

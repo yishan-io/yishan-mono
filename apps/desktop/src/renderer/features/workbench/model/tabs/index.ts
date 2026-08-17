@@ -11,16 +11,13 @@ import {
   updateFileTabContentState,
 } from "./layout";
 import { openTabState } from "./open";
-import { createSessionTabOptimisticState, failSessionTabInitState, resolveSessionTabState } from "./session";
 
 export {
   closeAllTabsState,
   closeAllTerminalTabsState,
   closeOtherTabsState,
   closeTabState,
-  createSessionTabOptimisticState,
   markFileTabSavedState,
-  failSessionTabInitState,
   openTabState,
   promoteTemporaryTabState,
   refreshDiffTabContentState,
@@ -28,7 +25,6 @@ export {
   renameTabsForEntryRenameState,
   renameTabState,
   reorderTabState,
-  resolveSessionTabState,
   toggleTabPinnedState,
   updateFileTabContentState,
 };

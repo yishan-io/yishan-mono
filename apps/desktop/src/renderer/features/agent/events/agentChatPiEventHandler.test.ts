@@ -608,14 +608,17 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
 
   it("routes pushed child transcript snapshots into the matching detail tab", () => {
     agentChatStore.getState().initSession("parent-tab", "parent-session");
-    tabStore.getState().openTab({
-      workspaceId: "workspace-1",
-      kind: "agent-chat",
-      title: "Builder",
-      cwd: "/tmp/project",
-      sessionId: "child-session-1",
-      sessionView: "subagent-detail",
-    });
+    tabStore.getState().openTab(
+      {
+        workspaceId: "workspace-1",
+        kind: "agent-chat",
+        title: "Builder",
+        cwd: "/tmp/project",
+        sessionId: "child-session-1",
+        sessionView: "subagent-detail",
+      },
+      { workspaceId: "workspace-1" },
+    );
     const detailTab = tabStore
       .getState()
       .tabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1");

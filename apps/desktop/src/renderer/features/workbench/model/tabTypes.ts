@@ -28,11 +28,6 @@ export type FileDiffEntry = {
 export type AgentChatSessionView = "full" | "subagent-detail";
 
 export type WorkspaceTabDataByKind = {
-  session: {
-    sessionId?: string;
-    agentKind?: DesktopAgentKind;
-    isInitializing?: boolean;
-  };
   diff: {
     path: string;
     oldContent: string;
@@ -90,10 +85,6 @@ export type WorkspaceTabBase = {
 };
 
 export type WorkspaceTab =
-  | (WorkspaceTabBase & {
-      kind: "session";
-      data: WorkspaceTabDataByKind["session"];
-    })
   | (WorkspaceTabBase & {
       kind: "diff";
       data: WorkspaceTabDataByKind["diff"];

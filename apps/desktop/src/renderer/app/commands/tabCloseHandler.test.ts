@@ -1,18 +1,14 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  __resetExplicitlyClosedTerminalTabIdsForTests,
-  consumeExplicitlyClosedTerminalTabId,
-} from "../../helpers/terminalCloseTombstones";
 import { chatStore } from "../../features/agent/state/chatStore";
 import { splitPaneStore } from "../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
 import {
-  closeAllTabsWithCleanup,
-  closeOtherTabsWithCleanup,
-  closeTabWithCleanup,
-} from "./tabCloseHandler";
+  __resetExplicitlyClosedTerminalTabIdsForTests,
+  consumeExplicitlyClosedTerminalTabId,
+} from "../../helpers/terminalCloseTombstones";
+import { closeAllTabsWithCleanup, closeOtherTabsWithCleanup, closeTabWithCleanup } from "./tabCloseHandler";
 
 const rpcMocks = vi.hoisted(() => ({
   closeAgentSession: vi.fn(),
@@ -80,17 +76,17 @@ afterEach(() => {
 });
 
 describe("tabCloseHandler", () => {
-  it("closes tab and backend session when tab has session id", async () => {
+  it("stops the pi session when an agent-chat tab with a session id closes", async () => {
     const removeTabData = vi.fn();
     tabStore.setState({
       tabs: [
         {
           id: "tab-1",
           workspaceId: "workspace-1",
-          title: "Untitled 1",
+          title: "Agent Chat",
           pinned: false,
-          kind: "session",
-          data: { sessionId: "session-1" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-1" },
         },
       ],
     });
@@ -99,7 +95,7 @@ describe("tabCloseHandler", () => {
     closeTabWithCleanup("tab-1");
     await Promise.resolve();
 
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-1" });
+    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-1");
     expect(rpcMocks.closeTab).toHaveBeenCalledWith("tab-1", undefined);
     expect(removeTabData).toHaveBeenCalledWith(["tab-1"]);
   });
@@ -172,7 +168,7 @@ describe("tabCloseHandler", () => {
     expect(rpcMocks.closeTab).toHaveBeenCalledWith("tab-agent-chat", undefined);
   });
 
-  it("closes other tabs and backend sessions for same workspace", async () => {
+  it("releases agent-chat sessions for removed sibling tabs", async () => {
     const removeTabData = vi.fn();
     tabStore.setState({
       tabs: [
@@ -181,32 +177,32 @@ describe("tabCloseHandler", () => {
           workspaceId: "workspace-1",
           title: "A",
           pinned: false,
-          kind: "session",
-          data: { sessionId: "session-1" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-1" },
         },
         {
           id: "tab-2",
           workspaceId: "workspace-1",
           title: "B",
           pinned: false,
-          kind: "session",
-          data: { sessionId: "session-2" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-2" },
         },
         {
           id: "tab-pinned",
           workspaceId: "workspace-1",
           title: "Pinned",
           pinned: true,
-          kind: "session",
-          data: { sessionId: "session-pinned" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-pinned" },
         },
         {
           id: "tab-3",
           workspaceId: "workspace-2",
           title: "C",
           pinned: false,
-          kind: "session",
-          data: { sessionId: "session-3" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/other", sessionId: "session-3" },
         },
       ],
     });
@@ -215,8 +211,9 @@ describe("tabCloseHandler", () => {
     closeOtherTabsWithCleanup("tab-1");
     await Promise.resolve();
 
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-2" });
-    expect(rpcMocks.closeAgentSession).not.toHaveBeenCalledWith({ sessionId: "session-pinned" });
+    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-2");
+    expect(rpcMocks.stopPiSession).not.toHaveBeenCalledWith("tab-pinned");
+    expect(rpcMocks.stopPiSession).not.toHaveBeenCalledWith("tab-3");
     expect(rpcMocks.closeOtherTabs).toHaveBeenCalledWith("tab-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-2"]);
   });
@@ -229,8 +226,8 @@ describe("tabCloseHandler", () => {
           workspaceId: "workspace-1",
           title: "Keep",
           pinned: false,
-          kind: "session",
-          data: { sessionId: "session-keep" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-keep", userRenamed: false, sessionView: "full" },
         },
         {
           id: "tab-agent",
@@ -365,7 +362,7 @@ describe("tabCloseHandler", () => {
     });
   });
 
-  it("closes all tabs and backend sessions for same workspace", async () => {
+  it("closes all tabs and releases agent-chat sessions for same workspace", async () => {
     const removeTabData = vi.fn();
     tabStore.setState({
       tabs: [
@@ -374,24 +371,24 @@ describe("tabCloseHandler", () => {
           workspaceId: "workspace-1",
           title: "A",
           pinned: false,
-          kind: "session",
-          data: { sessionId: "session-1" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-1" },
         },
         {
           id: "tab-2",
           workspaceId: "workspace-1",
           title: "B",
           pinned: false,
-          kind: "session",
-          data: { sessionId: "session-2" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-2" },
         },
         {
           id: "tab-pinned",
           workspaceId: "workspace-1",
           title: "Pinned",
           pinned: true,
-          kind: "session",
-          data: { sessionId: "session-pinned" },
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "session-pinned" },
         },
       ],
     });
@@ -400,9 +397,9 @@ describe("tabCloseHandler", () => {
     closeAllTabsWithCleanup("tab-1");
     await Promise.resolve();
 
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-1" });
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-2" });
-    expect(rpcMocks.closeAgentSession).not.toHaveBeenCalledWith({ sessionId: "session-pinned" });
+    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-1");
+    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-2");
+    expect(rpcMocks.stopPiSession).not.toHaveBeenCalledWith("tab-pinned");
     expect(rpcMocks.closeAllTabs).toHaveBeenCalledWith("tab-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-1", "tab-2"]);
   });
