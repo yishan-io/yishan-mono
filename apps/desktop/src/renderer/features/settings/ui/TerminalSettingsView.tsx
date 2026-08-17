@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
-import { getTabs } from "@renderer/features/workbench";
+import { tabStore } from "@renderer/features/workbench";
 import { closeTab } from "@renderer/features/workbench";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,8 +43,9 @@ function closeTerminalTabsForSession(sessionId: string): void {
     return;
   }
 
-  const tabIds = getTabs()
-    .filter((tab) => tab.kind === "terminal" && tab.data.sessionId?.trim() === normalizedSessionId)
+  const tabIds = tabStore
+    .getState()
+    .tabs.filter((tab) => tab.kind === "terminal" && tab.data.sessionId?.trim() === normalizedSessionId)
     .map((tab) => tab.id);
 
   for (const tabId of tabIds) {

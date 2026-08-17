@@ -15,9 +15,9 @@ import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type Vditor from "vditor";
+import { displaySettingsStore } from "../../features/settings/state/displaySettingsStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { i18n } from "../../i18n";
-import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
 import { attachMermaidZoomButtons, rethemeMermaidDiagrams } from "./mermaidZoomButton";
 import { type VditorEditorHandle, createVditorEditor, resolveVditorLang } from "./vditorEditor";
@@ -102,14 +102,14 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
 ) {
   // Content width mirrors the preview's readable/full setting so the editor
   // and preview stay visually consistent (readable = 860px centered column).
-  const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
+  const markdownPreviewWidth = displaySettingsStore((state) => state.markdownPreviewWidth);
   const { t } = useTranslation();
   // Markdown settings from the settings view drive the editor too:
   // - theme override (inherit/light/dark) forces the editor theme independently
   //   of the app theme, matching the preview behavior
   // - preview font size (small/medium/large) scales the editor base font size
-  const markdownThemePreference = layoutStore((state) => state.markdownThemePreference);
-  const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
+  const markdownThemePreference = displaySettingsStore((state) => state.markdownThemePreference);
+  const markdownPreviewFontSize = displaySettingsStore((state) => state.markdownPreviewFontSize);
   const resolvedIsDark = markdownThemePreference === "inherit" ? isDark : markdownThemePreference === "dark";
   // Vditor UI language (toolbar tooltips etc.) follows the app language. The
   // editor is created once per file open, so a language switch applies on the

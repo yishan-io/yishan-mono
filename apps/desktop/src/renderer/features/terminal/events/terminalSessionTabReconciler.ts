@@ -1,4 +1,4 @@
-import { getTabs } from "@renderer/features/workbench";
+import { tabStore } from "@renderer/features/workbench";
 import {
   bindTerminalTabSession,
   closeTab,
@@ -29,7 +29,7 @@ export function reconcileTerminalSessionChanged(
   payload: TerminalSessionChangedPayload,
   dependencies: TerminalSessionTabReconcilerDependencies,
 ): void {
-  const tabs = getTabs();
+  const tabs = tabStore.getState().tabs;
 
   if (payload.action === "created") {
     const existingSessionTab = tabs.find(

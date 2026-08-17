@@ -8,49 +8,9 @@ describe("layoutStore", () => {
     layoutStore.setState({
       leftWidth: DEFAULT_LEFT_WIDTH,
       rightWidth: DEFAULT_RIGHT_WIDTH,
-      themePreference: "system",
-      markdownThemePreference: "inherit",
-      markdownPreviewFontSize: "medium",
-      markdownPreviewWidth: "readable",
-      isMarkdownOutlineVisible: false,
+      isLeftPaneManuallyHidden: false,
     });
     window.localStorage.clear();
-  });
-
-  it("hydrates one valid persisted theme preference", () => {
-    window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          leftWidth: DEFAULT_LEFT_WIDTH,
-          rightWidth: DEFAULT_RIGHT_WIDTH,
-          themePreference: "dark",
-        },
-        version: 0,
-      }),
-    );
-
-    void layoutStore.persist.rehydrate();
-
-    expect(layoutStore.getState().themePreference).toBe("dark");
-  });
-
-  it("rehydrates persisted theme preference as stored", () => {
-    window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          leftWidth: DEFAULT_LEFT_WIDTH,
-          rightWidth: DEFAULT_RIGHT_WIDTH,
-          themePreference: "something-else",
-        },
-        version: 0,
-      }),
-    );
-
-    void layoutStore.persist.rehydrate();
-
-    expect(layoutStore.getState().themePreference).toBe("something-else");
   });
 
   it("persists left and right pane widths", () => {
@@ -63,48 +23,9 @@ describe("layoutStore", () => {
     expect(layoutStore.getState().rightWidth).toBe(440);
   });
 
-  it("persists theme preference", () => {
-    layoutStore.getState().setThemePreference("light");
+  it("persists left pane manual visibility", () => {
+    layoutStore.getState().setIsLeftPaneManuallyHidden(true);
 
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"themePreference":"light"');
-  });
-
-  it("hydrates persisted markdown theme preference", () => {
-    window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          leftWidth: DEFAULT_LEFT_WIDTH,
-          rightWidth: DEFAULT_RIGHT_WIDTH,
-          themePreference: "system",
-          markdownThemePreference: "dark",
-        },
-        version: 0,
-      }),
-    );
-
-    void layoutStore.persist.rehydrate();
-
-    expect(layoutStore.getState().markdownThemePreference).toBe("dark");
-  });
-
-  it("persists markdown theme preference", () => {
-    layoutStore.getState().setMarkdownThemePreference("light");
-
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownThemePreference":"light"');
-  });
-
-  it("persists markdown preview font size and preview width", () => {
-    layoutStore.getState().setMarkdownPreviewFontSize("large");
-    layoutStore.getState().setMarkdownPreviewWidth("full");
-
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewFontSize":"large"');
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
-  });
-
-  it("persists markdown outline visibility", () => {
-    layoutStore.getState().setIsMarkdownOutlineVisible(true);
-
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"isMarkdownOutlineVisible":true');
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"isLeftPaneManuallyHidden":true');
   });
 });

@@ -206,7 +206,7 @@ vi.mock("@renderer/features/workbench", () => {
     ),
     { getState: navState },
   );
-  return { workbenchNavigationStore: navStore };
+  return { workbenchNavigationStore: navStore, tabStore: mocks.workspaceStore };
 });
 
 vi.mock("@renderer/features/project/state/projectStore", () => {

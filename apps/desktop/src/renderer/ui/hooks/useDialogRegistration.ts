@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { layoutStore } from "../../features/workbench/state/layoutStore";
+import { popupStore } from "../../app/state/popupStore";
 
 export function useDialogRegistration(open: boolean): void {
   useEffect(() => {
@@ -7,9 +7,9 @@ export function useDialogRegistration(open: boolean): void {
       return;
     }
 
-    layoutStore.getState().registerPopup();
+    popupStore.getState().registerPopup();
     return () => {
-      layoutStore.getState().unregisterPopup();
+      popupStore.getState().unregisterPopup();
     };
   }, [open]);
 }

@@ -3,9 +3,9 @@
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { createElement, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { i18n } from "../i18n";
+import { displaySettingsStore } from "../features/settings/state/displaySettingsStore";
 import { editorSettingsStore } from "../features/settings/state/editorSettingsStore";
-import { layoutStore } from "../features/workbench/state/layoutStore";
+import { i18n } from "../i18n";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
 
@@ -204,7 +204,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   // Reset layout store to defaults between tests
-  layoutStore.setState({ themePreference: "system" });
+  displaySettingsStore.setState({ themePreference: "system" });
 });
 
 describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {

@@ -1,4 +1,4 @@
-import { closeAllTabs, closeOtherTabs, closeTab, getTabById, getTabs } from "@renderer/features/workbench";
+import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/features/workbench";
 import type { WorkspaceTab } from "@renderer/features/workbench";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
@@ -59,7 +59,7 @@ function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
 
 /** Releases product resources for one tab, then removes it via Workbench. */
 export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): void {
-  const tab = getTabById(tabId);
+  const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
   if (!tab) {
     return;
   }
@@ -79,7 +79,7 @@ export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): v
 
 /** Releases product resources for unpinned sibling tabs, then removes them via Workbench. */
 export function closeOtherTabsWithCleanup(tabId: string): void {
-  const tabs = getTabs();
+  const tabs = tabStore.getState().tabs;
   const target = tabs.find((tab) => tab.id === tabId);
   if (!target) {
     return;
@@ -104,7 +104,7 @@ export function closeOtherTabsWithCleanup(tabId: string): void {
 
 /** Releases product resources for all unpinned workspace tabs, then removes them via Workbench. */
 export function closeAllTabsWithCleanup(tabId: string): void {
-  const tabs = getTabs();
+  const tabs = tabStore.getState().tabs;
   const target = tabs.find((tab) => tab.id === tabId);
   if (!target) {
     return;

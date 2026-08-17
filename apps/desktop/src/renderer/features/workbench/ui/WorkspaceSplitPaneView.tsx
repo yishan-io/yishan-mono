@@ -19,7 +19,6 @@ import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { splitPaneStore } from "../state/splitPaneStore";
 import { tabStore } from "../state/tabStore";
 import { selectLayoutByWorkspaceId } from "../state/workbenchSelectors";
-import { selectSelectedTabId } from "../state/workbenchSelectors";
 import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
 import { usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
@@ -86,7 +85,7 @@ export function WorkspaceSplitPane({
     () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
     [workbenchCommands, fileCommands, gitCommands],
   );
-  const selectedTabId = tabStore(selectSelectedTabId);
+  const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = { worktreePath };
   const enabledAgentKindSet = useMemo(() => new Set(enabledAgentKinds), [enabledAgentKinds]);
 
@@ -98,7 +97,7 @@ export function WorkspaceSplitPane({
     {},
   );
 
-  const layout = splitPaneStore(selectLayoutByWorkspaceId(workspaceId));
+  const layout = splitPaneStore((state) => selectLayoutByWorkspaceId(state, workspaceId));
   const splitRoot = layout?.root;
   const activePaneId = layout?.activePaneId ?? "";
   const { tabPlacements, handleContentPlaceholderChange } = useWorkspaceTabPlacements({ splitRoot, activePaneId });
@@ -119,7 +118,7 @@ export function WorkspaceSplitPane({
 
     for (const tabId of currentTabIds) {
       if (!previousTabIds.has(tabId)) {
-        const existingPane = selectPaneForTab(workspaceId, tabId);
+        const existingPane = selectPaneForTab(splitPaneStore.getState(), workspaceId, tabId);
         if (!existingPane) {
           splitPaneStore.getState().registerTabInPane(workspaceId, tabId);
         }
@@ -146,7 +145,7 @@ export function WorkspaceSplitPane({
     const tab = tabById.get(selectedTabId);
     if (!tab || tab.workspaceId !== workspaceId) return;
 
-    const pane = selectPaneForTab(workspaceId, selectedTabId)(splitPaneStore.getState());
+    const pane = selectPaneForTab(splitPaneStore.getState(), workspaceId, selectedTabId);
     if (!pane) return;
 
     if (pane.selectedTabId !== selectedTabId || activePaneId !== pane.id) {

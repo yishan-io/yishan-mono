@@ -1,4 +1,4 @@
-import { getTabs } from "@renderer/features/workbench";
+import { tabStore } from "@renderer/features/workbench";
 import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../../../helpers/agentChatBudget";
 import { agentChatStore } from "../model/agentChatStore";
 import type { AgentMessage, AgentModel } from "../model/agentChatTypes";
@@ -121,7 +121,7 @@ export function applySubagentLiveTranscripts(parentTabId: string, transcripts: S
     );
 
   for (const transcript of transcripts) {
-    const detailTab = getTabs().find((tab) => {
+    const detailTab = tabStore.getState().tabs.find((tab) => {
       return (
         tab.kind === "agent-chat" &&
         tab.data.sessionView === "subagent-detail" &&

@@ -3,7 +3,10 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../../features/workbench/state/layoutStore";
+import {
+  DISPLAY_SETTINGS_STORE_STORAGE_KEY,
+  displaySettingsStore,
+} from "../../features/settings/state/displaySettingsStore";
 import { AppThemePreferenceProvider, useThemePreference } from "./useThemePreference";
 
 vi.mock("@mui/material", async () => {
@@ -68,8 +71,8 @@ function expectGitThemeVariables(values: GitThemeVariableValues) {
 describe("useThemePreference", () => {
   afterEach(() => {
     cleanup();
-    window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
-    layoutStore.setState({ themePreference: "system" });
+    window.localStorage.removeItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY);
+    displaySettingsStore.setState({ themePreference: "system" });
     document.documentElement.removeAttribute("data-app-theme-mode");
     document.documentElement.style.colorScheme = "";
     document.documentElement.style.removeProperty("--yishan-color-background-app");
@@ -88,7 +91,7 @@ describe("useThemePreference", () => {
 
   it("reads persisted preference and resolves mode", () => {
     window.localStorage.setItem(
-      LAYOUT_STORE_STORAGE_KEY,
+      DISPLAY_SETTINGS_STORE_STORAGE_KEY,
       JSON.stringify({
         state: {
           leftWidth: 320,
@@ -98,7 +101,7 @@ describe("useThemePreference", () => {
         version: 0,
       }),
     );
-    void layoutStore.persist.rehydrate();
+    void displaySettingsStore.persist.rehydrate();
 
     render(
       <AppThemePreferenceProvider>
@@ -111,7 +114,7 @@ describe("useThemePreference", () => {
   });
 
   it("updates root theme properties across light, dark, and light transitions", () => {
-    void layoutStore.persist.rehydrate();
+    void displaySettingsStore.persist.rehydrate();
     render(
       <AppThemePreferenceProvider>
         <ThemePreferenceProbe />
@@ -177,7 +180,7 @@ describe("useThemePreference", () => {
   });
 
   it("updates context state and persists preference changes", () => {
-    void layoutStore.persist.rehydrate();
+    void displaySettingsStore.persist.rehydrate();
     render(
       <AppThemePreferenceProvider>
         <ThemePreferenceProbe />
@@ -189,6 +192,6 @@ describe("useThemePreference", () => {
     });
 
     expect(screen.getByTestId("theme-preference").textContent).toBe("dark");
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"themePreference":"dark"');
+    expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain('"themePreference":"dark"');
   });
 });

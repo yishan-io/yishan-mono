@@ -210,24 +210,25 @@ vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 
-vi.mock("@renderer/features/workbench", () => {
-  const navStore = Object.assign(
+vi.mock("../../../../features/workbench/state/workbenchNavigationStore", () => ({
+  workbenchNavigationStore: Object.assign(
     vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
       selector(navStoreState.current),
     ),
     { getState: () => navStoreState.current },
-  );
-  return {
-    workbenchNavigationStore: navStore,
-    layoutStore: Object.assign(
-      (selector: (state: Record<string, unknown>) => unknown) => selector(layoutStoreState.current),
-      {
-        getState: () => layoutStoreState.current,
-        setState: (partial: Record<string, unknown>) => Object.assign(layoutStoreState.current, partial),
-      },
-    ),
-  };
-});
+  ),
+}));
+
+vi.mock("../../../../features/workbench/state/layoutStore", () => ({
+  DEFAULT_RIGHT_PANE_TAB: "files",
+  layoutStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) => selector(layoutStoreState.current),
+    {
+      getState: () => layoutStoreState.current,
+      setState: (partial: Record<string, unknown>) => Object.assign(layoutStoreState.current, partial),
+    },
+  ),
+}));
 
 vi.mock("../../../../features/project/state/projectStore", () => ({
   projectStore: (selector: (state: Record<string, unknown>) => unknown) =>
@@ -397,7 +398,7 @@ describe("RightPaneView delete flow", () => {
       clientX: 20,
       clientY: 20,
     });
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Open in..." }));
+    fireEvent.mouseOver(await screen.findByRole("menuitem", { name: "Open in..." }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Cursor" }));
 
     await waitFor(() => {

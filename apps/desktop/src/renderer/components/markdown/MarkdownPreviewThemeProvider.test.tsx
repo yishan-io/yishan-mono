@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { useTheme } from "@mui/material/styles";
-import { layoutStore } from "@renderer/features/workbench/state/layoutStore";
+import { displaySettingsStore } from "@renderer/features/settings/state/displaySettingsStore";
 import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
 import { cleanup, screen } from "@testing-library/react";
 import { act } from "react";
@@ -16,7 +16,7 @@ function ThemeModeProbe({ testId }: { testId: string }) {
 
 describe("MarkdownPreviewThemeProvider", () => {
   afterEach(() => {
-    layoutStore.setState({ markdownThemePreference: "inherit" });
+    displaySettingsStore.setState({ markdownThemePreference: "inherit" });
     cleanup();
   });
 
@@ -44,7 +44,7 @@ describe("MarkdownPreviewThemeProvider", () => {
     expect(screen.getByTestId("preview-theme-mode").textContent).toBe("dark");
 
     act(() => {
-      layoutStore.getState().setMarkdownThemePreference("light");
+      displaySettingsStore.getState().setMarkdownThemePreference("light");
     });
 
     expect(screen.getByTestId("app-theme-mode").textContent).toBe("dark");

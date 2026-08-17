@@ -3,8 +3,8 @@
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createElement, forwardRef, useImperativeHandle } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { displaySettingsStore } from "../features/settings/state/displaySettingsStore";
 import { editorSettingsStore } from "../features/settings/state/editorSettingsStore";
-import { layoutStore } from "../features/workbench/state/layoutStore";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
 
@@ -204,7 +204,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   // Reset layout store to defaults between tests
-  layoutStore.setState({ themePreference: "system" });
+  displaySettingsStore.setState({ themePreference: "system" });
 });
 
 describe("FileEditor", () => {
@@ -277,7 +277,7 @@ describe("FileEditor", () => {
   });
 
   it("uses dark theme when app theme mode is dark", () => {
-    layoutStore.setState({ themePreference: "dark" });
+    displaySettingsStore.setState({ themePreference: "dark" });
 
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
@@ -292,14 +292,14 @@ describe("FileEditor", () => {
   });
 
   it("updates theme/font/wrap without recreating the editor", () => {
-    layoutStore.setState({ themePreference: "light" });
+    displaySettingsStore.setState({ themePreference: "light" });
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
     const createCountAfterMount = mockEditorState.createCount;
     expect(createCountAfterMount).toBeGreaterThan(0);
 
     act(() => {
       editorSettingsStore.setState({ editorFontSize: 15, wordWrap: false });
-      layoutStore.setState({ themePreference: "dark" });
+      displaySettingsStore.setState({ themePreference: "dark" });
     });
 
     expect(mockEditorState.createCount).toBe(createCountAfterMount);
@@ -307,7 +307,7 @@ describe("FileEditor", () => {
     expect(mockEditorState.setThemeCalls).toContain("yishan-dark");
 
     // Restore stores so later tests see defaults.
-    layoutStore.setState({ themePreference: "system" });
+    displaySettingsStore.setState({ themePreference: "system" });
     editorSettingsStore.setState({ editorFontSize: 13, wordWrap: true });
   });
 

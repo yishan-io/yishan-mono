@@ -10,7 +10,7 @@ import type {
 } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../features/session/state/sessionStore";
-import { type LinkTarget, layoutStore } from "../../features/workbench/state/layoutStore";
+import { type LinkTarget, displaySettingsStore } from "../../features/settings/state/displaySettingsStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { rendererQueryClient } from "../../queryClient";
@@ -95,7 +95,7 @@ export type OpenLinkOptions = {
 
 export async function openLink(options: OpenLinkOptions): Promise<OpenLinkResult> {
   const { url, workspaceId } = options;
-  const linkTarget: LinkTarget = layoutStore.getState().linkTarget;
+  const linkTarget: LinkTarget = displaySettingsStore.getState().linkTarget;
 
   if (linkTarget === "built-in" && isHttpUrl(url)) {
     const resolvedWorkspaceId = workspaceId ?? resolveActiveWorkspaceId();

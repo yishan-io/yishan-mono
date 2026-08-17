@@ -1,4 +1,4 @@
-import { getTabById } from "@renderer/features/workbench";
+import { tabStore } from "@renderer/features/workbench";
 import type { AgentChatSessionView } from "../../../features/workbench/model/types";
 import { delay } from "../../../helpers/delay";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
@@ -224,7 +224,7 @@ export async function restartAgentSessionForProvider(opts: {
     // never restart a session that is no longer the one the provider was saved
     // into.
     const liveSession = agentChatStore.getState().sessionsByTabId[tabId];
-    const tabStillOpen = getTabById(tabId)?.kind === "agent-chat";
+    const tabStillOpen = tabStore.getState().tabs.find((tab) => tab.id === tabId)?.kind === "agent-chat";
     if (!tabStillOpen || liveSession?.sessionId !== previousSessionId || isAgentSessionBusy(liveSession?.state)) {
       return;
     }
@@ -314,7 +314,7 @@ export async function openChatFileTab(input: {
  * belongs to the Agent module (desktop6-adjust.md W6 task 2).
  */
 export async function renameAgentChatSessionByTab(tabId: string, title: string): Promise<void> {
-  const tab = getTabById(tabId);
+  const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
   const sessionId = tab?.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
   if (!sessionId) {
     return;

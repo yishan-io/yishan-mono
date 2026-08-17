@@ -1,7 +1,9 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
+import { tabStore } from "@renderer/features/workbench";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
+import { setAgentModel, setAgentThinkingLevel } from "../..";
 import { AgentChatVoiceButton } from "../../../../components/AgentChatVoiceButton";
 import { type ComposerAttachment, ComposerAttachmentBlock } from "../../../../components/ComposerAttachmentBlock";
 import { type DroppedFileEntry, RichComposer } from "../../../../components/RichComposer";
@@ -13,20 +15,18 @@ import {
   consumeAgentChatComposerFocus,
   getAgentChatComposerFocusRequest,
 } from "../../../../events/agentChatComposerFocus";
-import { setAgentModel, setAgentThinkingLevel } from "../..";
-import { abortAgent, compactAgent, sendAgentPrompt } from "../../commands/agentChatCommands";
-import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../model/agentChatTypes";
-import { setTurnError } from "../../state/chatActions";
-import { useAgentChatSessionMeta } from "../../ui/hooks/useAgentChatReadHooks";
-import { searchFiles } from "../../../files/commands/fileCommands";
-import { ProviderCredentialDialog } from "../../../settings/ui/ProviderCredentialDialog";
-import { useKeybindingOverrides } from "../../../settings/ui/hooks/useSettingsReadHooks";
-import { renameTab } from "../../../workbench/commands/tabCommands";
-import { useTabById } from "../../../workbench/ui/hooks/useWorkbenchTabs";
 import { formatAgentSessionTitle } from "../../../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { generateId } from "../../../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../../../shortcuts/keybindings";
+import { searchFiles } from "../../../files/commands/fileCommands";
+import { ProviderCredentialDialog } from "../../../settings/ui/ProviderCredentialDialog";
+import { useKeybindingOverrides } from "../../../settings/ui/hooks/useSettingsReadHooks";
+import { renameTab } from "../../../workbench/commands/tabCommands";
+import { abortAgent, compactAgent, sendAgentPrompt } from "../../commands/agentChatCommands";
+import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../model/agentChatTypes";
+import { setTurnError } from "../../state/chatActions";
+import { useAgentChatSessionMeta } from "../../ui/hooks/useAgentChatReadHooks";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
@@ -53,7 +53,7 @@ function AgentChatComposerPaneComponent({
 }: AgentChatComposerPaneProps) {
   const { t } = useTranslation();
   const slashCommands = useAgentChatSlashCommands();
-  const foundTab = useTabById(tabId);
+  const foundTab = tabStore((state) => state.tabs.find((tab) => tab.id === tabId));
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
   const {
     sessionId,

@@ -4,12 +4,12 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCommands } from "../../app/commands/useCommands";
 import { keybindingSettingsStore } from "../../features/settings/state/keybindingSettingsStore";
-import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { splitPaneStore } from "../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { getShortcutDefinitions } from "../../shortcuts/keybindings";
 import { compileShortcutDefinitions } from "../../shortcuts/shortcutRunner";
+import { popupStore } from "../state/popupStore";
 import { startShortcutRuntime } from "./shortcutRuntime";
 
 const WORKSPACE_ROUTE = "/";
@@ -23,7 +23,7 @@ export function useShortcuts(): void {
   const workspaceStoreState = workspaceStore((state) => state);
   const activeWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const splitPaneStoreState = splitPaneStore((state) => state);
-  const isPopupOpen = layoutStore((state) => state.isPopupOpen);
+  const isPopupOpen = popupStore((state) => state.isPopupOpen);
   const commands = useCommands();
   const overridesById = keybindingSettingsStore((state) => state.overridesById);
   const isCaptureActive = keybindingSettingsStore((state) => state.isCaptureActive);

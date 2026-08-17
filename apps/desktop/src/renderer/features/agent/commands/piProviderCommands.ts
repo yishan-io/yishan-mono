@@ -1,4 +1,4 @@
-import { getTabs } from "@renderer/features/workbench";
+import { tabStore } from "@renderer/features/workbench";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { openTab } from "@renderer/features/workbench";
 import { writeTerminalInput } from "../../../features/terminal/commands/terminalCommands";
@@ -113,10 +113,12 @@ export async function openPiProviderLogin(params: { providerId: string; tabTitle
 async function waitForTerminalSessionId(tabTitle: string, timeoutMs: number): Promise<string | null> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const tab = getTabs().find(
-      (candidate): candidate is Extract<WorkspaceTab, { kind: "terminal" }> =>
-        candidate.kind === "terminal" && candidate.data.title === tabTitle,
-    );
+    const tab = tabStore
+      .getState()
+      .tabs.find(
+        (candidate): candidate is Extract<WorkspaceTab, { kind: "terminal" }> =>
+          candidate.kind === "terminal" && candidate.data.title === tabTitle,
+      );
     if (tab?.data.sessionId) {
       return tab.data.sessionId;
     }

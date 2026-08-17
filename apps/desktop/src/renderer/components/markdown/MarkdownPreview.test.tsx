@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { layoutStore } from "@renderer/features/workbench/state/layoutStore";
+import { displaySettingsStore } from "@renderer/features/settings/state/displaySettingsStore";
 import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
@@ -20,7 +20,7 @@ describe("MarkdownPreview outline", () => {
   const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
   beforeEach(() => {
-    layoutStore.setState({ isMarkdownOutlineVisible: true, markdownThemePreference: "inherit" });
+    displaySettingsStore.setState({ isMarkdownOutlineVisible: true, markdownThemePreference: "inherit" });
     parseMock.mockResolvedValue(`
       <h1>Intro</h1>
       <p>Start</p>
@@ -33,14 +33,14 @@ describe("MarkdownPreview outline", () => {
 
   afterEach(() => {
     cleanup();
-    layoutStore.setState({ isMarkdownOutlineVisible: false, markdownThemePreference: "inherit" });
+    displaySettingsStore.setState({ isMarkdownOutlineVisible: false, markdownThemePreference: "inherit" });
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     parseMock.mockReset();
     vi.useRealTimers();
   });
 
   it("stays hidden by default when outline visibility setting is off", async () => {
-    layoutStore.setState({ isMarkdownOutlineVisible: false });
+    displaySettingsStore.setState({ isMarkdownOutlineVisible: false });
 
     renderWithAppTheme(<MarkdownPreview content="# placeholder" />);
 
@@ -101,7 +101,7 @@ describe("MarkdownPreview outline", () => {
   });
 
   it("uses a non-transparent preview background when forced to the opposite theme", async () => {
-    layoutStore.setState({ markdownThemePreference: "light" });
+    displaySettingsStore.setState({ markdownThemePreference: "light" });
 
     renderWithAppTheme(
       <MarkdownPreviewThemeProvider>

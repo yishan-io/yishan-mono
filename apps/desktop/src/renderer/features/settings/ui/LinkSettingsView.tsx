@@ -6,16 +6,14 @@ import {
   SettingsControlRow,
   SettingsSectionHeader,
 } from "../../../components/settings";
-import type { LinkTarget } from "../../../features/workbench";
-import { setLinkTarget as applySetLinkTarget } from "../../../features/workbench/state/workbenchActions";
-import { useLinkTarget } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
+import type { LinkTarget } from "../state/displaySettingsStore";
+import { displaySettingsStore } from "../state/displaySettingsStore";
 
 const LINK_TARGET_OPTIONS: LinkTarget[] = ["built-in", "external"];
 
 export function LinkSettingsView() {
   const { t } = useTranslation();
-  const linkTarget = useLinkTarget();
-  const setLinkTarget = applySetLinkTarget;
+  const linkTarget = displaySettingsStore((state) => state.linkTarget);
 
   return (
     <>
@@ -32,7 +30,7 @@ export function LinkSettingsView() {
                 if (nextTarget === linkTarget) {
                   return;
                 }
-                setLinkTarget(nextTarget);
+                displaySettingsStore.getState().setLinkTarget(nextTarget);
               }}
               slotProps={{
                 input: {

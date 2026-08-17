@@ -3,9 +3,12 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AppThemePreferenceProvider } from "../../../ui/hooks/useThemePreference";
 import { sessionStore } from "../../../features/session/state/sessionStore";
-import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../../../features/workbench/state/layoutStore";
+import {
+  DISPLAY_SETTINGS_STORE_STORAGE_KEY,
+  displaySettingsStore,
+} from "../../../features/settings/state/displaySettingsStore";
+import { AppThemePreferenceProvider } from "../../../ui/hooks/useThemePreference";
 import { SettingsView } from "./SettingsView";
 
 vi.mock("react-i18next", () => ({
@@ -62,8 +65,8 @@ vi.mock("./SkillsSettingsView", () => ({
 
 describe("SettingsView", () => {
   afterEach(() => {
-    window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
-    layoutStore.setState({
+    window.localStorage.removeItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY);
+    displaySettingsStore.setState({
       themePreference: "system",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
@@ -160,7 +163,7 @@ describe("SettingsView", () => {
 
     fireEvent.click(screen.getByTestId("settings-theme-option-dark"));
 
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"themePreference":"dark"');
+    expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain('"themePreference":"dark"');
   });
 
   it("persists markdown preview font size and preview width", () => {
@@ -180,8 +183,10 @@ describe("SettingsView", () => {
     fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.previewWidth.label"));
     fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.previewWidth.options.full" }));
 
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewFontSize":"large"');
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
+    expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain(
+      '"markdownPreviewFontSize":"large"',
+    );
+    expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
   });
 
   it("persists markdown outline visibility", () => {
@@ -197,7 +202,9 @@ describe("SettingsView", () => {
 
     fireEvent.click(screen.getByLabelText("settings.appearance.markdown.outlineVisible.label"));
 
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"isMarkdownOutlineVisible":true');
+    expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain(
+      '"isMarkdownOutlineVisible":true',
+    );
   });
 
   it("matches appearance theme settings in search and opens appearance tab", () => {

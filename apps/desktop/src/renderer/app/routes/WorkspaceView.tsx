@@ -25,6 +25,7 @@ import {
   useWorkspaceCommands,
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
+import { popupStore } from "../../app/state/popupStore";
 import { SplitPaneLayout } from "../../components/SplitPaneLayout";
 import { subscribeAppActionEvent } from "../../events";
 import { AgentChatRecoveryCoordinator } from "../../features/agent/runtime/agentChatRecovery";
@@ -74,7 +75,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
   useEffect(() => {
     return subscribeAppActionEvent((payload) => {
-      if (payload.action !== ACTIONS.NAVIGATE && layoutStore.getState().isPopupOpen) {
+      if (payload.action !== ACTIONS.NAVIGATE && popupStore.getState().isPopupOpen) {
         return;
       }
 

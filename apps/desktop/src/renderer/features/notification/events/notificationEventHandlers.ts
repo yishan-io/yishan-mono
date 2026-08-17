@@ -1,4 +1,4 @@
-import { getSelectedTabId, getTabs } from "@renderer/features/workbench";
+import { tabStore } from "@renderer/features/workbench";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 /**
  * Notification event handlers — owns notification.event effects: preference-
@@ -141,12 +141,12 @@ export function isRelevantTerminalFocusedForNotification(payload: NotificationEv
 
   if (
     workbenchNavigationStore.getState().activeWorkspaceId !== sessionParts.workspaceId ||
-    getSelectedTabId() !== sessionParts.tabId
+    tabStore.getState().selectedTabId !== sessionParts.tabId
   ) {
     return false;
   }
 
-  return getTabs().some((tab) => tab.id === sessionParts.tabId && tab.kind === "terminal");
+  return tabStore.getState().tabs.some((tab) => tab.id === sessionParts.tabId && tab.kind === "terminal");
 }
 
 export function isNormalAgentCliExit(payload: NotificationEventPayload): boolean {

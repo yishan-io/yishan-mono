@@ -2,8 +2,8 @@ import { useMediaQuery } from "@mui/material";
 import { TYPOGRAPHY_TOKENS } from "@yishan-io/design-tokens";
 import { createCssThemeVariables } from "@yishan-io/design-tokens/v1/css";
 import { type ReactNode, createContext, useContext, useLayoutEffect, useMemo } from "react";
+import { displaySettingsStore } from "../../features/settings/state/displaySettingsStore";
 import { editorSettingsStore } from "../../features/settings/state/editorSettingsStore";
-import { layoutStore } from "../../features/workbench/state/layoutStore";
 import type { AppThemeMode, AppThemePreference } from "../../theme";
 import { resolveAppThemeMode } from "../../theme";
 
@@ -17,8 +17,8 @@ const AppThemePreferenceContext = createContext<AppThemePreferenceContextValue |
 
 /** Provides persisted app theme preference and resolved theme mode for desktop main view routes. */
 export function AppThemePreferenceProvider({ children }: { children: ReactNode }) {
-  const themePreference = layoutStore((state) => state.themePreference);
-  const setThemePreference = layoutStore((state) => state.setThemePreference);
+  const themePreference = displaySettingsStore((state) => state.themePreference);
+  const setThemePreference = displaySettingsStore((state) => state.setThemePreference);
   const systemPrefersDark = useMediaQuery("(prefers-color-scheme: dark)");
   const themeMode = resolveAppThemeMode(themePreference, systemPrefersDark);
 

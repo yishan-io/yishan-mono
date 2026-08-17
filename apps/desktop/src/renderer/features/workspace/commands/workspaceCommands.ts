@@ -7,7 +7,6 @@ import {
 import {
   DEFAULT_RIGHT_PANE_TAB,
   type WorkspaceRightPaneTab,
-  getIsLeftPaneManuallyHidden,
   layoutStore,
   setIsRightPaneHidden,
   setLeftPaneHidden,
@@ -90,7 +89,7 @@ export function setLastUsedExternalAppId(appId: ExternalAppId) {
 
 /** Toggles left workspace pane manual visibility state. */
 export function toggleLeftPaneVisibility() {
-  setLeftPaneHidden(!getIsLeftPaneManuallyHidden());
+  setLeftPaneHidden(!layoutStore.getState().isLeftPaneManuallyHidden);
 }
 
 /** Toggles right workspace pane manual visibility state for the selected workspace. */
@@ -103,7 +102,7 @@ export function toggleRightPaneVisibility() {
 /** Toggles a workspace pane: opens and switches to it, or collapses if already active. */
 export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
   if (pane === "repo") {
-    setLeftPaneHidden(!getIsLeftPaneManuallyHidden());
+    setLeftPaneHidden(!layoutStore.getState().isLeftPaneManuallyHidden);
     return;
   }
 

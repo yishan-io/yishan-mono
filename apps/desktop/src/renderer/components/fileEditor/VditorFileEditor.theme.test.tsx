@@ -8,7 +8,7 @@
 import { render, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { layoutStore } from "../../features/workbench/state/layoutStore";
+import { displaySettingsStore } from "../../features/settings/state/displaySettingsStore";
 import { VditorFileEditor } from "./VditorFileEditor";
 
 // ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ describe("VditorFileEditor theme", () => {
     onMarkdownChangeFromFactory = null;
     mockGetValue.mockReturnValue("# test");
     // Reset markdown settings to their defaults so tests are isolated.
-    layoutStore.setState({
+    displaySettingsStore.setState({
       markdownThemePreference: "inherit",
       markdownPreviewFontSize: "medium",
     });
@@ -220,7 +220,7 @@ describe("VditorFileEditor theme", () => {
 
   it("forces dark when the markdown theme override is dark even if the app is light", async () => {
     act(() => {
-      layoutStore.getState().setMarkdownThemePreference("dark");
+      displaySettingsStore.getState().setMarkdownThemePreference("dark");
     });
 
     const { container } = render(
@@ -238,7 +238,7 @@ describe("VditorFileEditor theme", () => {
 
   it("forces light when the markdown theme override is light even if the app is dark", async () => {
     act(() => {
-      layoutStore.getState().setMarkdownThemePreference("light");
+      displaySettingsStore.getState().setMarkdownThemePreference("light");
     });
 
     const { container } = render(
@@ -266,7 +266,7 @@ describe("VditorFileEditor theme", () => {
 
   it("exposes the markdown preview font size setting as data-font-size", () => {
     act(() => {
-      layoutStore.getState().setMarkdownPreviewFontSize("large");
+      displaySettingsStore.getState().setMarkdownPreviewFontSize("large");
     });
 
     const { container } = render(

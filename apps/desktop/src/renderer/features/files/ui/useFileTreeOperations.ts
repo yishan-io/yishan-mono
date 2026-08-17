@@ -3,7 +3,7 @@ import { listFiles, listFilesBatch } from "@renderer/features/files/commands/fil
 import { fileTreeStore } from "@renderer/features/files/state/fileTreeStore";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 
-import { useWorkspaceTabs } from "@renderer/features/workbench/ui/hooks/useWorkbenchTabs";
+import { tabStore } from "@renderer/features/workbench";
 import {
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
@@ -238,7 +238,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   const fileTreeRefreshVersion = fileTreeStore((state) => state.fileTreeRefreshVersion);
   const { openTab, closeTab, renameTabsForEntryRename } = useWorkbenchCommands();
   const { setLastUsedExternalAppId } = useWorkspaceCommands();
-  const tabs = useWorkspaceTabs();
+  const tabs = tabStore((state) => state.tabs);
   const {
     fileOperationState,
     fileOperationError,

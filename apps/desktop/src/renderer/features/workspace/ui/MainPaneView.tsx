@@ -3,7 +3,7 @@ import { WorkspaceAgentChatSurface } from "@renderer/features/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
 import { resizeRightPane } from "@renderer/features/workbench";
-import { useSelectedTabId } from "@renderer/features/workbench";
+import { layoutStore, tabStore } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
@@ -22,8 +22,6 @@ import { useLastUsedExternalAppId } from "../../../features/project/ui/hooks/use
 import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
 import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "../../../features/terminal";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { useRightPaneWidth } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
-import { useWorkspaceTabs } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
@@ -54,8 +52,8 @@ export function MainPaneView() {
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
   const isErrorWorkspace = selectedWorkspace?.state === "error";
-  const tabs = useWorkspaceTabs();
-  const selectedTabId = useSelectedTabId();
+  const tabs = tabStore((state) => state.tabs);
+  const selectedTabId = tabStore((state) => state.selectedTabId);
   const mergedCmd = useMemo(
     () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
     [workbenchCommands, fileCommands, gitCommands],
@@ -105,7 +103,7 @@ export function MainPaneView() {
   );
   const inUseByAgentKind = useAgentKindsInUse();
   const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
-  const rightWidth = useRightPaneWidth();
+  const rightWidth = layoutStore((state) => state.rightWidth);
   const enabledAgentKinds = useMemo(
     () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
     [inUseByAgentKind],

@@ -51,7 +51,7 @@ export function usePaneTabHandlers({
       // viewing. Prefer it over the workspace-wide neighbor so closing a tab in
       // one pane never yanks the other pane's selection (e.g. sub-agent detail
       // tabs closed on the right must leave the left pane's selected tab alone).
-      const activePane = selectActivePane(workspaceId)(splitPaneStore.getState());
+      const activePane = selectActivePane(splitPaneStore.getState(), workspaceId);
       cmd.closeTab(tabId, activePane?.selectedTabId ? { preferredSelectedTabId: activePane.selectedTabId } : undefined);
     },
     [workspaceId, cmd],
@@ -155,7 +155,7 @@ export function usePaneTabHandlers({
   const handleFocusPane = useCallback(
     (paneId: string) => {
       splitPaneStore.getState().setActivePane(workspaceId, paneId);
-      const pane = selectPane(workspaceId, paneId)(splitPaneStore.getState());
+      const pane = selectPane(splitPaneStore.getState(), workspaceId, paneId);
       if (pane?.selectedTabId) {
         cmd.selectTab(pane.selectedTabId);
       }
@@ -165,7 +165,7 @@ export function usePaneTabHandlers({
 
   const performSplit = useCallback(
     (paneId: string, direction: "horizontal" | "vertical") => {
-      const pane = selectPane(workspaceId, paneId)(splitPaneStore.getState());
+      const pane = selectPane(splitPaneStore.getState(), workspaceId, paneId);
       if (!pane?.selectedTabId || pane.tabIds.length <= 1) return;
       const movedTabId = pane.selectedTabId;
       splitPaneStore.getState().splitPane(workspaceId, {

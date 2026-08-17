@@ -5,7 +5,7 @@ import { FileTree } from "@renderer/components/FileTree";
 import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
 import { useDetectedExternalAppIds } from "@renderer/features/files/ui/hooks/useDetectedExternalAppIds";
-import { useSelectedTabId, useWorkspaceTabs } from "@renderer/features/workbench/ui/hooks/useWorkbenchTabs";
+import { tabStore } from "@renderer/features/workbench";
 import { getRendererPlatform } from "@renderer/helpers/platform";
 import { useContextMenuState } from "@renderer/ui/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/ui/hooks/useSuppressNativeContextMenuWhileOpen";
@@ -118,8 +118,8 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const selectFolderInFileTreePath = fileTreeStore((state) => state.selectFolderInFileTreePath);
   const selectFolderInFileTreeRequestId = fileTreeStore((state) => state.selectFolderInFileTreeRequestId);
   const expandedItemsByWorkspaceId = fileTreeStore((state) => state.expandedFileTreeItemsByWorkspaceId);
-  const selectedTabId = useSelectedTabId();
-  const tabs = useWorkspaceTabs();
+  const selectedTabId = tabStore((state) => state.selectedTabId);
+  const tabs = tabStore((state) => state.tabs);
   const lastRevealedTabIdRef = useRef("");
   const lastAppliedFolderSelectionRequestIdRef = useRef(0);
 

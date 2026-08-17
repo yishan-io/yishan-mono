@@ -1,17 +1,13 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import { tabStore } from "@renderer/features/workbench";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { setAgentChatStreamTabVisible } from "../..";
-import { respondToAgentExtensionUiRequest } from "../../commands/agentChatCommands";
-import {
-  clearPendingUiAutoResponse,
-  setPendingUiAutoResponse,
-  setTurnError,
-} from "../../state/chatActions";
-import { useAgentChatSession } from "../../ui/hooks/useAgentChatReadHooks";
-import type { AgentChatSessionView } from "../../../workbench/model/types";
-import { useTabById } from "../../../workbench/ui/hooks/useWorkbenchTabs";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import type { AgentChatSessionView } from "../../../workbench/model/types";
+import { respondToAgentExtensionUiRequest } from "../../commands/agentChatCommands";
+import { clearPendingUiAutoResponse, setPendingUiAutoResponse, setTurnError } from "../../state/chatActions";
+import { useAgentChatSession } from "../../ui/hooks/useAgentChatReadHooks";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
@@ -39,7 +35,7 @@ function AgentChatViewComponent({
 }: AgentChatViewProps) {
   const { t } = useTranslation();
   const isReadOnlySubagentDetail = sessionView === "subagent-detail";
-  const foundTab = useTabById(tabId);
+  const foundTab = tabStore((state) => state.tabs.find((tab) => tab.id === tabId));
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
   const session = useAgentChatSession(tabId);
   const hasSession = Boolean(session);

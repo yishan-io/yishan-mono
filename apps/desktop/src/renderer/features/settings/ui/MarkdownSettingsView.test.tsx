@@ -2,7 +2,10 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../../../features/workbench/state/layoutStore";
+import {
+  DISPLAY_SETTINGS_STORE_STORAGE_KEY,
+  displaySettingsStore,
+} from "../../../features/settings/state/displaySettingsStore";
 import { MarkdownSettingsView } from "./MarkdownSettingsView";
 
 vi.mock("react-i18next", () => ({
@@ -17,13 +20,13 @@ vi.mock("react-i18next", () => ({
 
 describe("MarkdownSettingsView", () => {
   afterEach(() => {
-    layoutStore.setState({
+    displaySettingsStore.setState({
       markdownThemePreference: "inherit",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
       isMarkdownOutlineVisible: false,
     });
-    window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
+    window.localStorage.removeItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY);
     cleanup();
   });
 
@@ -33,6 +36,8 @@ describe("MarkdownSettingsView", () => {
     fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.theme.label"));
     fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.theme.options.dark" }));
 
-    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownThemePreference":"dark"');
+    expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain(
+      '"markdownThemePreference":"dark"',
+    );
   });
 });

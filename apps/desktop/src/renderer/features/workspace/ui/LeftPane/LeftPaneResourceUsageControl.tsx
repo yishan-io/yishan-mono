@@ -1,3 +1,4 @@
+import { tabStore } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
@@ -10,7 +11,6 @@ import {
 import { useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import type { TerminalResourceUsageSnapshot } from "../../../../features/terminal/commands/terminalCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
-import { useWorkspaceTabs } from "../../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
@@ -80,7 +80,7 @@ export function LeftPaneResourceUsageControl() {
   const isInRouterContext = useInRouterContext();
   const projects = useProjects();
   const workspaces = workspaceStore((state) => state.workspaces);
-  const tabs = useWorkspaceTabs();
+  const tabs = tabStore((state) => state.tabs);
   const { getTerminalResourceUsage } = useTerminalCommands();
   const { activateWorkspace } = useWorkspaceCommands();
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);

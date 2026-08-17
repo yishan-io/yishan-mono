@@ -10,31 +10,16 @@ import type {
   MarkdownPreviewFontSize,
   MarkdownPreviewWidth,
   MarkdownThemePreference,
-} from "../../../features/workbench";
-import {
-  setIsMarkdownOutlineVisible as applySetIsMarkdownOutlineVisible,
-  setMarkdownPreviewFontSize as applySetMarkdownPreviewFontSize,
-  setMarkdownPreviewWidth as applySetMarkdownPreviewWidth,
-  setMarkdownThemePreference as applySetMarkdownThemePreference,
-} from "../../../features/workbench/state/workbenchActions";
-import {
-  useIsMarkdownOutlineVisible,
-  useMarkdownPreviewFontSize,
-  useMarkdownPreviewWidth,
-  useMarkdownThemePreference,
-} from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
+} from "../state/displaySettingsStore";
+import { displaySettingsStore } from "../state/displaySettingsStore";
 
 /** Renders markdown editor preference controls. */
 export function MarkdownSettingsView() {
   const { t } = useTranslation();
-  const markdownThemePreference = useMarkdownThemePreference();
-  const setMarkdownThemePreference = applySetMarkdownThemePreference;
-  const markdownPreviewFontSize = useMarkdownPreviewFontSize();
-  const setMarkdownPreviewFontSize = applySetMarkdownPreviewFontSize;
-  const markdownPreviewWidth = useMarkdownPreviewWidth();
-  const setMarkdownPreviewWidth = applySetMarkdownPreviewWidth;
-  const isMarkdownOutlineVisible = useIsMarkdownOutlineVisible();
-  const setIsMarkdownOutlineVisible = applySetIsMarkdownOutlineVisible;
+  const markdownThemePreference = displaySettingsStore((state) => state.markdownThemePreference);
+  const markdownPreviewFontSize = displaySettingsStore((state) => state.markdownPreviewFontSize);
+  const markdownPreviewWidth = displaySettingsStore((state) => state.markdownPreviewWidth);
+  const isMarkdownOutlineVisible = displaySettingsStore((state) => state.isMarkdownOutlineVisible);
 
   return (
     <>
@@ -51,7 +36,9 @@ export function MarkdownSettingsView() {
               width={240}
               value={markdownThemePreference}
               onChange={(event) => {
-                setMarkdownThemePreference(event.target.value as MarkdownThemePreference);
+                displaySettingsStore
+                  .getState()
+                  .setMarkdownThemePreference(event.target.value as MarkdownThemePreference);
               }}
               slotProps={{
                 input: {
@@ -73,7 +60,9 @@ export function MarkdownSettingsView() {
               width={240}
               value={markdownPreviewFontSize}
               onChange={(event) => {
-                setMarkdownPreviewFontSize(event.target.value as MarkdownPreviewFontSize);
+                displaySettingsStore
+                  .getState()
+                  .setMarkdownPreviewFontSize(event.target.value as MarkdownPreviewFontSize);
               }}
               slotProps={{
                 input: {
@@ -95,7 +84,7 @@ export function MarkdownSettingsView() {
               width={240}
               value={markdownPreviewWidth}
               onChange={(event) => {
-                setMarkdownPreviewWidth(event.target.value as MarkdownPreviewWidth);
+                displaySettingsStore.getState().setMarkdownPreviewWidth(event.target.value as MarkdownPreviewWidth);
               }}
               slotProps={{
                 input: {
@@ -116,7 +105,7 @@ export function MarkdownSettingsView() {
               <Switch
                 checked={isMarkdownOutlineVisible}
                 onChange={(event) => {
-                  setIsMarkdownOutlineVisible(event.target.checked);
+                  displaySettingsStore.getState().setIsMarkdownOutlineVisible(event.target.checked);
                 }}
                 slotProps={{
                   input: {
