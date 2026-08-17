@@ -12,14 +12,14 @@ import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpc
 
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { tabStore } from "../../../features/workbench/state/tabStore";
+import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
 import { workspaceProjectionStore } from "../state/workspaceProjectionStore";
 
@@ -221,7 +221,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
 
     const taskRunSessionId = payload.taskRunSessionId?.trim();
     if (taskRunSessionId && payload.worktreePath) {
-      tabStore.getState().openTab({
+      openTab({
         workspaceId: payload.workspaceId,
         kind: "agent-chat",
         ...(payload.taskRunTitle?.trim() ? { title: payload.taskRunTitle.trim() } : {}),

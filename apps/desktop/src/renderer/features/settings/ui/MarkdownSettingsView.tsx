@@ -6,24 +6,35 @@ import {
   SettingsControlRow,
   SettingsSectionHeader,
 } from "../../../components/settings";
+import type {
+  MarkdownPreviewFontSize,
+  MarkdownPreviewWidth,
+  MarkdownThemePreference,
+} from "../../../features/workbench";
 import {
-  type MarkdownPreviewFontSize,
-  type MarkdownPreviewWidth,
-  type MarkdownThemePreference,
-  layoutStore,
-} from "../../../features/workbench/state/layoutStore";
+  setIsMarkdownOutlineVisible as applySetIsMarkdownOutlineVisible,
+  setMarkdownPreviewFontSize as applySetMarkdownPreviewFontSize,
+  setMarkdownPreviewWidth as applySetMarkdownPreviewWidth,
+  setMarkdownThemePreference as applySetMarkdownThemePreference,
+} from "../../../features/workbench/state/workbenchActions";
+import {
+  useIsMarkdownOutlineVisible,
+  useMarkdownPreviewFontSize,
+  useMarkdownPreviewWidth,
+  useMarkdownThemePreference,
+} from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
 
 /** Renders markdown editor preference controls. */
 export function MarkdownSettingsView() {
   const { t } = useTranslation();
-  const markdownThemePreference = layoutStore((state) => state.markdownThemePreference);
-  const setMarkdownThemePreference = layoutStore((state) => state.setMarkdownThemePreference);
-  const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
-  const setMarkdownPreviewFontSize = layoutStore((state) => state.setMarkdownPreviewFontSize);
-  const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
-  const setMarkdownPreviewWidth = layoutStore((state) => state.setMarkdownPreviewWidth);
-  const isMarkdownOutlineVisible = layoutStore((state) => state.isMarkdownOutlineVisible);
-  const setIsMarkdownOutlineVisible = layoutStore((state) => state.setIsMarkdownOutlineVisible);
+  const markdownThemePreference = useMarkdownThemePreference();
+  const setMarkdownThemePreference = applySetMarkdownThemePreference;
+  const markdownPreviewFontSize = useMarkdownPreviewFontSize();
+  const setMarkdownPreviewFontSize = applySetMarkdownPreviewFontSize;
+  const markdownPreviewWidth = useMarkdownPreviewWidth();
+  const setMarkdownPreviewWidth = applySetMarkdownPreviewWidth;
+  const isMarkdownOutlineVisible = useIsMarkdownOutlineVisible();
+  const setIsMarkdownOutlineVisible = applySetIsMarkdownOutlineVisible;
 
   return (
     <>

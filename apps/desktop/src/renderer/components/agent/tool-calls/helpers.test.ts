@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { ResolvedServer } from "@pi-lsp/types";
 import { describe, expect, it } from "vitest";
 import {

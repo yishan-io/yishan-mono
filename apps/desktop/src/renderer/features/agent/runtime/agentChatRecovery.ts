@@ -1,8 +1,6 @@
-import type { PiActiveSessionSummary } from "../../../rpc/daemonTypes";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { TabStoreState } from "../../../features/workbench/state/tabStore";
+import type { TabStoreState } from "../../../features/workbench";
 import type { AgentChatSessionView } from "../../../features/workbench/model/types";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import type { PiActiveSessionSummary } from "../../../rpc/daemonTypes";
 
 type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
 
@@ -36,8 +34,14 @@ const EMPTY_PERSISTED_AGENT_CHAT_PAYLOAD: PersistedAgentChatTabPayload = {
 /** Coordinates persistence and restore for live agent-chat tabs. */
 export class AgentChatRecoveryCoordinator {
   constructor(
-    private readonly tabStoreAccess: Pick<typeof tabStore, "getState" | "setState" | "subscribe"> = tabStore,
-    private readonly workspaceStoreAccess: Pick<typeof workspaceStore, "getState"> = workspaceStore,
+    private readonly tabStoreAccess: {
+      getState: () => TabStoreState;
+      setState: (partial: Partial<TabStoreState>) => void;
+      subscribe: (listener: (state: TabStoreState) => void) => () => void;
+    },
+    private readonly workspaceStoreAccess: {
+      getState: () => { workspaces: Array<{ id: string }> };
+    },
     private readonly storage: Storage | undefined = resolveBrowserStorage(),
   ) {}
 

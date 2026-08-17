@@ -10,12 +10,18 @@ export function selectSelectedOrganizationId(): string | undefined {
   return sessionStore.getState().selectedOrganizationId;
 }
 
+export function selectOrganizations() {
+  return sessionStore.getState().organizations;
+}
+
+export function selectCurrentUser() {
+  return sessionStore.getState().currentUser;
+}
+
 export function selectSessionDaemonId(): string | undefined {
   return sessionStore.getState().daemonId;
 }
 
-export function selectCurrentUserNotificationPreferences():
-  | SessionUser["notificationPreferences"]
-  | undefined {
+export function selectCurrentUserNotificationPreferences(): SessionUser["notificationPreferences"] | undefined {
   return sessionStore.getState().currentUser?.notificationPreferences;
 }

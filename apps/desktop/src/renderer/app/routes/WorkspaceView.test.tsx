@@ -60,6 +60,8 @@ vi.mock("../../rpc/rpcTransport", () => ({
       setCurrentOrg: rpcMocks.setCurrentOrg,
     },
   })),
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
 vi.mock("../../features/workspace/ui/hooks/useAllWorkspacesGitSync", () => ({
@@ -86,7 +88,6 @@ vi.mock("../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../features/workspace/ui/hooks/useWorkspacePaneVisibility", () => ({
   WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,

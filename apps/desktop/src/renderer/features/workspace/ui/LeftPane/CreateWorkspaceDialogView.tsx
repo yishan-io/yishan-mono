@@ -2,18 +2,18 @@ import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { projectStore } from "../../../../features/project/state/projectStore";
+import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
+import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
+import { useDaemonId, useSelectedOrganizationId } from "../../../../features/session/ui/hooks/useSessionReadHooks";
+import { useWorkspaceBranchPrefixSettings } from "../../../../features/settings/ui/hooks/useSettingsReadHooks";
+import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../../helpers/projectHelpers";
 import { resolveTargetBranchForCreate } from "../../../../helpers/workspaceBranchNaming";
-import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";
 import { buildWorkspaceNavigationPath } from "../../../../navigation/workspaceNavigation";
-import { sessionStore } from "../../../../features/session/state/sessionStore";
-import { workspaceSettingsStore } from "../../../../features/settings/state/workspaceSettingsStore";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";
 import { ProjectAndSourceBranchSection } from "./createWorkspaceDialog/ProjectAndSourceBranchSection";
 import { TaskRunSection } from "./createWorkspaceDialog/TaskRunSection";
@@ -39,16 +39,15 @@ export function CreateWorkspaceDialogView({
 }: CreateWorkspaceDialogViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const organizationId = sessionStore((state) => state.selectedOrganizationId);
-  const daemonId = sessionStore((state) => state.daemonId);
-  const projects = projectStore((state) => state.projects);
-  const displayProjectIds = projectStore((state) => state.displayProjectIds);
+  const organizationId = useSelectedOrganizationId();
+  const daemonId = useDaemonId();
+  const projects = useProjects();
+  const displayProjectIds = useDisplayProjectIds();
   const workspaces = workspaceStore((state) => state.workspaces);
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch } = useWorkspaceCommands();
   const { listGitBranches } = useGitCommands();
   const { listAgentModels } = useAgentCommands();
-  const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
-  const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
+  const { prefixMode, customPrefix } = useWorkspaceBranchPrefixSettings();
 
   useDialogRegistration(open);
 

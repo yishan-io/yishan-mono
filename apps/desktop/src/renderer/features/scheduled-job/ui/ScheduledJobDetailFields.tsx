@@ -1,11 +1,10 @@
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
-import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
 import { renderProjectIcon } from "../../../components/projectIcons";
-import { projectStore } from "../../../features/project/state/projectStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
+import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
 import { ScheduledJobStatusIndicator } from "./ScheduledJobStatusIndicator";
 import { describeCronExpression } from "./scheduledJobDetailHelpers";
 
@@ -53,9 +52,7 @@ function FieldRow({ label, children }: FieldRowProps) {
 /** Renders the read-only detail fields for one scheduled job. */
 export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailFieldsProps) {
   const { t } = useTranslation();
-  const project = projectStore((state) =>
-    state.projects.find((workspaceProject) => workspaceProject.id === job.projectId),
-  );
+  const project = useProjects().find((workspaceProject) => workspaceProject.id === job.projectId);
   const nodeQuery = useQuery({
     queryKey: ["org-nodes", orgId],
     queryFn: () => listOrgNodes(orgId),

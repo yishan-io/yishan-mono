@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
+import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { ResourceUsageMenu, type ResourceUsageMenuRow } from "../../../components/ResourceUsageMenu";
 import { RouteCloseWatcher } from "../../../components/RouteCloseWatcher";
-import { formatCpuPercent, formatMemoryBytes } from "../../../helpers/formatters";
-import { isTerminalTabWithSessionId } from "../../../helpers/terminalTabUtils";
-import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import { useTerminalTabLookups } from "../../../features/terminal/ui/hooks/useTerminalTabLookups";
-import { tabStore } from "../../../features/workbench/state/tabStore";
+import { useWorkspaceTabs } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { formatCpuPercent, formatMemoryBytes } from "../../../helpers/formatters";
+import { isTerminalTabWithSessionId } from "../../../helpers/terminalTabUtils";
 
 const MAX_VISIBLE_PROCESSES = 20;
 
@@ -23,7 +23,7 @@ export function WorkspaceResourceUsageControl() {
   const { t } = useTranslation();
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const tabs = tabStore((state) => state.tabs);
+  const tabs = useWorkspaceTabs();
   const { getTerminalResourceUsage } = useTerminalCommands();
   const { selectTab } = useWorkbenchCommands();
   const { setSelectedWorkspaceId } = useWorkspaceCommands();

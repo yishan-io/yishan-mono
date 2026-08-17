@@ -1,17 +1,19 @@
 import { Badge, Box, IconButton, Tooltip } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
+import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../../components/PaneHeader";
-import { projectStore } from "../../../../features/project/state/projectStore";
 import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
+import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+import {
+  DEFAULT_RIGHT_PANE_TAB,
+  type WorkspaceRightPaneTab,
+} from "../../../../features/workspace/state/workspaceUiStore";
+import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
-import { useSelectedWorkspaceWithProject } from "../../../../app/selectors";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab } from "../../../../features/workspace/state/workspaceUiStore";
-import { workspaceUiStore } from "../../../../features/workspace/state/workspaceUiStore";
 import { DARK_SURFACE_COLORS } from "../../../../theme";
 
 export type RightPaneTabBarProps = {

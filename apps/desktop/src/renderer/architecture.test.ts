@@ -1,225 +1,69 @@
 // @vitest-environment node
 
 /**
- * Architecture test — Desktop renderer dependency rules (refactor Phase 1).
+ * Architecture test — Desktop renderer dependency rules (Phases 1–20).
  *
- * Enforces the Phase 1 dependency contract from `.my-context/architecture/refactor/desktop2.md`:
+ * Phase 16 restructured this file into one focused test group per stable rule
+ * and hardened the allowlist lifecycle:
  *
- *   - Rule 1 (UI → transport): views/, components/, hooks/ must not VALUE-import
- *     renderer/api/* or renderer/rpc/*, must not import `electron`, and must not
- *     import main-process modules (main/ or @main/) in any form.
- *   - Rule 1b (@shared/contracts DTOs): report-only in Phase 1 — records the
- *     surface for Phases 3/6/7. Not failing yet.
- *   - Rule 2 (store → transport/commands): store/ must not VALUE-import
- *     rpc/, api/, electron, or commands/.
- *   - Rule 3 (pure domain → framework): features/workbench/model/tabs/ and features/workbench/model/split-pane/ must
- *     not import react, zustand, rpc/, api/, commands/, or electron.
- *   - Rule 4 (commands → views): commands/ must not import views/ or components/.
+ *   - each rule has its own `describe` with a focused assertion;
+ *   - a NEW boundary violation fails the test with file + import target;
+ *   - a STALE allowlist row (violation already fixed) fails the test;
+ *   - an allowlist row tagged with a completed phase fails the test;
+ *   - normal Zustand imports from Feature State files are permitted (no false
+ *     positive), and State may import the owning Feature's Model.
  *
- * KNOWN_VIOLATIONS is the Phase 0 baseline (from
- * `.my-context/architecture/refactor/desktop-baseline/cross-layer-dependency-index.md`).
- * Existing violations are allowed; NEW violations fail the test with file + rule +
- * phase tag. As later phases fix entries, remove them from this list.
+ * Rule set (desktop.md … desktop6.md):
+ *
+ *   - R1  UI (components/, ui/, Feature ui, app/routes/) must not VALUE-import
+ *         renderer/api/* or renderer/rpc/*, `electron`, or main-process code.
+ *   - R1b @shared/contracts DTO imports from UI: report-only (deferred).
+ *   - R3  features/workbench/model/tabs|split-pane must not import react,
+ *         zustand, transport, commands, or electron.
+ *   - R4  Commands must not import Views or Components.
+ *   - R5  Feature code must not import another Feature's internal State,
+ *         Events, Runtime, or Store Model; only public surfaces (Commands,
+ *         Selectors, Actions, index, Model types).
+ *   - R6  State files own Zustand State, Selectors, and synchronous mutations;
+ *         they may import Zustand and their own Feature's Model/State, but not
+ *         transport, Electron, Commands, Runtime, or another Feature's State.
+ *   - R7  Model files must not import React, Zustand, Electron, transport,
+ *         Runtime, or State.
+ *   - R8  Infrastructure (api/, rpc/) must not import Feature UI, app routes,
+ *         or shared ui.
+ *   - R9  Shared ui/ and components/ must not import Feature or app code.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { CURRENT_PHASE, KNOWN_VIOLATIONS, type KnownViolation, type RuleName } from "./architecture.knownViolations";
 
 const RENDERER_ROOT = resolve(dirname(fileURLToPath(import.meta.url)));
 const SHARED_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../shared");
 const MAIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../main");
 
-type RuleName =
-  | "R1-value-api-rpc"
-  | "R1-main"
-  | "R1b-shared-contracts"
-  | "R2"
-  | "R3"
-  | "R4"
-  | "R5-cross-feature-internal"
-  | "R6-state-layer"
-  | "R7-model-layer"
-  | "R8-infra-layer"
-  | "R9-ui-components";
-type KnownViolation = { rule: RuleName; file: string; phase: string };
+const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
 
 /**
- * Phase 0 baseline. Remove rows as later phases fix them.
- * Phase tags come from the cross-layer-dependency-index.
+ * Recorded Phase 16 baseline counts (occurrences, not files). A phase must not
+ * increase a count; update an entry only when a phase intentionally fixes
+ * violations and its pull request records the new number.
  */
-const KNOWN_VIOLATIONS: KnownViolation[] = [
-  // ---- Rule 1: UI value-imports of api/rpc (cross-layer index §1) ----
-  // ---- Rule 1: dir-spec api/rpc imports ("from \"../../api\"", no trailing slash) — Phase 4 gap closure ----
-  // ---- Rule 1: UI imports of main-process modules (cross-layer index §1b) ----
-  // ---- Rule 4: commands importing views/components (cross-layer index) ----
-  // ---- Phase 15 baseline: hook moves (hooks/ -> ui/hooks + feature ui hooks). ----
-  // ---- Phase 15 baseline: strict state/model/infra/ui-component rules (pre-existing). ----
-  { rule: "R6-state-layer", file: "features/agent/state/chatStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/overview/state/overviewStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/project/state/projectStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/scheduled-job/state/scheduledJobStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/session/state/sessionStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/settings/state/agentSettingsStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/settings/state/editorSettingsStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/settings/state/keybindingSettingsStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/settings/state/workspaceSettingsStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/terminal/state/terminalFocusStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workbench/state/layoutStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workbench/state/splitPaneStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workbench/state/tabStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.localFolders.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.selection.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.workspaces.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspaceCreateProgressStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspaceLifecycleNoticeStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspaceProjectionStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspaceStore.ts", phase: "P15" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspaceUiStore.ts", phase: "P15" },
-  { rule: "R7-model-layer", file: "features/agent/model/agentChatStore.ts", phase: "P15" },
-  { rule: "R7-model-layer", file: "features/workbench/model/types.ts", phase: "P15" },
-  { rule: "R7-model-layer", file: "features/workspace/model/snapshotReconciler.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/AppUpdateSnackbar.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/AudioPreview.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/AuthSessionExpiredSnackbar.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/FileDiffViewer.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/FileEditor.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/ImagePreview.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/MessageList.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/MultiFileDiffViewer.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/ProjectRow.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/SplitDropZone.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/SplitPaneContainer.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/SplitPaneGroup.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/TabBarMenus.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/VideoPreview.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/WorkspaceRow.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/WorkspaceTree/types.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/WorkspaceTree/useVisibleWorkspaceTree.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/session/AgentChatSubagentRow.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/session/AgentChatUsageSummaryLabel.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/session/AgentModelSelector.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/session/AgentModelSelectorMenu.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/session/SessionHistoryMenu.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/session/helpers.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/tool-calls/DiffToolCard.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/tool-calls/helpers.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/transcript/AgentMarkdownContent.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/transcript/AgentMessageList.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/transcript/ThinkingBlock.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/transcript/ToolResultMessageContent.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/transcript/UserMessageRow.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/transcript/helpers.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/agent/transcript/turnModel.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/fileEditor/VditorFileEditor.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/fileEditor/useMonacoFileEditor.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/markdown/MarkdownPreviewRenderer.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/markdown/MarkdownPreviewThemeProvider.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/markdown/markdownPreviewDom.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/multiFileDiffViewer/multiFileDiffViewerHelpers.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/projectIcons.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "components/useVoiceRecording.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/hooks/useCodeTheme.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/hooks/useDialogRegistration.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/hooks/useRemoteHealthQuery.ts", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/hooks/useThemePreference.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/layout/AppMenuOrganizationSubmenu.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/layout/AppMenuView.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/layout/AppShell.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/layout/CreateOrganizationDialogView.tsx", phase: "P15" },
-  { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "P15" },
-
-  { rule: "R5-cross-feature-internal", file: "features/git/ui/hooks/useGitAuthorName.ts", phase: "P15" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/ui/hooks/useTerminalTabLookups.ts", phase: "P15" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/hooks/useWorkspacePaneVisibility.tsx", phase: "P15" },
-  // ---- Phase 14 baseline: view moves exposed pre-existing cross-feature
-  // Store/transport imports (views/<f> -> features/<f>/ui). Replace with
-  // feature Selectors/Commands per Phase 14 task 8; remove rows as fixed. ----
-  { rule: "R5-cross-feature-internal", file: "features/overview/ui/OverviewView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/ScheduledJobDetailFields.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/ScheduledJobDetailView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/scheduled-job/ui/ScheduledJobListItemView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/AccountSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/GitWorkspaceSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/LanguageSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/LinkSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/MarkdownSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/MemberSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/NodesSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/TerminalSettingsView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/settings/ui/daemon/daemonSettings/closeTerminalTabsForDaemonRestart.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRuntimeRegistry.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatComposerPane.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatTranscriptPane.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/AgentChatView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/ChatView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/DaemonVersionWarningControl.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/FileSearchOverlay.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.testUtils.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/CreateWorkspaceDialogView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/LeftPaneResourceUsageControl.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/LeftPaneView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/ProjectConfigDialogView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/ProjectFilterPopoverView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/ProjectListView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useCreateWorkspaceDialogState.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListDialogState.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListFoldState.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/LeftPane/useProjectListTreeData.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneTitleBarView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/MainPaneView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/OnboardingView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneTabBar.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/RightPaneView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/RightPane/useChangesTabState.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspacePortsMenuControl.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceResourceUsageControl.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/WorkspaceSplitPaneView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/browser/BrowserView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/TerminalView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalFileDrop.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/terminal/useTerminalWakeRecovery.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/useAgentChatSessionLifecycle.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/useAgentChatSubagentActions.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/ui/usePaneTabHandlers.ts", phase: "P14" },
-  // ---- Rule 5 baseline (Phase 14): pre-existing cross-feature Store imports
-  // (store/ root moved to features/<feature>/state). Replace with feature
-  // Selectors/Commands per Phase 14 task 8; remove rows as fixed. ----
-  { rule: "R5-cross-feature-internal", file: "features/agent/commands/agentChatCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/agent/commands/agentChatSubagentCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/agent/commands/piProviderCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/agent/events/agentChatSubagentEvents.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/agent/runtime/agentChatRecovery.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/agent/runtime/agentSessionRuntime.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/files/ui/FileManagerView.tsx", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/files/ui/useFileTreeOperations.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/git/commands/gitCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/notification/events/notificationEventHandlers.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/organization/commands/orgCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/project/commands/projectCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/events/terminalEventHandlers.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/events/terminalSessionTabReconciler.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalRecovery.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionOrchestrator.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalSessionService.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/terminal/runtime/terminalTitleUtils.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workbench/commands/tabCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workbench/commands/workspaceTabSync.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workbench/state/tabStore.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/localFolderCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/selectionCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCommands.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/commands/workspaceCreateCommand.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/events/workspaceEventHandlers.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/state/workspace/actions.localFolders.ts", phase: "P14" },
-  { rule: "R5-cross-feature-internal", file: "features/workspace/state/workspace/actions.selection.ts", phase: "P14" },
-];
-
-const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
+const BASELINE_COUNTS: Record<RuleName, number> = {
+  "R1-value-api-rpc": 0,
+  "R1-main": 0,
+  "R1b-shared-contracts": 21,
+  R3: 0,
+  R4: 0,
+  "R5-cross-feature-internal": 0,
+  "R6-state-layer": 6,
+  "R7-model-layer": 8,
+  "R8-infra-layer": 0,
+  "R9-ui-components": 71,
+};
 
 function walkFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -227,7 +71,7 @@ function walkFiles(dir: string, out: string[] = []): string[] {
     if (entry.isDirectory()) {
       if (entry.name === "node_modules" || entry.name === "public" || entry.name === "generated") continue;
       walkFiles(path, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\./.test(entry.name)) {
+    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|testUtils)\./.test(entry.name)) {
       out.push(path);
     }
   }
@@ -281,15 +125,14 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
 
   for (const file of files) {
     const rel = relative(RENDERER_ROOT, file).replace(/\\/g, "/");
-    if (rel === "architecture.test.ts") continue;
+    if (rel.startsWith("architecture.")) continue;
     const isUi =
-      rel.startsWith("views/") ||
       rel.startsWith("components/") ||
-      rel.startsWith("hooks/") ||
-      rel.startsWith("app/routes/") ||
       rel.startsWith("ui/") ||
-      (/^features\/[^/]+\/ui\//.test(rel));
-    const isPureDomain = rel.startsWith("features/workbench/model/tabs/") || rel.startsWith("features/workbench/model/split-pane/");
+      rel.startsWith("app/routes/") ||
+      /^features\/[^/]+\/ui\//.test(rel);
+    const isPureDomain =
+      rel.startsWith("features/workbench/model/tabs/") || rel.startsWith("features/workbench/model/split-pane/");
 
     for (const imp of extractImports(file)) {
       const target = resolveSpecifier(imp.spec, file);
@@ -299,59 +142,61 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // slash; treat the bare dir as transport too (Phase 4 gap closure).
       const isTransport = relT.startsWith("api/") || relT.startsWith("rpc/") || relT === "api" || relT === "rpc";
       const isCommands = relT.startsWith("commands/");
-      const isViews =
-        relT.startsWith("views/") ||
-        relT.startsWith("components/") ||
-        relT.startsWith("ui/") ||
-        /^features\/[^/]+\/ui\//.test(relT);
+      const isViews = relT.startsWith("components/") || relT.startsWith("ui/") || /^features\/[^/]+\/ui\//.test(relT);
       const isMain = relT.startsWith("../main/") || relT.startsWith("main/");
 
+      // ---- Rule 1: UI value-imports of transport or main-process code. ----
       if (isUi && !imp.isTypeOnly && isTransport) {
         violations.push({ rule: "R1-value-api-rpc", file: rel, target: imp.spec });
       }
       if (isUi && (imp.spec === "electron" || isMain)) {
         violations.push({ rule: "R1-main", file: rel, target: imp.spec });
       }
+      // ---- Rule 1b: @shared/contracts DTO imports from UI (report-only). ----
       if (isUi && relS.startsWith("contracts/")) {
         sharedContracts.push({ rule: "R1b-shared-contracts", file: rel, target: imp.spec });
       }
-      if (rel.startsWith("store/") && !imp.isTypeOnly && (isTransport || isCommands || imp.spec === "electron")) {
-        violations.push({ rule: "R2", file: rel, target: imp.spec });
-      }
+      // ---- Rule 3: pure Workbench domain (tabs, split-pane) stays framework-free. ----
       if (
         isPureDomain &&
         (isTransport || isCommands || imp.spec === "electron" || imp.spec === "react" || imp.spec.startsWith("zustand"))
       ) {
         violations.push({ rule: "R3", file: rel, target: imp.spec });
       }
+      // ---- Rule 4: Commands must not import Views or Components. ----
       if ((rel.startsWith("commands/") || /^features\/[^/]+\/commands\//.test(rel)) && isViews) {
         violations.push({ rule: "R4", file: rel, target: imp.spec });
       }
-      // ---- Rule 5: feature A must not import feature B's internal State,
-      // Runtime, or Event Handler (Phase 12, desktop5.md). Cross-feature
-      // imports are allowed only to another feature's public surface: its
-      // commands/ modules (the declared command surface) or its index.ts.
+      // ---- Rule 5: Feature A must not import Feature B's internal State,
+      // Runtime, Event Handler, or Store Model. Cross-feature imports are
+      // allowed only to another feature's public surface: Commands, State
+      // Selectors/Actions, Model types, or its index.ts (Phase 12, desktop5.md). ----
       const crossFeature = /^features\/([^/]+)\//.exec(rel);
       const crossTarget = /^features\/([^/]+)\//.exec(relT);
-      // ---- Rule 6: state/ must not import commands, transport, another feature's
-      // state, or runtime (Phase 15). Selectors/Actions public surface excluded. ----
+      // ---- Rule 6: State files own Zustand State, Selectors, and synchronous
+      // mutations. They may import Zustand and the owning Feature's Model and
+      // State. They must not import transport implementations, Electron,
+      // Commands, Runtime implementations (own or other Feature), or another
+      // Feature's State internals. Selectors/Actions files are the public State
+      // surface and are excluded. (Phase 15, corrected in Phase 16) ----
       if (/^features\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
         const isOwnFeature = crossTarget && crossFeature && crossTarget[1] === crossFeature[1];
         const isPublicStateSurface = /\/state\/[^/]+(Selectors|Actions)(\.ts)?$/.test(relT);
-        if (!isPublicStateSurface && (isTransport || imp.spec === "electron" || imp.spec === "zustand")) {
+        if (!isPublicStateSurface && (isTransport || imp.spec === "electron")) {
           violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
         }
         if (!isPublicStateSurface && relT.includes("/commands/")) {
           violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
         }
+        if (!isPublicStateSurface && relT.includes("/runtime/")) {
+          violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
+        }
         if (!isOwnFeature && !isPublicStateSurface && relT.includes("/state/")) {
           violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
         }
-        if (!isOwnFeature && !isPublicStateSurface && relT.includes("/runtime/")) {
-          violations.push({ rule: "R6-state-layer", file: rel, target: imp.spec });
-        }
       }
-      // ---- Rule 7: model/ must not import React, Zustand, Electron, transport, runtime. ----
+      // ---- Rule 7: Model files are pure data and rules. They must not import
+      // React, Zustand, Electron, transport, Runtime, or State (Phase 15). ----
       if (/^features\/[^/]+\/model\//.test(rel) && !rel.includes(".test.")) {
         if (
           imp.spec === "react" ||
@@ -364,21 +209,24 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
           violations.push({ rule: "R7-model-layer", file: rel, target: imp.spec });
         }
       }
-      // ---- Rule 8: infrastructure (api/, rpc/) must not import feature UI or app routes. ----
+      // ---- Rule 8: Infrastructure (api/, rpc/) must not import Feature UI,
+      // app routes, or shared ui. ----
       if ((rel.startsWith("api/") || rel.startsWith("rpc/")) && !rel.includes(".test.")) {
         if (/^features\/[^/]+\/ui\//.test(relT) || relT.startsWith("app/routes/") || relT.startsWith("ui/")) {
           violations.push({ rule: "R8-infra-layer", file: rel, target: imp.spec });
         }
       }
-      // ---- Rule 9: domain-free ui/components must not import feature internals or app. ----
+      // ---- Rule 9: Domain-free shared ui/components must not import Feature
+      // internals or application code. ----
       if ((rel.startsWith("ui/") || rel.startsWith("components/")) && !rel.includes(".test.")) {
         if (/^features\//.test(relT) || relT.startsWith("app/")) {
           violations.push({ rule: "R9-ui-components", file: rel, target: imp.spec });
         }
       }
+      // ---- Rule 5 (cont.): the owning Feature's public State surface
+      // (Selectors = read models, Actions = state-change surface) is
+      // importable; the Store itself and other internals are not. ----
       if (crossFeature && crossTarget && crossFeature[1] !== crossTarget[1]) {
-        // The owning feature's public state surface (Selectors = read models,
-        // Actions = state-change surface) is importable; the Store itself is not.
         const isPublicStateSurface = /\/state\/[^/]+(Selectors|Actions)(\.ts)?$/.test(relT);
         const targetInternal =
           !isPublicStateSurface &&
@@ -395,42 +243,137 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
   return { violations, sharedContracts };
 }
 
+function unbaselined(violations: Violation[], rule: RuleName): Violation[] {
+  return violations.filter((v) => v.rule === rule && !KNOWN_SET.has(`${v.rule}:${v.file}`));
+}
+
+function failureMessages(fresh: Violation[]): string[] {
+  return fresh.map(
+    (v) =>
+      `[archtest] NEW violation ${v.rule}: ${v.file} imports ${v.target} — fix it or add to KNOWN_VIOLATIONS with phase ${CURRENT_PHASE}`,
+  );
+}
+
 describe("renderer architecture dependency rules", () => {
-  it("enforces the Phase 1 rules against the baseline allowlist", () => {
-    const { violations, sharedContracts } = scanViolations();
+  let violations: Violation[];
+  let sharedContracts: Violation[];
 
-    // Report-only in Phase 1 (recorded for Phases 3/6/7).
-    expect(sharedContracts.length).toBeGreaterThan(0);
-    // eslint-disable-next-line no-console
-    console.log(`[archtest] R1b @shared/contracts DTO imports (deferred): ${sharedContracts.length} files`);
+  beforeAll(() => {
+    ({ violations, sharedContracts } = scanViolations());
+  });
 
-    const newViolations = violations.filter((v) => !KNOWN_SET.has(`${v.rule}:${v.file}`));
-    const messages = newViolations.map(
-      (v) =>
-        `[archtest] NEW violation ${v.rule}: ${v.file} imports ${v.target} — fix it or add to KNOWN_VIOLATIONS with a phase tag`,
-    );
-    expect(messages, messages.join("\n")).toEqual([]);
+  describe("R1: UI must not import transport implementations or main-process code", () => {
+    it("reports no unbaselined value imports of api/rpc/electron/main from UI code", () => {
+      const fresh = [...unbaselined(violations, "R1-value-api-rpc"), ...unbaselined(violations, "R1-main")];
+      const messages = failureMessages(fresh);
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
 
-    // Baseline overview: show what remains (informational).
-    const byRule = new Map<string, number>();
-    for (const v of violations) byRule.set(v.rule, (byRule.get(v.rule) ?? 0) + 1);
-    // eslint-disable-next-line no-console
-    console.log(
-      `[archtest] baseline violations still present: ${[...byRule.entries()]
-        .map(([rule, n]) => `${rule}=${n}`)
-        .join(", ")}`,
-    );
+  describe("R1b: @shared/contracts DTO imports from UI (deferred, report-only)", () => {
+    it("stays at the recorded deferred baseline", () => {
+      // eslint-disable-next-line no-console
+      console.log(`[archtest] R1b @shared/contracts DTO imports (deferred): ${sharedContracts.length} imports`);
+      expect(sharedContracts.length).toBe(BASELINE_COUNTS["R1b-shared-contracts"]);
+    });
+  });
 
-    // Stale baseline entries (violation fixed, row not removed) are warnings only.
-    const present = new Set(violations.map((v) => `${v.rule}:${v.file}`));
-    const stale = [...KNOWN_VIOLATIONS].filter((v) => !present.has(`${v.rule}:${v.file}`));
-    if (stale.length > 0) {
+  describe("R3: pure Workbench domain stays framework-free", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R3"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R4: Commands must not import Views or Components", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R4"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R5: Features import other Features through public surfaces only", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R5-cross-feature-internal"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R6: State layer owns State, Selectors, and synchronous mutations", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R6-state-layer"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("permits normal Zustand imports from Feature State files (no false positive)", () => {
+      const zustandFlags = violations.filter((v) => v.rule === "R6-state-layer" && v.target === "zustand");
+      expect(zustandFlags, "State files use Zustand to define their stores").toEqual([]);
+    });
+
+    it("permits State imports of the owning Feature's Model", () => {
+      const modelFlags = violations.filter((v) => v.rule === "R6-state-layer" && v.target.includes("/model/"));
+      expect(modelFlags, "State files may read their owning Feature's Model types").toEqual([]);
+    });
+  });
+
+  describe("R7: Model layer stays pure data and rules", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R7-model-layer"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R8: Infrastructure must not import Feature UI, app routes, or shared ui", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R8-infra-layer"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R9: Shared UI must not import Feature or app code", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R9-ui-components"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("Allowlist lifecycle", () => {
+    it("fails on stale allowlist rows (violation already fixed)", () => {
+      const present = new Set(violations.map((v) => `${v.rule}:${v.file}`));
+      const stale = KNOWN_VIOLATIONS.filter((v) => !present.has(`${v.rule}:${v.file}`));
+      const messages = stale.map(
+        (v) => `[archtest] STALE allowlist row ${v.rule}: ${v.file} — violation fixed, remove the row`,
+      );
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("rejects allowlist rows tagged with a completed phase", () => {
+      const badPhase = KNOWN_VIOLATIONS.filter((v: KnownViolation) => v.phase !== CURRENT_PHASE);
+      const messages = badPhase.map(
+        (v) =>
+          `[archtest] allowlist row ${v.rule}: ${v.file} tagged ${v.phase} — rows must carry ${CURRENT_PHASE} (no allowlist rows for completed phases)`,
+      );
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("keeps baseline violation counts stable", () => {
+      const byRule = new Map<RuleName, number>();
+      for (const v of violations) byRule.set(v.rule, (byRule.get(v.rule) ?? 0) + 1);
       // eslint-disable-next-line no-console
       console.log(
-        `[archtest] stale KNOWN_VIOLATIONS (fix complete, remove from list): ${stale
-          .map((v) => `${v.rule}:${v.file}`)
-          .join(", ")}`,
+        `[archtest] baseline violations: ${[...byRule.entries()].map(([rule, n]) => `${rule}=${n}`).join(", ")}`,
       );
-    }
+      const mismatches: string[] = [];
+      // R1b is report-only and asserted in its own group; it is not part of `violations`.
+      for (const rule of (Object.keys(BASELINE_COUNTS) as RuleName[]).filter((r) => r !== "R1b-shared-contracts")) {
+        const actual = byRule.get(rule) ?? 0;
+        if (actual !== BASELINE_COUNTS[rule]) {
+          mismatches.push(
+            `[archtest] baseline mismatch ${rule}: ${actual} != ${BASELINE_COUNTS[rule]} — update BASELINE_COUNTS only when a phase intentionally fixes violations`,
+          );
+        }
+      }
+      expect(mismatches, mismatches.join("\n")).toEqual([]);
+    });
   });
 });

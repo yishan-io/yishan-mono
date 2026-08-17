@@ -1,3 +1,4 @@
+import { getSelectedTabId, getTabs } from "@renderer/features/workbench";
 /**
  * Notification event handlers — owns notification.event effects: preference-
  * backed delivery, suppression policy, effect dedupe, system notification copy
@@ -14,15 +15,18 @@ import type {
   NotificationPreferences,
 } from "../../../../shared/notifications/notificationPreferences";
 import { subscribeInAppNotificationEvent } from "../../../app/events/backendEventRouter.selectors";
+import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "../../../features/agent";
+import {
+  recordWorkspaceUnreadNotification,
+  setWorkspaceAgentStatusByWorkspaceId,
+} from "../../../features/agent/state/chatActions";
 import {
   dispatchNotification,
   getNotificationPreferences,
   playNotificationSound,
 } from "../../../features/notification/commands/notificationCommands";
 import { selectProjectById } from "../../../features/project/state/projectSelectors";
-import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../../../features/agent/state/chatStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { selectSelectedWorkspaceId, selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 
 import { parseObserverSessionKey, recordAgentObserverStatus } from "../../agent/commands/agentSessionLifecycle";
 
@@ -134,15 +138,11 @@ export function isRelevantTerminalFocusedForNotification(payload: NotificationEv
     return false;
   }
 
-  const state = tabStore.getState();
-  if (
-    workspaceStore.getState().selectedWorkspaceId !== sessionParts.workspaceId ||
-    state.selectedTabId !== sessionParts.tabId
-  ) {
+  if (selectSelectedWorkspaceId() !== sessionParts.workspaceId || getSelectedTabId() !== sessionParts.tabId) {
     return false;
   }
 
-  return state.tabs.some((tab) => tab.id === sessionParts.tabId && tab.kind === "terminal");
+  return getTabs().some((tab) => tab.id === sessionParts.tabId && tab.kind === "terminal");
 }
 
 export function isNormalAgentCliExit(payload: NotificationEventPayload): boolean {
@@ -263,10 +263,10 @@ export function handleInAppNotification(
 export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependencies = {
   subscribeInAppNotification: (listener) => subscribeInAppNotificationEvent(listener),
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId) => {
-    chatStore.getState().setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId);
+    setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId);
   },
   recordWorkspaceUnreadNotification: (workspaceId, tone) => {
-    chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
+    recordWorkspaceUnreadNotification(workspaceId, tone);
   },
   dispatchSystemNotification: async (input) => {
     await dispatchNotification(input);
@@ -277,8 +277,7 @@ export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependenc
   getNotificationPreferences,
   isRelevantTerminalFocused: isRelevantTerminalFocusedForNotification,
   resolveWorkspaceLabel: (workspaceId) => {
-    const state = workspaceStore.getState();
-    const workspace = state.workspaces.find((candidate) => candidate.id === workspaceId);
+    const workspace = selectWorkspaces().find((candidate) => candidate.id === workspaceId);
     const workspaceName = workspace?.name?.trim();
     if (!workspaceName) {
       return undefined;

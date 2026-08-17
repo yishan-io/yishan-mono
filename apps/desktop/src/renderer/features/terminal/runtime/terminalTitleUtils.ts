@@ -1,5 +1,5 @@
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 
 const MAX_TERMINAL_COMMAND_TITLE_LENGTH = 32;
 const ASCII_ESCAPE_CODE = 27;
@@ -12,7 +12,7 @@ export function resolveTerminalWorkspacePath(
     return undefined;
   }
 
-  return workspaceStore.getState().workspaces.find((workspace) => workspace.id === tab.workspaceId)?.worktreePath;
+  return selectWorkspaces().find((workspace) => workspace.id === tab.workspaceId)?.worktreePath;
 }
 
 /** Builds one concise tab title from a current working directory. */

@@ -1,20 +1,27 @@
 import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
 import { stopPiSession } from "../../../features/agent/commands/agentChatCommands";
 import { clearTerminalAgentStatus } from "../../../features/agent/commands/agentSessionLifecycle";
+import { removeTabData } from "../../../features/agent/state/chatActions";
+import { resolveChatFilePath } from "../../../features/files/commands/fileCommands";
+import { requestTerminalFocus } from "../../../features/terminal/commands/terminalCommands";
+import {
+  collectLeaves,
+  findOppositePaneId,
+  removeTabFromPane,
+  splitRootPane,
+} from "../../../features/workbench/model/split-pane";
+import type { OpenWorkspaceTabInput } from "../../../features/workbench/model/types";
+import { layoutStore } from "../../../features/workbench/state/layoutStore";
+import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
+import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
+import { tabStore } from "../../../features/workbench/state/tabStore";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceActions";
+import { selectSelectedWorkspaceId } from "../../../features/workspace/state/workspaceSelectors";
+import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../../../helpers/tabHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../../../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { chatStore } from "../../../features/agent/state/chatStore";
-import { collectLeaves, findOppositePaneId, removeTabFromPane, splitRootPane } from "../../../features/workbench/model/split-pane";
-import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
-import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
-import type { OpenWorkspaceTabInput } from "../../../features/workbench/model/types";
-import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { resolveChatFilePath } from "../../../features/files/commands/fileCommands";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;
@@ -149,7 +156,7 @@ export function closeTab(tabId: string, options?: CloseTabOptions): void {
   } else {
     snapshot.closeTab(tabId);
   }
-  chatStore.getState().removeTabData([tabId]);
+  removeTabData([tabId]);
 }
 
 /** Closes unpinned sibling tabs for one workspace and closes associated backend sessions. */
@@ -184,7 +191,7 @@ export function closeOtherTabs(tabId: string): void {
   stopAgentChatSessionsForTabs(removedAgentChatTabs);
   snapshot.closeOtherTabs(tabId);
   if (removedTabIds.length > 0) {
-    chatStore.getState().removeTabData(removedTabIds);
+    removeTabData(removedTabIds);
   }
 }
 
@@ -218,7 +225,7 @@ export function closeAllTabs(tabId: string): void {
   stopAgentChatSessionsForTabs(removedAgentChatTabs);
   snapshot.closeAllTabs(tabId);
   if (removedTabIds.length > 0) {
-    chatStore.getState().removeTabData(removedTabIds);
+    removeTabData(removedTabIds);
   }
 }
 
@@ -237,7 +244,7 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
 
   const requestFocus =
     selectedTab.kind === "terminal"
-      ? () => terminalFocusStore.getState().requestFocus(selectedTab.id)
+      ? () => requestTerminalFocus(selectedTab.id)
       : selectedTab.kind === "agent-chat" && selectedTab.data.sessionView !== "subagent-detail"
         ? () => requestNewAgentChatComposerFocus(selectedTab.id)
         : undefined;
@@ -256,12 +263,12 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
 }
 
 /** Opens one tab from one normalized tab input payload. */
-export function openTab(input: OpenWorkspaceTabInput) {
+export function openTab(input: OpenWorkspaceTabInput, options?: { activePaneTabIds?: string[] }) {
   const snapshot = readTabStoreState();
   const previousTabIds = new Set(snapshot.tabs.map((tab) => tab.id));
-  const workspaceId = input.workspaceId ?? workspaceStore.getState().selectedWorkspaceId;
+  const workspaceId = input.workspaceId ?? selectSelectedWorkspaceId();
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
-  snapshot.openTab(input, { activePaneTabIds: activePane?.tabIds });
+  snapshot.openTab(input, options ?? { activePaneTabIds: activePane?.tabIds });
   requestFocusForNewTab(previousTabIds);
 }
 
@@ -316,7 +323,7 @@ export async function openChatFileTab(input: {
  * because it reads the current `activePaneId` after the split is already in place.
  */
 export function openTabInOppositePane(input: OpenWorkspaceTabInput): void {
-  const workspaceId = input.workspaceId ?? workspaceStore.getState().selectedWorkspaceId;
+  const workspaceId = input.workspaceId ?? selectSelectedWorkspaceId();
   if (!workspaceId) {
     return;
   }
@@ -428,4 +435,120 @@ export function refreshFileTabFromDisk(input: { tabId: string; content: string; 
 /** Refreshes one diff tab content in place. */
 export function refreshDiffTabContent(input: { tabId: string; oldContent: string; newContent: string }) {
   readTabStoreState().refreshDiffTabContent(input);
+}
+
+/** Re-resolves the tab shown for one workspace after the selected workspace changed. */
+export function resolveTabForWorkspace(workspaceId: string): void {
+  tabStore.getState().resolveTabForWorkspace(workspaceId);
+}
+
+/** Records the bound backend session id on one terminal tab. */
+export function bindTerminalTabSession(tabId: string, sessionId: string): void {
+  tabStore.getState().setTerminalTabSessionId(tabId, sessionId);
+}
+
+/** Records the agent kind bound to one terminal tab. */
+export function setTerminalTabAgentKind(tabId: string, agentKind: DesktopAgentKind | undefined): void {
+  tabStore.getState().setTerminalTabAgentKind(tabId, agentKind);
+}
+
+/** Records the bound backend session id on one agent-chat tab. */
+export function bindAgentChatTabSession(input: { tabId: string; sessionId: string }): void {
+  tabStore.getState().setAgentChatTabSession(input);
+}
+
+/** Records subagent control metadata on one agent-chat tab. */
+export function setAgentChatTabSubagentControl(input: {
+  tabId: string;
+  agentId?: string;
+  parentSessionId?: string;
+}): void {
+  tabStore.getState().setAgentChatTabSubagentControl(input);
+}
+
+/** Closes all terminal tabs. */
+export function closeAllTerminalTabs(): void {
+  tabStore.getState().closeAllTerminalTabs();
+}
+
+/** Selects one tab inside one pane of a workspace layout. */
+export function paneSelectTab(workspaceId: string, paneId: string, tabId: string): void {
+  splitPaneStore.getState().selectTab(workspaceId, paneId, tabId);
+}
+
+/** Registers one tab into its pane (auto-registration from pane views). */
+export function registerTabInPane(workspaceId: string, tabId: string, paneId?: string): void {
+  splitPaneStore.getState().registerTabInPane(workspaceId, tabId, paneId);
+}
+
+/** Removes one tab from its pane. */
+export function unregisterTabFromPane(workspaceId: string, tabId: string): void {
+  splitPaneStore.getState().unregisterTabFromPane(workspaceId, tabId);
+}
+
+/** Splits one workspace pane and places one tab in the new pane. */
+export function splitWorkspacePane(
+  workspaceId: string,
+  input: {
+    tabId: string;
+    targetPaneId: string;
+    direction: "horizontal" | "vertical";
+    placement: "first" | "second";
+  },
+): void {
+  splitPaneStore.getState().splitPane(workspaceId, input);
+}
+
+/** Moves one tab into another pane of the same workspace layout. */
+export function moveTabToPane(workspaceId: string, tabId: string, targetPaneId: string): void {
+  splitPaneStore.getState().moveTab(workspaceId, tabId, targetPaneId);
+}
+
+/** Reorders one tab relative to one target tab inside one pane. */
+export function reorderPaneTab(
+  workspaceId: string,
+  paneId: string,
+  draggedTabId: string,
+  targetTabId: string,
+  position: "before" | "after",
+): void {
+  splitPaneStore.getState().reorderTab(workspaceId, paneId, draggedTabId, targetTabId, position);
+}
+
+/** Sets the active pane of one workspace layout. */
+export function setActivePane(workspaceId: string, paneId: string): void {
+  splitPaneStore.getState().setActivePane(workspaceId, paneId);
+}
+
+/** Updates the split ratio of one pane branch in a workspace layout. */
+export function updateSplitRatio(workspaceId: string, branchId: string, ratio: number): void {
+  splitPaneStore.getState().updateSplitRatio(workspaceId, branchId, ratio);
+}
+
+/** Creates one adjacent pane with one tab in a workspace layout. */
+export function createAdjacentPaneWithTab(
+  workspaceId: string,
+  input: {
+    tabId: string;
+    targetPaneId: string;
+    direction: "horizontal" | "vertical";
+    placement: "first" | "second";
+  },
+): void {
+  splitPaneStore.getState().createAdjacentPaneWithTab(workspaceId, input);
+}
+
+/** Sets the left pane width in workspace layout state. */
+export function resizeLeftPane(width: number): void {
+  layoutStore.getState().setLeftPaneWidth(width);
+}
+
+/** Sets the right pane width in workspace layout state. */
+export function resizeRightPane(width: number): void {
+  layoutStore.getState().setRightPaneWidth(width);
+}
+
+/** Sets the manual visibility state of the left workspace pane. */
+export function setLeftPaneHidden(hidden: boolean): void {
+  layoutStore.getState().setIsLeftPaneManuallyHidden(hidden);
 }

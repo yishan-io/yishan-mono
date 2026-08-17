@@ -8,9 +8,9 @@
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
+import { setTerminalTabAgentKind } from "../../../features/workbench/commands/tabCommands";
 import { isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../features/workbench/state/tabStore";
 import { clearTerminalAgentStatus } from "../../agent/commands/agentSessionLifecycle";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
@@ -74,7 +74,7 @@ export function createTerminalEventHandlers(dependencies: TerminalEventDependenc
           return;
         }
         const agentKind = isDesktopAgentKind(payload.agent) ? payload.agent : undefined;
-        tabStore.getState().setTerminalTabAgentKind(tabId, agentKind);
+        setTerminalTabAgentKind(tabId, agentKind);
       }) ?? (() => {});
 
     return () => {

@@ -51,6 +51,8 @@ vi.mock("../../../features/workspace/state/workspaceLifecycleNoticeStore", () =>
 }));
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     git: {
       inspectPath: rpcMocks.gitInspect,

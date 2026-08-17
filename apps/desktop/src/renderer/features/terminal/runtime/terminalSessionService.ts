@@ -1,4 +1,3 @@
-import { closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -8,11 +7,10 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../features/terminal/commands/terminalCommands";
+import { bindTerminalTabSession, closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
+import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import {
   shouldClearTerminalOutputShortcut,
   shouldReleaseCommandWForTabCloseShortcut,
@@ -30,7 +28,7 @@ import {
   setTerminalSessionId,
   updateTerminalReadIndex,
 } from "./terminalRuntimeRegistry";
-import type { TerminalRuntimeEntry } from "./terminalRuntimeRegistry";
+import type { TerminalRuntimeEntry, TerminalTabData } from "./terminalRuntimeRegistry";
 import { TerminalSessionOrchestrator } from "./terminalSessionOrchestrator";
 import {
   formatTerminalCommandTitle,
@@ -39,8 +37,6 @@ import {
 } from "./terminalTitleUtils";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-
-type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
 
 // ─── Module State ──────────────────────────────────────────────────────────────
 
@@ -88,13 +84,13 @@ subscribeDaemonConnectionStatus((status) => {
  * Initializes the terminal session lifecycle for a given tab.
  * Idempotent — calling multiple times for the same tabId is a no-op.
  */
-export function initTerminalSessionLifecycle(tabId: string): void {
+export function initTerminalSessionLifecycle(tabId: string, tabData: TerminalTabData): void {
   if (initializedTabs.has(tabId)) {
     return;
   }
   initializedTabs.add(tabId);
 
-  const entry = ensureTerminalRuntime(tabId);
+  const entry = ensureTerminalRuntime(tabId, tabData);
 
   // Set up keyboard shortcuts, input forwarding, and title tracking.
   setupKeyboardShortcuts(entry);
@@ -117,7 +113,7 @@ function handleTerminalSessionFailure(tabId: string, error: unknown): void {
     title: "Failed to create terminal session",
     message,
   });
-  tabStore.getState().closeTab(tabId);
+  closeTab(tabId);
 }
 
 /**
@@ -273,14 +269,21 @@ function setupTitleTracking(entry: TerminalRuntimeEntry, tabId: string): void {
 }
 
 async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: string): Promise<void> {
-  const orchestrator = new TerminalSessionOrchestrator({
-    createTerminalSession,
-    listTerminalSessions,
-    readTerminalOutput,
-    resizeTerminal,
-    writeTerminalInput,
-    closeTerminalSession,
-  });
+  const orchestrator = new TerminalSessionOrchestrator(
+    {
+      createTerminalSession,
+      listTerminalSessions,
+      readTerminalOutput,
+      resizeTerminal,
+      writeTerminalInput,
+      closeTerminalSession,
+    },
+    entry.tabData,
+    (boundTabId, sessionId) => {
+      bindTerminalTabSession(boundTabId, sessionId);
+      setTerminalSessionId(boundTabId, sessionId);
+    },
+  );
 
   const restored = await orchestrator.attachOrCreateAndRestore({
     tabId,
@@ -306,12 +309,11 @@ async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: st
   setTerminalSessionId(tabId, restored.sessionId);
   updateTerminalReadIndex(tabId, restored.nextIndex);
 
-  // Apply initial title.
-  const terminalTab = findTerminalTab(tabId);
-  if (terminalTab?.data.launchCommand) {
-    applyTitleFromCommand(tabId, terminalTab.data.launchCommand);
+  // Apply initial title from the caller-provided tab data.
+  if (entry.tabData.launchCommand) {
+    applyTitleFromCommand(tabId, entry.tabData.launchCommand);
   } else {
-    applyTitleFromPath(tabId, resolveTerminalWorkspacePath(terminalTab));
+    applyTitleFromPath(tabId, entry.tabData.worktreePath);
   }
 
   // Subscribe to live output — this subscription survives detach/attach.
@@ -382,9 +384,6 @@ async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: st
 }
 
 function applyTitleFromCommand(tabId: string, command: string): void {
-  if (isUserRenamed(tabId)) {
-    return;
-  }
   const title = formatTerminalCommandTitle(command);
   if (!title || title === lastAppliedTitleByTabId.get(tabId)) {
     return;
@@ -394,26 +393,12 @@ function applyTitleFromCommand(tabId: string, command: string): void {
 }
 
 function applyTitleFromPath(tabId: string, path: string | undefined): void {
-  if (isUserRenamed(tabId)) {
-    return;
-  }
   const title = formatTerminalPathTitle(path);
   if (!title || title === lastAppliedTitleByTabId.get(tabId)) {
     return;
   }
   lastAppliedTitleByTabId.set(tabId, title);
   renameTab(tabId, title);
-}
-
-function isUserRenamed(tabId: string): boolean {
-  const tab = findTerminalTab(tabId);
-  return tab?.data.userRenamed === true;
-}
-
-function findTerminalTab(tabId: string): TerminalTab | undefined {
-  return tabStore
-    .getState()
-    .tabs.find((candidate): candidate is TerminalTab => candidate.id === tabId && candidate.kind === "terminal");
 }
 
 function reportTerminalOutputPerf(tabId: string, chunkBytes: number): void {

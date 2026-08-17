@@ -1,9 +1,9 @@
 import { useMemo } from "react";
+import type { WorkspaceTab } from "../../../../features/workbench";
+import { useWorkspaceTabs } from "../../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
-import type { TabStoreState } from "../../../../features/workbench/state/tabStore";
-import { tabStore } from "../../../../features/workbench/state/tabStore";
 
-type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
+type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
 type TerminalTabWithSessionId = TerminalTab & { data: TerminalTab["data"] & { sessionId: string } };
 
 /**
@@ -11,7 +11,7 @@ type TerminalTabWithSessionId = TerminalTab & { data: TerminalTab["data"] & { se
  * non-empty session ID. Re-derived only when the tabs array reference changes.
  */
 export function useTerminalTabLookups(): Map<string, TerminalTabWithSessionId> {
-  const tabs = tabStore((state) => state.tabs);
+  const tabs = useWorkspaceTabs();
 
   return useMemo(
     () => new Map(tabs.filter(isTerminalTabWithSessionId).map((tab) => [tab.data.sessionId.trim(), tab])),

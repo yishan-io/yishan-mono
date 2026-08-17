@@ -1,49 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
+import { beforeEach } from "vitest";
 import type { TabStoreState } from "../../../features/workbench/state/tabStore";
+import type { TerminalRuntimeEntry } from "./terminalRuntimeRegistry";
 import { TerminalSessionOrchestrator } from "./terminalSessionOrchestrator";
+
+let mockSessionIdByTabId: Record<string, string | null> = {};
+
+vi.mock("./terminalRuntimeRegistry", () => ({
+  getTerminalRuntime: vi.fn((tabId: string) => ({
+    tabId,
+    sessionId: mockSessionIdByTabId[tabId] ?? null,
+  })),
+}));
+
+import { getTerminalRuntime } from "./terminalRuntimeRegistry";
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
 
-/** Builds a minimal mutable tab-store facade for terminal session orchestration tests. */
-function createTabStoreAccess(tab: TerminalTab | undefined) {
-  const setTerminalTabSessionId = vi.fn((tabId: string, sessionId: string) => {
-    if (!tab || tab.id !== tabId) {
-      return;
-    }
-
-    tab.data = {
-      ...tab.data,
-      sessionId,
-    };
-  });
-
+/** Extracts the caller-provided terminal tab data for orchestration tests. */
+function createTabData(tab: TerminalTab | undefined) {
   return {
-    getState: () => ({
-      tabs: tab ? [tab] : [],
-      setTerminalTabSessionId,
-    }),
-    setTerminalTabSessionId,
-  };
-}
-
-/** Builds a minimal workspace-store facade for terminal session orchestration tests. */
-function createWorkspaceStoreAccess(workspaceId: string, worktreePath: string) {
-  return {
-    getState: () => ({
-      selectedWorkspaceId: workspaceId,
-      workspaces: [
-        {
-          id: workspaceId,
-          repoId: "repo-1",
-          name: "Workspace",
-          title: "Workspace",
-          sourceBranch: "origin/main",
-          branch: "main",
-          summaryId: "summary-1",
-          worktreePath,
-        },
-      ],
-    }),
+    workspaceId: tab?.workspaceId ?? "",
+    sessionId: tab?.data.sessionId,
+    paneId: tab?.data.paneId,
+    launchCommand: tab?.data.launchCommand,
+    agentKind: tab?.data.agentKind,
   };
 }
 
@@ -79,10 +60,16 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+beforeEach(() => {
+  mockSessionIdByTabId = {};
+});
+
 describe("TerminalSessionOrchestrator", () => {
   it("reuses existing session and restores buffered output", async () => {
     const tab = createTerminalTab("tab-1", "workspace-1", "session-1");
-    const tabStoreAccess = createTabStoreAccess(tab);
+    const onSessionBoundSpy = vi.fn();
+    const tabData = createTabData(tab);
+    mockSessionIdByTabId = tab?.data.sessionId ? { [tab.id]: tab.data.sessionId } : {};
     const commands = {
       createTerminalSession: vi.fn(),
       readTerminalOutput: vi.fn().mockResolvedValue({
@@ -94,11 +81,7 @@ describe("TerminalSessionOrchestrator", () => {
       resizeTerminal: vi.fn().mockResolvedValue({ ok: true }),
     };
 
-    const orchestrator = new TerminalSessionOrchestrator(
-      commands,
-      tabStoreAccess,
-      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1"),
-    );
+    const orchestrator = new TerminalSessionOrchestrator(commands, tabData, onSessionBoundSpy);
 
     const terminal = {
       write: vi.fn(),
@@ -124,12 +107,14 @@ describe("TerminalSessionOrchestrator", () => {
     expect(commands.writeTerminalInput).not.toHaveBeenCalled();
     expect(fitAddon.fit).toHaveBeenCalledOnce();
     expect(terminal.write).toHaveBeenCalledWith("hello world");
-    expect(tabStoreAccess.setTerminalTabSessionId).not.toHaveBeenCalled();
+    expect(onSessionBoundSpy).not.toHaveBeenCalled();
   });
 
   it("creates a new session when persisted session is missing and runs launch command", async () => {
     const tab = createTerminalTab("tab-2", "workspace-1", "stale-session", "   codex   ");
-    const tabStoreAccess = createTabStoreAccess(tab);
+    const onSessionBoundSpy = vi.fn();
+    const tabData = createTabData(tab);
+    mockSessionIdByTabId = tab?.data.sessionId ? { [tab.id]: tab.data.sessionId } : {};
     const commands = {
       createTerminalSession: vi.fn().mockResolvedValue({ sessionId: "new-session" }),
       readTerminalOutput: vi.fn().mockRejectedValueOnce(new Error("Terminal session not found")).mockResolvedValueOnce({
@@ -141,11 +126,7 @@ describe("TerminalSessionOrchestrator", () => {
       resizeTerminal: vi.fn().mockResolvedValue({ ok: true }),
     };
 
-    const orchestrator = new TerminalSessionOrchestrator(
-      commands,
-      tabStoreAccess,
-      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1"),
-    );
+    const orchestrator = new TerminalSessionOrchestrator(commands, tabData, onSessionBoundSpy);
 
     const restored = await orchestrator.attachOrCreateAndRestore({
       tabId: "tab-2",
@@ -171,12 +152,14 @@ describe("TerminalSessionOrchestrator", () => {
       sessionId: "new-session",
       data: "codex\r",
     });
-    expect(tabStoreAccess.setTerminalTabSessionId).toHaveBeenCalledWith("tab-2", "new-session");
+    expect(onSessionBoundSpy).toHaveBeenCalledWith("tab-2", "new-session");
   });
 
   it("creates a replacement session when listSessions shows persisted session is gone", async () => {
     const tab = createTerminalTab("tab-2b", "workspace-1", "stale-session", "codex");
-    const tabStoreAccess = createTabStoreAccess(tab);
+    const onSessionBoundSpy = vi.fn();
+    const tabData = createTabData(tab);
+    mockSessionIdByTabId = tab?.data.sessionId ? { [tab.id]: tab.data.sessionId } : {};
     const commands = {
       createTerminalSession: vi.fn().mockResolvedValue({ sessionId: "new-session-2" }),
       listTerminalSessions: vi.fn().mockResolvedValue([]),
@@ -189,11 +172,7 @@ describe("TerminalSessionOrchestrator", () => {
       resizeTerminal: vi.fn().mockResolvedValue({ ok: true }),
     };
 
-    const orchestrator = new TerminalSessionOrchestrator(
-      commands,
-      tabStoreAccess,
-      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1"),
-    );
+    const orchestrator = new TerminalSessionOrchestrator(commands, tabData, onSessionBoundSpy);
 
     const restored = await orchestrator.attachOrCreateAndRestore({
       tabId: "tab-2b",
@@ -213,12 +192,14 @@ describe("TerminalSessionOrchestrator", () => {
     expect(commands.listTerminalSessions).toHaveBeenCalledWith({ includeExited: true });
     expect(commands.readTerminalOutput).toHaveBeenCalledTimes(1);
     expect(commands.readTerminalOutput).toHaveBeenCalledWith({ sessionId: "new-session-2", fromIndex: 0 });
-    expect(tabStoreAccess.setTerminalTabSessionId).toHaveBeenCalledWith("tab-2b", "new-session-2");
+    expect(onSessionBoundSpy).toHaveBeenCalledWith("tab-2b", "new-session-2");
   });
 
   it("reuses one exited session when includeExited lookup finds matching session id", async () => {
     const tab = createTerminalTab("tab-2c", "workspace-1", "exited-session");
-    const tabStoreAccess = createTabStoreAccess(tab);
+    const onSessionBoundSpy = vi.fn();
+    const tabData = createTabData(tab);
+    mockSessionIdByTabId = tab?.data.sessionId ? { [tab.id]: tab.data.sessionId } : {};
     const commands = {
       createTerminalSession: vi.fn(),
       listTerminalSessions: vi.fn().mockResolvedValue([{ sessionId: "exited-session" }]),
@@ -231,11 +212,7 @@ describe("TerminalSessionOrchestrator", () => {
       resizeTerminal: vi.fn().mockResolvedValue({ ok: true }),
     };
 
-    const orchestrator = new TerminalSessionOrchestrator(
-      commands,
-      tabStoreAccess,
-      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1"),
-    );
+    const orchestrator = new TerminalSessionOrchestrator(commands, tabData, onSessionBoundSpy);
 
     const restored = await orchestrator.attachOrCreateAndRestore({
       tabId: "tab-2c",
@@ -264,11 +241,7 @@ describe("TerminalSessionOrchestrator", () => {
       writeTerminalInput: vi.fn(),
       resizeTerminal: vi.fn(),
     };
-    const orchestrator = new TerminalSessionOrchestrator(
-      commands,
-      createTabStoreAccess(undefined),
-      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1"),
-    );
+    const orchestrator = new TerminalSessionOrchestrator(commands, createTabData(undefined));
 
     const restored = await orchestrator.attachOrCreateAndRestore({
       tabId: "missing-tab",
@@ -287,7 +260,9 @@ describe("TerminalSessionOrchestrator", () => {
 
   it("deduplicates concurrent session creation across orchestrator instances", async () => {
     const tab = createTerminalTab("tab-3", "workspace-1", undefined, "codex");
-    const tabStoreAccess = createTabStoreAccess(tab);
+    const onSessionBoundSpy = vi.fn();
+    const tabData = createTabData(tab);
+    mockSessionIdByTabId = tab?.data.sessionId ? { [tab.id]: tab.data.sessionId } : {};
     const deferredCreatedSession = createDeferred<{ sessionId: string }>();
     const commands = {
       createTerminalSession: vi.fn().mockImplementation(() => deferredCreatedSession.promise),
@@ -300,9 +275,8 @@ describe("TerminalSessionOrchestrator", () => {
       resizeTerminal: vi.fn().mockResolvedValue({ ok: true }),
     };
 
-    const workspaceStoreAccess = createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1");
-    const orchestratorA = new TerminalSessionOrchestrator(commands, tabStoreAccess, workspaceStoreAccess);
-    const orchestratorB = new TerminalSessionOrchestrator(commands, tabStoreAccess, workspaceStoreAccess);
+    const orchestratorA = new TerminalSessionOrchestrator(commands, tabData, onSessionBoundSpy);
+    const orchestratorB = new TerminalSessionOrchestrator(commands, tabData, onSessionBoundSpy);
 
     const terminalA = {
       write: vi.fn(),
@@ -344,7 +318,9 @@ describe("TerminalSessionOrchestrator", () => {
 
   it("cleans up orphan session and throws when tab is closed during session creation", async () => {
     const tab = createTerminalTab("tab-gone", "workspace-1", undefined, "opencode");
-    const tabStoreAccess = createTabStoreAccess(tab);
+    const onSessionBoundSpy = vi.fn();
+    const tabData = createTabData(tab);
+    mockSessionIdByTabId = tab?.data.sessionId ? { [tab.id]: tab.data.sessionId } : {};
     const closeTerminalSession = vi.fn().mockResolvedValue(undefined);
     const deferredCreated = createDeferred<{ sessionId: string }>();
     const commands = {
@@ -359,11 +335,7 @@ describe("TerminalSessionOrchestrator", () => {
       closeTerminalSession,
     };
 
-    const orchestrator = new TerminalSessionOrchestrator(
-      commands,
-      tabStoreAccess,
-      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1"),
-    );
+    const orchestrator = new TerminalSessionOrchestrator(commands, tabData, onSessionBoundSpy);
 
     const pending = orchestrator.attachOrCreateAndRestore({
       tabId: "tab-gone",
@@ -374,10 +346,8 @@ describe("TerminalSessionOrchestrator", () => {
     await Promise.resolve();
     expect(commands.createTerminalSession).toHaveBeenCalledTimes(1);
 
-    tabStoreAccess.getState = () => ({
-      tabs: [],
-      setTerminalTabSessionId: tabStoreAccess.setTerminalTabSessionId,
-    });
+    // force the runtime-entry check to fail mid-flight
+    vi.mocked(getTerminalRuntime).mockReturnValue(null as unknown as TerminalRuntimeEntry);
 
     deferredCreated.resolve({ sessionId: "orphan-session" });
 

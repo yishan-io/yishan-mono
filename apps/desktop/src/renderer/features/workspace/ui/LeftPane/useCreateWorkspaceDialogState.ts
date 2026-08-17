@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
 import type { BranchDropdownGroups } from "../../../../components/BranchDropdown";
+import { useGitAuthorName } from "../../../../features/git/ui/hooks/useGitAuthorName";
+import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
+import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../../features/settings/model/branchPrefix";
+import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../../features/workbench/model/types";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
 } from "../../../../helpers/workspaceBranchNaming";
-import { useGitAuthorName } from "../../../../features/git/ui/hooks/useGitAuthorName";
-import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../../features/settings/state/workspaceSettingsStore";
-import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../../features/workbench/model/types";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 
 type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean };

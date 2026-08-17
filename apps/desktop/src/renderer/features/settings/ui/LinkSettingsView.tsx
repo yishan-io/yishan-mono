@@ -6,14 +6,16 @@ import {
   SettingsControlRow,
   SettingsSectionHeader,
 } from "../../../components/settings";
-import { type LinkTarget, layoutStore } from "../../../features/workbench/state/layoutStore";
+import type { LinkTarget } from "../../../features/workbench";
+import { setLinkTarget as applySetLinkTarget } from "../../../features/workbench/state/workbenchActions";
+import { useLinkTarget } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
 
 const LINK_TARGET_OPTIONS: LinkTarget[] = ["built-in", "external"];
 
 export function LinkSettingsView() {
   const { t } = useTranslation();
-  const linkTarget = layoutStore((state) => state.linkTarget);
-  const setLinkTarget = layoutStore((state) => state.setLinkTarget);
+  const linkTarget = useLinkTarget();
+  const setLinkTarget = applySetLinkTarget;
 
   return (
     <>

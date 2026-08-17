@@ -1,27 +1,28 @@
 import { Box } from "@mui/material";
+import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useTerminalCommands } from "../../../app/commands/useCommands";
 import { ColumnSeparator } from "../../../components/ColumnSeparator";
 import { TabPanel } from "../../../components/TabPanel";
 import { retainOpenAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
-import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
-import { useTerminalCommands } from "../../../app/commands/useCommands";
-import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
-import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
-import { DEFAULT_RIGHT_WIDTH, layoutStore } from "../../../features/workbench/state/layoutStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
+import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
+import { disposeTerminalRuntimesForClosedTabs } from "../../../features/terminal";
+import { resizeRightPane } from "../../../features/workbench/commands/tabCommands";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
+import { useRightPaneWidth } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
+import { useWorkspaceTabs } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
+import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
 import { DARK_SURFACE_COLORS } from "../../../theme";
+import { WorkspaceSplitPane } from "../../workbench/ui/WorkspaceSplitPaneView";
 import { FileSearchOverlay } from "./FileSearchOverlay";
 import { LaunchView } from "./LaunchView";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { RightPaneTabBar } from "./RightPane/RightPaneTabBar";
 import { RightPaneView } from "./RightPane/RightPaneView";
 import { WorkspaceErrorStateView } from "./WorkspaceErrorStateView";
-import { WorkspaceSplitPane } from "./WorkspaceSplitPaneView";
-import { removeWebviewsForClosedTabs } from "./browser/webviewRegistry";
-import { disposeTerminalRuntimesForClosedTabs } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
 
 const RIGHT_MIN_WIDTH = 280;
 
@@ -37,10 +38,10 @@ export function MainPaneView() {
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
   const isErrorWorkspace = selectedWorkspace?.state === "error";
-  const tabs = tabStore((state) => state.tabs);
-  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
+  const tabs = useWorkspaceTabs();
+  const inUseByAgentKind = useAgentKindsInUse();
   const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
-  const rightWidth = layoutStore((state) => state.rightWidth);
+  const rightWidth = useRightPaneWidth();
   const enabledAgentKinds = useMemo(
     () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
     [inUseByAgentKind],
@@ -61,7 +62,7 @@ export function MainPaneView() {
     const { startX, startWidth } = rightDragRef.current;
     const delta = startX - clientX;
     const nextWidth = clamp(startWidth + delta, RIGHT_MIN_WIDTH, 800);
-    layoutStore.getState().setRightPaneWidth(nextWidth);
+    resizeRightPane(nextWidth);
   }, []);
 
   useEffect(() => {

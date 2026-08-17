@@ -1,16 +1,23 @@
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
+import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../features/session/state/sessionSelectors";
+import { selectIsDefaultContextEnabled } from "../../../features/settings/state/settingsSelectors";
+import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import {
+  addWorkspace as applyAddWorkspace,
+  deleteProject as applyDeleteProject,
+  setSelectedProjectId as applySetSelectedProjectId,
+  setSelectedWorkspaceId as applySetSelectedWorkspaceId,
+  updateProjectConfig as applyUpdateProjectConfig,
+  incrementFileTreeRefreshVersion,
+} from "../../../features/workspace/state/workspaceActions";
+import { selectSelectedWorkspaceId, selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectSessionDaemonId, selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { createLocalFolderImport } from "../../workspace/commands/localFolderCommands";
 import {
   buildWorkspaceOpenProjectEntries,
@@ -133,7 +140,6 @@ export async function createProject(input: {
     return;
   }
 
-  
   const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
   if (!selectedOrganizationId) {
     return;
@@ -150,7 +156,7 @@ export async function createProject(input: {
       repoUrl: inferredRemoteUrl,
       nodeId: inferredNodeId,
       localPath: isLocalSource ? normalizedPath : undefined,
-      contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
+      contextEnabled: selectIsDefaultContextEnabled(),
     });
   } catch (error) {
     console.error("Failed to create backend project", error);
@@ -198,15 +204,15 @@ export async function createProject(input: {
   });
   // The project store appends the project + display id; the command selects it
   // (selection is workspace-store-owned, never project-store-owned).
-  workspaceStore.getState().setSelectedProjectId(project.id);
-  workspaceStore.getState().setSelectedWorkspaceId("");
+  applySetSelectedProjectId(project.id);
+  applySetSelectedWorkspaceId("");
 
   for (const workspace of workspaces) {
     const workspaceName = workspace.kind === "primary" ? "local" : workspace.branch?.trim() || "workspace";
     // Non-git projects have no branches: store an empty branch instead of
     // fabricating "main" so nothing downstream mistakes the project for git.
     const isNonGitProject = project.sourceType === "unknown";
-    workspaceStore.getState().addWorkspace({
+    applyAddWorkspace({
       projectId: workspace.projectId ?? project.id,
       workspaceId: workspace.id,
       name: workspaceName,
@@ -222,19 +228,19 @@ export async function createProject(input: {
       workspaces.filter((workspace) => workspace.kind === "primary").map((workspace) => workspace.id),
     );
     if (importedPrimaryWorkspaceIds.size > 0) {
-      const importedPrimaryWorkspaces = workspaceStore
-        .getState()
-        .workspaces.filter((workspace) => importedPrimaryWorkspaceIds.has(workspace.id));
+      const importedPrimaryWorkspaces = selectWorkspaces().filter((workspace) =>
+        importedPrimaryWorkspaceIds.has(workspace.id),
+      );
       const openEntries = buildWorkspaceOpenProjectEntries(importedPrimaryWorkspaces, selectedOrganizationId);
       await openWorkspaceEntries(openEntries);
       for (const entry of openEntries) {
-        workspaceUiStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
+        incrementFileTreeRefreshVersion(entry.worktreePath, []);
         incrementGitRefreshVersion(entry.worktreePath);
       }
     }
   }
 
-  tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
+  resolveTabForWorkspace(selectSelectedWorkspaceId());
 
   // Ensure the context folder and symlinks are created for the new project's
   // known worktree paths. Without this, the `.my-context` directory is never
@@ -254,7 +260,7 @@ export async function deleteProject(projectId: string): Promise<void> {
     return;
   }
 
-  const previousWorkspaces = workspaceStore.getState().workspaces;
+  const previousWorkspaces = selectWorkspaces();
   const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
   if (selectedOrganizationId) {
     try {
@@ -266,7 +272,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   }
 
   projectStore.getState().deleteProject(projectId);
-  workspaceStore.getState().deleteProject(projectId);
+  applyDeleteProject(projectId);
   syncTabStoreWithWorkspace(previousWorkspaces);
 }
 
@@ -315,10 +321,9 @@ export async function updateProjectConfig(
         commands: updatedProject.commands ?? config.commands,
       };
 
-      const store = workspaceStore.getState();
       projectStore.getState().updateProjectConfig(projectId, persistedConfig);
-      store.updateProjectConfig(projectId, persistedConfig);
-      workspaceUiStore.getState().incrementFileTreeRefreshVersion();
+      applyUpdateProjectConfig(projectId, persistedConfig);
+      incrementFileTreeRefreshVersion();
 
       if (config.contextEnabled !== undefined && updatedProject.contextEnabled !== previousContextEnabled) {
         await syncProjectContextLinks({
@@ -334,10 +339,9 @@ export async function updateProjectConfig(
     }
   }
 
-  const store = workspaceStore.getState();
   projectStore.getState().updateProjectConfig(projectId, config);
-  store.updateProjectConfig(projectId, config);
-  workspaceUiStore.getState().incrementFileTreeRefreshVersion();
+  applyUpdateProjectConfig(projectId, config);
+  incrementFileTreeRefreshVersion();
 }
 
 /**
@@ -353,7 +357,6 @@ async function syncProjectContextLinks(input: {
   repoKey: string | null;
   enabled: boolean;
 }): Promise<void> {
-  const state = workspaceStore.getState();
   const project = projectStore.getState().projects.find((item) => item.id === input.projectId);
   const isNonGit = project?.sourceType === "unknown";
   const repoKey = isNonGit ? "" : (input.repoKey?.trim() ?? "");
@@ -365,7 +368,7 @@ async function syncProjectContextLinks(input: {
   }
   const candidatePaths = new Set<string>();
 
-  for (const workspace of state.workspaces) {
+  for (const workspace of selectWorkspaces()) {
     const ownsProject = (workspace.projectId ?? workspace.repoId) === input.projectId;
     if (!ownsProject) {
       continue;

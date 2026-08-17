@@ -20,12 +20,21 @@ import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
 import type { OrganizationMemberRecord } from "../../../api/types";
-import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../../features/organization/commands/orgCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
 import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
+import {
+  leaveOrg,
+  listOrganizationMembers,
+  removeOrgMember,
+} from "../../../features/organization/commands/orgCommands";
+import { setSessionData as applySetSessionData } from "../../../features/session/state/sessionActions";
+import {
+  useCurrentUser,
+  useOrganizations,
+  useSelectedOrganizationId,
+} from "../../../features/session/ui/hooks/useSessionReadHooks";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { sessionStore } from "../../../features/session/state/sessionStore";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
 
@@ -57,10 +66,10 @@ function resolveOrganizationId(
 
 export function MemberSettingsView() {
   const { t } = useTranslation();
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
-  const organizations = sessionStore((state) => state.organizations);
-  const currentUser = sessionStore((state) => state.currentUser);
-  const setSessionData = sessionStore((state) => state.setSessionData);
+  const selectedOrganizationId = useSelectedOrganizationId();
+  const organizations = useOrganizations();
+  const currentUser = useCurrentUser();
+  const setSessionData = applySetSessionData;
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [members, setMembers] = useState<OrganizationMemberRecord[]>([]);

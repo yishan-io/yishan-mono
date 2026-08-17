@@ -2,13 +2,12 @@ import { Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, Stac
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
-import { projectStore } from "../../../features/project/state/projectStore";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useScheduledJobCommands } from "../../../app/commands/useCommands";
+import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
+import { useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useDialogRegistration } from "../../../ui/hooks/useDialogRegistration";
-import { sessionStore } from "../../../features/session/state/sessionStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
 import { useScheduledJobFormState } from "./form/useScheduledJobFormState";
 import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "./scheduledJobFormHelpers";
@@ -25,8 +24,8 @@ const editCustomCronDescriptionSx = { mt: -0.5 };
 export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduledJobDialogViewProps) {
   const { t } = useTranslation();
   const { updateScheduledJob } = useScheduledJobCommands();
-  const orgId = sessionStore((state) => state.selectedOrganizationId);
-  const projects = projectStore((state) => state.projects);
+  const orgId = useSelectedOrganizationId();
+  const projects = useProjects();
   useDialogRegistration(open);
 
   const initialState = useMemo(() => {

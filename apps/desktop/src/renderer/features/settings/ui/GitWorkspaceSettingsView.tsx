@@ -2,14 +2,14 @@ import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "../../../components/settings";
-import { projectStore } from "../../../features/project/state/projectStore";
 import { useGitAuthorName } from "../../../features/git/ui/hooks/useGitAuthorName";
+import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import {
   type GitBranchPrefixMode,
   resolveGitBranchPrefix,
   workspaceSettingsStore,
 } from "../../../features/settings/state/workspaceSettingsStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { useSelectedProjectId } from "../../../features/workspace/ui/hooks/useWorkspaceReadHooks";
 
 const GIT_WORKSPACE_PREFIX_SELECT_WIDTH = 200;
 const GIT_WORKSPACE_CUSTOM_PREFIX_WIDTH = 140;
@@ -20,8 +20,8 @@ const PREVIEW_BRANCH_SUFFIX = "dev-123-settings-polish";
  */
 export function GitWorkspaceSettingsView() {
   const { t } = useTranslation();
-  const projects = projectStore((state) => state.projects);
-  const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
+  const projects = useProjects();
+  const selectedProjectId = useSelectedProjectId();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
   const setPrefixMode = workspaceSettingsStore((state) => state.setPrefixMode);

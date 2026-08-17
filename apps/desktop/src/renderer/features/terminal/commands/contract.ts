@@ -9,6 +9,7 @@ import type * as terminalCommands from "./terminalCommands";
 
 export type TerminalCommands = {
   consumeTerminalTabFocus: typeof terminalCommands.consumeTerminalTabFocus;
+  requestTerminalFocus: typeof terminalCommands.requestTerminalFocus;
   retainOpenTerminalTabFocus: typeof terminalCommands.retainOpenTerminalTabFocus;
   createTerminalSession: typeof terminalCommands.createTerminalSession;
   writeTerminalInput: typeof terminalCommands.writeTerminalInput;

@@ -25,6 +25,8 @@ const rpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     workspace: {
       listLocalFolders: rpcMocks.listLocalFolders,

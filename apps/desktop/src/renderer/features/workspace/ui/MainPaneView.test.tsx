@@ -351,10 +351,11 @@ vi.mock("./LaunchView", () => ({
   LaunchView: () => <div data-testid="launch-view" />,
 }));
 
-vi.mock("./terminal/TerminalView", () => ({
+vi.mock("@renderer/features/terminal", () => ({
   TerminalView: ({ tabId, focusRequestKey = 0 }: { tabId: string; focusRequestKey?: number }) => (
     <div data-testid="terminal-view" data-tab-id={tabId} data-focus-request-key={focusRequestKey} />
   ),
+  disposeTerminalRuntimesForClosedTabs: vi.fn(),
 }));
 
 afterEach(() => {

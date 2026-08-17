@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../model/agentChatStore";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
-import { clearPiSessionHandle, ensurePiSession, stopPiSession } from "./agentSessionRuntime";
 import { sendAgentPrompt } from "../commands/agentChatCommands";
-import { registerAgentSession } from "../events/agentChatPiEventShared";
-import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
+import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
+import { registerAgentSession } from "../events/agentChatPiEventShared";
+import { agentChatStore } from "../model/agentChatStore";
+import { clearPiSessionHandle, ensurePiSession, stopPiSession } from "./agentSessionRuntime";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -33,6 +33,8 @@ vi.mock("../events/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     pi: {
       start: mocks.start,
@@ -43,7 +45,6 @@ vi.mock("../../../rpc/rpcTransport", () => ({
       listActiveSessions: mocks.listActiveSessions,
     },
   })),
-  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
 }));
 
 afterEach(() => {
@@ -423,4 +424,3 @@ describe("agentSessionRuntime.ensurePiSession", () => {
     expect(agentChatStore.getState().sessionsByTabId["subagent-tab"]).toBeUndefined();
   });
 });
-

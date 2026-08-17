@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
-import type { TerminalDetectedPort } from "../../../features/terminal/commands/terminalCommands";
+import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { PortsTableMenu, type PortsTableMenuRow } from "../../../components/PortsTableMenu";
 import { RouteCloseWatcher } from "../../../components/RouteCloseWatcher";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import type { TerminalDetectedPort } from "../../../features/terminal/commands/terminalCommands";
 import { useTerminalTabLookups } from "../../../features/terminal/ui/hooks/useTerminalTabLookups";
-import { tabStore } from "../../../features/workbench/state/tabStore";
+import { useWorkspaceTabs } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 
 /** Builds one stable row id for port-menu rendering and selection mapping. */
 function buildPortRowId(entry: TerminalDetectedPort): string {
@@ -21,7 +21,7 @@ export function WorkspacePortsMenuControl() {
   const { t } = useTranslation();
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const tabs = tabStore((state) => state.tabs);
+  const tabs = useWorkspaceTabs();
   const { killTerminalProcess, listDetectedPorts, subscribeDetectedPorts } = useTerminalCommands();
   const { selectTab } = useWorkbenchCommands();
   const { setSelectedWorkspaceId } = useWorkspaceCommands();

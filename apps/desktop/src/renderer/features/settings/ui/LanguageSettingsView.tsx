@@ -1,22 +1,28 @@
 import { Alert, Box, MenuItem } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { updateLanguagePreference } from "../../../features/settings/commands/settingsCommands";
 import {
   SettingsCard,
   SettingsCompactSelect,
   SettingsControlRow,
   SettingsSectionHeader,
 } from "../../../components/settings";
+import { setSessionData } from "../../../features/session/state/sessionActions";
+import {
+  selectCurrentUser,
+  selectOrganizations,
+  selectSelectedOrganizationId,
+} from "../../../features/session/state/sessionSelectors";
+import { useCurrentUser } from "../../../features/session/ui/hooks/useSessionReadHooks";
+import { updateLanguagePreference } from "../../../features/settings/commands/settingsCommands";
 import { SUPPORTED_LANGUAGE_CODES, type SupportedLanguageCode, i18n, setAppLanguage } from "../../../i18n";
-import { sessionStore } from "../../../features/session/state/sessionStore";
 
 /**
  * Renders language selection and persists profile preference.
  */
 export function LanguageSettingsView() {
   const { t } = useTranslation();
-  const currentUser = sessionStore((state) => state.currentUser);
+  const currentUser = useCurrentUser();
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -55,15 +61,15 @@ export function LanguageSettingsView() {
                 try {
                   await setAppLanguage(nextLanguage);
                   const normalized = await updateLanguagePreference(nextLanguage);
-                  const state = sessionStore.getState();
-                  if (state.currentUser) {
-                    state.setSessionData({
+                  const currentUser = selectCurrentUser();
+                  if (currentUser) {
+                    setSessionData({
                       currentUser: {
-                        ...state.currentUser,
+                        ...currentUser,
                         languagePreference: normalized,
                       },
-                      organizations: state.organizations,
-                      selectedOrganizationId: state.selectedOrganizationId,
+                      organizations: selectOrganizations(),
+                      selectedOrganizationId: selectSelectedOrganizationId(),
                     });
                   }
                 } catch {

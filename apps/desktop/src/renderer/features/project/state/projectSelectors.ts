@@ -24,8 +24,16 @@ export function selectProjectDisplayIds(): string[] {
 }
 
 /** State-only selector for zustand subscriptions (see useProjectLastUsedExternalAppId). */
-export function selectProjectLastUsedExternalAppIdFromState(
-  state: ProjectStoreState,
-): ExternalAppId | undefined {
+export function selectProjectLastUsedExternalAppIdFromState(state: ProjectStoreState): ExternalAppId | undefined {
   return state.lastUsedExternalAppId;
+}
+
+/** Reads the last-used external app id. */
+export function selectLastUsedExternalAppId(): ExternalAppId | undefined {
+  return projectStore.getState().lastUsedExternalAppId;
+}
+
+/** Reads the workspace list hierarchy mode. */
+export function selectWorkspaceListHierarchyMode(): "by_project" | "by_node" {
+  return projectStore.getState().workspaceListHierarchyMode;
 }

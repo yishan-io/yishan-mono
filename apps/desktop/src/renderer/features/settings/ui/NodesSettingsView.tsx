@@ -15,15 +15,19 @@ import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 
 import type { NodeRecord, OrganizationMemberRecord } from "../../../api/types";
-import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
-import { listOrganizationMembers } from "../../../features/organization/commands/orgCommands";
-import { unregisterNode, updateNodeScope } from "../../../features/node/commands/nodeCommands";
 import { CenteredSpinner } from "../../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
 import { StatusIndicator } from "../../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
+import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
+import { unregisterNode, updateNodeScope } from "../../../features/node/commands/nodeCommands";
+import { listOrganizationMembers } from "../../../features/organization/commands/orgCommands";
+import {
+  useCurrentUser,
+  useOrganizations,
+  useSelectedOrganizationId,
+} from "../../../features/session/ui/hooks/useSessionReadHooks";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { sessionStore } from "../../../features/session/state/sessionStore";
 
 function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {
   if (!node.ownerUserId) {
@@ -58,9 +62,9 @@ type ScopeChangeTarget = {
 
 export function NodesSettingsView() {
   const { t } = useTranslation();
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
-  const organizations = sessionStore((state) => state.organizations);
-  const currentUserId = sessionStore((state) => state.currentUser?.id);
+  const selectedOrganizationId = useSelectedOrganizationId();
+  const organizations = useOrganizations();
+  const currentUserId = useCurrentUser()?.id;
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [nodes, setNodes] = useState<NodeRecord[]>([]);

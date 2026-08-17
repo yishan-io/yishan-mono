@@ -4,43 +4,46 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ACTIONS } from "../../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../shared/contracts/externalApps";
-import { SplitPaneLayout } from "../../components/SplitPaneLayout";
-import { subscribeAppActionEvent } from "../../events";
-import { projectStore } from "../../features/project/state/projectStore";
-import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
-import { useAllWorkspacesGitSync } from "../../features/workspace/ui/hooks/useAllWorkspacesGitSync";
 import {
-  useAgentCommands,
-  useFileCommands,
-  useProjectCommands,
-  useTerminalCommands,
-  useWorkbenchCommands,
-  useWorkspaceCommands,
   type AgentCommandSurface,
   type FileCommandSurface,
   type ProjectCommandSurface,
   type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
+  useAgentCommands,
+  useFileCommands,
+  useProjectCommands,
+  useTerminalCommands,
+  useWorkbenchCommands,
+  useWorkspaceCommands,
 } from "../../app/commands/useCommands";
-import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
-import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
-import { isEditableActiveElement } from "../../shortcuts/editableTarget";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
+import { SplitPaneLayout } from "../../components/SplitPaneLayout";
+import { subscribeAppActionEvent } from "../../events";
+import { AgentChatRecoveryCoordinator } from "../../features/agent/runtime/agentChatRecovery";
+import { OverviewView } from "../../features/overview/ui/OverviewView";
+import { projectStore } from "../../features/project/state/projectStore";
+import { ScheduledJobView } from "../../features/scheduled-job/ui/ScheduledJobView";
 import { sessionStore } from "../../features/session/state/sessionStore";
+import { TerminalRecoveryCoordinator } from "../../features/terminal/runtime/terminalRecovery";
 import { layoutStore } from "../../features/workbench/state/layoutStore";
 import { tabStore } from "../../features/workbench/state/tabStore";
+import { workspaceProjectionStore } from "../../features/workspace/state/workspaceProjectionStore";
 import { workspaceStore } from "../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../features/workspace/state/workspaceUiStore";
-import { OverviewView } from "../../features/overview/ui/OverviewView";
-import { ScheduledJobView } from "../../features/scheduled-job/ui/ScheduledJobView";
-import { CreateProjectDialogView } from "../../features/workspace/ui/LeftPane/CreateProjectDialogView";
+import { CreateProjectDialogView } from "@renderer/features/project";
 import { LeftPaneView } from "../../features/workspace/ui/LeftPane/LeftPaneView";
 import { MainPaneView } from "../../features/workspace/ui/MainPaneView";
 import { OnboardingView } from "../../features/workspace/ui/OnboardingView";
 import { WorkspaceLifecycleNoticeView } from "../../features/workspace/ui/WorkspaceLifecycleNoticeView";
-import { AgentChatRecoveryCoordinator } from "../../features/agent/runtime/agentChatRecovery";
-import { TerminalRecoveryCoordinator } from "../../features/terminal/runtime/terminalRecovery";
+import { useAllWorkspacesGitSync } from "../../features/workspace/ui/hooks/useAllWorkspacesGitSync";
+import {
+  WorkspacePaneVisibilityProvider,
+  useWorkspacePaneVisibility,
+} from "../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
+import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
+import { isEditableActiveElement } from "../../shortcuts/editableTarget";
 
 const LEFT_MIN_WIDTH = 240;
 const MAIN_MIN_WIDTH = 520;
@@ -369,8 +372,8 @@ export function WorkspaceView() {
     [workspaceCommands, workbenchCommands, agentCommands, terminalCommands, projectCommands, fileCommands],
   );
   useAllWorkspacesGitSync();
-  const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
-  const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator());
+  const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));
+  const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator(tabStore, workspaceStore));
   const { leftCollapsed, onToggleLeftPane } = paneVisibility;
 
   const handleCloseOverlayPanel = useCallback(() => {

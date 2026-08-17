@@ -1,8 +1,8 @@
-import path from "node:path";
 import { cpSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
+import path from "node:path";
 import react from "@vitejs/plugin-react";
-import { defineConfig, type Plugin } from "vite";
+import { type Plugin, defineConfig } from "vitest/config";
 
 const appRoot = import.meta.dirname;
 const require = createRequire(import.meta.url);
@@ -77,7 +77,7 @@ function copyVditorCdnAssets(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), copyVditorCdnAssets()],
   root: path.resolve(appRoot, "src/renderer"),
   base: "./",
@@ -86,15 +86,30 @@ export default defineConfig({
     emptyOutDir: true,
   },
   resolve: {
-    alias: {
-      "@renderer": path.resolve(appRoot, "src/renderer"),
-      "@shared": path.resolve(appRoot, "src/shared"),
-      "@pi-lsp": path.resolve(appRoot, "../../packages/pi-lsp/src"),
-    },
+    alias: [
+      { find: /^@renderer(\/.*)?$/, replacement: `${path.resolve(appRoot, "src/renderer")}$1` },
+      { find: /^@shared(\/.*)?$/, replacement: `${path.resolve(appRoot, "src/shared")}$1` },
+      { find: /^@pi-lsp(\/.*)?$/, replacement: `${path.resolve(appRoot, "../../packages/pi-lsp/src")}$1` },
+      // monaco-editor's main entry is ESM-only with worker entry points and
+      // cannot be loaded in vitest; stub only the bare package. Its
+      // `esm/...` subpaths (language definitions, editor.api) load fine and
+      // stay real for tests that exercise them.
+      ...(command !== "build"
+        ? [
+            {
+              find: /^monaco-editor$/,
+              replacement: path.resolve(appRoot, "src/renderer/testSetup/monacoStub.ts"),
+            },
+          ]
+        : []),
+    ],
   },
   server: {
     host: "127.0.0.1",
     port: 5173,
     strictPort: true,
   },
-});
+  test: {
+    setupFiles: ["testSetup/setup.ts"],
+  },
+}));
