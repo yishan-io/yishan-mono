@@ -13,4 +13,17 @@ export type {
   WorkspaceStatus,
 } from "./model/workspaceTypes";
 export { selectWorkspaceFileTreeRefreshVersion } from "./state/workspaceSelectors";
-export { incrementGitRefreshVersion } from "./state/workspaceActions";
+export { incrementGitRefreshVersion, setOrderedWorkspaceIds } from "./state/workspaceActions";
+export {
+  useSelectedProjectId,
+  useSelectedWorkspaceId,
+  useWorkspaceGitChangeTotalsByWorkspaceId,
+  useWorkspaces,
+} from "./ui/hooks/useWorkspaceReadHooks";
+
+// Stable UI entry points for cross-feature composition (Phase 18).
+export { CreateWorkspaceDialogView } from "./ui/LeftPane/CreateWorkspaceDialogView";
+export { WorkspaceDeleteDialogView } from "./ui/LeftPane/WorkspaceDeleteDialogView";
+export { WorkspaceInfoPopperView } from "./ui/LeftPane/WorkspaceInfoPopperView";
+export { type PendingWorkspaceDeletion, useWorkspaceDeletionFlow } from "./ui/LeftPane/useWorkspaceDeletionFlow";
+export { useWorkspaceInfoHover } from "./ui/LeftPane/useWorkspaceInfoHover";

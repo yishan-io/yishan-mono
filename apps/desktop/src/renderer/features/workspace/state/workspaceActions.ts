@@ -51,6 +51,11 @@ export function setExpandedFileTreeItems(workspaceId: string, paths: string[]): 
   workspaceUiStore.getState().setExpandedFileTreeItems(workspaceId, paths);
 }
 
+/** Reorders the workspace display ids. */
+export function setOrderedWorkspaceIds(workspaceIds: string[]): void {
+  workspaceStore.getState().setOrderedWorkspaceIds(workspaceIds);
+}
+
 /** Closes any overlay panel in workspace UI state. */
 export function closeOverlayPanel(): void {
   workspaceUiStore.getState().closeOverlayPanel();

@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import {
   useDisplayProjectIds,
   useWorkspaceListHierarchyMode,
-} from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { useSelectedOrganizationId } from "../../../../features/session/ui/hooks/useSessionReadHooks";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+} from "../../../features/project/ui/hooks/useProjectReadHooks";
+import { useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
 import {
   EMPTY_FOLD_STATE,
   EMPTY_ORDER_STATE,

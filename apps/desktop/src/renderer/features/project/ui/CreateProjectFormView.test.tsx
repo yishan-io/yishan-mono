@@ -23,7 +23,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     createProject: mocked.createProject,

@@ -14,7 +14,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
-import { useAppCommands, useProjectCommands } from "../../../../app/commands/useCommands";
+import { useAppCommands, useProjectCommands } from "../../../app/commands/useCommands";
 
 type RepoDraft = {
   name: string;

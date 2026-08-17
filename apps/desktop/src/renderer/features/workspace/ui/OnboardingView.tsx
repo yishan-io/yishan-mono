@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LuFolderGit2 } from "react-icons/lu";
 import { useOrganizations, useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
 import { AppMenuView } from "../../../ui/layout/AppMenuView";
-import { CreateProjectFormView } from "./LeftPane/CreateProjectFormView";
+import { CreateProjectFormView } from "@renderer/features/project";
 
 /** Renders the first-run project creation view for organizations without projects. */
 export function OnboardingView() {

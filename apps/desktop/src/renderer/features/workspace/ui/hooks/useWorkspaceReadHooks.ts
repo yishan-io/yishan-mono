@@ -1,5 +1,6 @@
 import { selectWorkspaceFileTreeRefreshVersion } from "../../state/workspaceSelectors";
 import { workspaceStore } from "../../state/workspaceStore";
+import { workspaceProjectionStore } from "../../state/workspaceProjectionStore";
 import { workspaceUiStore } from "../../state/workspaceUiStore";
 
 const EMPTY_CHANGED_RELATIVE_PATHS: string[] = [];
@@ -76,6 +77,11 @@ export function useSelectFolderInFileTreePath() {
 /** Subscribes to the select-folder-in-file-tree request id. */
 export function useSelectFolderInFileTreeRequestId() {
   return workspaceUiStore((state) => state.selectFolderInFileTreeRequestId);
+}
+
+/** Subscribes to the git change totals map by workspace id. */
+export function useWorkspaceGitChangeTotalsByWorkspaceId() {
+  return workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
 }
 
 /** Subscribes to the workspace list. */

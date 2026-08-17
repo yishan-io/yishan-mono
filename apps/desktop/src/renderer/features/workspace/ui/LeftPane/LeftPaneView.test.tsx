@@ -117,31 +117,25 @@ vi.mock("../../../../ui/layout/AppMenuView", () => ({
   AppMenuView: () => <div data-testid="app-menu-view" />,
 }));
 
-vi.mock("./CreateProjectDialogView", () => ({
-  CreateProjectDialogView: () => null,
-}));
-
-vi.mock("./CreateWorkspaceDialogView", () => ({
-  CreateWorkspaceDialogView: () => null,
-}));
-
-vi.mock("./ProjectConfigDialogView", () => ({
-  ProjectConfigDialogView: () => null,
-}));
-
-vi.mock("./ProjectListView", () => ({
-  ProjectListView: () => (
-    <>
-      {mocked.stateRef.current.projects
-        .filter((repo) => mocked.stateRef.current.displayProjectIds.includes(repo.id))
-        .map((repo) => (
-          <div key={repo.id} data-testid={`visible-repo-${repo.id}`}>
-            {repo.name}
-          </div>
-        ))}
-    </>
-  ),
-}));
+vi.mock("@renderer/features/project", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/project")>();
+  return {
+    ...actual,
+    CreateProjectDialogView: () => null,
+    ProjectConfigDialogView: () => null,
+    ProjectListView: () => (
+      <>
+        {mocked.stateRef.current.projects
+          .filter((repo) => mocked.stateRef.current.displayProjectIds.includes(repo.id))
+          .map((repo) => (
+            <div key={repo.id} data-testid={`visible-repo-${repo.id}`}>
+              {repo.name}
+            </div>
+          ))}
+      </>
+    ),
+  };
+});
 
 vi.mock("./LeftPaneResourceUsageControl", () => ({
   LeftPaneResourceUsageControl: () => <div data-testid="left-pane-resource-usage-control" />,

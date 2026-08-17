@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
-import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../../../shared/contracts/externalApps";
-import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../../../components/projectIcons";
-import { useAppCommands, useFileCommands, useProjectCommands } from "../../../../app/commands/useCommands";
+import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../../shared/contracts/externalApps";
+import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../../components/projectIcons";
+import { useAppCommands, useFileCommands, useProjectCommands } from "../../../app/commands/useCommands";
 import { DEFAULT_ICON_BG_COLOR, type ProjectConfigDraft } from "./useProjectConfigFormState";
 
 type ProjectLike = {

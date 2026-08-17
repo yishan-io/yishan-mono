@@ -11,8 +11,8 @@ import { workspaceUiStore } from "../../../../features/workspace/state/workspace
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../../../../ui/layout/AppMenuView";
-import { ProjectFilterPopoverView } from "./ProjectFilterPopoverView";
-import { ProjectListView } from "./ProjectListView";
+import { ProjectFilterPopoverView } from "@renderer/features/project";
+import { ProjectListView } from "@renderer/features/project";
 
 type LeftPaneViewProps = {
   onCreateRepository?: () => void;

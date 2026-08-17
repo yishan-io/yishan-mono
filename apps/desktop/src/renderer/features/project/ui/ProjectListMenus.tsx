@@ -6,17 +6,17 @@ import {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   findExternalAppPreset,
-} from "../../../../../shared/contracts/externalApps";
-import type { WorkspacePullRequestSummary } from "../../../../api/types";
-import { ContextMenu, type ContextMenuEntry } from "../../../../components/ContextMenu";
-import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
-import type { WorkspaceItem } from "../../../../features/workbench/model/types";
-import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
+} from "../../../../shared/contracts/externalApps";
+import type { WorkspacePullRequestSummary } from "../../../api/types";
+import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import type { WorkspaceItem } from "../../../features/workbench/model/types";
+import { CreateWorkspaceDialogView } from "@renderer/features/workspace";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";
-import { WorkspaceDeleteDialogView } from "./WorkspaceDeleteDialogView";
-import { WorkspaceInfoPopperView } from "./WorkspaceInfoPopperView";
-import type { PendingWorkspaceDeletion } from "./useWorkspaceDeletionFlow";
+import { WorkspaceDeleteDialogView } from "@renderer/features/workspace";
+import { WorkspaceInfoPopperView } from "@renderer/features/workspace";
+import type { PendingWorkspaceDeletion } from "@renderer/features/workspace";
 
 type PendingProjectDeletion = {
   projectName: string;

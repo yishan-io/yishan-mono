@@ -1,21 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import type { WorkspaceTreeWorkspace } from "../../../../components/WorkspaceTree";
-import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../../components/WorkspaceTree/types";
+import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
+import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
 import {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,
-} from "../../../../features/agent/ui/hooks/useAgentChatReadHooks";
-import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
-import { useDisplayProjectIds, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { useSelectedOrganizationId } from "../../../../features/session/ui/hooks/useSessionReadHooks";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
-import { workspaceProjectionStore } from "../../../../features/workspace/state/workspaceProjectionStore";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
-import { filterVisibleProjects } from "../../../../helpers/projectHelpers";
-import { resolveWorkspaceListDisplayName } from "../../../../helpers/workspaceDisplayNames";
-import { resolveWorkspaceNotificationTone } from "../../../../helpers/workspaceNotification";
+} from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
+import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
+import { useDisplayProjectIds, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import { useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import type { WorkspaceItem } from "@renderer/features/workspace";
+import { setOrderedWorkspaceIds, useWorkspaceGitChangeTotalsByWorkspaceId, useWorkspaces } from "@renderer/features/workspace";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
+import { filterVisibleProjects } from "../../../helpers/projectHelpers";
+import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
+import { resolveWorkspaceNotificationTone } from "../../../helpers/workspaceNotification";
 import { reconcileOrder } from "./projectListHelpers";
 
 type TreeProject = WorkspaceTreeProject;
@@ -36,7 +36,7 @@ export type ProjectListTreeDataResult = {
   treeWorkspaces: WorkspaceTreeWorkspace[];
   expandedTreeItems: string[];
   displayWorkspaceIdByProjectId: Record<string, string>;
-  workspaceByProjectId: Record<string, Array<ReturnType<typeof workspaceStore.getState>["workspaces"][number]>>;
+  workspaceByProjectId: Record<string, WorkspaceItem[]>;
 };
 
 /**
@@ -61,9 +61,9 @@ export function useProjectListTreeData(input: {
   } = input;
 
   const projects = useProjects();
-  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
+  const workspaces = useWorkspaces() ?? [];
   const displayProjectIds = useDisplayProjectIds();
-  const gitChangeTotalsByWorkspaceId = workspaceProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
+  const gitChangeTotalsByWorkspaceId = useWorkspaceGitChangeTotalsByWorkspaceId();
   const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
   const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
   const selectedOrganizationId = useSelectedOrganizationId();
@@ -236,7 +236,7 @@ export function useProjectListTreeData(input: {
   ]);
 
   useEffect(() => {
-    workspaceStore.getState().setOrderedWorkspaceIds(treeWorkspaces.map((workspace) => workspace.id));
+    setOrderedWorkspaceIds(treeWorkspaces.map((workspace) => workspace.id));
   }, [treeWorkspaces]);
 
   const expandedTreeItems = useMemo(() => {

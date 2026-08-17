@@ -15,3 +15,12 @@ export {
 } from "./state/projectSelectors";
 export { setDisplayProjectIds, setLastUsedExternalAppId } from "./state/projectActions";
 export { useProjectLastUsedExternalAppId } from "./ui/hooks/useProjectLastUsedExternalAppId";
+
+// Stable UI entry points for cross-feature composition (Phase 18).
+export { CreateProjectDialogView } from "./ui/CreateProjectDialogView";
+export { CreateProjectFormView } from "./ui/CreateProjectFormView";
+export { ProjectConfigDialogView } from "./ui/ProjectConfigDialogView";
+export { ProjectDeleteDialogView } from "./ui/ProjectDeleteDialogView";
+export { ProjectFilterPopoverView } from "./ui/ProjectFilterPopoverView";
+export { ProjectListMenus } from "./ui/ProjectListMenus";
+export { ProjectListView } from "./ui/ProjectListView";

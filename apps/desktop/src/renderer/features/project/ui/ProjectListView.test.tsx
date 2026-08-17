@@ -3,8 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { inspectGitRepository } from "../../../../features/git/commands/gitCommands";
-import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../../features/workspace/commands/workspaceCommands";
+import { inspectGitRepository } from "../../../features/git/commands/gitCommands";
+import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../features/workspace/commands/workspaceCommands";
 import { ProjectListView } from "./ProjectListView";
 
 const mocked = vi.hoisted(() => {
@@ -158,7 +158,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: (shortcutId: string) => {
     if (shortcutId === "create-workspace") {
       return "⌘+N";
@@ -168,25 +168,29 @@ vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../../../../components/projectIcons", () => ({
+vi.mock("../../../components/projectIcons", () => ({
   renderProjectIcon: () => "R",
   renderRepoIcon: () => "R",
 }));
 
-vi.mock("./CreateWorkspaceDialogView", () => ({
-  CreateWorkspaceDialogView: ({ open, mode }: { open: boolean; mode?: "create" | "rename" }) =>
-    open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
-}));
+vi.mock("@renderer/features/workspace", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workspace")>();
+  return {
+    ...actual,
+    CreateWorkspaceDialogView: ({ open, mode }: { open: boolean; mode?: "create" | "rename" }) =>
+      open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
+  };
+});
 
 vi.mock("./ProjectConfigDialogView", () => ({
   ProjectConfigDialogView: ({ open }: { open: boolean }) => (open ? <div data-testid="repo-config-dialog" /> : null),
 }));
 
-vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../../features/workspace/state/workspaceProjectionStore", () => {
+vi.mock("../../../features/workspace/state/workspaceProjectionStore", () => {
   const project = (
     selector: (state: {
       pullRequestByWorkspaceId: Record<string, unknown>;
@@ -209,7 +213,7 @@ vi.mock("../../../../features/workspace/state/workspaceProjectionStore", () => {
   return { workspaceProjectionStore: project };
 });
 
-vi.mock("../../../../features/project/state/projectStore", () => {
+vi.mock("../../../features/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string }) => unknown,
   ) =>
@@ -230,13 +234,13 @@ vi.mock("../../../../features/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../../features/session/state/sessionStore", () => ({
+vi.mock("../../../features/session/state/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector({ selectedOrganizationId: "" }),
   ),
 }));
 
-vi.mock("../../../../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     project: {
       getListPreferences: vi.fn(async () => ({
@@ -250,18 +254,18 @@ vi.mock("../../../../rpc/rpcTransport", () => ({
   })),
 }));
 
-vi.mock("../../../../features/agent/state/chatStore", () => ({
+vi.mock("../../../features/agent/state/chatStore", () => ({
   chatStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../../features/workspace/state/workspaceCreateProgressStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: vi.fn(
     (selector: (state: { progressByWorkspaceId: Record<string, { isComplete: boolean }> }) => unknown) =>
       selector({ progressByWorkspaceId: mocked.stateRef.current.progressByWorkspaceId }),
   ),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     setSelectedRepoId: mocked.setSelectedRepoId,
@@ -295,16 +299,16 @@ vi.mock("../../../../app/commands/useCommands", () => {
 });
 
 
-vi.mock("../../../../features/files/commands/fileCommands", () => ({
+vi.mock("../../../features/files/commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),
   listDetectedExternalAppIds: (...args: unknown[]) => mocked.listDetectedExternalAppIds(...args),
 }));
 
-vi.mock("../../../../features/git/commands/gitCommands", () => ({
+vi.mock("../../../features/git/commands/gitCommands", () => ({
   inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
 }));
 
-vi.mock("../../../../helpers/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => mocked.rendererPlatform,
 }));
 

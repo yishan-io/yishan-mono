@@ -10,41 +10,41 @@ import {
   isExternalAppPlatformSupported,
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
-} from "../../../../../shared/contracts/externalApps";
-import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { ContextMenu, type ContextMenuEntry } from "../../../../components/ContextMenu";
-import { WorkspaceTree } from "../../../../components/WorkspaceTree";
-import type { WorkspaceTreeWorkspace } from "../../../../components/WorkspaceTree";
-import type { WorkspaceTreeRow } from "../../../../components/WorkspaceTree/types";
-import { markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead } from "../../../../features/agent/state/chatActions";
-import { useWorkspaceUnreadToneByWorkspaceId } from "../../../../features/agent/ui/hooks/useAgentChatReadHooks";
-import { useDetectedExternalAppIds } from "../../../../features/files/ui/hooks/useDetectedExternalAppIds";
-import { useLastUsedExternalAppId, useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { subscribeOpenCreateWorkspaceDialog } from "../../../../features/workspace/commands/workspaceCommands";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
-import { getRendererPlatform } from "../../../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
-import { useContextMenuState } from "../../../../ui/hooks/useContextMenuState";
-import { useSuppressNativeContextMenuWhileOpen } from "../../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
+} from "../../../../shared/contracts/externalApps";
+import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
+import { WorkspaceTree } from "../../../components/WorkspaceTree";
+import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
+import type { WorkspaceTreeRow } from "../../../components/WorkspaceTree/types";
+import { markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead } from "../../../features/agent/state/chatActions";
+import { useWorkspaceUnreadToneByWorkspaceId } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
+import { useDetectedExternalAppIds } from "../../../features/files/ui/hooks/useDetectedExternalAppIds";
+import { useLastUsedExternalAppId, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
+import { subscribeOpenCreateWorkspaceDialog } from "../../../features/workspace/commands/workspaceCommands";
+import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/features/workspace";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { useContextMenuState } from "../../../ui/hooks/useContextMenuState";
+import { useSuppressNativeContextMenuWhileOpen } from "../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { ProjectListMenus } from "./ProjectListMenus";
-import { WorkspaceDeleteDialogView } from "./WorkspaceDeleteDialogView";
-import { WorkspaceInfoPopperView } from "./WorkspaceInfoPopperView";
+import { WorkspaceDeleteDialogView } from "@renderer/features/workspace";
+import { WorkspaceInfoPopperView } from "@renderer/features/workspace";
 import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./projectListHelpers";
 import { useProjectDeletionFlow } from "./useProjectDeletionFlow";
 import { useProjectListDialogState } from "./useProjectListDialogState";
 import { useProjectListFoldState } from "./useProjectListFoldState";
 import { useProjectListTreeData } from "./useProjectListTreeData";
 import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
-import { useWorkspaceDeletionFlow } from "./useWorkspaceDeletionFlow";
-import { useWorkspaceInfoHover } from "./useWorkspaceInfoHover";
+import { useWorkspaceDeletionFlow } from "@renderer/features/workspace";
+import { useWorkspaceInfoHover } from "@renderer/features/workspace";
 
 /** Renders project rows and nested workspace rows with per-project fold controls. */
 export function ProjectListView() {
   const { t } = useTranslation();
   const projects = useProjects();
-  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
-  const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const workspaces = useWorkspaces() ?? [];
+  const selectedProjectId = useSelectedProjectId();
+  const selectedWorkspaceId = useSelectedWorkspaceId();
   const lastUsedExternalAppId = useLastUsedExternalAppId();
   const {
     setSelectedRepoId,

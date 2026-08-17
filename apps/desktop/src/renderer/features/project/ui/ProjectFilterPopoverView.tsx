@@ -17,14 +17,13 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
-import { useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { setWorkspaceListHierarchyMode as applyWorkspaceListHierarchyMode } from "../../../../features/project/state/projectActions";
+import { useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { setWorkspaceListHierarchyMode as applyWorkspaceListHierarchyMode } from "../../../features/project/state/projectActions";
 import {
   useDisplayProjectIds,
   useProjects,
   useWorkspaceListHierarchyMode,
-} from "../../../../features/project/ui/hooks/useProjectReadHooks";
-import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
+} from "../../../features/project/ui/hooks/useProjectReadHooks";
 
 /** Returns true when a repository row matches the quick-search keyword. */
 function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: string): boolean {

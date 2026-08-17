@@ -1,4 +1,4 @@
-import type { ProjectListPreference } from "../../../../rpc/daemonTypes";
+import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 
 export type HierarchyMode = "by_project" | "by_node";
 
