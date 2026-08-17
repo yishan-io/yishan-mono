@@ -28,7 +28,7 @@ import {
   workspaceCreateProgressStore,
 } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { RecentAgentSessions } from "./RecentAgentSessions";
+import { RecentAgentSessions } from "@renderer/features/agent";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
   if (step.status === "completed") {

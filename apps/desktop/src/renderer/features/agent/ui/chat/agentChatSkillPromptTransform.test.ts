@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RichComposerSlashCommand } from "../../../components/RichComposer";
+import type { RichComposerSlashCommand } from "../../../../components/RichComposer";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 
 const SLASH_COMMANDS: RichComposerSlashCommand[] = [

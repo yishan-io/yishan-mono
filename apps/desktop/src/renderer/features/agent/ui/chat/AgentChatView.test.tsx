@@ -2,9 +2,9 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { requestAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
-import { agentChatStore } from "../../../features/agent/model/agentChatStore";
-import type { AgentMessage, AgentModel } from "../../../features/agent/model/agentChatTypes";
+import { requestAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../../events/agentChatComposerFocus";
+import { agentChatStore } from "../../model/agentChatStore";
+import type { AgentMessage, AgentModel } from "../../model/agentChatTypes";
 import { AgentChatView } from "./AgentChatView";
 
 const mocked = vi.hoisted(() => {
@@ -191,7 +191,7 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../features/agent/commands/agentChatCommands", () => ({
+vi.mock("../../commands/agentChatCommands", () => ({
   abortAgent: mocked.abortAgent,
   clearPiSessionHandle: mocked.clearPiSessionHandle,
   ensurePiSession: mocked.ensurePiSession,
@@ -210,23 +210,23 @@ vi.mock("../../../features/agent/commands/agentChatCommands", () => ({
   restartAgentSessionForProvider: mocked.restartAgentSessionForProvider,
 }));
 
-vi.mock("../../../features/agent/events/agentChatPiEventShared", () => ({
+vi.mock("../../events/agentChatPiEventShared", () => ({
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
   setAgentModel: mocked.setAgentModel,
   setAgentThinkingLevel: mocked.setAgentThinkingLevel,
 }));
 
-vi.mock("../../../features/agent/commands/agentChatSubagentCommands", () => ({
+vi.mock("../../commands/agentChatSubagentCommands", () => ({
   cancelSubagentRun: mocked.cancelSubagentRun,
   openSubagentSessionInRightSplitPane: mocked.openSubagentSessionInRightSplitPane,
 }));
 
-vi.mock("../../../features/workbench/commands/tabCommands", () => ({
+vi.mock("../../../workbench/commands/tabCommands", () => ({
   renameTab: vi.fn(),
   readTabStoreState: () => ({ tabs: mocked.stateRef.current.tabs }),
 }));
 
-vi.mock("../../../components/RichComposer", () => ({
+vi.mock("../../../../components/RichComposer", () => ({
   RichComposer: (props: {
     value?: string;
     onChange?: (value: string) => void;
@@ -244,11 +244,11 @@ vi.mock("../../../components/RichComposer", () => ({
   },
 }));
 
-vi.mock("../../../components/agent/transcript/AgentMessageList", () => ({
+vi.mock("../../../../components/agent/transcript/AgentMessageList", () => ({
   AgentMessageList: mocked.agentMessageList,
 }));
 
-vi.mock("../../../components/agent/session/AgentModelSelector", () => ({
+vi.mock("../../../../components/agent/session/AgentModelSelector", () => ({
   AgentModelSelector: ({
     onModelChange,
     onAddProvider,
@@ -272,7 +272,7 @@ vi.mock("../../../components/agent/session/AgentModelSelector", () => ({
   },
 }));
 
-vi.mock("../../../features/settings/ui/ProviderCredentialDialog", () => ({
+vi.mock("../../../settings/ui/ProviderCredentialDialog", () => ({
   ProviderCredentialDialog: (props: {
     open: boolean;
     mode: "add" | "edit";
@@ -284,13 +284,13 @@ vi.mock("../../../features/settings/ui/ProviderCredentialDialog", () => ({
   },
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
+vi.mock("../../../../rpc/rpcTransport", () => ({
   getDaemonClient: mocked.getDaemonClient,
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
 }));
 
 // Keep the provider-visibility poll (useAgentChatProviderAdd) fast in tests.
-vi.mock("../../../helpers/delay", () => ({
+vi.mock("../../../../helpers/delay", () => ({
   delay: mocked.delay,
 }));
 
@@ -306,7 +306,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../features/workbench/state/tabStore", () => ({
+vi.mock("../../../workbench/state/tabStore", () => ({
   tabStore: (
     selector: (state: {
       tabs: Array<{

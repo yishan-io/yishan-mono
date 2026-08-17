@@ -2,9 +2,9 @@ import { useCallback, useState } from "react";
 import {
   fetchAgentModels,
   restartAgentSessionForProvider,
-} from "../../../features/agent/commands/agentChatCommands";
-import { isAgentSessionBusy } from "../../../features/agent/model/agentChatTypes";
-import type { AgentSessionState } from "../../../features/agent/model/agentChatTypes";
+} from "../../commands/agentChatCommands";
+import { isAgentSessionBusy } from "../../model/agentChatTypes";
+import type { AgentSessionState } from "../../model/agentChatTypes";
 
 type UseAgentChatProviderAddParams = {
   tabId: string;

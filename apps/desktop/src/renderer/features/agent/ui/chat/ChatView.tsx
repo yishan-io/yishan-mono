@@ -1,19 +1,19 @@
 import { Autocomplete, Box, TextField, Typography, createFilterOptions } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAgentCommands } from "../../../app/commands/useCommands";
-import { MessageList } from "../../../components/MessageList";
-import { RichComposer } from "../../../components/RichComposer";
-import { subscribeWorkspaceChatEvent } from "../../../events";
+import { useAgentCommands } from "../../../../app/commands/useCommands";
+import { MessageList } from "../../../../components/MessageList";
+import { RichComposer } from "../../../../components/RichComposer";
+import { subscribeWorkspaceChatEvent } from "../../../../events";
 import {
   useChatAvailableModelsByTabId,
   useChatCurrentModelByTabId,
   useChatMessagesByTabId,
-} from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
-import type { AvailableModel, ChatMessage } from "../../../features/workspace/state/workspaceStore";
-import type { DesktopAgentKind } from "../../../helpers/agentSettings";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { generateId } from "../../../helpers/generateId";
+} from "../../ui/hooks/useAgentChatReadHooks";
+import type { AvailableModel, ChatMessage } from "../../model/chatTypes";
+import type { DesktopAgentKind } from "../../../../helpers/agentSettings";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import { generateId } from "../../../../helpers/generateId";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({

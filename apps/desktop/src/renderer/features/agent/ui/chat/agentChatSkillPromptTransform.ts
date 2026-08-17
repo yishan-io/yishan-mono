@@ -1,4 +1,4 @@
-import type { RichComposerSlashCommand } from "../../../components/RichComposer";
+import type { RichComposerSlashCommand } from "../../../../components/RichComposer";
 
 const LEADING_SKILL_COMMAND_REGEX = /^\/([a-zA-Z][\w-]*)(?=\s|$)([\s\S]*)$/;
 

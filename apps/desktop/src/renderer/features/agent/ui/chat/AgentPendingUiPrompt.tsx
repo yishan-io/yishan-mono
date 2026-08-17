@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AgentPendingUiRequest } from "../../../features/agent/model/agentChatTypes";
+import type { AgentPendingUiRequest } from "../../model/agentChatTypes";
 
 type AgentPendingUiPromptProps = {
   request: AgentPendingUiRequest;

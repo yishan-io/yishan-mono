@@ -148,7 +148,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     ensureChatSession: mocked.ensureChatSession,
@@ -273,7 +273,7 @@ vi.mock("../../../app/commands/useCommands", () => {
 });
 
 
-vi.mock("../../../events", async (importOriginal) => {
+vi.mock("../../../../events", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
@@ -281,7 +281,7 @@ vi.mock("../../../events", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../features/workspace/state/workspaceStore", async (importOriginal) => {
+vi.mock("../../../workspace/state/workspaceStore", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
@@ -289,11 +289,11 @@ vi.mock("../../../features/workspace/state/workspaceStore", async (importOrigina
   };
 });
 
-vi.mock("../../../features/agent/state/chatStore", () => ({
+vi.mock("../../state/chatStore", () => ({
   chatStore: mockedStore.workspaceStore,
 }));
 
-vi.mock("../../../components/RichComposer", () => ({
+vi.mock("../../../../components/RichComposer", () => ({
   RichComposer: ({
     onSubmit,
     disabled,

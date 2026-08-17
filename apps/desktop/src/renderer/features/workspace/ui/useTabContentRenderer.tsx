@@ -13,7 +13,7 @@ import { copyToClipboard } from "../../../helpers/clipboard";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/commands/useCommands";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { AgentChatView } from "./AgentChatView";
+import { AgentChatView } from "@renderer/features/agent";
 import { BrowserView } from "./browser/BrowserView";
 import { TerminalView } from "./terminal/TerminalView";
 

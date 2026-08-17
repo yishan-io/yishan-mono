@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { createPortal } from "react-dom";
 import { getOrCreateRuntimeRoot } from "../../../app/runtime/runtimeRoot";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { WorkspaceAgentChatSurface } from "./WorkspaceAgentChatSurface";
+import { WorkspaceAgentChatSurface } from "@renderer/features/agent";
 import type { WorkspaceTabPlacement } from "./useWorkspaceTabPlacements";
 
 type WorkspaceTabSurfaceLayerProps = {

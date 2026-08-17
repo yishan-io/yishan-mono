@@ -1,17 +1,17 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { setAgentChatStreamTabVisible } from "../../../features/agent";
-import { respondToAgentExtensionUiRequest } from "../../../features/agent/commands/agentChatCommands";
+import { setAgentChatStreamTabVisible } from "../..";
+import { respondToAgentExtensionUiRequest } from "../../commands/agentChatCommands";
 import {
   clearPendingUiAutoResponse,
   setPendingUiAutoResponse,
   setTurnError,
-} from "../../../features/agent/state/chatActions";
-import { useAgentChatSession } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
-import type { AgentChatSessionView } from "../../../features/workbench/model/types";
-import { useTabById } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
+} from "../../state/chatActions";
+import { useAgentChatSession } from "../../ui/hooks/useAgentChatReadHooks";
+import type { AgentChatSessionView } from "../../../workbench/model/types";
+import { useTabById } from "../../../workbench/ui/hooks/useWorkbenchTabs";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";

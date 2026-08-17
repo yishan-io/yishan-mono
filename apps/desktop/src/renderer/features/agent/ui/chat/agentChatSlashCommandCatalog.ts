@@ -1,10 +1,10 @@
-import builderAgentMarkdown from "../../../../../../../packages/pi-subagents/agents/builder.md?raw";
-import codeReviewerAgentMarkdown from "../../../../../../../packages/pi-subagents/agents/code-reviewer.md?raw";
-import exploreAgentMarkdown from "../../../../../../../packages/pi-subagents/agents/explore.md?raw";
-import generalAgentMarkdown from "../../../../../../../packages/pi-subagents/agents/general.md?raw";
-import planReviewerAgentMarkdown from "../../../../../../../packages/pi-subagents/agents/plan-reviewer.md?raw";
-import taskReviewerAgentMarkdown from "../../../../../../../packages/pi-subagents/agents/task-reviewer.md?raw";
-import type { RichComposerSlashCommand } from "../../../components/RichComposer";
+import builderAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/builder.md?raw";
+import codeReviewerAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/code-reviewer.md?raw";
+import exploreAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/explore.md?raw";
+import generalAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/general.md?raw";
+import planReviewerAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/plan-reviewer.md?raw";
+import taskReviewerAgentMarkdown from "../../../../../../../../packages/pi-subagents/agents/task-reviewer.md?raw";
+import type { RichComposerSlashCommand } from "../../../../components/RichComposer";
 
 const SUBAGENT_DEFINITION_MARKDOWNS = [
   builderAgentMarkdown,

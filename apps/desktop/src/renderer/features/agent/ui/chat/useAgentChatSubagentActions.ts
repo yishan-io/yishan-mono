@@ -1,15 +1,15 @@
 import { useCallback } from "react";
-import { fetchAgentMessages } from "../../../features/agent/commands/agentChatCommands";
+import { fetchAgentMessages } from "../../commands/agentChatCommands";
 import {
   cancelSubagentRun,
   openSubagentSessionInRightSplitPane,
-} from "../../../features/agent/commands/agentChatSubagentCommands";
+} from "../../commands/agentChatSubagentCommands";
 import {
   type RunningSubagentSummary,
   findMatchingRunningSubagent,
-} from "../../../features/agent/model/agentChatSubagents";
-import { selectAgentChatSession } from "../../../features/agent/state/agentChatSelectors";
-import { useAgentChatSubagentState } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
+} from "../../model/agentChatSubagents";
+import { selectAgentChatSession } from "../../state/agentChatSelectors";
+import { useAgentChatSubagentState } from "../../ui/hooks/useAgentChatReadHooks";
 
 type UseAgentChatSubagentActionsOptions = {
   tabId: string;

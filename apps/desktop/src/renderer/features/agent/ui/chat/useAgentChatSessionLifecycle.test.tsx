@@ -2,7 +2,7 @@
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../../../features/agent/model/agentChatStore";
+import { agentChatStore } from "../../model/agentChatStore";
 import { useAgentChatSessionLifecycle } from "./useAgentChatSessionLifecycle";
 
 type ConnectionStatus = "connected" | "disconnected";
@@ -13,12 +13,12 @@ const mocks = vi.hoisted(() => ({
   recoverAgentSessionAfterReconnect: vi.fn(async () => {}),
 }));
 
-vi.mock("../../../features/agent/commands/agentChatCommands", () => ({
+vi.mock("../../commands/agentChatCommands", () => ({
   startAgentChatSession: mocks.startAgentChatSession,
   recoverAgentSessionAfterReconnect: mocks.recoverAgentSessionAfterReconnect,
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
+vi.mock("../../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: (listener: (status: ConnectionStatus) => void) => {
     mocks.statusListener = listener;
     return () => {

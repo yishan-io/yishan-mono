@@ -27,3 +27,8 @@ export {
   setAgentModel,
   setAgentThinkingLevel,
 } from "./events/agentChatPiEventShared";
+
+// Stable UI entry points for cross-feature composition (Phase 18).
+export { AgentChatView } from "./ui/chat/AgentChatView";
+export { RecentAgentSessions } from "./ui/chat/RecentAgentSessions";
+export { WorkspaceAgentChatSurface } from "./ui/chat/WorkspaceAgentChatSurface";

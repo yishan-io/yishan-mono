@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import enAgentChat from "../../../locales/en/agentChat.json";
-import zhAgentChat from "../../../locales/zh/agentChat.json";
+import enAgentChat from "../../../../locales/en/agentChat.json";
+import zhAgentChat from "../../../../locales/zh/agentChat.json";
 import { AGENT_CHAT_TIP_KEYS, AGENT_CHAT_TIP_PREFIX_KEY } from "./agentChatTipCatalog";
 
 describe("agentChatTipCatalog", () => {
