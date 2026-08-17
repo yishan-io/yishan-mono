@@ -16,3 +16,6 @@ export {
   requestTerminalRuntimeFocus,
 } from "./runtime/terminalRuntimeRegistry";
 export { initTerminalSessionLifecycle } from "./runtime/terminalSessionService";
+
+// Stable UI entry points for cross-feature composition (Phase 18).
+export { TerminalView } from "./ui/TerminalView";

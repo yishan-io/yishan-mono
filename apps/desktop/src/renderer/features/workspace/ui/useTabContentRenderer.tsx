@@ -15,7 +15,7 @@ import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/c
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { AgentChatView } from "@renderer/features/agent";
 import { BrowserView } from "./browser/BrowserView";
-import { TerminalView } from "./terminal/TerminalView";
+import { TerminalView } from "@renderer/features/terminal";
 
 type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;

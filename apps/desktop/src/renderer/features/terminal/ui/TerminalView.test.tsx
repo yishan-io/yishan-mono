@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TerminalView } from "./TerminalView";
-import { __resetTerminalRuntimeRegistryForTests, getTerminalRuntime } from "../../../../features/terminal/runtime/terminalRuntimeRegistry";
-import { __resetTerminalSessionServiceForTests } from "../../../../features/terminal/runtime/terminalSessionService";
+import { __resetTerminalRuntimeRegistryForTests, getTerminalRuntime } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
+import { __resetTerminalSessionServiceForTests } from "../../../features/terminal/runtime/terminalSessionService";
 
 type TerminalOutputEvent =
   | { type: "output"; sessionId: string; chunk: string | Uint8Array; nextIndex: number }
@@ -142,20 +142,20 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../../features/workbench/state/tabStore", () => ({
+vi.mock("../../../features/workbench/state/tabStore", () => ({
   tabStore: mocked.tabStore,
 }));
 
-vi.mock("../../../../features/workbench/commands/tabCommands", () => ({
+vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   closeTab: mocked.closeTab,
   renameTab: mocked.renameTab,
 }));
 
-vi.mock("../../../../features/terminal/commands/terminalCommands", () => ({
+vi.mock("../../../features/terminal/commands/terminalCommands", () => ({
   createTerminalSession: mocked.createTerminalSession,
   listTerminalSessions: mocked.listTerminalSessions,
   readTerminalOutput: mocked.readTerminalOutput,
@@ -165,11 +165,11 @@ vi.mock("../../../../features/terminal/commands/terminalCommands", () => ({
   closeTerminalSession: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../../../features/workspace/state/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../features/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
 
     selectTab: mocked.selectTab,
@@ -266,7 +266,7 @@ vi.mock("@xterm/xterm", () => {
   };
 });
 
-vi.mock("../../../../features/terminal/runtime/terminalAddons", () => ({
+vi.mock("../../../features/terminal/runtime/terminalAddons", () => ({
   loadTerminalAddons: mocked.loadTerminalAddons,
 }));
 

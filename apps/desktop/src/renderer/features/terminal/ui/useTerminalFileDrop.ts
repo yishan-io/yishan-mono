@@ -7,8 +7,8 @@ import {
   extractSourcePathsFromDataTransfer,
   hasExternalFileDragIntent,
   resolveInternalFileTreeDragPaths,
-} from "../../../../components/FileTree/dataTransfer";
-import { getTerminalRuntime } from "../../../../features/terminal";
+} from "../../../components/FileTree/dataTransfer";
+import { getTerminalRuntime } from "../../../features/terminal";
 import { escapePathsForShell } from "./terminalPathEscape";
 
 type UseTerminalFileDropOptions = {

@@ -3,7 +3,7 @@ import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { memo, useEffect, useMemo, useRef } from "react";
-import { useTerminalCommands, useWorkbenchCommands } from "../../../../app/commands/useCommands";
+import { useTerminalCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
 import {
   attachTerminalRuntime,
   detachTerminalRuntime,
@@ -11,8 +11,8 @@ import {
   getTerminalRuntime,
   initTerminalSessionLifecycle,
   requestTerminalRuntimeFocus,
-} from "../../../../features/terminal";
-import { useHasPendingTerminalFocus } from "../../../../features/terminal/ui/hooks/useTerminalReadHooks";
+} from "../../../features/terminal";
+import { useHasPendingTerminalFocus } from "../../../features/terminal/ui/hooks/useTerminalReadHooks";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";
