@@ -6,7 +6,7 @@ import { ColumnSeparator } from "../../../components/ColumnSeparator";
 import { TabPanel } from "../../../components/TabPanel";
 import { retainOpenAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
 import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
-import { disposeTerminalRuntimesForClosedTabs } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
+import { disposeTerminalRuntimesForClosedTabs } from "../../../features/terminal";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { setRightPaneWidth } from "../../../features/workbench/state/workbenchActions";
 import { useRightPaneWidth } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";

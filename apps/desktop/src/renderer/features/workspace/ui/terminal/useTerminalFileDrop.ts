@@ -8,8 +8,8 @@ import {
   hasExternalFileDragIntent,
   resolveInternalFileTreeDragPaths,
 } from "../../../../components/FileTree/dataTransfer";
+import { getTerminalRuntime } from "../../../../features/terminal";
 import { escapePathsForShell } from "./terminalPathEscape";
-import { getTerminalRuntime } from "../../../../features/terminal/runtime/terminalRuntimeRegistry";
 
 type UseTerminalFileDropOptions = {
   /** Tab id used to look up the xterm host element from the runtime registry. */

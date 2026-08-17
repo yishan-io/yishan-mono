@@ -2,18 +2,18 @@ import { Box } from "@mui/material";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { memo, useEffect, useRef, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { useTerminalCommands, useWorkbenchCommands } from "../../../../app/commands/useCommands";
-import { terminalFocusStore } from "../../../../features/terminal/state/terminalFocusStore";
-import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import {
   attachTerminalRuntime,
   detachTerminalRuntime,
   ensureTerminalRuntime,
   getTerminalRuntime,
+  initTerminalSessionLifecycle,
   requestTerminalRuntimeFocus,
-} from "../../../../features/terminal/runtime/terminalRuntimeRegistry";
-import { initTerminalSessionLifecycle } from "../../../../features/terminal/runtime/terminalSessionService";
+} from "../../../../features/terminal";
+import { useHasPendingTerminalFocus } from "../../../../features/terminal/ui/hooks/useTerminalReadHooks";
+import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { useTerminalWakeRecovery } from "./useTerminalWakeRecovery";
@@ -37,14 +37,11 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
   const workbenchCommands = useWorkbenchCommands();
   // Stable identity: effects below key on `cmd`; a fresh object every render
   // would re-run them on each render (and re-subscribe/re-focus terminals).
-  const cmd = useMemo(
-    () => ({ ...terminalCommands, ...workbenchCommands }),
-    [terminalCommands, workbenchCommands],
-  );
+  const cmd = useMemo(() => ({ ...terminalCommands, ...workbenchCommands }), [terminalCommands, workbenchCommands]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const hasPendingAutoFocus = terminalFocusStore((state) => state.pendingTabIds.has(tabId));
+  const hasPendingAutoFocus = useHasPendingTerminalFocus(tabId);
 
   // Stable refs that point into the registry entry — these survive remount.
   const xtermRef = useRef<Terminal | null>(null);

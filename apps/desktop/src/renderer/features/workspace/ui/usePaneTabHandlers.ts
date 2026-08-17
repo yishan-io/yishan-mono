@@ -4,7 +4,7 @@ import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/c
 import type { SplitDropRegion } from "../../../components/SplitDropZone";
 import { resolveDropResult } from "../../../components/SplitDropZone";
 import type { TabBarCreateOption } from "../../../components/TabBar";
-import { forceFitTerminalRuntimes } from "../../../features/terminal/runtime/terminalRuntimeRegistry";
+import { forceFitTerminalRuntimes } from "../../../features/terminal";
 import { createNewWhiteboard } from "../../../features/workbench/commands/whiteboardCommands";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import {
