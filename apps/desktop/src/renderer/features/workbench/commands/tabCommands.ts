@@ -1,9 +1,5 @@
 import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
-import { stopPiSession } from "../../../features/agent/commands/agentChatCommands";
-import { clearTerminalAgentStatus } from "../../../features/agent/commands/agentSessionLifecycle";
-import { removeTabData } from "../../../features/agent/state/chatActions";
-import { resolveChatFilePath } from "../../../features/files/commands/fileCommands";
-import { requestTerminalFocus } from "../../../features/terminal/commands/terminalCommands";
+import { requestTerminalTabFocus } from "../../../events/terminalTabFocus";
 import {
   collectLeaves,
   findOppositePaneId,
@@ -16,19 +12,13 @@ import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore
 import type { CloseTabOptions, TabStoreState } from "../../../features/workbench/state/tabStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workbenchNavigationStore } from "../../../features/workbench/state/workbenchNavigationStore";
-import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceActions";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../../../helpers/tabHelpers";
-import { recordExplicitlyClosedTerminalTabId } from "../../../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;
 };
-
-type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
-type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
 
 /** Reads tab store state for both real Zustand stores and selector-only test doubles. */
 export function readTabStoreState(): TabStoreState {
@@ -40,38 +30,6 @@ export function readTabStoreState(): TabStoreState {
   return (tabStore as unknown as (selector: (state: TabStoreState) => TabStoreState) => TabStoreState)(
     (state) => state,
   );
-}
-
-/** Releases agent-chat sessions for tabs that are being closed in bulk. */
-function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {
-  for (const tab of tabs) {
-    clearAgentChatComposerFocus(tab.id);
-    // fire-and-forget: tab closure must not wait for daemon session cleanup.
-    void stopPiSession(tab.id).catch(() => {});
-  }
-}
-
-/** Closes terminal sessions for terminal tabs in the provided tab list. */
-
-function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
-  for (const tab of tabs) {
-    const sessionId = tab.data.sessionId?.trim();
-    if (!sessionId) {
-      continue;
-    }
-
-    void getDaemonClient()
-      .then((client) => {
-        return client.terminal.closeSession({ sessionId });
-      })
-      .catch((error) => {
-        const message = getErrorMessage(error);
-        enqueueWorkspaceErrorNotice({
-          title: "Failed to close terminal session",
-          message: `Could not clean up terminal session ${sessionId}: ${message}`,
-        });
-      });
-  }
 }
 
 /** Creates one tab optimistically, then initializes its backend chat session. */
@@ -125,26 +83,6 @@ export function closeTab(tabId: string, options?: CloseTabOptions): void {
     return;
   }
 
-  if (tab?.kind === "session" && tab.data.sessionId) {
-    const sessionId = tab.data.sessionId;
-    void getDaemonClient()
-      .then((client) => {
-        return client.chat.closeAgentSession({ sessionId });
-      })
-      .catch(() => {
-        return;
-      });
-  }
-  if (tab.kind === "agent-chat") {
-    clearAgentChatComposerFocus(tab.id);
-    // fire-and-forget: tab closure must not wait for daemon session cleanup.
-    void stopPiSession(tab.id).catch(() => {});
-  }
-  if (tab.kind === "terminal") {
-    recordExplicitlyClosedTerminalTabId(tab.id);
-    clearTerminalAgentStatus(tab.id);
-    closeTerminalSessionsForTabs([tab]);
-  }
   // Pane-aware preference: the ✕-button path passes the surviving pane's selected
   // tab explicitly (the tab is already unregistered by then); keyboard/menu paths
   // get it derived from the layout here. Without a preference, `closeTabState`
@@ -156,7 +94,6 @@ export function closeTab(tabId: string, options?: CloseTabOptions): void {
   } else {
     snapshot.closeTab(tabId);
   }
-  removeTabData([tabId]);
 }
 
 /** Closes unpinned sibling tabs for one workspace and closes associated backend sessions. */
@@ -167,32 +104,7 @@ export function closeOtherTabs(tabId: string): void {
     return;
   }
 
-  const removedTabs = snapshot.tabs.filter(
-    (tab) => tab.workspaceId === target.workspaceId && tab.id !== tabId && !tab.pinned,
-  );
-  const removedTerminalTabs = removedTabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
-  const removedAgentChatTabs = removedTabs.filter((tab): tab is AgentChatTab => tab.kind === "agent-chat");
-  const removedTabIds = removedTabs.map((tab) => tab.id);
-
-  for (const sessionId of collectSessionIdsToCloseOtherTabs(snapshot.tabs, tabId)) {
-    void getDaemonClient()
-      .then((client) => {
-        return client.chat.closeAgentSession({ sessionId });
-      })
-      .catch(() => {
-        return;
-      });
-  }
-  for (const removedTerminalTab of removedTerminalTabs) {
-    recordExplicitlyClosedTerminalTabId(removedTerminalTab.id);
-    clearTerminalAgentStatus(removedTerminalTab.id);
-  }
-  closeTerminalSessionsForTabs(removedTerminalTabs);
-  stopAgentChatSessionsForTabs(removedAgentChatTabs);
   snapshot.closeOtherTabs(tabId);
-  if (removedTabIds.length > 0) {
-    removeTabData(removedTabIds);
-  }
 }
 
 /** Closes all unpinned tabs for one workspace and closes associated backend sessions. */
@@ -203,30 +115,7 @@ export function closeAllTabs(tabId: string): void {
     return;
   }
 
-  const removedTabs = snapshot.tabs.filter((tab) => tab.workspaceId === target.workspaceId && !tab.pinned);
-  const removedTerminalTabs = removedTabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
-  const removedAgentChatTabs = removedTabs.filter((tab): tab is AgentChatTab => tab.kind === "agent-chat");
-  const removedTabIds = removedTabs.map((tab) => tab.id);
-
-  for (const sessionId of collectSessionIdsToCloseAllTabs(snapshot.tabs, tabId)) {
-    void getDaemonClient()
-      .then((client) => {
-        return client.chat.closeAgentSession({ sessionId });
-      })
-      .catch(() => {
-        return;
-      });
-  }
-  for (const removedTerminalTab of removedTerminalTabs) {
-    recordExplicitlyClosedTerminalTabId(removedTerminalTab.id);
-    clearTerminalAgentStatus(removedTerminalTab.id);
-  }
-  closeTerminalSessionsForTabs(removedTerminalTabs);
-  stopAgentChatSessionsForTabs(removedAgentChatTabs);
   snapshot.closeAllTabs(tabId);
-  if (removedTabIds.length > 0) {
-    removeTabData(removedTabIds);
-  }
 }
 
 /** Sets one selected tab id in tab store state. */
@@ -244,7 +133,7 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
 
   const requestFocus =
     selectedTab.kind === "terminal"
-      ? () => requestTerminalFocus(selectedTab.id)
+      ? () => requestTerminalTabFocus(selectedTab.id)
       : selectedTab.kind === "agent-chat" && selectedTab.data.sessionView !== "subagent-detail"
         ? () => requestNewAgentChatComposerFocus(selectedTab.id)
         : undefined;
@@ -270,47 +159,6 @@ export function openTab(input: OpenWorkspaceTabInput, options?: { activePaneTabI
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
   snapshot.openTab(input, options ?? { activePaneTabIds: activePane?.tabIds });
   requestFocusForNewTab(previousTabIds);
-}
-
-/**
- * Opens one file referenced from chat, resolving it to a real workspace file first.
- *
- * When the referenced path does not exist (agents sometimes emit unreal paths),
- * a best-effort search is attempted; if no unique real file is found the user is
- * notified instead of opening a tab with mock content.
- */
-export async function openChatFileTab(input: {
-  workspaceId: string;
-  relativePath: string;
-  oppositePane?: boolean;
-}): Promise<void> {
-  const resolved = await resolveChatFilePath({ workspaceId: input.workspaceId, relativePath: input.relativePath });
-  if (resolved.status === "unavailable") {
-    enqueueWorkspaceErrorNotice({
-      title: "Unable to open file",
-      message: `Could not load ${input.relativePath}. Please try again.`,
-    });
-    return;
-  }
-  if (resolved.status === "not-found") {
-    enqueueWorkspaceErrorNotice({
-      title: "File not found",
-      message: `${input.relativePath} does not exist in this workspace.`,
-    });
-    return;
-  }
-
-  const tabInput = {
-    kind: "file" as const,
-    workspaceId: input.workspaceId,
-    path: resolved.path,
-    content: resolved.content,
-  };
-  if (input.oppositePane) {
-    openTabInOppositePane(tabInput);
-  } else {
-    openTab(tabInput);
-  }
 }
 
 /**
@@ -435,6 +283,11 @@ export function refreshFileTabFromDisk(input: { tabId: string; content: string; 
 /** Refreshes one diff tab content in place. */
 export function refreshDiffTabContent(input: { tabId: string; oldContent: string; newContent: string }) {
   readTabStoreState().refreshDiffTabContent(input);
+}
+
+/** Retains only tabs that belong to the provided workspace ids; returns the removed tab ids. */
+export function retainWorkspaceTabs(workspaceIds: string[]): string[] {
+  return tabStore.getState().retainWorkspaceTabs(workspaceIds);
 }
 
 /** Re-resolves the tab shown for one workspace after the selected workspace changed. */

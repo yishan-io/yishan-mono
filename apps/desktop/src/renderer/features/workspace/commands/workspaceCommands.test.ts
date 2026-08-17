@@ -22,8 +22,6 @@ import {
   renameWorkspaceBranch,
   setDisplayRepoIds,
   setLastUsedExternalAppId,
-  setLeftPaneWidth,
-  setRightPaneWidth,
 } from "./workspaceCommands";
 
 const rpcMocks = vi.hoisted(() => ({
@@ -647,11 +645,9 @@ describe("workspaceCommands", () => {
     resolveClose?.();
   });
 
-  it("delegates workspace view-state updates to workspace and layout stores", () => {
+  it("delegates workspace view-state updates to workspace and project stores", () => {
     const setDisplayProjectIdsState = vi.fn();
     const setLastUsedExternalAppIdState = vi.fn();
-    const setLeftPaneWidth = vi.fn();
-    const setRightPaneWidth = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
       renameWorkspace: renameWorkspaceState,
@@ -660,18 +656,13 @@ describe("workspaceCommands", () => {
       setDisplayProjectIds: setDisplayProjectIdsState,
       setLastUsedExternalAppId: setLastUsedExternalAppIdState,
     });
-    layoutStore.setState({ setLeftPaneWidth, setRightPaneWidth });
 
     setDisplayRepoIds(["repo-1"]);
     setLastUsedExternalAppId("vscode");
-    setLeftPaneWidth(320);
-    setRightPaneWidth(420);
     renameWorkspace({ repoId: "repo-1", workspaceId: "workspace-1", name: "next-name" });
 
     expect(setDisplayProjectIdsState).toHaveBeenCalledWith(["repo-1"]);
     expect(setLastUsedExternalAppIdState).toHaveBeenCalledWith("vscode");
-    expect(setLeftPaneWidth).toHaveBeenCalledWith(320);
-    expect(setRightPaneWidth).toHaveBeenCalledWith(420);
     expect(renameWorkspaceState).toHaveBeenCalledWith({
       repoId: "repo-1",
       workspaceId: "workspace-1",

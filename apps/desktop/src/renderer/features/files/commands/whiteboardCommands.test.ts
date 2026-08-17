@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -6,14 +8,15 @@ const mocks = vi.hoisted(() => ({
   openTab: vi.fn(),
 }));
 
-vi.mock("../../../features/files/commands/fileCommands", () => ({
+vi.mock("./fileCommands", () => ({
   listFiles: mocks.listFiles,
   createFile: mocks.createFile,
 }));
 
-vi.mock("./tabCommands", () => ({
-  openTab: mocks.openTab,
-}));
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+  return { ...actual, openTab: mocks.openTab };
+});
 
 import { createNewWhiteboard, resolveNextWhiteboardPath } from "./whiteboardCommands";
 

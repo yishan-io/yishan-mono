@@ -31,28 +31,32 @@ const mocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({
-    file: {
-      createFile: mocks.createFile,
-      createFolder: mocks.createFolder,
-      deleteEntry: mocks.deleteEntry,
-      listFiles: mocks.listFiles,
-      listFilesBatch: mocks.listFilesBatch,
+vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDaemonClient: vi.fn(async () => ({
+      file: {
+        createFile: mocks.createFile,
+        createFolder: mocks.createFolder,
+        deleteEntry: mocks.deleteEntry,
+        listFiles: mocks.listFiles,
+        listFilesBatch: mocks.listFilesBatch,
+        openEntryInExternalApp: mocks.openEntryInExternalApp,
+        readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
+        readFile: mocks.readFile,
+        renameEntry: mocks.renameEntry,
+        searchFiles: mocks.searchFiles,
+        writeFile: mocks.writeFile,
+      },
+    })),
+    getDesktopHostBridge: vi.fn(() => ({
       openEntryInExternalApp: mocks.openEntryInExternalApp,
+      listDetectedExternalAppIds: mocks.listDetectedExternalAppIds,
       readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
-      readFile: mocks.readFile,
-      renameEntry: mocks.renameEntry,
-      searchFiles: mocks.searchFiles,
-      writeFile: mocks.writeFile,
-    },
-  })),
-  getDesktopHostBridge: vi.fn(() => ({
-    openEntryInExternalApp: mocks.openEntryInExternalApp,
-    listDetectedExternalAppIds: mocks.listDetectedExternalAppIds,
-    readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
-  })),
-}));
+    })),
+  };
+});
 
 describe("fileCommands", () => {
   beforeEach(() => {

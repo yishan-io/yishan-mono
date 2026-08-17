@@ -20,8 +20,6 @@ export type WorkspaceCommands = {
   subscribeOpenCreateWorkspaceDialog: typeof workspaceCommands.subscribeOpenCreateWorkspaceDialog;
   setDisplayRepoIds: typeof workspaceCommands.setDisplayRepoIds;
   setLastUsedExternalAppId: typeof workspaceCommands.setLastUsedExternalAppId;
-  setLeftPaneWidth: typeof workspaceCommands.setLeftPaneWidth;
-  setRightPaneWidth: typeof workspaceCommands.setRightPaneWidth;
   toggleLeftPaneVisibility: typeof workspaceCommands.toggleLeftPaneVisibility;
   toggleRightPaneVisibility: typeof workspaceCommands.toggleRightPaneVisibility;
   activateWorkspacePane: typeof workspaceCommands.activateWorkspacePane;

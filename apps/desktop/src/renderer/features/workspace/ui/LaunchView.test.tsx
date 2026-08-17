@@ -38,13 +38,12 @@ vi.mock("../../../features/agent/commands/agentChatSessionHistory", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 
-vi.mock("../../../features/workbench/commands/whiteboardCommands", () => ({
+vi.mock("@renderer/features/files", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
 }));
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     openTab: mocks.openTab,
     openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
   });
@@ -66,7 +65,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",

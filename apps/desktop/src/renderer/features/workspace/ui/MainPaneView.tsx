@@ -1,21 +1,33 @@
 import { Box } from "@mui/material";
+import { WorkspaceAgentChatSurface } from "@renderer/features/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/features/workbench";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { resizeRightPane } from "@renderer/features/workbench";
+import { useSelectedTabId } from "@renderer/features/workbench";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useTerminalCommands } from "../../../app/commands/useCommands";
+import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
+import {
+  useFileCommands,
+  useGitCommands,
+  useTerminalCommands,
+  useWorkbenchCommands,
+} from "../../../app/commands/useCommands";
+import { useTabContentRenderer } from "../../../app/ui/useTabContentRenderer";
 import { ColumnSeparator } from "../../../components/ColumnSeparator";
 import { TabPanel } from "../../../components/TabPanel";
 import { retainOpenAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
+import { findTabWithSession } from "../../../features/agent/commands/agentChatCommands";
+import { useLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
-import { disposeTerminalRuntimesForClosedTabs } from "../../../features/terminal";
-import { resizeRightPane } from "../../../features/workbench/commands/tabCommands";
+import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "../../../features/terminal";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 import { useRightPaneWidth } from "../../../features/workbench/ui/hooks/useWorkbenchLayout";
 import { useWorkspaceTabs } from "../../../features/workbench/ui/hooks/useWorkbenchTabs";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
+import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
 import { DARK_SURFACE_COLORS } from "../../../theme";
 import { WorkspaceSplitPane } from "../../workbench/ui/WorkspaceSplitPaneView";
 import { FileSearchOverlay } from "./FileSearchOverlay";
@@ -35,11 +47,62 @@ function clamp(value: number, min: number, max: number): number {
 export function MainPaneView() {
   const { t } = useTranslation();
   const cmd = useTerminalCommands();
+  const workbenchCommands = useWorkbenchCommands();
+  const fileCommands = useFileCommands();
+  const gitCommands = useGitCommands();
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
   const isErrorWorkspace = selectedWorkspace?.state === "error";
   const tabs = useWorkspaceTabs();
+  const selectedTabId = useSelectedTabId();
+  const mergedCmd = useMemo(
+    () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
+    [workbenchCommands, fileCommands, gitCommands],
+  );
+  const lastUsedExternalAppId = useLastUsedExternalAppId();
+  const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
+  const externalAppLabel = lastUsedExternalAppPreset
+    ? `Open in ${lastUsedExternalAppPreset.label}`
+    : "Open in external app";
+  const [focusContentRequestKey, setFocusContentRequestKey] = useState(0);
+  const renderTabContent = useTabContentRenderer({
+    workspace: selectedWorkspace,
+    externalAppLabel,
+    focusContentRequestKey,
+    cmd: mergedCmd,
+    onOpenExternalApp: async (filePath) => {
+      const workspaceWorktreePath = selectedWorkspace?.worktreePath;
+      if (!workspaceWorktreePath) return;
+      try {
+        await mergedCmd.openEntryInExternalApp({
+          workspaceWorktreePath,
+          appId: lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
+          relativePath: filePath,
+        });
+      } catch (error) {
+        console.error("Failed to open workspace file externally", error);
+      }
+    },
+  });
+  const renderAgentChatSurface = useCallback(
+    (input: {
+      tab: Extract<WorkspaceTab, { kind: "agent-chat" }>;
+      isWorkspaceActive: boolean;
+      isDraggingSplit: boolean;
+      isSelected: boolean;
+      isInActivePane: boolean;
+      rect: { left: number; top: number; width: number; height: number } | null;
+      paneId: string;
+      lastKnownRectByTabIdRef: React.MutableRefObject<
+        Record<string, { left: number; top: number; width: number; height: number }>
+      >;
+      handleFocusPane: (paneId: string) => void;
+    }) => {
+      return <WorkspaceAgentChatSurface key={input.tab.id} {...input} />;
+    },
+    [],
+  );
   const inUseByAgentKind = useAgentKindsInUse();
   const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
   const rightWidth = useRightPaneWidth();
@@ -76,6 +139,25 @@ export function MainPaneView() {
     retainOpenAgentChatComposerFocus(agentChatTabIds);
     disposeTerminalRuntimesForClosedTabs(terminalTabIds);
   }, [cmd, tabs]);
+
+  // Force-fit terminal runtimes when a terminal tab becomes the selected one so
+  // the PTY surface fills the pane placeholder (Workbench presents, Terminal fits).
+  useEffect(() => {
+    const selectedTab = tabs.find((tab) => tab.id === selectedTabId);
+    if (selectedTab?.kind !== "terminal") {
+      return;
+    }
+    const terminalTabIds = tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id);
+    if (terminalTabIds.length === 0) {
+      return;
+    }
+    const frameId = window.requestAnimationFrame(() => {
+      forceFitTerminalRuntimes(terminalTabIds);
+    });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [tabs, selectedTabId]);
 
   const workspaceIdsWithTabs = useMemo(() => {
     const ids = new Set<string>();
@@ -134,6 +216,13 @@ export function MainPaneView() {
                     workspaceId={wsId}
                     isActive={wsId === selectedWorkspaceId}
                     workspaceTabs={tabsByWorkspaceId.get(wsId) ?? []}
+                    worktreePath={workspaces.find((ws) => ws.id === wsId)?.worktreePath}
+                    enabledAgentKinds={enabledAgentKinds}
+                    lastUsedExternalAppId={lastUsedExternalAppId}
+                    findTabWithSession={findTabWithSession}
+                    formatAgentSessionTitle={formatAgentSessionTitle}
+                    renderTabContent={renderTabContent}
+                    renderAgentChatSurface={renderAgentChatSurface}
                   />
                 </Box>
               ))}

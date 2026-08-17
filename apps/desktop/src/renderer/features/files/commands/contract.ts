@@ -6,6 +6,7 @@
  * enforces the surface at typecheck time so a renamed/removed export fails.
  */
 import type * as fileCommands from "./fileCommands";
+import type * as whiteboardCommands from "./whiteboardCommands";
 
 export type FileCommands = {
   listFiles: typeof fileCommands.listFiles;
@@ -25,4 +26,6 @@ export type FileCommands = {
   buildWorkspaceFileUrl: typeof fileCommands.buildWorkspaceFileUrl;
   copyFiles: typeof fileCommands.copyFiles;
   writeFileBase64: typeof fileCommands.writeFileBase64;
+  createNewWhiteboard: typeof whiteboardCommands.createNewWhiteboard;
+  resolveNextWhiteboardPath: typeof whiteboardCommands.resolveNextWhiteboardPath;
 };

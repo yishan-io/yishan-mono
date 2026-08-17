@@ -19,6 +19,7 @@ export type {
   AgentThinkingSignatureSummary,
 } from "./model/agentChatTypes";
 export { isAgentSessionBusy } from "./model/agentChatTypes";
+export { removeTabData, removeWorkspaceTaskCounts } from "./state/chatActions";
 export type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
 // Re-exported through the public API instead of the events module (Phase 17).

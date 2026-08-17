@@ -1,34 +1,27 @@
 import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
-import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
+import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
 import { AgentIcon } from "../../../components/AgentIcon";
 import { SplitPaneContainer } from "../../../components/SplitPaneContainer";
 import { SplitPaneGroup } from "../../../components/SplitPaneGroup";
 import { SessionHistoryMenu } from "../../../components/agent/session/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../../components/fileTreeIcons";
-import { findTabWithSession } from "../../../features/agent/commands/agentChatCommands";
-import { useLastUsedExternalAppId } from "../../../features/project/ui/hooks/useProjectReadHooks";
-import { useAgentKindsInUse } from "../../../features/settings/ui/hooks/useSettingsReadHooks";
 import type { PaneLeaf, SplitPaneNode } from "../../../features/workbench/model/split-pane";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-
-import { useWorkspaces } from "@renderer/features/workspace";
 import { selectPaneForTab } from "../../../features/workbench/state/workbenchSelectors";
 import {
   type RefreshableOpenTab,
   useOpenTabAutoRefresh,
 } from "../../../features/workbench/ui/hooks/useOpenTabAutoRefresh";
-import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../../helpers/agentSettings";
-import { formatAgentSessionTitle } from "../../../helpers/agentSkillTextHelpers";
+import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { splitPaneStore } from "../state/splitPaneStore";
 import { tabStore } from "../state/tabStore";
 import { selectLayoutByWorkspaceId } from "../state/workbenchSelectors";
 import { selectSelectedTabId } from "../state/workbenchSelectors";
 import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
 import { usePaneTabHandlers } from "./usePaneTabHandlers";
-import { useTabContentRenderer } from "./useTabContentRenderer";
 import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
 import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";
 
@@ -38,6 +31,32 @@ export type WorkspaceSplitPaneProps = {
   workspaceId: string;
   isActive: boolean;
   workspaceTabs: WorkspaceTab[];
+  /** Worktree path for the workspace backing this pane (App-composed data). */
+  worktreePath: string | undefined;
+  /** Agent kinds currently in use, resolved by the App composition layer. */
+  enabledAgentKinds: DesktopAgentKind[];
+  /** Last used external app id for "open in app" actions. */
+  lastUsedExternalAppId: ExternalAppId | undefined;
+  /** Opens an existing agent-chat tab for a session, or null when absent. */
+  findTabWithSession: (sessionId: string) => string | undefined;
+  /** Formats an agent session title for the tab bar. */
+  formatAgentSessionTitle: (title: string) => string;
+  /** App-composed tab content renderer (product UI). */
+  renderTabContent: (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
+  /** App-composed agent-chat surface renderer (product UI). */
+  renderAgentChatSurface: (input: {
+    tab: Extract<WorkspaceTab, { kind: "agent-chat" }>;
+    isWorkspaceActive: boolean;
+    isDraggingSplit: boolean;
+    isSelected: boolean;
+    isInActivePane: boolean;
+    rect: { left: number; top: number; width: number; height: number } | null;
+    paneId: string;
+    lastKnownRectByTabIdRef: React.MutableRefObject<
+      Record<string, { left: number; top: number; width: number; height: number }>
+    >;
+    handleFocusPane: (paneId: string) => void;
+  }) => React.ReactNode;
 };
 
 /**
@@ -46,7 +65,18 @@ export type WorkspaceSplitPaneProps = {
  * Each workspace gets its own instance, kept mounted in the DOM and hidden via
  * `display: none` when inactive, so terminals/editors preserve their state.
  */
-export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceSplitPaneProps) {
+export function WorkspaceSplitPane({
+  workspaceId,
+  isActive,
+  workspaceTabs,
+  worktreePath,
+  enabledAgentKinds,
+  lastUsedExternalAppId,
+  findTabWithSession,
+  formatAgentSessionTitle,
+  renderTabContent,
+  renderAgentChatSurface,
+}: WorkspaceSplitPaneProps) {
   const workbenchCommands = useWorkbenchCommands();
   const fileCommands = useFileCommands();
   const gitCommands = useGitCommands();
@@ -56,34 +86,8 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
     [workbenchCommands, fileCommands, gitCommands],
   );
-  const workspaces = useWorkspaces();
   const selectedTabId = tabStore(selectSelectedTabId);
-  const workspace = workspaces.find((ws) => ws.id === workspaceId);
-  const lastUsedExternalAppId = useLastUsedExternalAppId();
-  const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
-  const externalAppLabel = lastUsedExternalAppPreset
-    ? `Open in ${lastUsedExternalAppPreset.label}`
-    : "Open in external app";
-
-  const handleOpenExternalApp = async (filePath: string) => {
-    const workspaceWorktreePath = workspace?.worktreePath;
-    if (!workspaceWorktreePath) return;
-    try {
-      await cmd.openEntryInExternalApp({
-        workspaceWorktreePath,
-        appId: lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
-        relativePath: filePath,
-      });
-    } catch (error) {
-      console.error("Failed to open workspace file externally", error);
-    }
-  };
-
-  const inUseByAgentKind = useAgentKindsInUse();
-  const enabledAgentKinds = useMemo(
-    () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
-    [inUseByAgentKind],
-  );
+  const workspace = { worktreePath };
   const enabledAgentKindSet = useMemo(() => new Set(enabledAgentKinds), [enabledAgentKinds]);
 
   const [focusContentRequestKey, setFocusContentRequestKey] = useState(0);
@@ -171,7 +175,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
   );
 
   useOpenTabAutoRefresh({
-    workspaceId: workspace?.id,
+    workspaceId,
     tabs: refreshableTabs,
     commands: cmd,
   });
@@ -236,14 +240,6 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
   );
 
   // ─── Tab content renderer ───────────────────────────────────────────────────
-
-  const renderTabContent = useTabContentRenderer({
-    workspace,
-    externalAppLabel,
-    focusContentRequestKey,
-    cmd,
-    onOpenExternalApp: handleOpenExternalApp,
-  });
 
   const renderPaneContent = useCallback((_pane: PaneLeaf, _placeholder: HTMLDivElement | null) => null, []);
 
@@ -328,6 +324,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
         lastKnownRectByTabIdRef={lastKnownRectByTabIdRef}
         handleFocusPane={handleFocusPane}
         renderTabContent={renderTabContent}
+        renderAgentChatSurface={renderAgentChatSurface}
       />
       {workspace?.worktreePath && (
         <SessionHistoryMenu

@@ -1,12 +1,12 @@
 import { fileTreeStore, setExpandedFileTreeItems, setSelectedEntryPath } from "@renderer/features/files";
 import { useFileSearchController } from "@renderer/features/files";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { openTab } from "@renderer/features/workbench";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
 import { buildWorkspaceFileUrl, readFile } from "../../../features/files/commands/fileCommands";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../../../features/files/ui/fileTreeHelpers";
-import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import {
   isAudioFile,

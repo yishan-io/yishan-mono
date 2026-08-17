@@ -21,11 +21,11 @@ import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
 import { projectStore } from "../../features/project/state/projectStore";
 import { sessionStore } from "../../features/session/state/sessionStore";
-import { syncTabStoreWithWorkspace } from "../../features/workbench/commands/workspaceTabSync";
 import {
   openFoldersForSnapshot,
   restoreFolderSelectionIfNeeded,
 } from "../../features/workspace/commands/localFolderCommands";
+import { syncTabStoreWithWorkspace } from "../../features/workspace/commands/workspaceTabSync";
 import { warmupWorkspacesForProjects } from "../../features/workspace/commands/workspaceWarmupCommand";
 import { reconcileWorkspaceSnapshot } from "../../features/workspace/model/snapshotReconciler";
 import { workspaceCreateProgressStore } from "../../features/workspace/state/workspaceCreateProgressStore";

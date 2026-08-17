@@ -4,17 +4,17 @@ import {
   requestSelectFolderInFileTree,
   requestUndo,
 } from "@renderer/features/files";
-import { getIsLeftPaneManuallyHidden } from "@renderer/features/workbench";
-import { type WorkspaceRightPaneTab, workbenchNavigationStore } from "@renderer/features/workbench";
-import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/features/workbench";
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import {
-  resizeLeftPane,
-  resizeRightPane,
+  DEFAULT_RIGHT_PANE_TAB,
+  type WorkspaceRightPaneTab,
+  getIsLeftPaneManuallyHidden,
+  layoutStore,
   setIsRightPaneHidden,
   setLeftPaneHidden,
   setRightPaneTab,
-} from "../../../features/workbench/commands/tabCommands";
+  workbenchNavigationStore,
+} from "@renderer/features/workbench";
+import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
@@ -30,7 +30,7 @@ import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./works
 
 export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
-import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workspace/commands/workspaceTabSync";
 export { deleteLocalFolder } from "./localFolderCommands";
 
 export const OPEN_CREATE_WORKSPACE_DIALOG_EVENT = "workspace:open-create-workspace-dialog";
@@ -86,16 +86,6 @@ export function setDisplayRepoIds(repoIds: string[]) {
 /** Stores last used external app id for quick-open actions. */
 export function setLastUsedExternalAppId(appId: ExternalAppId) {
   applyLastUsedExternalAppId(appId);
-}
-
-/** Sets left pane width in workspace layout state. */
-export function setLeftPaneWidth(width: number) {
-  resizeLeftPane(width);
-}
-
-/** Sets right pane width in workspace layout state. */
-export function setRightPaneWidth(width: number) {
-  resizeRightPane(width);
 }
 
 /** Toggles left workspace pane manual visibility state. */

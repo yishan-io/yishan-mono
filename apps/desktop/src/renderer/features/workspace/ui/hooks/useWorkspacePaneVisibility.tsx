@@ -1,7 +1,7 @@
 import { useMediaQuery, useTheme } from "@mui/material";
+import { setIsRightPaneHidden, setLeftPaneHidden } from "@renderer/features/workbench";
 import { type ReactNode, createContext, useContext, useMemo } from "react";
 import { useWorkspacePaneVisibilityState } from "../../../../app/selectors";
-import { setIsRightPaneHidden, setLeftPaneHidden } from "../../../../features/workbench/commands/tabCommands";
 
 export type WorkspacePaneVisibilityValue = {
   leftCollapsed: boolean;

@@ -1,8 +1,8 @@
 import { getTabs } from "@renderer/features/workbench";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { openTab } from "@renderer/features/workbench";
 import { writeTerminalInput } from "../../../features/terminal/commands/terminalCommands";
 import type { WorkspaceTab } from "../../../features/workbench";
-import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { delay } from "../../../helpers/delay";
 import { getDaemonClient } from "../../../rpc/rpcTransport";

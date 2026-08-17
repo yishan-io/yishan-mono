@@ -1,15 +1,15 @@
 import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
 import { incrementGitRefreshVersion } from "@renderer/features/git";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { activateProject } from "@renderer/features/workbench";
+import { resolveTabForWorkspace } from "@renderer/features/workbench";
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../features/session/state/sessionSelectors";
 import { selectIsDefaultContextEnabled } from "../../../features/settings/state/settingsSelectors";
-import { activateProject } from "../../../features/workbench/commands/navigationCommands";
-import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
-import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workspace/commands/workspaceTabSync";
 import {
   addWorkspace as applyAddWorkspace,
   deleteProject as applyDeleteProject,

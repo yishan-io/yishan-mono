@@ -1,4 +1,6 @@
 import { Box, Typography } from "@mui/material";
+import { RecentAgentSessions } from "@renderer/features/agent";
+import { createNewWhiteboard } from "@renderer/features/files";
 import { useTranslation } from "react-i18next";
 import {
   LuCircle,
@@ -12,8 +14,13 @@ import {
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
-import { createNewWhiteboard } from "../../../features/workbench/commands/whiteboardCommands";
+import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { AgentIcon } from "../../../components/AgentIcon";
+import {
+  type WorkspaceCreateProgressStep,
+  workspaceCreateProgressStore,
+} from "../../../features/workspace/state/workspaceCreateProgressStore";
+import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
@@ -21,14 +28,7 @@ import {
   type DesktopAgentKind,
 } from "../../../helpers/agentSettings";
 import { getRendererPlatform } from "../../../helpers/platform";
-import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
-import {
-  type WorkspaceCreateProgressStep,
-  workspaceCreateProgressStore,
-} from "../../../features/workspace/state/workspaceCreateProgressStore";
-import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
-import { RecentAgentSessions } from "@renderer/features/agent";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
   if (step.status === "completed") {

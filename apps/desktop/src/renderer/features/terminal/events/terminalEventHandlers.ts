@@ -1,3 +1,4 @@
+import { setTerminalTabAgentKind } from "@renderer/features/workbench";
 /**
  * Terminal event handlers — owns terminal.session.changed (tab reconcile via
  * the reconciler) and terminal.agent.changed (agent-kind metadata).
@@ -8,7 +9,6 @@
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
-import { setTerminalTabAgentKind } from "../../../features/workbench/commands/tabCommands";
 import { isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { clearTerminalAgentStatus } from "../../agent/commands/agentSessionLifecycle";

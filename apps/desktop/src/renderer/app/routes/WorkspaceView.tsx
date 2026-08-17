@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { gitProjectionStore } from "@renderer/features/git";
 import { CreateProjectDialogView } from "@renderer/features/project";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { resizeLeftPane } from "@renderer/features/workbench";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -424,9 +425,9 @@ export function WorkspaceView() {
       const { startX, startWidth } = leftDragRef.current;
       const delta = clientX - startX;
       const nextWidth = clamp(startWidth + delta, LEFT_MIN_WIDTH, maxLeftWidth);
-      cmd.setLeftPaneWidth(nextWidth);
+      resizeLeftPane(nextWidth);
     },
-    [cmd, maxLeftWidth],
+    [maxLeftWidth],
   );
 
   if (!isProjectsLoaded) {

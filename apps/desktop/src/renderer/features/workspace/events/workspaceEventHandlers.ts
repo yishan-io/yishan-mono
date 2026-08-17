@@ -12,10 +12,10 @@ import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpc
 
 import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
 import { gitProjectionStore } from "@renderer/features/git";
+import { openTab } from "@renderer/features/workbench";
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { openTab } from "../../../features/workbench/commands/tabCommands";
 import { workspaceCreateProgressStore } from "../../../features/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";

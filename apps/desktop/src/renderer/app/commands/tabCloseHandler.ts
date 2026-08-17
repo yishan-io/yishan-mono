@@ -1,0 +1,161 @@
+/**
+ * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
+ *
+ * UI composition code — not a Flow. Owns resource-specific cleanup when a
+ * Workbench Tab is closed, then removes the Tab through the Workbench
+ * remove-Tab command. Workbench Commands stay presentation-only.
+ *
+ * Command direction:
+ *   Workbench Tab UI
+ *     -> App Tab-close handler
+ *         -> Agent, Terminal, Files, or Git cleanup Command
+ *         -> Workbench remove-Tab Command
+ */
+import { clearAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
+import { stopPiSession } from "../../features/agent/commands/agentChatCommands";
+import { clearTerminalAgentStatus } from "../../features/agent/commands/agentSessionLifecycle";
+import { removeTabData } from "../../features/agent/state/chatActions";
+import {
+  closeAllTabs,
+  closeOtherTabs,
+  closeTab,
+  getTabById,
+  getTabs,
+} from "@renderer/features/workbench";
+import { getErrorMessage } from "../../helpers/errorHelpers";
+import { recordExplicitlyClosedTerminalTabId } from "../../helpers/terminalCloseTombstones";
+import { getDaemonClient } from "../../rpc/rpcTransport";
+import type { WorkspaceTab } from "@renderer/features/workbench";
+import type { CloseTabOptions } from "../../features/workbench/state/tabStore";
+import { enqueueWorkspaceErrorNotice } from "../../features/workspace/state/workspaceActions";
+
+type TerminalTab = Extract<WorkspaceTab, { kind: "terminal" }>;
+type AgentChatTab = Extract<WorkspaceTab, { kind: "agent-chat" }>;
+
+/** Releases agent-chat sessions for tabs that are being closed. */
+function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {
+  for (const tab of tabs) {
+    clearAgentChatComposerFocus(tab.id);
+    // fire-and-forget: tab closure must not wait for daemon session cleanup.
+    void stopPiSession(tab.id).catch(() => {});
+  }
+}
+
+/** Closes terminal sessions for terminal tabs in the provided tab list. */
+function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
+  for (const tab of tabs) {
+    const sessionId = tab.data.sessionId?.trim();
+    if (!sessionId) {
+      continue;
+    }
+
+    void getDaemonClient()
+      .then((client) => {
+        return client.terminal.closeSession({ sessionId });
+      })
+      .catch((error) => {
+        const message = getErrorMessage(error);
+        enqueueWorkspaceErrorNotice({
+          title: "Failed to close terminal session",
+          message: `Could not clean up terminal session ${sessionId}: ${message}`,
+        });
+      });
+  }
+}
+
+/** Releases daemon chat sessions for session-kind tabs in the provided list. */
+function closeAgentSessionsForTabs(tabs: WorkspaceTab[]): void {
+  for (const tab of tabs) {
+    if (tab.kind !== "session") {
+      continue;
+    }
+    const sessionId = tab.data.sessionId;
+    if (!sessionId) {
+      continue;
+    }
+    void getDaemonClient()
+      .then((client) => {
+        return client.chat.closeAgentSession({ sessionId });
+      })
+      .catch(() => {
+        return;
+      });
+  }
+}
+
+/** Releases product resources for one tab, then removes it via Workbench. */
+export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): void {
+  const tab = getTabById(tabId);
+  if (!tab) {
+    return;
+  }
+
+  if (tab.kind === "session") {
+    closeAgentSessionsForTabs([tab]);
+  }
+  if (tab.kind === "agent-chat") {
+    clearAgentChatComposerFocus(tab.id);
+    void stopPiSession(tab.id).catch(() => {});
+  }
+  if (tab.kind === "terminal") {
+    recordExplicitlyClosedTerminalTabId(tab.id);
+    clearTerminalAgentStatus(tab.id);
+    closeTerminalSessionsForTabs([tab]);
+  }
+  removeTabData([tabId]);
+  closeTab(tabId, options);
+}
+
+/** Releases product resources for unpinned sibling tabs, then removes them via Workbench. */
+export function closeOtherTabsWithCleanup(tabId: string): void {
+  const tabs = getTabs();
+  const target = tabs.find((tab) => tab.id === tabId);
+  if (!target) {
+    return;
+  }
+
+  const removedTabs = tabs.filter(
+    (tab) => tab.workspaceId === target.workspaceId && tab.id !== tabId && !tab.pinned,
+  );
+  const removedTerminalTabs = removedTabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
+  const removedAgentChatTabs = removedTabs.filter((tab): tab is AgentChatTab => tab.kind === "agent-chat");
+  const removedTabIds = removedTabs.map((tab) => tab.id);
+
+  closeAgentSessionsForTabs(removedTabs);
+  for (const removedTerminalTab of removedTerminalTabs) {
+    recordExplicitlyClosedTerminalTabId(removedTerminalTab.id);
+    clearTerminalAgentStatus(removedTerminalTab.id);
+  }
+  closeTerminalSessionsForTabs(removedTerminalTabs);
+  stopAgentChatSessionsForTabs(removedAgentChatTabs);
+  if (removedTabIds.length > 0) {
+    removeTabData(removedTabIds);
+  }
+  closeOtherTabs(tabId);
+}
+
+/** Releases product resources for all unpinned workspace tabs, then removes them via Workbench. */
+export function closeAllTabsWithCleanup(tabId: string): void {
+  const tabs = getTabs();
+  const target = tabs.find((tab) => tab.id === tabId);
+  if (!target) {
+    return;
+  }
+
+  const removedTabs = tabs.filter((tab) => tab.workspaceId === target.workspaceId && !tab.pinned);
+  const removedTerminalTabs = removedTabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
+  const removedAgentChatTabs = removedTabs.filter((tab): tab is AgentChatTab => tab.kind === "agent-chat");
+  const removedTabIds = removedTabs.map((tab) => tab.id);
+
+  closeAgentSessionsForTabs(removedTabs);
+  for (const removedTerminalTab of removedTerminalTabs) {
+    recordExplicitlyClosedTerminalTabId(removedTerminalTab.id);
+    clearTerminalAgentStatus(removedTerminalTab.id);
+  }
+  closeTerminalSessionsForTabs(removedTerminalTabs);
+  stopAgentChatSessionsForTabs(removedAgentChatTabs);
+  if (removedTabIds.length > 0) {
+    removeTabData(removedTabIds);
+  }
+  closeAllTabs(tabId);
+}

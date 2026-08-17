@@ -1,5 +1,5 @@
-import { createFile, listFiles } from "../../../features/files/commands/fileCommands";
-import { openTab } from "./tabCommands";
+import { openTab } from "@renderer/features/workbench";
+import { createFile, listFiles } from "./fileCommands";
 
 const WHITEBOARD_BASE_NAME = "whiteboard";
 const WHITEBOARD_EXTENSION = "excalidraw";

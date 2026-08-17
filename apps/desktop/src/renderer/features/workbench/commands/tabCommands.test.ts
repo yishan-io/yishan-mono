@@ -2,21 +2,24 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  __resetExplicitlyClosedTerminalTabIdsForTests,
-  consumeExplicitlyClosedTerminalTabId,
-} from "../../../helpers/terminalCloseTombstones";
+  __resetPendingTerminalTabFocusForTests,
+  consumeTerminalTabFocus,
+  hasPendingTerminalTabFocus,
+} from "../../../events/terminalTabFocus";
 import { chatStore } from "../../../features/agent/state/chatStore";
 import { createLeaf } from "../../../features/workbench/model/split-pane";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
-import { terminalFocusStore } from "../../../features/terminal/state/terminalFocusStore";
+import {
+  __resetExplicitlyClosedTerminalTabIdsForTests,
+  consumeExplicitlyClosedTerminalTabId,
+} from "../../../helpers/terminalCloseTombstones";
 import {
   closeAllTabs,
   closeOtherTabs,
   closeTab,
   createTab,
   markFileTabSaved,
-  openChatFileTab,
   openTab,
   renameTab,
   reorderTab,
@@ -37,15 +40,10 @@ const rpcMocks = vi.hoisted(() => ({
   requestAgentChatComposerFocus: vi.fn(),
   requestNewAgentChatComposerFocus: vi.fn(),
   clearAgentChatComposerFocus: vi.fn(),
-  resolveChatFilePath: vi.fn(),
 }));
 
 vi.mock("../../../features/agent/commands/agentChatCommands", () => ({
   stopPiSession: rpcMocks.stopPiSession,
-}));
-
-vi.mock("../../../features/files/commands/fileCommands", () => ({
-  resolveChatFilePath: rpcMocks.resolveChatFilePath,
 }));
 
 vi.mock("../../../features/workspace/state/workspaceLifecycleNoticeStore", () => ({
@@ -91,6 +89,7 @@ afterEach(() => {
   splitPaneStore.setState(initialSplitPaneStoreState, true);
   vi.clearAllMocks();
   __resetExplicitlyClosedTerminalTabIdsForTests();
+  __resetPendingTerminalTabFocusForTests();
 });
 
 describe("tabCommands", () => {
@@ -123,430 +122,6 @@ describe("tabCommands", () => {
     expect(resolveSessionTab).toHaveBeenCalledWith("tab-1", "session-1");
   });
 
-  it("closes tab and backend session when tab has session id", async () => {
-    const closeTabState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-1",
-          workspaceId: "workspace-1",
-          title: "Untitled 1",
-          pinned: false,
-          kind: "session",
-          data: { sessionId: "session-1" },
-        },
-      ],
-      closeTab: closeTabState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeTab("tab-1");
-    await Promise.resolve();
-
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-1" });
-    expect(closeTabState).toHaveBeenCalledWith("tab-1");
-    expect(removeTabData).toHaveBeenCalledWith(["tab-1"]);
-  });
-
-  it("closes backend terminal session when terminal tab is closed", async () => {
-    const closeTabState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-terminal-1",
-          workspaceId: "workspace-1",
-          title: "Codex",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Codex", launchCommand: "codex", sessionId: "terminal-session-1" },
-        },
-      ],
-      closeTab: closeTabState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeTab("tab-terminal-1");
-    await Promise.resolve();
-
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-1" });
-    expect(closeTabState).toHaveBeenCalledWith("tab-terminal-1");
-    expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-1"]);
-  });
-
-  it("closes terminal tab locally when no backend session id is bound yet", async () => {
-    const closeTabState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-terminal-pending",
-          workspaceId: "workspace-1",
-          title: "Terminal",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal" },
-        },
-      ],
-      closeTab: closeTabState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeTab("tab-terminal-pending");
-    await Promise.resolve();
-
-    expect(rpcMocks.closeSession).not.toHaveBeenCalled();
-    expect(closeTabState).toHaveBeenCalledWith("tab-terminal-pending");
-    expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-pending"]);
-  });
-
-  it("clears deferred composer focus when an agent-chat tab closes", async () => {
-    const closeTabState = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-agent-chat",
-          workspaceId: "workspace-1",
-          title: "Agent Chat",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/tmp/project" },
-        },
-      ],
-      closeTab: closeTabState,
-    });
-
-    closeTab("tab-agent-chat");
-
-    expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-agent-chat");
-    expect(closeTabState).toHaveBeenCalledWith("tab-agent-chat");
-  });
-
-  it("closes other tabs and backend sessions for same workspace", async () => {
-    const closeOtherTabsState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-1",
-          workspaceId: "workspace-1",
-          title: "A",
-          pinned: false,
-          kind: "session",
-          data: { sessionId: "session-1" },
-        },
-        {
-          id: "tab-2",
-          workspaceId: "workspace-1",
-          title: "B",
-          pinned: false,
-          kind: "session",
-          data: { sessionId: "session-2" },
-        },
-        {
-          id: "tab-pinned",
-          workspaceId: "workspace-1",
-          title: "Pinned",
-          pinned: true,
-          kind: "session",
-          data: { sessionId: "session-pinned" },
-        },
-        {
-          id: "tab-3",
-          workspaceId: "workspace-2",
-          title: "C",
-          pinned: false,
-          kind: "session",
-          data: { sessionId: "session-3" },
-        },
-      ],
-      closeOtherTabs: closeOtherTabsState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeOtherTabs("tab-1");
-    await Promise.resolve();
-
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-2" });
-    expect(rpcMocks.closeAgentSession).not.toHaveBeenCalledWith({ sessionId: "session-pinned" });
-    expect(closeOtherTabsState).toHaveBeenCalledWith("tab-1");
-    expect(removeTabData).toHaveBeenCalledWith(["tab-2"]);
-  });
-
-  it("releases all agent-chat tabs while leaving child-session ownership to detail tabs", async () => {
-    const closeOtherTabsState = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-keep",
-          workspaceId: "workspace-1",
-          title: "Keep",
-          pinned: false,
-          kind: "session",
-          data: { sessionId: "session-keep" },
-        },
-        {
-          id: "tab-agent",
-          workspaceId: "workspace-1",
-          title: "Agent",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/tmp/project", sessionId: "agent-session", userRenamed: false, sessionView: "full" },
-        },
-        {
-          id: "tab-subagent-detail",
-          workspaceId: "workspace-1",
-          title: "Sub-agent",
-          pinned: false,
-          kind: "agent-chat",
-          data: {
-            cwd: "/tmp/project",
-            sessionId: "child-session",
-            userRenamed: false,
-            sessionView: "subagent-detail",
-          },
-        },
-      ],
-      closeOtherTabs: closeOtherTabsState,
-    });
-
-    closeOtherTabs("tab-keep");
-    await vi.waitFor(() => {
-      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-agent");
-      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-subagent-detail");
-    });
-    expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-agent");
-    expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-subagent-detail");
-  });
-
-  it("closes terminal sessions for removed sibling tabs", async () => {
-    const closeOtherTabsState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-terminal-keep",
-          workspaceId: "workspace-1",
-          title: "A",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal A", sessionId: "terminal-session-1" },
-        },
-        {
-          id: "tab-terminal-close",
-          workspaceId: "workspace-1",
-          title: "B",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal B", sessionId: "terminal-session-2" },
-        },
-        {
-          id: "tab-terminal-pinned",
-          workspaceId: "workspace-1",
-          title: "Pinned Terminal",
-          pinned: true,
-          kind: "terminal",
-          data: { title: "Pinned Terminal", sessionId: "terminal-session-pinned" },
-        },
-      ],
-      closeOtherTabs: closeOtherTabsState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeOtherTabs("tab-terminal-keep");
-    await Promise.resolve();
-
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-2" });
-    expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({ sessionId: "terminal-session-pinned" });
-    expect(closeOtherTabsState).toHaveBeenCalledWith("tab-terminal-keep");
-    expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-close"]);
-  });
-
-  it("records tombstones for terminal tabs closed via closeOtherTabs", async () => {
-    const closeOtherTabsState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-terminal-keep",
-          workspaceId: "workspace-1",
-          title: "Keep",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Keep", sessionId: "terminal-session-keep" },
-        },
-        {
-          id: "tab-terminal-close",
-          workspaceId: "workspace-1",
-          title: "Close",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Close", sessionId: "terminal-session-2" },
-        },
-      ],
-      closeOtherTabs: closeOtherTabsState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeOtherTabs("tab-terminal-keep");
-    await Promise.resolve();
-
-    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-close")).toBe(true);
-    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-keep")).toBe(false);
-  });
-
-  it("shows an error notice when terminal cleanup fails", async () => {
-    const closeTabState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-terminal-1",
-          workspaceId: "workspace-1",
-          title: "Terminal",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal", sessionId: "terminal-session-1" },
-        },
-      ],
-      closeTab: closeTabState,
-    });
-    chatStore.setState({ removeTabData });
-    rpcMocks.closeSession.mockRejectedValueOnce(new Error("permission denied"));
-
-    closeTab("tab-terminal-1");
-    await Promise.resolve();
-    await Promise.resolve();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(rpcMocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
-      title: "Failed to close terminal session",
-      message: "Could not clean up terminal session terminal-session-1: permission denied",
-    });
-  });
-
-  it("closes all tabs and backend sessions for same workspace", async () => {
-    const closeAllTabsState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-1",
-          workspaceId: "workspace-1",
-          title: "A",
-          pinned: false,
-          kind: "session",
-          data: { sessionId: "session-1" },
-        },
-        {
-          id: "tab-2",
-          workspaceId: "workspace-1",
-          title: "B",
-          pinned: false,
-          kind: "session",
-          data: { sessionId: "session-2" },
-        },
-        {
-          id: "tab-pinned",
-          workspaceId: "workspace-1",
-          title: "Pinned",
-          pinned: true,
-          kind: "session",
-          data: { sessionId: "session-pinned" },
-        },
-      ],
-      closeAllTabs: closeAllTabsState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeAllTabs("tab-1");
-    await Promise.resolve();
-
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-1" });
-    expect(rpcMocks.closeAgentSession).toHaveBeenCalledWith({ sessionId: "session-2" });
-    expect(rpcMocks.closeAgentSession).not.toHaveBeenCalledWith({ sessionId: "session-pinned" });
-    expect(closeAllTabsState).toHaveBeenCalledWith("tab-1");
-    expect(removeTabData).toHaveBeenCalledWith(["tab-1", "tab-2"]);
-  });
-
-  it("closes terminal sessions for workspace tabs during close all", async () => {
-    const closeAllTabsState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-terminal-1",
-          workspaceId: "workspace-1",
-          title: "A",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal A", sessionId: "terminal-session-3" },
-        },
-        {
-          id: "tab-terminal-2",
-          workspaceId: "workspace-1",
-          title: "B",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal B", sessionId: "terminal-session-4" },
-        },
-        {
-          id: "tab-terminal-pinned",
-          workspaceId: "workspace-1",
-          title: "Pinned Terminal",
-          pinned: true,
-          kind: "terminal",
-          data: { title: "Pinned Terminal", sessionId: "terminal-session-pinned" },
-        },
-      ],
-      closeAllTabs: closeAllTabsState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeAllTabs("tab-terminal-1");
-    await Promise.resolve();
-
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-3" });
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-4" });
-    expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({ sessionId: "terminal-session-pinned" });
-    expect(closeAllTabsState).toHaveBeenCalledWith("tab-terminal-1");
-    expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-1", "tab-terminal-2"]);
-  });
-
-  it("records tombstones for terminal tabs closed via closeAllTabs", async () => {
-    const closeAllTabsState = vi.fn();
-    const removeTabData = vi.fn();
-    tabStore.setState({
-      tabs: [
-        {
-          id: "tab-terminal-1",
-          workspaceId: "workspace-1",
-          title: "A",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal A", sessionId: "terminal-session-3" },
-        },
-        {
-          id: "tab-terminal-2",
-          workspaceId: "workspace-1",
-          title: "B",
-          pinned: false,
-          kind: "terminal",
-          data: { title: "Terminal B", sessionId: "terminal-session-4" },
-        },
-      ],
-      closeAllTabs: closeAllTabsState,
-    });
-    chatStore.setState({ removeTabData });
-
-    closeAllTabs("tab-terminal-1");
-    await Promise.resolve();
-
-    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-1")).toBe(true);
-    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-2")).toBe(true);
-  });
-
   it("requests terminal focus on the next frame only for a newly created terminal tab", () => {
     let focusFrame: FrameRequestCallback | undefined;
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
@@ -563,11 +138,11 @@ describe("tabCommands", () => {
 
     const createdTabId = tabStore.getState().selectedTabId;
     expect(createdTabId).not.toBe("");
-    expect(terminalFocusStore.getState().pendingTabIds.has(createdTabId)).toBe(false);
+    expect(hasPendingTerminalTabFocus(createdTabId)).toBe(false);
     focusFrame?.(0);
-    expect(terminalFocusStore.getState().pendingTabIds.has(createdTabId)).toBe(true);
+    expect(hasPendingTerminalTabFocus(createdTabId)).toBe(true);
 
-    terminalFocusStore.getState().consumeFocus(createdTabId);
+    consumeTerminalTabFocus(createdTabId);
     openTab({ workspaceId: "workspace-1", kind: "terminal", title: "Terminal" });
 
     expect(rpcMocks.requestTerminalRuntimeFocus).not.toHaveBeenCalled();
@@ -890,74 +465,5 @@ describe("tabCommands", () => {
 
     expect(tabStore.getState().selectedTabId).toBe("tab-b");
     expect(tabStore.getState().tabs.some((tab) => tab.id === "tab-c")).toBe(false);
-  });
-
-  it("openChatFileTab opens the resolved file in the resolved workspace", async () => {
-    const openTabStateSpy = vi.fn();
-    tabStore.setState({ openTab: openTabStateSpy });
-    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({
-      status: "found",
-      path: "src/db/index.ts",
-      content: "db content",
-    });
-
-    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
-
-    expect(rpcMocks.resolveChatFilePath).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
-      relativePath: "db/index.ts",
-    });
-    expect(openTabStateSpy).toHaveBeenCalledWith(
-      { kind: "file", workspaceId: "workspace-1", path: "src/db/index.ts", content: "db content" },
-      expect.anything(),
-    );
-    expect(rpcMocks.enqueueWorkspaceErrorNotice).not.toHaveBeenCalled();
-  });
-
-  it("openChatFileTab opens in the opposite pane when requested", async () => {
-    const openTabStateSpy = vi.fn();
-    tabStore.setState({ openTab: openTabStateSpy });
-    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({
-      status: "found",
-      path: "src/a.ts",
-      content: "a",
-    });
-
-    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "a.ts", oppositePane: true });
-
-    // No split layout exists in the test store — openTabInOppositePane falls
-    // back to a normal open, which must still carry the resolved workspace.
-    expect(openTabStateSpy).toHaveBeenCalledWith(
-      { kind: "file", workspaceId: "workspace-1", path: "src/a.ts", content: "a" },
-      expect.anything(),
-    );
-  });
-
-  it("openChatFileTab notifies when the referenced file does not exist", async () => {
-    const openTabStateSpy = vi.fn();
-    tabStore.setState({ openTab: openTabStateSpy });
-    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({ status: "not-found" });
-
-    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
-
-    expect(rpcMocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
-      title: "File not found",
-      message: "db/index.ts does not exist in this workspace.",
-    });
-    expect(openTabStateSpy).not.toHaveBeenCalled();
-  });
-
-  it("openChatFileTab notifies separately when the file could not be loaded", async () => {
-    const openTabStateSpy = vi.fn();
-    tabStore.setState({ openTab: openTabStateSpy });
-    rpcMocks.resolveChatFilePath.mockResolvedValueOnce({ status: "unavailable" });
-
-    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
-
-    expect(rpcMocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
-      title: "Unable to open file",
-      message: "Could not load db/index.ts. Please try again.",
-    });
-    expect(openTabStateSpy).not.toHaveBeenCalled();
   });
 });

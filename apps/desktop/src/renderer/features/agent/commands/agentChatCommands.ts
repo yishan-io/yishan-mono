@@ -258,3 +258,52 @@ export async function restartAgentSessionForProvider(opts: {
 // ─── Session history ─────────────────────────────────────────────────────────
 // Moved to agentChatSessionHistory.ts; re-exported to preserve the public API.
 export { fetchAgentSessionFilePath, fetchSessionHistory, listActivePiSessions } from "./agentChatSessionHistory";
+
+// ─── Chat-to-file tab bridge (desktop6-adjust.md W5) ───────────────────────
+// Opening a file referenced from chat is an Agent workflow: resolve the path
+// through the Files feature, then open a Workbench Tab through the public
+// Workbench API.
+import { openTab, openTabInOppositePane } from "@renderer/features/workbench";
+import { resolveChatFilePath } from "../../files/commands/fileCommands";
+import { enqueueWorkspaceErrorNotice } from "../../workspace/state/workspaceActions";
+
+/**
+ * Opens one file referenced from chat, resolving it to a real workspace file first.
+ *
+ * When the referenced path does not exist (agents sometimes emit unreal paths),
+ * a best-effort search is attempted; if no unique real file is found the user is
+ * notified instead of opening a tab with mock content.
+ */
+export async function openChatFileTab(input: {
+  workspaceId: string;
+  relativePath: string;
+  oppositePane?: boolean;
+}): Promise<void> {
+  const resolved = await resolveChatFilePath({ workspaceId: input.workspaceId, relativePath: input.relativePath });
+  if (resolved.status === "unavailable") {
+    enqueueWorkspaceErrorNotice({
+      title: "Unable to open file",
+      message: `Could not load ${input.relativePath}. Please try again.`,
+    });
+    return;
+  }
+  if (resolved.status === "not-found") {
+    enqueueWorkspaceErrorNotice({
+      title: "File not found",
+      message: `${input.relativePath} does not exist in this workspace.`,
+    });
+    return;
+  }
+
+  const tabInput = {
+    kind: "file" as const,
+    workspaceId: input.workspaceId,
+    path: resolved.path,
+    content: resolved.content,
+  };
+  if (input.oppositePane) {
+    openTabInOppositePane(tabInput);
+  } else {
+    openTab(tabInput);
+  }
+}

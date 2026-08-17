@@ -9,9 +9,34 @@ export {
   openOverlayPanel,
 } from "./commands/navigationCommands";
 export {
+  bindAgentChatTabSession,
+  bindTerminalTabSession,
+  closeAllTabs,
+  closeAllTerminalTabs,
+  closeOtherTabs,
+  createAdjacentPaneWithTab,
+  moveTabToPane,
+  closeTab,
+  openTab,
+  openTabInOppositePane,
+  paneSelectTab,
+  registerTabInPane,
   removeRightPaneStateForWorkspace,
+  renameTab,
+  reorderPaneTab,
+  resizeLeftPane,
+  resizeRightPane,
+  resolveTabForWorkspace,
+  retainWorkspaceTabs,
+  setActivePane,
+  setAgentChatTabSubagentControl,
+  setLeftPaneHidden,
   setIsRightPaneHidden,
   setRightPaneTab,
+  setSelectedTab,
+  setTerminalTabAgentKind,
+  splitWorkspacePane,
+  unregisterTabFromPane,
 } from "./commands/tabCommands";
 export type { WorkspaceTab } from "./model/types";
 export type { TabStoreState } from "./state/tabStore";
@@ -47,5 +72,6 @@ export type {
 export { BrowserView } from "./ui/browser/BrowserView";
 export { reloadWebview, removeWebviewsForClosedTabs } from "./ui/browser/webviewRegistry";
 export { WorkspaceSplitPane } from "./ui/WorkspaceSplitPaneView";
+export { useSelectedTabId } from "./ui/hooks/useWorkbenchTabs";
 export { WorkspaceTabSurfaceLayer } from "./ui/WorkspaceTabSurfaceLayer";
 export { type WorkspaceTabPlacement, useWorkspaceTabPlacements } from "./ui/useWorkspaceTabPlacements";

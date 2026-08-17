@@ -23,6 +23,9 @@ vi.mock("@renderer/components/markdown/markdownService", () => ({
 vi.mock("../../../features/workbench/commands/tabCommands", () => ({
   openTab: mocked.openTab,
   openTabInOppositePane: mocked.openTabInOppositePane,
+}));
+
+vi.mock("../../../features/agent/commands/agentChatCommands", () => ({
   openChatFileTab: mocked.openChatFileTab,
 }));
 

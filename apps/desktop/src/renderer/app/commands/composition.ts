@@ -33,6 +33,10 @@ import {
   writeFile as writeFileCommand,
 } from "../../features/files/commands/fileCommands";
 import {
+  createNewWhiteboard as createNewWhiteboardCommand,
+  resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
+} from "../../features/files/commands/whiteboardCommands";
+import {
   commitGitChanges as commitGitChangesCommand,
   getGitAuthorName as getGitAuthorNameCommand,
   getGitBranchStatus as getGitBranchStatusCommand,
@@ -144,8 +148,6 @@ import {
   reorderWorkspace as reorderWorkspaceCommand,
   setDisplayRepoIds as setDisplayRepoIdsCommand,
   setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
-  setLeftPaneWidth as setLeftPaneWidthCommand,
-  setRightPaneWidth as setRightPaneWidthCommand,
   toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
@@ -197,8 +199,6 @@ export type WorkspaceCommandSurface = {
   activateWorkspace: typeof activateWorkspaceCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
-  setLeftPaneWidth: typeof setLeftPaneWidthCommand;
-  setRightPaneWidth: typeof setRightPaneWidthCommand;
   toggleLeftPaneVisibility: typeof toggleLeftPaneVisibilityCommand;
   toggleRightPaneVisibility: typeof toggleRightPaneVisibilityCommand;
   activateWorkspacePane: typeof activateWorkspacePaneCommand;
@@ -315,6 +315,8 @@ export type FileCommandSurface = {
   openEntryInExternalApp: typeof openEntryInExternalAppCommand;
   listDetectedExternalAppIds: typeof listDetectedExternalAppIdsCommand;
   readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
+  createNewWhiteboard: typeof createNewWhiteboardCommand;
+  resolveNextWhiteboardPath: typeof resolveNextWhiteboardPathCommand;
 };
 
 /** Project feature command surface. */
@@ -422,8 +424,6 @@ export function createWorkspaceCommands(): WorkspaceCommandSurface {
     activateWorkspace: activateWorkspaceCommand,
     setDisplayRepoIds: setDisplayRepoIdsCommand,
     setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
-    setLeftPaneWidth: setLeftPaneWidthCommand,
-    setRightPaneWidth: setRightPaneWidthCommand,
     toggleLeftPaneVisibility: toggleLeftPaneVisibilityCommand,
     toggleRightPaneVisibility: toggleRightPaneVisibilityCommand,
     activateWorkspacePane: activateWorkspacePaneCommand,
@@ -537,6 +537,8 @@ export function createFileCommands(): FileCommandSurface {
     openEntryInExternalApp: openEntryInExternalAppCommand,
     listDetectedExternalAppIds: listDetectedExternalAppIdsCommand,
     readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
+    createNewWhiteboard: createNewWhiteboardCommand,
+    resolveNextWhiteboardPath: resolveNextWhiteboardPathCommand,
   };
 }
 

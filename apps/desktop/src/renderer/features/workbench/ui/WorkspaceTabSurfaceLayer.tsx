@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import { createPortal } from "react-dom";
 import { getOrCreateRuntimeRoot } from "../../../app/runtime/runtimeRoot";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
-import { WorkspaceAgentChatSurface } from "@renderer/features/agent";
 import type { WorkspaceTabPlacement } from "./useWorkspaceTabPlacements";
 
 type WorkspaceTabSurfaceLayerProps = {
@@ -16,6 +15,20 @@ type WorkspaceTabSurfaceLayerProps = {
   >;
   handleFocusPane: (paneId: string) => void;
   renderTabContent: (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
+  /** App-composed portal surface for agent-chat tabs (product UI). */
+  renderAgentChatSurface: (input: {
+    tab: Extract<WorkspaceTab, { kind: "agent-chat" }>;
+    isWorkspaceActive: boolean;
+    isDraggingSplit: boolean;
+    isSelected: boolean;
+    isInActivePane: boolean;
+    rect: { left: number; top: number; width: number; height: number } | null;
+    paneId: string;
+    lastKnownRectByTabIdRef: React.MutableRefObject<
+      Record<string, { left: number; top: number; width: number; height: number }>
+    >;
+    handleFocusPane: (paneId: string) => void;
+  }) => React.ReactNode;
 };
 
 /** Renders fixed-position portal surfaces for active tab contents, aligned to pane placeholders. */
@@ -27,6 +40,7 @@ export function WorkspaceTabSurfaceLayer({
   lastKnownRectByTabIdRef,
   handleFocusPane,
   renderTabContent,
+  renderAgentChatSurface,
 }: WorkspaceTabSurfaceLayerProps) {
   const renderTabSurface = useCallback(
     (
@@ -103,20 +117,17 @@ export function WorkspaceTabSurfaceLayer({
         const paneId = placement?.paneId ?? "";
 
         if (tab.kind === "agent-chat") {
-          return (
-            <WorkspaceAgentChatSurface
-              key={tab.id}
-              tab={tab}
-              isWorkspaceActive={isActive}
-              isDraggingSplit={isDraggingSplit}
-              isSelected={isSelected}
-              isInActivePane={isInActivePane}
-              rect={rect}
-              paneId={paneId}
-              lastKnownRectByTabIdRef={lastKnownRectByTabIdRef}
-              handleFocusPane={handleFocusPane}
-            />
-          );
+          return renderAgentChatSurface({
+            tab,
+            isWorkspaceActive: isActive,
+            isDraggingSplit,
+            isSelected,
+            isInActivePane,
+            rect,
+            paneId,
+            lastKnownRectByTabIdRef,
+            handleFocusPane,
+          });
         }
 
         return renderTabSurface(tab, isSelected, isInActivePane, rect, paneId);

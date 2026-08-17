@@ -1,19 +1,15 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/commands/useCommands";
 import type { SplitDropRegion } from "../../../components/SplitDropZone";
 import { resolveDropResult } from "../../../components/SplitDropZone";
 import type { TabBarCreateOption } from "../../../components/TabBar";
-import { forceFitTerminalRuntimes } from "../../../features/terminal";
-import { createNewWhiteboard } from "../../../features/workbench/commands/whiteboardCommands";
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { splitPaneStore } from "../state/splitPaneStore";
-import { tabStore } from "../state/tabStore";
 import { selectActivePane, selectPane } from "../state/workbenchSelectors";
-import { selectSelectedTabId } from "../state/workbenchSelectors";
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;
@@ -39,31 +35,6 @@ export function usePaneTabHandlers({
 }: UsePaneTabHandlersOptions) {
   const { t } = useTranslation();
   const workspaceWorktreePath = workspace?.worktreePath;
-  const terminalTabIds = useMemo(
-    () => workspaceTabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
-    [workspaceTabs],
-  );
-  const selectedTabId = tabStore(selectSelectedTabId);
-
-  useEffect(() => {
-    if (terminalTabIds.length === 0 || selectedTabId == null) {
-      return;
-    }
-
-    // Only trigger when the selected tab is a terminal tab.
-    const selectedTab = workspaceTabs.find((tab) => tab.id === selectedTabId);
-    if (!selectedTab || selectedTab.kind !== "terminal") {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      forceFitTerminalRuntimes(terminalTabIds);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [terminalTabIds, selectedTabId, workspaceTabs]);
 
   const handleSelectTab = useCallback(
     (paneId: string, tabId: string) => {
@@ -106,7 +77,7 @@ export function usePaneTabHandlers({
         return;
       }
       if (option === "whiteboard") {
-        void createNewWhiteboard(workspaceId);
+        void cmd.createNewWhiteboard(workspaceId);
         return;
       }
       if (!enabledAgentKindSet.has(option)) return;

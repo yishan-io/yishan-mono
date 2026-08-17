@@ -1,6 +1,6 @@
+import { removeRightPaneStateForWorkspace } from "@renderer/features/workbench";
 import { selectSelectedOrganizationId } from "../../../features/session/state/sessionSelectors";
-import { removeRightPaneStateForWorkspace } from "../../../features/workbench/commands/tabCommands";
-import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workspace/commands/workspaceTabSync";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import type { WorkspaceLifecycleScriptWarning } from "../../../features/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";

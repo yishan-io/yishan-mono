@@ -6,14 +6,15 @@ import {
 } from "@renderer/components/markdown/markdownHelpers";
 import { markdownService } from "@renderer/components/markdown/markdownService";
 import { useMarkdownStyles } from "@renderer/components/markdown/markdownStyles";
-import { useCodeTheme } from "@renderer/ui/hooks/useCodeTheme";
 import { editorSettingsStore } from "@renderer/features/settings/state/editorSettingsStore";
+import { openTab, openTabInOppositePane } from "@renderer/features/workbench";
+import { useCodeTheme } from "@renderer/ui/hooks/useCodeTheme";
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../app/commands/appCommands";
-import { openChatFileTab, openTab, openTabInOppositePane } from "../../../features/workbench/commands/tabCommands";
+import { openChatFileTab } from "../../../features/agent/commands/agentChatCommands";
 import { selectFolderInFileTree } from "../../../features/workspace/commands/workspaceCommands";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 
 type AgentMarkdownContentProps = {
   content: string;

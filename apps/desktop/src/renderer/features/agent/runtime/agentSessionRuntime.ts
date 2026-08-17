@@ -1,5 +1,5 @@
 import { getTabById, getTabs } from "@renderer/features/workbench";
-import { bindAgentChatTabSession } from "../../../features/workbench/commands/tabCommands";
+import { bindAgentChatTabSession } from "@renderer/features/workbench";
 import type { AgentChatSessionView } from "../../../features/workbench/model/types";
 import { delay } from "../../../helpers/delay";
 /**

@@ -1,3 +1,4 @@
+import { bindTerminalTabSession, closeTab, renameTab } from "@renderer/features/workbench";
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -7,7 +8,6 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../features/terminal/commands/terminalCommands";
-import { bindTerminalTabSession, closeTab, renameTab } from "../../../features/workbench/commands/tabCommands";
 import { enqueueWorkspaceErrorNotice } from "../../../features/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";

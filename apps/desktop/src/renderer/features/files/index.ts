@@ -12,6 +12,7 @@ export {
   setSelectedEntryPath,
 } from "./commands/fileTreeCommands";
 export { fileTreeStore, type FileTreeStoreState } from "./state/fileTreeStore";
+export { createNewWhiteboard, resolveNextWhiteboardPath } from "./commands/whiteboardCommands";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { useFileSearchController } from "./ui/useFileSearchController";

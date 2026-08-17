@@ -12,7 +12,7 @@ import {
   setSelectedTab,
   splitWorkspacePane,
   unregisterTabFromPane,
-} from "../../../features/workbench/commands/tabCommands";
+} from "@renderer/features/workbench";
 import { findOppositePaneId } from "../../../features/workbench/model/split-pane";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../model/agentChatStore";

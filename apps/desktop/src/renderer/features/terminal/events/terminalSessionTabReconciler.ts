@@ -1,13 +1,13 @@
 import { getTabs } from "@renderer/features/workbench";
-import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import type { WorkspaceTab } from "../../../features/workbench";
 import {
   bindTerminalTabSession,
   closeTab,
   openTab,
   renameTab,
   setTerminalTabAgentKind,
-} from "../../../features/workbench/commands/tabCommands";
+} from "@renderer/features/workbench";
+import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
+import type { WorkspaceTab } from "../../../features/workbench";
 import { selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";

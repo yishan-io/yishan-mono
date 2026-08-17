@@ -1,6 +1,6 @@
 import { openLink } from "@renderer/app/commands/appCommands";
 import { buildWorkspaceFileUrl } from "@renderer/features/files/commands/fileCommands";
-import { openTabInOppositePane } from "@renderer/features/workbench/commands/tabCommands";
+import { openTabInOppositePane } from "@renderer/features/workbench";
 import { tabStore } from "@renderer/features/workbench/state/tabStore";
 import { enqueueWorkspaceErrorNotice } from "@renderer/features/workspace/state/workspaceLifecycleNoticeStore";
 import { getTaskListItemChecked, isAbsoluteUrl, resolveRelativePath, toggleTaskListItem } from "./markdownHelpers";

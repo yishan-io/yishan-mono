@@ -1,8 +1,8 @@
 import { incrementFileTreeRefreshVersion } from "@renderer/features/files";
 import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { activateWorkspace } from "@renderer/features/workbench";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
-import { activateWorkspace } from "../../../features/workbench/commands/navigationCommands";
-import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
+import { syncTabStoreWithWorkspace } from "../../../features/workspace/commands/workspaceTabSync";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../features/workbench/state/splitPaneStore";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { agentChatStore } from "../model/agentChatStore";
-import { startAgentChatSession } from "./agentChatCommands";
+import { openChatFileTab, startAgentChatSession } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -52,6 +52,29 @@ afterEach(() => {
   mocks.stop.mockReset();
   vi.clearAllMocks();
 });
+
+const openChatMocks = vi.hoisted(() => ({
+  resolveChatFilePath: vi.fn(),
+  openTab: vi.fn(),
+  openTabInOppositePane: vi.fn(),
+}));
+
+vi.mock("../../files/commands/fileCommands", () => ({
+  resolveChatFilePath: openChatMocks.resolveChatFilePath,
+}));
+
+vi.mock("@renderer/features/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+  return {
+    ...actual,
+    openTab: openChatMocks.openTab,
+    openTabInOppositePane: openChatMocks.openTabInOppositePane,
+  };
+});
+
+vi.mock("../../workspace/state/workspaceActions", () => ({
+  enqueueWorkspaceErrorNotice: vi.fn(),
+}));
 describe("agentChatCommands.startAgentChatSession", () => {
   it("classifies pre-existing history as interrupted after a fresh start", async () => {
     mocks.start.mockResolvedValue({ sessionId: "session-1" });
@@ -83,5 +106,56 @@ describe("agentChatCommands.startAgentChatSession", () => {
     });
 
     expect(agentChatStore.getState().sessionsByTabId["tab-attach"]?.subagentSessionEndedAtMs).toBeNull();
+  });
+
+  it("openChatFileTab opens the resolved file in the resolved workspace", async () => {
+    openChatMocks.resolveChatFilePath.mockResolvedValueOnce({
+      status: "found",
+      path: "src/db/index.ts",
+      content: "db content",
+    });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(openChatMocks.openTab).toHaveBeenCalledWith({
+      kind: "file",
+      workspaceId: "workspace-1",
+      path: "src/db/index.ts",
+      content: "db content",
+    });
+    expect(openChatMocks.openTabInOppositePane).not.toHaveBeenCalled();
+  });
+
+  it("openChatFileTab opens in the opposite pane when requested", async () => {
+    openChatMocks.resolveChatFilePath.mockResolvedValueOnce({
+      status: "found",
+      path: "src/a.ts",
+      content: "a",
+    });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "a.ts", oppositePane: true });
+
+    expect(openChatMocks.openTabInOppositePane).toHaveBeenCalledWith({
+      kind: "file",
+      workspaceId: "workspace-1",
+      path: "src/a.ts",
+      content: "a",
+    });
+  });
+
+  it("openChatFileTab notifies when the referenced file does not exist", async () => {
+    openChatMocks.resolveChatFilePath.mockResolvedValueOnce({ status: "not-found" });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(openChatMocks.openTab).not.toHaveBeenCalled();
+  });
+
+  it("openChatFileTab notifies separately when the file could not be loaded", async () => {
+    openChatMocks.resolveChatFilePath.mockResolvedValueOnce({ status: "unavailable" });
+
+    await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
+
+    expect(openChatMocks.openTab).not.toHaveBeenCalled();
   });
 });
