@@ -1,4 +1,4 @@
-import type { WorkspaceStoreState } from "../features/workbench/model/types";
+import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStoreTypes";
 import { resolveExplicitWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
 
 type WorkspaceStoreSlice = Pick<

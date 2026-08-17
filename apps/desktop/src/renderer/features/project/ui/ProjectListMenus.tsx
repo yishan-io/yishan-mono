@@ -1,4 +1,8 @@
 import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
+import { CreateWorkspaceDialogView } from "@renderer/features/workspace";
+import { WorkspaceDeleteDialogView } from "@renderer/features/workspace";
+import { WorkspaceInfoPopperView } from "@renderer/features/workspace";
+import type { PendingWorkspaceDeletion } from "@renderer/features/workspace";
 import type { TFunction } from "i18next";
 import type { Dispatch, SetStateAction } from "react";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
@@ -9,14 +13,10 @@ import {
 } from "../../../../shared/contracts/externalApps";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
+import type { WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import type { WorkspaceItem } from "../../../features/workbench/model/types";
-import { CreateWorkspaceDialogView } from "@renderer/features/workspace";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";
-import { WorkspaceDeleteDialogView } from "@renderer/features/workspace";
-import { WorkspaceInfoPopperView } from "@renderer/features/workspace";
-import type { PendingWorkspaceDeletion } from "@renderer/features/workspace";
 
 type PendingProjectDeletion = {
   projectName: string;

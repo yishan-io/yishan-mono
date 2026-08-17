@@ -1,10 +1,5 @@
 import type { WorkspaceTab } from "../../../features/workbench/model/types";
 
-export function getFileName(path: string): string {
-  const normalized = path.replace(/\\/g, "/");
-  return normalized.split("/").pop() ?? path;
-}
-
 export function resolveSelectedTabIdForWorkspace(input: {
   workspaceId: string;
   tabs: WorkspaceTab[];
@@ -17,4 +12,3 @@ export function resolveSelectedTabIdForWorkspace(input: {
   }
   return workspaceTabs[0]?.id ?? "";
 }
-

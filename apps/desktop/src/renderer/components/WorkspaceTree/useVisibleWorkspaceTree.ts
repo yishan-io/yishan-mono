@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../features/project/model/projectTypes";
 import { supportsGitFeatures } from "../../helpers/projectGitCapability";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../features/workbench/model/types";
 import type { WorkspaceTreeNode, WorkspaceTreeProject, WorkspaceTreeRow, WorkspaceTreeWorkspace } from "./types";
 
 type UseVisibleWorkspaceTreeInput = {

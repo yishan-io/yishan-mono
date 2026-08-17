@@ -5,9 +5,9 @@
  * Lives in the Workspace model so both Commands and Events can import it
  * without depending on a command module.
  */
-import type { WorkspaceStoreState } from "../../../features/workbench/model/types";
+import type { AddWorkspaceInput } from "./workspaceTypes";
 
-export type WorkspaceCreatePlaceholderInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
+export type WorkspaceCreatePlaceholderInput = AddWorkspaceInput;
 
 /** Builds one optimistic workspace row payload shared by UI create and backend create-start flows. */
 export function buildWorkspaceCreatePlaceholder(

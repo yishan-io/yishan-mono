@@ -1,4 +1,4 @@
-import type { WorkspaceProjectRecord } from "../../../workbench/model/types";
+import type { WorkspaceProjectRecord } from "../../model/projectTypes";
 import { projectStore } from "../../state/projectStore";
 
 /**

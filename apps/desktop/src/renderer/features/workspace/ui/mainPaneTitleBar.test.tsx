@@ -2,8 +2,9 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
-import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../features/workbench/model/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
+import type { WorkspaceProjectRecord } from "../../../features/project/model/projectTypes";
+import type { WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 import { RepoSelectorMenu } from "./mainPaneTitleBarMenus";
@@ -127,7 +128,6 @@ vi.mock("../../../features/agent/state/chatStore", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     setSelectedRepoId: (projectId: string) => {
       mocked.stateRef.current.selectedProjectId = projectId;
     },
@@ -155,7 +155,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => Promise.resolve({ isFullscreen: false }),

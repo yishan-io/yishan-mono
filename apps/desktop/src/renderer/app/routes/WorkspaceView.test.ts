@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { WorkspaceTab } from "../../features/workspace/state/workspaceStore";
+import type { WorkspaceTab } from "../../features/workbench/model/tabTypes";
 import type { InAppWorkspaceNotificationPayload } from "../../features/workspace/ui/workspaceNotificationUtils";
 import {
   isNotificationForFocusedSession,

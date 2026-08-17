@@ -1,6 +1,6 @@
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";

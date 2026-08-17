@@ -1,6 +1,6 @@
 import { removeTabData, removeWorkspaceTaskCounts } from "../../../features/agent/state/chatActions";
-import type { WorkspaceItem } from "../../../features/workbench/model/types";
 import { tabStore } from "../../../features/workbench/state/tabStore";
+import type { WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
 import { selectSelectedWorkspaceId, selectWorkspaces } from "../../../features/workspace/state/workspaceSelectors";
 
 /** Reconciles tab/chat state after workspace list changes in workspace store. */

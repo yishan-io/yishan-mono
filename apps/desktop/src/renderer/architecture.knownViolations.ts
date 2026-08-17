@@ -21,7 +21,8 @@ export type RuleName =
   | "R6-state-layer"
   | "R7-model-layer"
   | "R8-infra-layer"
-  | "R9-ui-components";
+  | "R9-ui-components"
+  | "R10-workspace-workbench";
 
 export type KnownViolation = { rule: RuleName; file: string; phase: string };
 
@@ -36,20 +37,23 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- R6-state-layer (Phase 16 baseline) ----
   { rule: "R6-state-layer", file: "features/overview/state/overviewStore.ts", phase: "P16" },
   { rule: "R6-state-layer", file: "features/scheduled-job/state/scheduledJobStore.ts", phase: "P16" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.localFolders.ts", phase: "P16" },
-  { rule: "R6-state-layer", file: "features/workspace/state/workspace/actions.workspaces.ts", phase: "P16" },
   { rule: "R6-state-layer", file: "features/workspace/state/workspaceProjectionStore.ts", phase: "P16" },
+  // desktop6-adjust W1: Workspace Store types moved to Workspace State; the
+  // store boundary keeps transport DTO references (baselined like the other
+  // workspace projection store rows). actions.localFolders/actions.workspaces
+  // rows removed — those files no longer import transport directly.
+  { rule: "R6-state-layer", file: "features/workspace/state/workspaceStoreTypes.ts", phase: "P16" },
   // ---- R7-model-layer (Phase 16 baseline) ----
   { rule: "R7-model-layer", file: "features/agent/model/agentChatStore.ts", phase: "P16" },
-  { rule: "R7-model-layer", file: "features/workbench/model/types.ts", phase: "P16" },
   { rule: "R7-model-layer", file: "features/workspace/model/snapshotReconciler.ts", phase: "P16" },
+  // desktop6-adjust W1: workbench/model/types.ts row removed — the generic
+  // types file no longer imports transport/zustand (tab types moved to
+  // tabTypes.ts, Workspace Store types moved to Workspace State).
   // ---- R9-ui-components (Phase 16 baseline) ----
   { rule: "R9-ui-components", file: "components/AppUpdateSnackbar.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/AudioPreview.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/AuthSessionExpiredSnackbar.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/FileDiffViewer.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/FileEditor.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/ImagePreview.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/MessageList.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/MultiFileDiffViewer.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/ProjectRow.tsx", phase: "P16" },
@@ -57,7 +61,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R9-ui-components", file: "components/SplitPaneContainer.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/SplitPaneGroup.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/TabBarMenus.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/VideoPreview.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/WorkspaceRow.tsx", phase: "P16" },
   { rule: "R9-ui-components", file: "components/WorkspaceTree/types.ts", phase: "P16" },
   { rule: "R9-ui-components", file: "components/WorkspaceTree/useVisibleWorkspaceTree.ts", phase: "P16" },

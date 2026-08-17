@@ -3,10 +3,10 @@ import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
 import type { WorkspacePullRequestSummary } from "../../../../api/types";
 import { PullRequestIcon } from "../../../../components/PullRequestIcon";
+import type { WorkspaceItem } from "../../../../features/workspace/model/workspaceTypes";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { livePrStatus } from "../../../../helpers/pullRequestUtils";
 import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
-import type { WorkspaceItem } from "../../../../features/workbench/model/types";
 
 type WorkspaceInfoPopperViewProps = {
   open: boolean;

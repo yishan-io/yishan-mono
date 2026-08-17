@@ -1,6 +1,6 @@
 import type { WorkspaceRecord } from "../api/types";
-import { getFileName } from "../features/workbench/model/tabs";
-import type { WorkspaceItem } from "../features/workbench/model/types";
+import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
+import { getFileName } from "./pathHelpers";
 
 export const LOCAL_WORKSPACE_DISPLAY_NAME = "local";
 const DEFAULT_MANAGED_WORKSPACE_DISPLAY_NAME = "workspace";

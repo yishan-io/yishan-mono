@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { BranchDropdown, type BranchDropdownGroups } from "@renderer/components/BranchDropdown";
 import { renderProjectIcon } from "@renderer/components/projectIcons";
-import type { WorkspaceProjectRecord } from "@renderer/features/workbench/model/types";
+import type { WorkspaceProjectRecord } from "@renderer/features/project/model/projectTypes";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuFolderGit2, LuGitBranch } from "react-icons/lu";
 import { compactSelectSx } from "../createWorkspaceHelpers";

@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import type { BranchDropdownGroups } from "../../../../components/BranchDropdown";
 import { useGitAuthorName } from "../../../../features/git/ui/hooks/useGitAuthorName";
 import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
+import type { WorkspaceProjectRecord } from "../../../../features/project/model/projectTypes";
 import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../../features/settings/model/branchPrefix";
-import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../../features/workbench/model/types";
+import type { WorkspaceItem } from "../../../../features/workspace/model/workspaceTypes";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import {
   resolveSourceBranchState,

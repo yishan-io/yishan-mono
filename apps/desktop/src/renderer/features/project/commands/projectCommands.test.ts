@@ -2,9 +2,9 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../features/agent/state/chatStore";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { sessionStore } from "../../../features/session/state/sessionStore";
 import { workspaceSettingsStore } from "../../../features/settings/state/workspaceSettingsStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
 import { tabStore } from "../../../features/workbench/state/tabStore";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { workspaceUiStore } from "../../../features/workspace/state/workspaceUiStore";

@@ -1,6 +1,6 @@
-import type { WorkspaceStoreState } from "../../workbench/model/types";
 import { workspaceProjectionStore } from "./workspaceProjectionStore";
 import { workspaceStore } from "./workspaceStore";
+import type { WorkspaceStoreState } from "./workspaceStoreTypes";
 import { workspaceUiStore } from "./workspaceUiStore";
 
 /**

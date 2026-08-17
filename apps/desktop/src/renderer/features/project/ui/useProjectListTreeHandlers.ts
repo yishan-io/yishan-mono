@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./projectListHelpers";
 
 type TreeWorkspace = { id: string; projectId: string; nodeId: string; isLocalFolder?: boolean };

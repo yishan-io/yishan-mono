@@ -1,16 +1,14 @@
 import { selectSessionDaemonId } from "../../../../features/session/state/sessionSelectors";
+import { getFileName } from "../../../../helpers/pathHelpers";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../project/model/projectTypes";
+import type { WorkspaceHealth, WorkspaceItem, WorkspaceLifecycleState } from "../../model/workspaceTypes";
 import type {
-  WorkspaceHealth,
-  WorkspaceItem,
-  WorkspaceLifecycleState,
   WorkspaceStoreActions,
   WorkspaceStoreGetState,
   WorkspaceStoreSetState,
   WorkspaceStoreState,
-} from "../../../../features/workbench/model/types";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../features/workbench/model/types";
-import type { DaemonLocalFolder } from "../../../../rpc/daemonTypes";
-import { getFileName } from "../../../workbench/model/tabs";
+} from "../workspaceStoreTypes";
+import type { DaemonLocalFolder } from "../workspaceStoreTypes";
 
 type LocalFolderActions = Pick<WorkspaceStoreActions, "loadLocalFolders" | "addLocalFolder" | "removeLocalFolder">;
 

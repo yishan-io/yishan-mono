@@ -1,11 +1,11 @@
 import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../features/session/state/sessionSelectors";
 import { selectIsDefaultContextEnabled } from "../../../features/settings/state/settingsSelectors";
 import { resolveTabForWorkspace } from "../../../features/workbench/commands/tabCommands";
 import { syncTabStoreWithWorkspace } from "../../../features/workbench/commands/workspaceTabSync";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
 import {
   addWorkspace as applyAddWorkspace,
   deleteProject as applyDeleteProject,

@@ -1,16 +1,11 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { WorkspaceStoreState } from "../../../features/workbench/model/types";
 import { createWorkspaceStoreActions } from "./workspace/actions";
 import { initialWorkspaceState, partializeWorkspaceState } from "./workspace/state";
+import type { WorkspaceStoreState } from "./workspaceStoreTypes";
 
-export type {
-  AvailableModel,
-  ChatMessage,
-  WorkspaceStoreState,
-  WorkspaceTab,
-} from "../../../features/workbench/model/types";
+export type { WorkspaceStoreState } from "./workspaceStoreTypes";
 
 export const workspaceStore = create<WorkspaceStoreState>()(
   persist(

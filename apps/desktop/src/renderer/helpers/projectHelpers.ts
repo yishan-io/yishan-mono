@@ -1,13 +1,13 @@
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../features/project/model/projectIconPresets";
-import { type ProjectStoreSlice, reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
-import { getFileName } from "../features/workbench/model/tabs";
 import type {
-  WorkspaceItem,
   WorkspaceProjectRecord,
   WorkspaceStoreOrganizationPreference,
-  WorkspaceStoreState,
-} from "../features/workbench/model/types";
+} from "../features/project/model/projectTypes";
+import { type ProjectStoreSlice, reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
+import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
+import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStoreTypes";
+import { getFileName } from "./pathHelpers";
 import { resolveHydratedWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
 
 export type RepoConfigUpdate = Pick<

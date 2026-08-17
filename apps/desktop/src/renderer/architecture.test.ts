@@ -60,9 +60,10 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   R4: 0,
   "R5-cross-feature-internal": 0,
   "R6-state-layer": 6,
-  "R7-model-layer": 8,
+  "R7-model-layer": 5,
   "R8-infra-layer": 0,
-  "R9-ui-components": 71,
+  "R9-ui-components": 68,
+  "R10-workspace-workbench": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -223,6 +224,16 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
           violations.push({ rule: "R9-ui-components", file: rel, target: imp.spec });
         }
       }
+      // ---- Rule 10 (desktop6-adjust.md W1): Workspace Model and State must
+      // not import Workbench, and Workbench Model must not import Workspace
+      // State (Workspace Store types under Workbench Model are an ownership
+      // inversion). Workspace Commands and UI may use the Workbench public API. ----
+      if (/^features\/workspace\/(model|state)\//.test(rel) && relT.startsWith("features/workbench/")) {
+        violations.push({ rule: "R10-workspace-workbench", file: rel, target: imp.spec });
+      }
+      if (/^features\/workbench\/model\//.test(rel) && relT.startsWith("features/workspace/")) {
+        violations.push({ rule: "R10-workspace-workbench", file: rel, target: imp.spec });
+      }
       // ---- Rule 5 (cont.): the owning Feature's public State surface
       // (Selectors = read models, Actions = state-change surface) is
       // importable; the Store itself and other internals are not. ----
@@ -333,6 +344,13 @@ describe("renderer architecture dependency rules", () => {
   describe("R9: Shared UI must not import Feature or app code", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R9-ui-components"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R10: Workspace Model/State must not import Workbench (desktop6-adjust W1)", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R10-workspace-workbench"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });

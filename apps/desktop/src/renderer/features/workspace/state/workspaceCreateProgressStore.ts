@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import type { WorkspaceItem } from "../../../features/workbench/model/types";
+import type { WorkspaceItem } from "../model/workspaceTypes";
 
 export type WorkspaceCreateProgressStatus = RpcFrontendMessagePayload<"workspaceCreateProgress">["status"];
 

@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { LuTriangleAlert } from "react-icons/lu";
 import { closeWorkspace } from "../../../features/workspace/commands/workspaceCloseCommand";
-import type { WorkspaceItem } from "../../../features/workbench/model/types";
+import type { WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
 
 type WorkspaceErrorStateViewProps = {
   workspace: WorkspaceItem;

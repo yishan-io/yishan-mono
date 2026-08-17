@@ -1,3 +1,9 @@
+import type { WorkspaceItem } from "@renderer/features/workspace";
+import {
+  setOrderedWorkspaceIds,
+  useWorkspaceGitChangeTotalsByWorkspaceId,
+  useWorkspaces,
+} from "@renderer/features/workspace";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
@@ -7,11 +13,9 @@ import {
   useWorkspaceUnreadToneByWorkspaceId,
 } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { useDisplayProjectIds, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import { useSelectedOrganizationId } from "../../../features/session/ui/hooks/useSessionReadHooks";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
-import type { WorkspaceItem } from "@renderer/features/workspace";
-import { setOrderedWorkspaceIds, useWorkspaceGitChangeTotalsByWorkspaceId, useWorkspaces } from "@renderer/features/workspace";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";

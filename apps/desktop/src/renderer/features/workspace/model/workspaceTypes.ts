@@ -2,6 +2,25 @@
 export type WorkspaceStatus = "active" | "closed" | "provisioning";
 
 /**
+ * Workspace Store `addWorkspace` action input (desktop6-adjust.md W1).
+ * Defined in the Workspace model so Commands, Events, and model builders can
+ * use it without importing Store State.
+ */
+export type AddWorkspaceInput = {
+  organizationId?: string;
+  projectId?: string;
+  repoId?: string;
+  name: string;
+  sourceBranch: string;
+  branch: string;
+  worktreePath?: string;
+  nodeId?: string;
+  workspaceId: string;
+  status?: WorkspaceStatus;
+  preserveOnMissingSnapshot?: boolean;
+};
+
+/**
  * Workspace feature vocabulary (Phase 3 split of features/workbench/model/types.ts).
  * Feature-owned status unions replace transport DTO references.
  */

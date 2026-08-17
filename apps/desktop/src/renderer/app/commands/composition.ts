@@ -15,48 +15,11 @@ import {
   updateChatMessage as updateChatMessageCommand,
 } from "../../features/agent/commands/chatCommands";
 import {
-  createProject as createProjectCommand,
-  deleteProject as deleteProjectCommand,
-  inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
-  updateProjectConfig as updateProjectConfigCommand,
-} from "../../features/project/commands/projectCommands";
-import { setSelectedRepo, setSelectedWorkspace } from "../../features/workspace/commands/selectionCommands";
-import {
-  activateWorkspacePane as activateWorkspacePaneCommand,
-  closeWorkspace as closeWorkspaceCommand,
-  createWorkspace as createWorkspaceCommand,
-  deleteLocalFolder as deleteLocalFolderCommand,
-  deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
-  focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
-  openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
-  openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
-  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
-  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
-  renameWorkspaceBranch as renameWorkspaceBranchCommand,
-  renameWorkspace as renameWorkspaceCommand,
-  reorderWorkspace as reorderWorkspaceCommand,
-  setDisplayRepoIds as setDisplayRepoIdsCommand,
-  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
-  setLeftPaneWidth as setLeftPaneWidthCommand,
-  setRightPaneWidth as setRightPaneWidthCommand,
-  toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
-  toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
-  undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "../../features/workspace/commands/workspaceCommands";
-import type { WorkspaceProjectRecord } from "../../features/workbench/model/types";
-import {
-  appendBrowserHistory as appendBrowserHistoryCommand,
-  checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
-  ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
-  getDefaultWorktreeLocation as getDefaultWorktreeLocationCommand,
-  loadBrowserHistory as loadBrowserHistoryCommand,
-  logout as logoutCommand,
-  openExternalUrl as openExternalUrlCommand,
-  openLocalFolderDialog as openLocalFolderDialogCommand,
-  toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
-} from "./appCommands";
-import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../features/settings/commands/cliToolCommands";
+  listPiProviders as listPiProvidersCommand,
+  openPiProviderLogin as openPiProviderLoginCommand,
+  removePiProvider as removePiProviderCommand,
+  savePiProvider as savePiProviderCommand,
+} from "../../features/agent/commands/piProviderCommands";
 import {
   createFile as createFileCommand,
   createFolder as createFolderCommand,
@@ -87,11 +50,6 @@ import {
 } from "../../features/git/commands/gitCommands";
 import { listOrgNodes as listOrgNodesCommand } from "../../features/node/commands/nodeCommands";
 import {
-  getRemoteHealthStatus as getRemoteHealthStatusCommand,
-  getSessionBootstrapData as getSessionBootstrapDataCommand,
-  resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../features/session/commands/sessionCommands";
-import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
   previewNotification as previewNotificationCommand,
@@ -104,11 +62,13 @@ import {
   setOverviewTimeRange as setOverviewTimeRangeCommand,
 } from "../../features/overview/commands/overviewCommands";
 import {
-  listPiProviders as listPiProvidersCommand,
-  openPiProviderLogin as openPiProviderLoginCommand,
-  removePiProvider as removePiProviderCommand,
-  savePiProvider as savePiProviderCommand,
-} from "../../features/agent/commands/piProviderCommands";
+  createProject as createProjectCommand,
+  deleteProject as deleteProjectCommand,
+  inspectLocalProjectSource as inspectLocalProjectSourceCommand,
+  loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
+  updateProjectConfig as updateProjectConfigCommand,
+} from "../../features/project/commands/projectCommands";
+import type { WorkspaceProjectRecord } from "../../features/project/model/projectTypes";
 import {
   createScheduledJob as createScheduledJobCommand,
   deleteScheduledJob as deleteScheduledJobCommand,
@@ -118,6 +78,29 @@ import {
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
 } from "../../features/scheduled-job/commands/scheduledJobCommands";
+import {
+  getRemoteHealthStatus as getRemoteHealthStatusCommand,
+  getSessionBootstrapData as getSessionBootstrapDataCommand,
+  resetAuthExpiredState as resetAuthExpiredStateCommand,
+} from "../../features/session/commands/sessionCommands";
+import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../features/settings/commands/cliToolCommands";
+import {
+  closeTerminalSession as closeTerminalSessionCommand,
+  consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
+  createTerminalSession as createTerminalSessionCommand,
+  getTerminalResourceUsage as getTerminalResourceUsageCommand,
+  killTerminalProcess as killTerminalProcessCommand,
+  listDetectedPorts as listDetectedPortsCommand,
+  listTerminalSessions as listTerminalSessionsCommand,
+  readTerminalOutput as readTerminalOutputCommand,
+  resizeTerminal as resizeTerminalCommand,
+  retainOpenTerminalTabFocus as retainOpenTerminalTabFocusCommand,
+  setActiveWorkspace as setActiveWorkspaceCommand,
+  subscribeDetectedPorts as subscribeDetectedPortsCommand,
+  subscribeTerminalOutput as subscribeTerminalOutputCommand,
+  subscribeTerminalSessions as subscribeTerminalSessionsCommand,
+  writeTerminalInput as writeTerminalInputCommand,
+} from "../../features/terminal/commands/terminalCommands";
 import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
@@ -138,23 +121,40 @@ import {
   toggleTabPinned as toggleTabPinnedCommand,
   updateFileTabContent as updateFileTabContentCommand,
 } from "../../features/workbench/commands/tabCommands";
+import { setSelectedRepo, setSelectedWorkspace } from "../../features/workspace/commands/selectionCommands";
 import {
-  closeTerminalSession as closeTerminalSessionCommand,
-  consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
-  createTerminalSession as createTerminalSessionCommand,
-  getTerminalResourceUsage as getTerminalResourceUsageCommand,
-  killTerminalProcess as killTerminalProcessCommand,
-  listDetectedPorts as listDetectedPortsCommand,
-  listTerminalSessions as listTerminalSessionsCommand,
-  readTerminalOutput as readTerminalOutputCommand,
-  resizeTerminal as resizeTerminalCommand,
-  retainOpenTerminalTabFocus as retainOpenTerminalTabFocusCommand,
-  setActiveWorkspace as setActiveWorkspaceCommand,
-  subscribeDetectedPorts as subscribeDetectedPortsCommand,
-  subscribeTerminalOutput as subscribeTerminalOutputCommand,
-  subscribeTerminalSessions as subscribeTerminalSessionsCommand,
-  writeTerminalInput as writeTerminalInputCommand,
-} from "../../features/terminal/commands/terminalCommands";
+  activateWorkspacePane as activateWorkspacePaneCommand,
+  closeWorkspace as closeWorkspaceCommand,
+  createWorkspace as createWorkspaceCommand,
+  deleteLocalFolder as deleteLocalFolderCommand,
+  deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
+  focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
+  openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
+  openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
+  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
+  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
+  renameWorkspaceBranch as renameWorkspaceBranchCommand,
+  renameWorkspace as renameWorkspaceCommand,
+  reorderWorkspace as reorderWorkspaceCommand,
+  setDisplayRepoIds as setDisplayRepoIdsCommand,
+  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
+  setLeftPaneWidth as setLeftPaneWidthCommand,
+  setRightPaneWidth as setRightPaneWidthCommand,
+  toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
+  toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
+  undoFileTreeOperation as undoFileTreeOperationCommand,
+} from "../../features/workspace/commands/workspaceCommands";
+import {
+  appendBrowserHistory as appendBrowserHistoryCommand,
+  checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
+  ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
+  getDefaultWorktreeLocation as getDefaultWorktreeLocationCommand,
+  loadBrowserHistory as loadBrowserHistoryCommand,
+  logout as logoutCommand,
+  openExternalUrl as openExternalUrlCommand,
+  openLocalFolderDialog as openLocalFolderDialogCommand,
+  toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
+} from "./appCommands";
 
 /**
  * Application command composition (Phase 12, desktop5.md).

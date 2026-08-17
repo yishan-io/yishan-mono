@@ -11,8 +11,8 @@ import {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,
 } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/project/model/projectTypes";
 import { useDisplayProjectIds, useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../features/workbench/model/types";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { useWorkspacePaneVisibilityContext } from "../../../features/workspace/ui/hooks/useWorkspacePaneVisibility";
 import { isFolderWorkspace } from "../../../helpers/localFolder";

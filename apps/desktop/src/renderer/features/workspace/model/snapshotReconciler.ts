@@ -12,24 +12,25 @@
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspaceRecord } from "../../../api/types";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
+import { buildWorkspaceStateFromData } from "../../../features/workspace/state/workspace/state";
+import { getFileName } from "../../../helpers/pathHelpers";
 import { resolveHydratedWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import { getFileName } from "../../../features/workbench/model/tabs";
-import type { WorkspaceItem, WorkspaceStoreOrganizationPreference, WorkspaceStoreState } from "../../../features/workbench/model/types";
-import { buildWorkspaceStateFromData } from "../../../features/workspace/state/workspace/state";
+import type { WorkspaceStoreOrganizationPreference } from "../../project/model/projectTypes";
 import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
+import type { WorkspaceItem } from "./workspaceTypes";
 import type { WorkspaceGitChangeTotals } from "./workspaceTypes";
 import type { WorkspaceStatus } from "./workspaceTypes";
 
 type ProjectStoreSlice = {
   projects: WorkspaceProjectRecord[];
-  workspaces: WorkspaceStoreState["workspaces"];
+  workspaces: WorkspaceItem[];
   pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
   latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
-  selectedProjectId: WorkspaceStoreState["selectedProjectId"];
-  selectedWorkspaceId: WorkspaceStoreState["selectedWorkspaceId"];
+  selectedProjectId: string;
+  selectedWorkspaceId: string;
   displayProjectIds?: string[];
   lastUsedExternalAppId?: ExternalAppId;
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
