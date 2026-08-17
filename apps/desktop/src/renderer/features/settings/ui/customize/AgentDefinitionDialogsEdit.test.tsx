@@ -113,7 +113,8 @@ describe("AgentDefinitionDialogsEdit", () => {
     // order wins (anthropic sorts before openrouter), so this assertion pins
     // that ordering too.
     await screen.findByText("claude-sonnet-4-5");
-    expect(screen.getByText("Anthropic")).toBeTruthy();
+    // Provider heading renders with the model list; wait for it (CI is slower).
+    await screen.findByText("Anthropic");
     expect(screen.queryByText("Other")).toBeNull();
 
     // Saving without touching the selector keeps the bare frontmatter value
