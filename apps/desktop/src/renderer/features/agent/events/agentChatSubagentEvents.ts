@@ -1,7 +1,7 @@
+import { selectTabs } from "../../../features/workbench/state/workbenchSelectors";
 import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../../../helpers/agentChatBudget";
 import { agentChatStore } from "../model/agentChatStore";
 import type { AgentMessage, AgentModel } from "../model/agentChatTypes";
-import { tabStore } from "../../../features/workbench/state/tabStore";
 import { isRecord, normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
 
 // ─── Subagent event parsers ───────────────────────────────────────────────────
@@ -121,7 +121,7 @@ export function applySubagentLiveTranscripts(parentTabId: string, transcripts: S
     );
 
   for (const transcript of transcripts) {
-    const detailTab = tabStore.getState().tabs.find((tab) => {
+    const detailTab = selectTabs().find((tab) => {
       return (
         tab.kind === "agent-chat" &&
         tab.data.sessionView === "subagent-detail" &&

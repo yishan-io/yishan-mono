@@ -1,9 +1,9 @@
+import type { AgentChatSessionView } from "../../../features/workbench/model/types";
+import { selectTabById } from "../../../features/workbench/state/workbenchSelectors";
 import { delay } from "../../../helpers/delay";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { AgentChatSessionView } from "../../../features/workbench/model/types";
 import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
 import { agentChatStore } from "../model/agentChatStore";
 import { isAgentSessionBusy } from "../model/agentChatTypes";
@@ -224,9 +224,7 @@ export async function restartAgentSessionForProvider(opts: {
     // never restart a session that is no longer the one the provider was saved
     // into.
     const liveSession = agentChatStore.getState().sessionsByTabId[tabId];
-    const tabStillOpen = tabStore
-      .getState()
-      .tabs.some((candidate) => candidate.id === tabId && candidate.kind === "agent-chat");
+    const tabStillOpen = selectTabById(tabId)?.kind === "agent-chat";
     if (!tabStillOpen || liveSession?.sessionId !== previousSessionId || isAgentSessionBusy(liveSession?.state)) {
       return;
     }

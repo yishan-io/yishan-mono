@@ -1,3 +1,7 @@
+import type { AgentChatSessionView } from "../../../features/workbench/model/types";
+import { setAgentChatTabSession } from "../../../features/workbench/state/workbenchActions";
+import { selectTabById, selectTabs } from "../../../features/workbench/state/workbenchSelectors";
+import { delay } from "../../../helpers/delay";
 /**
  * AgentSessionRuntime — one owner for Pi session handles and lifecycle races.
  *
@@ -16,18 +20,12 @@
  * double-mounts reuse the same Pi process instead of starting a second one.
  */
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { delay } from "../../../helpers/delay";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../model/agentChatStore";
-import { tabStore } from "../../../features/workbench/state/tabStore";
-import type { AgentChatSessionView } from "../../../features/workbench/model/types";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
-import {
-  clearAgentChatSessionStatsSequence,
-  refreshAgentSessionStats,
-} from "../events/agentChatPiEventShared";
+import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../events/agentChatPiEventShared";
+import { agentChatStore } from "../model/agentChatStore";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
 type PiSessionHandle = {
@@ -156,7 +154,7 @@ export async function ensurePiSession(opts: {
     })
     .then(async () => {
       handle.startPromise = null;
-      tabStore.getState().setAgentChatTabSession({
+      setAgentChatTabSession({
         tabId: opts.tabId,
         sessionId,
       });
@@ -191,7 +189,7 @@ export async function ensurePiSession(opts: {
 
 /** Returns the tabId that currently owns the given agent-chat session, if any. */
 export function findTabWithSession(sessionId: string): string | undefined {
-  const openTabIds = new Set(tabStore.getState().tabs.map((tab) => tab.id));
+  const openTabIds = new Set(selectTabs().map((tab) => tab.id));
 
   for (const [tabId, session] of activePiSessions) {
     if (session.sessionId === sessionId && openTabIds.has(tabId)) {
@@ -222,7 +220,7 @@ export async function reattachPiSession(tabId: string): Promise<void> {
     return;
   }
 
-  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId && candidate.kind === "agent-chat");
+  const tab = selectTabById(tabId);
   const client = await getDaemonClient();
   await client.pi.attach({
     sessionId: session.sessionId,
@@ -242,7 +240,7 @@ export async function stopPiSession(tabId: string): Promise<void> {
 
   const session = activePiSessions.get(tabId);
   if (!session) {
-    const fallbackTab = tabStore.getState().tabs.find((tab) => tab.id === tabId && tab.kind === "agent-chat");
+    const fallbackTab = selectTabById(tabId);
     const isReadOnlySubagentDetail =
       fallbackTab?.kind === "agent-chat" && fallbackTab.data.sessionView === "subagent-detail";
     const fallbackSessionId =

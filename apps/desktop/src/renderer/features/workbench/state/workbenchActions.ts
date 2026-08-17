@@ -120,3 +120,35 @@ export function closeTab(tabId: string, options?: CloseTabOptions): void {
     tabStore.getState().closeTab(tabId);
   }
 }
+
+/** Records the bound backend session id on one agent-chat tab. */
+export function setAgentChatTabSession(input: { tabId: string; sessionId: string }): void {
+  tabStore.getState().setAgentChatTabSession(input);
+}
+
+/** Records subagent control metadata on one agent-chat tab. */
+export function setAgentChatTabSubagentControl(input: {
+  tabId: string;
+  agentId?: string;
+  parentSessionId?: string;
+}): void {
+  tabStore.getState().setAgentChatTabSubagentControl(input);
+}
+
+/** Selects one tab in the tab store. */
+export function selectTab(tabId: string): void {
+  tabStore.getState().selectTab(tabId);
+}
+
+/** Creates one adjacent pane with one tab in a workspace layout. */
+export function createAdjacentPaneWithTab(
+  workspaceId: string,
+  input: {
+    tabId: string;
+    targetPaneId: string;
+    direction: "horizontal" | "vertical";
+    placement: "first" | "second";
+  },
+): void {
+  splitPaneStore.getState().createAdjacentPaneWithTab(workspaceId, input);
+}

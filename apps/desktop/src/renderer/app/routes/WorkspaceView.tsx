@@ -373,7 +373,7 @@ export function WorkspaceView() {
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));
-  const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator());
+  const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator(tabStore, workspaceStore));
   const { leftCollapsed, onToggleLeftPane } = paneVisibility;
 
   const handleCloseOverlayPanel = useCallback(() => {

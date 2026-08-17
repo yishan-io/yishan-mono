@@ -4,6 +4,7 @@ import { splitPaneStore } from "./splitPaneStore";
 import { tabStore } from "./tabStore";
 import {
   closeTab,
+  createAdjacentPaneWithTab,
   moveTabToPane,
   openTab,
   registerTabInPane,
@@ -11,13 +12,16 @@ import {
   reorderPaneTab,
   resolveTabForWorkspace,
   selectPaneTab,
+  selectTab,
   setActivePane,
+  setAgentChatTabSession,
+  setAgentChatTabSubagentControl,
   setBrowserTabUrl,
   setIsLeftPaneManuallyHidden,
-  setTerminalTabAgentKind,
-  setTerminalTabSessionId,
   setLeftPaneWidth,
   setRightPaneWidth,
+  setTerminalTabAgentKind,
+  setTerminalTabSessionId,
   splitPane,
   unregisterTabFromPane,
   updateSplitRatio,
@@ -124,7 +128,6 @@ describe("workbenchActions — Workbench state public change surface (Phase 17)"
     expect(updateSplitRatio).toHaveBeenCalledWith("workspace-1", "branch-1", 0.5);
   });
 
-
   it("terminal tab actions forward to the tab store", () => {
     const setTerminalTabSessionId = vi.fn();
     const setTerminalTabAgentKind = vi.fn();
@@ -141,5 +144,38 @@ describe("workbenchActions — Workbench state public change surface (Phase 17)"
     expect(setTerminalTabAgentKind).toHaveBeenCalledWith("tab-1", "opencode");
     expect(renameTab).toHaveBeenCalledWith("tab-1", "New title", { userRenamed: true });
     expect(closeTab).toHaveBeenCalledWith("tab-1");
+  });
+
+  it("agent-chat tab actions forward to the tab and split-pane stores", () => {
+    const setAgentChatTabSession = vi.fn();
+    const setAgentChatTabSubagentControl = vi.fn();
+    const selectTab = vi.fn();
+    const createAdjacentPaneWithTab = vi.fn();
+    tabStore.setState({ setAgentChatTabSession, setAgentChatTabSubagentControl, selectTab });
+    splitPaneStore.setState({ createAdjacentPaneWithTab });
+
+    setAgentChatTabSession({ tabId: "tab-1", sessionId: "session-1" });
+    setAgentChatTabSubagentControl({ tabId: "tab-1", agentId: "builder", parentSessionId: "session-0" });
+    selectTab("tab-1");
+    createAdjacentPaneWithTab("workspace-1", {
+      tabId: "tab-2",
+      targetPaneId: "pane-1",
+      direction: "horizontal",
+      placement: "second",
+    });
+
+    expect(setAgentChatTabSession).toHaveBeenCalledWith({ tabId: "tab-1", sessionId: "session-1" });
+    expect(setAgentChatTabSubagentControl).toHaveBeenCalledWith({
+      tabId: "tab-1",
+      agentId: "builder",
+      parentSessionId: "session-0",
+    });
+    expect(selectTab).toHaveBeenCalledWith("tab-1");
+    expect(createAdjacentPaneWithTab).toHaveBeenCalledWith("workspace-1", {
+      tabId: "tab-2",
+      targetPaneId: "pane-1",
+      direction: "horizontal",
+      placement: "second",
+    });
   });
 });
