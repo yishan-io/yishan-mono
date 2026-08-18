@@ -1,33 +1,17 @@
 /**
  * Workbench event handlers — owns open.browser.url (opens a browser tab).
  *
- * Phase 2 split from `backendEventStoreBindings.ts`. During the transition
- * this factory is consumed by the binding (no self-subscription); at Task 6 its
- * default deps subscribe via the router selectors.
+ * The backend-event subscription is App-composed: app/events/index.ts passes
+ * the router subscription into createWorkbenchEventHandlers so Workbench never
+ * imports app (Domains plan D7).
  */
-import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 
 export type WorkbenchEventDependencies = {
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
 };
 
-export const DEFAULT_WORKBENCH_EVENT_DEPENDENCIES: WorkbenchEventDependencies = {
-  subscribeOpenBrowserUrl: (listener) =>
-    subscribeBackendEvent("open.browser.url", (event) => {
-      if (event.source !== "openBrowserUrl") {
-        return;
-      }
-      listener(event.payload);
-    }),
-};
-
-/**
- * Starts workbench event handlers with default deps.
- */
-export function startWorkbenchEventHandlers() {
-  return createWorkbenchEventHandlers(DEFAULT_WORKBENCH_EVENT_DEPENDENCIES)();
-}
+export const DEFAULT_WORKBENCH_EVENT_DEPENDENCIES: WorkbenchEventDependencies = {};
 
 /**
  * Creates one workbench event handler factory. Returns `start()` which

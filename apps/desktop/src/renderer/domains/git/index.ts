@@ -4,6 +4,7 @@
 export type { GitCommands } from "./commands/contract";
 export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
 export { refreshDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
+export { readBranchComparisonDiff, readCommitDiff, readDiff } from "./commands/gitCommands";
 export {
   incrementGitRefreshVersion,
   listPullRequestHistory,

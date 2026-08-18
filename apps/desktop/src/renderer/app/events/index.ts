@@ -9,8 +9,9 @@ import { resetAgentLifecycleState } from "../../domains/agent/commands/agentSess
  */
 import { startNotificationEventHandlers } from "../../domains/notification/events/notificationEventHandlers";
 import { startTerminalEventHandlers } from "../../domains/terminal/events/terminalEventHandlers";
-import { startWorkbenchEventHandlers } from "../../domains/workbench/events/workbenchEventHandlers";
+import { createWorkbenchEventHandlers } from "../../domains/workbench/events/workbenchEventHandlers";
 import { startWorkspaceEventHandlers } from "../../domains/workspace/events/workspaceEventHandlers";
+import { subscribeBackendEvent } from "./backendEventRouter";
 
 /**
  * Starts all feature event handlers and returns one teardown function.
@@ -20,7 +21,17 @@ export function startBackendEventHandlers() {
   const stopWorkspaceEventHandlers = startWorkspaceEventHandlers();
   const stopNotificationEventHandlers = startNotificationEventHandlers();
   const stopTerminalEventHandlers = startTerminalEventHandlers();
-  const stopWorkbenchEventHandlers = startWorkbenchEventHandlers();
+  // App composes the backend-event subscription into the Workbench handler
+  // (Workbench never imports app; Domains plan D7).
+  const stopWorkbenchEventHandlers = createWorkbenchEventHandlers({
+    subscribeOpenBrowserUrl: (listener) =>
+      subscribeBackendEvent("open.browser.url", (event) => {
+        if (event.source !== "openBrowserUrl") {
+          return;
+        }
+        listener(event.payload);
+      }),
+  })();
 
   return () => {
     stopWorkspaceEventHandlers();

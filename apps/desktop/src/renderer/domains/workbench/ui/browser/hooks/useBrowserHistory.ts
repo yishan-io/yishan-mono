@@ -1,51 +1,47 @@
-import type { BrowserHistoryGroup } from "@renderer/app/commands/appCommands";
+import { appendBrowserHistory, loadBrowserHistory } from "@renderer/domains/workbench";
+import type { BrowserHistoryGroup } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAppCommands } from "../../../../../app/commands/useCommands";
 
 export function useBrowserHistory() {
-  const cmd = useAppCommands();
   const [historyGroups, setHistoryGroups] = useState<BrowserHistoryGroup[]>([]);
 
   useEffect(() => {
-    void cmd.loadBrowserHistory().then(setHistoryGroups);
-  }, [cmd]);
+    void loadBrowserHistory().then(setHistoryGroups);
+  }, []);
 
-  const addHistoryEntry = useCallback(
-    (url: string, title: string, faviconUrl?: string) => {
-      if (!url.trim()) {
-        return;
+  const addHistoryEntry = useCallback((url: string, title: string, faviconUrl?: string) => {
+    if (!url.trim()) {
+      return;
+    }
+    const entry = { url, title: title || url, faviconUrl, visitedAt: new Date().toISOString() };
+    void appendBrowserHistory({ entry });
+    setHistoryGroups((prev) => {
+      let host: string;
+      try {
+        host = new URL(url).host;
+      } catch {
+        host = url;
       }
-      const entry = { url, title: title || url, faviconUrl, visitedAt: new Date().toISOString() };
-      void cmd.appendBrowserHistory({ entry });
-      setHistoryGroups((prev) => {
-        let host: string;
-        try {
-          host = new URL(url).host;
-        } catch {
-          host = url;
-        }
-        const next = prev.map((g) => ({ ...g, entries: [...g.entries] }));
-        let group = next.find((g) => g.host === host);
-        if (!group) {
-          group = { host, faviconUrl, entries: [] };
-          next.unshift(group);
-        }
-        if (faviconUrl) {
-          group.faviconUrl = faviconUrl;
-        }
-        const existing = group.entries.find((entry) => entry.url === url);
-        if (existing) {
-          existing.title = title || existing.title;
-          existing.faviconUrl = faviconUrl || existing.faviconUrl;
-          existing.visitedAt = entry.visitedAt;
-        } else {
-          group.entries.push(entry);
-        }
-        return next;
-      });
-    },
-    [cmd],
-  );
+      const next = prev.map((g) => ({ ...g, entries: [...g.entries] }));
+      let group = next.find((g) => g.host === host);
+      if (!group) {
+        group = { host, faviconUrl, entries: [] };
+        next.unshift(group);
+      }
+      if (faviconUrl) {
+        group.faviconUrl = faviconUrl;
+      }
+      const existing = group.entries.find((entry) => entry.url === url);
+      if (existing) {
+        existing.title = title || existing.title;
+        existing.faviconUrl = faviconUrl || existing.faviconUrl;
+        existing.visitedAt = entry.visitedAt;
+      } else {
+        group.entries.push(entry);
+      }
+      return next;
+    });
+  }, []);
 
   const filterHistory = useCallback(
     (urlInput: string, urlFocused: boolean) => {

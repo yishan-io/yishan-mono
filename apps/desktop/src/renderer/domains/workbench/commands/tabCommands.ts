@@ -1,6 +1,4 @@
 import type { DesktopAgentKind } from "@renderer/domains/agent";
-import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
-import { requestTerminalTabFocus } from "../../../events/terminalTabFocus";
 import {
   collectLeaves,
   findOppositePaneId,
@@ -13,6 +11,8 @@ import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore"
 import type { CloseTabOptions, TabStoreState } from "../../../domains/workbench/state/tabStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workbenchNavigationStore } from "../../../domains/workbench/state/workbenchNavigationStore";
+import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events/agentChatComposerFocus";
+import { requestTerminalTabFocus } from "../../../events/terminalTabFocus";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;

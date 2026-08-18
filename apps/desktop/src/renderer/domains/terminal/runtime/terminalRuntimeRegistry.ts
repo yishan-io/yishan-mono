@@ -1,5 +1,5 @@
+import { createFixedRuntimeLayer } from "@renderer/domains/workbench";
 import { Terminal } from "@xterm/xterm";
-import { createFixedRuntimeLayer } from "../../../app/runtime/runtimeSurfaceLayer";
 import { loadTerminalAddons } from "./terminalAddons";
 import {
   MIN_FIT_INTERVAL_MS,

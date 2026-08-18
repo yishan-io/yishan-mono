@@ -1,5 +1,5 @@
+import { renameTab, setBrowserTabFaviconUrl } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useWorkbenchCommands } from "../../../../../app/commands/useCommands";
 
 export function useWebviewEvents(args: {
   tabId: string;
@@ -10,7 +10,7 @@ export function useWebviewEvents(args: {
   onNavigated?: (url: string) => void;
 }) {
   const { tabId, resolvedUrl, pageTitle, addHistoryEntry, setPageTitle, onNavigated } = args;
-  const cmd = useWorkbenchCommands();
+
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const isWebviewReadyRef = useRef(false);
   const pageTitleRef = useRef(pageTitle);
@@ -44,13 +44,13 @@ export function useWebviewEvents(args: {
       setPageTitle(nextTitle);
       const currentUrl = webview.getURL?.() || resolvedUrl;
       addHistoryEntry(currentUrl, nextTitle);
-      cmd.renameTab(tabId, nextTitle);
+      renameTab(tabId, nextTitle);
     };
 
     const handleFaviconUpdated = (event: Event) => {
       const favicons = (event as { favicons?: string[] }).favicons;
       const faviconUrl = favicons?.[0];
-      cmd.setBrowserTabFaviconUrl(tabId, faviconUrl);
+      setBrowserTabFaviconUrl(tabId, faviconUrl);
       if (faviconUrl) {
         const currentUrl = webview.getURL?.() || resolvedUrl;
         addHistoryEntry(currentUrl, pageTitleRef.current, faviconUrl);
@@ -120,7 +120,7 @@ export function useWebviewEvents(args: {
       webview.removeEventListener("did-start-loading", handleDidStartLoading);
       webview.removeEventListener("did-stop-loading", handleDidStopLoading);
     };
-  }, [cmd, tabId, resolvedUrl, addHistoryEntry, setPageTitle]);
+  }, [tabId, resolvedUrl, addHistoryEntry, setPageTitle]);
 
   const setWebviewRef = useCallback((element: Electron.WebviewTag | null) => {
     webviewRef.current = element;

@@ -161,12 +161,9 @@ import {
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "../../domains/workspace/commands/workspaceCommands";
 import {
-  appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
-  loadBrowserHistory as loadBrowserHistoryCommand,
   logout as logoutCommand,
-  openExternalUrl as openExternalUrlCommand,
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "./appCommands";
 
@@ -181,15 +178,12 @@ import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "../flows/
  * compatibility entry for app-level consumers (e.g. the shortcut runtime).
  */
 
-/** App-level commands (Electron host, auth, browser history, app flows). */
+/** App-level commands (Electron host, auth, app flows). */
 export type AppCommandSurface = {
   logout: typeof logoutCommand;
-  openExternalUrl: typeof openExternalUrlCommand;
   checkAgentGlobalConfigExternalDirectoryPermission: typeof checkAgentGlobalConfigExternalDirectoryPermissionCommand;
   ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
   toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
-  loadBrowserHistory: typeof loadBrowserHistoryCommand;
-  appendBrowserHistory: typeof appendBrowserHistoryCommand;
   loadWorkspaceSnapshot: () => Promise<void>;
 };
 
@@ -404,12 +398,9 @@ export type Commands = AppCommandSurface &
 export function createAppCommands(): AppCommandSurface {
   return {
     logout: logoutCommand,
-    openExternalUrl: openExternalUrlCommand,
     checkAgentGlobalConfigExternalDirectoryPermission: checkAgentGlobalConfigExternalDirectoryPermissionCommand,
     ensureAgentGlobalConfigExternalDirectoryPermission: ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
     toggleMainWindowMaximized: toggleMainWindowMaximizedCommand,
-    loadBrowserHistory: loadBrowserHistoryCommand,
-    appendBrowserHistory: appendBrowserHistoryCommand,
     loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
   };
 }

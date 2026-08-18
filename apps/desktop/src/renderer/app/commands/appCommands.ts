@@ -1,8 +1,6 @@
-import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { openExternalUrl, openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import type {
-  AppendBrowserHistoryInput,
   AuthStatusResult,
-  BrowserHistoryGroup,
   DaemonInfoResult,
   DaemonLogResult,
   DaemonRestartResult,
@@ -36,11 +34,6 @@ export async function toggleMainWindowMaximized() {
 /** Returns whether the main desktop window currently runs in fullscreen mode. */
 export async function getMainWindowFullscreenState() {
   return await getDesktopHostBridge().getMainWindowFullscreenState();
-}
-
-/** Opens one URL through the Electron main-process host bridge. */
-export async function openExternalUrl(url: string) {
-  return await getDesktopHostBridge().openExternalUrl({ url });
 }
 
 /** Clears renderer and daemon auth state for one desktop logout flow. */
@@ -159,14 +152,6 @@ export async function login() {
   return result;
 }
 
-export async function loadBrowserHistory(): Promise<BrowserHistoryGroup[]> {
-  return await getDesktopHostBridge().loadBrowserHistory();
-}
-
-export async function appendBrowserHistory(input: AppendBrowserHistoryInput): Promise<{ ok: true }> {
-  return await getDesktopHostBridge().appendBrowserHistory(input);
-}
-
 // ─── Desktop update surface ────────────────────────────────────────────────────
 // Owns the Electron bridge update calls so UI never imports the bridge value
 // or main-process types directly (UpdateRuntime ownership: Phase 9).
@@ -210,7 +195,7 @@ export function installDesktopUpdate() {
 
 export type { DesktopUpdateEventPayload } from "../../../main/ipc";
 
-export type { BrowserHistoryGroup, DaemonInfoResult, DaemonLogResult } from "../../../main/ipc";
+export type { DaemonInfoResult, DaemonLogResult } from "../../../main/ipc";
 
 /** Reads the daemon log from the Electron host. */
 export async function getDaemonLog(): Promise<DaemonLogResult> {

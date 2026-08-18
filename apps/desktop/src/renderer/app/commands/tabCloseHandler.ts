@@ -1,5 +1,12 @@
 import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
+import { stopPiSession } from "../../domains/agent/commands/agentChatCommands";
+import { clearTerminalAgentStatus } from "../../domains/agent/commands/agentSessionLifecycle";
+import { removeTabData } from "../../domains/agent/state/chatActions";
+import { removeFileTabContent } from "../../domains/files/commands/fileTabContentCommands";
+import { removeDiffTabContent } from "../../domains/git/commands/diffTabContentCommands";
+import type { CloseTabOptions } from "../../domains/workbench/state/tabStore";
+import { enqueueWorkspaceErrorNotice } from "../../domains/workspace/state/workspaceActions";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
  *
@@ -14,13 +21,6 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
  *         -> Workbench remove-Tab Command
  */
 import { clearAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
-import { stopPiSession } from "../../domains/agent/commands/agentChatCommands";
-import { clearTerminalAgentStatus } from "../../domains/agent/commands/agentSessionLifecycle";
-import { removeTabData } from "../../domains/agent/state/chatActions";
-import { removeFileTabContent } from "../../domains/files/commands/fileTabContentCommands";
-import { removeDiffTabContent } from "../../domains/git/commands/diffTabContentCommands";
-import type { CloseTabOptions } from "../../domains/workbench/state/tabStore";
-import { enqueueWorkspaceErrorNotice } from "../../domains/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../../rpc/rpcTransport";

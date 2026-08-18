@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
+import { setBrowserTabFaviconUrl } from "@renderer/domains/workbench";
 import { type FormEvent, useCallback, useMemo, useRef } from "react";
 import { LuWrench } from "react-icons/lu";
-import { useWorkbenchCommands } from "../../../../app/commands/useCommands";
 import { tabStore } from "../../state/tabStore";
 import { BlankView } from "./BlankView";
 import { ToolsMenu } from "./ToolsMenu";
@@ -20,7 +20,6 @@ type BrowserViewProps = {
 };
 
 export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
-  const cmd = useWorkbenchCommands();
   const textFieldRef = useRef<HTMLDivElement>(null);
 
   const { historyGroups, addHistoryEntry, filterHistory } = useBrowserHistory();
@@ -78,7 +77,7 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
         return;
       }
       setUrlInput(normalized);
-      cmd.setBrowserTabFaviconUrl(tabId, undefined);
+      setBrowserTabFaviconUrl(tabId, undefined);
       resetForNavigation();
       if (normalized === resolvedUrl) {
         webviewRef.current?.reload();
@@ -87,7 +86,7 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
       }
       (document.activeElement as HTMLElement)?.blur();
     },
-    [cmd, tabId, setUrlInput, setActiveUrl, resetForNavigation, resolvedUrl, webviewRef],
+    [tabId, setUrlInput, setActiveUrl, resetForNavigation, resolvedUrl, webviewRef],
   );
 
   const handleSubmit = useCallback(
@@ -95,7 +94,7 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
       event.preventDefault();
       const trimmed = urlInput.trim();
       if (!trimmed) {
-        cmd.setBrowserTabFaviconUrl(tabId, undefined);
+        setBrowserTabFaviconUrl(tabId, undefined);
         resetForNavigation();
         setActiveUrl("");
         tabStore.getState().setBrowserTabUrl(tabId, "");
@@ -103,7 +102,7 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
         return;
       }
       const nextUrl = normalizeUrl(trimmed);
-      cmd.setBrowserTabFaviconUrl(tabId, undefined);
+      setBrowserTabFaviconUrl(tabId, undefined);
       resetForNavigation();
       if (nextUrl === resolvedUrl) {
         webviewRef.current?.reload();
@@ -113,7 +112,7 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
       addHistoryEntry(nextUrl, "");
       (document.activeElement as HTMLElement)?.blur();
     },
-    [urlInput, cmd, tabId, setActiveUrl, resetForNavigation, addHistoryEntry, resolvedUrl, webviewRef],
+    [urlInput, tabId, setActiveUrl, resetForNavigation, addHistoryEntry, resolvedUrl, webviewRef],
   );
 
   const handleUrlKeyDown = useCallback(

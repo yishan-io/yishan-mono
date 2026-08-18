@@ -1,6 +1,7 @@
-import type { Commands } from "../../../app/commands/composition";
-import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events/backendEventPipeline";
+import type { readFile, refreshFileTabFromDisk } from "@renderer/domains/files";
+import type { readBranchComparisonDiff, readCommitDiff, readDiff, refreshDiffTabContent } from "@renderer/domains/git";
 import type { DiffTabSource } from "../../../domains/workbench/model/types";
+import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events/backendEventPipeline";
 import { isFileNotFoundError } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 
@@ -17,15 +18,14 @@ export type RefreshableOpenTab =
       source?: DiffTabSource;
     };
 
-export type OpenTabAutoRefreshCommands = Pick<
-  Commands,
-  | "readFile"
-  | "readDiff"
-  | "readCommitDiff"
-  | "readBranchComparisonDiff"
-  | "refreshFileTabFromDisk"
-  | "refreshDiffTabContent"
->;
+export type OpenTabAutoRefreshCommands = {
+  readFile: typeof readFile;
+  readDiff: typeof readDiff;
+  readCommitDiff: typeof readCommitDiff;
+  readBranchComparisonDiff: typeof readBranchComparisonDiff;
+  refreshFileTabFromDisk: typeof refreshFileTabFromDisk;
+  refreshDiffTabContent: typeof refreshDiffTabContent;
+};
 
 export type SubscribeDaemonConnectionStatus = typeof defaultSubscribeDaemonConnectionStatus;
 

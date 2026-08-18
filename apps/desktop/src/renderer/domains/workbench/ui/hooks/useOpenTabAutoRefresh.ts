@@ -7,7 +7,7 @@ import {
   createOpenTabAutoRefreshRuntime,
 } from "../../runtime/openTabAutoRefreshRuntime";
 
-export type { RefreshableOpenTab } from "../../runtime/openTabAutoRefreshRuntime";
+export type { OpenTabAutoRefreshCommands, RefreshableOpenTab } from "../../runtime/openTabAutoRefreshRuntime";
 
 type UseOpenTabAutoRefreshInput = {
   workspaceId?: string;

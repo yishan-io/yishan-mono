@@ -2,6 +2,14 @@
  * Workbench feature public API (Phase 12, desktop5.md).
  */
 export {
+  appendBrowserHistory,
+  loadBrowserHistory,
+  openExternalUrl,
+} from "./infrastructure/browserHostCommands";
+export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "./infrastructure/browserHostCommands";
+export { createFixedRuntimeLayer } from "./runtime/runtimeSurfaceLayer";
+export { getOrCreateRuntimeRoot } from "./runtime/runtimeRoot";
+export {
   activateProject,
   activateWorkspace,
   closeOverlayPanel,
@@ -19,9 +27,11 @@ export {
   openTab,
   openTabInOppositePane,
   paneSelectTab,
+  promoteTemporaryTab,
   registerTabInPane,
   removeRightPaneStateForWorkspace,
   renameTab,
+  renameTabsForEntryRename,
   reorderPaneTab,
   resizeLeftPane,
   resizeRightPane,
@@ -29,6 +39,7 @@ export {
   retainWorkspaceTabs,
   setActivePane,
   setAgentChatTabSubagentControl,
+  setBrowserTabFaviconUrl,
   setLeftPaneHidden,
   setIsRightPaneHidden,
   setRightPaneTab,
@@ -36,6 +47,7 @@ export {
   setSelectedTab,
   setTerminalTabAgentKind,
   splitWorkspacePane,
+  toggleTabPinned,
   unregisterTabFromPane,
 } from "./commands/tabCommands";
 export type { WorkbenchTab } from "./model/types";

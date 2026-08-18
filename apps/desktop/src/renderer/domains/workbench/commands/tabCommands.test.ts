@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { chatStore } from "../../../domains/agent/state/chatStore";
+import { createLeaf } from "../../../domains/workbench/model/split-pane";
+import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
+import { tabStore } from "../../../domains/workbench/state/tabStore";
 import {
   __resetPendingTerminalTabFocusForTests,
   consumeTerminalTabFocus,
   hasPendingTerminalTabFocus,
 } from "../../../events/terminalTabFocus";
-import { chatStore } from "../../../domains/agent/state/chatStore";
-import { createLeaf } from "../../../domains/workbench/model/split-pane";
-import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
-import { tabStore } from "../../../domains/workbench/state/tabStore";
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,

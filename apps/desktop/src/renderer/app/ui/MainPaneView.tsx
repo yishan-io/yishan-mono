@@ -288,6 +288,18 @@ export function MainPaneView() {
                     worktreePath={workspaces.find((ws) => ws.id === wsId)?.worktreePath}
                     enabledAgentKinds={enabledAgentKinds}
                     agentPresetMeta={agentPresetMeta}
+                    tabFileCommands={{
+                      createNewWhiteboard: fileCommands.createNewWhiteboard,
+                      renameEntry: fileCommands.renameEntry,
+                    }}
+                    openTabRefreshCommands={{
+                      readFile: fileCommands.readFile,
+                      refreshFileTabFromDisk: fileCommands.refreshFileTabFromDisk,
+                      readDiff: gitCommands.readDiff,
+                      readCommitDiff: gitCommands.readCommitDiff,
+                      readBranchComparisonDiff: gitCommands.readBranchComparisonDiff,
+                      refreshDiffTabContent: gitCommands.refreshDiffTabContent,
+                    }}
                     fetchAgentSessionFilePath={fetchAgentSessionFilePath}
                     renderAgentIcon={(agentKind, label) => (
                       <AgentIcon agentKind={agentKind as never} context="tabMenu" label={label} />

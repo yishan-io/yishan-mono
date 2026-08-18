@@ -807,14 +807,17 @@ describe("MainPaneView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "create-codex" }));
 
-    expect(openTab).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
-      kind: "terminal",
-      title: "settings.agents.items.codex",
-      launchCommand: "codex",
-      agentKind: "codex",
-      reuseExisting: false,
-    });
+    expect(openTab).toHaveBeenCalledWith(
+      {
+        workspaceId: "workspace-1",
+        kind: "terminal",
+        title: "settings.agents.items.codex",
+        launchCommand: "codex",
+        agentKind: "codex",
+        reuseExisting: false,
+      },
+      { activePaneTabIds: ["tab-1"], workspaceId: "workspace-1" },
+    );
   });
 
   it("hides disabled agents from tab creation menu", () => {
@@ -853,12 +856,15 @@ describe("MainPaneView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "create-terminal" }));
 
-    expect(openTab).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
-      kind: "terminal",
-      title: "terminal.title",
-      reuseExisting: false,
-    });
+    expect(openTab).toHaveBeenCalledWith(
+      {
+        workspaceId: "workspace-1",
+        kind: "terminal",
+        title: "terminal.title",
+        reuseExisting: false,
+      },
+      { activePaneTabIds: ["tab-1"], workspaceId: "workspace-1" },
+    );
   });
 
   it("shows the left pane toggle and right tab bar controls", () => {

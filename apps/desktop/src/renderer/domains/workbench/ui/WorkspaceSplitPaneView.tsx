@@ -1,12 +1,23 @@
 import { Box } from "@mui/material";
+import {
+  closeAllTabs,
+  closeOtherTabs,
+  closeTab,
+  openTab,
+  promoteTemporaryTab,
+  renameTab,
+  renameTabsForEntryRename,
+  setSelectedTab as selectTab,
+  toggleTabPinned,
+} from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
 import type { PaneLeaf, SplitPaneNode } from "../../../domains/workbench/model/split-pane";
 import type { WorkbenchTab } from "../../../domains/workbench/model/types";
 import { selectPaneForTab } from "../../../domains/workbench/state/workbenchSelectors";
 import {
+  type OpenTabAutoRefreshCommands,
   type RefreshableOpenTab,
   useOpenTabAutoRefresh,
 } from "../../../domains/workbench/ui/hooks/useOpenTabAutoRefresh";
@@ -32,6 +43,17 @@ export type WorkspaceSplitPaneProps = {
   enabledAgentKinds: string[];
   /** Agent terminal preset metadata for the tab create menu (App-composed; agent-owned). */
   agentPresetMeta: Record<string, AgentPresetMeta>;
+  /** Files tab-file commands used by tab gestures (App-composed; files-owned). */
+  tabFileCommands: {
+    createNewWhiteboard: (workspaceId: string) => Promise<string | null>;
+    renameEntry: (input: {
+      workspaceId: string;
+      fromRelativePath: string;
+      toRelativePath: string;
+    }) => Promise<{ ok: true }>;
+  };
+  /** Refreshes open file/diff tabs after backend changes (App-composed; files/git-owned). */
+  openTabRefreshCommands: OpenTabAutoRefreshCommands;
   /** Resolves one agent transcript file path for the tab context menu (App-supplied). */
   fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
   /** Renders one agent icon (App-supplied; agent-owned). */
@@ -82,6 +104,8 @@ export function WorkspaceSplitPane({
   worktreePath,
   enabledAgentKinds,
   agentPresetMeta,
+  tabFileCommands,
+  openTabRefreshCommands,
   fetchAgentSessionFilePath,
   renderAgentIcon,
   resolveFileTabIcon,
@@ -92,14 +116,11 @@ export function WorkspaceSplitPane({
   renderTabContent,
   renderAgentChatSurface,
 }: WorkspaceSplitPaneProps) {
-  const workbenchCommands = useWorkbenchCommands();
-  const fileCommands = useFileCommands();
-  const gitCommands = useGitCommands();
   // Stable identity: passed to tab handlers + open-tab auto-refresh; a fresh
   // object every render would re-run their effects on each render.
   const cmd = useMemo(
-    () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
-    [workbenchCommands, fileCommands, gitCommands],
+    () => ({ openTab, closeTab, selectTab, renameTab, renameTabsForEntryRename, ...tabFileCommands }),
+    [tabFileCommands],
   );
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = { worktreePath };
@@ -203,7 +224,7 @@ export function WorkspaceSplitPane({
   useOpenTabAutoRefresh({
     workspaceId,
     tabs: refreshableTabs,
-    commands: cmd,
+    commands: openTabRefreshCommands,
   });
 
   // ─── Pane tab handlers ──────────────────────────────────────────────────────
@@ -292,12 +313,12 @@ export function WorkspaceSplitPane({
           isDraggingSplit={isDraggingSplit}
           onSelectTab={handleSelectTab}
           onCloseTab={handleCloseTab}
-          onCloseOtherTabs={cmd.closeOtherTabs}
-          onCloseAllTabs={cmd.closeAllTabs}
-          onTogglePinTab={cmd.toggleTabPinned}
+          onCloseOtherTabs={closeOtherTabs}
+          onCloseAllTabs={closeAllTabs}
+          onTogglePinTab={toggleTabPinned}
           onReorderTab={handleReorderTab}
           onCreateTab={handleCreateTab}
-          onPromoteTemporaryTab={cmd.promoteTemporaryTab}
+          onPromoteTemporaryTab={promoteTemporaryTab}
           onSplitDrop={handleSplitDrop}
           onSplitRight={handleSplitRight}
           onSplitDown={handleSplitDown}
@@ -322,7 +343,6 @@ export function WorkspaceSplitPane({
       tabById,
       handleSelectTab,
       handleCloseTab,
-      cmd,
       handleRenameTab,
       handleReorderTab,
       handleCreateTab,
@@ -374,10 +394,10 @@ export function WorkspaceSplitPane({
                   tab.data.sessionId === session.sessionId,
               )?.id;
             if (existingTabId) {
-              cmd.selectTab(existingTabId);
+              selectTab(existingTabId);
               return;
             }
-            cmd.openTab({
+            openTab({
               workspaceId,
               kind: "agent-chat",
               title: formatAgentSessionTitle(title),

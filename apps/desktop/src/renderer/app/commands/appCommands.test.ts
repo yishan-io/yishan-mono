@@ -8,14 +8,12 @@ import {
   getDaemonInfo,
   getMainWindowFullscreenState,
   login,
-  openExternalUrl,
   toggleMainWindowMaximized,
 } from "./appCommands";
 
 const mocks = vi.hoisted(() => ({
   checkAgentGlobalConfigExternalDirectoryPermission: vi.fn(),
   ensureAgentGlobalConfigExternalDirectoryPermission: vi.fn(),
-  openExternalUrl: vi.fn(),
   toggleMainWindowMaximized: vi.fn(),
   getMainWindowFullscreenState: vi.fn(),
   checkAuthStatus: vi.fn(),
@@ -36,7 +34,6 @@ vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
       },
     })),
     getDesktopHostBridge: vi.fn(() => ({
-      openExternalUrl: mocks.openExternalUrl,
       toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
       getMainWindowFullscreenState: mocks.getMainWindowFullscreenState,
       getDaemonInfo: mocks.getDaemonInfo,
@@ -54,7 +51,6 @@ describe("appCommands", () => {
     await ensureAgentGlobalConfigExternalDirectoryPermission({ agentKind: "claude" });
     await toggleMainWindowMaximized();
     await getMainWindowFullscreenState();
-    await openExternalUrl("https://yishan.io/docs");
     await getAuthStatus();
     await getDaemonInfo();
     await login();
@@ -63,7 +59,6 @@ describe("appCommands", () => {
     expect(mocks.ensureAgentGlobalConfigExternalDirectoryPermission).toHaveBeenCalledWith({ agentKind: "claude" });
     expect(mocks.toggleMainWindowMaximized).toHaveBeenCalledWith();
     expect(mocks.getMainWindowFullscreenState).toHaveBeenCalledWith();
-    expect(mocks.openExternalUrl).toHaveBeenCalledWith({ url: "https://yishan.io/docs" });
     expect(mocks.checkAuthStatus).toHaveBeenCalledWith();
     expect(mocks.getDaemonInfo).toHaveBeenCalledWith();
     expect(mocks.login).toHaveBeenCalledWith();

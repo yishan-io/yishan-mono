@@ -1,7 +1,14 @@
 import type { DesktopAgentKind } from "@renderer/domains/agent";
+import type { createNewWhiteboard, renameEntry } from "@renderer/domains/files";
+import type {
+  closeTab,
+  openTab,
+  renameTab,
+  renameTabsForEntryRename,
+  setSelectedTab as selectTab,
+} from "@renderer/domains/workbench";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { FileCommandSurface, WorkbenchCommandSurface } from "../../../app/commands/useCommands";
 import type { WorkbenchTab } from "../../../domains/workbench/model/types";
 import type { SplitDropRegion } from "./pane/SplitDropZone";
 import { resolveDropResult } from "./pane/SplitDropZone";
@@ -18,13 +25,24 @@ export type AgentPresetMeta = {
   launchCommand: string;
 };
 
+/** Tab commands supplied to the pane tab handlers (workbench tab commands + files tab-file commands). */
+export type PaneTabHandlersCommands = {
+  openTab: typeof openTab;
+  closeTab: typeof closeTab;
+  selectTab: typeof selectTab;
+  renameTab: typeof renameTab;
+  renameTabsForEntryRename: typeof renameTabsForEntryRename;
+  createNewWhiteboard: typeof createNewWhiteboard;
+  renameEntry: typeof renameEntry;
+};
+
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;
   workspaceTabs: WorkbenchTab[];
   workspace: { worktreePath?: string } | undefined;
   enabledAgentKindSet: Set<string>;
   agentPresetMeta: Record<string, AgentPresetMeta>;
-  cmd: WorkbenchCommandSurface & FileCommandSurface;
+  cmd: PaneTabHandlersCommands;
   setFocusContentRequestKey: React.Dispatch<React.SetStateAction<number>>;
   setIsDraggingSplit: React.Dispatch<React.SetStateAction<boolean>>;
 };

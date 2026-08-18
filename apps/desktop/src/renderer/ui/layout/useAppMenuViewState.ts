@@ -1,3 +1,4 @@
+import { openExternalUrl } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppCommands, useOrganizationCommands } from "../../app/commands/useCommands";
@@ -6,7 +7,7 @@ import { useAppCommands, useOrganizationCommands } from "../../app/commands/useC
 export function useAppMenuViewState() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, openExternalUrl } = useAppCommands();
+  const { logout } = useAppCommands();
   const { switchOrganization } = useOrganizationCommands();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [organizationMenuAnchor, setOrganizationMenuAnchor] = useState<HTMLElement | null>(null);
@@ -59,16 +60,13 @@ export function useAppMenuViewState() {
     navigate("/");
   }, [closeMenus, logout, navigate]);
 
-  const handleOpenExternalUrl = useCallback(
-    (url: string) => {
-      // fire-and-forget: external browser open should not block menu interaction.
-      void openExternalUrl(url).catch((error) => {
-        console.warn("Failed to open external URL", error);
-      });
-      setMenuAnchor(null);
-    },
-    [openExternalUrl],
-  );
+  const handleOpenExternalUrl = useCallback((url: string) => {
+    // fire-and-forget: external browser open should not block menu interaction.
+    void openExternalUrl(url).catch((error) => {
+      console.warn("Failed to open external URL", error);
+    });
+    setMenuAnchor(null);
+  }, []);
 
   const handleSelectOrganization = useCallback(
     (organizationId: string, isSelected: boolean) => {

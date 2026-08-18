@@ -2,7 +2,7 @@
  * Files feature public API (Phase 12, desktop5.md).
  */
 export type { FileCommands } from "./commands/contract";
-export { openEntryInExternalApp } from "./commands/fileCommands";
+export { openEntryInExternalApp, readFile, renameEntry } from "./commands/fileCommands";
 export { useDetectedExternalAppIds } from "./ui/hooks/useDetectedExternalAppIds";
 export {
   incrementFileTreeRefreshVersion,
