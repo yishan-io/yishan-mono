@@ -102,7 +102,7 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../domains/overview/ui/OverviewView", () => ({
+vi.mock("@renderer/domains/overview", () => ({
   OverviewView: () => <div data-testid="overview-view" />,
 }));
 

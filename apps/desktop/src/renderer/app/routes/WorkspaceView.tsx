@@ -34,7 +34,7 @@ import { popupStore } from "../../app/state/popupStore";
 import { LeftPaneView } from "../../app/ui/LeftPaneView";
 import { MainPaneView } from "../../app/ui/MainPaneView";
 import { AgentChatRecoveryCoordinator } from "../../domains/agent/runtime/agentChatRecovery";
-import { OverviewView } from "../../domains/overview/ui/OverviewView";
+import { OverviewView } from "@renderer/domains/overview";
 import { projectStore } from "../../domains/project/state/projectStore";
 import { ScheduledJobView } from "../../domains/scheduled-job/ui/ScheduledJobView";
 import { sessionStore } from "../../domains/session";

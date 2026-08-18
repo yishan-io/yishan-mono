@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { overviewStore } from "../../../domains/overview/state/overviewStore";
+import { overviewStore } from "../../../../domains/overview/state/overviewStore";
 import { TokenUsageChartView } from "./TokenUsageChartView";
 
 vi.mock("@mui/x-charts/BarChart", () => ({

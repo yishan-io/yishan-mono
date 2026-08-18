@@ -1,5 +1,5 @@
 import { api } from "../../../api";
-import type { OverviewTimeRange } from "../../../api/overviewApi.types";
+import type { OverviewTimeRange } from "../model/overviewTypes";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
 import { selectSelectedOrganizationId } from "../../../domains/session";

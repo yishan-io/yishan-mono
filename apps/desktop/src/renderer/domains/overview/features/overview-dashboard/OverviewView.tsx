@@ -5,11 +5,11 @@ import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar } from "react-icons/lu";
-import { useOverviewCommands } from "../../../app/commands/useCommands";
-import { overviewStore } from "../../../domains/overview/state/overviewStore";
-import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
-import { getRendererPlatform } from "../../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { loadAllOverviewData } from "../../commands/overviewCommands";
+import { overviewStore } from "../../../../domains/overview/state/overviewStore";
+import { useProjects } from "@renderer/domains/project";
+import { getRendererPlatform } from "../../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { AgentKindChartView } from "./AgentKindChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
 import { OverviewFiltersView } from "./OverviewFiltersView";
@@ -45,7 +45,6 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
   const projects = useProjects();
 
-  const { loadAllOverviewData } = useOverviewCommands();
 
   useEffect(() => {
     void loadAllOverviewData();
