@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  applyCreatedWorkspaceState,
-  countWorkspaceGitChanges,
-  normalizeCreateWorkspaceInput,
-} from "./workspaceHelpers";
+import { applyCreatedWorkspaceState, normalizeCreateWorkspaceInput } from "./workspaceStoreMutations";
 
-describe("workspaceHelpers", () => {
+describe("workspaceStoreMutations", () => {
   it("normalizes create-workspace input and applies defaults", () => {
     expect(
       normalizeCreateWorkspaceInput({
@@ -15,16 +11,6 @@ describe("workspaceHelpers", () => {
       normalizedName: "feature-a",
       normalizedBranch: "main",
     });
-  });
-
-  it("counts changes across staged, unstaged, and untracked sections", () => {
-    expect(
-      countWorkspaceGitChanges({
-        staged: [{ path: "a.ts" }],
-        unstaged: [{ path: "b.ts" }, { path: "c.ts" }],
-        untracked: [{ path: "d.ts" }],
-      }),
-    ).toBe(4);
   });
 
   it("updates existing optimistic workspace when backend details arrive", () => {

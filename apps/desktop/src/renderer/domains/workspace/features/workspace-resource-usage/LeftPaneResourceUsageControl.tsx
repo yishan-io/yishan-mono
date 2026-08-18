@@ -9,7 +9,7 @@ import { workspaceStore } from "../../../../domains/workspace/state/workspaceSto
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
 import { RouteCloseWatcher } from "../../../../ui/components/RouteCloseWatcher";
-import { WorkspaceResourceTableMenu, type WorkspaceResourceTableMenuRow } from "../WorkspaceResourceTableMenu";
+import { WorkspaceResourceTableMenu, type WorkspaceResourceTableMenuRow } from "./WorkspaceResourceTableMenu";
 
 type WorkspaceResourceUsageRow = {
   workspaceId: string;

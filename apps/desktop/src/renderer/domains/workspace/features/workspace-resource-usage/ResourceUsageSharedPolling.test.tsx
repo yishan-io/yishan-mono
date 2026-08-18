@@ -3,10 +3,10 @@
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetSharedTerminalResourceUsageSnapshotForTests } from "../../../domains/terminal/runtime/sharedTerminalResourceUsage";
-import { tabStore } from "../../../domains/workbench/state/tabStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { LeftPaneResourceUsageControl } from "./LeftPane/LeftPaneResourceUsageControl";
+import { resetSharedTerminalResourceUsageSnapshotForTests } from "../../../../domains/terminal/runtime/sharedTerminalResourceUsage";
+import { tabStore } from "../../../../domains/workbench/state/tabStore";
+import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
+import { LeftPaneResourceUsageControl } from "./LeftPaneResourceUsageControl";
 import { WorkspaceResourceUsageControl } from "./WorkspaceResourceUsageControl";
 
 const mocked = vi.hoisted(() => ({

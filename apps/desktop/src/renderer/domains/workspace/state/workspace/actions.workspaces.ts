@@ -1,10 +1,10 @@
+import type { WorkspaceItem } from "../../model/workspaceTypes";
 import {
   applyCreatedWorkspaceState,
   applyDeletedWorkspaceState,
   applyRenamedWorkspaceBranchState,
   applyRenamedWorkspaceState,
-} from "../../../../helpers/workspaceHelpers";
-import type { WorkspaceItem } from "../../model/workspaceTypes";
+} from "../workspaceStoreMutations";
 import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../workspaceStoreTypes";
 
 type WorkspaceActions = Pick<

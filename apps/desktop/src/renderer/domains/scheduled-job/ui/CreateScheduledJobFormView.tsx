@@ -6,7 +6,7 @@ import { useScheduledJobCommands } from "../../../app/commands/useCommands";
 import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
 import type { CreateScheduledJobInput } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { useDaemonId, useSelectedOrganizationId } from "../../../domains/session";
-import { useSelectedProjectId } from "../../../domains/workspace/ui/hooks/useWorkspaceReadHooks";
+import { useSelectedProjectId } from "../../../domains/workspace/hooks/useWorkspaceReadHooks";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
 import { useScheduledJobFormState } from "./form/useScheduledJobFormState";

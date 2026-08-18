@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   enqueueWorkspaceLifecycleWarnings,
   workspaceLifecycleNoticeStore,
-} from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
+} from "../../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { WorkspaceLifecycleNoticeView } from "./WorkspaceLifecycleNoticeView";
 
 afterEach(() => {

@@ -3,9 +3,9 @@
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../../domains/project/state/projectStore";
-import { tabStore } from "../../../domains/workbench/state/tabStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
+import { projectStore } from "../../../../domains/project/state/projectStore";
+import { tabStore } from "../../../../domains/workbench/state/tabStore";
+import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { WorkspaceResourceUsageControl } from "./WorkspaceResourceUsageControl";
 
 const mocked = vi.hoisted(() => ({

@@ -172,7 +172,7 @@ vi.mock("../ui/projectIcons", () => ({
   renderRepoIcon: () => "R",
 }));
 
-vi.mock("../../../../domains/workspace/ui/LeftPane/CreateWorkspaceDialogView", () => ({
+vi.mock("../../../../domains/workspace/features/create-workspace/CreateWorkspaceDialogView", () => ({
   CreateWorkspaceDialogView: ({ open, mode }: { open: boolean; mode?: "create" | "rename" }) =>
     open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
 }));
@@ -197,9 +197,30 @@ vi.mock("../project-config/ProjectConfigDialogView", () => ({
   ProjectConfigDialogView: ({ open }: { open: boolean }) => (open ? <div data-testid="repo-config-dialog" /> : null),
 }));
 
-vi.mock("@renderer/domains/project", () => ({
-  deleteProject: mocked.deleteProject,
-}));
+vi.mock("@renderer/domains/project", async () => {
+  // The workspace feature graph (reached through @renderer/domains/workspace)
+  // imports project public-API members; load the stateless ones from deep
+  // paths (async factory avoids the project<->workspace index cycle).
+  const projectTypes = await import("../../../../domains/project/model/projectTypes");
+  const projectCapability = await import("../../../../domains/project/model/projectGitCapability");
+  const projectListRules = await import("../../../../domains/project/model/projectListRules");
+  const projectSelectors = await import("../../../../domains/project/state/projectSelectors");
+  const projectReadHooks = await import("../../../../domains/project/hooks/useProjectReadHooks");
+  const projectIcons = await import("../../../../domains/project/ui/projectIcons");
+  return {
+    deleteProject: mocked.deleteProject,
+    LOCAL_FOLDER_PROJECT_ID: projectTypes.LOCAL_FOLDER_PROJECT_ID,
+    supportsGitFeatures: projectCapability.supportsGitFeatures,
+    filterVisibleProjects: projectListRules.filterVisibleProjects,
+    selectProjectById: projectSelectors.selectProjectById,
+    selectProjectDisplayIds: projectSelectors.selectProjectDisplayIds,
+    selectProjects: projectSelectors.selectProjects,
+    useProjects: projectReadHooks.useProjects,
+    useDisplayProjectIds: projectReadHooks.useDisplayProjectIds,
+    useLastUsedExternalAppId: projectReadHooks.useLastUsedExternalAppId,
+    renderProjectIcon: projectIcons.renderProjectIcon,
+  };
+});
 
 vi.mock("../../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
@@ -319,9 +340,13 @@ vi.mock("../../../../domains/files/commands/fileCommands", async (importOriginal
   };
 });
 
-vi.mock("../../../../domains/git/commands/gitCommands", () => ({
-  inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
-}));
+vi.mock("../../../../domains/git/commands/gitCommands", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../domains/git/commands/gitCommands")>();
+  return {
+    ...actual,
+    inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
+  };
+});
 
 vi.mock("../../../../helpers/platform", () => ({
   getRendererPlatform: () => mocked.rendererPlatform,

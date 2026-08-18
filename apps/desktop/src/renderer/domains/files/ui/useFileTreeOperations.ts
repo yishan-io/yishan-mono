@@ -8,7 +8,7 @@ import {
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
   useWorkspaces,
-} from "@renderer/domains/workspace/ui/hooks/useWorkspaceReadHooks";
+} from "@renderer/domains/workspace/hooks/useWorkspaceReadHooks";
 import type { ExternalAppId } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

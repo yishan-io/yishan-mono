@@ -46,14 +46,17 @@ export {
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
   useWorkspaces,
-} from "./ui/hooks/useWorkspaceReadHooks";
+} from "./hooks/useWorkspaceReadHooks";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { CreateWorkspaceDialogView } from "./ui/LeftPane/CreateWorkspaceDialogView";
-export { WorkspaceDeleteDialogView } from "./ui/LeftPane/WorkspaceDeleteDialogView";
-export { WorkspaceInfoPopperView } from "./ui/LeftPane/WorkspaceInfoPopperView";
-export { type PendingWorkspaceDeletion, useWorkspaceDeletionFlow } from "./ui/LeftPane/useWorkspaceDeletionFlow";
-export { useWorkspaceInfoHover } from "./ui/LeftPane/useWorkspaceInfoHover";
+export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWorkspaceDialogView";
+export { WorkspaceDeleteDialogView } from "./features/delete-workspace/WorkspaceDeleteDialogView";
+export { WorkspaceInfoPopperView } from "./features/workspace-status/WorkspaceInfoPopperView";
+export {
+  type PendingWorkspaceDeletion,
+  useWorkspaceDeletionFlow,
+} from "./features/delete-workspace/useWorkspaceDeletionFlow";
+export { useWorkspaceInfoHover } from "./features/workspace-status/useWorkspaceInfoHover";
 export { enqueueWorkspaceErrorNotice } from "./state/workspaceLifecycleNoticeStore";
-export { WorkspaceErrorStateView } from "./ui/WorkspaceErrorStateView";
-export { WorkspaceLifecycleNoticeView } from "./ui/WorkspaceLifecycleNoticeView";
+export { WorkspaceErrorStateView } from "./features/workspace-status/WorkspaceErrorStateView";
+export { WorkspaceLifecycleNoticeView } from "./features/workspace-status/WorkspaceLifecycleNoticeView";

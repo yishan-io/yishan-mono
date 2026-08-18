@@ -12,13 +12,13 @@ import { selectWorkspaces } from "@renderer/domains/workspace";
 import { api } from "../../../api";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { selectProjectById } from "../../project/state/projectSelectors";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
   summarizeReconciledWorkspaceGitChangeTotals,
-} from "../../../helpers/workspaceHelpers";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectProjectById } from "../../project/state/projectSelectors";
+} from "../model/gitChangeSummary";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 
 /**

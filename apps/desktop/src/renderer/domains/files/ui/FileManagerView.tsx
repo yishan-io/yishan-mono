@@ -16,7 +16,7 @@ import { useWorkspaceGitRefreshVersion } from "@renderer/domains/git";
 import {
   useSelectedWorkspaceId,
   useSelectedWorkspaceWorktreePath,
-} from "@renderer/domains/workspace/ui/hooks/useWorkspaceReadHooks";
+} from "@renderer/domains/workspace/hooks/useWorkspaceReadHooks";
 import {
   findExternalAppPreset,
   getExternalAppMenuEntries,

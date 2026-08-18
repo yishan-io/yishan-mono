@@ -1,4 +1,4 @@
-import { TableDropdownMenu } from "../../../ui/components/TableDropdownMenu";
+import { TableDropdownMenu } from "../../../../ui/components/TableDropdownMenu";
 
 const WORKSPACE_RESOURCE_GRID_TEMPLATE_COLUMNS = "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.6fr) minmax(0, 0.8fr)";
 

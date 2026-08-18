@@ -8,7 +8,7 @@ import {
   resolveGitBranchPrefix,
   workspaceSettingsStore,
 } from "../../../domains/settings/state/workspaceSettingsStore";
-import { useSelectedProjectId } from "../../../domains/workspace/ui/hooks/useWorkspaceReadHooks";
+import { useSelectedProjectId } from "../../../domains/workspace/hooks/useWorkspaceReadHooks";
 import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "./controls";
 
 const GIT_WORKSPACE_PREFIX_SELECT_WIDTH = 200;

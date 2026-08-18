@@ -10,8 +10,8 @@ import {
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 
 type CreateWorkspaceInput = {
   projectId: string;

@@ -1,5 +1,5 @@
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { workspaceStore } from "../../state/workspaceStore";
+import { workspaceStore } from "../state/workspaceStore";
 
 /**
  * Workspace feature read-only hooks — the stable read surface for Workspace
