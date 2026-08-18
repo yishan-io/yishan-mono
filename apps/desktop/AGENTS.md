@@ -4,7 +4,7 @@
 
 ## Mandatory Rules
 
-1. Do not skip the Renderer layer contract. UI → Commands → State → domain helpers.
+1. Do not skip the Renderer layer contract. UI → Commands → State → Domain services.
    Handlers → Services → DB. Command handlers stay thin.
 2. Do not import another Feature's internal State, Runtime, Event handler, or
    Store. Use its public API (`index.ts`), Selectors, or Commands.
@@ -16,9 +16,11 @@
    may import Zustand and their own Feature's Model. Do not add business logic
    or side effects to State actions.
 6. Keep component files under 300 lines and other files under 500 lines.
-7. Do not create `utils`, `common`, `shared`, or `services` buckets in the
-   Renderer. Shared UI lives in `ui/`; shared technical functions stay domain-free.
-8. Cross-Feature workflows belong in `app/commands` or `app/flows`, not in a Feature.
+7. Do not create `utils`, `common`, or `shared` buckets in the Renderer. Shared
+   UI lives in `ui/`; shared technical functions stay domain-free. A Domain may
+   use a `services/` layer for stateless operations across its own Model concepts.
+8. Cross-Feature workflows belong in `app/commands` or `app/events`, not in a
+   Feature. `app/flows` is migration residue and must not be extended.
 9. Do not add allowlist rows to `architecture.knownViolations.ts` for completed
    phases. Remove a row in the same change that fixes its violation.
 10. Preserve visible behavior unless a task explicitly changes it. Add

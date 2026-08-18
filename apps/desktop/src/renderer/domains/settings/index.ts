@@ -3,7 +3,6 @@
  */
 export type { SettingsCommands } from "./commands/contract";
 export {
-  useAgentKindsInUse,
   useKeybindingOverrides,
   useWorkspaceBranchPrefixSettings,
 } from "./hooks/useSettingsReadHooks";

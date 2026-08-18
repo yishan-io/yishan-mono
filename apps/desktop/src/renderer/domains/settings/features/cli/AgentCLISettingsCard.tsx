@@ -7,10 +7,10 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
 } from "@renderer/domains/agent";
+import { agentSettingsStore } from "@renderer/domains/agent";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToolCommands";
-import { agentSettingsStore } from "../../../../domains/settings/state/agentSettingsStore";
 import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
 
 type AgentCLISettingsCardProps = {

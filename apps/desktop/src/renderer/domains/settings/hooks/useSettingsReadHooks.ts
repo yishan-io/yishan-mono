@@ -1,5 +1,4 @@
 import { useShallow } from "zustand/react/shallow";
-import { agentSettingsStore } from "../state/agentSettingsStore";
 import { keybindingSettingsStore } from "../state/keybindingSettingsStore";
 import { workspaceSettingsStore } from "../state/workspaceSettingsStore";
 
@@ -17,11 +16,6 @@ export function useWorkspaceBranchPrefixSettings() {
       customPrefix: state.customPrefix,
     })),
   );
-}
-
-/** Subscribes to which agent kinds are in use. */
-export function useAgentKindsInUse() {
-  return agentSettingsStore((state) => state.inUseByAgentKind);
 }
 
 /** Subscribes to keybinding overrides by command id. */

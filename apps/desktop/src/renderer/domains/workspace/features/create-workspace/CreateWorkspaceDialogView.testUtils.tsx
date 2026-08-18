@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
+import { agentSettingsStore } from "@renderer/domains/agent";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, vi } from "vitest";
 import { projectStore } from "../../../../domains/project/state/projectStore";
 import { sessionStore } from "../../../../domains/session/state/sessionStore";
-import { agentSettingsStore } from "../../../../domains/settings/state/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../../domains/settings/state/workspaceSettingsStore";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 

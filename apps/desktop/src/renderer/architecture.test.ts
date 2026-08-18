@@ -49,6 +49,12 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { beforeAll, describe, expect, it } from "vitest";
 import { COMPLETED_PHASES, KNOWN_VIOLATIONS, type KnownViolation, type RuleName } from "./architecture.knownViolations";
+import {
+  ROOT_HELPERS_FILES,
+  ROOT_HELPERS_IMPORTERS,
+  ROOT_UI_DEP_VIOLATION_FILES,
+  ROOT_UI_HOOKS_FILES,
+} from "./architecture.migrationBaselines";
 
 const RENDERER_ROOT = resolve(dirname(fileURLToPath(import.meta.url)));
 const SHARED_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../shared");
@@ -78,7 +84,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R11-workbench-product-import": 0,
   "R12-store-action-promise": 0,
   "R13-getter-forwarding-action-file": 0,
-  "R14-cross-domain-deep": 1,
+  "R14-cross-domain-deep": 0,
   "R15-app-from-domain": 0,
   "R16-app-deep-into-domain": 73,
 };
@@ -537,6 +543,108 @@ describe("renderer architecture dependency rules", () => {
         }
       }
       expect(mismatches, mismatches.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("Migration baselines (desktop7 Phase 21)", () => {
+    const helperBaseline = new Set(ROOT_HELPERS_FILES.map((p) => resolve(RENDERER_ROOT, p)));
+    const helperImporterBaseline = new Set(ROOT_HELPERS_IMPORTERS.map((p) => resolve(RENDERER_ROOT, p)));
+    const uiHooksBaseline = new Set(ROOT_UI_HOOKS_FILES.map((p) => resolve(RENDERER_ROOT, p)));
+    const uiDepViolationBaseline = new Set(ROOT_UI_DEP_VIOLATION_FILES.map((p) => resolve(RENDERER_ROOT, p)));
+
+    it("rejects new root Helpers files outside the recorded baseline", () => {
+      const present = new Set(walkFiles(join(RENDERER_ROOT, "helpers")));
+      const newFiles = [...present].filter((p) => !helperBaseline.has(p));
+      const messages = newFiles.map(
+        (p) => `[archtest] NEW root Helpers file ${relative(RENDERER_ROOT, p)} — Phase 21 baseline must not grow`,
+      );
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("rejects new production importers of root Helpers", () => {
+      const present = new Set(
+        walkFiles(RENDERER_ROOT)
+          .filter((p) => !relative(RENDERER_ROOT, p).startsWith("helpers/"))
+          .filter((p) => {
+            const src = readFileSync(p, "utf8");
+            const sf = ts.createSourceFile(
+              p,
+              src,
+              ts.ScriptTarget.Latest,
+              true,
+              p.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+            );
+            let importsHelpers = false;
+            const visit = (node: ts.Node) => {
+              if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+                const target = resolveSpecifier(node.moduleSpecifier.text, p);
+                const relT = target ? relative(RENDERER_ROOT, target).replace(/\\/g, "/") : "";
+                if (relT.startsWith("helpers/")) importsHelpers = true;
+              }
+              ts.forEachChild(node, visit);
+            };
+            visit(sf);
+            return importsHelpers;
+          })
+          .map((p) => resolve(p)),
+      );
+      const newImporters = [...present].filter((p) => !helperImporterBaseline.has(p));
+      const messages = newImporters.map(
+        (p) => `[archtest] NEW root Helpers importer ${relative(RENDERER_ROOT, p)} — Phase 21 baseline must not grow`,
+      );
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("rejects new files in ui/hooks", () => {
+      const present = new Set(walkFiles(join(RENDERER_ROOT, "ui", "hooks")));
+      const newFiles = [...present].filter((p) => !uiHooksBaseline.has(p));
+      const messages = newFiles.map(
+        (p) =>
+          `[archtest] NEW ui/hooks file ${relative(RENDERER_ROOT, p)} — ui/hooks is migration residue; use renderer/hooks`,
+      );
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("rejects new root UI dependency violations (App/Domains/API/RPC/Helpers)", () => {
+      const present = new Set(
+        walkFiles(RENDERER_ROOT)
+          .filter((p) => relative(RENDERER_ROOT, p).startsWith("ui/"))
+          .filter((p) => {
+            const src = readFileSync(p, "utf8");
+            const sf = ts.createSourceFile(
+              p,
+              src,
+              ts.ScriptTarget.Latest,
+              true,
+              p.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+            );
+            let violates = false;
+            const visit = (node: ts.Node) => {
+              if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+                const target = resolveSpecifier(node.moduleSpecifier.text, p);
+                const relT = target ? relative(RENDERER_ROOT, target).replace(/\\/g, "/") : "";
+                if (
+                  relT.startsWith("app/") ||
+                  relT.startsWith("domains/") ||
+                  relT.startsWith("api/") ||
+                  relT.startsWith("rpc/") ||
+                  relT.startsWith("helpers/")
+                ) {
+                  violates = true;
+                }
+              }
+              ts.forEachChild(node, visit);
+            };
+            visit(sf);
+            return violates;
+          }),
+      );
+      const newViolations = [...present].filter((p) => !uiDepViolationBaseline.has(p));
+      const messages = newViolations.map(
+        (p) =>
+          `[archtest] NEW root UI dependency violation ${relative(RENDERER_ROOT, p)} — root UI must stay domain-free`,
+      );
+      expect(messages, messages.join("\n")).toEqual([]);
     });
   });
 });

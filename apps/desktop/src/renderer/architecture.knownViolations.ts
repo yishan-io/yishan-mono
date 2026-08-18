@@ -49,7 +49,25 @@ export type KnownViolation = { rule: RuleName; file: string; phase: string };
  * Desktop phase completes; the test rejects rows tagged with any of these
  * phases, which prevents allowlist rows for completed phases.
  */
-export const COMPLETED_PHASES = ["P16", "D1", "D3", "D4", "D5"] as const;
+export const COMPLETED_PHASES = [
+  "P16",
+  "D1",
+  "D2",
+  "D3",
+  "D4",
+  "D5",
+  "D6",
+  "D7",
+  "D8",
+  "D9",
+  "D10",
+  "D11",
+  "D12",
+  "D13",
+  "D14",
+  "D15",
+  "D16",
+] as const;
 
 export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- R6-state-layer (owning phase = the Domain that owns the store) ----
@@ -70,7 +88,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // the api/types transport boundary keeps this R7 row (baseline R7 = 2).
   // ---- R9-ui-components (owning phase = D17 Final Closure removes root ui behavior) ----
   // ---- R14-cross-domain-deep (Phase D2 baseline; owning phase = importing Domain) ----
-  { rule: "R14-cross-domain-deep", file: "domains/settings/state/agentSettingsStore.ts", phase: "D16" },
   // ---- R15-app-from-domain (Phase D2 baseline; owning phase = importing Domain) ----
   // ---- R16-app-deep-into-domain (Phase D2 baseline; owning phase = D17 App audit) ----
   { rule: "R16-app-deep-into-domain", file: "app/commands/appCommands.ts", phase: "D17" },
@@ -83,7 +100,11 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R16-app-deep-into-domain", file: "app/runtime/useShortcuts.ts", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/selectors.ts", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/features/title-bar/MainPaneTitleBarView.tsx", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/features/workspace-shell/WorkspacePortsMenuControl.tsx", phase: "D17" },
+  {
+    rule: "R16-app-deep-into-domain",
+    file: "app/features/workspace-shell/WorkspacePortsMenuControl.tsx",
+    phase: "D17",
+  },
   { rule: "R16-app-deep-into-domain", file: "app/features/title-bar/mainPaneTitleBarHelpers.tsx", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/features/title-bar/mainPaneTitleBarMenus.tsx", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/features/tab-content/useTabContentRenderer.tsx", phase: "D17" },

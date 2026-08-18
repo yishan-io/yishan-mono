@@ -101,7 +101,7 @@ vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
     selector({ workspaces: mocks.workspaces }),
 }));
 
-vi.mock("../../../domains/settings/state/agentSettingsStore", () => ({
+vi.mock("@renderer/domains/agent/state/agentSettingsStore", () => ({
   agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
     selector({ customCommandByAgentKind: {} }),
 }));

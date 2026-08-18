@@ -7,13 +7,13 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "@renderer/domains/agent";
 import { formatAgentSessionTitle } from "@renderer/domains/agent";
+import { useAgentKindsInUse } from "@renderer/domains/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
 import { FileSearchOverlay } from "@renderer/domains/files";
 import { getFileTreeIcon } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useLastUsedExternalAppId } from "@renderer/domains/project";
 import { supportsGitFeatures } from "@renderer/domains/project";
-import { useAgentKindsInUse } from "@renderer/domains/settings";
 import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/domains/terminal";
 import {
   DEFAULT_RIGHT_PANE_TAB,

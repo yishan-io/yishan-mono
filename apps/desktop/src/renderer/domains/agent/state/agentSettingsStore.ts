@@ -1,11 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import {
-  type DesktopAgentKind,
-  createDefaultAgentInUseByKind,
-  isDesktopAgentKind,
-} from "../../../domains/agent/model/agentSettings";
+import { type DesktopAgentKind, createDefaultAgentInUseByKind, isDesktopAgentKind } from "../model/agentSettings";
 
 export const AGENT_SETTINGS_STORE_STORAGE_KEY = "yishan-agent-settings-store";
 

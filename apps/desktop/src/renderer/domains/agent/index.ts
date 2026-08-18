@@ -3,7 +3,30 @@
  *
  * Exports the stable command surface, agent chat models, and public state
  * surfaces. Internal Stores and Runtime implementations are not exported.
+ *
+ * Ordering constraint (desktop7 Phase 21): the leaf `model/agentSettings`
+ * re-export must stay FIRST. The Agent enablement store
+ * (`state/agentSettingsStore`) imports this module and calls
+ * `createDefaultAgentInUseByKind` at evaluation time, and Agent features
+ * import the settings index back (eval cycle). A mid-cycle importer can read
+ * the binding only after this statement executes; moving it later re-triggers
+ * `createDefaultAgentInUseByKind is not a function`.
  */
+export {
+  AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  DEFAULT_AGENT_COMMANDS,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+  createDefaultAgentInUseByKind,
+  getAgentIconPresentation,
+  isDesktopAgentKind,
+  type AgentIconContext,
+  type AgentIconPresentation,
+  type AgentIconThemeMode,
+  type DesktopAgentKind,
+} from "./model/agentSettings";
+
 export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
 export { listAgentModels } from "./commands/agentCommands";
@@ -43,20 +66,6 @@ export {
   type PiProviderCatalogEntry,
 } from "./model/piProviders";
 export { KimiIcon } from "./ui/piProviderIcons";
-export {
-  AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
-  DEFAULT_AGENT_COMMANDS,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-  createDefaultAgentInUseByKind,
-  getAgentIconPresentation,
-  isDesktopAgentKind,
-  type AgentIconContext,
-  type AgentIconPresentation,
-  type AgentIconThemeMode,
-  type DesktopAgentKind,
-} from "./model/agentSettings";
 export type {
   AgentCompactionReason,
   AgentContentBlock,
@@ -111,3 +120,8 @@ export {
 export { findTabWithSession } from "./commands/agentChatCommands";
 export { fetchAgentSessionFilePath } from "./commands/agentChatSessionHistory";
 export { ProviderCredentialDialog } from "./ui/credentials/ProviderCredentialDialog";
+// Agent enablement preferences owned by Agent, consumed by the Settings CLI
+// feature through the public API (desktop7 Phase 21 — moved from Settings so
+// the settings→agent edge never evaluates this store mid-cycle).
+export { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "./state/agentSettingsStore";
+export { useAgentKindsInUse } from "./hooks/useAgentKindsInUse";
