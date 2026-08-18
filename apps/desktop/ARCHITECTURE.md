@@ -219,8 +219,15 @@ allowlist row with the Domain phase that removes it. The Domain phases D3–D17
 normalize one Domain at a time.
 
 Execution moved to `refactor/desktop7.md` (Phases 21–27). D6–D16 are
-completed; D17's remaining App audit is desktop7 Phase 22. R14 is zero;
-R16 stands at 73 and must not increase until Phase 22 removes it.
+completed. Phase 22 closed the App→Domain R16 boundary (R16 = 0). Phase 23
+normalized Settings. Phase 24 is complete: workspace/workbench/project each
+pass the Domain Completion Method; the combined Project/Node/Workspace
+navigator moved to `app/features/project-workspace-navigator` (shell renamed
+`main-workspace-shell`); create/rename-workspace are split Features; the
+Project and Workspace RPC clients and DTOs moved to Domain Infrastructure
+over the root transport (`getDaemonTransport`), so root RPC no longer
+composes those clients. R1b is 19 (was 21; the navigator files left the UI
+scope). Root Helpers and root UI migration continues in Phases 25–26.
 
 ## Root Migration Baselines (desktop7 Phase 21)
 
