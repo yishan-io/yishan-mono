@@ -8,12 +8,9 @@ import (
 	"strings"
 	"time"
 
-<<<<<<< Updated upstream
 	"yishan/apps/cli/internal/platform/config"
-=======
+
 	"github.com/rs/zerolog/log"
-	"yishan/apps/cli/internal/config"
->>>>>>> Stashed changes
 )
 
 const StateFileName = "daemon.state.json"

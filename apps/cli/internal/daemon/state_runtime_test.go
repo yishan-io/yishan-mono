@@ -60,7 +60,7 @@ func TestRemoveOwnedState_RemovesOnlyOwnedState(t *testing.T) {
 		Port:      43123,
 		StartedAt: time.Now().UTC(),
 	}
-	if err := SaveState(statePath, other); err != nil {
+	if err := saveState(statePath, other); err != nil {
 		t.Fatalf("save state: %v", err)
 	}
 	removeOwnedState(statePath, os.Getpid())
@@ -75,7 +75,7 @@ func TestRemoveOwnedState_RemovesOnlyOwnedState(t *testing.T) {
 		Port:      43124,
 		StartedAt: time.Now().UTC(),
 	}
-	if err := SaveState(statePath, owned); err != nil {
+	if err := saveState(statePath, owned); err != nil {
 		t.Fatalf("save state: %v", err)
 	}
 	removeOwnedState(statePath, os.Getpid())
