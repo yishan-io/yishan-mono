@@ -1,10 +1,10 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import { tabStore } from "@renderer/domains/workbench";
+import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { setAgentChatStreamTabVisible } from "../..";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { AgentChatSessionView } from "../../../workbench/model/types";
 import { respondToAgentExtensionUiRequest } from "../../commands/agentChatCommands";
 import { clearPendingUiAutoResponse, setPendingUiAutoResponse, setTurnError } from "../../state/chatActions";
 import { useAgentChatSession } from "../../ui/hooks/useAgentChatReadHooks";

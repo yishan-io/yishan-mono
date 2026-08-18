@@ -22,11 +22,7 @@ import { LuLogOut } from "react-icons/lu";
 import type { OrganizationMemberRecord } from "../../../api/types";
 import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../../domains/organization";
 import { setSessionData as applySetSessionData } from "../../../domains/session";
-import {
-  useCurrentUser,
-  useOrganizations,
-  useSelectedOrganizationId,
-} from "../../../domains/session";
+import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../domains/session";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
 import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";

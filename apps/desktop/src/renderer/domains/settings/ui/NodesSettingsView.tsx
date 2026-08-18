@@ -18,11 +18,7 @@ import type { NodeRecord, OrganizationMemberRecord } from "../../../api/types";
 import { listOrgNodes } from "../../../domains/node";
 import { unregisterNode, updateNodeScope } from "../../../domains/node";
 import { listOrganizationMembers } from "../../../domains/organization";
-import {
-  useCurrentUser,
-  useOrganizations,
-  useSelectedOrganizationId,
-} from "../../../domains/session";
+import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../domains/session";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
 import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";

@@ -11,6 +11,16 @@ const mocked = {
   openPiProviderLogin: vi.fn(),
 };
 
+vi.mock("../../../domains/agent/commands/piProviderCommands", () => ({
+  NO_ACTIVE_WORKSPACE_LOGIN_ERROR: "no-active-workspace",
+  get savePiProvider() {
+    return mocked.savePiProvider;
+  },
+  get openPiProviderLogin() {
+    return mocked.openPiProviderLogin;
+  },
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -135,6 +145,8 @@ describe("AgentProviderSettingsView", () => {
     fireEvent.click(screen.getByText("settings.providers.actions.save"));
 
     await waitFor(() => {
+      // PROBE
+      expect(mocked.savePiProvider.mock.calls.length).toBeGreaterThan(0);
       expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-test-secret", undefined);
     });
     expect(mocked.listPiProviders).toHaveBeenCalledTimes(2); // initial load + refresh after save

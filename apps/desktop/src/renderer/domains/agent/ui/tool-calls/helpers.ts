@@ -1,6 +1,6 @@
 import { getSingularPatch, parseDiffFromFile } from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs";
-import { resolveRelativePath, toWorkspaceRelativePath } from "@renderer/domains/files/ui/markdown/markdownHelpers";
+import { resolveRelativePath, toWorkspaceRelativePath } from "@renderer/domains/files";
 import { openTab } from "@renderer/domains/workbench";
 import type { AgentContentBlock, AgentMessage } from "../../../../domains/agent/model/agentChatTypes";
 

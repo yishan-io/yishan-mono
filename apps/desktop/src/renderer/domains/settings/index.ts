@@ -4,8 +4,10 @@
 export type { SettingsCommands } from "./commands/contract";
 export {
   useAgentKindsInUse,
+  useKeybindingOverrides,
   useWorkspaceBranchPrefixSettings,
 } from "./ui/hooks/useSettingsReadHooks";
+export { listSkills } from "./commands/skillCommands";
 export {
   type GitBranchPrefixMode,
   resolveGitBranchPrefix,

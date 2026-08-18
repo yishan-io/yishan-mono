@@ -44,13 +44,20 @@ export {
   toggleTabPinned,
   unregisterTabFromPane,
 } from "./commands/tabCommands";
-export type { DiffFileChangeKind, FileDiffEntry, OpenTabInput, WorkbenchTab } from "./model/types";
+export type {
+  AgentChatSessionView,
+  DiffFileChangeKind,
+  FileDiffEntry,
+  OpenTabInput,
+  WorkbenchTab,
+} from "./model/types";
 export {
   workbenchNavigationStore,
   type OverlayPanel,
   type WorkbenchNavigationState,
 } from "./state/workbenchNavigationStore";
 export { splitPaneStore, type SplitPaneStoreState } from "./state/splitPaneStore";
+export { findOppositePaneId } from "./model/split-pane";
 export { tabStore, type TabStoreState } from "./state/tabStore";
 export {
   layoutStore,

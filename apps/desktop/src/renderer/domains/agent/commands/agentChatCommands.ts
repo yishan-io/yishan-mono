@@ -1,5 +1,5 @@
 import { tabStore } from "@renderer/domains/workbench";
-import type { AgentChatSessionView } from "../../../domains/workbench/model/types";
+import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "../../../helpers/delay";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
@@ -259,13 +259,13 @@ export async function restartAgentSessionForProvider(opts: {
 // Moved to agentChatSessionHistory.ts; re-exported to preserve the public API.
 export { fetchAgentSessionFilePath, fetchSessionHistory, listActivePiSessions } from "./agentChatSessionHistory";
 
+import { resolveChatFilePath } from "@renderer/domains/files";
 // ─── Chat-to-file tab bridge (desktop6-adjust.md W5) ───────────────────────
 // Opening a file referenced from chat is an Agent workflow: resolve the path
 // through the Files feature, then open a Workbench Tab through the public
 // Workbench API.
 import { openTab, openTabInOppositePane } from "@renderer/domains/workbench";
-import { resolveChatFilePath } from "../../files/commands/fileCommands";
-import { enqueueWorkspaceErrorNotice } from "../../workspace/state/workspaceActions";
+import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
 
 /**
  * Opens one file referenced from chat, resolving it to a real workspace file first.

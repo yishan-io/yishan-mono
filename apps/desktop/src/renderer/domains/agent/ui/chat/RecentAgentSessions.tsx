@@ -1,8 +1,8 @@
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { openTab } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
-import { useWorkbenchCommands } from "../../../../app/commands/useCommands";
 import { formatAgentSessionTitle } from "../../../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type * as Rpc from "../../../../rpc/daemonTypes";
@@ -31,7 +31,6 @@ function formatRelativeTime(timestamp: string, t: (key: string, options?: { coun
 /** Lists recent Pi sessions for a workspace when no tabs are open. */
 export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsProps) {
   const { t } = useTranslation();
-  const { openTab } = useWorkbenchCommands();
   const [sessions, setSessions] = useState<Rpc.PiSessionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(cwd));
   const [error, setError] = useState<string | null>(null);

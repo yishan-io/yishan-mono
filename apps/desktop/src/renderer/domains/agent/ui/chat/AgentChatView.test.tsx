@@ -275,7 +275,7 @@ vi.mock("@renderer/domains/agent/ui/session/AgentModelSelector", () => ({
   },
 }));
 
-vi.mock("../../../settings/ui/ProviderCredentialDialog", () => ({
+vi.mock("../credentials/ProviderCredentialDialog", () => ({
   ProviderCredentialDialog: (props: {
     open: boolean;
     mode: "add" | "edit";

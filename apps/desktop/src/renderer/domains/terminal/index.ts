@@ -2,6 +2,14 @@
  * Terminal feature public API (Phase 12, desktop5.md).
  */
 export type { TerminalCommands } from "./commands/contract";
+// Leaf command + read-surface exports first: cross-domain imports (e.g. the
+// agent pi provider commands) re-enter this index while the Runtime section
+// below is still evaluating, so the leaf bindings must already be available.
+export { getTerminalResourceUsage } from "./commands/terminalCommands";
+export type { TerminalResourceUsageSnapshot } from "./commands/terminalCommands";
+export { consumeTerminalTabFocus, writeTerminalInput } from "./commands/terminalCommands";
+export { useSharedTerminalResourceUsageSnapshot } from "./hooks/useSharedTerminalResourceUsageSnapshot";
+export { useTerminalTabLookups } from "./hooks/useTerminalTabLookups";
 // Terminal Runtime entry points required by cross-feature composition. These
 // are function entry points into the Terminal Runtime; the Runtime instance
 // itself stays internal (Phase 17, desktop6.md).
@@ -16,11 +24,6 @@ export {
   requestTerminalRuntimeFocus,
 } from "./runtime/terminalRuntimeRegistry";
 export { initTerminalSessionLifecycle } from "./runtime/terminalSessionService";
-export { getTerminalResourceUsage } from "./commands/terminalCommands";
-export type { TerminalResourceUsageSnapshot } from "./commands/terminalCommands";
-export { consumeTerminalTabFocus } from "./commands/terminalCommands";
-export { useSharedTerminalResourceUsageSnapshot } from "./hooks/useSharedTerminalResourceUsageSnapshot";
-export { useTerminalTabLookups } from "./hooks/useTerminalTabLookups";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { TerminalView } from "./features/terminal-tab/TerminalView";

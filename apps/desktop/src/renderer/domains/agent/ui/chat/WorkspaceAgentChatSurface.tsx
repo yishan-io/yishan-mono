@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
-import type { WorkspaceTabPlacement } from "@renderer/domains/workbench/features/workspace-tabs/useWorkspaceTabPlacements";
+import type { WorkspaceTabPlacement } from "@renderer/domains/workbench";
+import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { memo } from "react";
 import type { MutableRefObject } from "react";
-import type { WorkbenchTab } from "../../../workbench/model/types";
 import { AgentChatView } from "./AgentChatView";
 
 type AgentChatTab = Extract<WorkbenchTab, { kind: "agent-chat" }>;

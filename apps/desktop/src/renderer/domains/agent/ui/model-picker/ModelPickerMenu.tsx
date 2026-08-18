@@ -13,8 +13,8 @@ import { type MutableRefObject, useEffect, useMemo, useRef, useState } from "rea
 import { useTranslation } from "react-i18next";
 import { LuPlus } from "react-icons/lu";
 import { FloatingSurface } from "../../../../ui/components/FloatingSurface";
-import { ProviderMark } from "./ProviderMark";
 import { SearchInput } from "../../../../ui/components/SearchInput";
+import { ProviderMark } from "./ProviderMark";
 import {
   type ModelPickerOption,
   type ModelPickerProviderGroup,

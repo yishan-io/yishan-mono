@@ -69,3 +69,4 @@ export {
 } from "./ui/hooks/useAgentChatReadHooks";
 export { findTabWithSession } from "./commands/agentChatCommands";
 export { fetchAgentSessionFilePath } from "./commands/agentChatSessionHistory";
+export { ProviderCredentialDialog } from "./ui/credentials/ProviderCredentialDialog";

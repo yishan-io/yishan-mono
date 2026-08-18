@@ -1,11 +1,20 @@
 import { Autocomplete, Box, TextField, Typography, createFilterOptions } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAgentCommands } from "../../../../app/commands/useCommands";
 import { subscribeWorkspaceChatEvent } from "../../../../events";
 import type { DesktopAgentKind } from "../../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { generateId } from "../../../../helpers/generateId";
+import {
+  appendChatMessages,
+  createWorkspaceChatEventHandler,
+  ensureChatSession,
+  getChatMessages,
+  runChatPrompt,
+  setChatAvailableModels,
+  setChatCurrentModel,
+  updateChatMessage,
+} from "../../commands/chatCommands";
 import type { AvailableModel, ChatMessage } from "../../model/chatTypes";
 import {
   useChatAvailableModelsByTabId,
@@ -59,16 +68,7 @@ type ChatViewProps = {
 /** Renders one workspace chat tab and streams runtime events into local UI state. */
 export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: ChatViewProps) {
   const { t } = useTranslation();
-  const {
-    appendChatMessages,
-    createWorkspaceChatEventHandler,
-    ensureChatSession,
-    getChatMessages,
-    runChatPrompt,
-    setChatAvailableModels,
-    setChatCurrentModel,
-    updateChatMessage,
-  } = useAgentCommands();
+
   const messagesByTabId = useChatMessagesByTabId();
   const messages = messagesByTabId[tabId] ?? EMPTY_MESSAGES;
   const availableModelsByTabId = useChatAvailableModelsByTabId();

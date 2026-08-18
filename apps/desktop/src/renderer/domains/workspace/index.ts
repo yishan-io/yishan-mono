@@ -23,6 +23,7 @@ export {
   reorderWorkspace,
   setDisplayRepoIds,
   setLastUsedExternalAppId,
+  selectFolderInFileTree,
   subscribeOpenCreateWorkspaceDialog,
 } from "./commands/workspaceCommands";
 export { createLocalFolderImport } from "./commands/localFolderCommands";

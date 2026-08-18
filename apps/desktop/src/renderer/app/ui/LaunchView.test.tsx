@@ -13,6 +13,11 @@ const mocks = vi.hoisted(() => ({
   fetchSessionHistory: vi.fn(),
 }));
 
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
+  return { ...actual, openTab: mocks.openTab };
+});
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {

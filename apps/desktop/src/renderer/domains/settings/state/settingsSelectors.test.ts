@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { workspaceSettingsStore } from "./workspaceSettingsStore";
 import { selectIsDefaultContextEnabled } from "./settingsSelectors";
+import { workspaceSettingsStore } from "./workspaceSettingsStore";
 
 const initialWorkspaceSettingsState = workspaceSettingsStore.getState();
 

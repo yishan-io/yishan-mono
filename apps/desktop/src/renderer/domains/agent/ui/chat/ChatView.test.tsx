@@ -148,128 +148,108 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    ensureChatSession: mocked.ensureChatSession,
-    runChatPrompt: mocked.runChatPrompt,
-    getChatMessages: (tabId: string) => mockedStore.stateRef.current.getMessages(tabId),
-    appendChatMessages: (
-      tabId: string,
-      messages: Array<{ id: string; role: "user" | "assistant"; content: string; thinking?: string }>,
-    ) => mockedStore.stateRef.current.appendMessages(tabId, messages),
-    updateChatMessage: (
-      tabId: string,
-      messageId: string,
-      update: Partial<{ id: string; role: "user" | "assistant"; content: string; thinking?: string }>,
-    ) => mockedStore.stateRef.current.updateMessage(tabId, messageId, update),
-    setChatAvailableModels: (tabId: string, models: Array<{ id: string; name: string }>) =>
-      mockedStore.stateRef.current.setAvailableModels(tabId, models),
-    setChatCurrentModel: (tabId: string, modelId: string) =>
-      mockedStore.stateRef.current.setCurrentModel(tabId, modelId),
-    createWorkspaceChatEventHandler: (input: {
-      tabId: string;
+vi.mock("../../commands/chatCommands", () => ({
+  ensureChatSession: mocked.ensureChatSession,
+  runChatPrompt: mocked.runChatPrompt,
+  getChatMessages: (tabId: string) => mockedStore.stateRef.current.getMessages(tabId),
+  appendChatMessages: (
+    tabId: string,
+    messages: Array<{ id: string; role: "user" | "assistant"; content: string; thinking?: string }>,
+  ) => mockedStore.stateRef.current.appendMessages(tabId, messages),
+  updateChatMessage: (
+    tabId: string,
+    messageId: string,
+    update: Partial<{ id: string; role: "user" | "assistant"; content: string; thinking?: string }>,
+  ) => mockedStore.stateRef.current.updateMessage(tabId, messageId, update),
+  setChatAvailableModels: (tabId: string, models: Array<{ id: string; name: string }>) =>
+    mockedStore.stateRef.current.setAvailableModels(tabId, models),
+  setChatCurrentModel: (tabId: string, modelId: string) => mockedStore.stateRef.current.setCurrentModel(tabId, modelId),
+  createWorkspaceChatEventHandler: (input: {
+    tabId: string;
+    workspaceId: string;
+    expectedSessionId: string;
+    getActiveAssistantMessageId: () => string | null;
+  }) => {
+    return (event: {
       workspaceId: string;
-      expectedSessionId: string;
-      getActiveAssistantMessageId: () => string | null;
-    }) => {
-      return (event: {
-        workspaceId: string;
-        sessionId: string;
-        event: {
-          type: string;
-          update?: { update?: { sessionUpdate?: string; content?: { type?: string; text?: string } } };
-        };
-      }) => {
-        if (event.workspaceId !== input.workspaceId || event.sessionId !== input.expectedSessionId) {
-          return;
-        }
-
-        if (event.event.type === "capabilities-updated") {
-          const modelsRecord =
-            typeof (event.event as { models?: unknown }).models === "object" &&
-            (event.event as { models?: unknown }).models !== null
-              ? ((event.event as { models?: unknown }).models as {
-                  availableModels?: Array<{ id?: string; modelId?: string; name?: string }>;
-                  current?: string;
-                })
-              : undefined;
-          const availableModels = (modelsRecord?.availableModels ?? [])
-            .map((model) => ({
-              id: model.id ?? model.modelId ?? "",
-              name: model.name ?? model.id ?? model.modelId ?? "",
-            }))
-            .filter((model) => model.id.length > 0);
-          mockedStore.stateRef.current.setAvailableModels(input.tabId, availableModels);
-          if (typeof modelsRecord?.current === "string" && modelsRecord.current.length > 0) {
-            mockedStore.stateRef.current.setCurrentModel(input.tabId, modelsRecord.current);
-          }
-          return;
-        }
-
-        const update = event.event.update?.update;
-        if (update?.sessionUpdate === "available_commands_update") {
-          const commands = Array.isArray((update as { availableCommands?: unknown[] }).availableCommands)
-            ? (
-                ((update as { availableCommands?: unknown[] }).availableCommands ?? []) as Array<{
-                  name?: string;
-                  description?: string;
-                }>
-              )
-                .map((command) => ({
-                  name: command.name?.trim() ?? "",
-                  description: command.description?.trim() ?? "",
-                }))
-                .filter((command) => command.name.length > 0)
-            : [];
-          mockedStore.stateRef.current.setAvailableCommands(input.tabId, commands);
-          return;
-        }
-
-        const activeAssistantMessageId = input.getActiveAssistantMessageId();
-        if (!activeAssistantMessageId) {
-          return;
-        }
-
-        const currentMessages = mockedStore.stateRef.current.getMessages(input.tabId);
-        const existingMessage = currentMessages.find((message) => message.id === activeAssistantMessageId);
-        if (!existingMessage) {
-          return;
-        }
-
-        const chunkText = update?.content?.type === "text" ? (update.content.text ?? "") : "";
-        if (update?.sessionUpdate === "agent_thought_chunk") {
-          mockedStore.stateRef.current.updateMessage(input.tabId, activeAssistantMessageId, {
-            thinking: `${existingMessage.thinking ?? ""}${chunkText}`,
-          });
-          return;
-        }
-
-        if (update?.sessionUpdate === "agent_message_chunk") {
-          mockedStore.stateRef.current.updateMessage(input.tabId, activeAssistantMessageId, {
-            content: `${existingMessage.content}${chunkText}`,
-          });
-        }
+      sessionId: string;
+      event: {
+        type: string;
+        update?: { update?: { sessionUpdate?: string; content?: { type?: string; text?: string } } };
       };
-    },
-  });
-  return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
-  };
-});
+    }) => {
+      if (event.workspaceId !== input.workspaceId || event.sessionId !== input.expectedSessionId) {
+        return;
+      }
+
+      if (event.event.type === "capabilities-updated") {
+        const modelsRecord =
+          typeof (event.event as { models?: unknown }).models === "object" &&
+          (event.event as { models?: unknown }).models !== null
+            ? ((event.event as { models?: unknown }).models as {
+                availableModels?: Array<{ id?: string; modelId?: string; name?: string }>;
+                current?: string;
+              })
+            : undefined;
+        const availableModels = (modelsRecord?.availableModels ?? [])
+          .map((model) => ({
+            id: model.id ?? model.modelId ?? "",
+            name: model.name ?? model.id ?? model.modelId ?? "",
+          }))
+          .filter((model) => model.id.length > 0);
+        mockedStore.stateRef.current.setAvailableModels(input.tabId, availableModels);
+        if (typeof modelsRecord?.current === "string" && modelsRecord.current.length > 0) {
+          mockedStore.stateRef.current.setCurrentModel(input.tabId, modelsRecord.current);
+        }
+        return;
+      }
+
+      const update = event.event.update?.update;
+      if (update?.sessionUpdate === "available_commands_update") {
+        const commands = Array.isArray((update as { availableCommands?: unknown[] }).availableCommands)
+          ? (
+              ((update as { availableCommands?: unknown[] }).availableCommands ?? []) as Array<{
+                name?: string;
+                description?: string;
+              }>
+            )
+              .map((command) => ({
+                name: command.name?.trim() ?? "",
+                description: command.description?.trim() ?? "",
+              }))
+              .filter((command) => command.name.length > 0)
+          : [];
+        mockedStore.stateRef.current.setAvailableCommands(input.tabId, commands);
+        return;
+      }
+
+      const activeAssistantMessageId = input.getActiveAssistantMessageId();
+      if (!activeAssistantMessageId) {
+        return;
+      }
+
+      const currentMessages = mockedStore.stateRef.current.getMessages(input.tabId);
+      const existingMessage = currentMessages.find((message) => message.id === activeAssistantMessageId);
+      if (!existingMessage) {
+        return;
+      }
+
+      const chunkText = update?.content?.type === "text" ? (update.content.text ?? "") : "";
+      if (update?.sessionUpdate === "agent_thought_chunk") {
+        mockedStore.stateRef.current.updateMessage(input.tabId, activeAssistantMessageId, {
+          thinking: `${existingMessage.thinking ?? ""}${chunkText}`,
+        });
+        return;
+      }
+
+      if (update?.sessionUpdate === "agent_message_chunk") {
+        mockedStore.stateRef.current.updateMessage(input.tabId, activeAssistantMessageId, {
+          content: `${existingMessage.content}${chunkText}`,
+        });
+      }
+    };
+  },
+}));
 
 vi.mock("../../../../events", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

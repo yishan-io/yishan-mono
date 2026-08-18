@@ -1,5 +1,5 @@
-import { getPiProviderDisplayName } from "../../../../helpers/piProviders";
 import type { AgentModel } from "../../../../domains/agent/model/agentChatTypes";
+import { getPiProviderDisplayName } from "../../../../helpers/piProviders";
 
 export const FALLBACK_MODEL_PROVIDER_NAME = "Other";
 

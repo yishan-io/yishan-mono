@@ -1,3 +1,9 @@
+import type { DaemonLogResult } from "../../../../main/ipc";
+import {
+  createServiceToken as createServiceTokenFromApi,
+  listServiceTokens as listServiceTokensFromApi,
+  revokeServiceToken as revokeServiceTokenFromApi,
+} from "../../../api/serviceTokenApi";
 /**
  * SettingsCommands — the public command surface for the Settings feature.
  *
@@ -7,23 +13,10 @@
  * directly by views from their own command modules (no re-export bucket).
  */
 import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "../../../api/sessionApi";
-import {
-  createServiceToken as createServiceTokenFromApi,
-  listServiceTokens as listServiceTokensFromApi,
-  revokeServiceToken as revokeServiceTokenFromApi,
-} from "../../../api/serviceTokenApi";
 import { getVoiceTranscriptionUsage } from "../../../api/voiceTranscriptionApi";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../app/commands/appCommands";
 import type { MemoryConfig } from "../../../rpc/daemonTypes";
 import { getDaemonClient, getDesktopHostBridge } from "../../../rpc/rpcTransport";
-import type { DaemonLogResult } from "../../../../main/ipc";
-import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../app/commands/appCommands";
-import {
-  addSkill,
-  getSkillDetail,
-  listSkills,
-  removeSkill,
-  updateSkill,
-} from "./skillCommands";
 import {
   createAgentDefinition,
   getAgentDefinitionDetail,
@@ -36,6 +29,7 @@ import {
   updateAgentDefinition,
   updateExtension,
 } from "./customizeCommands";
+import { addSkill, getSkillDetail, listSkills, removeSkill, updateSkill } from "./skillCommands";
 
 /** Updates the app language preference. */
 export function updateLanguagePreference(language: Parameters<typeof updateLanguagePreferenceFromApi>[0]) {

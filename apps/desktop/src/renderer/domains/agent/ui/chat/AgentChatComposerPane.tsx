@@ -1,5 +1,8 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
+import { searchFiles } from "@renderer/domains/files";
+import { useKeybindingOverrides } from "@renderer/domains/settings";
 import { tabStore } from "@renderer/domains/workbench";
+import { renameTab } from "@renderer/domains/workbench";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
@@ -13,14 +16,11 @@ import { formatAgentSessionTitle } from "../../../../helpers/agentSkillTextHelpe
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { generateId } from "../../../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../../../shortcuts/keybindings";
-import { searchFiles } from "../../../files/commands/fileCommands";
-import { ProviderCredentialDialog } from "../../../settings/ui/ProviderCredentialDialog";
-import { useKeybindingOverrides } from "../../../settings/ui/hooks/useSettingsReadHooks";
-import { renameTab } from "../../../workbench/commands/tabCommands";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../commands/agentChatCommands";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../model/agentChatTypes";
 import { setTurnError } from "../../state/chatActions";
 import { useAgentChatSessionMeta } from "../../ui/hooks/useAgentChatReadHooks";
+import { ProviderCredentialDialog } from "../credentials/ProviderCredentialDialog";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
 import { AgentModelSelector } from "../session/AgentModelSelector";

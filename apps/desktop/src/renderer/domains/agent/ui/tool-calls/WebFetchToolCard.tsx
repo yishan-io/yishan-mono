@@ -1,11 +1,11 @@
 import { Box, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
 import { TbWorldSearch } from "react-icons/tb";
+import { AgentMarkdownContent } from "../transcript/AgentMarkdownContent";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { type AgentToolCallCardProps, extractResultText } from "./helpers";
-import { AgentMarkdownContent } from "../transcript/AgentMarkdownContent";
 
 /** Renders the specialized web_fetch tool-call card. */
 export function WebFetchToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
@@ -67,12 +67,7 @@ export function WebFetchToolCard({ toolCall, result = null, workspacePath }: Age
           </Box>
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection
-        open={open}
-        resultText={resultText}
-        isError={result?.isError === true}
-        label="fetched content"
-      >
+      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="fetched content">
         <Box sx={{ maxHeight: 320, overflowY: "auto" }}>
           <AgentMarkdownContent content={resultText} workspacePath={workspacePath} />
         </Box>

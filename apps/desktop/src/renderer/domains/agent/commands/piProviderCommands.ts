@@ -1,7 +1,6 @@
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
-import { writeTerminalInput } from "../../../domains/terminal/commands/terminalCommands";
 import type { WorkbenchTab } from "../../../domains/workbench";
 import { DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { delay } from "../../../helpers/delay";
@@ -106,6 +105,9 @@ export async function openPiProviderLogin(params: { providerId: string; tabTitle
   }
 
   await delay(PI_LOGIN_INPUT_DELAY_MS);
+  // Lazy import: the terminal index pulls the session runtime, which would
+  // re-enter mid-eval when the agent module graph loads it eagerly.
+  const { writeTerminalInput } = await import("@renderer/domains/terminal");
   await writeTerminalInput({ sessionId, data: `/login ${params.providerId}\r` });
 }
 

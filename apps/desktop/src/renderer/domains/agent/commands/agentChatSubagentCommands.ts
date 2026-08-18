@@ -13,7 +13,7 @@ import {
   splitWorkspacePane,
   unregisterTabFromPane,
 } from "@renderer/domains/workbench";
-import { findOppositePaneId } from "../../../domains/workbench/model/split-pane";
+import { findOppositePaneId } from "@renderer/domains/workbench";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../model/agentChatStore";
 import { isAgentSessionBusy } from "../model/agentChatTypes";

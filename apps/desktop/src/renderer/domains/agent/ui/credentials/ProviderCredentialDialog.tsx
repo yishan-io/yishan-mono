@@ -12,13 +12,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { ProviderMark } from "@renderer/domains/agent";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuLogIn } from "react-icons/lu";
-import { useAgentCommands } from "../../../app/commands/useCommands";
-import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../../domains/agent/commands/piProviderCommands";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import {
   PI_PROVIDER_CATALOG,
   getPiProviderCatalogEntry,
@@ -26,7 +23,10 @@ import {
   isPiProviderApiKeyCapable,
   isPiProviderOAuthCapable,
   isPiProviderSubscriptionCapable,
-} from "../../../helpers/piProviders";
+} from "../../../../helpers/piProviders";
+import { openPiProviderLogin, savePiProvider } from "../../commands/piProviderCommands";
+import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../commands/piProviderCommands";
+import { ProviderMark } from "../model-picker/ProviderMark";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 
@@ -48,7 +48,7 @@ export function ProviderCredentialDialog({
   onSaved: (providerId?: string) => void;
 }) {
   const { t } = useTranslation();
-  const { savePiProvider, openPiProviderLogin } = useAgentCommands();
+
   const [providerId, setProviderId] = useState(initialProviderId ?? "");
   const [key, setKey] = useState("");
   const [envValues, setEnvValues] = useState<Record<string, string>>({});

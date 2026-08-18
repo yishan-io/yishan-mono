@@ -1,6 +1,6 @@
 import { tabStore } from "@renderer/domains/workbench";
 import { bindAgentChatTabSession } from "@renderer/domains/workbench";
-import type { AgentChatSessionView } from "../../../domains/workbench/model/types";
+import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "../../../helpers/delay";
 /**
  * AgentSessionRuntime — one owner for Pi session handles and lifecycle races.

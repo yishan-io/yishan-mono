@@ -2,7 +2,14 @@
  * Files feature public API (Phase 12, desktop5.md).
  */
 export type { FileCommands } from "./commands/contract";
-export { listDetectedExternalAppIds, openEntryInExternalApp, readFile, renameEntry } from "./commands/fileCommands";
+export {
+  listDetectedExternalAppIds,
+  openEntryInExternalApp,
+  readFile,
+  renameEntry,
+  resolveChatFilePath,
+  searchFiles,
+} from "./commands/fileCommands";
 export { resolveWorkspaceAbsolutePath } from "./features/file-manager/fileTreeHelpers";
 export { useDetectedExternalAppIds } from "./hooks/useDetectedExternalAppIds";
 export {
@@ -58,3 +65,7 @@ export {
   UnsupportedFileView,
   VideoPreview,
 } from "./features/file-editor/editors";
+
+export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
+export { markdownService } from "./ui/markdown/markdownService";
+export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
