@@ -1,4 +1,9 @@
-import { useNotificationCommands } from "@renderer/app/commands/useCommands";
+import {
+  getNotificationPreferences,
+  playNotificationSound,
+  previewNotification,
+  updateNotificationPreferences,
+} from "@renderer/domains/notification";
 import { useState } from "react";
 import type { NotificationPreviewStatus, NotificationSettingsErrorKey } from "./notificationSettingsState.types";
 import { useNotificationSettingsMutations } from "./useNotificationSettingsMutations";
@@ -10,8 +15,6 @@ export type { NotificationPreviewStatus, NotificationSettingsErrorKey } from "./
  * Composes notification-settings state, persistence, and preview behavior for the settings panel.
  */
 export function useNotificationSettingsState() {
-  const { getNotificationPreferences, playNotificationSound, previewNotification, updateNotificationPreferences } =
-    useNotificationCommands();
   const [errorKey, setErrorKey] = useState<NotificationSettingsErrorKey>(null);
   const [previewStatus, setPreviewStatus] = useState<NotificationPreviewStatus>(null);
   const persistenceState = useNotificationSettingsPersistence({

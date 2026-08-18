@@ -1,5 +1,5 @@
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
-import type { DaemonInfoResult } from "@renderer/app/commands/appCommands";
+import type { DaemonInfoResult } from "@renderer/domains/settings";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "@renderer/domains/settings";
 import { MONOSPACE_SX } from "@renderer/helpers/styles";
 import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";

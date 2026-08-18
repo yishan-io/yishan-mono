@@ -1,4 +1,4 @@
-import type { Commands } from "@renderer/app/commands/useCommands";
+import type { NotificationCommands } from "@renderer/domains/notification";
 import { NOTIFICATION_PREVIEW_STATUS_AUTO_HIDE_MS } from "@shared/notifications/notificationConstants";
 import type {
   NotificationEventType,
@@ -14,8 +14,8 @@ import type {
 
 type UseNotificationSettingsPreviewInput = {
   draft: NotificationPreferences | null;
-  playNotificationSound: Commands["playNotificationSound"];
-  previewNotification: Commands["previewNotification"];
+  playNotificationSound: NotificationCommands["playNotificationSound"];
+  previewNotification: NotificationCommands["previewNotification"];
   previewStatus: NotificationPreviewStatus;
   setErrorKey: (errorKey: NotificationSettingsErrorKey) => void;
   setPreviewStatus: (previewStatus: NotificationPreviewStatus) => void;

@@ -8,6 +8,8 @@ import type {
   TerminalStreamEvent,
 } from "../../../rpc/daemonTypes";
 import type { TerminalDetectedPort } from "../../../rpc/daemonTypes";
+
+export type { TerminalSessionSummary } from "../../../rpc/daemonTypes";
 import { getDaemonClient, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
 import type { DaemonRpcClient } from "../../../rpc/types";
 

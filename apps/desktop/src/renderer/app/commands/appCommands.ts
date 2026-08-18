@@ -1,13 +1,14 @@
 import type { DesktopAgentKind } from "@renderer/domains/agent";
 import { openExternalUrl } from "@renderer/domains/browser";
+import {
+  getDaemonInfo,
+  getDaemonLog,
+  getDaemonQuitOnExit,
+  restartDaemon,
+  setDaemonQuitOnExit,
+} from "@renderer/domains/settings";
 import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
-import type {
-  AuthStatusResult,
-  DaemonInfoResult,
-  DaemonLogResult,
-  DaemonRestartResult,
-  DesktopUpdateEventPayload,
-} from "../../../main/ipc";
+import type { AuthStatusResult, DesktopUpdateEventPayload } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
@@ -70,25 +71,7 @@ export async function getDesktopAppVersion(): Promise<string> {
   return await getDesktopHostBridge().getDesktopAppVersion();
 }
 
-/** Reads current daemon identity and version from desktop main-process IPC. */
-export async function getDaemonInfo(): Promise<DaemonInfoResult> {
-  return await getDesktopHostBridge().getDaemonInfo();
-}
-
-/** Restarts the local daemon through the desktop main process. */
-export async function restartDaemon(): Promise<DaemonRestartResult> {
-  return await getDesktopHostBridge().restartDaemon();
-}
-
-/** Reads the persisted quit-daemon-before-app-exit setting. */
-export async function getDaemonQuitOnExit(): Promise<boolean> {
-  return await getDesktopHostBridge().getDaemonQuitOnExit();
-}
-
-/** Persists the quit-daemon-before-app-exit setting. */
-export async function setDaemonQuitOnExit(value: boolean): Promise<void> {
-  await getDesktopHostBridge().setDaemonQuitOnExit(value);
-}
+export { getDaemonInfo, getDaemonQuitOnExit, restartDaemon, setDaemonQuitOnExit };
 
 /** Runs one desktop login flow through main-process IPC. */
 export async function login() {
@@ -145,9 +128,5 @@ export function installDesktopUpdate() {
 
 export type { DesktopUpdateEventPayload } from "../../../main/ipc";
 
-export type { DaemonInfoResult, DaemonLogResult } from "../../../main/ipc";
-
-/** Reads the daemon log from the Electron host. */
-export async function getDaemonLog(): Promise<DaemonLogResult> {
-  return getDesktopHostBridge().readDaemonLog();
-}
+export { getDaemonLog };
+export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "@renderer/domains/settings";

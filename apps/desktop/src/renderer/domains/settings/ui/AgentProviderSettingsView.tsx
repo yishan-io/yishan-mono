@@ -1,12 +1,11 @@
 import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { ProviderMark } from "@renderer/domains/agent";
-import { ProviderCredentialDialog } from "@renderer/domains/agent";
+import { ProviderCredentialDialog, listPiProviders } from "@renderer/domains/agent";
 import { getPiProviderDisplayName, getPiProviderPinEnv } from "@renderer/domains/agent";
+import type { PiProviderStatus } from "@renderer/domains/agent";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
-import { useAgentCommands } from "../../../app/commands/useCommands";
-import type { PiProviderStatus } from "../../../domains/agent/commands/piProviderCommands";
 import { useRefreshableLoader } from "../../../ui/hooks/useRefreshableLoader";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "./controls";
@@ -105,7 +104,6 @@ function ProviderRow({
 /** Renders providers registered in the yishan pi agent with add/edit/remove. */
 export function AgentProviderSettingsView() {
   const { t } = useTranslation();
-  const { listPiProviders } = useAgentCommands();
   const [credentialTarget, setCredentialTarget] = useState<ProviderCredentialDialogTarget | null>(null);
   const [removeTarget, setRemoveTarget] = useState<PiProviderStatus | null>(null);
 

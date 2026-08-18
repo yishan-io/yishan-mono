@@ -13,6 +13,12 @@ const mocked = {
 
 vi.mock("../../../domains/agent/commands/piProviderCommands", () => ({
   NO_ACTIVE_WORKSPACE_LOGIN_ERROR: "no-active-workspace",
+  get listPiProviders() {
+    return mocked.listPiProviders;
+  },
+  get removePiProvider() {
+    return mocked.removePiProvider;
+  },
   get savePiProvider() {
     return mocked.savePiProvider;
   },

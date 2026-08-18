@@ -19,3 +19,14 @@ export {
 } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
 export { selectIsDefaultContextEnabled } from "./state/settingsSelectors";
+
+export {
+  getDaemonInfo,
+  getDaemonLog,
+  getDaemonQuitOnExit,
+  restartDaemon,
+  setDaemonQuitOnExit,
+  type DaemonInfoResult,
+  type DaemonLogResult,
+  type DaemonRestartResult,
+} from "./infrastructure/daemonHostCommands";

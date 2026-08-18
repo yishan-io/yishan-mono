@@ -7,7 +7,14 @@ export type { TerminalCommands } from "./commands/contract";
 // below is still evaluating, so the leaf bindings must already be available.
 export { getTerminalResourceUsage } from "./commands/terminalCommands";
 export type { TerminalResourceUsageSnapshot } from "./commands/terminalCommands";
-export { consumeTerminalTabFocus, writeTerminalInput } from "./commands/terminalCommands";
+export {
+  closeTerminalSession,
+  consumeTerminalTabFocus,
+  listTerminalSessions,
+  subscribeTerminalSessions,
+  writeTerminalInput,
+} from "./commands/terminalCommands";
+export type { TerminalSessionSummary } from "./commands/terminalCommands";
 export { useSharedTerminalResourceUsageSnapshot } from "./hooks/useSharedTerminalResourceUsageSnapshot";
 export { useTerminalTabLookups } from "./hooks/useTerminalTabLookups";
 // Terminal Runtime entry points required by cross-feature composition. These

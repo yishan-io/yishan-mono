@@ -1,4 +1,4 @@
-import { closeTerminalSession } from "@renderer/domains/terminal/commands/terminalCommands";
+import { closeTerminalSession } from "@renderer/domains/terminal";
 import { tabStore } from "@renderer/domains/workbench";
 import { closeAllTerminalTabs } from "@renderer/domains/workbench";
 

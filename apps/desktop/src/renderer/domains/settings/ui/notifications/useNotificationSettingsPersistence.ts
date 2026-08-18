@@ -1,4 +1,4 @@
-import type { Commands } from "@renderer/app/commands/useCommands";
+import type { NotificationCommands } from "@renderer/domains/notification";
 import {
   NOTIFICATION_PREFERENCES_LOAD_RETRY_ATTEMPTS,
   NOTIFICATION_PREFERENCES_LOAD_RETRY_BASE_DELAY_MS,
@@ -12,8 +12,8 @@ import { normalizeNotificationPreferencesSnapshot } from "./notificationSettings
 import type { NotificationSettingsErrorKey } from "./notificationSettingsState.types";
 
 type UseNotificationSettingsPersistenceInput = {
-  getNotificationPreferences: Commands["getNotificationPreferences"];
-  updateNotificationPreferences: Commands["updateNotificationPreferences"];
+  getNotificationPreferences: NotificationCommands["getNotificationPreferences"];
+  updateNotificationPreferences: NotificationCommands["updateNotificationPreferences"];
   clearPreviewStatus: () => void;
   setErrorKey: (errorKey: NotificationSettingsErrorKey) => void;
 };

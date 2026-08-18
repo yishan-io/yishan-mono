@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { MarkdownPreview } from "@renderer/domains/files/ui/markdown/MarkdownPreview";
+import { MarkdownPreview } from "@renderer/domains/files";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";

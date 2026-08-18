@@ -1,4 +1,5 @@
 import { clearTerminalAgentStatus } from "@renderer/domains/agent";
+import { isDesktopAgentKind } from "@renderer/domains/agent";
 import { setTerminalTabAgentKind } from "@renderer/domains/workbench";
 /**
  * Terminal event handlers — owns terminal.session.changed (tab reconcile via
@@ -9,7 +10,6 @@ import { setTerminalTabAgentKind } from "@renderer/domains/workbench";
  * default deps subscribe via the router selectors.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { isDesktopAgentKind } from "@renderer/domains/agent";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 

@@ -82,62 +82,7 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "D17" },
   // ---- R14-cross-domain-deep (Phase D2 baseline; owning phase = importing Domain) ----
   { rule: "R14-cross-domain-deep", file: "domains/settings/state/agentSettingsStore.ts", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/AgentProviderSettingsView.tsx", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/AgentSkillsCardDialogs.tsx", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/GitWorkspaceSettingsView.tsx", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/RemoveProviderDialog.tsx", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/TerminalSettingsView.tsx", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/customize/ModelThinkingSelector.tsx", phase: "D16" },
-  {
-    rule: "R14-cross-domain-deep",
-    file: "domains/settings/ui/daemon/daemonSettings/closeTerminalTabsForDaemonRestart.ts",
-    phase: "D16",
-  },
   // ---- R15-app-from-domain (Phase D2 baseline; owning phase = importing Domain) ----
-  { rule: "R15-app-from-domain", file: "domains/settings/commands/settingsCommands.ts", phase: "D16" },
-  { rule: "R15-app-from-domain", file: "domains/settings/ui/AgentProviderSettingsView.tsx", phase: "D16" },
-  { rule: "R15-app-from-domain", file: "domains/settings/ui/RemoveProviderDialog.tsx", phase: "D16" },
-  { rule: "R15-app-from-domain", file: "domains/settings/ui/TerminalSettingsView.tsx", phase: "D16" },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/daemon/daemonSettings/DaemonConnectionSection.tsx",
-    phase: "D16",
-  },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/daemon/daemonSettings/DaemonRelaySection.tsx",
-    phase: "D16",
-  },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/daemon/daemonSettings/useDaemonConnectionState.ts",
-    phase: "D16",
-  },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/daemon/daemonSettings/useDaemonLogDialog.ts",
-    phase: "D16",
-  },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/daemon/daemonSettings/useQuitOnExitSetting.ts",
-    phase: "D16",
-  },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/notifications/useNotificationSettingsPersistence.ts",
-    phase: "D16",
-  },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/notifications/useNotificationSettingsPreview.ts",
-    phase: "D16",
-  },
-  {
-    rule: "R15-app-from-domain",
-    file: "domains/settings/ui/notifications/useNotificationSettingsState.ts",
-    phase: "D16",
-  },
   // ---- R16-app-deep-into-domain (Phase D2 baseline; owning phase = D17 App audit) ----
   { rule: "R16-app-deep-into-domain", file: "app/commands/appCommands.ts", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/commands/composition.ts", phase: "D17" },

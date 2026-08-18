@@ -3,10 +3,10 @@ import { AgentModelSelector } from "@renderer/domains/agent";
 import { splitModelId, stripProviderPrefix } from "@renderer/domains/agent";
 import { clampThinkingLevel, formatSupportedThinkingLevels, isThinkingLevelSupported } from "@renderer/domains/agent";
 import { getPiProviderDisplayName } from "@renderer/domains/agent";
+import { listAgentModels } from "@renderer/domains/agent";
+import type { AgentModel } from "@renderer/domains/agent";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { listAgentModels } from "../../../../domains/agent/commands/agentCommands";
-import type { AgentModel } from "../../../../domains/agent/model/agentChatTypes";
 
 type ModelThinkingSelectorProps = {
   model: string;

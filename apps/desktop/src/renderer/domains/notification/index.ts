@@ -9,3 +9,11 @@ export {
   type WorkspaceNotificationColor,
   type WorkspaceNotificationTone,
 } from "./model/workspaceNotification";
+
+export {
+  dispatchNotification,
+  getNotificationPreferences,
+  playNotificationSound,
+  previewNotification,
+  updateNotificationPreferences,
+} from "./commands/notificationCommands";

@@ -69,3 +69,5 @@ export {
 export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
 export { markdownService } from "./ui/markdown/markdownService";
 export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
+
+export { MarkdownPreview } from "./ui/markdown/MarkdownPreview";

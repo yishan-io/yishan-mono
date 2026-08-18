@@ -1,3 +1,4 @@
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "@renderer/domains/settings";
 import type { DaemonLogResult } from "../../../../main/ipc";
 import {
   createServiceToken as createServiceTokenFromApi,
@@ -14,7 +15,6 @@ import {
  */
 import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "../../../api/sessionApi";
 import { getVoiceTranscriptionUsage } from "../../../api/voiceTranscriptionApi";
-import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../app/commands/appCommands";
 import type { MemoryConfig } from "../../../rpc/daemonTypes";
 import { getDaemonClient, getDesktopHostBridge } from "../../../rpc/rpcTransport";
 import {

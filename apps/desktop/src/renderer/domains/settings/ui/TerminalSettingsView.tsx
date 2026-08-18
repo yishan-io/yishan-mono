@@ -1,11 +1,12 @@
 import { Alert, Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } from "@renderer/domains/terminal";
 import { tabStore } from "@renderer/domains/workbench";
 import { closeTab } from "@renderer/domains/workbench";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useTerminalCommands } from "../../../app/commands/useCommands";
-import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
-import { useWorkspaces } from "../../../domains/workspace/hooks/useWorkspaceReadHooks";
+
+import { useProjects } from "@renderer/domains/project";
+import { useWorkspaces } from "@renderer/domains/workspace";
 import { MONOSPACE_SX } from "../../../helpers/styles";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
@@ -82,7 +83,6 @@ function resolveSessionLocationLabel(input: {
 /** Renders one settings panel for globally listing and managing terminal sessions. */
 export function TerminalSettingsView() {
   const { t } = useTranslation();
-  const { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } = useTerminalCommands();
   const projects = useProjects();
   const workspaces = useWorkspaces();
   const [isLoading, setIsLoading] = useState(true);
