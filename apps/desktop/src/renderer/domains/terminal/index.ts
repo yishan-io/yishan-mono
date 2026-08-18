@@ -16,6 +16,10 @@ export {
   requestTerminalRuntimeFocus,
 } from "./runtime/terminalRuntimeRegistry";
 export { initTerminalSessionLifecycle } from "./runtime/terminalSessionService";
+export { getTerminalResourceUsage } from "./commands/terminalCommands";
+export type { TerminalResourceUsageSnapshot } from "./commands/terminalCommands";
+export { useSharedTerminalResourceUsageSnapshot } from "./ui/hooks/useSharedTerminalResourceUsageSnapshot";
+export { useTerminalTabLookups } from "./ui/hooks/useTerminalTabLookups";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { TerminalView } from "./ui/TerminalView";

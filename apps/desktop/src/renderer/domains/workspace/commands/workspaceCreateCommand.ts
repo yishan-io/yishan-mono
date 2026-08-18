@@ -1,6 +1,7 @@
+import { selectProjectById } from "@renderer/domains/project";
+import { selectIsDefaultContextEnabled } from "@renderer/domains/settings";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectSelectedOrganizationId } from "../../../domains/session";
-import { selectIsDefaultContextEnabled } from "../../../domains/settings/state/settingsSelectors";
 import { buildWorkspaceCreatePlaceholder } from "../../../domains/workspace/model/workspaceCreatePlaceholder";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import {
@@ -11,7 +12,6 @@ import {
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectProjectById } from "../../project/state/projectSelectors";
 
 type CreateWorkspaceInput = {
   projectId: string;

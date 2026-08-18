@@ -1,4 +1,4 @@
-import type { AgentModelInfo } from "@renderer/domains/agent/commands/agentCommands";
+import type { AgentModelInfo } from "@renderer/domains/agent";
 import type { DesktopAgentKind } from "@renderer/helpers/agentSettings";
 import { useEffect, useState } from "react";
 

@@ -2,6 +2,7 @@
 
 import "./CreateWorkspaceDialogView.testSetup";
 
+import { createWorkspace } from "@renderer/domains/workspace";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { projectStore } from "../../../../domains/project/state/projectStore";
@@ -16,6 +17,10 @@ import {
 
 describe("CreateWorkspaceDialogView branch behavior", () => {
   setupCreateWorkspaceDialogViewTests();
+
+  it("DEBUG mock identity", () => {
+    expect(createWorkspace).toBe(getMockedCommands().createWorkspace);
+  });
 
   it("loads Pi models regardless of the configured default agent", async () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);

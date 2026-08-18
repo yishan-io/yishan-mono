@@ -5,6 +5,8 @@
  * surfaces. Internal Stores and Runtime implementations are not exported.
  */
 export type { AgentCommands } from "./commands/contract";
+export type { AgentModelInfo } from "./commands/agentCommands";
+export { listAgentModels } from "./commands/agentCommands";
 export {
   AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,

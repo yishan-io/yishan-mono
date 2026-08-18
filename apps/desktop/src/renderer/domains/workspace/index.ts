@@ -16,7 +16,10 @@ export { selectWorkspaces } from "./state/workspaceSelectors";
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
 export {
   closeWorkspace,
+  createWorkspace,
   deleteLocalFolder,
+  renameWorkspace,
+  renameWorkspaceBranch,
   reorderWorkspace,
   setDisplayRepoIds,
   setLastUsedExternalAppId,

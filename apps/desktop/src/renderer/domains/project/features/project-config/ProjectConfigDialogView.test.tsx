@@ -14,10 +14,21 @@ const mocked = vi.hoisted(() => ({
   openLocalFolderDialog: vi.fn(),
 }));
 
-vi.mock("@renderer/domains/project", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/domains/project")>();
+vi.mock("@renderer/domains/project", async () => {
+  // The dialog graph needs the real stateless presentation values. A full
+  // mock avoids importOriginal recursing project -> workspace -> project (D8);
+  // the real values come from the deep ui/projectIcons module inside the
+  // async factory (vi.mock factories are hoisted, so no module-scope refs).
+  const projectIcons = await import("../../ui/projectIcons");
   return {
-    ...actual,
+    DEFAULT_PROJECT_ICON_ID: projectIcons.DEFAULT_PROJECT_ICON_ID,
+    PROJECT_COLOR_PRESETS: projectIcons.PROJECT_COLOR_PRESETS,
+    PROJECT_ICON_OPTIONS: projectIcons.PROJECT_ICON_OPTIONS,
+    REPO_ICON_OPTIONS: projectIcons.REPO_ICON_OPTIONS,
+    findProjectIconOption: projectIcons.findProjectIconOption,
+    pickRandomProjectColor: projectIcons.pickRandomProjectColor,
+    pickRandomProjectIcon: projectIcons.pickRandomProjectIcon,
+    renderProjectIcon: projectIcons.renderProjectIcon,
     updateProjectConfig: mocked.updateProjectConfig,
     getDefaultWorktreeLocation: mocked.getDefaultWorktreeLocation,
     openLocalFolderDialog: mocked.openLocalFolderDialog,
@@ -53,8 +64,7 @@ afterEach(() => {
 describe("ProjectConfigDialogView", () => {
   it("renders git url and repo key as static text rows", () => {
     workspaceStore.setState({
-
-      workspaces: []
+      workspaces: [],
     });
     projectStore.setState({
       projects: [
@@ -81,8 +91,7 @@ describe("ProjectConfigDialogView", () => {
 
   it("labels the context toggle generically", () => {
     workspaceStore.setState({
-
-      workspaces: []
+      workspaces: [],
     });
     projectStore.setState({
       projects: [
@@ -108,8 +117,7 @@ describe("ProjectConfigDialogView", () => {
 
   it("keeps focus while editing a quick command name", () => {
     workspaceStore.setState({
-
-      workspaces: []
+      workspaces: [],
     });
     projectStore.setState({
       projects: [

@@ -104,6 +104,12 @@ func Run(cfg RunConfig, statePath string, runtime *session.Session) error {
 		return err
 	}
 	defer dr.closeListener()
+<<<<<<< Updated upstream
+=======
+	defer dr.closeLocalDatabase()
+	defer dr.cleanupCtxCancel()
+	defer removeOwnedState(statePath, os.Getpid())
+>>>>>>> Stashed changes
 
 	sc, err := startServing(cfg, dr)
 	if err != nil {

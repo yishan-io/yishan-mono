@@ -25,28 +25,20 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    getTerminalResourceUsage: mocked.getTerminalResourceUsage,
-    activateWorkspace: mocked.activateWorkspace,
-    selectTab: mocked.selectTab,
-  });
+vi.mock("@renderer/domains/terminal", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/terminal")>();
   return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
+    ...actual,
+    getTerminalResourceUsage: mocked.getTerminalResourceUsage,
+  };
+});
+
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
+  return {
+    ...actual,
+    activateWorkspace: mocked.activateWorkspace,
+    setSelectedTab: mocked.selectTab,
   };
 });
 

@@ -2,7 +2,14 @@
  * Settings feature public API (Phase 12, desktop5.md).
  */
 export type { SettingsCommands } from "./commands/contract";
-export { useAgentKindsInUse } from "./ui/hooks/useSettingsReadHooks";
+export {
+  useAgentKindsInUse,
+  useWorkspaceBranchPrefixSettings,
+} from "./ui/hooks/useSettingsReadHooks";
+export {
+  type GitBranchPrefixMode,
+  resolveGitBranchPrefix,
+} from "./model/branchPrefix";
 export * from "./ui/controls";
 export {
   editorSettingsStore,

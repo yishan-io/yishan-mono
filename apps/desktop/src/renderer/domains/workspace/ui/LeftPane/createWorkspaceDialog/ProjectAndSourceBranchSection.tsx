@@ -11,7 +11,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { renderProjectIcon } from "@renderer/domains/project";
-import type { WorkspaceProjectRecord } from "@renderer/domains/project/model/projectTypes";
+import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 import { BranchDropdown, type BranchDropdownGroups } from "@renderer/ui/components/BranchDropdown";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuFolderGit2, LuGitBranch } from "react-icons/lu";

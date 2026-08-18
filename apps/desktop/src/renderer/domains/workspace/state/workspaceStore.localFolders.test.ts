@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";

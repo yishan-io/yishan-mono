@@ -1,6 +1,6 @@
+import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
 import { selectSessionDaemonId } from "../../../../domains/session";
 import { getFileName } from "../../../../helpers/pathHelpers";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../project/model/projectTypes";
 import type { WorkspaceHealth, WorkspaceItem, WorkspaceLifecycleState } from "../../model/workspaceTypes";
 import type {
   WorkspaceStoreActions,

@@ -13,8 +13,6 @@ import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpc
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion, setWorkspaceCurrentBranch, setWorkspacePullRequest } from "@renderer/domains/git";
 import { openTab } from "@renderer/domains/workbench";
-import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
-import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
@@ -38,7 +36,7 @@ export type WorkspaceEventDependencies = {
   subscribeDaemonConnectionStatus?: (
     listener: (status: "connected" | "connecting" | "disconnected") => void,
   ) => () => void;
-  subscribeGitChanged: (
+  subscribeGitChanged?: (
     listener: (
       workspaceId: string | undefined,
       workspaceWorktreePath: string,
@@ -46,7 +44,7 @@ export type WorkspaceEventDependencies = {
       currentBranch?: string,
     ) => void,
   ) => () => void;
-  subscribeWorkspaceFilesChanged: (
+  subscribeWorkspaceFilesChanged?: (
     listener: (workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void,
   ) => () => void;
   subscribeWorkspaceCreateStarted?: (listener: (payload: WorkspaceCreateStartedPayload) => void) => () => void;
@@ -77,80 +75,14 @@ export type WorkspaceEventDependencies = {
 };
 
 /**
- * Default dependencies: real store actions + router subscribers. Used by
- * `startWorkspaceEventHandlers()` (production composition) and by tests that
- * do not inject a specific dep.
+ * Default dependencies: real store actions. The backend-event subscriptions
+ * and the workspace-snapshot flow are App-composed: app/events/index.ts
+ * passes them into createWorkspaceEventHandlers so Workspace never imports
+ * app (Domains plan D8).
  */
 export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = {
   subscribeDaemonConnectionStatus,
-  subscribeGitChanged: (listener) =>
-    subscribeBackendEvent("git.changed", (event) => {
-      if (event.source !== "gitChanged") {
-        return;
-      }
-      listener(
-        event.payload.workspaceId,
-        event.payload.workspaceWorktreePath,
-        event.payload.affectsBranch ?? true,
-        event.payload.currentBranch,
-      );
-    }),
-  subscribeWorkspaceFilesChanged: (listener) =>
-    subscribeBackendEvent("workspace.files.changed", (event) => {
-      if (event.source !== "workspaceFilesChanged") {
-        return;
-      }
-      listener(event.payload.workspaceId, event.payload.workspaceWorktreePath, event.payload.changedRelativePaths);
-    }),
-  subscribeWorkspaceCreateStarted: (listener) =>
-    subscribeBackendEvent("workspace.create.started", (event) => {
-      if (event.source !== "workspaceCreateStarted") {
-        return;
-      }
-      listener(event.payload);
-    }),
-  subscribeWorkspaceCreateProgress: (listener) =>
-    subscribeBackendEvent("workspace.create.progress", (event) => {
-      if (event.source !== "workspaceCreateProgress") {
-        return;
-      }
-      listener(event.payload);
-    }),
-  subscribeWorkspaceCreateCompleted: (listener) =>
-    subscribeBackendEvent("workspace.create.completed", (event) => {
-      if (event.source !== "workspaceCreateCompleted") {
-        return;
-      }
-      listener(event.payload);
-    }),
-  subscribeWorkspaceCreateFailed: (listener) =>
-    subscribeBackendEvent("workspace.create.failed", (event) => {
-      if (event.source !== "workspaceCreateFailed") {
-        return;
-      }
-      listener(event.payload);
-    }),
-  subscribeWorkspacePullRequestUpdated: (listener) =>
-    subscribeBackendEvent("workspace.pull_request.updated", (event) => {
-      if (event.source !== "workspacePullRequestUpdated") {
-        return;
-      }
-      listener(event.payload);
-    }),
-  subscribeWorkspaceSnapshotChanged: (listener) =>
-    subscribeBackendEvent("workspace.snapshot.changed", (event) => {
-      if (event.source !== "workspaceSnapshotChanged") {
-        return;
-      }
-      listener(event.payload);
-    }),
-  subscribeWorkspaceStateChanged: (listener) =>
-    subscribeBackendEvent("workspace.state.changed", (event) => {
-      if (event.source !== "workspaceStateChanged") {
-        return;
-      }
-      listener(event.payload);
-    }),
+
   listWorkspaceWorktreePaths: () =>
     workspaceStore
       .getState()
@@ -251,7 +183,6 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
     setWorkspacePullRequest(workspaceId, pullRequest);
   },
-  loadWorkspaceSnapshot,
   getSelectedOrganizationId: () => selectSelectedOrganizationId(),
   workspaceExistsLocally: (workspaceId) =>
     workspaceStore.getState().workspaces.some((workspace) => workspace.id === workspaceId),
@@ -335,8 +266,8 @@ export function createWorkspaceEventHandlers(dependencies: WorkspaceEventDepende
       gitRefreshTimersByWorktreePath.set(normalizedPath, timeoutId);
     };
 
-    const unsubscribeGitChanged = resolvedDependencies.subscribeGitChanged(
-      (workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
+    const unsubscribeGitChanged =
+      resolvedDependencies.subscribeGitChanged?.((workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
         scheduleGitRefresh(workspaceWorktreePath);
 
         if (affectsBranch) {
@@ -346,8 +277,7 @@ export function createWorkspaceEventHandlers(dependencies: WorkspaceEventDepende
             void resolvedDependencies.refreshWorkspaceCurrentBranch?.(resolvedId, currentBranch);
           }
         }
-      },
-    );
+      }) ?? (() => {});
     let hasObservedConnectedState = false;
     let shouldRecoverWorkspaceViewsOnReconnect = false;
     const unsubscribeDaemonConnectionStatus = (
@@ -387,12 +317,13 @@ export function createWorkspaceEventHandlers(dependencies: WorkspaceEventDepende
         }
       })();
     });
-    const unsubscribeWorkspaceFilesChanged = resolvedDependencies.subscribeWorkspaceFilesChanged(
-      (_workspaceId, workspaceWorktreePath, changedRelativePaths) => {
-        resolvedDependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
-        scheduleGitRefresh(workspaceWorktreePath);
-      },
-    );
+    const unsubscribeWorkspaceFilesChanged =
+      resolvedDependencies.subscribeWorkspaceFilesChanged?.(
+        (_workspaceId, workspaceWorktreePath, changedRelativePaths) => {
+          resolvedDependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
+          scheduleGitRefresh(workspaceWorktreePath);
+        },
+      ) ?? (() => {});
     const unsubscribeWorkspaceCreateStarted =
       resolvedDependencies.subscribeWorkspaceCreateStarted?.((payload) => {
         resolvedDependencies.applyWorkspaceCreateStartedEvent?.(payload);

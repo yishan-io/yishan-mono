@@ -7,6 +7,11 @@ import {
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import {
+  setDisplayProjectIds as applyDisplayProjectIds,
+  setLastUsedExternalAppId as applyLastUsedExternalAppId,
+} from "@renderer/domains/project";
+import { selectProjectById, selectProjectDisplayIds, selectProjects } from "@renderer/domains/project";
+import {
   DEFAULT_RIGHT_PANE_TAB,
   type WorkspaceRightPaneTab,
   layoutStore,
@@ -20,11 +25,6 @@ import { workspaceStore } from "../../../domains/workspace/state/workspaceStore"
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import {
-  setDisplayProjectIds as applyDisplayProjectIds,
-  setLastUsedExternalAppId as applyLastUsedExternalAppId,
-} from "../../project/state/projectActions";
-import { selectProjectById, selectProjectDisplayIds, selectProjects } from "../../project/state/projectSelectors";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 export { createWorkspace } from "./workspaceCreateCommand";

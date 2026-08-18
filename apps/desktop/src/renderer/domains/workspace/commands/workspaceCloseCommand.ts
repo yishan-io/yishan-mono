@@ -1,3 +1,4 @@
+import { selectProjectById } from "@renderer/domains/project";
 import { removeRightPaneStateForWorkspace } from "@renderer/domains/workbench";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
@@ -6,7 +7,6 @@ import type { WorkspaceLifecycleScriptWarning } from "../../../domains/workspace
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectProjectById } from "../../project/state/projectSelectors";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 

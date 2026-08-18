@@ -1,11 +1,13 @@
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import {
+  getTerminalResourceUsage,
+  useSharedTerminalResourceUsageSnapshot,
+  useTerminalTabLookups,
+} from "@renderer/domains/terminal";
+import { activateWorkspace, setSelectedTab as selectTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
-import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { useSharedTerminalResourceUsageSnapshot } from "../../../domains/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
-import { useTerminalTabLookups } from "../../../domains/terminal/ui/hooks/useTerminalTabLookups";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../helpers/terminalTabUtils";
@@ -25,9 +27,6 @@ export function WorkspaceResourceUsageControl() {
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
-  const { getTerminalResourceUsage } = useTerminalCommands();
-  const { selectTab } = useWorkbenchCommands();
-  const { activateWorkspace } = useWorkspaceCommands();
   const [resourceMenuAnchorEl, setResourceMenuAnchorEl] = useState<null | HTMLElement>(null);
   const closeResourceMenu = useCallback(() => {
     setResourceMenuAnchorEl(null);

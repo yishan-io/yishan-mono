@@ -1,13 +1,15 @@
 import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
+import { listAgentModels } from "@renderer/domains/agent";
+import { listGitBranches } from "@renderer/domains/git";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
+import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
+import { useWorkspaceBranchPrefixSettings } from "@renderer/domains/settings";
+import { createWorkspace, renameWorkspace, renameWorkspaceBranch } from "@renderer/domains/workspace";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { useDisplayProjectIds, useProjects } from "../../../../domains/project/hooks/useProjectReadHooks";
 import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
-import { useWorkspaceBranchPrefixSettings } from "../../../../domains/settings/ui/hooks/useSettingsReadHooks";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
@@ -44,9 +46,6 @@ export function CreateWorkspaceDialogView({
   const projects = useProjects();
   const displayProjectIds = useDisplayProjectIds();
   const workspaces = workspaceStore((state) => state.workspaces);
-  const { createWorkspace, renameWorkspace, renameWorkspaceBranch } = useWorkspaceCommands();
-  const { listGitBranches } = useGitCommands();
-  const { listAgentModels } = useAgentCommands();
   const { prefixMode, customPrefix } = useWorkspaceBranchPrefixSettings();
 
   useDialogRegistration(open);
