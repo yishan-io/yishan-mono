@@ -3,7 +3,7 @@
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
+import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFlow";
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { sessionStore } from "../../../domains/session/state/sessionStore";

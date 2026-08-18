@@ -259,9 +259,9 @@ Helpers importer, no new `ui/hooks` file, no new root UI dependency violation.
 | `ResourceUsageMenu` | Workspace resource-usage Feature |
 | `DiagramZoomOverlay` | Files UI plus Files React behavior |
 | `KeybindingDisplay` | Settings keybindings Feature (currently violates: imports `helpers/platform`) |
-| `PortsTableMenu` | App workspace-shell Feature |
-| `AppBootstrapLoadingView` | App launch Feature |
-| `RouteCloseWatcher` | Root Hook or App Runtime |
+| `PortsTableMenu` | App workspace-shell Feature — **moved (Phase 22)** |
+| `AppBootstrapLoadingView` | App launch Feature — **moved (Phase 22)** |
+| `RouteCloseWatcher` | Root Hook — **moved to `renderer/hooks` (Phase 22)** |
 | `CenteredSpinner`, `FloatingSurface`, `SearchInput`, `StatusBadge`, `StatusIndicator`, `TableDropdownMenu`, `VirtualizedListbox`, `CenteredContentLayout` | Root UI (domain-free) |
 | `ModelAutocomplete` | Remove after consumer search (test-only) |
 | `ui/hooks/*` (4 files) | Root `renderer/hooks` |

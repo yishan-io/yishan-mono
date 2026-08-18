@@ -7,6 +7,10 @@ import type { TurnWorkingBlock } from "../transcript/turnModel";
 import { AgentToolCallGroup, buildLiveHeaderGradient } from "./AgentToolCallGroup";
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       const count = typeof options?.count === "number" ? String(options.count) : "";

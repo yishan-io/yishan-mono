@@ -44,9 +44,13 @@ vi.mock("../../events/agentChatComposerFocus", () => ({
   clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
 }));
 
-vi.mock("../../domains/workspace/state/workspaceActions", () => ({
-  enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
-}));
+vi.mock("@renderer/domains/workspace", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workspace")>();
+  return {
+    ...actual,
+    enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
+  };
+});
 
 vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../rpc/rpcTransport")>();

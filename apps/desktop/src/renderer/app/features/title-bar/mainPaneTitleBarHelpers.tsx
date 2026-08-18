@@ -1,8 +1,8 @@
 import { MenuItem, TextField } from "@mui/material";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuFolder } from "react-icons/lu";
-import type { WorkspaceProjectRecord } from "../../../domains/project/model/projectTypes";
-import type { WorkspaceItem } from "../../../domains/workspace/model/workspaceTypes";
+import type { WorkspaceProjectRecord } from "@renderer/domains/project";
+import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 
 /** Resolves the workspace displayed as local in the left pane for a project. */

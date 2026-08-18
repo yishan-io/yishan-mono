@@ -1,9 +1,4 @@
 import {
-  AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-} from "@renderer/domains/agent";
-import {
   BiBell,
   BiBot,
   BiChip,
@@ -399,16 +394,10 @@ const CLI_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.agents.inUse",
     ],
   },
-  ...SUPPORTED_DESKTOP_AGENT_KINDS.filter(
-    (agentKind) => !AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION.has(agentKind),
-  ).map((agentKind) => ({
-    id: `cli-agent-${agentKind}`,
-    tab: "cli" as const,
-    icon: BiBot,
-    labelKey: AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind],
-    sectionLabelKey: "settings.items.cli",
-    keywordKeys: ["settings.agents.inUse", "settings.agents.status.detected", "settings.agents.status.notDetected"],
-  })),
+  // Agent-kind search entries load lazily from settingsSearchCatalogAgent
+  // (desktop7 Phase 22): the Settings index must not evaluate the Agent index
+  // at module-load time (Agent features import the Settings index back, and
+  // the re-entrancy cycle breaks mocked test graphs).
 ];
 const PROVIDERS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {

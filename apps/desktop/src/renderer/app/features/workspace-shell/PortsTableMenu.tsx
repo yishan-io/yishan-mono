@@ -1,5 +1,5 @@
 import { LuX } from "react-icons/lu";
-import { TableDropdownMenu } from "./TableDropdownMenu";
+import { TableDropdownMenu } from "../../../ui/components/TableDropdownMenu";
 
 const PORTS_GRID_TEMPLATE_COLUMNS = "minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 0.6fr) 28px";
 

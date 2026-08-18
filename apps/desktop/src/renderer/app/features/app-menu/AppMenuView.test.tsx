@@ -8,6 +8,10 @@ import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { AppMenuView } from "./AppMenuView";
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

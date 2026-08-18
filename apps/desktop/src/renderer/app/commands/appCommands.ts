@@ -11,7 +11,7 @@ import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import type { AuthStatusResult, DesktopUpdateEventPayload } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
-import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
+import { workspaceStore } from "@renderer/domains/workspace";
 import { rendererQueryClient } from "../../queryClient";
 import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
 

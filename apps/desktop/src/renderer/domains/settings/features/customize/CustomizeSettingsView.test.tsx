@@ -5,6 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CustomizeSettingsView } from "./CustomizeSettingsView";
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

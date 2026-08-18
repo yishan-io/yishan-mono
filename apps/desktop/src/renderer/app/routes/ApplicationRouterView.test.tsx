@@ -32,6 +32,7 @@ vi.mock("../../app/commands/appCommands", () => ({
 
 vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({})),
+  subscribeDaemonConnectionStatus: vi.fn(() => () => {}),
   subscribeDesktopRpcEvent: vi.fn(() => () => {}),
 }));
 

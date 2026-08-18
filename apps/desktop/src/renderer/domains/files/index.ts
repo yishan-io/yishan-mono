@@ -3,12 +3,18 @@
  */
 export type { FileCommands } from "./commands/contract";
 export {
+  createFile,
+  createFolder,
+  deleteEntry,
   listDetectedExternalAppIds,
+  listFiles,
   openEntryInExternalApp,
+  readExternalClipboardSourcePaths,
   readFile,
   renameEntry,
   resolveChatFilePath,
   searchFiles,
+  writeFile,
 } from "./commands/fileCommands";
 export { resolveWorkspaceAbsolutePath } from "./features/file-manager/fileTreeHelpers";
 export { useDetectedExternalAppIds } from "./hooks/useDetectedExternalAppIds";
@@ -27,6 +33,7 @@ export { createNewWhiteboard, resolveNextWhiteboardPath } from "./commands/white
 export {
   markFileTabSaved,
   refreshFileTabFromDisk,
+  removeFileTabContent,
   seedFileTabContent,
   updateFileTabContent,
 } from "./commands/fileTabContentCommands";
@@ -71,3 +78,4 @@ export { markdownService } from "./ui/markdown/markdownService";
 export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
 
 export { MarkdownPreview } from "./ui/markdown/MarkdownPreview";
+export { createFileTabPlaceholder } from "./model/fileTabPlaceholder";

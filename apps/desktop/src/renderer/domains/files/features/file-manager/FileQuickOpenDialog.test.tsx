@@ -9,9 +9,13 @@ vi.mock("./fileTreeIcons", () => ({
   getFileTreeIcon: () => "mock-icon.svg",
 }));
 
-vi.mock("react-icons/bi", () => ({
-  BiSearch: () => <svg data-testid="file-search-icon" />,
-}));
+vi.mock("react-icons/bi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-icons/bi")>();
+  return {
+    ...actual,
+    BiSearch: () => <svg data-testid="file-search-icon" />,
+  };
+});
 
 afterEach(() => {
   cleanup();

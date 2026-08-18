@@ -10,8 +10,16 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import {
+  type ComponentType,
+  type LazyExoticComponent,
+  type ReactNode,
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import type { BiCog } from "react-icons/bi";
 import { RxExit } from "react-icons/rx";
@@ -21,35 +29,70 @@ import { getRendererPlatform } from "../../../../helpers/platform";
 import { SearchInput } from "../../../../ui/components/SearchInput";
 import { SettingsErrorBoundary, SettingsPageLayout, SettingsSectionHeader } from "../../ui/controls";
 import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
-import { AccountSettingsView } from "../account/AccountSettingsView";
-import { MemberSettingsView } from "../account/MemberSettingsView";
-import { ServiceTokenSettingsView } from "../account/ServiceTokenSettingsView";
-import { AgentProviderSettingsView } from "../agent-providers/AgentProviderSettingsView";
-import { CLISettingsView } from "../cli/CLISettingsView";
-import { ComputerUseSettingsView } from "../computer-use/ComputerUseSettingsView";
-import { CustomizeSettingsView } from "../customize/CustomizeSettingsView";
-import { DaemonSettingsView } from "../daemon/DaemonSettingsView";
-import { EditorSettingsView } from "../editor/EditorSettingsView";
-import { KeybindingsSettingsView } from "../keybindings/KeybindingsSettingsView";
-import { LanguageSettingsView } from "../language/LanguageSettingsView";
-import { LinkSettingsView } from "../link/LinkSettingsView";
-import { MarkdownSettingsView } from "../markdown/MarkdownSettingsView";
-import { MemorySettingsView } from "../memory/MemorySettingsView";
-import { NodesSettingsView } from "../nodes/NodesSettingsView";
-import { NotificationSettingsView } from "../notifications/NotificationSettingsView";
 import {
   type NotificationSettingsFocusItemId,
   isNotificationSettingsFocusItemId,
 } from "../notifications/notificationSettingsCatalog";
-import { TerminalSettingsView } from "../terminal/TerminalSettingsView";
-import { WorkspaceSettingsView } from "../workspace/WorkspaceSettingsView";
 import {
   type CustomizeFocusItemId,
   SETTINGS_NAV_SECTIONS,
   SETTINGS_SEARCH_CATALOG,
+  type SettingsSearchCatalogItem,
   type SettingsTab,
   isCustomizeFocusItemId,
 } from "./settingsSearchCatalog";
+
+const AccountSettingsView = lazy(() =>
+  import("../account/AccountSettingsView").then((m) => ({ default: m.AccountSettingsView })),
+);
+const MemberSettingsView = lazy(() =>
+  import("../account/MemberSettingsView").then((m) => ({ default: m.MemberSettingsView })),
+);
+const ServiceTokenSettingsView = lazy(() =>
+  import("../account/ServiceTokenSettingsView").then((m) => ({ default: m.ServiceTokenSettingsView })),
+);
+const ComputerUseSettingsView = lazy(() =>
+  import("../computer-use/ComputerUseSettingsView").then((m) => ({ default: m.ComputerUseSettingsView })),
+);
+const DaemonSettingsView = lazy(() =>
+  import("../daemon/DaemonSettingsView").then((m) => ({ default: m.DaemonSettingsView })),
+);
+const EditorSettingsView = lazy(() =>
+  import("../editor/EditorSettingsView").then((m) => ({ default: m.EditorSettingsView })),
+);
+const KeybindingsSettingsView = lazy(() =>
+  import("../keybindings/KeybindingsSettingsView").then((m) => ({ default: m.KeybindingsSettingsView })),
+);
+const LanguageSettingsView = lazy(() =>
+  import("../language/LanguageSettingsView").then((m) => ({ default: m.LanguageSettingsView })),
+);
+const LinkSettingsView = lazy(() => import("../link/LinkSettingsView").then((m) => ({ default: m.LinkSettingsView })));
+const MarkdownSettingsView = lazy(() =>
+  import("../markdown/MarkdownSettingsView").then((m) => ({ default: m.MarkdownSettingsView })),
+);
+const NodesSettingsView = lazy(() =>
+  import("../nodes/NodesSettingsView").then((m) => ({ default: m.NodesSettingsView })),
+);
+const NotificationSettingsView = lazy(() =>
+  import("../notifications/NotificationSettingsView").then((m) => ({ default: m.NotificationSettingsView })),
+);
+const TerminalSettingsView = lazy(() =>
+  import("../terminal/TerminalSettingsView").then((m) => ({ default: m.TerminalSettingsView })),
+);
+const WorkspaceSettingsView = lazy(() =>
+  import("../workspace/WorkspaceSettingsView").then((m) => ({ default: m.WorkspaceSettingsView })),
+);
+
+const AgentProviderSettingsView = lazy(() =>
+  import("../agent-providers/AgentProviderSettingsView").then((m) => ({ default: m.AgentProviderSettingsView })),
+);
+const CLISettingsView = lazy(() => import("../cli/CLISettingsView").then((m) => ({ default: m.CLISettingsView })));
+const CustomizeSettingsView = lazy(() =>
+  import("../customize/CustomizeSettingsView").then((m) => ({ default: m.CustomizeSettingsView })),
+);
+const MemorySettingsView = lazy(() =>
+  import("../memory/MemorySettingsView").then((m) => ({ default: m.MemorySettingsView })),
+);
 
 type SettingsSearchResult = {
   id: string;
@@ -150,42 +193,80 @@ export function SettingsView() {
 
   const normalizedSearchQuery = useMemo(() => normalizeSettingsSearchQuery(searchQuery), [searchQuery]);
 
+  const [agentSearchEntries, setAgentSearchEntries] = useState<readonly SettingsSearchCatalogItem[]>(() => []);
+  useEffect(() => {
+    let alive = true;
+    void import("./settingsSearchCatalogAgent")
+      .then((module) => {
+        if (alive) {
+          setAgentSearchEntries(module.AGENT_SETTINGS_SEARCH_ENTRIES ?? []);
+        }
+      })
+      .catch(() => {
+        // The agent search entries are enhancement-only; a failed lazy load
+        // must never break the settings shell.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const settingsSearchCatalog = useMemo(
+    () => [...SETTINGS_SEARCH_CATALOG, ...agentSearchEntries],
+    [agentSearchEntries],
+  );
+
   const searchResults = useMemo(() => {
     if (!normalizedSearchQuery) {
       return [];
     }
 
-    return SETTINGS_SEARCH_CATALOG.map<SettingsSearchResult | null>((item) => {
-      const label = t(item.labelKey);
-      const searchableText = [label, ...item.keywordKeys.map((keywordKey) => t(keywordKey))].join(" ");
-      const rank = rankSettingsSearchResult(searchableText, normalizedSearchQuery);
-      if (!Number.isFinite(rank)) {
-        return null;
-      }
-      return {
-        id: item.id,
-        tab: item.tab,
-        icon: item.icon,
-        label,
-        sectionLabel: t(item.sectionLabelKey),
-        focusItemId: item.focusItemId,
-        rank,
-      };
-    })
+    return settingsSearchCatalog
+      .map<SettingsSearchResult | null>((item) => {
+        const label = t(item.labelKey);
+        const searchableText = [label, ...item.keywordKeys.map((keywordKey) => t(keywordKey))].join(" ");
+        const rank = rankSettingsSearchResult(searchableText, normalizedSearchQuery);
+        if (!Number.isFinite(rank)) {
+          return null;
+        }
+        return {
+          id: item.id,
+          tab: item.tab,
+          icon: item.icon,
+          label,
+          sectionLabel: t(item.sectionLabelKey),
+          focusItemId: item.focusItemId,
+          rank,
+        };
+      })
       .filter((result): result is SettingsSearchResult => result !== null)
       .sort((left, right) => left.rank - right.rank);
-  }, [normalizedSearchQuery, t]);
+  }, [normalizedSearchQuery, settingsSearchCatalog, t]);
 
   const selectedTabContentByTab = useMemo<Record<SettingsTab, ReactNode>>(
     () => ({
-      notifications: <NotificationSettingsView focusItemId={focusedNotificationItemId} />,
-      account: <AccountSettingsView />,
+      notifications: (
+        <Suspense fallback={null}>
+          <NotificationSettingsView focusItemId={focusedNotificationItemId} />
+        </Suspense>
+      ),
+      account: (
+        <Suspense fallback={null}>
+          <AccountSettingsView />
+        </Suspense>
+      ),
       cli: (
         <SettingsErrorBoundary sectionLabel={t("settings.cli.title")}>
-          <CLISettingsView />
+          <Suspense fallback={null}>
+            <CLISettingsView />
+          </Suspense>
         </SettingsErrorBoundary>
       ),
-      computerUse: <ComputerUseSettingsView />,
+      computerUse: (
+        <Suspense fallback={null}>
+          <ComputerUseSettingsView />
+        </Suspense>
+      ),
       appearance: (
         <Stack spacing={2}>
           <ThemePreferencePicker
@@ -197,26 +278,70 @@ export function SettingsView() {
             darkLabel={t("settings.appearance.theme.options.dark")}
             systemLabel={t("settings.appearance.theme.options.system")}
           />
-          <LanguageSettingsView />
-          <EditorSettingsView />
-          <MarkdownSettingsView />
+          <Suspense fallback={null}>
+            <LanguageSettingsView />
+          </Suspense>
+          <Suspense fallback={null}>
+            <EditorSettingsView />
+          </Suspense>
+          <Suspense fallback={null}>
+            <MarkdownSettingsView />
+          </Suspense>
         </Stack>
       ),
-      daemon: <DaemonSettingsView />,
-      links: <LinkSettingsView />,
-      members: <MemberSettingsView />,
-      nodes: <NodesSettingsView />,
+      daemon: (
+        <Suspense fallback={null}>
+          <DaemonSettingsView />
+        </Suspense>
+      ),
+      links: (
+        <Suspense fallback={null}>
+          <LinkSettingsView />
+        </Suspense>
+      ),
+      members: (
+        <Suspense fallback={null}>
+          <MemberSettingsView />
+        </Suspense>
+      ),
+      nodes: (
+        <Suspense fallback={null}>
+          <NodesSettingsView />
+        </Suspense>
+      ),
       providers: (
         <SettingsErrorBoundary sectionLabel={t("settings.providers.title")}>
-          <AgentProviderSettingsView />
+          <Suspense fallback={null}>
+            <AgentProviderSettingsView />
+          </Suspense>
         </SettingsErrorBoundary>
       ),
-      serviceTokens: <ServiceTokenSettingsView />,
-      customize: <CustomizeSettingsView focus={focusedCustomizeItem} />,
-      terminal: <TerminalSettingsView />,
+      serviceTokens: (
+        <Suspense fallback={null}>
+          <ServiceTokenSettingsView />
+        </Suspense>
+      ),
+      customize: (
+        <Suspense fallback={null}>
+          <CustomizeSettingsView focus={focusedCustomizeItem} />
+        </Suspense>
+      ),
+      terminal: (
+        <Suspense fallback={null}>
+          <TerminalSettingsView />
+        </Suspense>
+      ),
       keybindings: <KeybindingsSettingsView />,
-      memory: <MemorySettingsView />,
-      workspace: <WorkspaceSettingsView />,
+      memory: (
+        <Suspense fallback={null}>
+          <MemorySettingsView />
+        </Suspense>
+      ),
+      workspace: (
+        <Suspense fallback={null}>
+          <WorkspaceSettingsView />
+        </Suspense>
+      ),
     }),
     [focusedNotificationItemId, focusedCustomizeItem, setThemePreference, t, themePreference],
   );

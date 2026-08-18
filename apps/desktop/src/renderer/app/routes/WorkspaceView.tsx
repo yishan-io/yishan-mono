@@ -8,7 +8,9 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { resizeLeftPane } from "@renderer/domains/workbench";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/domains/workbench";
 import { SplitPaneLayout } from "@renderer/domains/workbench";
+import { layoutStore } from "@renderer/domains/workbench";
 import { popupStore } from "@renderer/domains/workbench";
+import { tabStore } from "@renderer/domains/workbench";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -33,15 +35,15 @@ import {
   useWorkspaceCommands,
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
-import { AgentChatRecoveryCoordinator } from "../../domains/agent/runtime/agentChatRecovery";
-import { projectStore } from "../../domains/project/state/projectStore";
-import { sessionStore } from "../../domains/session";
-import { TerminalRecoveryCoordinator } from "../../domains/terminal/runtime/terminalRecovery";
-import { layoutStore } from "../../domains/workbench/state/layoutStore";
-import { tabStore } from "../../domains/workbench/state/tabStore";
-import { WorkspaceLifecycleNoticeView } from "../../domains/workspace/features/workspace-status/WorkspaceLifecycleNoticeView";
-import { resolveWorkspaceProjectId } from "../../domains/workspace/model/workspaceTypes";
-import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
+import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
+import { projectStore } from "@renderer/domains/project";
+import { sessionStore } from "@renderer/domains/session";
+import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
+import {
+  WorkspaceLifecycleNoticeView,
+  resolveWorkspaceProjectId,
+  workspaceStore,
+} from "@renderer/domains/workspace";
 import { subscribeAppActionEvent } from "../../events";
 import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";

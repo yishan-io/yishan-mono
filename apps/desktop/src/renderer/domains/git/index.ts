@@ -9,13 +9,17 @@ export type {
   GitPullRequestSummary,
 } from "./model/gitPullRequestTypes";
 export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
-export { refreshDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
+export { refreshDiffTabContent, removeDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
 export {
+  commitGitChanges,
   getGitAuthorName,
+  getGitBranchStatus,
   inspectGitRepository,
   listGitBranches,
   listGitChanges,
   listGitCommitsToTarget,
+  publishGitBranch,
+  pushGitBranch,
   readBranchComparisonDiff,
   readCommitDiff,
   readDiff,
@@ -55,3 +59,4 @@ export { PullRequestTabView } from "./features/pull-request-tab/PullRequestTabVi
 export { useWorkspacePullRequestState } from "./features/pull-request-tab/useWorkspacePullRequestState";
 export { GitChangeTotals } from "./ui/GitChangeTotals";
 export { ProjectCommitComparison } from "./features/project-git-changes/ProjectCommitComparison";
+export { createDiffTabPlaceholder } from "./model/diffTabPlaceholder";

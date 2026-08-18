@@ -1,6 +1,6 @@
 import { gitProjectionStore } from "@renderer/domains/git";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import type { WorkspaceProjectRecord } from "../domains/project/model/projectTypes";
+import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 /**
  * Composed screen read models.
  *
@@ -9,10 +9,10 @@ import type { WorkspaceProjectRecord } from "../domains/project/model/projectTyp
  * Each selector reads current state via store.getState() and returns a derived
  * value; callers wrap in useMemo when subscribing.
  */
-import { projectStore } from "../domains/project/state/projectStore";
-import { layoutStore } from "../domains/workbench/state/layoutStore";
-import type { WorkspaceItem } from "../domains/workspace/model/workspaceTypes";
-import { workspaceStore } from "../domains/workspace/state/workspaceStore";
+import { projectStore } from "@renderer/domains/project";
+import { layoutStore } from "@renderer/domains/workbench";
+import type { WorkspaceItem } from "@renderer/domains/workspace";
+import { workspaceStore } from "@renderer/domains/workspace";
 
 /** Resolves a workspace's owning project id (folder workspaces use their repo id). */
 function resolveWorkspaceProjectId(workspace: Pick<WorkspaceItem, "projectId" | "repoId">): string {

@@ -29,18 +29,13 @@ export {
 
 export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
-export { listAgentModels } from "./commands/agentCommands";
-export {
-  listPiProviders,
-  openPiProviderLogin,
-  removePiProvider,
-  savePiProvider,
-  type PiProviderStatus,
-} from "./commands/piProviderCommands";
+export { listAgentDetectionStatuses, listAgentModels } from "./commands/agentCommands";
+export { listPiProviders, openPiProviderLogin, removePiProvider, savePiProvider, type PiProviderStatus } from "./commands/piProviderCommands";
 export {
   clearTerminalAgentStatus,
   parseObserverSessionKey,
   recordAgentObserverStatus,
+  resetAgentLifecycleState,
 } from "./commands/agentSessionLifecycle";
 export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./model/agentSkillTextHelpers";
 export {
@@ -117,11 +112,23 @@ export {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,
 } from "./hooks/useAgentChatReadHooks";
-export { findTabWithSession } from "./commands/agentChatCommands";
-export { fetchAgentSessionFilePath } from "./commands/agentChatSessionHistory";
+export { findTabWithSession, renameAgentChatSessionByTab, stopPiSession } from "./commands/agentChatCommands";
+export { fetchAgentSessionFilePath, listActivePiSessions } from "./commands/agentChatSessionHistory";
 export { ProviderCredentialDialog } from "./ui/credentials/ProviderCredentialDialog";
 // Agent enablement preferences owned by Agent, consumed by the Settings CLI
 // feature through the public API (desktop7 Phase 21 — moved from Settings so
 // the settings→agent edge never evaluates this store mid-cycle).
 export { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "./state/agentSettingsStore";
 export { useAgentKindsInUse } from "./hooks/useAgentKindsInUse";
+export { AgentChatRecoveryCoordinator } from "./runtime/agentChatRecovery";
+export {
+  appendChatMessages,
+  closeAgentSession,
+  createWorkspaceChatEventHandler,
+  ensureChatSession,
+  getChatMessages,
+  runChatPrompt,
+  setChatAvailableModels,
+  setChatCurrentModel,
+  updateChatMessage,
+} from "./commands/chatCommands";

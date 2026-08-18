@@ -1,16 +1,15 @@
 import { useTerminalTabLookups } from "@renderer/domains/terminal";
+import type { TerminalDetectedPort } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
+import { enqueueWorkspaceErrorNotice, workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import type { TerminalDetectedPort } from "../../../domains/terminal/commands/terminalCommands";
-import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { PortsTableMenu, type PortsTableMenuRow } from "../../../ui/components/PortsTableMenu";
-import { RouteCloseWatcher } from "../../../ui/components/RouteCloseWatcher";
+import { RouteCloseWatcher } from "../../../hooks/RouteCloseWatcher";
+import { PortsTableMenu, type PortsTableMenuRow } from "./PortsTableMenu";
 
 /** Builds one stable row id for port-menu rendering and selection mapping. */
 function buildPortRowId(entry: TerminalDetectedPort): string {

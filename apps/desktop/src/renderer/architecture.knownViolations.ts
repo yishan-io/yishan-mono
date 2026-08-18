@@ -89,23 +89,4 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- R9-ui-components (owning phase = D17 Final Closure removes root ui behavior) ----
   // ---- R14-cross-domain-deep (Phase D2 baseline; owning phase = importing Domain) ----
   // ---- R15-app-from-domain (Phase D2 baseline; owning phase = importing Domain) ----
-  // ---- R16-app-deep-into-domain (Phase D2 baseline; owning phase = D17 App audit) ----
-  { rule: "R16-app-deep-into-domain", file: "app/commands/appCommands.ts", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/commands/composition.ts", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/commands/tabCloseHandler.ts", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/events/index.ts", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/flows/workspaceSnapshotFlow.ts", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/routes/AppRoutes.tsx", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/routes/WorkspaceView.tsx", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/runtime/useShortcuts.ts", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/selectors.ts", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/features/title-bar/MainPaneTitleBarView.tsx", phase: "D17" },
-  {
-    rule: "R16-app-deep-into-domain",
-    file: "app/features/workspace-shell/WorkspacePortsMenuControl.tsx",
-    phase: "D17",
-  },
-  { rule: "R16-app-deep-into-domain", file: "app/features/title-bar/mainPaneTitleBarHelpers.tsx", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/features/title-bar/mainPaneTitleBarMenus.tsx", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/features/tab-content/useTabContentRenderer.tsx", phase: "D17" },
 ];

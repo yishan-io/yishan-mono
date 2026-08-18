@@ -299,6 +299,10 @@ vi.mock("../../../../../helpers/delay", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {

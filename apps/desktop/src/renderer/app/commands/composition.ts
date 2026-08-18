@@ -1,96 +1,84 @@
 import { tabStore } from "@renderer/domains/workbench";
-import { renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand } from "../../domains/agent/commands/agentChatCommands";
-import { listActivePiSessions as listActivePiSessionsCommand } from "../../domains/agent/commands/agentChatSessionHistory";
-import {
-  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
-  listAgentModels as listAgentModelsCommand,
-} from "../../domains/agent/commands/agentCommands";
 import {
   appendChatMessages as appendChatMessagesCommand,
   closeAgentSession as closeAgentSessionCommand,
   createWorkspaceChatEventHandler as createWorkspaceChatEventHandlerCommand,
   ensureChatSession as ensureChatSessionCommand,
   getChatMessages as getChatMessagesCommand,
-  runChatPrompt as runChatPromptCommand,
-  setChatAvailableModels as setChatAvailableModelsCommand,
-  setChatCurrentModel as setChatCurrentModelCommand,
-  updateChatMessage as updateChatMessageCommand,
-} from "../../domains/agent/commands/chatCommands";
-import {
+  listActivePiSessions as listActivePiSessionsCommand,
+  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
+  listAgentModels as listAgentModelsCommand,
   listPiProviders as listPiProvidersCommand,
   openPiProviderLogin as openPiProviderLoginCommand,
   removePiProvider as removePiProviderCommand,
+  renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand,
+  runChatPrompt as runChatPromptCommand,
   savePiProvider as savePiProviderCommand,
-} from "../../domains/agent/commands/piProviderCommands";
+  setChatAvailableModels as setChatAvailableModelsCommand,
+  setChatCurrentModel as setChatCurrentModelCommand,
+  updateChatMessage as updateChatMessageCommand,
+} from "@renderer/domains/agent";
 import {
   createFile as createFileCommand,
+  createFileTabPlaceholder,
   createFolder as createFolderCommand,
+  createNewWhiteboard as createNewWhiteboardCommand,
   deleteEntry as deleteEntryCommand,
   listDetectedExternalAppIds as listDetectedExternalAppIdsCommand,
   listFiles as listFilesCommand,
+  markFileTabSaved as markFileTabSavedCommand,
   openEntryInExternalApp as openEntryInExternalAppCommand,
   readExternalClipboardSourcePaths as readExternalClipboardSourcePathsCommand,
   readFile as readFileCommand,
-  renameEntry as renameEntryCommand,
-  writeFile as writeFileCommand,
-} from "../../domains/files/commands/fileCommands";
-import {
-  markFileTabSaved as markFileTabSavedCommand,
   refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
+  renameEntry as renameEntryCommand,
+  resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
   seedFileTabContent as seedFileTabContentCommand,
   updateFileTabContent as updateFileTabContentCommand,
-} from "../../domains/files/commands/fileTabContentCommands";
-import {
-  createNewWhiteboard as createNewWhiteboardCommand,
-  resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
-} from "../../domains/files/commands/whiteboardCommands";
-import { createFileTabPlaceholder } from "../../domains/files/model/fileTabPlaceholder";
-import {
-  refreshDiffTabContent as refreshDiffTabContentCommand,
-  seedDiffTabContent as seedDiffTabContentCommand,
-} from "../../domains/git/commands/diffTabContentCommands";
+  writeFile as writeFileCommand,
+} from "@renderer/domains/files";
 import {
   commitGitChanges as commitGitChangesCommand,
+  createDiffTabPlaceholder,
   getGitAuthorName as getGitAuthorNameCommand,
   getGitBranchStatus as getGitBranchStatusCommand,
   listGitBranches as listGitBranchesCommand,
   listGitChanges as listGitChangesCommand,
   listGitCommitsToTarget as listGitCommitsToTargetCommand,
+  listPullRequestHistory as listPullRequestHistoryCommand,
   publishGitBranch as publishGitBranchCommand,
   pushGitBranch as pushGitBranchCommand,
   readBranchComparisonDiff as readBranchComparisonDiffCommand,
   readCommitDiff as readCommitDiffCommand,
   readDiff as readDiffCommand,
-  revertGitChanges as revertGitChangesCommand,
-  trackGitChanges as trackGitChangesCommand,
-  unstageGitChanges as unstageGitChangesCommand,
-} from "../../domains/git/commands/gitCommands";
-import {
-  listPullRequestHistory as listPullRequestHistoryCommand,
+  refreshDiffTabContent as refreshDiffTabContentCommand,
   refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
   refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
-} from "../../domains/git/commands/gitProjectionCommands";
-import { createDiffTabPlaceholder } from "../../domains/git/model/diffTabPlaceholder";
+  revertGitChanges as revertGitChangesCommand,
+  seedDiffTabContent as seedDiffTabContentCommand,
+  trackGitChanges as trackGitChangesCommand,
+  unstageGitChanges as unstageGitChangesCommand,
+} from "@renderer/domains/git";
 import { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
   previewNotification as previewNotificationCommand,
   updateNotificationPreferences as updateNotificationPreferencesCommand,
-} from "../../domains/notification/commands/notificationCommands";
+} from "@renderer/domains/notification";
 import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
 import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,
   setOverviewTimeRange as setOverviewTimeRangeCommand,
-} from "../../domains/overview/commands/overviewCommands";
+} from "@renderer/domains/overview";
 import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
   updateProjectConfig as updateProjectConfigCommand,
-} from "../../domains/project/commands/projectCommands";
-import type { WorkspaceProjectRecord } from "../../domains/project/model/projectTypes";
+  type WorkspaceProjectRecord,
+} from "@renderer/domains/project";
 import {
   createScheduledJob as createScheduledJobCommand,
   deleteScheduledJob as deleteScheduledJobCommand,
@@ -99,13 +87,13 @@ import {
   resumeScheduledJob as resumeScheduledJobCommand,
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
-} from "../../domains/scheduled-job/commands/scheduledJobCommands";
+} from "@renderer/domains/scheduled-job";
 import {
   getRemoteHealthStatus as getRemoteHealthStatusCommand,
   getSessionBootstrapData as getSessionBootstrapDataCommand,
   resetAuthExpiredState as resetAuthExpiredStateCommand,
 } from "../../domains/session";
-import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../domains/settings/commands/cliToolCommands";
+import { listCLIToolStatuses as listCLIToolStatusesCommand } from "@renderer/domains/settings";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -122,12 +110,10 @@ import {
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
-} from "../../domains/terminal/commands/terminalCommands";
+} from "@renderer/domains/terminal";
 import {
   activateProject as activateProjectCommand,
   activateWorkspace as activateWorkspaceCommand,
-} from "../../domains/workbench/commands/navigationCommands";
-import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
   closeTab as closeTabCommand,
@@ -141,7 +127,7 @@ import {
   setBrowserTabUrl as setBrowserTabUrlCommand,
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
-} from "../../domains/workbench/commands/tabCommands";
+} from "@renderer/domains/workbench";
 import {
   activateWorkspacePane as activateWorkspacePaneCommand,
   closeWorkspace as closeWorkspaceCommand,
@@ -159,7 +145,7 @@ import {
   toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "../../domains/workspace/commands/workspaceCommands";
+} from "@renderer/domains/workspace";
 import {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -167,7 +153,7 @@ import {
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "./appCommands";
 
-import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "../flows/workspaceSnapshotFlow";
+import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspaceSnapshotFlow";
 
 /**
  * Application command composition (Phase 12, desktop5.md).

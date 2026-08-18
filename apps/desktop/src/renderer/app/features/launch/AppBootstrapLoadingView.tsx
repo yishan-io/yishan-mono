@@ -1,7 +1,7 @@
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import yishanLogo from "../../../assets/images/yishan-transparent.png";
-import { AppBackgroundContainer } from "../../ui/components/AppBackgroundContainer";
+import yishanLogo from "../../../../assets/images/yishan-transparent.png";
+import { AppBackgroundContainer } from "../../../ui/components/AppBackgroundContainer";
 
 type AppBootstrapLoadingViewProps = {
   hasError: boolean;

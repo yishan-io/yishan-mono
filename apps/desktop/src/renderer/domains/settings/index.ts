@@ -19,6 +19,7 @@ export {
   type EditorSettingsStoreState,
 } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
+export { keybindingSettingsStore, type KeybindingOverrideMap } from "./state/keybindingSettingsStore";
 export { selectIsDefaultContextEnabled } from "./state/settingsSelectors";
 
 export {
@@ -31,3 +32,6 @@ export {
   type DaemonLogResult,
   type DaemonRestartResult,
 } from "./infrastructure/daemonHostCommands";
+export { listCLIToolStatuses } from "./commands/cliToolCommands";
+
+export { SettingsView } from "./features/settings-shell/SettingsView";

@@ -10,11 +10,20 @@ export type { TerminalResourceUsageSnapshot } from "./commands/terminalCommands"
 export {
   closeTerminalSession,
   consumeTerminalTabFocus,
+  createTerminalSession,
+  killTerminalProcess,
+  listDetectedPorts,
   listTerminalSessions,
+  readTerminalOutput,
+  resizeTerminal,
+  retainOpenTerminalTabFocus,
+  setActiveWorkspace,
+  subscribeDetectedPorts,
+  subscribeTerminalOutput,
   subscribeTerminalSessions,
   writeTerminalInput,
 } from "./commands/terminalCommands";
-export type { TerminalSessionSummary } from "./commands/terminalCommands";
+export type { TerminalDetectedPort, TerminalSessionSummary } from "./commands/terminalCommands";
 export { useSharedTerminalResourceUsageSnapshot } from "./hooks/useSharedTerminalResourceUsageSnapshot";
 export { useTerminalTabLookups } from "./hooks/useTerminalTabLookups";
 // Terminal Runtime entry points required by cross-feature composition. These
@@ -31,6 +40,8 @@ export {
   requestTerminalRuntimeFocus,
 } from "./runtime/terminalRuntimeRegistry";
 export { initTerminalSessionLifecycle } from "./runtime/terminalSessionService";
+export { TerminalRecoveryCoordinator } from "./runtime/terminalRecovery";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { TerminalView } from "./features/terminal-tab/TerminalView";
+export { createTerminalEventHandlers } from "./events/terminalEventHandlers";

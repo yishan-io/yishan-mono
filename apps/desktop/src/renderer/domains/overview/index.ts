@@ -4,3 +4,9 @@
 export type { OverviewCommands } from "./commands/contract";
 
 export { OverviewView } from "./features/overview-dashboard/OverviewView";
+export {
+  loadAllOverviewData,
+  setOverviewGranularity,
+  setOverviewProjectId,
+  setOverviewTimeRange,
+} from "./commands/overviewCommands";

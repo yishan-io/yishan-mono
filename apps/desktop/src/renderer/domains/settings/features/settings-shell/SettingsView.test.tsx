@@ -3,6 +3,10 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Lazy settings tabs load real feature modules under full-suite load; the
+// default 5s per-test timeout is too tight for the first load.
+vi.setConfig({ testTimeout: 30000 });
 import { sessionStore } from "../../../../domains/session/state/sessionStore";
 import { AppThemePreferenceProvider } from "../../../../domains/settings";
 import {
@@ -77,7 +81,7 @@ describe("SettingsView", () => {
     vi.clearAllMocks();
   });
 
-  it("renders notification panel when notifications tab is selected", () => {
+  it("renders notification panel when notifications tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -88,10 +92,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("notification-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("notification-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("navigates back to workspace view from settings back button", () => {
+  it("navigates back to workspace view from settings back button", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -108,7 +112,7 @@ describe("SettingsView", () => {
     expect(screen.getByTestId("repos-view")).toBeTruthy();
   });
 
-  it("searches and selects one notification setting item", () => {
+  it("searches and selects one notification setting item", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -123,12 +127,16 @@ describe("SettingsView", () => {
       target: { value: "focus" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /org\.settings\.notifications\.focusOnClick/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /org\.settings\.notifications\.focusOnClick/ }));
 
-    expect(screen.getByTestId("notification-settings-panel").getAttribute("data-focus-item-id")).toBe("focus-on-click");
+    expect(
+      (await screen.findByTestId("notification-settings-panel", {}, { timeout: 30000 })).getAttribute(
+        "data-focus-item-id",
+      ),
+    ).toBe("focus-on-click");
   });
 
-  it("shows empty-state text when search has no matching items", () => {
+  it("shows empty-state text when search has no matching items", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -146,7 +154,7 @@ describe("SettingsView", () => {
     expect(screen.getByText("settings.searchNoResults")).toBeTruthy();
   });
 
-  it("renders appearance theme cards and triggers preference change", () => {
+  it("renders appearance theme cards and triggers preference change", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=appearance"]}>
@@ -157,7 +165,7 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("settings-theme-option-light")).toBeTruthy();
+    expect(await screen.findByTestId("settings-theme-option-light", {}, { timeout: 30000 })).toBeTruthy();
     expect(screen.getByTestId("settings-theme-option-dark")).toBeTruthy();
     expect(screen.getByTestId("settings-theme-option-system").getAttribute("aria-pressed")).toBe("true");
 
@@ -166,7 +174,7 @@ describe("SettingsView", () => {
     expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain('"themePreference":"dark"');
   });
 
-  it("persists markdown preview font size and preview width", () => {
+  it("persists markdown preview font size and preview width", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=appearance"]}>
@@ -177,10 +185,14 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.previewFontSize.label"));
+    fireEvent.mouseDown(
+      await screen.findByLabelText("settings.appearance.markdown.previewFontSize.label", {}, { timeout: 30000 }),
+    );
     fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.previewFontSize.options.large" }));
 
-    fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.previewWidth.label"));
+    fireEvent.mouseDown(
+      await screen.findByLabelText("settings.appearance.markdown.previewWidth.label", {}, { timeout: 30000 }),
+    );
     fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.previewWidth.options.full" }));
 
     expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain(
@@ -189,7 +201,7 @@ describe("SettingsView", () => {
     expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
   });
 
-  it("persists markdown outline visibility", () => {
+  it("persists markdown outline visibility", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=appearance"]}>
@@ -200,14 +212,16 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    fireEvent.click(screen.getByLabelText("settings.appearance.markdown.outlineVisible.label"));
+    fireEvent.click(
+      await screen.findByLabelText("settings.appearance.markdown.outlineVisible.label", {}, { timeout: 30000 }),
+    );
 
     expect(window.localStorage.getItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY)).toContain(
       '"isMarkdownOutlineVisible":true',
     );
   });
 
-  it("matches appearance theme settings in search and opens appearance tab", () => {
+  it("matches appearance theme settings in search and opens appearance tab", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -222,12 +236,12 @@ describe("SettingsView", () => {
       target: { value: "dark" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /settings\.appearance\.theme\.title/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /settings\.appearance\.theme\.title/ }));
 
-    expect(screen.getByTestId("settings-theme-option-dark")).toBeTruthy();
+    expect(await screen.findByTestId("settings-theme-option-dark", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders terminal panel when terminal tab is selected", () => {
+  it("renders terminal panel when terminal tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=terminal"]}>
@@ -238,10 +252,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("terminal-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("terminal-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders daemon panel when daemon tab is selected", () => {
+  it("renders daemon panel when daemon tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=daemon"]}>
@@ -252,10 +266,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("daemon-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("daemon-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders members panel when members tab is selected", () => {
+  it("renders members panel when members tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=members"]}>
@@ -266,10 +280,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("member-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("member-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("matches member settings in search and opens members tab", () => {
+  it("matches member settings in search and opens members tab", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -284,12 +298,12 @@ describe("SettingsView", () => {
       target: { value: "role" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /settings\.members\.title/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /settings\.members\.title/ }));
 
-    expect(screen.getByTestId("member-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("member-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("matches daemon settings in search and opens daemon tab", () => {
+  it("matches daemon settings in search and opens daemon tab", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -304,12 +318,12 @@ describe("SettingsView", () => {
       target: { value: "websocket" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /settings\.daemon\.title/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /settings\.daemon\.title/ }));
 
-    expect(screen.getByTestId("daemon-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("daemon-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders computer use panel when computerUse tab is selected", () => {
+  it("renders computer use panel when computerUse tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=computerUse"]}>
@@ -320,10 +334,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("computer-use-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("computer-use-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders git workspace settings panel when workspace tab is selected", () => {
+  it("renders git workspace settings panel when workspace tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=workspace"]}>
@@ -334,10 +348,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("git-workspace-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("git-workspace-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders the agents section when the cli tab is selected", () => {
+  it("renders the agents section when the cli tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=cli"]}>
@@ -348,10 +362,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("agent-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders skills panel when the customize tab deep-links to skills", () => {
+  it("renders skills panel when the customize tab deep-links to skills", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=customize&focus=skills"]}>
@@ -362,10 +376,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("skills-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("skills-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders current user profile details on account tab", () => {
+  it("renders current user profile details on account tab", async () => {
     sessionStore.setState({
       currentUser: {
         id: "user-1",
@@ -396,7 +410,7 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByText("settings.account.title")).toBeTruthy();
+    expect(await screen.findByText("settings.account.title", {}, { timeout: 30000 })).toBeTruthy();
     expect(screen.getAllByText("Test User").length).toBeGreaterThan(0);
     expect(screen.getAllByText("user@example.com").length).toBeGreaterThan(0);
     expect(screen.getByText("user-1")).toBeTruthy();
@@ -409,7 +423,7 @@ describe("SettingsView", () => {
     expect(screen.getByText("settings.account.usage.summary")).toBeTruthy();
   });
 
-  it("renders account profile view by default", () => {
+  it("renders account profile view by default", async () => {
     sessionStore.setState({
       currentUser: {
         id: "user-1",
@@ -432,11 +446,11 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByText("settings.account.title")).toBeTruthy();
+    expect(await screen.findByText("settings.account.title", {}, { timeout: 30000 })).toBeTruthy();
     expect(screen.getAllByText("Test User").length).toBeGreaterThan(0);
   });
 
-  it("renders account loading state safely", () => {
+  it("renders account loading state safely", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=account"]}>
@@ -447,10 +461,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByText("settings.account.loading")).toBeTruthy();
+    expect(await screen.findByText("settings.account.loading", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders missing account profile state safely", () => {
+  it("renders missing account profile state safely", async () => {
     sessionStore.setState({ currentUser: null, organizations: [], selectedOrganizationId: undefined, loaded: true });
 
     render(
@@ -463,10 +477,10 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByText("settings.account.empty")).toBeTruthy();
+    expect(await screen.findByText("settings.account.empty", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("matches agent settings in search and opens the cli tab", () => {
+  it("matches agent settings in search and opens the cli tab", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
@@ -481,12 +495,12 @@ describe("SettingsView", () => {
       target: { value: "codex" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /settings\.agents\.items\.codex/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /settings\.agents\.items\.codex/ }));
 
-    expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("agent-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders keybindings panel when keybindings tab is selected", () => {
+  it("renders keybindings panel when keybindings tab is selected", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=keybindings"]}>
@@ -497,6 +511,6 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("keybindings-settings-panel")).toBeTruthy();
+    expect(await screen.findByTestId("keybindings-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 });

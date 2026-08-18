@@ -5,6 +5,10 @@ import { addOrgMember } from "../../../../domains/organization/commands/orgComma
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

@@ -15,9 +15,14 @@ export type {
 export { selectWorkspaces } from "./state/workspaceSelectors";
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
 export {
+  activateWorkspacePane,
   closeWorkspace,
   createWorkspace,
   deleteLocalFolder,
+  deleteSelectedFileTreeEntry,
+  focusWorkspaceFileTree,
+  openCreateWorkspaceDialog,
+  openWorkspaceFileSearch,
   renameWorkspace,
   renameWorkspaceBranch,
   reorderWorkspace,
@@ -25,13 +30,27 @@ export {
   setLastUsedExternalAppId,
   selectFolderInFileTree,
   subscribeOpenCreateWorkspaceDialog,
+  toggleLeftPaneVisibility,
+  toggleRightPaneVisibility,
+  undoFileTreeOperation,
 } from "./commands/workspaceCommands";
-export { createLocalFolderImport } from "./commands/localFolderCommands";
+export {
+  createLocalFolderImport,
+  openFoldersForSnapshot,
+  restoreFolderSelectionIfNeeded,
+} from "./commands/localFolderCommands";
 export {
   buildWorkspaceOpenProjectEntries,
   openWorkspaceEntries,
+  warmupWorkspacesForProjects,
 } from "./commands/workspaceWarmupCommand";
 export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
+export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./model/workspaceTypes";
+export {
+  reconcileWorkspaceSnapshot,
+  type SnapshotReconcilerInput,
+  type SnapshotReconcilerResult,
+} from "./model/snapshotReconciler";
 export {
   addWorkspace,
   setOrderedWorkspaceIds,
@@ -61,3 +80,4 @@ export { useWorkspaceInfoHover } from "./features/workspace-status/useWorkspaceI
 export { enqueueWorkspaceErrorNotice } from "./state/workspaceLifecycleNoticeStore";
 export { WorkspaceErrorStateView } from "./features/workspace-status/WorkspaceErrorStateView";
 export { WorkspaceLifecycleNoticeView } from "./features/workspace-status/WorkspaceLifecycleNoticeView";
+export { createWorkspaceEventHandlers } from "./events/workspaceEventHandlers";

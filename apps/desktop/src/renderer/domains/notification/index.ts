@@ -17,3 +17,4 @@ export {
   previewNotification,
   updateNotificationPreferences,
 } from "./commands/notificationCommands";
+export { createNotificationEventHandlers } from "./events/notificationEventHandlers";

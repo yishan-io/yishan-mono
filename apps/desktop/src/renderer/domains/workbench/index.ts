@@ -23,6 +23,7 @@ export {
   paneSelectTab,
   promoteTemporaryTab,
   registerTabInPane,
+  reorderTab,
   removeRightPaneStateForWorkspace,
   renameTab,
   renameTabsForEntryRename,
@@ -34,6 +35,7 @@ export {
   setActivePane,
   setAgentChatTabSubagentControl,
   setBrowserTabFaviconUrl,
+  setBrowserTabUrl,
   setLeftPaneHidden,
   setIsRightPaneHidden,
   setRightPaneTab,
@@ -58,7 +60,7 @@ export {
 } from "./state/workbenchNavigationStore";
 export { splitPaneStore, type SplitPaneStoreState } from "./state/splitPaneStore";
 export { findOppositePaneId } from "./model/split-pane";
-export { tabStore, type TabStoreState } from "./state/tabStore";
+export { tabStore, type CloseTabOptions, type TabStoreState } from "./state/tabStore";
 export {
   layoutStore,
   type WorkspaceRightPaneTab,
@@ -104,3 +106,4 @@ export { useDialogRegistration } from "./hooks/useDialogRegistration";
 export { popupStore, type PopupStoreState } from "./state/popupStore";
 
 export { ConfirmationDialog } from "./ui/ConfirmationDialog";
+export { createWorkbenchEventHandlers } from "./events/workbenchEventHandlers";

@@ -15,6 +15,10 @@ const mocked = vi.hoisted(() => ({
 }));
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string, values?: Record<string, string>) => {
       if (key === "terminal.resourceUsage.leftPaneSummary") {

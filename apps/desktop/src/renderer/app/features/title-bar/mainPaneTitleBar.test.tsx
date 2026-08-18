@@ -96,7 +96,13 @@ vi.mock("../workspace-shell/WorkspacePortsMenuControl", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
 }));
 
 vi.mock("../../../domains/session/state/sessionStore", () => ({

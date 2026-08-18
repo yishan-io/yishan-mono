@@ -12,7 +12,7 @@ import { workspaceStore } from "../../../../domains/workspace/state/workspaceSto
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
 import { ResourceUsageMenu, type ResourceUsageMenuRow } from "../../../../ui/components/ResourceUsageMenu";
-import { RouteCloseWatcher } from "../../../../ui/components/RouteCloseWatcher";
+import { RouteCloseWatcher } from "../../../../hooks/RouteCloseWatcher";
 
 const MAX_VISIBLE_PROCESSES = 20;
 

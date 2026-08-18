@@ -1,3 +1,4 @@
+import { resetAgentLifecycleState } from "@renderer/domains/agent";
 /**
  * Event composition — starts all feature event handlers and returns a
  * combined teardown. This replaces `backendEventStoreBindings.ts`.
@@ -9,12 +10,11 @@
  */
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
-import { resetAgentLifecycleState } from "../../domains/agent/commands/agentSessionLifecycle";
-import { createNotificationEventHandlers } from "../../domains/notification/events/notificationEventHandlers";
-import { createTerminalEventHandlers } from "../../domains/terminal/events/terminalEventHandlers";
-import { createWorkbenchEventHandlers } from "../../domains/workbench/events/workbenchEventHandlers";
-import { createWorkspaceEventHandlers } from "../../domains/workspace/events/workspaceEventHandlers";
-import { loadWorkspaceSnapshot } from "../flows/workspaceSnapshotFlow";
+import { createNotificationEventHandlers } from "@renderer/domains/notification";
+import { createTerminalEventHandlers } from "@renderer/domains/terminal";
+import { createWorkbenchEventHandlers } from "@renderer/domains/workbench";
+import { createWorkspaceEventHandlers } from "@renderer/domains/workspace";
+import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
 import { subscribeBackendEvent } from "./backendEventRouter";
 
 /**

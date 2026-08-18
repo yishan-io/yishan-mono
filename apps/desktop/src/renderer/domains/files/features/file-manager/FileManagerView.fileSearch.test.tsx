@@ -299,6 +299,10 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
 });
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string, params?: { path?: string }) => {
       const translations: Record<string, string> = {

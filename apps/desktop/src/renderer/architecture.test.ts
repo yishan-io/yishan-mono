@@ -86,7 +86,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R13-getter-forwarding-action-file": 0,
   "R14-cross-domain-deep": 0,
   "R15-app-from-domain": 0,
-  "R16-app-deep-into-domain": 73,
+  "R16-app-deep-into-domain": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {

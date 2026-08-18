@@ -15,6 +15,10 @@ vi.mock("../../../../../domains/workbench/commands/tabCommands", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       if (key === "agentChat.askUser.card.unavailable") {

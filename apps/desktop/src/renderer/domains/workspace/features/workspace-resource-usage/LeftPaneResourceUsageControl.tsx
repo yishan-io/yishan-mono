@@ -8,7 +8,7 @@ import { useInRouterContext } from "react-router-dom";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
-import { RouteCloseWatcher } from "../../../../ui/components/RouteCloseWatcher";
+import { RouteCloseWatcher } from "../../../../hooks/RouteCloseWatcher";
 import { WorkspaceResourceTableMenu, type WorkspaceResourceTableMenuRow } from "./WorkspaceResourceTableMenu";
 
 type WorkspaceResourceUsageRow = {
