@@ -1,10 +1,10 @@
 /**
- * Project feature public API (Phase 12, desktop5.md).
+ * Project Domain public API (Domains plan D6).
  *
- * Exports the stable command surface, project models, and the public State
- * surfaces (selectors + actions). The Project Store itself is internal.
+ * Exports the stable command surface, project models, the public State
+ * surfaces (selectors + actions), the read Store, and the read-only React
+ * hooks. Cross-Domain code imports project through this file only.
  */
-export type { ProjectCommands } from "./commands/contract";
 export { LOCAL_FOLDER_PROJECT_ID } from "./model/projectTypes";
 export type {
   WorkspaceProjectCommand,
@@ -12,23 +12,42 @@ export type {
   WorkspaceStoreOrganizationPreference,
 } from "./model/projectTypes";
 export {
+  createProject,
+  deleteProject,
+  inspectLocalProjectSource,
+  updateProjectConfig,
+} from "./commands/projectCommands";
+export { getDefaultWorktreeLocation, openLocalFolderDialog } from "./infrastructure/projectHostCommands";
+export {
+  selectLastUsedExternalAppId,
   selectProjectById,
   selectProjectDisplayIds,
   selectProjectLastUsedExternalAppIdFromState,
   selectProjects,
+  selectWorkspaceListHierarchyMode,
 } from "./state/projectSelectors";
-export { setDisplayProjectIds, setLastUsedExternalAppId } from "./state/projectActions";
-export { useProjectLastUsedExternalAppId } from "./ui/hooks/useProjectLastUsedExternalAppId";
+export {
+  setDisplayProjectIds,
+  setLastUsedExternalAppId,
+  setWorkspaceListHierarchyMode,
+} from "./state/projectActions";
+export { projectStore } from "./state/projectStore";
+export { useProjectLastUsedExternalAppId } from "./hooks/useProjectLastUsedExternalAppId";
+export {
+  useDisplayProjectIds,
+  useLastUsedExternalAppId,
+  useProjects,
+  useWorkspaceListHierarchyMode,
+} from "./hooks/useProjectReadHooks";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { CreateProjectDialogView } from "./ui/CreateProjectDialogView";
-export { CreateProjectFormView } from "./ui/CreateProjectFormView";
-export { ProjectConfigDialogView } from "./ui/ProjectConfigDialogView";
-export { ProjectDeleteDialogView } from "./ui/ProjectDeleteDialogView";
-export { ProjectFilterPopoverView } from "./ui/ProjectFilterPopoverView";
-export { ProjectListMenus } from "./ui/ProjectListMenus";
-export { ProjectListView } from "./ui/ProjectListView";
-export { useDisplayProjectIds, useProjects, useLastUsedExternalAppId } from "./ui/hooks/useProjectReadHooks";
+export { CreateProjectDialogView } from "./features/create-project/CreateProjectDialogView";
+export { CreateProjectFormView } from "./features/create-project/CreateProjectFormView";
+export { ProjectConfigDialogView } from "./features/project-config/ProjectConfigDialogView";
+export { ProjectDeleteDialogView } from "./features/project-delete/ProjectDeleteDialogView";
+export { ProjectFilterPopoverView } from "./features/project-list/ProjectFilterPopoverView";
+export { ProjectListMenus } from "./features/project-list/ProjectListMenus";
+export { ProjectListView } from "./features/project-list/ProjectListView";
 export { renderProjectIcon } from "./ui/projectIcons";
 export {
   DEFAULT_PROJECT_ICON_ID,

@@ -6,19 +6,15 @@ import {
   ensureAgentGlobalConfigExternalDirectoryPermission,
   getAuthStatus,
   getDaemonInfo,
-  getDefaultWorktreeLocation,
   getMainWindowFullscreenState,
   login,
   openExternalUrl,
-  openLocalFolderDialog,
   toggleMainWindowMaximized,
 } from "./appCommands";
 
 const mocks = vi.hoisted(() => ({
   checkAgentGlobalConfigExternalDirectoryPermission: vi.fn(),
   ensureAgentGlobalConfigExternalDirectoryPermission: vi.fn(),
-  getDefaultWorktreeLocation: vi.fn(),
-  openLocalFolderDialog: vi.fn(),
   openExternalUrl: vi.fn(),
   toggleMainWindowMaximized: vi.fn(),
   getMainWindowFullscreenState: vi.fn(),
@@ -35,14 +31,11 @@ vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
       app: {
         checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
         ensureAgentGlobalConfigExternalDirectoryPermission: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
-        getDefaultWorktreeLocation: mocks.getDefaultWorktreeLocation,
-        openLocalFolderDialog: mocks.openLocalFolderDialog,
         toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
         checkAuthStatus: mocks.checkAuthStatus,
       },
     })),
     getDesktopHostBridge: vi.fn(() => ({
-      openLocalFolderDialog: mocks.openLocalFolderDialog,
       openExternalUrl: mocks.openExternalUrl,
       toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
       getMainWindowFullscreenState: mocks.getMainWindowFullscreenState,
@@ -54,12 +47,9 @@ vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
 
 describe("appCommands", () => {
   it("delegates shell commands to app shell service", async () => {
-    mocks.getDefaultWorktreeLocation.mockResolvedValueOnce({ worktreePath: "/tmp/worktrees" });
     mocks.checkAuthStatus.mockResolvedValueOnce({ authenticated: true, accessTokenExpiresAt: "2026-05-11T10:00:00Z" });
     mocks.login.mockResolvedValueOnce({ authenticated: true, skipped: true });
 
-    await openLocalFolderDialog("/tmp");
-    await getDefaultWorktreeLocation();
     await checkAgentGlobalConfigExternalDirectoryPermission({ agentKind: "opencode" });
     await ensureAgentGlobalConfigExternalDirectoryPermission({ agentKind: "claude" });
     await toggleMainWindowMaximized();
@@ -69,8 +59,6 @@ describe("appCommands", () => {
     await getDaemonInfo();
     await login();
 
-    expect(mocks.openLocalFolderDialog).toHaveBeenCalledWith({ startingFolder: "/tmp" });
-    expect(mocks.getDefaultWorktreeLocation).toHaveBeenCalledWith(undefined);
     expect(mocks.checkAgentGlobalConfigExternalDirectoryPermission).toHaveBeenCalledWith({ agentKind: "opencode" });
     expect(mocks.ensureAgentGlobalConfigExternalDirectoryPermission).toHaveBeenCalledWith({ agentKind: "claude" });
     expect(mocks.toggleMainWindowMaximized).toHaveBeenCalledWith();

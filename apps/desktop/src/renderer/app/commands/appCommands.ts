@@ -16,18 +16,6 @@ import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { rendererQueryClient } from "../../queryClient";
 import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
 
-/** Opens one native folder picker and returns a selected directory path when available. */
-export async function openLocalFolderDialog(startingFolder?: string) {
-  return await getDesktopHostBridge().openLocalFolderDialog({ startingFolder });
-}
-
-/** Reads default workspace worktree location from backend app settings. */
-export async function getDefaultWorktreeLocation() {
-  const client = await getDaemonClient();
-  const response = await client.app.getDefaultWorktreeLocation(undefined);
-  return response.worktreePath;
-}
-
 /** Checks whether one agent global config grants external directory access. */
 export async function checkAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: DesktopAgentKind }) {
   const client = await getDaemonClient();

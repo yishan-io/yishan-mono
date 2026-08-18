@@ -26,7 +26,7 @@ import {
 } from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useProjectLastUsedExternalAppId } from "../../../domains/project/ui/hooks/useProjectLastUsedExternalAppId";
+import { useProjectLastUsedExternalAppId } from "../../../domains/project/hooks/useProjectLastUsedExternalAppId";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";

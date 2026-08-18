@@ -1,13 +1,13 @@
 import { Alert, Box, Button, CircularProgress, Paper, Typography } from "@mui/material";
+import { PaneHeader } from "@renderer/domains/workbench";
+import { PaneToggleButton } from "@renderer/domains/workbench";
+import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar } from "react-icons/lu";
 import { useOverviewCommands } from "../../../app/commands/useCommands";
-import { PaneHeader } from "@renderer/domains/workbench";
-import { PaneToggleButton } from "@renderer/domains/workbench";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
-import { useProjects } from "../../../domains/project/ui/hooks/useProjectReadHooks";
-import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
+import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { AgentKindChartView } from "./AgentKindChartView";

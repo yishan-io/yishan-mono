@@ -79,7 +79,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R12-store-action-promise": 0,
   "R13-getter-forwarding-action-file": 0,
   "R14-cross-domain-deep": 107,
-  "R15-app-from-domain": 65,
+  "R15-app-from-domain": 59,
   "R16-app-deep-into-domain": 77,
 };
 
@@ -148,7 +148,9 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       rel.startsWith("components/") ||
       rel.startsWith("ui/") ||
       rel.startsWith("app/routes/") ||
-      /^domains\/[^/]+\/ui\//.test(rel);
+      /^domains\/[^/]+\/ui\//.test(rel) ||
+      /^domains\/[^/]+\/features\//.test(rel) ||
+      /^domains\/[^/]+\/hooks\//.test(rel);
     const isPureDomain =
       rel.startsWith("domains/workbench/model/tabs/") || rel.startsWith("domains/workbench/model/split-pane/");
 
@@ -512,8 +514,7 @@ describe("renderer architecture dependency rules", () => {
         (COMPLETED_PHASES as readonly string[]).includes(v.phase),
       );
       const messages = badPhase.map(
-        (v) =>
-          `[archtest] allowlist row ${v.rule}: ${v.file} tagged ${v.phase} — completed phase, remove the row`,
+        (v) => `[archtest] allowlist row ${v.rule}: ${v.file} tagged ${v.phase} — completed phase, remove the row`,
       );
       expect(messages, messages.join("\n")).toEqual([]);
     });

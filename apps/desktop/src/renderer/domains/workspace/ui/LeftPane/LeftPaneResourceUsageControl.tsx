@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { useTerminalCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { useProjects } from "../../../../domains/project/ui/hooks/useProjectReadHooks";
+import { useProjects } from "../../../../domains/project/hooks/useProjectReadHooks";
 import type { TerminalResourceUsageSnapshot } from "../../../../domains/terminal/commands/terminalCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../../domains/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";

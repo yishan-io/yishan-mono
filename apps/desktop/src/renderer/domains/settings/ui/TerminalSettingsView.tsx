@@ -4,7 +4,7 @@ import { closeTab } from "@renderer/domains/workbench";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTerminalCommands } from "../../../app/commands/useCommands";
-import { useProjects } from "../../../domains/project/ui/hooks/useProjectReadHooks";
+import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
 import { useWorkspaces } from "../../../domains/workspace/ui/hooks/useWorkspaceReadHooks";
 import { MONOSPACE_SX } from "../../../helpers/styles";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../../rpc/daemonTypes";

@@ -9,7 +9,7 @@ import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
-import { useProjectCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
+import { useAppCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
 import { getRendererPlatform } from "../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../../ui/layout/AppMenuView";
@@ -39,7 +39,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
   const isOverviewPanelOpen = overlayPanel === "overview";
   const { activateProject, activateWorkspace } = useWorkspaceCommands();
-  const { loadWorkspaceSnapshot } = useProjectCommands();
+  const { loadWorkspaceSnapshot } = useAppCommands();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefreshProjects = useCallback(async () => {

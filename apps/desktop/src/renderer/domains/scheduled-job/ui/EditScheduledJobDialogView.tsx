@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useScheduledJobCommands } from "../../../app/commands/useCommands";
-import { useProjects } from "../../../domains/project/ui/hooks/useProjectReadHooks";
+import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
 import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { useSelectedOrganizationId } from "../../../domains/session";
 import { getErrorMessage } from "../../../helpers/errorHelpers";

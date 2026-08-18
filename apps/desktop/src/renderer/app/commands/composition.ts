@@ -88,7 +88,6 @@ import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
   updateProjectConfig as updateProjectConfigCommand,
 } from "../../domains/project/commands/projectCommands";
 import type { WorkspaceProjectRecord } from "../../domains/project/model/projectTypes";
@@ -165,13 +164,13 @@ import {
   appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
-  getDefaultWorktreeLocation as getDefaultWorktreeLocationCommand,
   loadBrowserHistory as loadBrowserHistoryCommand,
   logout as logoutCommand,
   openExternalUrl as openExternalUrlCommand,
-  openLocalFolderDialog as openLocalFolderDialogCommand,
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "./appCommands";
+
+import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "../flows/workspaceSnapshotFlow";
 
 /**
  * Application command composition (Phase 12, desktop5.md).
@@ -182,17 +181,16 @@ import {
  * compatibility entry for app-level consumers (e.g. the shortcut runtime).
  */
 
-/** App-level commands (Electron host, auth, browser history). */
+/** App-level commands (Electron host, auth, browser history, app flows). */
 export type AppCommandSurface = {
   logout: typeof logoutCommand;
   openExternalUrl: typeof openExternalUrlCommand;
-  openLocalFolderDialog: typeof openLocalFolderDialogCommand;
-  getDefaultWorktreeLocation: typeof getDefaultWorktreeLocationCommand;
   checkAgentGlobalConfigExternalDirectoryPermission: typeof checkAgentGlobalConfigExternalDirectoryPermissionCommand;
   ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
   toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
   loadBrowserHistory: typeof loadBrowserHistoryCommand;
   appendBrowserHistory: typeof appendBrowserHistoryCommand;
+  loadWorkspaceSnapshot: () => Promise<void>;
 };
 
 /** Session feature command surface. */
@@ -334,7 +332,6 @@ export type FileCommandSurface = {
 
 /** Project feature command surface. */
 export type ProjectCommandSurface = {
-  loadWorkspaceSnapshot: () => Promise<void>;
   inspectLocalProjectSource: typeof inspectLocalProjectSourceCommand;
   createProject: (input: {
     name: string;
@@ -408,13 +405,12 @@ export function createAppCommands(): AppCommandSurface {
   return {
     logout: logoutCommand,
     openExternalUrl: openExternalUrlCommand,
-    openLocalFolderDialog: openLocalFolderDialogCommand,
-    getDefaultWorktreeLocation: getDefaultWorktreeLocationCommand,
     checkAgentGlobalConfigExternalDirectoryPermission: checkAgentGlobalConfigExternalDirectoryPermissionCommand,
     ensureAgentGlobalConfigExternalDirectoryPermission: ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
     toggleMainWindowMaximized: toggleMainWindowMaximizedCommand,
     loadBrowserHistory: loadBrowserHistoryCommand,
     appendBrowserHistory: appendBrowserHistoryCommand,
+    loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
   };
 }
 
@@ -556,7 +552,6 @@ export function createFileCommands(): FileCommandSurface {
 
 export function createProjectCommands(): ProjectCommandSurface {
   return {
-    loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
     inspectLocalProjectSource: inspectLocalProjectSourceCommand,
     createProject: createProjectCommand,
     deleteProject: deleteProjectCommand,

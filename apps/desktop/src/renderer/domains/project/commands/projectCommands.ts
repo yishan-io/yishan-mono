@@ -4,8 +4,7 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { api } from "../../../api";
-import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
-import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
+import type { ProjectWithWorkspacesRecord } from "../../../api";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
 import { selectIsDefaultContextEnabled } from "../../../domains/settings/state/settingsSelectors";
@@ -26,11 +25,6 @@ import {
 } from "../../workspace/commands/workspaceWarmupCommand";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../state/projectStore";
-
-/** Loads the latest workspace snapshot (shared Flow owned by Events + Commands). */
-export function loadWorkspaceSnapshot(): Promise<void> {
-  return loadWorkspaceSnapshotFlow();
-}
 
 async function inspectLocalRepository(path: string): Promise<{
   isGitRepository: boolean;

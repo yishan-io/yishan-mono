@@ -1,10 +1,10 @@
 import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
+import { renderProjectIcon } from "@renderer/domains/project";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPause, LuPlay } from "react-icons/lu";
 import { useScheduledJobCommands } from "../../../app/commands/useCommands";
-import { renderProjectIcon } from "@renderer/domains/project";
-import { useProjects } from "../../../domains/project/ui/hooks/useProjectReadHooks";
+import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
 import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
 import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";

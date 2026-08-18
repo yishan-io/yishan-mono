@@ -3,6 +3,7 @@
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
@@ -10,7 +11,7 @@ import { workspaceSettingsStore } from "../../../domains/settings/state/workspac
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { projectStore } from "../state/projectStore";
-import { createProject, deleteProject, loadWorkspaceSnapshot, updateProjectConfig } from "./projectCommands";
+import { createProject, deleteProject, updateProjectConfig } from "./projectCommands";
 
 const apiMocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),

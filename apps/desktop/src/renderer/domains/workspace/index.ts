@@ -16,6 +16,13 @@ export { selectWorkspaces } from "./state/workspaceSelectors";
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
 export { setOrderedWorkspaceIds } from "./state/workspaceActions";
 export {
+  closeWorkspace,
+  deleteLocalFolder,
+  reorderWorkspace,
+  setDisplayRepoIds,
+  setLastUsedExternalAppId,
+} from "./commands/workspaceCommands";
+export {
   workspaceCreateProgressStore,
   type WorkspaceCreateProgressEntry,
   type WorkspaceCreateProgressStep,

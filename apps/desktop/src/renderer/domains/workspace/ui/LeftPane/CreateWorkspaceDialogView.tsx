@@ -3,7 +3,7 @@ import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { useDisplayProjectIds, useProjects } from "../../../../domains/project/ui/hooks/useProjectReadHooks";
+import { useDisplayProjectIds, useProjects } from "../../../../domains/project/hooks/useProjectReadHooks";
 import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
 import { useWorkspaceBranchPrefixSettings } from "../../../../domains/settings/ui/hooks/useSettingsReadHooks";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
