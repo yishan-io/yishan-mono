@@ -1,11 +1,8 @@
 // @vitest-environment jsdom
 
+import { WORKSPACE_SETTINGS_STORE_STORAGE_KEY, workspaceSettingsStore } from "@renderer/domains/workspace";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  WORKSPACE_SETTINGS_STORE_STORAGE_KEY,
-  workspaceSettingsStore,
-} from "@renderer/domains/workspace";
 import { WorkspaceSettingsView } from "./WorkspaceSettingsView";
 
 describe("WorkspaceSettingsView", () => {

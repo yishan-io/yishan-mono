@@ -24,14 +24,17 @@ const rpcMocks = vi.hoisted(() => ({
   listLocalFolders: vi.fn(async () => []),
 }));
 
+vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+  getWorkspaceRpc: () =>
+    Promise.resolve({
+      listLocalFolders: rpcMocks.listLocalFolders,
+    }),
+}));
+
 vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    workspace: {
-      listLocalFolders: rpcMocks.listLocalFolders,
-    },
-  })),
+  getDaemonClient: vi.fn(async () => ({})),
   getDaemonTransport: vi.fn(async () => ({
     invoke: async (method: string, params?: { organizationId?: string }) => {
       if (method === "project.listWithWorkspaces") {

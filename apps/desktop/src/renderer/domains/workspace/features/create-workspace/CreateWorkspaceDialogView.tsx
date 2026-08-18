@@ -10,17 +10,17 @@ import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
+import { useDialogRegistration } from "../../../../domains/workbench";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { getRendererPlatform } from "../../../../helpers/platform";
-import { resolveTargetBranchForCreate } from "./workspaceBranchNaming";
 import { buildWorkspaceNavigationPath } from "../../../../navigation/workspaceNavigation";
-import { useDialogRegistration } from "../../../../domains/workbench";
+import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
+import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";
 import { ProjectAndSourceBranchSection } from "./createWorkspaceDialog/ProjectAndSourceBranchSection";
 import { TaskRunSection } from "./createWorkspaceDialog/TaskRunSection";
-import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
-import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { useCreateWorkspaceDialogState } from "./useCreateWorkspaceDialogState";
+import { resolveTargetBranchForCreate } from "./workspaceBranchNaming";
 
 type CreateWorkspaceDialogViewProps = {
   open: boolean;

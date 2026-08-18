@@ -1,10 +1,10 @@
 import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
+import { useDialogRegistration } from "@renderer/domains/workbench";
 import { useTranslation } from "react-i18next";
 import { useSelectedOrganizationId } from "../../../../domains/session";
-import { workspaceStore } from "../../state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
-import { useDialogRegistration } from "@renderer/domains/workbench";
+import { workspaceStore } from "../../state/workspaceStore";
 import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
 import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { useRenameWorkspaceDialogState } from "./useRenameWorkspaceDialogState";
@@ -17,27 +17,15 @@ type RenameWorkspaceDialogViewProps = {
 };
 
 /** Renders the workspace rename dialog (desktop7 Phase 24 — split from create-workspace). */
-export function RenameWorkspaceDialogView({
-  open,
-  projectId,
-  workspaceId,
-  onClose,
-}: RenameWorkspaceDialogViewProps) {
+export function RenameWorkspaceDialogView({ open, projectId, workspaceId, onClose }: RenameWorkspaceDialogViewProps) {
   const { t } = useTranslation();
   const organizationId = useSelectedOrganizationId();
   const workspaces = workspaceStore((state) => state.workspaces);
 
   useDialogRegistration(open);
 
-  const {
-    name,
-    setName,
-    targetBranch,
-    setTargetBranch,
-    isSaving,
-    canRename,
-    handleRename,
-  } = useRenameWorkspaceDialogState({ open, projectId, workspaceId, workspaces });
+  const { name, setName, targetBranch, setTargetBranch, isSaving, canRename, handleRename } =
+    useRenameWorkspaceDialogState({ open, projectId, workspaceId, workspaces });
 
   const handleSubmit = async () => {
     const renamed = await handleRename();

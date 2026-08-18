@@ -13,6 +13,13 @@ const rpcMocks = vi.hoisted(() => ({
   gitInspect: vi.fn(async () => ({ isGitRepository: true })),
 }));
 
+vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+  getWorkspaceRpc: () =>
+    Promise.resolve({
+      refreshPullRequest: rpcMocks.refreshWorkspacePullRequest,
+    }),
+}));
+
 vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
@@ -21,9 +28,6 @@ vi.mock("../../../rpc/rpcTransport", () => ({
       inspectPath: rpcMocks.gitInspect,
       listChanges: rpcMocks.listGitChanges,
       getBranchDiffSummary: rpcMocks.getBranchDiffSummary,
-    },
-    workspace: {
-      refreshPullRequest: rpcMocks.refreshWorkspacePullRequest,
     },
   })),
 }));

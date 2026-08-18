@@ -4,8 +4,8 @@ import "./CreateWorkspaceDialogView.testSetup";
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 import { RenameWorkspaceDialogView } from "../rename-workspace/RenameWorkspaceDialogView";
+import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 import {
   getMockedCommands,
   renderDialog,
@@ -134,9 +134,7 @@ describe("CreateWorkspaceDialogView keyboard shortcuts", () => {
     const onClose = vi.fn();
     seedRenameWorkspace();
 
-    renderDialog(
-      <RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={onClose} />,
-    );
+    renderDialog(<RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={onClose} />);
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
       target: { value: "Renamed Via Shortcut" },

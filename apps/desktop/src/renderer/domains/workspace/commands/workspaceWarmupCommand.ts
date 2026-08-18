@@ -1,6 +1,6 @@
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 
 type WorkspaceOpenProjectEntry = {
   workspaceId: string;
@@ -42,8 +42,8 @@ export async function openWorkspaceEntries(entries: WorkspaceOpenProjectEntry[])
   }
 
   try {
-    const client = await getDaemonClient();
-    await client.workspace.openProject({ workspaces: entries });
+    const workspaceRpc = await getWorkspaceRpc();
+    await workspaceRpc.openProject({ workspaces: entries });
   } catch (error) {
     console.error("[warmup] workspace.openProject failed", error);
   }
@@ -98,8 +98,8 @@ export async function closeWorkspacesForProjects(projectIds: string[]): Promise<
   }
 
   try {
-    const client = await getDaemonClient();
-    await client.workspace.closeProject({ workspaceIds });
+    const workspaceRpc = await getWorkspaceRpc();
+    await workspaceRpc.closeProject({ workspaceIds });
   } catch (error) {
     console.error("[warmup] workspace.closeProject failed", error);
   }

@@ -1,6 +1,10 @@
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { selectProjectById } from "@renderer/domains/project";
 import { selectWorkspaces } from "@renderer/domains/workspace";
+import {
+  isFolderWorkspace,
+  refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc,
+} from "@renderer/domains/workspace";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
  *
@@ -12,7 +16,6 @@ import { selectWorkspaces } from "@renderer/domains/workspace";
  */
 import { api } from "../../../api";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
-import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import {
   computeUniqueGitChangeFileCount,
@@ -133,8 +136,7 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
   }
 
   try {
-    const client = await getDaemonClient();
-    const refreshedWorkspace = await client.workspace.refreshPullRequest({
+    const refreshedWorkspace = await refreshWorkspacePullRequestRpc({
       workspaceId,
     });
 

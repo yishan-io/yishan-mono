@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { listOrgNodes } from "../../../../domains/node";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import type { BranchDropdownGroups } from "./BranchDropdown";
+import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
 } from "./workspaceBranchNaming";
-import type { BranchDropdownGroups } from "./BranchDropdown";
-import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 
 type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean };
 
@@ -271,7 +271,13 @@ export function useCreateWorkspaceDialogState({
     return () => {
       isCancelled = true;
     };
-  }, [listGitBranches, open, selectedProject?.defaultBranch, selectedProjectBranchListPath, selectedProjectBranchListWorkspaceId]);
+  }, [
+    listGitBranches,
+    open,
+    selectedProject?.defaultBranch,
+    selectedProjectBranchListPath,
+    selectedProjectBranchListWorkspaceId,
+  ]);
 
   return {
     selectedProjectId,

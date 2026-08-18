@@ -5,8 +5,8 @@ import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/w
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import type { WorkspaceLifecycleScriptWarning } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
+import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../model/localFolder";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 
@@ -42,9 +42,9 @@ async function removeWorkspaceInBackground(input: {
   removeBranch?: boolean;
   postHook?: string;
 }): Promise<void> {
-  const client = await getDaemonClient();
+  const workspaceRpc = await getWorkspaceRpc();
 
-  const closed = (await client.workspace.close({
+  const closed = (await workspaceRpc.close({
     workspaceId: input.workspaceId,
     organizationId: input.organizationId,
     projectId: input.projectId,

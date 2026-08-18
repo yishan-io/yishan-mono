@@ -50,19 +50,23 @@ const rpcMocks = vi.hoisted(() => ({
   ),
 }));
 
+vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+  getWorkspaceRpc: () =>
+    Promise.resolve({
+      list: rpcMocks.workspaceList,
+      openProject: rpcMocks.workspaceOpenProject,
+      syncContextLink: rpcMocks.workspaceSyncContextLink,
+      createLocalFolder: rpcMocks.workspaceCreateLocalFolder,
+      listLocalFolders: rpcMocks.workspaceListLocalFolders,
+    }),
+}));
+
 vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
     git: {
       inspectPath: rpcMocks.gitInspect,
-    },
-    workspace: {
-      list: rpcMocks.workspaceList,
-      openProject: rpcMocks.workspaceOpenProject,
-      syncContextLink: rpcMocks.workspaceSyncContextLink,
-      createLocalFolder: rpcMocks.workspaceCreateLocalFolder,
-      listLocalFolders: rpcMocks.workspaceListLocalFolders,
     },
   })),
   getDaemonTransport: vi.fn(async () => ({

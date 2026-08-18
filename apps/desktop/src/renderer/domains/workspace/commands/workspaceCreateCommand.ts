@@ -1,6 +1,6 @@
 import { selectProjectById } from "@renderer/domains/project";
-import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
+import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { buildWorkspaceCreatePlaceholder } from "../../../domains/workspace/model/workspaceCreatePlaceholder";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
@@ -10,7 +10,7 @@ import {
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 
 type CreateWorkspaceInput = {
@@ -129,10 +129,10 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
 
   const normalizedNodeId = input.nodeId?.trim() || "";
 
-  const client = await getDaemonClient();
+  const workspaceRpc = await getWorkspaceRpc();
   let created: Record<string, unknown>;
   try {
-    created = (await client.workspace.createWorkspace({
+    created = (await workspaceRpc.createWorkspace({
       organizationId,
       nodeId: normalizedNodeId || undefined,
       projectId,

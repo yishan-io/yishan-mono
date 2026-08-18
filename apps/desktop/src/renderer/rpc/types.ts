@@ -42,19 +42,6 @@ export type DaemonRpcClient = {
     setActiveProject: (projectId: string) => Promise<unknown>;
     setActiveFile: (filePath: string) => Promise<unknown>;
   };
-  workspace: {
-    list: (input?: unknown) => Promise<Rpc.DaemonWorkspace[]>;
-    refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) => Promise<Rpc.DaemonWorkspace>;
-    createWorkspace: (input: Rpc.WorkspaceCreateInput) => Promise<Rpc.WorkspaceCreateResponse>;
-    close: (input: Rpc.WorkspaceCloseExecutionInput) => Promise<Rpc.WorkspaceCloseExecutionResponse | undefined>;
-    syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => Promise<Rpc.WorkspaceSyncContextLinkResponse>;
-    health: (input: Rpc.WorkspaceHealthInput) => Promise<Rpc.WorkspaceHealthOutput>;
-    openProject: (input: Rpc.WorkspaceOpenProjectInput) => Promise<Rpc.WorkspaceOpenProjectOutput>;
-    closeProject: (input: Rpc.WorkspaceCloseProjectInput) => Promise<Rpc.WorkspaceCloseProjectOutput>;
-    createLocalFolder: (input: { path: string; name?: string }) => Promise<Rpc.DaemonLocalFolder>;
-    listLocalFolders: () => Promise<Rpc.DaemonLocalFolder[]>;
-    deleteLocalFolder: (input: { id: string }) => Promise<void>;
-  };
   file: {
     listFiles: (input: Rpc.FileListInput) => Promise<Rpc.FileListResponse>;
     listFilesBatch: (input: Rpc.FileListBatchInput) => Promise<Rpc.FileListBatchResponse>;

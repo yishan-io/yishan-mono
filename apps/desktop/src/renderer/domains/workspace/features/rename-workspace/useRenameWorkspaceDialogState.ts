@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import { renameWorkspace, renameWorkspaceBranch } from "@renderer/domains/workspace";
+import { useEffect, useRef, useState } from "react";
 import type { WorkspaceItem } from "../../model/workspaceTypes";
 
 /**
@@ -49,7 +49,8 @@ export function useRenameWorkspaceDialogState({
       (name.trim() !== (selectedWorkspace.name.trim() ?? "") ||
         targetBranch.trim() !== (selectedWorkspace.branch.trim() ?? "")),
   );
-  const canRename = Boolean(selectedWorkspace) && !isSaving && Boolean(name.trim()) && Boolean(targetBranch.trim()) && hasRenameChanges;
+  const canRename =
+    Boolean(selectedWorkspace) && !isSaving && Boolean(name.trim()) && Boolean(targetBranch.trim()) && hasRenameChanges;
 
   const handleRename = async (): Promise<boolean> => {
     if (isSaving || !selectedWorkspace) {

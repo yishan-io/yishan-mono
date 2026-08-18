@@ -5,14 +5,14 @@ import {
 } from "@renderer/domains/terminal";
 import { activateWorkspace, setSelectedTab as selectTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
+import { isTerminalTabWithSessionId } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
-import { isTerminalTabWithSessionId } from "@renderer/domains/workbench";
-import { ResourceUsageMenu, type ResourceUsageMenuRow } from "./ResourceUsageMenu";
 import { RouteCloseWatcher } from "../../../../hooks/RouteCloseWatcher";
+import { ResourceUsageMenu, type ResourceUsageMenuRow } from "./ResourceUsageMenu";
 
 const MAX_VISIBLE_PROCESSES = 20;
 

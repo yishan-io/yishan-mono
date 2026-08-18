@@ -4,13 +4,13 @@ import "../create-workspace/CreateWorkspaceDialogView.testSetup";
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { RenameWorkspaceDialogView } from "./RenameWorkspaceDialogView";
 import {
   getMockedCommands,
   renderDialog,
   seedRenameWorkspace,
   setupCreateWorkspaceDialogViewTests,
 } from "../create-workspace/CreateWorkspaceDialogView.testUtils";
+import { RenameWorkspaceDialogView } from "./RenameWorkspaceDialogView";
 
 describe("CreateWorkspaceDialogView rename flow", () => {
   setupCreateWorkspaceDialogViewTests();
@@ -18,9 +18,7 @@ describe("CreateWorkspaceDialogView rename flow", () => {
   it("shows rename mode with editable workspace and branch names only", () => {
     seedRenameWorkspace();
 
-    renderDialog(
-      <RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={() => {}} />,
-    );
+    renderDialog(<RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={() => {}} />);
 
     expect(getMockedCommands().listGitBranches).not.toHaveBeenCalled();
     expect((screen.getByPlaceholderText("workspace.create.namePlaceholder") as HTMLInputElement).value).toBe(
@@ -35,9 +33,7 @@ describe("CreateWorkspaceDialogView rename flow", () => {
     const onClose = vi.fn();
     seedRenameWorkspace();
 
-    renderDialog(
-      <RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={onClose} />,
-    );
+    renderDialog(<RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={onClose} />);
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
       target: { value: "Workspace Renamed" },
@@ -71,9 +67,7 @@ describe("CreateWorkspaceDialogView rename flow", () => {
     getMockedCommands().renameWorkspaceBranch.mockRejectedValueOnce(new Error("rename failed"));
     seedRenameWorkspace();
 
-    renderDialog(
-      <RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={onClose} />,
-    );
+    renderDialog(<RenameWorkspaceDialogView open projectId="repo-1" workspaceId="workspace-1" onClose={onClose} />);
 
     fireEvent.change(screen.getByPlaceholderText("workspace.rename.branchNameLabel"), {
       target: { value: "feature/renamed" },

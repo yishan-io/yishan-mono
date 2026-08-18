@@ -2,12 +2,12 @@ import { useProjects } from "@renderer/domains/project";
 import type { TerminalResourceUsageSnapshot } from "@renderer/domains/terminal";
 import { getTerminalResourceUsage, useSharedTerminalResourceUsageSnapshot } from "@renderer/domains/terminal";
 import { activateWorkspace, tabStore } from "@renderer/domains/workbench";
+import { isTerminalTabWithSessionId } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
-import { isTerminalTabWithSessionId } from "@renderer/domains/workbench";
 import { RouteCloseWatcher } from "../../../../hooks/RouteCloseWatcher";
 import { WorkspaceResourceTableMenu, type WorkspaceResourceTableMenuRow } from "./WorkspaceResourceTableMenu";
 

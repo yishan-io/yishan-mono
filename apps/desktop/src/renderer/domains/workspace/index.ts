@@ -33,9 +33,12 @@ export {
   toggleLeftPaneVisibility,
   toggleRightPaneVisibility,
   undoFileTreeOperation,
+  refreshWorkspacePullRequest,
+  syncWorkspaceContextLinks,
 } from "./commands/workspaceCommands";
 export {
   createLocalFolderImport,
+  listLocalFolders,
   openFoldersForSnapshot,
   restoreFolderSelectionIfNeeded,
 } from "./commands/localFolderCommands";

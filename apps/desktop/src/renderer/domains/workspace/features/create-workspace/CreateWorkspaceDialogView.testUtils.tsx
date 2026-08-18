@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
 import { agentSettingsStore } from "@renderer/domains/agent";
+import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, vi } from "vitest";
 import { projectStore } from "../../../../domains/project/state/projectStore";
 import { sessionStore } from "../../../../domains/session/state/sessionStore";
-import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 
 import { getMockedCommands, resetMockedCommands } from "./CreateWorkspaceDialogView.testSetup";

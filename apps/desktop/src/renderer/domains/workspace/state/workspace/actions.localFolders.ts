@@ -1,6 +1,7 @@
 import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
 import { selectSessionDaemonId } from "../../../../domains/session";
 import { getFileName } from "../../../../helpers/pathHelpers";
+import type { DaemonLocalFolder } from "../../model/snapshotTypes";
 import type { WorkspaceHealth, WorkspaceItem, WorkspaceLifecycleState } from "../../model/workspaceTypes";
 import type {
   WorkspaceStoreActions,
@@ -8,7 +9,6 @@ import type {
   WorkspaceStoreSetState,
   WorkspaceStoreState,
 } from "../workspaceStoreTypes";
-import type { DaemonLocalFolder } from "../workspaceStoreTypes";
 
 type LocalFolderActions = Pick<WorkspaceStoreActions, "loadLocalFolders" | "addLocalFolder" | "removeLocalFolder">;
 

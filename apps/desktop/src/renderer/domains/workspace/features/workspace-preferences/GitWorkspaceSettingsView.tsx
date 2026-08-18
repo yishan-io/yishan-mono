@@ -1,16 +1,16 @@
 import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useGitAuthorName } from "@renderer/domains/git";
 import { useProjects } from "@renderer/domains/project";
-import { useSelectedProjectId } from "../../hooks/useWorkspaceReadHooks";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { SettingsCompactTextField } from "../../../../ui/components/SettingsCompactControls";
+import { SettingsCard, SettingsControlRow, SettingsRows } from "../../../../ui/components/SettingsPrimitives";
+import { useSelectedProjectId } from "../../hooks/useWorkspaceReadHooks";
 import {
   type GitBranchPrefixMode,
   resolveGitBranchPrefix,
   workspaceSettingsStore,
 } from "../../state/workspaceSettingsStore";
-import {SettingsCard, SettingsControlRow, SettingsRows} from "../../../../ui/components/SettingsPrimitives";
-import {SettingsCompactTextField} from "../../../../ui/components/SettingsCompactControls";
 
 const GIT_WORKSPACE_PREFIX_SELECT_WIDTH = 200;
 const GIT_WORKSPACE_CUSTOM_PREFIX_WIDTH = 140;

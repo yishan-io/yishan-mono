@@ -3,7 +3,6 @@ import { DaemonFileClient } from "./daemonFileClient";
 import { DaemonGitClient } from "./daemonGitClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
-import { DaemonWorkspaceClient } from "./daemonWorkspaceClient";
 import {
   asRecord,
   buildRequest,
@@ -57,7 +56,6 @@ export class DaemonClient {
   private reconnectPromise: Promise<void> | null = null;
   private disposed = false;
 
-  private readonly _workspaceClient: DaemonWorkspaceClient;
   private readonly _fileClient: DaemonFileClient;
   private readonly _gitClient: DaemonGitClient;
   private readonly _terminalClient: DaemonTerminalClient;
@@ -72,7 +70,6 @@ export class DaemonClient {
     const invoke = this.invoke.bind(this);
     const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
 
-    this._workspaceClient = new DaemonWorkspaceClient(invoke, this.workspaceIdByWorktreePath);
     this._fileClient = new DaemonFileClient(invoke);
     this._gitClient = new DaemonGitClient(invoke);
     this._terminalClient = new DaemonTerminalClient({
@@ -97,21 +94,6 @@ export class DaemonClient {
   };
 
   readonly tokenUsage = {};
-
-  readonly workspace = {
-    list: () => this._workspaceClient.list(),
-    refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) =>
-      this._workspaceClient.refreshPullRequest(input),
-    createWorkspace: (input: Rpc.WorkspaceCreateInput) => this._workspaceClient.createWorkspace(input),
-    close: (input: Rpc.WorkspaceCloseExecutionInput) => this._workspaceClient.close(input),
-    syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => this._workspaceClient.syncContextLink(input),
-    health: (input: Rpc.WorkspaceHealthInput) => this._workspaceClient.health(input),
-    openProject: (input: Rpc.WorkspaceOpenProjectInput) => this._workspaceClient.openProject(input),
-    closeProject: (input: Rpc.WorkspaceCloseProjectInput) => this._workspaceClient.closeProject(input),
-    createLocalFolder: (input: { path: string; name?: string }) => this._workspaceClient.createLocalFolder(input),
-    listLocalFolders: () => this._workspaceClient.listLocalFolders(),
-    deleteLocalFolder: (input: { id: string }) => this._workspaceClient.deleteLocalFolder(input),
-  };
 
   readonly file = {
     listFiles: (input: Rpc.FileListInput) => this._fileClient.listFiles(input),

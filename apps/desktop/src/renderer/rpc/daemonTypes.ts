@@ -69,82 +69,6 @@ export type ProcedureSubscriptionOptions = {
   onNotification: (event: ProcedureNotification) => void;
 };
 
-export type DaemonWorkspace = {
-  id: string;
-  path: string;
-  state?: string;
-  health?: string;
-  orgId?: string;
-  projectId?: string;
-  pullRequest?: DaemonWorkspacePullRequest;
-};
-
-export type DaemonLocalFolder = {
-  id: string;
-  path: string;
-  name?: string;
-  state?: string;
-  health?: string;
-};
-
-export type DaemonWorkspacePullRequest = {
-  number: number;
-  title?: string;
-  url?: string;
-  branch?: string;
-  baseBranch?: string;
-  githubState?: string;
-  status?: string;
-  reviewDecision?: string;
-  isDraft?: boolean;
-  complete?: boolean;
-  updatedAt?: string;
-  checks?: DaemonWorkspacePullRequestCheck[];
-  deployments?: DaemonWorkspacePullRequestDeployment[];
-};
-
-export type DaemonWorkspacePullRequestCheck = {
-  name: string;
-  workflow?: string;
-  state: string;
-  description?: string;
-  url?: string;
-};
-
-export type DaemonWorkspacePullRequestDeployment = {
-  id: number;
-  environment?: string;
-  state?: string;
-  description?: string;
-  environmentUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  originalPayload?: string;
-};
-
-export type WorkspaceCreateInput = {
-  workspaceId?: string;
-  organizationId?: string;
-  nodeId?: string;
-  repoKey?: string;
-  sourcePath?: string;
-  workspaceName?: string;
-  projectId?: string;
-  sourceBranch?: string;
-  targetBranch?: string;
-  contextEnabled?: boolean;
-  setupHook?: string;
-  taskRun?: {
-    agentKind?: string;
-    prompt?: string;
-    model?: string;
-  };
-};
-
-export type WorkspaceRefreshPullRequestInput = {
-  workspaceId: string;
-};
-
 export type PersistAuthTokensInput = {
   accessToken: string;
   refreshToken?: string;
@@ -168,70 +92,6 @@ export type LogoutOutput = {
 
 export type ReloadAuthConfigOutput = {
   ok: boolean;
-};
-
-export type WorkspaceSyncContextLinkInput = {
-  repoKey: string;
-  nonGit?: boolean;
-  enabled: boolean;
-  worktreePaths: string[];
-};
-
-export type WorkspaceSyncContextLinkResponse = {
-  updated: string[];
-  skipped: string[];
-  errors: Record<string, string>;
-};
-
-export type WorkspaceCloseExecutionInput = {
-  workspaceId: string;
-  organizationId?: string;
-  projectId?: string;
-  branch?: string;
-  removeBranch?: boolean;
-  postHook?: string;
-};
-
-export type WorkspaceHealthInput = {
-  workspaceId: string;
-};
-
-export type WorkspaceHealthOutput = {
-  workspaceId: string;
-  state: string;
-  health?: string;
-  path: string;
-  error?: string;
-};
-
-export type WorkspaceOpenProjectInput = {
-  workspaces: Array<{
-    workspaceId: string;
-    worktreePath: string;
-    projectId?: string;
-    orgId?: string;
-  }>;
-};
-
-export type WorkspaceOpenProjectOutput = {
-  opened: string[];
-  skipped: string[];
-  errors: string[];
-};
-
-export type WorkspaceCloseProjectInput = {
-  workspaceIds: string[];
-};
-
-export type WorkspaceCloseProjectOutput = {
-  stopped: string[];
-};
-
-export type WorkspaceStateChangedEvent = {
-  workspaceId: string;
-  state: string;
-  health?: string;
-  removed: boolean;
 };
 
 export type FileListInput = {
@@ -381,25 +241,6 @@ export type TerminalListSessionsInput = {
 
 export type SetActiveWorkspaceInput = {
   workspaceId?: string;
-};
-
-export type WorkspaceListResponse = DaemonWorkspace[];
-
-export type WorkspaceCreateResponse = {
-  workspaceId: string;
-  projectId: string;
-  name: string;
-  sourceBranch: string;
-  branch: string;
-  worktreePath: string;
-  status: string;
-  lifecycleScriptWarnings: unknown[];
-};
-
-export type WorkspaceCloseExecutionResponse = {
-  workspace: { id: string; status: string };
-  workspaceId: string;
-  lifecycleScriptWarnings: unknown[];
 };
 
 export type DaemonFileEntry = {

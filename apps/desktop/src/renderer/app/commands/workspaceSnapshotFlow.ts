@@ -10,6 +10,7 @@ import {
   workspaceCreateProgressStore,
   workspaceStore,
 } from "@renderer/domains/workspace";
+import { listLocalFolders } from "@renderer/domains/workspace";
 /**
  * WorkspaceSnapshotFlow — the shared workspace-snapshot load.
  *
@@ -30,7 +31,6 @@ import {
  */
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
-import { getDaemonClient } from "../../rpc/rpcTransport";
 
 let latestWorkspaceSnapshotRequestId = 0;
 
@@ -60,8 +60,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
       workspaceStore.getState().load("", []);
 
-      const orphanDaemonClient = await getDaemonClient();
-      const orphanFolders = await orphanDaemonClient.workspace.listLocalFolders();
+      const orphanFolders = await listLocalFolders();
       if (!isLatestWorkspaceSnapshotRequest(requestId)) {
         return;
       }
@@ -121,8 +120,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     workbenchNavigationStore.getState().setActiveWorkspaceId(reconciled.selectedWorkspaceId);
 
     // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
-    const daemonClient = await getDaemonClient();
-    const daemonFolders = await daemonClient.workspace.listLocalFolders();
+    const daemonFolders = await listLocalFolders();
 
     if (!isLatestWorkspaceSnapshotRequest(requestId)) {
       return;

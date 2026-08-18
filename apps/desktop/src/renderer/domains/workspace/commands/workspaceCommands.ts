@@ -22,8 +22,9 @@ import {
 } from "@renderer/domains/workbench";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { isFolderWorkspace } from "../model/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
+import { isFolderWorkspace } from "../model/localFolder";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
@@ -298,4 +299,21 @@ export async function renameWorkspaceBranch(input: {
     console.error("Failed to rename workspace branch", error);
     throw error;
   }
+}
+
+/** Refreshes one workspace's pull request projection (git domain consumes this). */
+export async function refreshWorkspacePullRequest(input: { workspaceId: string }) {
+  const workspaceRpc = await getWorkspaceRpc();
+  return await workspaceRpc.refreshPullRequest(input);
+}
+
+/** Syncs project context links across the given worktree paths (project domain consumes this). */
+export async function syncWorkspaceContextLinks(input: {
+  repoKey: string;
+  nonGit?: boolean;
+  enabled: boolean;
+  worktreePaths: string[];
+}) {
+  const workspaceRpc = await getWorkspaceRpc();
+  return await workspaceRpc.syncContextLink(input);
 }

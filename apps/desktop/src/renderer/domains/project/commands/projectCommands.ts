@@ -15,6 +15,7 @@ import {
   openWorkspaceEntries,
   selectWorkspaces,
   syncTabStoreWithWorkspace,
+  syncWorkspaceContextLinks,
 } from "../../../domains/workspace";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
@@ -388,15 +389,14 @@ async function syncProjectContextLinks(input: {
   }
 
   try {
-    const client = await getDaemonClient();
-    const result = await client.workspace.syncContextLink({
+    await syncWorkspaceContextLinks({
       repoKey,
       nonGit: isNonGit,
       enabled: input.enabled,
       worktreePaths: Array.from(candidatePaths),
     });
     if (import.meta.env.DEV) {
-      console.debug("[projectCommands] context sync result", { input, result });
+      console.debug("[projectCommands] context sync ok", { input });
     }
   } catch (error) {
     console.error("Failed to sync project context links across workspaces", error);

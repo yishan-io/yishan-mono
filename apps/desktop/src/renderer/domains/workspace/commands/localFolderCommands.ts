@@ -5,9 +5,9 @@ import { activateWorkspace } from "@renderer/domains/workbench";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../model/localFolder";
-import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import type { DaemonLocalFolder } from "../model/snapshotTypes";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
 /**
@@ -18,8 +18,8 @@ import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./worksp
 export async function createLocalFolderImport(input: { path: string; name: string }): Promise<void> {
   let folder: DaemonLocalFolder;
   try {
-    const client = await getDaemonClient();
-    folder = await client.workspace.createLocalFolder({
+    const workspaceRpc = await getWorkspaceRpc();
+    folder = await workspaceRpc.createLocalFolder({
       path: input.path,
       name: input.name,
     });
@@ -95,6 +95,12 @@ export function restoreFolderSelectionIfNeeded(
   }
 }
 
+/** Lists all local folder workspaces registered on the daemon. */
+export async function listLocalFolders(): Promise<DaemonLocalFolder[]> {
+  const workspaceRpc = await getWorkspaceRpc();
+  return await workspaceRpc.listLocalFolders();
+}
+
 /** Deletes one local folder workspace on the daemon, then removes it from store state. */
 export async function deleteLocalFolder(id: string): Promise<void> {
   const folderId = id.trim();
@@ -104,7 +110,8 @@ export async function deleteLocalFolder(id: string): Promise<void> {
 
   const previousWorkspaces = workspaceStore.getState().workspaces;
   try {
-    await (await getDaemonClient()).workspace.deleteLocalFolder({ id: folderId });
+    const workspaceRpc = await getWorkspaceRpc();
+    await workspaceRpc.deleteLocalFolder({ id: folderId });
   } catch (error) {
     console.error("Failed to delete local folder", error);
     throw new Error(getErrorMessage(error));

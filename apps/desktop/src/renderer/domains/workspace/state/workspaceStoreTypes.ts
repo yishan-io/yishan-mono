@@ -14,8 +14,6 @@ import type { StateCreator } from "zustand";
 import type { DaemonLocalFolder } from "../model/snapshotTypes";
 import type { AddWorkspaceInput, WorkspaceItem } from "../model/workspaceTypes";
 
-export type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
-
 export type WorkspaceStoreState = {
   workspaces: WorkspaceItem[];
   orderedWorkspaceIds: string[];

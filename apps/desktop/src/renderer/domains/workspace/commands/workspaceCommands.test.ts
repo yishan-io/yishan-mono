@@ -42,14 +42,9 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceLifecycleWarnings: rpcMocks.enqueueWorkspaceLifecycleWarnings,
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    git: {
-      renameBranch: rpcMocks.renameGitBranch,
-    },
-    workspace: {
+vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+  getWorkspaceRpc: () =>
+    Promise.resolve({
       createWorkspace: rpcMocks.createWorkspace,
       list: rpcMocks.list,
       open: rpcMocks.openWorkspace,
@@ -57,6 +52,15 @@ vi.mock("../../../rpc/rpcTransport", () => ({
       closeProject: rpcMocks.closeProject,
       close: rpcMocks.closeWorkspace,
       deleteLocalFolder: rpcMocks.deleteLocalFolder,
+    }),
+}));
+
+vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+  getDaemonClient: vi.fn(async () => ({
+    git: {
+      renameBranch: rpcMocks.renameGitBranch,
     },
   })),
 }));
