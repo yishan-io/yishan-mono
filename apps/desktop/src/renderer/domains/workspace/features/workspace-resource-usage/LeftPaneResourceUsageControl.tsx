@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
-import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
+import { isTerminalTabWithSessionId } from "@renderer/domains/workbench";
 import { RouteCloseWatcher } from "../../../../hooks/RouteCloseWatcher";
 import { WorkspaceResourceTableMenu, type WorkspaceResourceTableMenuRow } from "./WorkspaceResourceTableMenu";
 

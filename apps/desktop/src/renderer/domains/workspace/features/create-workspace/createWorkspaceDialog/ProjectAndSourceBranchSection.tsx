@@ -18,7 +18,6 @@ import { LuChevronDown, LuFolderGit2, LuGitBranch } from "react-icons/lu";
 import { compactSelectSx } from "../createWorkspaceHelpers";
 
 type ProjectAndSourceBranchSectionProps = {
-  isRenameMode: boolean;
   selectableProjects: WorkspaceProjectRecord[];
   selectedProjectId: string;
   onProjectChange: (projectId: string) => void;
@@ -35,7 +34,6 @@ type ProjectAndSourceBranchSectionProps = {
 
 /** Renders project and source-branch controls for the workspace dialog. */
 export function ProjectAndSourceBranchSection({
-  isRenameMode,
   selectableProjects,
   selectedProjectId,
   onProjectChange,
@@ -65,7 +63,7 @@ export function ProjectAndSourceBranchSection({
           value={selectedProjectId}
           onChange={(event) => onProjectChange(event.target.value)}
           sx={compactSelectSx}
-          disabled={isRenameMode}
+          disabled={false}
           slotProps={{
             select: {
               displayEmpty: true,
@@ -145,14 +143,14 @@ export function ProjectAndSourceBranchSection({
           fullWidth
           value={sourceBranchSelectValue}
           onClick={(event) => {
-            if (isRenameMode || !selectedProjectId || sourceBranchOptions.length === 0) {
+            if (!selectedProjectId || sourceBranchOptions.length === 0) {
               return;
             }
             onSourceBranchMenuOpen(event.currentTarget);
           }}
           sx={compactSelectSx}
           placeholder="Source branch"
-          disabled={isRenameMode || !selectedProjectId || sourceBranchOptions.length === 0}
+          disabled={!selectedProjectId || sourceBranchOptions.length === 0}
           slotProps={{
             input: {
               readOnly: true,

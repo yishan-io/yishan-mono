@@ -177,8 +177,13 @@ vi.mock("../ui/projectIcons", () => ({
 }));
 
 vi.mock("../../../../domains/workspace/features/create-workspace/CreateWorkspaceDialogView", () => ({
-  CreateWorkspaceDialogView: ({ open, mode }: { open: boolean; mode?: "create" | "rename" }) =>
-    open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
+  CreateWorkspaceDialogView: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="create-workspace-dialog" /> : null,
+}));
+
+vi.mock("../../../../domains/workspace/features/rename-workspace/RenameWorkspaceDialogView", () => ({
+  RenameWorkspaceDialogView: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="rename-workspace-dialog" /> : null,
 }));
 
 vi.mock("@renderer/domains/workspace", async (importOriginal) => {

@@ -78,6 +78,7 @@ export { selectIsDefaultContextEnabled } from "./state/workspaceSettingsSelector
 export { useWorkspaceBranchPrefixSettings } from "./hooks/useWorkspaceBranchPrefixSettings";
 export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./model/branchPrefix";
 export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWorkspaceDialogView";
+export { RenameWorkspaceDialogView } from "./features/rename-workspace/RenameWorkspaceDialogView";
 export { WorkspaceDeleteDialogView } from "./features/delete-workspace/WorkspaceDeleteDialogView";
 export { WorkspaceInfoPopperView } from "./features/workspace-status/WorkspaceInfoPopperView";
 export {

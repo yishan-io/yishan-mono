@@ -107,3 +107,4 @@ export { popupStore, type PopupStoreState } from "./state/popupStore";
 
 export { ConfirmationDialog } from "./ui/ConfirmationDialog";
 export { createWorkbenchEventHandlers } from "./events/workbenchEventHandlers";
+export { isTerminalTabWithSessionId } from "./model/terminalTabUtils";

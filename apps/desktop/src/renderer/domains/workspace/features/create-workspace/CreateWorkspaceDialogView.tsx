@@ -5,13 +5,12 @@ import { supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
 import { useWorkspaceBranchPrefixSettings } from "@renderer/domains/workspace";
-import { createWorkspace, renameWorkspace, renameWorkspaceBranch } from "@renderer/domains/workspace";
+import { createWorkspace } from "@renderer/domains/workspace";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { resolveTargetBranchForCreate } from "./workspaceBranchNaming";
 import { buildWorkspaceNavigationPath } from "../../../../navigation/workspaceNavigation";
@@ -19,26 +18,18 @@ import { useDialogRegistration } from "../../../../domains/workbench";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";
 import { ProjectAndSourceBranchSection } from "./createWorkspaceDialog/ProjectAndSourceBranchSection";
 import { TaskRunSection } from "./createWorkspaceDialog/TaskRunSection";
-import { WorkspaceDetailsSection } from "./createWorkspaceDialog/WorkspaceDetailsSection";
-import { WorkspaceDialogSubmitButton } from "./createWorkspaceDialog/WorkspaceDialogSubmitButton";
+import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
+import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { useCreateWorkspaceDialogState } from "./useCreateWorkspaceDialogState";
 
 type CreateWorkspaceDialogViewProps = {
   open: boolean;
   projectId: string;
-  mode?: "create" | "rename";
-  workspaceId?: string;
   onClose: () => void;
 };
 
-/** Renders one create/rename workspace dialog that reuses shared name/branch form controls. */
-export function CreateWorkspaceDialogView({
-  open,
-  projectId,
-  mode = "create",
-  workspaceId,
-  onClose,
-}: CreateWorkspaceDialogViewProps) {
+/** Renders the create-workspace dialog (desktop7 Phase 24 — rename mode split into rename-workspace). */
+export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWorkspaceDialogViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const organizationId = useSelectedOrganizationId();
@@ -55,15 +46,11 @@ export function CreateWorkspaceDialogView({
   const targetProject = projects.find((item) => item.id === projectId);
   const isTargetNonGit = Boolean(projectId) && !supportsGitFeatures(targetProject?.sourceType);
 
-  const isRenameMode = mode === "rename";
   // Create mode: only git-capable projects can receive worktrees, so non-git
   // projects are excluded from the project dropdown.
-  const selectableProjects = isRenameMode
-    ? projects
-    : filterVisibleProjects(projects, displayProjectIds).filter((project) => supportsGitFeatures(project.sourceType));
-  const branchInputPlaceholder = isRenameMode
-    ? t("workspace.rename.branchNameLabel")
-    : t("workspace.create.branchNameLabel");
+  const selectableProjects = filterVisibleProjects(projects, displayProjectIds).filter((project) =>
+    supportsGitFeatures(project.sourceType),
+  );
   const {
     selectedProjectId,
     setSelectedProjectId,
@@ -86,7 +73,6 @@ export function CreateWorkspaceDialogView({
     nodes,
     nodesError,
     resetDraftInputs,
-    selectedWorkspace,
     defaultBranchPrefix,
     taskPrompt,
     setTaskPrompt,
@@ -95,8 +81,6 @@ export function CreateWorkspaceDialogView({
   } = useCreateWorkspaceDialogState({
     open,
     projectId,
-    workspaceId,
-    isRenameMode,
     organizationId,
     daemonId,
     projects: selectableProjects,
@@ -114,19 +98,6 @@ export function CreateWorkspaceDialogView({
     (!organizationId || Boolean(selectedNodeId)) &&
     Boolean(sourceBranch.trim()) &&
     Boolean(targetBranch.trim());
-  const hasRenameChanges =
-    Boolean(selectedWorkspace) &&
-    (name.trim() !== (selectedWorkspace?.name.trim() ?? "") ||
-      targetBranch.trim() !== (selectedWorkspace?.branch.trim() ?? ""));
-  const canRenameWorkspace =
-    Boolean(selectedWorkspace) &&
-    !isCreatingWorkspace &&
-    Boolean(name.trim()) &&
-    Boolean(targetBranch.trim()) &&
-    hasRenameChanges;
-  const canSubmitWorkspace = isRenameMode ? canRenameWorkspace : canCreateWorkspace;
-  const submitLabel = isRenameMode ? t("workspace.actions.rename") : t("workspace.actions.create");
-  const dialogTitle = isRenameMode ? t("workspace.rename.title") : t("workspace.create.title");
   const submitShortcutLabel = getRendererPlatform() === "darwin" ? "⌘↵" : "Ctrl+↵";
   const sourceBranchSelectValue = sourceBranchOptions.includes(sourceBranch) ? sourceBranch : "";
   const isSelectedSourceBranchWorktree = sourceBranchGroups.worktreeBranches.includes(sourceBranchSelectValue);
@@ -173,55 +144,10 @@ export function CreateWorkspaceDialogView({
     }
   };
 
-  const handleRenameWorkspace = async () => {
-    if (isCreatingWorkspace || !selectedWorkspace) {
-      return;
-    }
-
-    const normalizedName = name.trim();
-    const normalizedTargetBranch = targetBranch.trim();
-    if (!normalizedName || !normalizedTargetBranch) {
-      return;
-    }
-
-    const hasNameChanged = normalizedName !== selectedWorkspace.name.trim();
-    const hasBranchChanged = normalizedTargetBranch !== selectedWorkspace.branch.trim();
-    if (!hasNameChanged && !hasBranchChanged) {
-      return;
-    }
-
-    setIsCreatingWorkspace(true);
-    try {
-      if (hasNameChanged) {
-        renameWorkspace({
-          repoId: selectedProjectId,
-          workspaceId: selectedWorkspace.id,
-          name: normalizedName,
-        });
-      }
-      if (hasBranchChanged) {
-        await renameWorkspaceBranch({
-          repoId: selectedProjectId,
-          workspaceId: selectedWorkspace.id,
-          branch: normalizedTargetBranch,
-        });
-      }
-      onClose();
-    } catch (error) {
-      console.error("Failed to rename workspace from dialog", getErrorMessage(error));
-    } finally {
-      setIsCreatingWorkspace(false);
-    }
-  };
-
-  const handleSubmit = () => {
-    void (isRenameMode ? handleRenameWorkspace() : handleCreateWorkspace());
-  };
-
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && canSubmitWorkspace) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && canCreateWorkspace) {
       event.preventDefault();
-      handleSubmit();
+      void handleCreateWorkspace();
     }
   };
 
@@ -234,11 +160,10 @@ export function CreateWorkspaceDialogView({
       maxWidth="sm"
       slotProps={{ paper: { sx: { borderRadius: 3 } } }}
     >
-      <DialogTitle sx={{ pb: 1 }}>{dialogTitle}</DialogTitle>
+      <DialogTitle sx={{ pb: 1 }}>{t("workspace.create.title")}</DialogTitle>
       <DialogContent sx={{ p: 2.5 }}>
         <Stack spacing={2}>
           <ProjectAndSourceBranchSection
-            isRenameMode={isRenameMode}
             selectableProjects={selectableProjects}
             selectedProjectId={selectedProjectId}
             onProjectChange={setSelectedProjectId}
@@ -259,37 +184,35 @@ export function CreateWorkspaceDialogView({
             name={name}
             onNameChange={setName}
             targetBranch={targetBranch}
-            branchInputPlaceholder={branchInputPlaceholder}
+            branchInputPlaceholder={t("workspace.create.branchNameLabel")}
             onTargetBranchChange={(branch) => {
               setTargetBranch(branch);
               hasEditedTargetBranchRef.current = true;
             }}
           />
-          {!isRenameMode ? (
-            <NodeSelectorSection
-              selectedNodeId={selectedNodeId}
-              onNodeChange={setSelectedNodeId}
-              nodes={nodes}
-              nodesError={nodesError}
-              isCreatingWorkspace={isCreatingWorkspace}
-            />
-          ) : null}
-          {!isRenameMode ? (
-            <TaskRunSection
-              taskPrompt={taskPrompt}
-              onTaskPromptChange={setTaskPrompt}
-              taskModel={taskModel}
-              onTaskModelChange={setTaskModel}
-              isCreatingWorkspace={isCreatingWorkspace}
-              listAgentModels={listAgentModels}
-            />
-          ) : null}
+          <NodeSelectorSection
+            selectedNodeId={selectedNodeId}
+            onNodeChange={setSelectedNodeId}
+            nodes={nodes}
+            nodesError={nodesError}
+            isCreatingWorkspace={isCreatingWorkspace}
+          />
+          <TaskRunSection
+            taskPrompt={taskPrompt}
+            onTaskPromptChange={setTaskPrompt}
+            taskModel={taskModel}
+            onTaskModelChange={setTaskModel}
+            isCreatingWorkspace={isCreatingWorkspace}
+            listAgentModels={listAgentModels}
+          />
           <WorkspaceDialogSubmitButton
-            submitLabel={submitLabel}
+            submitLabel={t("workspace.actions.create")}
             submitShortcutLabel={submitShortcutLabel}
             isCreatingWorkspace={isCreatingWorkspace}
-            disabled={!canSubmitWorkspace}
-            onClick={handleSubmit}
+            disabled={!canCreateWorkspace}
+            onClick={() => {
+              void handleCreateWorkspace();
+            }}
           />
         </Stack>
       </DialogContent>

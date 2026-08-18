@@ -18,8 +18,6 @@ type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUs
 type UseCreateWorkspaceDialogStateInput = {
   open: boolean;
   projectId: string;
-  workspaceId?: string;
-  isRenameMode: boolean;
   organizationId: string | undefined;
   daemonId: string | undefined;
   projects: WorkspaceProjectRecord[];
@@ -57,7 +55,6 @@ export type UseCreateWorkspaceDialogStateResult = {
   nodesError: string;
   resetDraftInputs: () => void;
   selectedProject: WorkspaceProjectRecord | undefined;
-  selectedWorkspace: WorkspaceItem | undefined;
   selectedProjectBranchListPath: string;
   defaultBranchPrefix: string;
   taskPrompt: string;
@@ -70,8 +67,6 @@ export type UseCreateWorkspaceDialogStateResult = {
 export function useCreateWorkspaceDialogState({
   open,
   projectId,
-  workspaceId,
-  isRenameMode,
   organizationId,
   daemonId,
   projects,
@@ -104,9 +99,6 @@ export function useCreateWorkspaceDialogState({
   const [taskModel, setTaskModel] = useState("");
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
-  const selectedWorkspace = workspaces.find(
-    (workspace) => workspace.id === workspaceId && workspace.repoId === selectedProjectId && workspace.kind !== "local",
-  );
   const selectedProjectBranchListPath =
     selectedProject?.localPath?.trim() || selectedProject?.path?.trim() || selectedProject?.worktreePath?.trim() || "";
   const selectedProjectBranchListWorkspaceId =
@@ -116,7 +108,7 @@ export function useCreateWorkspaceDialogState({
         workspace.kind !== "local" &&
         workspace.worktreePath?.trim() === selectedProjectBranchListPath,
     )?.id ?? "";
-  const gitAuthorNamePath = open && !isRenameMode && prefixMode === "user" ? selectedProjectBranchListPath : "";
+  const gitAuthorNamePath = open && prefixMode === "user" ? selectedProjectBranchListPath : "";
   const resolvedGitUserName = useGitAuthorName(gitAuthorNamePath);
   const resolvedPrefix = resolveGitBranchPrefix({
     prefixMode,
@@ -157,7 +149,7 @@ export function useCreateWorkspaceDialogState({
   }, [open, projectId, projects]);
 
   useEffect(() => {
-    if (!open || isRenameMode || !organizationId) {
+    if (!open || !organizationId) {
       setNodes([]);
       setNodesError("");
       setSelectedNodeId("");
@@ -186,10 +178,10 @@ export function useCreateWorkspaceDialogState({
     return () => {
       isCancelled = true;
     };
-  }, [isRenameMode, open, organizationId]);
+  }, [open, organizationId]);
 
   useEffect(() => {
-    if (!open || isRenameMode || !nodes || nodes.length === 0) {
+    if (!open || !nodes || nodes.length === 0) {
       return;
     }
     setSelectedNodeId((currentNodeId) => {
@@ -205,30 +197,18 @@ export function useCreateWorkspaceDialogState({
       const fallbackNode = nodes.find((node) => node.canUse && node.isOnline);
       return fallbackNode?.id ?? "";
     });
-  }, [daemonId, isRenameMode, nodes, open]);
+  }, [daemonId, nodes, open]);
 
   useEffect(() => {
-    if (!open || hasEditedTargetBranchRef.current || isRenameMode) {
+    if (!open || hasEditedTargetBranchRef.current) {
       return;
     }
     const nextTargetBranch = suggestTargetBranchName(name, defaultBranchPrefix);
     setTargetBranch((currentValue) => (currentValue === nextTargetBranch ? currentValue : nextTargetBranch));
-  }, [defaultBranchPrefix, isRenameMode, name, open]);
+  }, [defaultBranchPrefix, name, open]);
 
   useEffect(() => {
-    if (!open || !selectedProjectBranchListPath || isRenameMode) {
-      const renameSourceBranch = selectedWorkspace?.sourceBranch?.trim() ?? "";
-      if (isRenameMode && open) {
-        setSourceBranchOptions(renameSourceBranch ? [renameSourceBranch] : []);
-        setSourceBranchGroups({
-          localBranches: renameSourceBranch ? [renameSourceBranch] : [],
-          worktreeBranches: [],
-          remoteBranches: [],
-        });
-        setSourceBranch(renameSourceBranch);
-        setIsLoadingSourceBranches(false);
-        return;
-      }
+    if (!open || !selectedProjectBranchListPath) {
       setSourceBranchOptions([]);
       setSourceBranchGroups({
         localBranches: [],
@@ -291,24 +271,7 @@ export function useCreateWorkspaceDialogState({
     return () => {
       isCancelled = true;
     };
-  }, [
-    isRenameMode,
-    listGitBranches,
-    open,
-    selectedProject?.defaultBranch,
-    selectedProjectBranchListPath,
-    selectedProjectBranchListWorkspaceId,
-    selectedWorkspace?.sourceBranch,
-  ]);
-
-  useEffect(() => {
-    if (!open || !isRenameMode) {
-      return;
-    }
-
-    setName(selectedWorkspace?.name ?? "");
-    setTargetBranch(selectedWorkspace?.branch ?? "");
-  }, [isRenameMode, open, selectedWorkspace?.branch, selectedWorkspace?.name]);
+  }, [listGitBranches, open, selectedProject?.defaultBranch, selectedProjectBranchListPath, selectedProjectBranchListWorkspaceId]);
 
   return {
     selectedProjectId,
@@ -333,7 +296,6 @@ export function useCreateWorkspaceDialogState({
     nodesError,
     resetDraftInputs,
     selectedProject,
-    selectedWorkspace,
     selectedProjectBranchListPath,
     defaultBranchPrefix,
     taskPrompt,

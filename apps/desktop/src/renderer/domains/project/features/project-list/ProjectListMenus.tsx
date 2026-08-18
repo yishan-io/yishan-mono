@@ -1,6 +1,6 @@
 import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
 import type { GitPullRequest, GitPullRequestSummary } from "@renderer/domains/git";
-import { CreateWorkspaceDialogView } from "@renderer/domains/workspace";
+import { CreateWorkspaceDialogView, RenameWorkspaceDialogView } from "@renderer/domains/workspace";
 import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
 import type { PendingWorkspaceDeletion } from "@renderer/domains/workspace";
@@ -400,8 +400,7 @@ export function ProjectListMenus({
           setCreateWorkspaceProjectId("");
         }}
       />
-      <CreateWorkspaceDialogView
-        mode="rename"
+      <RenameWorkspaceDialogView
         open={Boolean(renameWorkspaceContext)}
         projectId={renameWorkspaceContext?.projectId ?? ""}
         workspaceId={renameWorkspaceContext?.workspaceId ?? ""}

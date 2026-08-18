@@ -1,6 +1,6 @@
-import type { TabStoreState } from "../domains/workbench/state/tabStore";
+import type { WorkbenchTab } from "./types";
 
-type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
+type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 
 /**
  * Narrows one tab union entry to a terminal tab with a non-empty bound session id.
@@ -11,7 +11,7 @@ type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
  * ```
  */
 export function isTerminalTabWithSessionId(
-  tab: TabStoreState["tabs"][number],
+  tab: WorkbenchTab,
 ): tab is TerminalTab & { data: TerminalTab["data"] & { sessionId: string } } {
   return tab.kind === "terminal" && Boolean(tab.data.sessionId?.trim());
 }
