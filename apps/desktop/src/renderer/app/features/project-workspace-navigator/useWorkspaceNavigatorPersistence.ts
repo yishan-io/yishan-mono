@@ -1,7 +1,7 @@
 import { getProjectListPreferences, setProjectListPreferences } from "@renderer/domains/project";
+import type { ProjectListPreference } from "@renderer/domains/project";
 import { useEffect, useRef } from "react";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import {
   EMPTY_FOLD_STATE,
   EMPTY_ORDER_STATE,

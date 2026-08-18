@@ -1,4 +1,3 @@
-import { tabStore } from "@renderer/domains/workbench";
 import {
   appendChatMessages as appendChatMessagesCommand,
   closeAgentSession as closeAgentSessionCommand,
@@ -59,25 +58,23 @@ import {
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
 } from "@renderer/domains/git";
-import { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
   previewNotification as previewNotificationCommand,
   updateNotificationPreferences as updateNotificationPreferencesCommand,
 } from "@renderer/domains/notification";
-import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
 import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,
   setOverviewTimeRange as setOverviewTimeRangeCommand,
 } from "@renderer/domains/overview";
 import {
+  type WorkspaceProjectRecord,
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
   updateProjectConfig as updateProjectConfigCommand,
-  type WorkspaceProjectRecord,
 } from "@renderer/domains/project";
 import {
   createScheduledJob as createScheduledJobCommand,
@@ -88,11 +85,6 @@ import {
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
 } from "@renderer/domains/scheduled-job";
-import {
-  getRemoteHealthStatus as getRemoteHealthStatusCommand,
-  getSessionBootstrapData as getSessionBootstrapDataCommand,
-  resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../domains/session";
 import { listCLIToolStatuses as listCLIToolStatusesCommand } from "@renderer/domains/settings";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
@@ -111,6 +103,7 @@ import {
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
 } from "@renderer/domains/terminal";
+import { tabStore } from "@renderer/domains/workbench";
 import {
   activateProject as activateProjectCommand,
   activateWorkspace as activateWorkspaceCommand,
@@ -146,6 +139,13 @@ import {
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "@renderer/domains/workspace";
+import { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
+import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
+import {
+  getRemoteHealthStatus as getRemoteHealthStatusCommand,
+  getSessionBootstrapData as getSessionBootstrapDataCommand,
+  resetAuthExpiredState as resetAuthExpiredStateCommand,
+} from "../../domains/session";
 import {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,

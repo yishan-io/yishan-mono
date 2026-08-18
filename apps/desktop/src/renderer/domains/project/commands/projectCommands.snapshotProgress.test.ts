@@ -31,9 +31,16 @@ vi.mock("../../../rpc/rpcTransport", () => ({
     workspace: {
       listLocalFolders: rpcMocks.listLocalFolders,
     },
-    project: {
-      listByOrg: rpcMocks.listProjects,
+  })),
+  getDaemonTransport: vi.fn(async () => ({
+    invoke: async (method: string, params?: { organizationId?: string }) => {
+      if (method === "project.listWithWorkspaces") {
+        return rpcMocks.listProjects(params);
+      }
+      return undefined;
     },
+    workspaceIdByWorktreePath: new Map(),
+    resolveWorkspaceId: async () => "",
   })),
 }));
 

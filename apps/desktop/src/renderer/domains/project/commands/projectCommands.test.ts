@@ -2,12 +2,12 @@
 
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFlow";
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
-import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { projectStore } from "../state/projectStore";
@@ -64,9 +64,16 @@ vi.mock("../../../rpc/rpcTransport", () => ({
       createLocalFolder: rpcMocks.workspaceCreateLocalFolder,
       listLocalFolders: rpcMocks.workspaceListLocalFolders,
     },
-    project: {
-      listByOrg: rpcMocks.listProjects,
+  })),
+  getDaemonTransport: vi.fn(async () => ({
+    invoke: async (method: string, params?: { organizationId?: string }) => {
+      if (method === "project.listWithWorkspaces") {
+        return rpcMocks.listProjects(params);
+      }
+      return undefined;
     },
+    workspaceIdByWorktreePath: new Map(),
+    resolveWorkspaceId: async () => "",
   })),
 }));
 
@@ -130,7 +137,7 @@ describe("projectCommands", () => {
 
     await loadWorkspaceSnapshot();
 
-    expect(rpcMocks.listProjects).toHaveBeenCalledWith("org-1", { withWorkspaces: true });
+    expect(rpcMocks.listProjects).toHaveBeenCalledWith({ organizationId: "org-1" });
     // Projects reconcile into the project store; workspaces (view models) into
     // the workspace store (D8: workspace store no longer holds projects).
     expect(projectStore.getState().projects).toEqual([expect.objectContaining({ id: "project-1", name: "Project 1" })]);

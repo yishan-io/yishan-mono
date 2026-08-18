@@ -767,20 +767,3 @@ export type ComputerPermissionStatus = {
   prompted?: boolean;
   remediation?: string[];
 };
-
-/** One hierarchy mode's left-pane order/fold state (order hints; missing ids are last). */
-export type ProjectListModePreference = {
-  projectOrderIds: string[];
-  nodeOrderByParentId: Record<string, string[]>;
-  foldedProjectIds: string[];
-  foldedNodeKeys: string[];
-};
-
-/** One org's persisted left-pane list state, versioned for forward compatibility. */
-export type ProjectListPreference = {
-  version: number;
-  by_project: ProjectListModePreference;
-  by_node: ProjectListModePreference;
-  /** Workspace order shared across modes, keyed by `${projectId}:${nodeId}`. */
-  workspaceOrderByParentId: Record<string, string[]>;
-};

@@ -1,7 +1,6 @@
 import { generateId } from "../helpers/generateId";
 import { DaemonFileClient } from "./daemonFileClient";
 import { DaemonGitClient } from "./daemonGitClient";
-import { DaemonProjectClient } from "./daemonProjectClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
 import { DaemonWorkspaceClient } from "./daemonWorkspaceClient";
@@ -9,9 +8,11 @@ import {
   asRecord,
   buildRequest,
   buildUnsupportedMethodError,
+  normalizeWorktreePath,
   parseJsonRpcMessage,
   readOptionalString,
 } from "./helpers";
+import type { DaemonTransport } from "./types";
 
 const RPC_REQUEST_TIMEOUT_MS = 30_000;
 // workspace.create can take a very long time for large repos (shallow fetch +
@@ -60,7 +61,6 @@ export class DaemonClient {
   private readonly _fileClient: DaemonFileClient;
   private readonly _gitClient: DaemonGitClient;
   private readonly _terminalClient: DaemonTerminalClient;
-  private readonly _projectClient: DaemonProjectClient;
 
   constructor(options: {
     openSocket: () => Promise<WebSocket>;
@@ -82,14 +82,18 @@ export class DaemonClient {
       getSocketReadyState: () => this.socket?.readyState ?? null,
       subscriptionsById: this.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
     });
-    this._projectClient = new DaemonProjectClient(invoke);
   }
 
-  readonly project = {
-    listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) => this._projectClient.listByOrg(orgId, opts),
-    getListPreferences: (orgId: string) => this._projectClient.getListPreferences(orgId),
-    setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) =>
-      this._projectClient.setListPreferences(orgId, preferences),
+  /**
+   * Transport core exposed to Domain RPC adapters (desktop7 Phase 24).
+   * resolveWorkspaceId is a Phase 25 residue: the root terminal client still
+   * needs worktree→id resolution until the terminal Domain migrates; the
+   * workspace Domain owns the canonical implementation.
+   */
+  readonly transport: DaemonTransport = {
+    invoke: (method, params, timeoutMs) => this.invoke(method, params, timeoutMs),
+    workspaceIdByWorktreePath: this.workspaceIdByWorktreePath,
+    resolveWorkspaceId: (input) => this.resolveWorkspaceId(input),
   };
 
   readonly tokenUsage = {};
@@ -476,8 +480,89 @@ export class DaemonClient {
     return await this.sendRequest(method, params, timeoutMs);
   }
 
-  private resolveWorkspaceId(input: unknown): Promise<string> {
-    return this._workspaceClient.resolveId(input);
+  /**
+   * Resolves a worktree path / cwd / workspaceId to one workspace id.
+   * Phase 25 residue: mirrors the workspace Domain's resolveId so the root
+   * terminal client can map worktree paths while it still lives in root RPC.
+   */
+  private async resolveWorkspaceId(input: unknown): Promise<string> {
+    const record = asRecord(input);
+    if (!record) {
+      throw new Error("workspace input is required");
+    }
+
+    const workspaceId = readOptionalString(record.workspaceId);
+    const workspaceWorktreePath = readOptionalString(record.workspaceWorktreePath);
+    if (workspaceWorktreePath) {
+      return await this.ensureWorkspaceIdByWorktreePath(workspaceWorktreePath, workspaceId);
+    }
+
+    const cwd = readOptionalString(record.cwd);
+    if (cwd) {
+      return await this.ensureWorkspaceIdByWorktreePath(cwd, workspaceId);
+    }
+
+    if (workspaceId) {
+      return workspaceId;
+    }
+
+    throw new Error("workspaceId or workspaceWorktreePath is required");
+  }
+
+  private async ensureWorkspaceIdByWorktreePath(worktreePath: string, preferredWorkspaceId?: string): Promise<string> {
+    const normalizedWorktreePath = normalizeWorktreePath(worktreePath);
+    const normalizedPreferredWorkspaceId = preferredWorkspaceId?.trim();
+    if (normalizedPreferredWorkspaceId) {
+      const workspaces = await this.listTransportWorkspaces();
+      for (const workspace of workspaces) {
+        this.workspaceIdByWorktreePath.set(workspace.path, workspace.id);
+      }
+
+      const existingPreferredWorkspace = workspaces.find(
+        (workspace) => workspace.id === normalizedPreferredWorkspaceId,
+      );
+      if (existingPreferredWorkspace) {
+        return existingPreferredWorkspace.id;
+      }
+
+      throw new Error(`daemon workspace not found for id: ${normalizedPreferredWorkspaceId}`);
+    }
+
+    const cachedWorkspaceId = this.workspaceIdByWorktreePath.get(normalizedWorktreePath);
+    if (cachedWorkspaceId) {
+      return cachedWorkspaceId;
+    }
+
+    const workspaces = await this.listTransportWorkspaces();
+    for (const workspace of workspaces) {
+      this.workspaceIdByWorktreePath.set(workspace.path, workspace.id);
+    }
+
+    const existingWorkspace = workspaces.find((workspace) => workspace.path === normalizedWorktreePath);
+    if (existingWorkspace) {
+      return existingWorkspace.id;
+    }
+
+    throw new Error(`daemon workspace is not open for path: ${normalizedWorktreePath}`);
+  }
+
+  private async listTransportWorkspaces(): Promise<Array<{ id: string; path: string }>> {
+    const result = await this.invoke("list");
+    if (!Array.isArray(result)) {
+      return [];
+    }
+
+    const workspaces: Array<{ id: string; path: string }> = [];
+    for (const candidate of result) {
+      const record = asRecord(candidate);
+      const id = readOptionalString(record?.id);
+      const path = readOptionalString(record?.path);
+      if (!id || !path) {
+        continue;
+      }
+      workspaces.push({ id, path: normalizeWorktreePath(path) });
+    }
+    return workspaces;
   }
 
   private async startRawSubscription(options: Rpc.StartSubscriptionOptions): Promise<string> {

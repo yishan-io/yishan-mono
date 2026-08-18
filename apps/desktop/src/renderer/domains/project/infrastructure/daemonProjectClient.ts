@@ -1,6 +1,23 @@
-import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../api";
-import type { ProjectListModePreference, ProjectListPreference } from "./daemonTypes";
-import { asRecord, readOptionalBoolean, readOptionalString } from "./helpers";
+import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../../../api";
+import { asRecord, readOptionalBoolean, readOptionalString } from "../../../rpc/helpers";
+import { getDaemonTransport } from "../../../rpc/rpcTransport";
+
+/** One hierarchy mode's left-pane order/fold state (order hints; missing ids are last). */
+export type ProjectListModePreference = {
+  projectOrderIds: string[];
+  nodeOrderByParentId: Record<string, string[]>;
+  foldedProjectIds: string[];
+  foldedNodeKeys: string[];
+};
+
+/** One org's persisted left-pane list state, versioned for forward compatibility. */
+export type ProjectListPreference = {
+  version: number;
+  by_project: ProjectListModePreference;
+  by_node: ProjectListModePreference;
+  /** Workspace order shared across modes, keyed by `${projectId}:${nodeId}`. */
+  workspaceOrderByParentId: Record<string, string[]>;
+};
 
 type InvokeFn = (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
 
@@ -154,4 +171,17 @@ export class DaemonProjectClient {
       updatedAt: readOptionalString(record?.updatedAt) ?? "",
     };
   }
+}
+
+let cachedProjectRpc: DaemonProjectClient | null = null;
+
+/**
+ * Lazily resolves the project Domain RPC adapter over the root transport
+ * (dependency direction: Domain RPC adapter → root RPC transport).
+ */
+export async function getProjectRpc(): Promise<DaemonProjectClient> {
+  if (!cachedProjectRpc) {
+    cachedProjectRpc = new DaemonProjectClient((await getDaemonTransport()).invoke);
+  }
+  return cachedProjectRpc;
 }

@@ -2,7 +2,7 @@ import type { DesktopBridge, DesktopHostBridge, DesktopRpcEventEnvelope } from "
 import { DaemonClient } from "./daemonClient";
 import type { ApiNamespace } from "./daemonTypes";
 import { delay } from "./helpers";
-import type { ApiSubscriptionHandlers, DaemonRpcClient } from "./types";
+import type { ApiSubscriptionHandlers, DaemonRpcClient, DaemonTransport } from "./types";
 
 type DesktopRpcEventListener = (envelope: DesktopRpcEventEnvelope) => void;
 type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
@@ -348,6 +348,22 @@ function createRpcPathProxy(pathSegments: string[]): unknown {
 }
 
 /** Returns one cached dynamic API client for renderer commands. */
+/**
+ * Returns the raw transport core for Domain RPC adapters (desktop7 Phase 24).
+ * Domain Infrastructure is the only layer that may import this alongside
+ * app/events and app/runtime (Phase 27 rule); Domain commands use their own
+ * adapter over this transport.
+ */
+export async function getDaemonTransport(): Promise<DaemonTransport> {
+  const transportClient = await getDaemonTransportClient();
+  return transportClient.transport;
+}
+
+/**
+ * Returns the legacy composed client surface. Domain clients migrate to
+ * Domain Infrastructure one phase at a time (Phase 24: project/workspace,
+ * Phase 25: file/git/terminal); this facade shrinks with each migration.
+ */
 export async function getDaemonClient(): Promise<DaemonRpcClient> {
   if (!daemonRpcClientPromise) {
     daemonRpcClientPromise = getDaemonTransportClient().then<DaemonRpcClient>((transportClient) => {
@@ -382,7 +398,6 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         customize: proxyClient.customize,
         memory: proxyClient.memory,
         pi: proxyClient.pi,
-        project: transportClient.project,
         tokenUsage: transportClient.tokenUsage,
         context: {
           getState: () => transportClient.context.getState(),

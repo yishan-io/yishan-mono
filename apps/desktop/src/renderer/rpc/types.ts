@@ -6,6 +6,15 @@ export type ApiSubscriptionHandlers = {
   onError?: (error: unknown) => void;
 };
 
+export type DaemonTransport = {
+  /** Sends one raw JSON-RPC method over the wire (transport-level, no namespace parsing). */
+  invoke: (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
+  /** Shared worktree-path → workspace-id cache (populated by workspace operations). */
+  workspaceIdByWorktreePath: Map<string, string>;
+  /** Resolves a worktree path / cwd / workspaceId to one workspace id (Phase 24: terminal bridge). */
+  resolveWorkspaceId: (input: unknown) => Promise<string>;
+};
+
 type DaemonRpcSubscription = {
   unsubscribe: () => void;
 };
@@ -242,11 +251,6 @@ export type DaemonRpcClient = {
     status: (input?: unknown) => Promise<{ enabled: boolean }>;
     updateConfig: (input: Rpc.MemoryUpdateConfigInput) => Promise<{ ok: boolean }>;
     getConfig: (input?: unknown) => Promise<Rpc.MemoryConfig>;
-  };
-  project: {
-    listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) => Promise<unknown>;
-    getListPreferences: (orgId: string) => Promise<Rpc.ProjectListPreference>;
-    setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) => Promise<{ ok: boolean }>;
   };
   tokenUsage: {};
 };

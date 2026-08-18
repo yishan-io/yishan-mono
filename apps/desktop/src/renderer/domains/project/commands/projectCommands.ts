@@ -3,11 +3,11 @@ import { incrementGitRefreshVersion } from "@renderer/domains/git";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
+import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import { api } from "../../../api";
 import type { ProjectWithWorkspacesRecord } from "../../../api";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
-import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import {
   addWorkspace as applyAddWorkspace,
   buildWorkspaceOpenProjectEntries,
@@ -17,8 +17,8 @@ import {
   syncTabStoreWithWorkspace,
 } from "../../../domains/workspace";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { type ProjectListPreference, getProjectRpc } from "../infrastructure/daemonProjectClient";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../state/projectStore";
 
@@ -65,10 +65,19 @@ export async function inspectLocalProjectSource(path: string): Promise<{
   };
 }
 
+/** Loads one organization's projects with their workspaces from the daemon. */
+export async function listProjectsByOrg(
+  organizationId: string,
+  opts?: { withWorkspaces?: boolean },
+): Promise<ProjectWithWorkspacesRecord[]> {
+  const projectRpc = await getProjectRpc();
+  return await projectRpc.listByOrg(organizationId, opts);
+}
+
 /** Loads one organization's project-list order/fold preferences from the daemon. */
 export async function getProjectListPreferences(organizationId: string) {
-  const client = await getDaemonClient();
-  return client.project.getListPreferences(organizationId);
+  const projectRpc = await getProjectRpc();
+  return projectRpc.getListPreferences(organizationId);
 }
 
 /** Persists one organization's project-list order/fold preferences to the daemon. */
@@ -76,8 +85,8 @@ export async function setProjectListPreferences(
   organizationId: string,
   preferences: ProjectListPreference,
 ): Promise<void> {
-  const client = await getDaemonClient();
-  await client.project.setListPreferences(organizationId, preferences);
+  const projectRpc = await getProjectRpc();
+  await projectRpc.setListPreferences(organizationId, preferences);
 }
 
 /** Creates one project in backend, then applies it into the local legacy store shape. */

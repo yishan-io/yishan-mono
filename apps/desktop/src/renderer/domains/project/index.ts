@@ -18,10 +18,15 @@ export {
   deleteProject,
   getProjectListPreferences,
   inspectLocalProjectSource,
+  listProjectsByOrg,
   setProjectListPreferences,
   updateProjectConfig,
 } from "./commands/projectCommands";
 export { getDefaultWorktreeLocation, openLocalFolderDialog } from "./infrastructure/projectHostCommands";
+export type {
+  ProjectListModePreference,
+  ProjectListPreference,
+} from "./infrastructure/daemonProjectClient";
 export {
   selectLastUsedExternalAppId,
   selectProjectById,

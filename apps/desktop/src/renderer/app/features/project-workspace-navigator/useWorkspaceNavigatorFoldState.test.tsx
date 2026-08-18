@@ -19,8 +19,8 @@ const EMPTY_PREFERENCES = {
 };
 
 const mocked = vi.hoisted(() => {
-  const getListPreferences = vi.fn(async () => EMPTY_PREFERENCES);
-  const setListPreferences = vi.fn(async () => ({ ok: true }));
+  const getListPreferences = vi.fn(async (_params?: unknown) => EMPTY_PREFERENCES);
+  const setListPreferences = vi.fn(async (_params?: unknown) => ({ ok: true }));
   const sessionState = { selectedOrganizationId: "org-1" };
   const workspaceState = {
     displayProjectIds: ["project-1", "project-2"] as string[],
@@ -68,11 +68,19 @@ vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
 vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    project: {
-      getListPreferences: mocked.getListPreferences,
-      setListPreferences: mocked.setListPreferences,
+  getDaemonClient: vi.fn(async () => ({})),
+  getDaemonTransport: vi.fn(async () => ({
+    invoke: async (method: string, params?: { organizationId?: string; preferences?: unknown }) => {
+      if (method === "project.getListPreferences") {
+        return mocked.getListPreferences(params);
+      }
+      if (method === "project.setListPreferences") {
+        return mocked.setListPreferences(params);
+      }
+      return undefined;
     },
+    workspaceIdByWorktreePath: new Map(),
+    resolveWorkspaceId: async () => "",
   })),
 }));
 
@@ -109,7 +117,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mocked.getListPreferences).toHaveBeenCalledWith("org-1");
+    expect(mocked.getListPreferences).toHaveBeenCalledWith({ organizationId: "org-1" });
     expect(result.current.projectOrderIds).toEqual(["project-2", "project-1"]);
     expect(result.current.nodeOrderByParentId["project:project-1"]).toEqual(["node-a"]);
     expect(result.current.foldedProjectIds).toEqual(["project-2"]);
@@ -177,13 +185,13 @@ describe("useWorkspaceNavigatorFoldState", () => {
     });
 
     expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith(
-      "org-1",
-      expect.objectContaining({
+    expect(mocked.setListPreferences).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      preferences: expect.objectContaining({
         by_project: expect.objectContaining({ projectOrderIds: ["project-2", "project-1"] }),
         by_node: expect.objectContaining({ projectOrderIds: [] }),
       }),
-    );
+    });
   });
 
   it("refetches and resets state when the organization switches", async () => {
@@ -212,7 +220,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mocked.getListPreferences).toHaveBeenLastCalledWith("org-2");
+    expect(mocked.getListPreferences).toHaveBeenLastCalledWith({ organizationId: "org-2" });
     expect(result.current.projectOrderIds).toEqual([]);
   });
 
@@ -235,13 +243,13 @@ describe("useWorkspaceNavigatorFoldState", () => {
       await vi.advanceTimersByTimeAsync(600);
     });
     expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith(
-      "org-1",
-      expect.objectContaining({
+    expect(mocked.setListPreferences).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      preferences: expect.objectContaining({
         version: 1,
         by_project: expect.objectContaining({ projectOrderIds: ["project-3"] }),
       }),
-    );
+    });
   });
 
   it("never pushes before a successful fetch so persisted state is not overwritten", async () => {
@@ -282,12 +290,12 @@ describe("useWorkspaceNavigatorFoldState", () => {
     });
 
     expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith(
-      "org-1",
-      expect.objectContaining({
+    expect(mocked.setListPreferences).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      preferences: expect.objectContaining({
         by_project: expect.objectContaining({ projectOrderIds: ["project-1", "project-2"] }),
       }),
-    );
+    });
   });
 
   it("cancels a pending push when the organization switches", async () => {
@@ -329,11 +337,11 @@ describe("useWorkspaceNavigatorFoldState", () => {
     await act(async () => {});
 
     expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith(
-      "org-1",
-      expect.objectContaining({
+    expect(mocked.setListPreferences).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      preferences: expect.objectContaining({
         by_project: expect.objectContaining({ projectOrderIds: ["project-1"] }),
       }),
-    );
+    });
   });
 });

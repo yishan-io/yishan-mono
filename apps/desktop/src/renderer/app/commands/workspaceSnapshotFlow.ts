@@ -1,4 +1,15 @@
+import { listProjectsByOrg, projectStore } from "@renderer/domains/project";
+import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import {
+  openFoldersForSnapshot,
+  reconcileWorkspaceSnapshot,
+  restoreFolderSelectionIfNeeded,
+  syncTabStoreWithWorkspace,
+  warmupWorkspacesForProjects,
+  workspaceCreateProgressStore,
+  workspaceStore,
+} from "@renderer/domains/workspace";
 /**
  * WorkspaceSnapshotFlow — the shared workspace-snapshot load.
  *
@@ -19,17 +30,6 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
  */
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
-import { projectStore } from "@renderer/domains/project";
-import { sessionStore } from "@renderer/domains/session";
-import {
-  openFoldersForSnapshot,
-  reconcileWorkspaceSnapshot,
-  restoreFolderSelectionIfNeeded,
-  syncTabStoreWithWorkspace,
-  warmupWorkspacesForProjects,
-  workspaceCreateProgressStore,
-  workspaceStore,
-} from "@renderer/domains/workspace";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 
 let latestWorkspaceSnapshotRequestId = 0;
@@ -75,10 +75,9 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       return;
     }
 
-    const daemonClient = await getDaemonClient();
-    const projectsWithWorkspaces = (await daemonClient.project.listByOrg(selectedOrganization.id, {
+    const projectsWithWorkspaces = await listProjectsByOrg(selectedOrganization.id, {
       withWorkspaces: true,
-    })) as ProjectWithWorkspacesRecord[];
+    });
     const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
 
@@ -122,6 +121,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     workbenchNavigationStore.getState().setActiveWorkspaceId(reconciled.selectedWorkspaceId);
 
     // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
+    const daemonClient = await getDaemonClient();
     const daemonFolders = await daemonClient.workspace.listLocalFolders();
 
     if (!isLatestWorkspaceSnapshotRequest(requestId)) {
