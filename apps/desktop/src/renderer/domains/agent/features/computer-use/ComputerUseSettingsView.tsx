@@ -6,11 +6,11 @@ import { LuGlobe } from "react-icons/lu";
 import {
   getComputerUsePermissions,
   openComputerUsePermissionSettings,
-} from "../../../../domains/settings/commands/settingsCommands";
+} from "../../commands/agentConfigCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import type { ComputerPermissionState, ComputerPermissionStatus } from "../../../../rpc/daemonTypes";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "@renderer/domains/settings";
 
 type PermissionRowKey = "accessibility" | "screenRecording" | "inputMonitoring" | "automation";
 

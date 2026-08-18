@@ -1,11 +1,7 @@
 import { Alert, Box, Button, Stack } from "@mui/material";
-import { ModelPickerMenu } from "@renderer/domains/agent";
-import { ProviderMark } from "@renderer/domains/agent";
-import {
-  buildModelPickerOption,
-  groupModelPickerOptionsByProvider,
-  stripProviderPrefix,
-} from "@renderer/domains/agent";
+import { ModelPickerMenu } from "../model-picker";
+import { ProviderMark } from "../model-picker/ProviderMark";
+import { buildModelPickerOption, groupModelPickerOptionsByProvider, stripProviderPrefix } from "../model-picker";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
@@ -13,7 +9,7 @@ import {
   getMemoryConfig,
   listAgentModelsForMemorySettings,
   updateMemoryConfig,
-} from "../../../../domains/settings/commands/settingsCommands";
+} from "../../commands/agentConfigCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { MemoryConfig } from "../../../../rpc/daemonTypes";
 import {
@@ -22,7 +18,7 @@ import {
   SettingsRows,
   SettingsSectionHeader,
   SettingsToggleRow,
-} from "../../ui/controls";
+} from "@renderer/domains/settings";
 
 const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
 

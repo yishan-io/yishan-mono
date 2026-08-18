@@ -1,10 +1,10 @@
 import { Box, Typography } from "@mui/material";
-import { AgentModelSelector } from "@renderer/domains/agent";
-import { splitModelId, stripProviderPrefix } from "@renderer/domains/agent";
-import { clampThinkingLevel, formatSupportedThinkingLevels, isThinkingLevelSupported } from "@renderer/domains/agent";
-import { getPiProviderDisplayName } from "@renderer/domains/agent";
-import { listAgentModels } from "@renderer/domains/agent";
-import type { AgentModel } from "@renderer/domains/agent";
+import { AgentModelSelector } from "../../features/agent-chat/session/AgentModelSelector";
+import { splitModelId, stripProviderPrefix } from "../model-picker";
+import { clampThinkingLevel, formatSupportedThinkingLevels, isThinkingLevelSupported } from "../../model/agentThinkingLevels";
+import { getPiProviderDisplayName } from "../../model/piProviders";
+import { listAgentModels } from "../../commands/agentCommands";
+import type { AgentModel } from "../../model/agentChatTypes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 

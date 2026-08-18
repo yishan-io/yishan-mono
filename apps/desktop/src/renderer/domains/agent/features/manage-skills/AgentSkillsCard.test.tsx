@@ -22,7 +22,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../domains/settings/commands/skillCommands", () => ({
+vi.mock("../../commands/agentSkillCommands", () => ({
   listSkills: () => mocked.listSkills(),
   addSkill: (source: string) => mocked.addSkill(source),
   removeSkill: (name: string) => mocked.removeSkill(name),

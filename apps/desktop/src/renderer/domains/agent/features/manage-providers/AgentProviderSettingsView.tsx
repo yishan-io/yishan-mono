@@ -1,13 +1,14 @@
 import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { ProviderMark } from "@renderer/domains/agent";
-import { ProviderCredentialDialog, listPiProviders } from "@renderer/domains/agent";
-import { getPiProviderDisplayName, getPiProviderPinEnv } from "@renderer/domains/agent";
-import type { PiProviderStatus } from "@renderer/domains/agent";
+import { ProviderMark } from "../model-picker/ProviderMark";
+import { listPiProviders } from "../../commands/piProviderCommands";
+import { ProviderCredentialDialog } from "../../ui/credentials/ProviderCredentialDialog";
+import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../model/piProviders";
+import type { PiProviderStatus } from "../../commands/piProviderCommands";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
 import { useRefreshableLoader } from "../../../../ui/hooks/useRefreshableLoader";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "@renderer/domains/settings";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 
 type ProviderCredentialDialogTarget = {

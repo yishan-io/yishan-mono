@@ -16,7 +16,7 @@ import {
   createAgentDefinition,
   getAgentDefinitionDetail,
   updateAgentDefinition,
-} from "../../../../domains/settings/commands/customizeCommands";
+} from "../../commands/agentDefinitionCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";

@@ -1,9 +1,10 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
-import { getPiProviderDisplayName } from "@renderer/domains/agent";
+import { getPiProviderDisplayName } from "../../model/piProviders";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type PiProviderStatus, removePiProvider } from "@renderer/domains/agent";
+import { removePiProvider } from "../../commands/piProviderCommands";
+import type { PiProviderStatus } from "../../commands/piProviderCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 
 export function RemoveProviderDialog({

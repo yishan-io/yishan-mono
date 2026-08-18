@@ -52,7 +52,7 @@ const ServiceTokenSettingsView = lazy(() =>
   import("../account/ServiceTokenSettingsView").then((m) => ({ default: m.ServiceTokenSettingsView })),
 );
 const ComputerUseSettingsView = lazy(() =>
-  import("../computer-use/ComputerUseSettingsView").then((m) => ({ default: m.ComputerUseSettingsView })),
+  import("@renderer/domains/agent").then((m) => ({ default: m.ComputerUseSettingsView })),
 );
 const DaemonSettingsView = lazy(() =>
   import("../daemon/DaemonSettingsView").then((m) => ({ default: m.DaemonSettingsView })),
@@ -84,14 +84,14 @@ const WorkspaceSettingsView = lazy(() =>
 );
 
 const AgentProviderSettingsView = lazy(() =>
-  import("../agent-providers/AgentProviderSettingsView").then((m) => ({ default: m.AgentProviderSettingsView })),
+  import("@renderer/domains/agent").then((m) => ({ default: m.AgentProviderSettingsView })),
 );
 const CLISettingsView = lazy(() => import("../cli/CLISettingsView").then((m) => ({ default: m.CLISettingsView })));
 const CustomizeSettingsView = lazy(() =>
-  import("../customize/CustomizeSettingsView").then((m) => ({ default: m.CustomizeSettingsView })),
+  import("@renderer/domains/agent").then((m) => ({ default: m.CustomizeSettingsView })),
 );
 const MemorySettingsView = lazy(() =>
-  import("../memory/MemorySettingsView").then((m) => ({ default: m.MemorySettingsView })),
+  import("@renderer/domains/agent").then((m) => ({ default: m.MemorySettingsView })),
 );
 
 type SettingsSearchResult = {

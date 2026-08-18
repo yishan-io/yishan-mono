@@ -132,3 +132,38 @@ export {
   setChatCurrentModel,
   updateChatMessage,
 } from "./commands/chatCommands";
+// Agent configuration + definition commands (desktop7 Phase 23 — moved from Settings).
+export {
+  addSkill,
+  getSkillDetail,
+  listSkills,
+  removeSkill,
+  updateSkill,
+  updateAllSkills,
+} from "./commands/agentSkillCommands";
+export {
+  createAgentDefinition,
+  getAgentDefinitionDetail,
+  installExtension,
+  listAgentDefinitions,
+  listExtensions,
+  removeAgentDefinition,
+  removeExtension,
+  restoreAgentDefinition,
+  updateAgentDefinition,
+  updateExtension,
+} from "./commands/agentDefinitionCommands";
+export {
+  getComputerUsePermissions,
+  getMemoryConfig,
+  listAgentModelsForMemorySettings,
+  openComputerUsePermissionSettings,
+  updateMemoryConfig,
+} from "./commands/agentConfigCommands";
+
+// Agent administration UI composed by the Settings shell (desktop7 Phase 23).
+export { AgentProviderSettingsView } from "./features/manage-providers/AgentProviderSettingsView";
+export { SkillsSettingsView } from "./features/manage-skills/SkillsSettingsView";
+export { CustomizeSettingsView } from "./features/agent-definitions/CustomizeSettingsView";
+export { MemorySettingsView } from "./features/agent-memory/MemorySettingsView";
+export { ComputerUseSettingsView } from "./features/computer-use/ComputerUseSettingsView";

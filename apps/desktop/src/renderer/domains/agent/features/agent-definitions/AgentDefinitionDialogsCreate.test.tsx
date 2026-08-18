@@ -33,7 +33,7 @@ vi.mock("../../../../domains/agent/commands/agentCommands", () => ({
   listAgentModels: () => mocked.listAgentModels(),
 }));
 
-vi.mock("../../../../domains/settings/commands/customizeCommands", () => ({
+vi.mock("../../commands/agentDefinitionCommands", () => ({
   listAgentDefinitions: () => mocked.listAgentDefinitions(),
   getAgentDefinitionDetail: (name: string) => mocked.getAgentDefinitionDetail(name),
   createAgentDefinition: (input: {

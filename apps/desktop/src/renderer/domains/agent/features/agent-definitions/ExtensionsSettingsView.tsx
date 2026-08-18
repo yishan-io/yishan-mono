@@ -25,11 +25,11 @@ import {
   listExtensions,
   removeExtension,
   updateExtension,
-} from "../../../../domains/settings/commands/customizeCommands";
+} from "../../commands/agentDefinitionCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { PiExtensionInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { SettingsCard } from "../../ui/controls";
+import { SettingsCard } from "@renderer/domains/settings";
 
 const LOCAL_FILE_SOURCE = "local file";
 

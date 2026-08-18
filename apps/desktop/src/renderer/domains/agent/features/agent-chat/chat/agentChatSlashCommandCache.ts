@@ -1,4 +1,4 @@
-import { listSkills } from "@renderer/domains/settings";
+import { listSkills } from "../../../commands/agentSkillCommands";
 import type { SkillInfo } from "../../../../../rpc/daemonTypes";
 import { buildSubagentSlashCommands } from "./agentChatSlashCommandCatalog";
 import type { RichComposerSlashCommand } from "./composer/RichComposer";

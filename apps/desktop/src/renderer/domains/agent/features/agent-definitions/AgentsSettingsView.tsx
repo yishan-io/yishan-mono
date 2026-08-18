@@ -19,11 +19,11 @@ import {
   listAgentDefinitions,
   removeAgentDefinition,
   restoreAgentDefinition,
-} from "../../../../domains/settings/commands/customizeCommands";
+} from "../../commands/agentDefinitionCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { SettingsCard } from "../../ui/controls";
+import { SettingsCard } from "@renderer/domains/settings";
 import { AgentDetailDialog, ConfirmDialog, CreateAgentDialog } from "./AgentDefinitionDialogs";
 
 const AGENT_TABLE_SX = {

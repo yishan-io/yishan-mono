@@ -20,11 +20,11 @@ import {
   removeSkill,
   updateAllSkills,
   updateSkill,
-} from "../../../../domains/settings/commands/skillCommands";
+} from "../../commands/agentSkillCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { SkillInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { SettingsCard } from "../../ui/controls";
+import { SettingsCard } from "@renderer/domains/settings";
 import { AddSkillDialog, RemoveSkillDialog, SkillDetailDialog } from "./AgentSkillsCardDialogs";
 
 // Skills are installed/updated via the pi ecosystem (npm packages, `npx skill

@@ -8,7 +8,6 @@ export {
 } from "./hooks/useSettingsReadHooks";
 export { useCodeTheme } from "./hooks/useCodeTheme";
 export { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
-export { listSkills } from "./commands/skillCommands";
 export {
   type GitBranchPrefixMode,
   resolveGitBranchPrefix,
@@ -35,3 +34,4 @@ export {
 export { listCLIToolStatuses } from "./commands/cliToolCommands";
 
 export { SettingsView } from "./features/settings-shell/SettingsView";
+export type { CustomizeFocusItemId } from "./features/settings-shell/settingsSearchCatalog";
