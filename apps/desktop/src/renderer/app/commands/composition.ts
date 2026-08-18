@@ -78,7 +78,7 @@ import {
   previewNotification as previewNotificationCommand,
   updateNotificationPreferences as updateNotificationPreferencesCommand,
 } from "../../domains/notification/commands/notificationCommands";
-import { switchOrganization as switchOrganizationCommand } from "../../domains/organization/commands/orgCommands";
+import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
 import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,

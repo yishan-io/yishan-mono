@@ -20,11 +20,7 @@ import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
 import type { OrganizationMemberRecord } from "../../../api/types";
-import {
-  leaveOrg,
-  listOrganizationMembers,
-  removeOrgMember,
-} from "../../../domains/organization/commands/orgCommands";
+import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../../domains/organization";
 import { setSessionData as applySetSessionData } from "../../../domains/session";
 import {
   useCurrentUser,

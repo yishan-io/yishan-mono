@@ -49,7 +49,7 @@ export type KnownViolation = { rule: RuleName; file: string; phase: string };
  * Desktop phase completes; the test rejects rows tagged with any of these
  * phases, which prevents allowlist rows for completed phases.
  */
-export const COMPLETED_PHASES = ["P16", "D1", "D3"] as const;
+export const COMPLETED_PHASES = ["P16", "D1", "D3", "D4"] as const;
 
 export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- R6-state-layer (owning phase = the Domain that owns the store) ----
@@ -125,13 +125,10 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/ScheduledJobDetailFields.tsx", phase: "D15" },
   { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/ScheduledJobListItemView.tsx", phase: "D15" },
   { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/form/useScheduledJobFormState.ts", phase: "D15" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/AddOrgMemberDialog.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/AgentProviderSettingsView.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/AgentSkillsCardDialogs.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/GitWorkspaceSettingsView.tsx", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/MemberSettingsView.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/NodesSettingsView.tsx", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/settings/ui/PendingInvitesSection.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/ProviderCredentialDialog.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/RemoveProviderDialog.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/TerminalSettingsView.tsx", phase: "D16" },
@@ -226,7 +223,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R16-app-deep-into-domain", file: "app/events/index.ts", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/flows/workspaceSnapshotFlow.ts", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/routes/AppRoutes.tsx", phase: "D17" },
-  { rule: "R16-app-deep-into-domain", file: "app/routes/OnboardOrgView.tsx", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/routes/WorkspaceView.tsx", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/runtime/sessionBootstrap.ts", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/runtime/useShortcuts.ts", phase: "D17" },

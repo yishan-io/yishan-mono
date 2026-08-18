@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { BiX } from "react-icons/bi";
 
 import type { OrganizationInviteRecord } from "../../../api/types";
-import { cancelOrgInvite, listPendingInvites } from "../../../domains/organization/commands/orgCommands";
+import { cancelOrgInvite, listPendingInvites } from "../../../domains/organization";
 import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
 import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";
 import { SettingsCard, SettingsSectionHeader } from "./controls";

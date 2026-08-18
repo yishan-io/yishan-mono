@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { addOrgMember } from "../../../domains/organization/commands/orgCommands";
+import { addOrgMember } from "../../../domains/organization";
 
 type AddMemberRole = "member" | "admin";
 
