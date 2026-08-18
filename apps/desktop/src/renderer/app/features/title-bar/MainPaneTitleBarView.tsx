@@ -12,16 +12,19 @@ import { PaneToggleButton } from "@renderer/domains/workbench";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
-import { getMainWindowFullscreenState } from "../../app/commands/appCommands";
-import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../domains/project/model/projectTypes";
-import { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "../../domains/workspace/model/workspaceTypes";
-import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
-import { isFolderWorkspace } from "../../helpers/localFolder";
-import { getRendererPlatform } from "../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { DaemonVersionWarningControl } from "./DaemonVersionWarningControl";
-import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
+import { getMainWindowFullscreenState } from "../../../app/commands/appCommands";
+import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
+import {
+  resolveWorkspaceIdForProject,
+  resolveWorkspaceProjectId,
+} from "../../../domains/workspace/model/workspaceTypes";
+import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { DaemonVersionWarningControl } from "../launch/DaemonVersionWarningControl";
+import { WorkspacePortsMenuControl } from "../workspace-shell/WorkspacePortsMenuControl";
 import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
 import {
   AddProjectCommandDialog,

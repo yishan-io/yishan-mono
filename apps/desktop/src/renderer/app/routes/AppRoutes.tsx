@@ -1,7 +1,7 @@
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { SettingsView } from "../../domains/settings/features/settings-shell/SettingsView";
-import { WorkspaceOverlay } from "../ui/WorkspaceOverlay";
-import { AppShell } from "../ui/layout/AppShell";
+import { AppShell } from "../features/app-menu/AppShell";
+import { WorkspaceOverlay } from "../features/workspace-shell/WorkspaceOverlay";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
 /**

@@ -4,8 +4,8 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { tabStore } from "../../domains/workbench/state/tabStore";
-import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
+import { tabStore } from "../../../domains/workbench/state/tabStore";
+import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 
 const mocked = vi.hoisted(() => ({
@@ -22,7 +22,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     killTerminalProcess: mocked.killTerminalProcess,
     listDetectedPorts: mocked.listDetectedPorts,

@@ -4,8 +4,8 @@ import { ChangesTabView } from "@renderer/domains/git";
 import { PullRequestTabView } from "@renderer/domains/git";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/domains/workbench";
-import { isFolderWorkspace } from "../../helpers/localFolder";
-import { useSelectedWorkspaceWithProject } from "../selectors";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { useSelectedWorkspaceWithProject } from "../../selectors";
 
 export type RightPaneViewProps = {
   onToggleRightPane?: () => void;

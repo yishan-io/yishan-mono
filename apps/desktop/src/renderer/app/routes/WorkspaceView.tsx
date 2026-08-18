@@ -33,8 +33,6 @@ import {
   useWorkspaceCommands,
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
-import { LeftPaneView } from "../../app/ui/LeftPaneView";
-import { MainPaneView } from "../../app/ui/MainPaneView";
 import { AgentChatRecoveryCoordinator } from "../../domains/agent/runtime/agentChatRecovery";
 import { projectStore } from "../../domains/project/state/projectStore";
 import { sessionStore } from "../../domains/session";
@@ -47,6 +45,8 @@ import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { subscribeAppActionEvent } from "../../events";
 import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";
+import { LeftPaneView } from "../features/workspace-shell/LeftPaneView";
+import { MainPaneView } from "../features/workspace-shell/MainPaneView";
 import { OnboardingView } from "./OnboardingView";
 
 const LEFT_MIN_WIDTH = 240;

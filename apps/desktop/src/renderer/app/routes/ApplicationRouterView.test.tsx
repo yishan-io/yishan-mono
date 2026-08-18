@@ -107,7 +107,7 @@ vi.mock("../../ui/layout/AppBootstrapLoadingView", () => ({
   AppBootstrapLoadingView: () => <div data-testid="bootstrap-loading-view">bootstrap-loading</div>,
 }));
 
-vi.mock("../ui/layout/AppMenuView", () => ({
+vi.mock("../features/app-menu/AppMenuView", () => ({
   AppMenuView: () => <div data-testid="app-menu-view" />,
 }));
 

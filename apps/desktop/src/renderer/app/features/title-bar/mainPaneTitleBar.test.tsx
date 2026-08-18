@@ -2,9 +2,9 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../domains/project/model/projectTypes";
-import type { WorkspaceProjectRecord } from "../../domains/project/model/projectTypes";
-import type { WorkspaceItem } from "../../domains/workspace/model/workspaceTypes";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
+import type { WorkspaceProjectRecord } from "../../../domains/project/model/projectTypes";
+import type { WorkspaceItem } from "../../../domains/workspace/model/workspaceTypes";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 import { RepoSelectorMenu } from "./mainPaneTitleBarMenus";
@@ -84,13 +84,14 @@ const mocked = vi.hoisted(() => {
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
+  useInRouterContext: () => true,
 }));
 
-vi.mock("./DaemonVersionWarningControl", () => ({
+vi.mock("../launch/DaemonVersionWarningControl", () => ({
   DaemonVersionWarningControl: () => null,
 }));
 
-vi.mock("./WorkspacePortsMenuControl", () => ({
+vi.mock("../workspace-shell/WorkspacePortsMenuControl", () => ({
   WorkspacePortsMenuControl: () => null,
 }));
 
@@ -98,12 +99,12 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../domains/session/state/sessionStore", () => ({
+vi.mock("../../../domains/session/state/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
 
-vi.mock("../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: (typeof mocked.stateRef)["current"]) => unknown) =>
     selector(mocked.stateRef.current),
 }));
@@ -128,7 +129,7 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../domains/project/state/projectStore", () => {
+vi.mock("../../../domains/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
     selector({ projects: mocked.stateRef.current.projects ?? [] });
   (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
@@ -137,7 +138,7 @@ vi.mock("../../domains/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../domains/agent/state/chatStore", () => ({
+vi.mock("../../../domains/agent/state/chatStore", () => ({
   chatStore: (
     selector: (state: {
       workspaceAgentStatusByWorkspaceId: Record<string, unknown>;
@@ -146,7 +147,7 @@ vi.mock("../../domains/agent/state/chatStore", () => ({
   ) => selector({ workspaceAgentStatusByWorkspaceId: {}, workspaceUnreadToneByWorkspaceId: {} }),
 }));
 
-vi.mock("../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     activateProject: ({ projectId }: { projectId: string }) => {
       mocked.stateRef.current.selectedProjectId = projectId;
@@ -179,15 +180,15 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../app/commands/appCommands", () => ({
+vi.mock("../../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => Promise.resolve({ isFullscreen: false }),
 }));
 
-vi.mock("../../helpers/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../components/PaneToggleButton", () => ({
+vi.mock("../../../components/PaneToggleButton", () => ({
   PaneToggleButton: () => null,
 }));
 

@@ -24,9 +24,9 @@ import {
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
-import { useWorkbenchCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
-import { getRendererPlatform } from "../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
+import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
   if (step.status === "completed") {

@@ -39,7 +39,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../domains/agent/commands/agentChatSessionHistory", () => ({
+vi.mock("../../../domains/agent/commands/agentChatSessionHistory", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 
@@ -47,7 +47,7 @@ vi.mock("@renderer/domains/files", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
 }));
 
-vi.mock("../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     openTab: mocks.openTab,
     openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
@@ -71,11 +71,11 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../helpers/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: (id: string) => {
     if (id === "open-terminal") {
       return "⌘+T";
@@ -91,17 +91,17 @@ vi.mock("../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../../domains/workspace/state/workspaceCreateProgressStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: (selector: (state: { progressByWorkspaceId: Record<string, unknown> }) => unknown) =>
     selector({ progressByWorkspaceId: mocks.progressByWorkspaceId }),
 }));
 
-vi.mock("../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: { workspaces: Array<{ id: string; status?: string }> }) => unknown) =>
     selector({ workspaces: mocks.workspaces }),
 }));
 
-vi.mock("../../domains/settings/state/agentSettingsStore", () => ({
+vi.mock("../../../domains/settings/state/agentSettingsStore", () => ({
   agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
     selector({ customCommandByAgentKind: {} }),
 }));

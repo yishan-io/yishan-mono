@@ -16,10 +16,10 @@ import { TerminalView } from "@renderer/domains/terminal";
 import { TabPanel } from "@renderer/domains/workbench";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkbenchTab } from "../../domains/workbench/model/types";
-import { copyToClipboard } from "../../helpers/clipboard";
-import { getErrorMessage } from "../../helpers/errorHelpers";
-import type { FileCommandSurface, WorkbenchCommandSurface } from "../commands/useCommands";
+import type { WorkbenchTab } from "../../../domains/workbench/model/types";
+import { copyToClipboard } from "../../../helpers/clipboard";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
+import type { FileCommandSurface, WorkbenchCommandSurface } from "../../commands/useCommands";
 
 type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;

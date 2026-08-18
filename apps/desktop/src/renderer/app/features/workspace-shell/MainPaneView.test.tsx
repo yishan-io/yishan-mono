@@ -3,9 +3,12 @@
 import { WorkspacePaneVisibilityProvider } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fileTabContentStore } from "../../domains/files/state/fileTabContentStore";
-import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../domains/settings/state/agentSettingsStore";
-import type { SplitPaneNode } from "../../domains/workbench/model/split-pane";
+import { fileTabContentStore } from "../../../domains/files/state/fileTabContentStore";
+import {
+  AGENT_SETTINGS_STORE_STORAGE_KEY,
+  agentSettingsStore,
+} from "../../../domains/settings/state/agentSettingsStore";
+import type { SplitPaneNode } from "../../../domains/workbench/model/split-pane";
 import { MainPaneView } from "./MainPaneView";
 
 type MockLeafPane = {
@@ -54,12 +57,12 @@ vi.mock("react-router-dom", () => ({
   useInRouterContext: () => false,
 }));
 
-vi.mock("../../domains/session/state/sessionStore", () => ({
+vi.mock("../../../domains/session/state/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
 
-vi.mock("../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
@@ -107,7 +110,7 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../domains/project/state/projectStore", () => {
+vi.mock("../../../domains/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[]; displayProjectIds: string[] }) => unknown) =>
     selector({
       projects: (mocked.stateRef.current.projects as unknown[] | undefined) ?? [],
@@ -124,11 +127,11 @@ vi.mock("../../domains/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../domains/workbench/state/tabStore", () => ({
+vi.mock("../../../domains/workbench/state/tabStore", () => ({
   tabStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../domains/agent/state/chatStore", () => ({
+vi.mock("../../../domains/agent/state/chatStore", () => ({
   chatStore: (
     selector: (state: {
       workspaceUnreadToneByWorkspaceId: Record<string, "success" | "error">;
@@ -146,7 +149,7 @@ vi.mock("../../domains/agent/state/chatStore", () => ({
     }),
 }));
 
-vi.mock("../../app/commands/useCommands", () => {
+vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => {
     const state = mocked.stateRef.current as Record<string, unknown>;
     return {
@@ -194,20 +197,20 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../helpers/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../app/commands/appCommands", () => ({
+vi.mock("../../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => mocked.getMainWindowFullscreenState(),
 }));
 
-vi.mock("../../domains/files/commands/fileCommands", () => ({
+vi.mock("../../../domains/files/commands/fileCommands", () => ({
   listDetectedExternalAppIds: vi.fn(async () => []),
   writeFile: vi.fn(),
 }));
 
-vi.mock("../../domains/workbench/features/workspace-tabs/pane/TabBar", () => ({
+vi.mock("../../../domains/workbench/features/workspace-tabs/pane/TabBar", () => ({
   TabBar: ({
     tabs,
     onCreateTab,
@@ -233,7 +236,7 @@ vi.mock("../../domains/workbench/features/workspace-tabs/pane/TabBar", () => ({
   ),
 }));
 
-vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitPaneGroup", () => ({
+vi.mock("../../../domains/workbench/features/workspace-tabs/pane/SplitPaneGroup", () => ({
   SplitPaneGroup: ({
     pane,
     tabs,
@@ -262,7 +265,7 @@ vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitPaneGroup", (
   ),
 }));
 
-vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitPaneContainer", () => ({
+vi.mock("../../../domains/workbench/features/workspace-tabs/pane/SplitPaneContainer", () => ({
   SplitPaneContainer: ({
     node,
     renderPane,
@@ -283,7 +286,7 @@ vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitPaneContainer
   },
 }));
 
-vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitDropZone", () => ({
+vi.mock("../../../domains/workbench/features/workspace-tabs/pane/SplitDropZone", () => ({
   SplitDropZone: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   resolveDropResult: () => null,
 }));
@@ -292,7 +295,7 @@ vi.mock("./RightPaneView", () => ({
   RightPaneView: () => <div data-testid="mock-right-pane-view" />,
 }));
 
-vi.mock("../../domains/workbench/state/splitPaneStore", () => {
+vi.mock("../../../domains/workbench/state/splitPaneStore", () => {
   // Builds a root pane for a given workspace from the current test state.
   function buildRootPaneForWorkspace(workspaceId: string): MockLeafPane {
     const state = mocked.stateRef.current as Record<string, unknown>;
@@ -368,7 +371,7 @@ vi.mock("@renderer/domains/files", async (importOriginal) => {
   };
 });
 
-vi.mock("../../app/ui/LaunchView", () => ({
+vi.mock("../launch/LaunchView", () => ({
   LaunchView: () => <div data-testid="launch-view" />,
 }));
 

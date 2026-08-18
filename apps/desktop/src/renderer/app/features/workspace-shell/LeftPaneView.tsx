@@ -9,10 +9,10 @@ import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
-import { useAppCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
-import { getRendererPlatform } from "../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { AppMenuView } from "../ui/layout/AppMenuView";
+import { useAppCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { AppMenuView } from "../app-menu/AppMenuView";
 
 type LeftPaneViewProps = {
   onCreateRepository?: () => void;

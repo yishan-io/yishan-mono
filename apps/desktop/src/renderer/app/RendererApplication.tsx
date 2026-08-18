@@ -10,9 +10,9 @@ import { i18n } from "../i18n";
 import { rendererQueryClient } from "../queryClient";
 import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
 import { createAppTheme } from "../theme";
+import { AppUpdateSnackbar } from "./features/launch/AppUpdateSnackbar";
+import { AuthSessionExpiredSnackbar } from "./features/launch/AuthSessionExpiredSnackbar";
 import { AppRoutes } from "./routes/AppRoutes";
-import { AppUpdateSnackbar } from "./ui/AppUpdateSnackbar";
-import { AuthSessionExpiredSnackbar } from "./ui/AuthSessionExpiredSnackbar";
 
 // React 19 dev mode emits performance.measure() entries for every component render/update.
 // These accumulate indefinitely in the Performance API buffer and cause unbounded memory growth.

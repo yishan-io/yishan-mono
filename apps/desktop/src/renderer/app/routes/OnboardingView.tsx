@@ -3,7 +3,7 @@ import { CreateProjectFormView } from "@renderer/domains/project";
 import { useTranslation } from "react-i18next";
 import { LuFolderGit2 } from "react-icons/lu";
 import { useOrganizations, useSelectedOrganizationId } from "../../domains/session";
-import { AppMenuView } from "../ui/layout/AppMenuView";
+import { AppMenuView } from "../features/app-menu/AppMenuView";
 
 /** Renders the first-run project creation view for organizations without projects. */
 export function OnboardingView() {
