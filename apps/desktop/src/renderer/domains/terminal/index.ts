@@ -18,8 +18,9 @@ export {
 export { initTerminalSessionLifecycle } from "./runtime/terminalSessionService";
 export { getTerminalResourceUsage } from "./commands/terminalCommands";
 export type { TerminalResourceUsageSnapshot } from "./commands/terminalCommands";
-export { useSharedTerminalResourceUsageSnapshot } from "./ui/hooks/useSharedTerminalResourceUsageSnapshot";
-export { useTerminalTabLookups } from "./ui/hooks/useTerminalTabLookups";
+export { consumeTerminalTabFocus } from "./commands/terminalCommands";
+export { useSharedTerminalResourceUsageSnapshot } from "./hooks/useSharedTerminalResourceUsageSnapshot";
+export { useTerminalTabLookups } from "./hooks/useTerminalTabLookups";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { TerminalView } from "./ui/TerminalView";
+export { TerminalView } from "./features/terminal-tab/TerminalView";

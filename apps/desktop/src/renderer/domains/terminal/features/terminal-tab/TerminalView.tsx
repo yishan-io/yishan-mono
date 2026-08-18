@@ -2,8 +2,7 @@ import { Box } from "@mui/material";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { memo, useEffect, useMemo, useRef } from "react";
-import { useTerminalCommands, useWorkbenchCommands } from "../../../app/commands/useCommands";
+import { consumeTerminalTabFocus } from "@renderer/domains/terminal";
 import {
   attachTerminalRuntime,
   detachTerminalRuntime,
@@ -11,8 +10,10 @@ import {
   getTerminalRuntime,
   initTerminalSessionLifecycle,
   requestTerminalRuntimeFocus,
-} from "../../../domains/terminal";
-import { useHasPendingTerminalFocus } from "../../../domains/terminal/ui/hooks/useTerminalReadHooks";
+} from "@renderer/domains/terminal";
+import { setSelectedTab as selectTab } from "@renderer/domains/workbench";
+import { memo, useEffect, useMemo, useRef } from "react";
+import { useHasPendingTerminalFocus } from "../../../../domains/terminal/hooks/useTerminalReadHooks";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";
@@ -40,11 +41,9 @@ type TerminalViewProps = {
  * 4. Manages UI-only concerns: search panel, drag/drop overlay, focus, keyboard shortcuts.
  */
 export const TerminalView = memo(function TerminalView({ tabId, tabData, focusRequestKey = 0 }: TerminalViewProps) {
-  const terminalCommands = useTerminalCommands();
-  const workbenchCommands = useWorkbenchCommands();
   // Stable identity: effects below key on `cmd`; a fresh object every render
   // would re-run them on each render (and re-subscribe/re-focus terminals).
-  const cmd = useMemo(() => ({ ...terminalCommands, ...workbenchCommands }), [terminalCommands, workbenchCommands]);
+  const cmd = useMemo(() => ({ consumeTerminalTabFocus, selectTab }), []);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -89,7 +88,7 @@ export const TerminalView = memo(function TerminalView({ tabId, tabData, focusRe
   }, [tabId]);
 
   useEffect(() => {
-    if (hasPendingAutoFocus && cmd.consumeTerminalTabFocus(tabId)) {
+    if (hasPendingAutoFocus && consumeTerminalTabFocus(tabId)) {
       requestTerminalRuntimeFocus(tabId);
     }
   }, [cmd, hasPendingAutoFocus, tabId]);
@@ -108,7 +107,7 @@ export const TerminalView = memo(function TerminalView({ tabId, tabData, focusRe
     }
 
     const handleMouseDown = () => {
-      cmd.selectTab(tabId);
+      selectTab(tabId);
     };
 
     hostElement.addEventListener("mousedown", handleMouseDown);

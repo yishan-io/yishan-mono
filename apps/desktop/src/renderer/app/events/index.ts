@@ -11,7 +11,7 @@ import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
 import { resetAgentLifecycleState } from "../../domains/agent/commands/agentSessionLifecycle";
 import { startNotificationEventHandlers } from "../../domains/notification/events/notificationEventHandlers";
-import { startTerminalEventHandlers } from "../../domains/terminal/events/terminalEventHandlers";
+import { createTerminalEventHandlers } from "../../domains/terminal/events/terminalEventHandlers";
 import { createWorkbenchEventHandlers } from "../../domains/workbench/events/workbenchEventHandlers";
 import { createWorkspaceEventHandlers } from "../../domains/workspace/events/workspaceEventHandlers";
 import { loadWorkspaceSnapshot } from "../flows/workspaceSnapshotFlow";
@@ -98,7 +98,22 @@ export function startBackendEventHandlers() {
     loadWorkspaceSnapshot,
   })();
   const stopNotificationEventHandlers = startNotificationEventHandlers();
-  const stopTerminalEventHandlers = startTerminalEventHandlers();
+  const stopTerminalEventHandlers = createTerminalEventHandlers({
+    subscribeTerminalSessionChanged: (listener) =>
+      subscribeBackendEvent("terminal.session.changed", (event) => {
+        if (event.source !== "terminalSessionChanged") {
+          return;
+        }
+        listener(event.payload);
+      }),
+    subscribeTerminalAgentChanged: (listener) =>
+      subscribeBackendEvent("terminal.agent.changed", (event) => {
+        if (event.source !== "terminalAgentChanged") {
+          return;
+        }
+        listener(event.payload);
+      }),
+  })();
   // App composes the backend-event subscription into the Workbench handler
   // (Workbench never imports app; Domains plan D7).
   const stopWorkbenchEventHandlers = createWorkbenchEventHandlers({

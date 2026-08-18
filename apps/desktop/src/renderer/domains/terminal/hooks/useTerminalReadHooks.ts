@@ -1,4 +1,4 @@
-import { terminalFocusStore } from "../../state/terminalFocusStore";
+import { terminalFocusStore } from "../state/terminalFocusStore";
 
 /**
  * Terminal feature read-only hooks — the stable read surface for Terminal

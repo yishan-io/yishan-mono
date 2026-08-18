@@ -372,12 +372,16 @@ vi.mock("../../app/ui/LaunchView", () => ({
   LaunchView: () => <div data-testid="launch-view" />,
 }));
 
-vi.mock("@renderer/domains/terminal", () => ({
-  TerminalView: ({ tabId, focusRequestKey = 0 }: { tabId: string; focusRequestKey?: number }) => (
-    <div data-testid="terminal-view" data-tab-id={tabId} data-focus-request-key={focusRequestKey} />
-  ),
-  disposeTerminalRuntimesForClosedTabs: vi.fn(),
-}));
+vi.mock("@renderer/domains/terminal", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/terminal")>();
+  return {
+    ...actual,
+    TerminalView: ({ tabId, focusRequestKey = 0 }: { tabId: string; focusRequestKey?: number }) => (
+      <div data-testid="terminal-view" data-tab-id={tabId} data-focus-request-key={focusRequestKey} />
+    ),
+    disposeTerminalRuntimesForClosedTabs: vi.fn(),
+  };
+});
 
 afterEach(() => {
   cleanup();

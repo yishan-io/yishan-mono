@@ -2,7 +2,7 @@
 
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { terminalFocusStore } from "../../state/terminalFocusStore";
+import { terminalFocusStore } from "../state/terminalFocusStore";
 import { useHasPendingTerminalFocus } from "./useTerminalReadHooks";
 
 const initialTerminalFocusState = terminalFocusStore.getState();

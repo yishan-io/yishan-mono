@@ -1,4 +1,5 @@
 import { bindTerminalTabSession, closeTab, renameTab } from "@renderer/domains/workbench";
+import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -8,7 +9,6 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../domains/terminal/commands/terminalCommands";
-import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import {

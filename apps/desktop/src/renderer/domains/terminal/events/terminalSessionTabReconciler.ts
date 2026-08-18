@@ -6,9 +6,9 @@ import {
   renameTab,
   setTerminalTabAgentKind,
 } from "@renderer/domains/workbench";
+import { selectWorkspaces } from "@renderer/domains/workspace";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import type { WorkbenchTab } from "../../../domains/workbench";
-import { selectWorkspaces } from "../../../domains/workspace/state/workspaceSelectors";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {

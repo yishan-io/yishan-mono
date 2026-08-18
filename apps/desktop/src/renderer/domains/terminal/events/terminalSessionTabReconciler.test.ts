@@ -2,12 +2,12 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
+import { tabStore } from "../../../domains/workbench/state/tabStore";
+import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
 } from "../../../helpers/terminalCloseTombstones";
-import { tabStore } from "../../../domains/workbench/state/tabStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;

@@ -7,6 +7,7 @@
 export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
 export { listAgentModels } from "./commands/agentCommands";
+export { clearTerminalAgentStatus } from "./commands/agentSessionLifecycle";
 export {
   AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,

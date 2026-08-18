@@ -1,14 +1,14 @@
 import type { DragEvent, RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Terminal } from "@xterm/xterm";
 import {
   FILETREE_DRAG_MIME,
   extractSourcePathsFromDataTransfer,
   hasExternalFileDragIntent,
   resolveInternalFileTreeDragPaths,
 } from "@renderer/domains/files";
-import { getTerminalRuntime } from "../../../domains/terminal";
+import { getTerminalRuntime } from "@renderer/domains/terminal";
+import type { Terminal } from "@xterm/xterm";
 import { escapePathsForShell } from "./terminalPathEscape";
 
 type UseTerminalFileDropOptions = {

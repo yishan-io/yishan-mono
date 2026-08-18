@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   __resetTerminalRuntimeRegistryForTests,
   getTerminalRuntime,
-} from "../../../domains/terminal/runtime/terminalRuntimeRegistry";
-import { __resetTerminalSessionServiceForTests } from "../../../domains/terminal/runtime/terminalSessionService";
+} from "../../../../domains/terminal/runtime/terminalRuntimeRegistry";
+import { __resetTerminalSessionServiceForTests } from "../../../../domains/terminal/runtime/terminalSessionService";
 import { TerminalView } from "./TerminalView";
 
 type TerminalOutputEvent =
@@ -145,21 +145,22 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../domains/workbench/state/tabStore", () => ({
+vi.mock("../../../../domains/workbench/state/tabStore", () => ({
   tabStore: mocked.tabStore,
 }));
 
-vi.mock("../../../domains/workbench/commands/tabCommands", () => ({
+vi.mock("../../../../domains/workbench/commands/tabCommands", () => ({
   bindTerminalTabSession: vi.fn(),
   closeTab: mocked.closeTab,
   renameTab: mocked.renameTab,
+  setSelectedTab: mocked.selectTab,
 }));
 
-vi.mock("../../../domains/terminal/commands/terminalCommands", () => ({
+vi.mock("../../../../domains/terminal/commands/terminalCommands", () => ({
   createTerminalSession: mocked.createTerminalSession,
   listTerminalSessions: mocked.listTerminalSessions,
   readTerminalOutput: mocked.readTerminalOutput,
@@ -169,11 +170,11 @@ vi.mock("../../../domains/terminal/commands/terminalCommands", () => ({
   closeTerminalSession: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => ({
+vi.mock("../../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
+vi.mock("../../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     selectTab: mocked.selectTab,
     closeTab: mocked.closeTab,
@@ -268,7 +269,7 @@ vi.mock("@xterm/xterm", () => {
   };
 });
 
-vi.mock("../../../domains/terminal/runtime/terminalAddons", () => ({
+vi.mock("../../../../domains/terminal/runtime/terminalAddons", () => ({
   loadTerminalAddons: mocked.loadTerminalAddons,
 }));
 

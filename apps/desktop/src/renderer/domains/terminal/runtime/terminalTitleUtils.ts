@@ -1,5 +1,5 @@
-import type { WorkbenchTab } from "../../../domains/workbench/model/types";
-import { selectWorkspaces } from "../../../domains/workspace/state/workspaceSelectors";
+import type { WorkbenchTab } from "@renderer/domains/workbench";
+import { selectWorkspaces } from "@renderer/domains/workspace";
 
 const MAX_TERMINAL_COMMAND_TITLE_LENGTH = 32;
 const ASCII_ESCAPE_CODE = 27;

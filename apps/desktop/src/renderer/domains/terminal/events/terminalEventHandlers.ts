@@ -1,3 +1,4 @@
+import { clearTerminalAgentStatus } from "@renderer/domains/agent";
 import { setTerminalTabAgentKind } from "@renderer/domains/workbench";
 /**
  * Terminal event handlers — owns terminal.session.changed (tab reconcile via
@@ -8,10 +9,8 @@ import { setTerminalTabAgentKind } from "@renderer/domains/workbench";
  * default deps subscribe via the router selectors.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { clearTerminalAgentStatus } from "../../agent/commands/agentSessionLifecycle";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 export type TerminalEventDependencies = {
@@ -23,20 +22,6 @@ export type TerminalEventDependencies = {
 };
 
 export const DEFAULT_TERMINAL_EVENT_DEPENDENCIES: TerminalEventDependencies = {
-  subscribeTerminalSessionChanged: (listener) =>
-    subscribeBackendEvent("terminal.session.changed", (event) => {
-      if (event.source !== "terminalSessionChanged") {
-        return;
-      }
-      listener(event.payload);
-    }),
-  subscribeTerminalAgentChanged: (listener) =>
-    subscribeBackendEvent("terminal.agent.changed", (event) => {
-      if (event.source !== "terminalAgentChanged") {
-        return;
-      }
-      listener(event.payload);
-    }),
   closeTerminalSession: async (sessionId) => {
     const client = await getDaemonClient();
     await client.terminal.closeSession({ sessionId });

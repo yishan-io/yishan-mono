@@ -115,10 +115,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     file: "domains/settings/ui/daemon/daemonSettings/closeTerminalTabsForDaemonRestart.ts",
     phase: "D16",
   },
-  { rule: "R14-cross-domain-deep", file: "domains/terminal/events/terminalEventHandlers.ts", phase: "D11" },
-  { rule: "R14-cross-domain-deep", file: "domains/terminal/events/terminalSessionTabReconciler.ts", phase: "D11" },
-  { rule: "R14-cross-domain-deep", file: "domains/terminal/runtime/terminalSessionService.ts", phase: "D11" },
-  { rule: "R14-cross-domain-deep", file: "domains/terminal/runtime/terminalTitleUtils.ts", phase: "D11" },
   // ---- R15-app-from-domain (Phase D2 baseline; owning phase = importing Domain) ----
   { rule: "R15-app-from-domain", file: "domains/agent/ui/chat/ChatView.tsx", phase: "D12" },
   { rule: "R15-app-from-domain", file: "domains/agent/ui/chat/RecentAgentSessions.tsx", phase: "D12" },
@@ -174,8 +170,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     file: "domains/settings/ui/notifications/useNotificationSettingsState.ts",
     phase: "D16",
   },
-  { rule: "R15-app-from-domain", file: "domains/terminal/events/terminalEventHandlers.ts", phase: "D11" },
-  { rule: "R15-app-from-domain", file: "domains/terminal/ui/TerminalView.tsx", phase: "D11" },
   // ---- R16-app-deep-into-domain (Phase D2 baseline; owning phase = D17 App audit) ----
   { rule: "R16-app-deep-into-domain", file: "app/commands/appCommands.ts", phase: "D17" },
   { rule: "R16-app-deep-into-domain", file: "app/commands/composition.ts", phase: "D17" },

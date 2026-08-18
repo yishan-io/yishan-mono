@@ -1,3 +1,4 @@
+import { useTerminalTabLookups } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -5,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
 import type { TerminalDetectedPort } from "../../domains/terminal/commands/terminalCommands";
-import { useTerminalTabLookups } from "../../domains/terminal/ui/hooks/useTerminalTabLookups";
 import { enqueueWorkspaceErrorNotice } from "../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";

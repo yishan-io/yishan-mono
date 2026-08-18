@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { TerminalResourceUsageSnapshot } from "../../../../rpc/daemonTypes";
-import { sharedTerminalResourceUsagePoller } from "../../runtime/sharedTerminalResourceUsage";
+import type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
+import { sharedTerminalResourceUsagePoller } from "../runtime/sharedTerminalResourceUsage";
 
 /**
  * Subscribes one control to one shared terminal resource usage snapshot
