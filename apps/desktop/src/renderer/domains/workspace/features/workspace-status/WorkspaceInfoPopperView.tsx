@@ -5,7 +5,7 @@ import { PullRequestIcon } from "@renderer/ui/components/PullRequestIcon";
 import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
-import { isFolderWorkspace } from "../../../../helpers/localFolder";
+import { isFolderWorkspace } from "../../model/localFolder";
 import { livePrStatus } from "../../../../helpers/pullRequestUtils";
 
 type WorkspaceInfoPopperViewProps = {

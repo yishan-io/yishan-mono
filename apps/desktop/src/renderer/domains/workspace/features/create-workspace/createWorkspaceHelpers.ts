@@ -1,4 +1,4 @@
-import type { BranchDropdownGroups } from "../../../../ui/components/BranchDropdown";
+import type { BranchDropdownGroups } from "./BranchDropdown";
 
 /** Deduplicates and sorts branch names with preferred branches (main, master) first. */
 export function toUniqueSorted(values: string[]): string[] {

@@ -13,7 +13,7 @@ import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/sess
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
-import { resolveTargetBranchForCreate } from "../../../../helpers/workspaceBranchNaming";
+import { resolveTargetBranchForCreate } from "./workspaceBranchNaming";
 import { buildWorkspaceNavigationPath } from "../../../../navigation/workspaceNavigation";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";

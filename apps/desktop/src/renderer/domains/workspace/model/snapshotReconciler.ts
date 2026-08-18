@@ -13,7 +13,7 @@ import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspaceRecord } from "./snapshotTypes";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../../../domains/project";
 import { getFileName } from "../../../helpers/pathHelpers";
-import { resolveHydratedWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
+import { resolveHydratedWorkspaceDisplayMetadata } from "../services/workspaceDisplayNames";
 import type { WorkspaceItem } from "./workspaceTypes";
 import type { WorkspaceGitChangeTotals } from "./workspaceTypes";
 import type { WorkspaceStatus } from "./workspaceTypes";

@@ -1,7 +1,7 @@
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { selectProjectById } from "@renderer/domains/project";
 import { selectWorkspaces } from "@renderer/domains/workspace";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isFolderWorkspace } from "@renderer/domains/workspace";
 import type { GitChangesBySection } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 

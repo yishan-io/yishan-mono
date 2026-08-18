@@ -22,7 +22,7 @@ import {
 } from "@renderer/domains/workbench";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isFolderWorkspace } from "../model/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";

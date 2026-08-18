@@ -16,7 +16,7 @@ import { getMainWindowFullscreenState } from "../../../app/commands/appCommands"
 import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
 import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
 import { resolveWorkspaceIdForProject, resolveWorkspaceProjectId, workspaceStore } from "@renderer/domains/workspace";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { DaemonVersionWarningControl } from "../launch/DaemonVersionWarningControl";

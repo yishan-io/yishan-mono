@@ -31,7 +31,6 @@ export const ROOT_HELPERS_FILES = [
   "helpers/gitGutterDiff.ts",
   "helpers/issueLinks.ts",
   "helpers/leftPaneStyles.ts",
-  "helpers/localFolder.ts",
   "helpers/monacoSetup.ts",
   "helpers/monacoThemeRules.ts",
   "helpers/pathHelpers.ts",
@@ -44,8 +43,6 @@ export const ROOT_HELPERS_FILES = [
   "helpers/version.ts",
   "helpers/versionHelpers.ts",
   "helpers/withTimeout.ts",
-  "helpers/workspaceBranchNaming.ts",
-  "helpers/workspaceDisplayNames.ts",
 ];
 
 /** Production files that import root Helpers at Phase 21 (139). */
@@ -175,6 +172,7 @@ export const ROOT_HELPERS_IMPORTERS = [
   "domains/workspace/features/create-workspace/useCreateWorkspaceDialogState.ts",
   "domains/workspace/features/workspace-resource-usage/LeftPaneResourceUsageControl.tsx",
   "domains/workspace/features/workspace-resource-usage/WorkspaceResourceUsageControl.tsx",
+  "domains/workspace/services/workspaceDisplayNames.ts",
   "domains/workspace/features/workspace-status/WorkspaceInfoPopperView.tsx",
   "domains/workspace/features/workspace-status/WorkspaceLifecycleNoticeView.tsx",
   "domains/workspace/features/workspace-status/useWorkspaceInfoHover.ts",

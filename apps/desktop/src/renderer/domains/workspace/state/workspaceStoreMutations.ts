@@ -1,4 +1,4 @@
-import { resolveExplicitWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
+import { resolveExplicitWorkspaceDisplayMetadata } from "../services/workspaceDisplayNames";
 import type { WorkspaceStoreState } from "./workspaceStoreTypes";
 
 type WorkspaceStoreSlice = Pick<WorkspaceStoreState, "workspaces"> & {

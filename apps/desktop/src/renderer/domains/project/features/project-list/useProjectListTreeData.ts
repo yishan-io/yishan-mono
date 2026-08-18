@@ -9,7 +9,7 @@ import { listOrgNodes } from "../../../../domains/node";
 import { useDisplayProjectIds, useProjects } from "../../../../domains/project/hooks/useProjectReadHooks";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../../domains/project/model/projectTypes";
 import { useSelectedOrganizationId } from "../../../../domains/session";
-import { resolveWorkspaceListDisplayName } from "../../../../helpers/workspaceDisplayNames";
+import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
 import { supportsGitFeatures } from "../../model/projectGitCapability";
 import { filterVisibleProjects } from "../../model/projectListRules";
 import { reconcileOrder } from "./projectListHelpers";

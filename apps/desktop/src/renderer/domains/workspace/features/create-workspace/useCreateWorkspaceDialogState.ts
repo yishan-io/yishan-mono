@@ -9,8 +9,8 @@ import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
-} from "../../../../helpers/workspaceBranchNaming";
-import type { BranchDropdownGroups } from "../../../../ui/components/BranchDropdown";
+} from "./workspaceBranchNaming";
+import type { BranchDropdownGroups } from "./BranchDropdown";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 
 type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean };

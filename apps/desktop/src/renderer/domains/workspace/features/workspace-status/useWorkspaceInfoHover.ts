@@ -4,7 +4,7 @@ import { inspectGitRepository } from "@renderer/domains/git";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
-import { isFolderWorkspace } from "../../../../helpers/localFolder";
+import { isFolderWorkspace } from "../../model/localFolder";
 
 type UseWorkspaceInfoHoverInput = {
   workspaces: WorkspaceItem[];

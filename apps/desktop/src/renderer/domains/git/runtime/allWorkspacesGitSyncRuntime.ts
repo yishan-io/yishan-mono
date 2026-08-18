@@ -12,7 +12,7 @@ import { selectProjects } from "@renderer/domains/project";
  */
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { selectWorkspaces } from "@renderer/domains/workspace";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { refreshWorkspaceGitChanges } from "../commands/gitProjectionCommands";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 

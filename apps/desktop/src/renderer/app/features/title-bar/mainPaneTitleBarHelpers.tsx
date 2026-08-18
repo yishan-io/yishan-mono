@@ -3,7 +3,7 @@ import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuFolder } from "react-icons/lu";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isFolderWorkspace } from "@renderer/domains/workspace";
 
 /** Resolves the workspace displayed as local in the left pane for a project. */
 export function resolvePrimaryWorkspaceId(project: WorkspaceProjectRecord | undefined, workspaces: WorkspaceItem[]) {

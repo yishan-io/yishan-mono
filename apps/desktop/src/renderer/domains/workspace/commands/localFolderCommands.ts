@@ -5,7 +5,7 @@ import { activateWorkspace } from "@renderer/domains/workbench";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isFolderWorkspace } from "../model/localFolder";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";

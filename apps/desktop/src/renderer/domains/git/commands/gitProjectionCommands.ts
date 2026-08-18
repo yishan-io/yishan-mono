@@ -12,7 +12,7 @@ import { selectWorkspaces } from "@renderer/domains/workspace";
  */
 import { api } from "../../../api";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import {
   computeUniqueGitChangeFileCount,

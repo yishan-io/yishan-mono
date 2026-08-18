@@ -91,3 +91,12 @@ export { WorkspaceLifecycleNoticeView } from "./features/workspace-status/Worksp
 export { createWorkspaceEventHandlers } from "./events/workspaceEventHandlers";
 // Workspace preferences + branch-naming settings (desktop7 Phase 23 — moved from Settings).
 export { WorkspaceSettingsView } from "./features/workspace-preferences/WorkspaceSettingsView";
+// Workspace display + local-folder model helpers (desktop7 Phase 24 — moved from root helpers).
+export {
+  LOCAL_WORKSPACE_DISPLAY_NAME,
+  resolveExplicitWorkspaceDisplayMetadata,
+  resolveHydratedWorkspaceDisplayMetadata,
+  resolveWorkspaceListDisplayName,
+} from "./services/workspaceDisplayNames";
+export { isFolderWorkspace } from "./model/localFolder";
+export { BranchDropdown, type BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";

@@ -1,4 +1,4 @@
-import { LOCAL_FOLDER_PROJECT_ID } from "../domains/project/model/projectTypes";
+import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
 
 /** A minimal duck-typed workspace row sufficient to identify a folder. */
 type FolderCandidate =
