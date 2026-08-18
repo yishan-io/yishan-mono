@@ -15,8 +15,8 @@ import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 
 import type { NodeRecord, OrganizationMemberRecord } from "../../../api/types";
-import { listOrgNodes } from "../../../domains/node/commands/nodeCommands";
-import { unregisterNode, updateNodeScope } from "../../../domains/node/commands/nodeCommands";
+import { listOrgNodes } from "../../../domains/node";
+import { unregisterNode, updateNodeScope } from "../../../domains/node";
 import { listOrganizationMembers } from "../../../domains/organization";
 import {
   useCurrentUser,

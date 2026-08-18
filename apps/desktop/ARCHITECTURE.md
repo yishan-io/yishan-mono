@@ -149,7 +149,7 @@ displays and imports behavior from many Domains.
 |---|---|---|---|
 | D3 | `session` | `completed` | Establish authentication, bootstrap State, and public identity reads. |
 | D4 | `organization` | `completed` | Separate organization administration from Session and shared UI. |
-| D5 | `node` | `planned` | Establish node discovery, selection data, and administration ownership. |
+| D5 | `node` | `completed` | Establish node discovery, selection data, and administration ownership. |
 | D6 | `project` | `planned` | Establish project identity, configuration, grouping, and list behavior. |
 | D7 | `workbench` | `planned` | Establish active context, tabs, panes, layout, and presentation Commands. |
 | D8 | `workspace` | `planned` | Establish Workspace lifecycle, creation, health, and Workspace-specific UI. |

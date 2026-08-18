@@ -71,7 +71,7 @@ import {
   refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
 } from "../../domains/git/commands/gitProjectionCommands";
 import { createDiffTabPlaceholder } from "../../domains/git/model/diffTabPlaceholder";
-import { listOrgNodes as listOrgNodesCommand } from "../../domains/node/commands/nodeCommands";
+import { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,

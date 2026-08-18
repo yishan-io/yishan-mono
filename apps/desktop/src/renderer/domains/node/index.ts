@@ -1,4 +1,8 @@
 /**
- * Node feature public API (Phase 12, desktop5.md).
+ * Node Domain public API (Domains plan D5).
+ *
+ * Exports the stable command surface for execution-node discovery, scope,
+ * selection data, and node administration. Cross-Domain code imports node
+ * through this file only.
  */
-export type { NodeCommands } from "./commands/contract";
+export { listOrgNodes, unregisterNode, updateNodeScope } from "./commands/nodeCommands";

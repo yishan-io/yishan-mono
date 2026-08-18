@@ -7,7 +7,7 @@ import {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,
 } from "../../../domains/agent/ui/hooks/useAgentChatReadHooks";
-import { listOrgNodes } from "../../../domains/node/commands/nodeCommands";
+import { listOrgNodes } from "../../../domains/node";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { useDisplayProjectIds, useProjects } from "../../../domains/project/ui/hooks/useProjectReadHooks";
 import { useSelectedOrganizationId } from "../../../domains/session";

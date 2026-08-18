@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useGitAuthorName } from "../../../../domains/git/ui/hooks/useGitAuthorName";
-import { listOrgNodes } from "../../../../domains/node/commands/nodeCommands";
+import { listOrgNodes } from "../../../../domains/node";
 import type { WorkspaceProjectRecord } from "../../../../domains/project/model/projectTypes";
 import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../../domains/settings/model/branchPrefix";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
