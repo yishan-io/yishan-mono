@@ -3,7 +3,7 @@ import {
   playNotificationSound,
   previewNotification,
   updateNotificationPreferences,
-} from "@renderer/domains/notification";
+} from "../../commands/notificationCommands";
 import { useState } from "react";
 import type { NotificationPreviewStatus, NotificationSettingsErrorKey } from "./notificationSettingsState.types";
 import { useNotificationSettingsMutations } from "./useNotificationSettingsMutations";

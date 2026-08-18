@@ -45,3 +45,4 @@ export { TerminalRecoveryCoordinator } from "./runtime/terminalRecovery";
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { TerminalView } from "./features/terminal-tab/TerminalView";
 export { createTerminalEventHandlers } from "./events/terminalEventHandlers";
+export { TerminalSettingsView } from "./features/manage-terminal-sessions/TerminalSettingsView";

@@ -5,7 +5,7 @@ import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToo
 import { MONOSPACE_SX } from "../../../../helpers/styles";
 import { isNewerVersion } from "../../../../helpers/version";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { SettingsCard, SettingsControlRow, SettingsRows } from "../../ui/controls";
+import {SettingsCard, SettingsControlRow, SettingsRows} from "../../../../ui/components/SettingsPrimitives";
 
 type PiCliInstallCardProps = {
   status: CLIToolStatus | null;

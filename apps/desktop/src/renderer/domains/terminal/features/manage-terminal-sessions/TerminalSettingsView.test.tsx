@@ -35,7 +35,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("@renderer/domains/terminal", async (importOriginal) => {
+vi.mock("../../commands/terminalCommands", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/terminal")>();
   return {
     ...actual,

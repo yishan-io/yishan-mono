@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../../../domains/project/state/projectStore";
-import { workspaceSettingsStore } from "../../../../domains/settings/state/workspaceSettingsStore";
+import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 
@@ -17,17 +17,25 @@ const listAgentModels = vi.fn();
 const setIsCreatingWorkspace = vi.fn();
 const resetDraftInputs = vi.fn();
 
-vi.mock("@renderer/domains/workspace", () => ({
-  get createWorkspace() {
-    return createWorkspace;
-  },
-  get renameWorkspace() {
-    return renameWorkspace;
-  },
-  get renameWorkspaceBranch() {
-    return renameWorkspaceBranch;
-  },
-}));
+vi.mock("@renderer/domains/workspace", async () => {
+  const { workspaceSettingsStore } = await import("../../state/workspaceSettingsStore");
+  const { useWorkspaceBranchPrefixSettings } = await import("../../hooks/useWorkspaceBranchPrefixSettings");
+  const { resolveGitBranchPrefix } = await import("../../model/branchPrefix");
+  return {
+    workspaceSettingsStore,
+    useWorkspaceBranchPrefixSettings,
+    resolveGitBranchPrefix,
+    get createWorkspace() {
+      return createWorkspace;
+    },
+    get renameWorkspace() {
+      return renameWorkspace;
+    },
+    get renameWorkspaceBranch() {
+      return renameWorkspaceBranch;
+    },
+  };
+});
 
 vi.mock("@renderer/domains/git", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/git")>();

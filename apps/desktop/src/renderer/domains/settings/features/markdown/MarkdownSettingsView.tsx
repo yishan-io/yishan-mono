@@ -6,7 +6,8 @@ import type {
   MarkdownThemePreference,
 } from "../../state/displaySettingsStore";
 import { displaySettingsStore } from "../../state/displaySettingsStore";
-import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsControlRow, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import {SettingsCompactSelect} from "../../../../ui/components/SettingsCompactControls";
 
 /** Renders markdown editor preference controls. */
 export function MarkdownSettingsView() {

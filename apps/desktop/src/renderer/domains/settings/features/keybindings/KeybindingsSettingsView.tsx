@@ -6,7 +6,7 @@ import { getRendererPlatform } from "../../../../helpers/platform";
 import { detectShortcutConflicts, normalizeKeysString } from "../../../../shortcuts/customKeybindings";
 import { getShortcutDefinitions, getSupportedKeyBindings } from "../../../../shortcuts/keybindings";
 import { HotkeyDisplay } from "../../../../ui/components/KeybindingDisplay";
-import { SettingsSectionHeader } from "../../ui/controls";
+import {SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 type EditingState = {
   shortcutId: string;

@@ -18,7 +18,7 @@ export {
   resolveGitBranchPrefix,
 } from "../model/branchPrefix";
 
-type WorkspaceSettingsStoreState = {
+export type WorkspaceSettingsStoreState = {
   isDefaultContextEnabled: boolean;
   prefixMode: GitBranchPrefixMode;
   customPrefix: string;

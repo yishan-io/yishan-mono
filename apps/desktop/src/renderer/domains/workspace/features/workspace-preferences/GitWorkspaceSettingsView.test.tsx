@@ -4,7 +4,7 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../../../domains/project/state/projectStore";
-import { workspaceSettingsStore } from "../../../../domains/settings/state/workspaceSettingsStore";
+import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { GitWorkspaceSettingsView } from "./GitWorkspaceSettingsView";
 

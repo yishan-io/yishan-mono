@@ -11,7 +11,7 @@ import { agentSettingsStore } from "@renderer/domains/agent";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToolCommands";
-import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 type AgentCLISettingsCardProps = {
   statuses: CLIToolStatus[];

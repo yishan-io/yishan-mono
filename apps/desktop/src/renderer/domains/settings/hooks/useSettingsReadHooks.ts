@@ -1,22 +1,10 @@
-import { useShallow } from "zustand/react/shallow";
 import { keybindingSettingsStore } from "../state/keybindingSettingsStore";
-import { workspaceSettingsStore } from "../state/workspaceSettingsStore";
 
 /**
  * Settings feature read-only hooks — the stable read surface for Settings
  * State (Phase 17, desktop6.md). Cross-feature UI subscribes to settings state
  * through these hooks instead of importing the Settings Stores directly.
  */
-
-/** Subscribes to the git branch prefix settings. */
-export function useWorkspaceBranchPrefixSettings() {
-  return workspaceSettingsStore(
-    useShallow((state) => ({
-      prefixMode: state.prefixMode,
-      customPrefix: state.customPrefix,
-    })),
-  );
-}
 
 /** Subscribes to keybinding overrides by command id. */
 export function useKeybindingOverrides() {

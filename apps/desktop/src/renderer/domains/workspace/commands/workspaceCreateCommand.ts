@@ -1,5 +1,5 @@
 import { selectProjectById } from "@renderer/domains/project";
-import { selectIsDefaultContextEnabled } from "@renderer/domains/settings";
+import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { buildWorkspaceCreatePlaceholder } from "../../../domains/workspace/model/workspaceCreatePlaceholder";

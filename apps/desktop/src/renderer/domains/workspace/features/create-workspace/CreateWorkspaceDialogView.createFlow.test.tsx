@@ -7,7 +7,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../../../domains/project/state/projectStore";
 import { sessionStore } from "../../../../domains/session/state/sessionStore";
-import { workspaceSettingsStore } from "../../../../domains/settings/state/workspaceSettingsStore";
+import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 import {

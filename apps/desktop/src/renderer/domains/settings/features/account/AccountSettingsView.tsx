@@ -10,7 +10,7 @@ import {
   useSessionLoaded,
 } from "../../../../domains/session";
 import { getVoiceUsage } from "../../../../domains/settings/commands/settingsCommands";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 const PLAN_LABELS = {
   free: "Free",

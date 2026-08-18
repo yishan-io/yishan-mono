@@ -1,4 +1,4 @@
-import type { NotificationCommands } from "@renderer/domains/notification";
+import type { NotificationCommands } from "../../commands/contract";
 import { NOTIFICATION_PREVIEW_STATUS_AUTO_HIDE_MS } from "@shared/notifications/notificationConstants";
 import type {
   NotificationEventType,

@@ -132,6 +132,17 @@ const mocks = vi.hoisted(() => {
     { getState: () => stateRef.current },
   );
 
+  const navState = () => ({
+    activeProjectId: ((stateRef.current as { selectedProjectId?: string }).selectedProjectId as string) ?? "",
+    activeWorkspaceId: (stateRef.current.selectedWorkspaceId as string) ?? "",
+  });
+  const navStore = Object.assign(
+    vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
+      selector(navState()),
+    ),
+    { getState: navState },
+  );
+
   return {
     listFiles,
     listFilesBatch,
@@ -155,6 +166,7 @@ const mocks = vi.hoisted(() => {
     repoFileTreePropsRef,
     stateRef,
     workspaceStore,
+    navStore,
   };
 });
 
@@ -231,6 +243,10 @@ vi.mock("@renderer/domains/workbench/state/tabStore", () => ({
   tabStore: mocks.workspaceStore,
 }));
 
+vi.mock("@renderer/domains/workbench/state/workbenchNavigationStore", () => ({
+  workbenchNavigationStore: mocks.navStore,
+}));
+
 vi.mock("@renderer/helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
@@ -256,7 +272,7 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   );
   return {
     ...actual,
-    workbenchNavigationStore: navStore,
+    workbenchNavigationStore: mocks.navStore,
     tabStore: mocks.workspaceStore,
     createFixedRuntimeLayer: vi.fn(() => ({
       register: vi.fn(),

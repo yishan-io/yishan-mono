@@ -6,3 +6,4 @@
  * through this file only.
  */
 export { listOrgNodes, unregisterNode, updateNodeScope } from "./commands/nodeCommands";
+export { NodesSettingsView } from "./features/manage-nodes/NodesSettingsView";

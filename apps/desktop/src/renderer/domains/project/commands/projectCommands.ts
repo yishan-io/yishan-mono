@@ -7,7 +7,7 @@ import { api } from "../../../api";
 import type { ProjectWithWorkspacesRecord } from "../../../api";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
-import { selectIsDefaultContextEnabled } from "../../../domains/settings";
+import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import {
   addWorkspace as applyAddWorkspace,
   buildWorkspaceOpenProjectEntries,

@@ -13,7 +13,7 @@ import {
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { MONOSPACE_SX } from "../../../../helpers/styles";
 import { useRefreshableLoader } from "../../../../ui/hooks/useRefreshableLoader";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 import { AgentCLISettingsCard } from "./AgentCLISettingsCard";
 import { DaemonCliInstallCard } from "./DaemonCliInstallCard";
 import { PiCliInstallCard } from "./PiCliInstallCard";

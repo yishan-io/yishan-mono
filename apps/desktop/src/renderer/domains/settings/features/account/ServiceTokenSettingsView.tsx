@@ -29,7 +29,7 @@ import {
 import { copyToClipboard } from "../../../../helpers/clipboard";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
-import { SettingsCard, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 function formatTokenDate(dateString: string | null): string {
   if (!dateString) {

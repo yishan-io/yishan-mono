@@ -1,9 +1,9 @@
 import { Alert, Box, Stack, Switch, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { workspaceSettingsStore } from "../../../../domains/settings/state/workspaceSettingsStore";
+import { workspaceSettingsStore } from "../../state/workspaceSettingsStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 import { GitWorkspaceSettingsView } from "./GitWorkspaceSettingsView";
 
 /** Renders workspace-level preferences and workspace creation defaults. */

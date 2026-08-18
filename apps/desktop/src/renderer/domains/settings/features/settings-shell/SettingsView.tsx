@@ -27,12 +27,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useThemePreference } from "../../../../domains/settings";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { SearchInput } from "../../../../ui/components/SearchInput";
-import { SettingsErrorBoundary, SettingsPageLayout, SettingsSectionHeader } from "../../ui/controls";
+import { SettingsErrorBoundary, SettingsPageLayout } from "../../ui/controls";
+import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
 import {
   type NotificationSettingsFocusItemId,
   isNotificationSettingsFocusItemId,
-} from "../notifications/notificationSettingsCatalog";
+} from "@renderer/domains/notification";
 import {
   type CustomizeFocusItemId,
   SETTINGS_NAV_SECTIONS,
@@ -71,16 +72,16 @@ const MarkdownSettingsView = lazy(() =>
   import("../markdown/MarkdownSettingsView").then((m) => ({ default: m.MarkdownSettingsView })),
 );
 const NodesSettingsView = lazy(() =>
-  import("../nodes/NodesSettingsView").then((m) => ({ default: m.NodesSettingsView })),
+  import("@renderer/domains/node").then((m) => ({ default: m.NodesSettingsView })),
 );
 const NotificationSettingsView = lazy(() =>
-  import("../notifications/NotificationSettingsView").then((m) => ({ default: m.NotificationSettingsView })),
+  import("@renderer/domains/notification").then((m) => ({ default: m.NotificationSettingsView })),
 );
 const TerminalSettingsView = lazy(() =>
-  import("../terminal/TerminalSettingsView").then((m) => ({ default: m.TerminalSettingsView })),
+  import("@renderer/domains/terminal").then((m) => ({ default: m.TerminalSettingsView })),
 );
 const WorkspaceSettingsView = lazy(() =>
-  import("../workspace/WorkspaceSettingsView").then((m) => ({ default: m.WorkspaceSettingsView })),
+  import("@renderer/domains/workspace").then((m) => ({ default: m.WorkspaceSettingsView })),
 );
 
 const AgentProviderSettingsView = lazy(() =>

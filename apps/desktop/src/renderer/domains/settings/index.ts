@@ -2,24 +2,23 @@
  * Settings feature public API (Phase 12, desktop5.md).
  */
 export type { SettingsCommands } from "./commands/contract";
-export {
-  useKeybindingOverrides,
-  useWorkspaceBranchPrefixSettings,
-} from "./hooks/useSettingsReadHooks";
+export { useKeybindingOverrides } from "./hooks/useSettingsReadHooks";
 export { useCodeTheme } from "./hooks/useCodeTheme";
 export { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
+
 export {
-  type GitBranchPrefixMode,
-  resolveGitBranchPrefix,
-} from "./model/branchPrefix";
-export * from "./ui/controls";
+  SettingsErrorBoundary,
+  SettingsPageLayout,
+  type SettingsErrorBoundaryProps,
+  type SettingsPageLayoutProps,
+} from "./ui/controls";
 export {
   editorSettingsStore,
   type EditorSettingsStoreState,
 } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
 export { keybindingSettingsStore, type KeybindingOverrideMap } from "./state/keybindingSettingsStore";
-export { selectIsDefaultContextEnabled } from "./state/settingsSelectors";
+
 
 export {
   getDaemonInfo,

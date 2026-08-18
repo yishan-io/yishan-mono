@@ -10,7 +10,7 @@ import {
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import type { ComputerPermissionState, ComputerPermissionStatus } from "../../../../rpc/daemonTypes";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "@renderer/domains/settings";
+import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 type PermissionRowKey = "accessibility" | "screenRecording" | "inputMonitoring" | "automation";
 

@@ -29,7 +29,7 @@ vi.mock("../../../../helpers/platform", () => ({
   getRendererPlatform: () => "linux",
 }));
 
-vi.mock("../notifications/NotificationSettingsView", () => ({
+vi.mock("@renderer/domains/notification/features/configure-notifications/NotificationSettingsView", () => ({
   NotificationSettingsView: ({ focusItemId }: { focusItemId?: string | null }) => (
     <div data-testid="notification-settings-panel" data-focus-item-id={focusItemId ?? ""} />
   ),
@@ -39,7 +39,7 @@ vi.mock("../cli/CLISettingsView", () => ({
   CLISettingsView: () => <div data-testid="agent-settings-panel" />,
 }));
 
-vi.mock("../terminal/TerminalSettingsView", () => ({
+vi.mock("@renderer/domains/terminal/features/manage-terminal-sessions/TerminalSettingsView", () => ({
   TerminalSettingsView: () => <div data-testid="terminal-settings-panel" />,
 }));
 
@@ -47,7 +47,7 @@ vi.mock("../daemon/DaemonSettingsView", () => ({
   DaemonSettingsView: () => <div data-testid="daemon-settings-panel" />,
 }));
 
-vi.mock("../computer-use/ComputerUseSettingsView", () => ({
+vi.mock("@renderer/domains/agent/features/computer-use/ComputerUseSettingsView", () => ({
   ComputerUseSettingsView: () => <div data-testid="computer-use-settings-panel" />,
 }));
 
@@ -63,7 +63,7 @@ vi.mock("../account/MemberSettingsView", () => ({
   MemberSettingsView: () => <div data-testid="member-settings-panel" />,
 }));
 
-vi.mock("../agent-skills/SkillsSettingsView", () => ({
+vi.mock("@renderer/domains/agent/features/manage-skills/SkillsSettingsView", () => ({
   SkillsSettingsView: () => <div data-testid="skills-settings-panel" />,
 }));
 

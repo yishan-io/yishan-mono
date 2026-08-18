@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
-import { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } from "@renderer/domains/terminal";
+import { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } from "../../commands/terminalCommands";
 import { tabStore } from "@renderer/domains/workbench";
 import { closeTab } from "@renderer/domains/workbench";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -11,7 +11,7 @@ import { MONOSPACE_SX } from "../../../../helpers/styles";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
-import { SettingsCard, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 /** Builds one stable map key for in-flight close action tracking. */
 function buildSessionActionKey(sessionId: string): string {

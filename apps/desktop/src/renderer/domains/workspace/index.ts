@@ -69,6 +69,14 @@ export {
 } from "./hooks/useWorkspaceReadHooks";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
+export {
+  WORKSPACE_SETTINGS_STORE_STORAGE_KEY,
+  workspaceSettingsStore,
+  type WorkspaceSettingsStoreState,
+} from "./state/workspaceSettingsStore";
+export { selectIsDefaultContextEnabled } from "./state/workspaceSettingsSelectors";
+export { useWorkspaceBranchPrefixSettings } from "./hooks/useWorkspaceBranchPrefixSettings";
+export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./model/branchPrefix";
 export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWorkspaceDialogView";
 export { WorkspaceDeleteDialogView } from "./features/delete-workspace/WorkspaceDeleteDialogView";
 export { WorkspaceInfoPopperView } from "./features/workspace-status/WorkspaceInfoPopperView";
@@ -81,3 +89,5 @@ export { enqueueWorkspaceErrorNotice } from "./state/workspaceLifecycleNoticeSto
 export { WorkspaceErrorStateView } from "./features/workspace-status/WorkspaceErrorStateView";
 export { WorkspaceLifecycleNoticeView } from "./features/workspace-status/WorkspaceLifecycleNoticeView";
 export { createWorkspaceEventHandlers } from "./events/workspaceEventHandlers";
+// Workspace preferences + branch-naming settings (desktop7 Phase 23 — moved from Settings).
+export { WorkspaceSettingsView } from "./features/workspace-preferences/WorkspaceSettingsView";

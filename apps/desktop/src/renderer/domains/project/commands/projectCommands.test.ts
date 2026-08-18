@@ -7,7 +7,7 @@ import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFl
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
-import { workspaceSettingsStore } from "../../../domains/settings/state/workspaceSettingsStore";
+import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { projectStore } from "../state/projectStore";

@@ -10,7 +10,8 @@ import {
 import { useCurrentUser } from "../../../../domains/session";
 import { updateLanguagePreference } from "../../../../domains/settings/commands/settingsCommands";
 import { SUPPORTED_LANGUAGE_CODES, type SupportedLanguageCode, i18n, setAppLanguage } from "../../../../i18n";
-import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsControlRow, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import {SettingsCompactSelect} from "../../../../ui/components/SettingsCompactControls";
 
 /**
  * Renders language selection and persists profile preference.

@@ -20,7 +20,7 @@ import { LuHammer, LuPuzzle } from "react-icons/lu";
 import {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
   type NotificationSettingsFocusItemId,
-} from "../notifications/notificationSettingsCatalog";
+} from "@renderer/domains/notification";
 
 export type SettingsTab =
   | "account"

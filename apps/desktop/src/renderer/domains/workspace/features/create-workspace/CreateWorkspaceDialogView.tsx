@@ -4,7 +4,7 @@ import { listGitBranches } from "@renderer/domains/git";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
-import { useWorkspaceBranchPrefixSettings } from "@renderer/domains/settings";
+import { useWorkspaceBranchPrefixSettings } from "@renderer/domains/workspace";
 import { createWorkspace, renameWorkspace, renameWorkspaceBranch } from "@renderer/domains/workspace";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";

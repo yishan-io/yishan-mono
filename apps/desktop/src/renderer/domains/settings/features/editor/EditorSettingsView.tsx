@@ -3,7 +3,8 @@ import { TYPOGRAPHY_TOKENS } from "@yishan-io/design-tokens";
 import { useTranslation } from "react-i18next";
 import { editorSettingsStore } from "../../../../domains/settings/state/editorSettingsStore";
 import { CODE_THEME_FAMILIES, type CodeThemeFamilyId } from "../../../../helpers/codeThemes";
-import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "../../ui/controls";
+import {SettingsCard, SettingsControlRow, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import {SettingsCompactSelect} from "../../../../ui/components/SettingsCompactControls";
 
 const FONT_SIZE_OPTIONS: number[] = Array.from(
   { length: TYPOGRAPHY_TOKENS.editorFontSizeMaxPx - TYPOGRAPHY_TOKENS.editorFontSizeMinPx + 1 },

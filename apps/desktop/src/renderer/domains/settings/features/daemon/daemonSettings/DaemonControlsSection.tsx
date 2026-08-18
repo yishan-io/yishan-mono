@@ -1,11 +1,5 @@
 import { Alert, Box, Button, CircularProgress } from "@mui/material";
-import {
-  SettingsCard,
-  SettingsControlRow,
-  SettingsRows,
-  SettingsSectionHeader,
-  SettingsToggleRow,
-} from "@renderer/domains/settings";
+import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader, SettingsToggleRow} from "../../../../../ui/components/SettingsPrimitives";
 import { useTranslation } from "react-i18next";
 import { LuPower } from "react-icons/lu";
 

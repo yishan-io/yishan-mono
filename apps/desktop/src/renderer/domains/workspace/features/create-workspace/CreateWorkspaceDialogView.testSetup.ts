@@ -52,17 +52,25 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
-vi.mock("@renderer/domains/workspace", () => ({
-  get createWorkspace() {
-    return getMockedCommands().createWorkspace;
-  },
-  get renameWorkspace() {
-    return getMockedCommands().renameWorkspace;
-  },
-  get renameWorkspaceBranch() {
-    return getMockedCommands().renameWorkspaceBranch;
-  },
-}));
+vi.mock("@renderer/domains/workspace", async () => {
+  const { workspaceSettingsStore } = await import("../../state/workspaceSettingsStore");
+  const { useWorkspaceBranchPrefixSettings } = await import("../../hooks/useWorkspaceBranchPrefixSettings");
+  const { resolveGitBranchPrefix } = await import("../../model/branchPrefix");
+  return {
+    workspaceSettingsStore,
+    useWorkspaceBranchPrefixSettings,
+    resolveGitBranchPrefix,
+    get createWorkspace() {
+      return getMockedCommands().createWorkspace;
+    },
+    get renameWorkspace() {
+      return getMockedCommands().renameWorkspace;
+    },
+    get renameWorkspaceBranch() {
+      return getMockedCommands().renameWorkspaceBranch;
+    },
+  };
+});
 
 vi.mock("@renderer/domains/git", async () => {
   const { useEffect, useState } = await import("react");

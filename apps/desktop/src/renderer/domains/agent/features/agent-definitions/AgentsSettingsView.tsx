@@ -23,7 +23,7 @@ import {
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { SettingsCard } from "@renderer/domains/settings";
+import {SettingsCard} from "../../../../ui/components/SettingsPrimitives";
 import { AgentDetailDialog, ConfirmDialog, CreateAgentDialog } from "./AgentDefinitionDialogs";
 
 const AGENT_TABLE_SX = {

@@ -1,4 +1,4 @@
-import type { NotificationCommands } from "@renderer/domains/notification";
+import type { NotificationCommands } from "../../commands/contract";
 import {
   NOTIFICATION_PREFERENCES_LOAD_RETRY_ATTEMPTS,
   NOTIFICATION_PREFERENCES_LOAD_RETRY_BASE_DELAY_MS,

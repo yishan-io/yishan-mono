@@ -29,7 +29,7 @@ import {
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { PiExtensionInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { SettingsCard } from "@renderer/domains/settings";
+import {SettingsCard} from "../../../../ui/components/SettingsPrimitives";
 
 const LOCAL_FILE_SOURCE = "local file";
 
