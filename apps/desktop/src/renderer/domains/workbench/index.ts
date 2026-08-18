@@ -44,7 +44,7 @@ export {
   toggleTabPinned,
   unregisterTabFromPane,
 } from "./commands/tabCommands";
-export type { WorkbenchTab } from "./model/types";
+export type { FileDiffEntry, OpenTabInput, WorkbenchTab } from "./model/types";
 export {
   workbenchNavigationStore,
   type OverlayPanel,

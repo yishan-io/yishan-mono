@@ -1,9 +1,9 @@
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
+import { openLink } from "@renderer/domains/browser";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
-import { openLink } from "../app/commands/appCommands";
 import { startBackendEventHandlers, startBackendEventPipeline } from "../events";
 import { i18n } from "../i18n";
 import { rendererQueryClient } from "../queryClient";

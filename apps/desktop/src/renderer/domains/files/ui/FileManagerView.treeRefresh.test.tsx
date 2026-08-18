@@ -196,11 +196,22 @@ vi.mock("@renderer/domains/git/commands/gitCommands", () => ({
   subscribeWorkspaceGitChanged: (listener: unknown) => mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
+vi.mock("@renderer/domains/workspace", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workspace")>();
+  return {
+    ...actual,
+    get setLastUsedExternalAppId() {
+      return mocks.setLastUsedExternalAppId;
+    },
+  };
+});
+
 vi.mock("@renderer/domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocks.workspaceStore,
 }));
 
-vi.mock("@renderer/domains/workbench", () => {
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
   const navState = () => ({
     activeProjectId: (mocks.stateRef.current.selectedProjectId as string) ?? "",
     activeWorkspaceId: (mocks.stateRef.current.selectedWorkspaceId as string) ?? "",
@@ -212,6 +223,7 @@ vi.mock("@renderer/domains/workbench", () => {
     { getState: navState },
   );
   return {
+    ...actual,
     workbenchNavigationStore: navStore,
     tabStore: mocks.workspaceStore,
     createFixedRuntimeLayer: vi.fn(() => ({

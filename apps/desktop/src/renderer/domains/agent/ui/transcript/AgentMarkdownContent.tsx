@@ -1,4 +1,5 @@
 import { Box, Typography, useTheme } from "@mui/material";
+import { openLink } from "@renderer/domains/browser";
 import {
   isAbsoluteUrl,
   resolveRelativePath,
@@ -8,12 +9,11 @@ import { markdownService } from "@renderer/domains/files/ui/markdown/markdownSer
 import { useMarkdownStyles } from "@renderer/domains/files/ui/markdown/markdownStyles";
 import { editorSettingsStore } from "@renderer/domains/settings";
 import { openTab, openTabInOppositePane } from "@renderer/domains/workbench";
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useCodeTheme } from "@renderer/ui/hooks/useCodeTheme";
 import { useEffect, useRef, useState } from "react";
-import { openLink } from "../../../../app/commands/appCommands";
 import { openChatFileTab } from "../../../../domains/agent/commands/agentChatCommands";
 import { selectFolderInFileTree } from "../../../../domains/workspace/commands/workspaceCommands";
-import { workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 
 type AgentMarkdownContentProps = {

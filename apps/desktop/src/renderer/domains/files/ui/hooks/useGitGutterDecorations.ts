@@ -1,5 +1,5 @@
+import { readDiff } from "@renderer/domains/git";
 import { useEffect, useRef, useState } from "react";
-import { readDiff } from "../../../../domains/git/commands/gitCommands";
 import {
   type GitLineChange,
   type GitLineChangeKind,

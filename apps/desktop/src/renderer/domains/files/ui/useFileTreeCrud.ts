@@ -7,7 +7,7 @@ import {
   readFile,
   renameEntry,
 } from "@renderer/domains/files/commands/fileCommands";
-import type { OpenTabInput, WorkbenchTab } from "@renderer/domains/workbench/model/types";
+import type { OpenTabInput, WorkbenchTab } from "@renderer/domains/workbench";
 import {
   isAudioFile,
   isExcalidrawFile,

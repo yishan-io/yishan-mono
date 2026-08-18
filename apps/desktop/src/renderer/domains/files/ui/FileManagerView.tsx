@@ -1,6 +1,6 @@
 import { Alert, Box } from "@mui/material";
-import { useGitCommands } from "@renderer/app/commands/useCommands";
 import { useDetectedExternalAppIds } from "@renderer/domains/files/ui/hooks/useDetectedExternalAppIds";
+import { listGitChanges } from "@renderer/domains/git";
 import { tabStore } from "@renderer/domains/workbench";
 import { getRendererPlatform } from "@renderer/helpers/platform";
 import { ContextMenu } from "@renderer/ui/components/ContextMenu";
@@ -13,10 +13,8 @@ import type { FileTreeContextMenuRequest } from "./file-tree/types";
 import { setExpandedFileTreeItems, setSelectedEntryPath } from "@renderer/domains/files";
 import { fileTreeStore } from "@renderer/domains/files";
 import { useWorkspaceGitRefreshVersion } from "@renderer/domains/git";
-import {
-  useSelectedWorkspaceId,
-  useSelectedWorkspaceWorktreePath,
-} from "@renderer/domains/workspace/hooks/useWorkspaceReadHooks";
+import { useProjectLastUsedExternalAppId } from "@renderer/domains/project";
+import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
 import {
   findExternalAppPreset,
   getExternalAppMenuEntries,
@@ -26,7 +24,6 @@ import {
 } from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useProjectLastUsedExternalAppId } from "../../../domains/project/hooks/useProjectLastUsedExternalAppId";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
@@ -42,7 +39,6 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const { t } = useTranslation();
   const ops = useFileTreeOperations();
   const rendererPlatform = getRendererPlatform();
-  const cmd = useGitCommands();
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
   const lastUsedExternalAppId = useProjectLastUsedExternalAppId();
   const selectedWorkspaceId = useSelectedWorkspaceId();
@@ -148,7 +144,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
 
   const visibleTreeFiles = ops.repoFiles;
   const gitChangesByPath = useFileTreeGitChanges({
-    listGitChanges: cmd.listGitChanges,
+    listGitChanges,
     selectedWorkspaceId,
     selectedWorkspaceWorktreePath,
     workspaceGitRefreshVersion,

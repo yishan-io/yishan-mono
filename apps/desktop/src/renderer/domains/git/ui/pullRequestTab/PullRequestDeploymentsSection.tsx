@@ -1,5 +1,5 @@
 import { Box, Chip, Divider, Link, Stack, Typography } from "@mui/material";
-import { openLink } from "@renderer/app/commands/appCommands";
+import { openLink } from "@renderer/domains/browser";
 import type { DaemonWorkspacePullRequestDeployment } from "@renderer/rpc/daemonTypes";
 import { useTranslation } from "react-i18next";
 

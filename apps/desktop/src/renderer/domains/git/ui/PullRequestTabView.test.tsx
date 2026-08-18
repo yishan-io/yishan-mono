@@ -51,9 +51,13 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../app/commands/appCommands", () => ({
-  openLink: (options: { url: string }) => mocked.openLink(options),
-}));
+vi.mock("@renderer/domains/browser", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/browser")>();
+  return {
+    ...actual,
+    openLink: (options: { url: string }) => mocked.openLink(options),
+  };
+});
 
 vi.mock("../../../domains/git/commands/gitCommands", () => ({
   mergePullRequest: (options: {

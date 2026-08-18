@@ -1,3 +1,4 @@
+import { openLink } from "@renderer/domains/browser";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { ImageAddon } from "@xterm/addon-image";
@@ -6,7 +7,6 @@ import { WebFontsAddon } from "@xterm/addon-web-fonts";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import type { ITerminalAddon, Terminal } from "@xterm/xterm";
-import { openLink } from "../../../app/commands/appCommands";
 
 type Logger = Pick<Console, "warn">;
 const TERMINAL_DISABLED_ADDONS_STORAGE_KEY = "yishan.terminal.disabledAddons";

@@ -12,7 +12,8 @@ import { UserMessageRow } from "./UserMessageRow";
 import type { AgentToolResultMap } from "./helpers";
 import { buildTranscriptRows } from "./turnModel";
 
-const BOTTOM_SCROLL_THRESHOLD_PX = 48;const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
+const BOTTOM_SCROLL_THRESHOLD_PX = 48;
+const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
 const MESSAGE_VIRTUALIZER_OVERSCAN = 5;
 
 const savedScrollTopByTabId = new Map<string, number>();

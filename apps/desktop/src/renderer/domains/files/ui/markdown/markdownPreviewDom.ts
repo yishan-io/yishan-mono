@@ -1,6 +1,6 @@
+import { openLink } from "@renderer/domains/browser";
 import { openTab, openTabInOppositePane } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
-import { openLink } from "../../../../app/commands/appCommands";
 import { buildWorkspaceFileUrl } from "../../commands/fileCommands";
 import { getTaskListItemChecked, isAbsoluteUrl, resolveRelativePath, toggleTaskListItem } from "./markdownHelpers";
 import { type MarkdownOutlineData, extractMarkdownOutline } from "./markdownOutlineTree";

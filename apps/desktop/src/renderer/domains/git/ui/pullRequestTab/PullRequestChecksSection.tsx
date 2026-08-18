@@ -1,5 +1,5 @@
 import { Box, Link, Stack, Typography } from "@mui/material";
-import { openLink } from "@renderer/app/commands/appCommands";
+import { openLink } from "@renderer/domains/browser";
 import type { DaemonWorkspacePullRequestCheck } from "@renderer/rpc/daemonTypes";
 import { useTranslation } from "react-i18next";
 import { LuCheck, LuCircleDashed, LuX } from "react-icons/lu";

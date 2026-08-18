@@ -7,6 +7,7 @@ export { refreshDiffTabContent, seedDiffTabContent } from "./commands/diffTabCon
 export {
   inspectGitRepository,
   listGitBranches,
+  listGitChanges,
   readBranchComparisonDiff,
   readCommitDiff,
   readDiff,

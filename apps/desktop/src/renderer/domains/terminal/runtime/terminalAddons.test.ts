@@ -7,9 +7,13 @@ const mocks = vi.hoisted(() => ({
   webLinksOpenHandler: null as ((event: MouseEvent, uri: string) => void) | null,
 }));
 
-vi.mock("../../../app/commands/appCommands", () => ({
-  openLink: (options: { url: string; workspaceId?: string }) => mocks.openLink(options),
-}));
+vi.mock("@renderer/domains/browser", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/browser")>();
+  return {
+    ...actual,
+    openLink: (options: { url: string; workspaceId?: string }) => mocks.openLink(options),
+  };
+});
 
 vi.mock("@xterm/addon-web-links", () => ({
   WebLinksAddon: class {

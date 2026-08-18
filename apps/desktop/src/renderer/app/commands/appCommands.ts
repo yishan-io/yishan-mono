@@ -9,7 +9,6 @@ import type {
 } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
-import { type LinkTarget, displaySettingsStore } from "../../domains/settings/state/displaySettingsStore";
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { rendererQueryClient } from "../../queryClient";
@@ -50,56 +49,6 @@ export async function logout(): Promise<void> {
   sessionStore.getState().setAuthState(false, true);
   sessionStore.getState().clearSessionData();
   rendererQueryClient.clear();
-}
-
-function isHttpUrl(url: string): boolean {
-  try {
-    const protocol = new URL(url).protocol;
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-export type OpenLinkResult =
-  | {
-      opened: true;
-    }
-  | {
-      opened: false;
-      reason: string;
-    };
-
-export type OpenLinkOptions = {
-  url: string;
-  workspaceId?: string;
-};
-
-export async function openLink(options: OpenLinkOptions): Promise<OpenLinkResult> {
-  const { url, workspaceId } = options;
-  const linkTarget: LinkTarget = displaySettingsStore.getState().linkTarget;
-
-  if (linkTarget === "built-in" && isHttpUrl(url)) {
-    const resolvedWorkspaceId = workspaceId ?? resolveActiveWorkspaceId();
-    if (resolvedWorkspaceId) {
-      openTab({ kind: "browser", workspaceId: resolvedWorkspaceId, url });
-      return { opened: true };
-    }
-  }
-
-  try {
-    const result = await openExternalUrl(url);
-    if (result.opened) {
-      return { opened: true };
-    }
-    return { opened: false, reason: result.reason };
-  } catch {
-    return { opened: false, reason: "open-failed" };
-  }
-}
-
-function resolveActiveWorkspaceId(): string | undefined {
-  return workbenchNavigationStore.getState().activeWorkspaceId || undefined;
 }
 
 /** Reads current desktop authentication status from main-process IPC. */

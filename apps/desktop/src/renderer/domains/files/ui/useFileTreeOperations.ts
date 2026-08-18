@@ -1,14 +1,11 @@
-import { useWorkbenchCommands, useWorkspaceCommands } from "@renderer/app/commands/useCommands";
 import { listFiles, listFilesBatch } from "@renderer/domains/files/commands/fileCommands";
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
+import { closeTab, openTab, renameTabsForEntryRename } from "@renderer/domains/workbench";
+import { setLastUsedExternalAppId } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 
 import { tabStore } from "@renderer/domains/workbench";
-import {
-  useSelectedWorkspaceId,
-  useSelectedWorkspaceWorktreePath,
-  useWorkspaces,
-} from "@renderer/domains/workspace/hooks/useWorkspaceReadHooks";
+import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath, useWorkspaces } from "@renderer/domains/workspace";
 import type { ExternalAppId } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -236,8 +233,6 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
       : EMPTY_CHANGED_RELATIVE_PATHS,
   );
   const fileTreeRefreshVersion = fileTreeStore((state) => state.fileTreeRefreshVersion);
-  const { openTab, closeTab, renameTabsForEntryRename } = useWorkbenchCommands();
-  const { setLastUsedExternalAppId } = useWorkspaceCommands();
   const tabs = tabStore((state) => state.tabs);
   const {
     fileOperationState,

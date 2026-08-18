@@ -15,3 +15,4 @@ export {
   openExternalUrl,
 } from "./infrastructure/browserHostCommands";
 export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "./infrastructure/browserHostCommands";
+export { openLink, type OpenLinkOptions, type OpenLinkResult } from "./commands/browserLinkCommands";

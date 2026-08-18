@@ -1,4 +1,4 @@
-import type { WorkbenchTab } from "../../../domains/workbench/model/types";
+import type { WorkbenchTab } from "@renderer/domains/workbench";
 
 /**
  * Returns true when deletedPath should be treated as a directory in the current file listing.

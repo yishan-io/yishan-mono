@@ -14,7 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { openLink } from "@renderer/app/commands/appCommands";
+import { openLink } from "@renderer/domains/browser";
 import { BranchBadge } from "@renderer/ui/components/BranchBadge";
 import { PullRequestIcon } from "@renderer/ui/components/PullRequestIcon";
 import { useTranslation } from "react-i18next";
