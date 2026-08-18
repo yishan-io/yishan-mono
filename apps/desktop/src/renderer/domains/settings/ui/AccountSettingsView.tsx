@@ -2,13 +2,13 @@ import { Avatar, Box, LinearProgress, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionUser } from "../../../domains/session";
-import { setOrganizationVoiceUsage as applySetOrganizationVoiceUsage } from "../../../domains/session/state/sessionActions";
 import {
+  setOrganizationVoiceUsage as applySetOrganizationVoiceUsage,
   useCurrentUser,
   useOrganizations,
   useSelectedOrganizationId,
   useSessionLoaded,
-} from "../../../domains/session/ui/hooks/useSessionReadHooks";
+} from "../../../domains/session";
 import { getVoiceUsage } from "../../../domains/settings/commands/settingsCommands";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "./controls";
 

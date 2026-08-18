@@ -1,5 +1,5 @@
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
-import { selectSelectedOrganizationId } from "../../../domains/session/state/sessionSelectors";
+import { selectSelectedOrganizationId } from "../../../domains/session";
 import { selectIsDefaultContextEnabled } from "../../../domains/settings/state/settingsSelectors";
 import { buildWorkspaceCreatePlaceholder } from "../../../domains/workspace/model/workspaceCreatePlaceholder";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";

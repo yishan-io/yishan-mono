@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useScheduledJobCommands } from "../../../app/commands/useCommands";
 import { useProjects } from "../../../domains/project/ui/hooks/useProjectReadHooks";
 import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { useSelectedOrganizationId } from "../../../domains/session/ui/hooks/useSessionReadHooks";
+import { useSelectedOrganizationId } from "../../../domains/session";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useDialogRegistration } from "../../../ui/hooks/useDialogRegistration";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";

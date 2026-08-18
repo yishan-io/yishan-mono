@@ -7,7 +7,7 @@ import { PaneToggleButton } from "@renderer/domains/workbench";
 import { SplitPaneLayout } from "@renderer/domains/workbench";
 import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
-import { useSelectedOrganizationId } from "../../../domains/session/ui/hooks/useSessionReadHooks";
+import { useSelectedOrganizationId } from "../../../domains/session";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";

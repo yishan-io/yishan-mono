@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import recordStartSound from "../../../../../assets/record-start.mp3";
 import { transcribeVoiceForOrganization } from "../../../../domains/agent/commands/voiceTranscriptionCommands";
-import { selectSelectedOrganizationId } from "../../../../domains/session/state/sessionSelectors";
+import { selectSelectedOrganizationId } from "../../../../domains/session";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 
 const MAX_RECORDING_MS = 60_000;

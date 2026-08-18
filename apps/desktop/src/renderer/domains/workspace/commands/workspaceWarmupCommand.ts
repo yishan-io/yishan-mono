@@ -1,4 +1,4 @@
-import { selectSelectedOrganizationId } from "../../../domains/session/state/sessionSelectors";
+import { selectSelectedOrganizationId } from "../../../domains/session";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 

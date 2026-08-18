@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAgentCommands, useGitCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
 import { useDisplayProjectIds, useProjects } from "../../../../domains/project/ui/hooks/useProjectReadHooks";
-import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session/ui/hooks/useSessionReadHooks";
+import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
 import { useWorkspaceBranchPrefixSettings } from "../../../../domains/settings/ui/hooks/useSettingsReadHooks";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";

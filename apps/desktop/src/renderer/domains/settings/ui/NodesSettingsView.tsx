@@ -22,7 +22,7 @@ import {
   useCurrentUser,
   useOrganizations,
   useSelectedOrganizationId,
-} from "../../../domains/session/ui/hooks/useSessionReadHooks";
+} from "../../../domains/session";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
 import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";

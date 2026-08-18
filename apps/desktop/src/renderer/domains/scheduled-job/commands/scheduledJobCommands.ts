@@ -2,7 +2,7 @@ import { api } from "../../../api";
 import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../../../api/scheduledJobApi";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
-import { selectSelectedOrganizationId } from "../../session/state/sessionSelectors";
+import { selectSelectedOrganizationId } from "../../../domains/session";
 
 /**
  * Updates an existing scheduled job and refreshes the store entry on success.

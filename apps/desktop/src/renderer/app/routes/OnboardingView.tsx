@@ -2,7 +2,7 @@ import { Box, Paper, Stack, Typography } from "@mui/material";
 import { CreateProjectFormView } from "@renderer/domains/project";
 import { useTranslation } from "react-i18next";
 import { LuFolderGit2 } from "react-icons/lu";
-import { useOrganizations, useSelectedOrganizationId } from "../../domains/session/ui/hooks/useSessionReadHooks";
+import { useOrganizations, useSelectedOrganizationId } from "../../domains/session";
 import { AppMenuView } from "../../ui/layout/AppMenuView";
 
 /** Renders the first-run project creation view for organizations without projects. */

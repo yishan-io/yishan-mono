@@ -20,7 +20,7 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
 import { projectStore } from "../../domains/project/state/projectStore";
-import { sessionStore } from "../../domains/session/state/sessionStore";
+import { sessionStore } from "../../domains/session";
 import {
   openFoldersForSnapshot,
   restoreFolderSelectionIfNeeded,

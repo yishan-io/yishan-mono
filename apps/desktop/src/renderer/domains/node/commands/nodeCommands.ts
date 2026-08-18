@@ -1,6 +1,6 @@
 import { api } from "../../../api";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { selectSelectedOrganizationId } from "../../../domains/session/state/sessionSelectors";
+import { selectSelectedOrganizationId } from "../../../domains/session";
 
 const errNoOrgSelected = "No organization selected.";
 

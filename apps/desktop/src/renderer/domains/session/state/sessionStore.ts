@@ -1,29 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { NotificationPreferences } from "../../../../shared/notifications/notificationPreferences";
-import type { SupportedLanguageCode } from "../../../i18n";
-
-export type SessionUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  avatarUrl: string | null;
-  languagePreference?: SupportedLanguageCode;
-  notificationPreferences?: NotificationPreferences;
-};
-
-export type SessionOrganization = {
-  id: string;
-  name: string;
-  plan?: "free" | "pro" | "premium";
-  members?: Array<{ userId: string; role: string }>;
-  voiceUsage?: {
-    quotaMinutes: number;
-    usedSeconds: number;
-    remainingSeconds: number;
-  };
-};
+import type { SessionOrganization, SessionUser } from "../model/sessionTypes";
 
 type SessionStoreState = {
   currentUser: SessionUser | null;

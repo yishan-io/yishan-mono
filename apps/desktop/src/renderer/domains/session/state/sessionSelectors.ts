@@ -1,4 +1,4 @@
-import type { SessionUser } from "./sessionStore";
+import type { SessionUser } from "../model/sessionTypes";
 import { sessionStore } from "./sessionStore";
 
 /**

@@ -1,13 +1,13 @@
 import { Alert, Box, MenuItem } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { setSessionData } from "../../../domains/session/state/sessionActions";
 import {
   selectCurrentUser,
   selectOrganizations,
   selectSelectedOrganizationId,
-} from "../../../domains/session/state/sessionSelectors";
-import { useCurrentUser } from "../../../domains/session/ui/hooks/useSessionReadHooks";
+  setSessionData,
+} from "../../../domains/session";
+import { useCurrentUser } from "../../../domains/session";
 import { updateLanguagePreference } from "../../../domains/settings/commands/settingsCommands";
 import { SUPPORTED_LANGUAGE_CODES, type SupportedLanguageCode, i18n, setAppLanguage } from "../../../i18n";
 import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "./controls";

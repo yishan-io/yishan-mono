@@ -10,7 +10,7 @@ import {
 import { listOrgNodes } from "../../../domains/node/commands/nodeCommands";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { useDisplayProjectIds, useProjects } from "../../../domains/project/ui/hooks/useProjectReadHooks";
-import { useSelectedOrganizationId } from "../../../domains/session/ui/hooks/useSessionReadHooks";
+import { useSelectedOrganizationId } from "../../../domains/session";
 import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";

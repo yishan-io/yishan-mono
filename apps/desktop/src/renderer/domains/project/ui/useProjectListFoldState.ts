@@ -3,7 +3,7 @@ import {
   useDisplayProjectIds,
   useWorkspaceListHierarchyMode,
 } from "../../../domains/project/ui/hooks/useProjectReadHooks";
-import { useSelectedOrganizationId } from "../../../domains/session/ui/hooks/useSessionReadHooks";
+import { useSelectedOrganizationId } from "../../../domains/session";
 import {
   EMPTY_FOLD_STATE,
   EMPTY_ORDER_STATE,

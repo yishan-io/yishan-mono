@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { subscribeDaemonConnectionStatus } from "../../../session/commands/sessionCommands";
+import { subscribeDaemonConnectionStatus } from "../../../../domains/session";
 import type { AgentChatSessionView } from "../../../workbench/model/types";
 import { recoverAgentSessionAfterReconnect, startAgentChatSession } from "../../commands/agentChatCommands";
 import { selectAgentChatSession } from "../../state/agentChatSelectors";

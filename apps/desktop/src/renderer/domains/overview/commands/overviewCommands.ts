@@ -2,7 +2,7 @@ import { api } from "../../../api";
 import type { OverviewTimeRange } from "../../../api/overviewApi.types";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
-import { selectSelectedOrganizationId } from "../../session/state/sessionSelectors";
+import { selectSelectedOrganizationId } from "../../../domains/session";
 
 function selectedOrganizationId(): string {
   const organizationId = selectSelectedOrganizationId()?.trim() || "";

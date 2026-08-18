@@ -7,7 +7,7 @@ import { api } from "../../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../../api";
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotFlow } from "../../../app/flows/workspaceSnapshotFlow";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
-import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session/state/sessionSelectors";
+import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
 import { selectIsDefaultContextEnabled } from "../../../domains/settings/state/settingsSelectors";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import {

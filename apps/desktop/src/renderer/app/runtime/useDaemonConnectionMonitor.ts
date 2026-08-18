@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { subscribeDaemonConnectionStatus, subscribeDaemonInfoRefresh } from "../../domains/session/commands/sessionCommands";
+import { subscribeDaemonConnectionStatus, subscribeDaemonInfoRefresh } from "../../domains/session";
 
 type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
 

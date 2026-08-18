@@ -9,7 +9,7 @@ import type {
   DesktopUpdateEventPayload,
 } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
-import { sessionStore } from "../../domains/session/state/sessionStore";
+import { sessionStore } from "../../domains/session";
 import { type LinkTarget, displaySettingsStore } from "../../domains/settings/state/displaySettingsStore";
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";

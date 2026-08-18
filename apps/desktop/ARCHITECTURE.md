@@ -147,7 +147,7 @@ displays and imports behavior from many Domains.
 
 | Phase | Domain | Status | Primary purpose |
 |---|---|---|---|
-| D3 | `session` | `planned` | Establish authentication, bootstrap State, and public identity reads. |
+| D3 | `session` | `completed` | Establish authentication, bootstrap State, and public identity reads. |
 | D4 | `organization` | `planned` | Separate organization administration from Session and shared UI. |
 | D5 | `node` | `planned` | Establish node discovery, selection data, and administration ownership. |
 | D6 | `project` | `planned` | Establish project identity, configuration, grouping, and list behavior. |

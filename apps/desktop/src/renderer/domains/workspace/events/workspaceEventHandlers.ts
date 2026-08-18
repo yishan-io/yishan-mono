@@ -15,7 +15,7 @@ import { incrementGitRefreshVersion, setWorkspaceCurrentBranch, setWorkspacePull
 import { openTab } from "@renderer/domains/workbench";
 import { subscribeBackendEvent } from "../../../app/events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../../../app/flows/workspaceSnapshotFlow";
-import { selectSelectedOrganizationId } from "../../../domains/session/state/sessionSelectors";
+import { selectSelectedOrganizationId } from "../../../domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";

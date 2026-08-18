@@ -105,7 +105,7 @@ import {
   getRemoteHealthStatus as getRemoteHealthStatusCommand,
   getSessionBootstrapData as getSessionBootstrapDataCommand,
   resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../domains/session/commands/sessionCommands";
+} from "../../domains/session";
 import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../domains/settings/commands/cliToolCommands";
 import {
   closeTerminalSession as closeTerminalSessionCommand,

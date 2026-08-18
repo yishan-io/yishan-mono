@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionUser } from "../../../domains/session/state/sessionStore";
+import type { SessionUser } from "../../../domains/session/model/sessionTypes";
 import {
   dispatchNotification,
   getNotificationPreferences,

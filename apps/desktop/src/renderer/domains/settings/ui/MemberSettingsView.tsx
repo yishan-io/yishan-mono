@@ -25,12 +25,12 @@ import {
   listOrganizationMembers,
   removeOrgMember,
 } from "../../../domains/organization/commands/orgCommands";
-import { setSessionData as applySetSessionData } from "../../../domains/session/state/sessionActions";
+import { setSessionData as applySetSessionData } from "../../../domains/session";
 import {
   useCurrentUser,
   useOrganizations,
   useSelectedOrganizationId,
-} from "../../../domains/session/ui/hooks/useSessionReadHooks";
+} from "../../../domains/session";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
 import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";
