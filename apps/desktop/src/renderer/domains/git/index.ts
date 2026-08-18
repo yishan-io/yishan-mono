@@ -17,7 +17,7 @@ export {
   trackGitChanges,
   unstageGitChanges,
 } from "./commands/gitCommands";
-export { useGitAuthorName } from "./ui/hooks/useGitAuthorName";
+export { useGitAuthorName } from "./hooks/useGitAuthorName";
 export {
   incrementGitRefreshVersion,
   listPullRequestHistory,
@@ -34,18 +34,18 @@ export {
   useWorkspaceGitChangeTotalsByWorkspaceId,
   useWorkspaceGitRefreshVersion,
   useWorkspacePullRequestByWorkspaceId,
-} from "./ui/hooks/useGitProjectionReadHooks";
+} from "./hooks/useGitProjectionReadHooks";
 export {
   createAllWorkspacesGitSyncRuntime,
   type AllWorkspacesGitSyncRuntime,
   type WorkspaceRefreshState,
 } from "./runtime/allWorkspacesGitSyncRuntime";
 
-export { useAllWorkspacesGitSync } from "./ui/hooks/useAllWorkspacesGitSync";
+export { useAllWorkspacesGitSync } from "./hooks/useAllWorkspacesGitSync";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { ChangesTabView } from "./ui/ChangesTabView";
-export { PullRequestTabView } from "./ui/PullRequestTabView";
-export { useWorkspacePullRequestState } from "./ui/useWorkspacePullRequestState";
+export { ChangesTabView } from "./features/changes-tab/ChangesTabView";
+export { PullRequestTabView } from "./features/pull-request-tab/PullRequestTabView";
+export { useWorkspacePullRequestState } from "./features/pull-request-tab/useWorkspacePullRequestState";
 export { GitChangeTotals } from "./ui/GitChangeTotals";
-export { ProjectCommitComparison } from "./ui/ProjectCommitComparison";
+export { ProjectCommitComparison } from "./features/project-git-changes/ProjectCommitComparison";

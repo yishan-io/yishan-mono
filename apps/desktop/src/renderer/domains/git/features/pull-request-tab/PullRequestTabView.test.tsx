@@ -20,9 +20,9 @@ import { gitProjectionStore } from "@renderer/domains/git";
 import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { WorkspacePullRequestRecord } from "../../../api/types";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import type { WorkspacePullRequestRecord } from "../../../../api/types";
+import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
+import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
 import { PullRequestTabView } from "./PullRequestTabView";
 
 const mocked = vi.hoisted(() => ({
@@ -76,8 +76,8 @@ vi.mock("@renderer/domains/browser", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../domains/git/commands/gitCommands", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../domains/git/commands/gitCommands")>();
+vi.mock("../../../../domains/git/commands/gitCommands", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../domains/git/commands/gitCommands")>();
   return {
     ...actual,
     mergePullRequest: (options: {

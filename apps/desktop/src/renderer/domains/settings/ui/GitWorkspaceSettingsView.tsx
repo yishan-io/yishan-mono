@@ -1,7 +1,7 @@
 import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useGitAuthorName } from "../../../domains/git/ui/hooks/useGitAuthorName";
+import { useGitAuthorName } from "@renderer/domains/git";
 import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
 import {
   type GitBranchPrefixMode,

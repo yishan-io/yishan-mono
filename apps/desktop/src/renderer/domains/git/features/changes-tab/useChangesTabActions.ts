@@ -10,8 +10,8 @@ import {
 import { openTab } from "@renderer/domains/workbench";
 import type { DiffFileChangeKind, FileDiffEntry } from "@renderer/domains/workbench";
 import { useCallback } from "react";
-import { writeClipboardText } from "../../../helpers/clipboard";
-import type { ProjectGitChangeItem } from "./ProjectGitChangesList";
+import { writeClipboardText } from "../../../../helpers/clipboard";
+import type { ProjectGitChangeItem } from "../project-git-changes/ProjectGitChangesList";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 
 type UseChangesTabActionsInput = {

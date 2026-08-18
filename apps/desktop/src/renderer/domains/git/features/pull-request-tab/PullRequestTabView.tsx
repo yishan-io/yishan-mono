@@ -3,13 +3,13 @@ import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import { PaneLoadingBar } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
 import { useMemo, useState } from "react";
-import PullRequestChecksSection from "./pullRequestTab/PullRequestChecksSection";
-import PullRequestDeploymentsSection from "./pullRequestTab/PullRequestDeploymentsSection";
-import PullRequestEmptyState from "./pullRequestTab/PullRequestEmptyState";
-import PullRequestHeaderSection from "./pullRequestTab/PullRequestHeaderSection";
-import PullRequestHistorySection from "./pullRequestTab/PullRequestHistorySection";
-import { type MergeMethod, derivePullRequestTabState } from "./pullRequestTab/pullRequestTabHelpers";
-import { usePullRequestTabActions } from "./pullRequestTab/usePullRequestTabActions";
+import PullRequestChecksSection from "./PullRequestChecksSection";
+import PullRequestDeploymentsSection from "./PullRequestDeploymentsSection";
+import PullRequestEmptyState from "./PullRequestEmptyState";
+import PullRequestHeaderSection from "./PullRequestHeaderSection";
+import PullRequestHistorySection from "./PullRequestHistorySection";
+import { type MergeMethod, derivePullRequestTabState } from "./pullRequestTabHelpers";
+import { usePullRequestTabActions } from "./usePullRequestTabActions";
 import { useWorkspacePullRequestState } from "./useWorkspacePullRequestState";
 
 /** Renders pull request, checks, and deployment details for the selected workspace. */

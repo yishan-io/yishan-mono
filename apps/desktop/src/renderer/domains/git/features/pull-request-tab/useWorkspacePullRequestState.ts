@@ -1,9 +1,9 @@
 import { listPullRequestHistory, refreshWorkspacePullRequest } from "@renderer/domains/git";
 import { useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
 import { useEffect, useRef, useState } from "react";
-import type { WorkspacePullRequestRecord } from "../../../api/types";
-import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import { useWorkspacePullRequestByWorkspaceId } from "./hooks/useGitProjectionReadHooks";
+import type { WorkspacePullRequestRecord } from "../../../../api/types";
+import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
+import { useWorkspacePullRequestByWorkspaceId } from "../../hooks/useGitProjectionReadHooks";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;

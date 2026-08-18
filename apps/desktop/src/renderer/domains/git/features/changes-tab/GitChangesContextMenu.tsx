@@ -1,6 +1,9 @@
 import { Divider, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import { LuCopy, LuCornerUpLeft, LuMinus, LuPlus } from "react-icons/lu";
-import type { ProjectGitChangeItem, ProjectGitChangesSection } from "./ProjectGitChangesList.types";
+import type {
+  ProjectGitChangeItem,
+  ProjectGitChangesSection,
+} from "../project-git-changes/ProjectGitChangesList.types";
 
 type GitChangesContextMenuState = {
   file: ProjectGitChangeItem;

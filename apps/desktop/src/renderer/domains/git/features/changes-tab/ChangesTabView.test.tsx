@@ -36,7 +36,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../../domains/git/commands/gitCommands", () => ({
+vi.mock("../../../../domains/git/commands/gitCommands", () => ({
   listGitChanges: (...args: unknown[]) => mocks.listGitChanges(...args),
   readBranchComparisonDiff: (...args: unknown[]) => mocks.readBranchComparisonDiff(...args),
   readDiff: (...args: unknown[]) => mocks.readDiff(...args),
@@ -55,7 +55,7 @@ vi.mock("@renderer/domains/git", async (importOriginal) => {
   return { ...actual };
 });
 
-vi.mock("../../../domains/git/state/gitProjectionStore", () => ({
+vi.mock("../../../../domains/git/state/gitProjectionStore", () => ({
   gitProjectionStore: (selector: (state: { gitRefreshVersionByWorktreePath: Record<string, number> }) => unknown) =>
     selector({
       gitRefreshVersionByWorktreePath:
@@ -64,7 +64,7 @@ vi.mock("../../../domains/git/state/gitProjectionStore", () => ({
     }),
 }));
 
-vi.mock("../../../domains/project/state/projectStore", () => {
+vi.mock("../../../../domains/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
     selector({ projects: (mocks.workspaceState as { projects?: unknown[] }).projects ?? [] });
   (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
@@ -73,7 +73,7 @@ vi.mock("../../../domains/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ ...mocks.workspaceState, openTab: mocks.openTab }),
 }));

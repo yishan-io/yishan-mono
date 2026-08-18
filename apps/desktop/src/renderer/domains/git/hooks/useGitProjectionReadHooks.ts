@@ -5,7 +5,7 @@
  * of importing the Git Store directly. The projections previously lived in
  * the Workspace feature (`useWorkspaceReadHooks`).
  */
-import { gitProjectionStore } from "../../state/gitProjectionStore";
+import { gitProjectionStore } from "../state/gitProjectionStore";
 
 /** Subscribes to the git refresh version for a worktree path. */
 export function useWorkspaceGitRefreshVersion(worktreePath: string) {

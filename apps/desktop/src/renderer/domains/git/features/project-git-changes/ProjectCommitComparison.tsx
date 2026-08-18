@@ -1,7 +1,7 @@
 import { Autocomplete, type AutocompleteRenderInputParams, Box, LinearProgress, TextField } from "@mui/material";
 import { memo, useCallback, useMemo, useState } from "react";
 import { LuArrowRight } from "react-icons/lu";
-import { BranchBadge } from "../../../ui/components/BranchBadge";
+import { BranchBadge } from "../../../../ui/components/BranchBadge";
 
 export type ProjectCommitComparisonFile = {
   path: string;

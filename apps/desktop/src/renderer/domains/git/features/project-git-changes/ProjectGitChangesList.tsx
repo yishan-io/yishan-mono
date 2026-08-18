@@ -1,9 +1,9 @@
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { type MouseEvent as ReactMouseEvent, useCallback, useState } from "react";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
-import { GitChangesContextMenu, type GitChangesContextMenuState } from "./GitChangesContextMenu";
-import { GitChangesFileRow } from "./GitChangesFileRow";
-import { GitChangesSectionHeader } from "./GitChangesSectionHeader";
+import { GitChangesContextMenu, type GitChangesContextMenuState } from "../changes-tab/GitChangesContextMenu";
+import { GitChangesFileRow } from "../changes-tab/GitChangesFileRow";
+import { GitChangesSectionHeader } from "../changes-tab/GitChangesSectionHeader";
 import type { ProjectGitChangeItem, ProjectGitChangesSection } from "./ProjectGitChangesList.types";
 import {
   getFileSelectionKey,

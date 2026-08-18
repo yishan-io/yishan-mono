@@ -6,15 +6,15 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { isWorkspaceNotFoundError } from "../../../../helpers/errorHelpers";
+import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
   ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
-} from "./ProjectCommitComparison";
-import type { ProjectGitChangeKind, ProjectGitChangesSection } from "./ProjectGitChangesList";
+} from "../project-git-changes/ProjectCommitComparison";
+import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../project-git-changes/ProjectGitChangesList";
 import {
   type RepoChangesBySection,
   buildAllCommitChangesSection,
