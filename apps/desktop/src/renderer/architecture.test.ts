@@ -70,7 +70,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   R3: 0,
   R4: 0,
   "R5-cross-feature-internal": 0,
-  "R6-state-layer": 5,
+  "R6-state-layer": 3,
   "R7-model-layer": 2,
   "R8-infra-layer": 0,
   "R9-ui-components": 14,

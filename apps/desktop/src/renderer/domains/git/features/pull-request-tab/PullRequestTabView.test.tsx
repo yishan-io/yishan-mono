@@ -18,11 +18,11 @@ vi.mock("@renderer/domains/git", () => {
 
 import { gitProjectionStore } from "@renderer/domains/git";
 import { refreshWorkspacePullRequest } from "@renderer/domains/git";
+import type { GitPullRequest } from "@renderer/domains/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspacePullRequestRecord } from "../../../../api/types";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
-import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
 import { PullRequestTabView } from "./PullRequestTabView";
 
 const mocked = vi.hoisted(() => ({
@@ -32,7 +32,7 @@ const mocked = vi.hoisted(() => ({
   refreshWorkspacePullRequest: vi.fn(),
   state: {
     selectedWorkspaceId: "workspace-1",
-    pullRequest: undefined as DaemonWorkspacePullRequest | undefined,
+    pullRequest: undefined as GitPullRequest | undefined,
     historicalPullRequests: [] as WorkspacePullRequestRecord[],
     isLoading: false,
   },

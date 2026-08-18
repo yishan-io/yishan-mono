@@ -1,7 +1,7 @@
 import { setWorkspacePullRequest } from "@renderer/domains/git";
+import type { GitPullRequest } from "@renderer/domains/git";
 import { closePullRequest, mergePullRequest } from "@renderer/domains/git/commands/gitCommands";
 import { getErrorMessage } from "@renderer/helpers/errorHelpers";
-import type { DaemonWorkspacePullRequest } from "@renderer/rpc/daemonTypes";
 import { type MouseEvent, useCallback, useState } from "react";
 import type { MergeMethod } from "./pullRequestTabHelpers";
 
@@ -14,7 +14,7 @@ type UsePullRequestTabActionsParams = {
   prNumber: number | undefined;
   prTitle: string | undefined;
   prUrl: string | undefined;
-  pullRequest: DaemonWorkspacePullRequest | undefined;
+  pullRequest: GitPullRequest | undefined;
   refreshWorkspacePullRequest: (workspaceId: string) => Promise<unknown>;
   selectedWorkspaceId: string;
   worktreePath: string | undefined;
@@ -38,7 +38,7 @@ export type PullRequestTabActionsState = {
 function buildCompletedPullRequest(
   params: UsePullRequestTabActionsParams,
   status: PullRequestActionStatus,
-): DaemonWorkspacePullRequest {
+): GitPullRequest {
   return {
     number: params.prNumber ?? 0,
     title: params.prTitle ?? "",

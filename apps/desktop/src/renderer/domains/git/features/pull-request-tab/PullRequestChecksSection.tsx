@@ -1,11 +1,11 @@
 import { Box, Link, Stack, Typography } from "@mui/material";
 import { openLink } from "@renderer/domains/browser";
-import type { DaemonWorkspacePullRequestCheck } from "@renderer/rpc/daemonTypes";
+import type { GitPullRequestCheck } from "@renderer/domains/git";
 import { useTranslation } from "react-i18next";
 import { LuCheck, LuCircleDashed, LuX } from "react-icons/lu";
 
 interface PullRequestChecksSectionProps {
-  checks: DaemonWorkspacePullRequestCheck[];
+  checks: GitPullRequestCheck[];
 }
 
 function CheckStateIcon({ state }: { state: string }) {

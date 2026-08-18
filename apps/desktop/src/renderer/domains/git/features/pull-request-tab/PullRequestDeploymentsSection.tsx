@@ -1,10 +1,10 @@
 import { Box, Chip, Divider, Link, Stack, Typography } from "@mui/material";
 import { openLink } from "@renderer/domains/browser";
-import type { DaemonWorkspacePullRequestDeployment } from "@renderer/rpc/daemonTypes";
+import type { GitPullRequestDeployment } from "@renderer/domains/git";
 import { useTranslation } from "react-i18next";
 
 interface PullRequestDeploymentsSectionProps {
-  deployments: DaemonWorkspacePullRequestDeployment[];
+  deployments: GitPullRequestDeployment[];
 }
 
 /** Renders live pull request deployments. */

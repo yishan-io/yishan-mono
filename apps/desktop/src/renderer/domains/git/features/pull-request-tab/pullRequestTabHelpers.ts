@@ -1,14 +1,14 @@
 import type { WorkspacePullRequestRecord } from "@renderer/api/types";
+import type { GitPullRequest, GitPullRequestCheck } from "@renderer/domains/git";
 import { livePrStatus } from "@renderer/helpers/pullRequestUtils";
-import type { DaemonWorkspacePullRequest, DaemonWorkspacePullRequestCheck } from "@renderer/rpc/daemonTypes";
 
 export type MergeMethod = "merge" | "squash" | "rebase";
 
 export type PullRequestTabDerivedState = {
   hasLivePr: boolean;
   liveStatus: string | undefined;
-  checks: DaemonWorkspacePullRequestCheck[];
-  deployments: NonNullable<DaemonWorkspacePullRequest["deployments"]>;
+  checks: GitPullRequestCheck[];
+  deployments: NonNullable<GitPullRequest["deployments"]>;
   bestOpenHistoryPr: WorkspacePullRequestRecord | undefined;
   pastPullRequests: WorkspacePullRequestRecord[];
   hasHistory: boolean;
@@ -25,12 +25,12 @@ export type PullRequestTabDerivedState = {
 const failingCheckStates = new Set(["FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"]);
 
 /** Returns whether a pull request check should block merge actions. */
-export function isFailingCheck(check: DaemonWorkspacePullRequestCheck): boolean {
+export function isFailingCheck(check: GitPullRequestCheck): boolean {
   return failingCheckStates.has(check.state.toUpperCase());
 }
 
 /** Returns whether a live pull request can be merged from the current view. */
-export function canMergePullRequest(pr: DaemonWorkspacePullRequest): boolean {
+export function canMergePullRequest(pr: GitPullRequest): boolean {
   if (livePrStatus(pr) !== "open") {
     return false;
   }
@@ -45,7 +45,7 @@ export function canMergePullRequest(pr: DaemonWorkspacePullRequest): boolean {
 
 /** Derives the current pull request tab display state from live and historical data. */
 export function derivePullRequestTabState(
-  pullRequest: DaemonWorkspacePullRequest | undefined,
+  pullRequest: GitPullRequest | undefined,
   historicalPullRequests: WorkspacePullRequestRecord[] | undefined,
 ): PullRequestTabDerivedState {
   const hasLivePr = Boolean(pullRequest);

@@ -1,4 +1,5 @@
 import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
+import type { GitPullRequest, GitPullRequestSummary } from "@renderer/domains/git";
 import { CreateWorkspaceDialogView } from "@renderer/domains/workspace";
 import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
@@ -12,8 +13,6 @@ import {
   type ExternalAppMenuEntry,
   findExternalAppPreset,
 } from "../../../../../shared/contracts/externalApps";
-import type { WorkspacePullRequestSummary } from "../../../../api/types";
-import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
 import { ContextMenu, type ContextMenuEntry } from "../../../../ui/components/ContextMenu";
 import { ProjectConfigDialogView } from "../project-config/ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "../project-delete/ProjectDeleteDialogView";
@@ -90,8 +89,8 @@ type ProjectListMenusProps = {
   hoveredWorkspace: WorkspaceItem | undefined;
   isHoveredWorkspacePrimary: boolean;
   hoveredWorkspaceCurrentBranch: string | undefined;
-  hoveredWorkspacePullRequest: DaemonWorkspacePullRequest | undefined;
-  hoveredWorkspaceLatestPullRequest: WorkspacePullRequestSummary | undefined;
+  hoveredWorkspacePullRequest: GitPullRequest | undefined;
+  hoveredWorkspaceLatestPullRequest: GitPullRequestSummary | undefined;
   handleWorkspaceInfoPopoverMouseEnter: () => void;
   handleWorkspaceInfoPopoverMouseLeave: () => void;
 };

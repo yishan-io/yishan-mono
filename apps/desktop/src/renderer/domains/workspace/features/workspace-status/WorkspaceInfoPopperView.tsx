@@ -1,12 +1,12 @@
 import { Box, Paper, Popper, Stack, Typography } from "@mui/material";
+import type { GitPullRequestSummary } from "@renderer/domains/git";
+import type { GitPullRequest } from "@renderer/domains/git";
 import { PullRequestIcon } from "@renderer/ui/components/PullRequestIcon";
 import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
-import type { WorkspacePullRequestSummary } from "../../../../api/types";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { livePrStatus } from "../../../../helpers/pullRequestUtils";
-import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
 
 type WorkspaceInfoPopperViewProps = {
   open: boolean;
@@ -15,9 +15,9 @@ type WorkspaceInfoPopperViewProps = {
   isPrimaryWorkspace: boolean;
   /** Live current branch read from the workspace path via the daemon. */
   currentBranch?: string;
-  pullRequest?: DaemonWorkspacePullRequest;
+  pullRequest?: GitPullRequest;
   /** Latest PR snapshot from the api-service — shown when no live daemon PR is available. */
-  latestPullRequest?: WorkspacePullRequestSummary;
+  latestPullRequest?: GitPullRequestSummary;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 };

@@ -63,7 +63,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // desktop6-adjust W4: git projections moved from the Workspace feature to
   // the Git feature; the transport-DTO boundary on the store keeps the same
   // baselined R6 row (was domains/workspace/state/workspaceProjectionStore.ts).
-  { rule: "R6-state-layer", file: "domains/git/state/gitProjectionStore.ts", phase: "D10" },
   // ---- R7-model-layer (owning phase = the Domain that owns the model) ----
   { rule: "R7-model-layer", file: "domains/agent/model/agentChatStore.ts", phase: "D12" },
   // desktop6-adjust W1: workbench/model/types.ts row removed — the generic

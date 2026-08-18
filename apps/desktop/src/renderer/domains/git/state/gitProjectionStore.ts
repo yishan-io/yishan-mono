@@ -9,25 +9,24 @@ import type { WorkspaceGitChangeTotals } from "@renderer/domains/workspace";
  */
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { WorkspacePullRequestSummary } from "../../../api/types";
-import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import type { GitPullRequest, GitPullRequestSummary } from "../model/gitPullRequestTypes";
 
 export type GitProjectionStoreState = {
-  pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
-  latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
+  pullRequestByWorkspaceId: Record<string, GitPullRequest | undefined>;
+  latestPullRequestByWorkspaceId: Record<string, GitPullRequestSummary | undefined>;
   currentBranchByWorkspaceId: Record<string, string>;
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
   gitRefreshVersionByWorktreePath: Record<string, number>;
-  setWorkspacePullRequest: (workspaceId: string, pullRequest?: DaemonWorkspacePullRequest) => void;
+  setWorkspacePullRequest: (workspaceId: string, pullRequest?: GitPullRequest) => void;
   setWorkspaceCurrentBranch: (workspaceId: string, branch: string) => void;
   setWorkspaceGitChangesCount: (workspaceId: string, count: number) => void;
   setWorkspaceGitChangeTotals: (workspaceId: string, totals: WorkspaceGitChangeTotals) => void;
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
   pruneForWorkspaces: (workspaceIdSet: ReadonlySet<string>) => void;
   setAll: (input: {
-    pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
-    latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
+    pullRequestByWorkspaceId: Record<string, GitPullRequest | undefined>;
+    latestPullRequestByWorkspaceId: Record<string, GitPullRequestSummary | undefined>;
     gitChangesCountByWorkspaceId: Record<string, number>;
     gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
   }) => void;

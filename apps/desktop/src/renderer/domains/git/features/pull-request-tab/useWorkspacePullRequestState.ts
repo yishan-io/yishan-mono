@@ -1,14 +1,14 @@
 import { listPullRequestHistory, refreshWorkspacePullRequest } from "@renderer/domains/git";
+import type { GitPullRequest } from "@renderer/domains/git";
 import { useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
 import { useEffect, useRef, useState } from "react";
 import type { WorkspacePullRequestRecord } from "../../../../api/types";
-import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
 import { useWorkspacePullRequestByWorkspaceId } from "../../hooks/useGitProjectionReadHooks";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;
   /** The live PR from the daemon (current branch, real-time). */
-  pullRequest: DaemonWorkspacePullRequest | undefined;
+  pullRequest: GitPullRequest | undefined;
   /** Historical PRs from the api-service, ordered by detected_at desc. */
   historicalPullRequests: WorkspacePullRequestRecord[];
   isLoading: boolean;
