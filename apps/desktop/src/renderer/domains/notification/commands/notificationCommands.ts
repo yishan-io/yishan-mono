@@ -9,11 +9,9 @@ import {
   DEFAULT_NOTIFICATION_PREFERENCES,
 } from "../../../../shared/notifications/notificationPreferences";
 import { requestJson } from "../../../api/restClient";
-import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
-import {
-  selectCurrentUserNotificationPreferences,
-} from "../../../domains/session";
+import { selectCurrentUserNotificationPreferences } from "../../../domains/session";
 import { updateCurrentUserNotificationPreferences } from "../../../domains/session";
+import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
 
 /** Loads notification preferences from current session user, then falls back to local cache. */
 export async function getNotificationPreferences() {

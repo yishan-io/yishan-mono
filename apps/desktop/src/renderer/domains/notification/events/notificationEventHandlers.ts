@@ -1,5 +1,8 @@
+import { recordWorkspaceUnreadNotification, setWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
+import { selectProjectById } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import { selectWorkspaces } from "@renderer/domains/workspace";
 /**
  * Notification event handlers — owns notification.event effects: preference-
  * backed delivery, suppression policy, effect dedupe, system notification copy
@@ -15,21 +18,14 @@ import type {
   NotificationEventType,
   NotificationPreferences,
 } from "../../../../shared/notifications/notificationPreferences";
-import { subscribeInAppNotificationEvent } from "../../../app/events/backendEventRouter.selectors";
 import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "../../../domains/agent";
-import {
-  recordWorkspaceUnreadNotification,
-  setWorkspaceAgentStatusByWorkspaceId,
-} from "../../../domains/agent/state/chatActions";
 import {
   dispatchNotification,
   getNotificationPreferences,
   playNotificationSound,
 } from "../../../domains/notification/commands/notificationCommands";
-import { selectProjectById } from "../../../domains/project/state/projectSelectors";
-import { selectWorkspaces } from "../../../domains/workspace/state/workspaceSelectors";
 
-import { parseObserverSessionKey, recordAgentObserverStatus } from "../../agent/commands/agentSessionLifecycle";
+import { parseObserverSessionKey, recordAgentObserverStatus } from "@renderer/domains/agent";
 
 const NOTIFICATION_EFFECT_DEDUPE_WINDOW_MS = 1_500;
 
@@ -38,7 +34,7 @@ export type NotificationSoundPayload = NonNullable<NotificationEventPayload["sou
 export type SystemNotificationInput = { title: string; body?: string; silent?: boolean };
 
 export type NotificationEventDependencies = {
-  subscribeInAppNotification: (listener: (payload: NotificationEventPayload) => void) => () => void;
+  subscribeInAppNotification?: (listener: (payload: NotificationEventPayload) => void) => () => void;
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
   recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
   dispatchSystemNotification: (input: SystemNotificationInput) => Promise<void>;
@@ -265,7 +261,6 @@ export function handleInAppNotification(
 }
 
 export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependencies = {
-  subscribeInAppNotification: (listener) => subscribeInAppNotificationEvent(listener),
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId) => {
     setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId);
   },
@@ -303,7 +298,7 @@ export function startNotificationEventHandlers() {
  * Creates one notification event handler factory. Returns `start()` which
  * subscribes to notification.event and returns a teardown.
  */
-export function createNotificationEventHandlers(dependencies: NotificationEventDependencies) {
+export function createNotificationEventHandlers(dependencies: Partial<NotificationEventDependencies>) {
   const resolvedDependencies = {
     ...DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES,
     ...dependencies,
@@ -311,12 +306,12 @@ export function createNotificationEventHandlers(dependencies: NotificationEventD
   return function startNotificationEventHandlers() {
     const notificationEffectTimeoutsById = new Map<string, ReturnType<typeof setTimeout>>();
 
-    const unsubscribeInAppNotification = resolvedDependencies.subscribeInAppNotification((payload) => {
+    const unsubscribeInAppNotification = resolvedDependencies.subscribeInAppNotification?.((payload) => {
       handleInAppNotification(payload, resolvedDependencies, notificationEffectTimeoutsById);
     });
 
     return () => {
-      unsubscribeInAppNotification();
+      unsubscribeInAppNotification?.();
       for (const timeoutId of notificationEffectTimeoutsById.values()) {
         clearTimeout(timeoutId);
       }

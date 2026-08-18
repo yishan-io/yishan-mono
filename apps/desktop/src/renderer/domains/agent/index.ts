@@ -7,7 +7,7 @@
 export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
 export { listAgentModels } from "./commands/agentCommands";
-export { clearTerminalAgentStatus } from "./commands/agentSessionLifecycle";
+export { clearTerminalAgentStatus, parseObserverSessionKey, recordAgentObserverStatus } from "./commands/agentSessionLifecycle";
 export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./model/agentSkillTextHelpers";
 export {
   THINKING_LEVELS,
@@ -60,7 +60,7 @@ export type {
   AgentThinkingSignatureSummary,
 } from "./model/agentChatTypes";
 export { isAgentSessionBusy } from "./model/agentChatTypes";
-export { removeTabData, removeWorkspaceTaskCounts, markWorkspaceNotificationsRead } from "./state/chatActions";
+export { recordWorkspaceUnreadNotification, removeTabData, removeWorkspaceTaskCounts, setWorkspaceAgentStatusByWorkspaceId, markWorkspaceNotificationsRead } from "./state/chatActions";
 export type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
 // Re-exported through the public API instead of the events module (Phase 17).

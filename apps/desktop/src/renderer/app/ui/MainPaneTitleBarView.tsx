@@ -1,6 +1,7 @@
 import { Box, Button, Tooltip, Typography } from "@mui/material";
 import { useWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
 import { useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
+import { resolveWorkspaceNotificationColor, resolveWorkspaceNotificationTone } from "@renderer/domains/notification";
 import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
 import { renderProjectIcon } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
@@ -18,10 +19,6 @@ import { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "../../d
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../helpers/localFolder";
 import { getRendererPlatform } from "../../helpers/platform";
-import {
-  resolveWorkspaceNotificationColor,
-  resolveWorkspaceNotificationTone,
-} from "../../helpers/workspaceNotification";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { DaemonVersionWarningControl } from "./DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";

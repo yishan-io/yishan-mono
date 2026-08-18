@@ -84,7 +84,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "D17" },
   // ---- R14-cross-domain-deep (Phase D2 baseline; owning phase = importing Domain) ----
   { rule: "R14-cross-domain-deep", file: "domains/settings/state/agentSettingsStore.ts", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/notification/events/notificationEventHandlers.ts", phase: "D13" },
   { rule: "R14-cross-domain-deep", file: "domains/overview/ui/OverviewFiltersView.tsx", phase: "D14" },
   { rule: "R14-cross-domain-deep", file: "domains/overview/ui/OverviewView.tsx", phase: "D14" },
   { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "D15" },
@@ -103,7 +102,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     phase: "D16",
   },
   // ---- R15-app-from-domain (Phase D2 baseline; owning phase = importing Domain) ----
-  { rule: "R15-app-from-domain", file: "domains/notification/events/notificationEventHandlers.ts", phase: "D13" },
   { rule: "R15-app-from-domain", file: "domains/overview/ui/OverviewView.tsx", phase: "D14" },
   { rule: "R15-app-from-domain", file: "domains/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "D15" },
   { rule: "R15-app-from-domain", file: "domains/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "D15" },

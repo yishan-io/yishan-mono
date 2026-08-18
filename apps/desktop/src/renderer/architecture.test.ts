@@ -78,8 +78,8 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R11-workbench-product-import": 0,
   "R12-store-action-promise": 0,
   "R13-getter-forwarding-action-file": 0,
-  "R14-cross-domain-deep": 22,
-  "R15-app-from-domain": 20,
+  "R14-cross-domain-deep": 18,
+  "R15-app-from-domain": 19,
   "R16-app-deep-into-domain": 75,
 };
 

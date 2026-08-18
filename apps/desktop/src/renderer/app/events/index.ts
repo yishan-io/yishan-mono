@@ -10,7 +10,7 @@
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
 import { resetAgentLifecycleState } from "../../domains/agent/commands/agentSessionLifecycle";
-import { startNotificationEventHandlers } from "../../domains/notification/events/notificationEventHandlers";
+import { createNotificationEventHandlers } from "../../domains/notification/events/notificationEventHandlers";
 import { createTerminalEventHandlers } from "../../domains/terminal/events/terminalEventHandlers";
 import { createWorkbenchEventHandlers } from "../../domains/workbench/events/workbenchEventHandlers";
 import { createWorkspaceEventHandlers } from "../../domains/workspace/events/workspaceEventHandlers";
@@ -97,7 +97,15 @@ export function startBackendEventHandlers() {
       }),
     loadWorkspaceSnapshot,
   })();
-  const stopNotificationEventHandlers = startNotificationEventHandlers();
+  const stopNotificationEventHandlers = createNotificationEventHandlers({
+    subscribeInAppNotification: (listener) =>
+      subscribeBackendEvent("notification.event", (event) => {
+        if (event.source !== "notificationEvent") {
+          return;
+        }
+        listener(event.payload);
+      }),
+  })();
   const stopTerminalEventHandlers = createTerminalEventHandlers({
     subscribeTerminalSessionChanged: (listener) =>
       subscribeBackendEvent("terminal.session.changed", (event) => {

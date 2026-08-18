@@ -1,5 +1,6 @@
 import { useWorkspaceAgentStatusByWorkspaceId, useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
 import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/domains/git";
+import { resolveWorkspaceNotificationTone } from "@renderer/domains/notification";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/domains/workspace";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +10,6 @@ import { useDisplayProjectIds, useProjects } from "../../../../domains/project/h
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../../domains/project/model/projectTypes";
 import { useSelectedOrganizationId } from "../../../../domains/session";
 import { resolveWorkspaceListDisplayName } from "../../../../helpers/workspaceDisplayNames";
-import { resolveWorkspaceNotificationTone } from "../../../../helpers/workspaceNotification";
 import { supportsGitFeatures } from "../../model/projectGitCapability";
 import { filterVisibleProjects } from "../../model/projectListRules";
 import { reconcileOrder } from "./projectListHelpers";
