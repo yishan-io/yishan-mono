@@ -6,7 +6,7 @@ export {
   useAgentKindsInUse,
   useKeybindingOverrides,
   useWorkspaceBranchPrefixSettings,
-} from "./ui/hooks/useSettingsReadHooks";
+} from "./hooks/useSettingsReadHooks";
 export { listSkills } from "./commands/skillCommands";
 export {
   type GitBranchPrefixMode,
