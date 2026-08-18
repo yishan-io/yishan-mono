@@ -3,6 +3,7 @@ import { CreateWorkspaceDialogView } from "@renderer/domains/workspace";
 import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
 import type { PendingWorkspaceDeletion } from "@renderer/domains/workspace";
+import type { WorkspaceItem } from "@renderer/domains/workspace";
 import type { TFunction } from "i18next";
 import type { Dispatch, SetStateAction } from "react";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
@@ -12,7 +13,6 @@ import {
   findExternalAppPreset,
 } from "../../../../../shared/contracts/externalApps";
 import type { WorkspacePullRequestSummary } from "../../../../api/types";
-import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
 import type { DaemonWorkspacePullRequest } from "../../../../rpc/daemonTypes";
 import { ContextMenu, type ContextMenuEntry } from "../../../../ui/components/ContextMenu";
 import { ProjectConfigDialogView } from "../project-config/ProjectConfigDialogView";

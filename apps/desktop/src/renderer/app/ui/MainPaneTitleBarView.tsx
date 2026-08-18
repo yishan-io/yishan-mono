@@ -3,6 +3,7 @@ import { useWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
 import { useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
 import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
 import { renderProjectIcon } from "@renderer/domains/project";
+import { filterVisibleProjects } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { PaneHeader } from "@renderer/domains/workbench";
@@ -17,7 +18,6 @@ import { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "../../d
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../helpers/localFolder";
 import { getRendererPlatform } from "../../helpers/platform";
-import { filterVisibleProjects } from "../../helpers/projectHelpers";
 import {
   resolveWorkspaceNotificationColor,
   resolveWorkspaceNotificationTone,

@@ -1,5 +1,10 @@
 import { Box } from "@mui/material";
+import {
+  markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead,
+  useWorkspaceUnreadToneByWorkspaceId,
+} from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
+import { useDetectedExternalAppIds } from "@renderer/domains/files";
 import { deleteProject } from "@renderer/domains/project";
 import { activateProject, activateWorkspace } from "@renderer/domains/workbench";
 import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
@@ -13,6 +18,7 @@ import {
   reorderWorkspace,
   setLastUsedExternalAppId,
 } from "@renderer/domains/workspace";
+import { subscribeOpenCreateWorkspaceDialog } from "@renderer/domains/workspace";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
@@ -25,11 +31,7 @@ import {
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
 } from "../../../../../shared/contracts/externalApps";
-import { markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead } from "../../../../domains/agent/state/chatActions";
-import { useWorkspaceUnreadToneByWorkspaceId } from "../../../../domains/agent/ui/hooks/useAgentChatReadHooks";
-import { useDetectedExternalAppIds } from "../../../../domains/files/ui/hooks/useDetectedExternalAppIds";
 import { useLastUsedExternalAppId, useProjects } from "../../../../domains/project/hooks/useProjectReadHooks";
-import { subscribeOpenCreateWorkspaceDialog } from "../../../../domains/workspace/commands/workspaceCommands";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { ContextMenu, type ContextMenuEntry } from "../../../../ui/components/ContextMenu";

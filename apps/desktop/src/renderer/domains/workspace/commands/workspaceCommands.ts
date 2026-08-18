@@ -4,6 +4,8 @@ import {
   requestSelectFolderInFileTree,
   requestUndo,
 } from "@renderer/domains/files";
+import { supportsGitFeatures } from "@renderer/domains/project";
+import { filterVisibleProjects } from "@renderer/domains/project";
 import {
   DEFAULT_RIGHT_PANE_TAB,
   type WorkspaceRightPaneTab,
@@ -16,8 +18,6 @@ import {
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
-import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
-import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { normalizeCreateWorkspaceInput } from "../../../helpers/workspaceHelpers";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import {

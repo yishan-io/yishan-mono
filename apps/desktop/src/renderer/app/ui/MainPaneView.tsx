@@ -5,6 +5,7 @@ import { FileSearchOverlay } from "@renderer/domains/files";
 import { getFileTreeIcon } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useLastUsedExternalAppId } from "@renderer/domains/project";
+import { supportsGitFeatures } from "@renderer/domains/project";
 import { useAgentKindsInUse } from "@renderer/domains/settings";
 import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/domains/terminal";
 import {
@@ -37,7 +38,6 @@ import {
 } from "../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { isFolderWorkspace } from "../../helpers/localFolder";
-import { supportsGitFeatures } from "../../helpers/projectGitCapability";
 import { DARK_SURFACE_COLORS } from "../../theme";
 import { useFileCommands, useGitCommands, useTerminalCommands, useWorkbenchCommands } from "../commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../selectors";

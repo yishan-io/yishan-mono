@@ -14,14 +14,26 @@ export type {
 } from "./model/workspaceTypes";
 export { selectWorkspaces } from "./state/workspaceSelectors";
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
-export { setOrderedWorkspaceIds } from "./state/workspaceActions";
 export {
   closeWorkspace,
   deleteLocalFolder,
   reorderWorkspace,
   setDisplayRepoIds,
   setLastUsedExternalAppId,
+  subscribeOpenCreateWorkspaceDialog,
 } from "./commands/workspaceCommands";
+export { createLocalFolderImport } from "./commands/localFolderCommands";
+export {
+  buildWorkspaceOpenProjectEntries,
+  openWorkspaceEntries,
+} from "./commands/workspaceWarmupCommand";
+export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
+export {
+  addWorkspace,
+  deleteProject,
+  setOrderedWorkspaceIds,
+  updateProjectConfig,
+} from "./state/workspaceActions";
 export {
   workspaceCreateProgressStore,
   type WorkspaceCreateProgressEntry,

@@ -6,6 +6,8 @@
  * hooks. Cross-Domain code imports project through this file only.
  */
 export { LOCAL_FOLDER_PROJECT_ID } from "./model/projectTypes";
+export { isGitProject, supportsGitFeatures } from "./model/projectGitCapability";
+export { filterVisibleProjects } from "./model/projectListRules";
 export type {
   WorkspaceProjectCommand,
   WorkspaceProjectRecord,

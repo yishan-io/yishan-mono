@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { selectProjectById } from "../../../../domains/project/state/projectSelectors";
-import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
+import { supportsGitFeatures } from "../../model/projectGitCapability";
 
 export function useProjectListDialogState() {
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);

@@ -9,3 +9,4 @@ export {
   type EditorSettingsStoreState,
 } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
+export { selectIsDefaultContextEnabled } from "./state/settingsSelectors";

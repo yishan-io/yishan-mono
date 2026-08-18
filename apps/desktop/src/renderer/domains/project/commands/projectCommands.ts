@@ -7,22 +7,20 @@ import { api } from "../../../api";
 import type { ProjectWithWorkspacesRecord } from "../../../api";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
-import { selectIsDefaultContextEnabled } from "../../../domains/settings/state/settingsSelectors";
-import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
+import { selectIsDefaultContextEnabled } from "../../../domains/settings";
 import {
   addWorkspace as applyAddWorkspace,
   deleteProject as applyDeleteProject,
   updateProjectConfig as applyUpdateProjectConfig,
-} from "../../../domains/workspace/state/workspaceActions";
-import { selectWorkspaces } from "../../../domains/workspace/state/workspaceSelectors";
+  buildWorkspaceOpenProjectEntries,
+  createLocalFolderImport,
+  openWorkspaceEntries,
+  selectWorkspaces,
+  syncTabStoreWithWorkspace,
+} from "../../../domains/workspace";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { createLocalFolderImport } from "../../workspace/commands/localFolderCommands";
-import {
-  buildWorkspaceOpenProjectEntries,
-  openWorkspaceEntries,
-} from "../../workspace/commands/workspaceWarmupCommand";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../state/projectStore";
 

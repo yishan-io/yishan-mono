@@ -1,11 +1,11 @@
 import { useWorkspaceGitRefreshVersion } from "@renderer/domains/git";
+import { supportsGitFeatures } from "@renderer/domains/project";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGitCommands } from "../../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../../app/selectors";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
-import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,

@@ -12,11 +12,10 @@ import { immer } from "zustand/middleware/immer";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import {
   type RepoConfigUpdate,
-  applyCreatedProjectState,
-  applyDeletedProjectState,
   applyUpdatedRepoConfigState,
   normalizeCreateRepoInput,
 } from "../../../helpers/projectHelpers";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import type { WorkspaceProjectRecord } from "../model/projectTypes";
 
 export type WorkspaceStoreOrganizationPreference = {
@@ -98,6 +97,61 @@ const initialProjectState = {
   organizationPreferencesById: undefined,
   workspaceListHierarchyMode: "by_project" as const,
 };
+
+type CreatedProjectInput = {
+  name: string;
+  source: "local" | "remote";
+  normalizedPath: string;
+  normalizedGitUrl: string;
+  resolvedPath: string;
+  backendProject: WorkspaceProjectRecord;
+};
+
+/** Project-slice create: appends the project + display id. Selection is set by the command layer. */
+function applyCreatedProjectState(
+  state: { projects: WorkspaceProjectRecord[]; displayProjectIds: string[] },
+  input: CreatedProjectInput,
+): void {
+  const currentDisplayProjectIds = state.displayProjectIds;
+  const nextRepoId = input.backendProject.id;
+  const repoPath = (input.backendProject.localPath ?? input.resolvedPath).trim();
+  const nextProject = {
+    id: nextRepoId,
+    key: input.backendProject.key ?? input.backendProject.repoKey ?? nextRepoId,
+    name: input.name.trim(),
+    path: repoPath,
+    missing: false,
+    gitUrl: input.backendProject.gitUrl ?? (input.source === "remote" ? input.normalizedGitUrl : ""),
+    localPath: input.source === "local" ? repoPath : "",
+    worktreePath: input.backendProject.worktreePath ?? (input.source === "local" ? repoPath : ""),
+    contextEnabled: input.backendProject.contextEnabled ?? true,
+    defaultBranch: input.backendProject.defaultBranch ?? "",
+    icon: input.backendProject.icon || pickRandomProjectIcon(),
+    color: input.backendProject.color || pickRandomProjectColor(),
+    setupScript: input.backendProject.setupScript ?? "",
+    postScript: input.backendProject.postScript ?? "",
+    commands: input.backendProject.commands ?? [],
+    sourceType: input.backendProject.sourceType ?? (input.source === "local" ? "git-local" : "git"),
+    repoProvider: input.backendProject.repoProvider ?? null,
+    repoUrl: (input.backendProject.repoUrl ?? (input.source === "remote" ? input.normalizedGitUrl : "")) || null,
+    repoKey: input.backendProject.repoKey ?? input.backendProject.key ?? nextRepoId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdByUserId: "",
+  } satisfies WorkspaceProjectRecord;
+
+  state.projects.push(nextProject);
+  state.displayProjectIds = [...(currentDisplayProjectIds ?? []), nextRepoId];
+}
+
+/** Project-slice delete: removes the project + its display-project id. */
+function applyDeletedProjectState(
+  state: { projects: WorkspaceProjectRecord[]; displayProjectIds: string[] },
+  projectId: string,
+): void {
+  state.projects = state.projects.filter((project) => project.id !== projectId);
+  state.displayProjectIds = state.displayProjectIds.filter((id) => id !== projectId);
+}
 
 export const projectStore = create<ProjectStoreState>()(
   persist(

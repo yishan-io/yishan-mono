@@ -1,4 +1,6 @@
 import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
+import { supportsGitFeatures } from "@renderer/domains/project";
+import { filterVisibleProjects } from "@renderer/domains/project";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -9,8 +11,6 @@ import { useWorkspaceBranchPrefixSettings } from "../../../../domains/settings/u
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
-import { supportsGitFeatures } from "../../../../helpers/projectGitCapability";
-import { filterVisibleProjects } from "../../../../helpers/projectHelpers";
 import { resolveTargetBranchForCreate } from "../../../../helpers/workspaceBranchNaming";
 import { buildWorkspaceNavigationPath } from "../../../../navigation/workspaceNavigation";
 import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";

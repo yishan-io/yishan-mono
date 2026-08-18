@@ -3,6 +3,7 @@
  */
 export type { FileCommands } from "./commands/contract";
 export { openEntryInExternalApp } from "./commands/fileCommands";
+export { useDetectedExternalAppIds } from "./ui/hooks/useDetectedExternalAppIds";
 export {
   incrementFileTreeRefreshVersion,
   requestDeleteSelection,
