@@ -5,12 +5,12 @@ import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
-import { useScheduledJobCommands } from "../../../app/commands/useCommands";
-import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
-import { getRendererPlatform } from "../../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
-import { CreateScheduledJobDialogView } from "./CreateScheduledJobDialogView";
-import { ScheduledJobDetailView } from "./ScheduledJobDetailView";
+import { loadScheduledJobs } from "../../commands/scheduledJobCommands";
+import { scheduledJobStore } from "../../../../domains/scheduled-job/state/scheduledJobStore";
+import { getRendererPlatform } from "../../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
+import { CreateScheduledJobDialogView } from "../scheduled-job-create/CreateScheduledJobDialogView";
+import { ScheduledJobDetailView } from "../scheduled-job-detail/ScheduledJobDetailView";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";
 
 const thSx = {
@@ -43,7 +43,6 @@ export function ScheduledJobView({ onClose: _onClose }: ScheduledJobViewProps = 
   const jobs = scheduledJobStore((state) => state.scheduledJobs);
   const loadState = scheduledJobStore((state) => state.loadState);
   const loadError = scheduledJobStore((state) => state.loadError);
-  const { loadScheduledJobs } = useScheduledJobCommands();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 

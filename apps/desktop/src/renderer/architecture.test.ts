@@ -70,7 +70,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   R3: 0,
   R4: 0,
   "R5-cross-feature-internal": 0,
-  "R6-state-layer": 2,
+  "R6-state-layer": 1,
   "R7-model-layer": 1,
   "R8-infra-layer": 0,
   "R9-ui-components": 14,
@@ -78,9 +78,9 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R11-workbench-product-import": 0,
   "R12-store-action-promise": 0,
   "R13-getter-forwarding-action-file": 0,
-  "R14-cross-domain-deep": 16,
-  "R15-app-from-domain": 18,
-  "R16-app-deep-into-domain": 74,
+  "R14-cross-domain-deep": 11,
+  "R15-app-from-domain": 13,
+  "R16-app-deep-into-domain": 73,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {

@@ -2,15 +2,15 @@ import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useScheduledJobCommands } from "../../../app/commands/useCommands";
-import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
-import type { CreateScheduledJobInput } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { useDaemonId, useSelectedOrganizationId } from "../../../domains/session";
-import { useSelectedProjectId } from "../../../domains/workspace/hooks/useWorkspaceReadHooks";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
-import { useScheduledJobFormState } from "./form/useScheduledJobFormState";
-import { DEFAULT_FORM_DRAFT, SCHEDULED_JOB_AGENT_KIND } from "./scheduledJobFormHelpers";
+import { createScheduledJob } from "../../commands/scheduledJobCommands";
+import { useProjects } from "@renderer/domains/project";
+import type { CreateScheduledJobInput } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
+import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
+import { useSelectedProjectId } from "@renderer/domains/workspace";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import { ScheduledJobFormFields } from "../scheduled-job-form/form/ScheduledJobFormFields";
+import { useScheduledJobFormState } from "../scheduled-job-form/form/useScheduledJobFormState";
+import { DEFAULT_FORM_DRAFT, SCHEDULED_JOB_AGENT_KIND } from "../scheduled-job-form/scheduledJobFormHelpers";
 
 type CreateScheduledJobFormViewProps = {
   onCreated: () => void;
@@ -24,7 +24,6 @@ const createCustomCronDescriptionSx = { display: "block", mt: 0.75 };
 /** Form for creating a new scheduled job. */
 export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }: CreateScheduledJobFormViewProps) {
   const { t } = useTranslation();
-  const { createScheduledJob } = useScheduledJobCommands();
   const orgId = useSelectedOrganizationId();
   const daemonId = useDaemonId();
   const selectedProjectId = useSelectedProjectId();

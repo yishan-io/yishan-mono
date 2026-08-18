@@ -53,7 +53,6 @@ export const COMPLETED_PHASES = ["P16", "D1", "D3", "D4", "D5"] as const;
 
 export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // ---- R6-state-layer (owning phase = the Domain that owns the store) ----
-  { rule: "R6-state-layer", file: "domains/scheduled-job/state/scheduledJobStore.ts", phase: "D15" },
   // desktop6-adjust W1: Workspace Store types moved to Workspace State; the
   // store boundary keeps transport DTO references (baselined like the other
   // workspace projection store rows). actions.localFolders/actions.workspaces
@@ -83,10 +82,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "D17" },
   // ---- R14-cross-domain-deep (Phase D2 baseline; owning phase = importing Domain) ----
   { rule: "R14-cross-domain-deep", file: "domains/settings/state/agentSettingsStore.ts", phase: "D16" },
-  { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "D15" },
-  { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "D15" },
-  { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/ScheduledJobDetailFields.tsx", phase: "D15" },
-  { rule: "R14-cross-domain-deep", file: "domains/scheduled-job/ui/ScheduledJobListItemView.tsx", phase: "D15" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/AgentProviderSettingsView.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/AgentSkillsCardDialogs.tsx", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/settings/ui/GitWorkspaceSettingsView.tsx", phase: "D16" },
@@ -99,11 +94,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
     phase: "D16",
   },
   // ---- R15-app-from-domain (Phase D2 baseline; owning phase = importing Domain) ----
-  { rule: "R15-app-from-domain", file: "domains/scheduled-job/ui/CreateScheduledJobFormView.tsx", phase: "D15" },
-  { rule: "R15-app-from-domain", file: "domains/scheduled-job/ui/EditScheduledJobDialogView.tsx", phase: "D15" },
-  { rule: "R15-app-from-domain", file: "domains/scheduled-job/ui/ScheduledJobListItemView.tsx", phase: "D15" },
-  { rule: "R15-app-from-domain", file: "domains/scheduled-job/ui/ScheduledJobView.tsx", phase: "D15" },
-  { rule: "R15-app-from-domain", file: "domains/scheduled-job/ui/useScheduledJobDetailState.ts", phase: "D15" },
   { rule: "R15-app-from-domain", file: "domains/settings/commands/settingsCommands.ts", phase: "D16" },
   { rule: "R15-app-from-domain", file: "domains/settings/ui/AgentProviderSettingsView.tsx", phase: "D16" },
   { rule: "R15-app-from-domain", file: "domains/settings/ui/RemoveProviderDialog.tsx", phase: "D16" },

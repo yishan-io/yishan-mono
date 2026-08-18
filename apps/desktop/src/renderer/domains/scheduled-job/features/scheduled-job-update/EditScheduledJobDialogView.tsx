@@ -2,15 +2,15 @@ import { Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, Stac
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useScheduledJobCommands } from "../../../app/commands/useCommands";
-import { useProjects } from "../../../domains/project/hooks/useProjectReadHooks";
-import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { useSelectedOrganizationId } from "../../../domains/session";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { useDialogRegistration } from "../../../ui/hooks/useDialogRegistration";
-import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
-import { useScheduledJobFormState } from "./form/useScheduledJobFormState";
-import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "./scheduledJobFormHelpers";
+import { updateScheduledJob } from "../../commands/scheduledJobCommands";
+import { useProjects } from "@renderer/domains/project";
+import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
+import { useSelectedOrganizationId } from "../../../../domains/session";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";
+import { ScheduledJobFormFields } from "../scheduled-job-form/form/ScheduledJobFormFields";
+import { useScheduledJobFormState } from "../scheduled-job-form/form/useScheduledJobFormState";
+import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "../scheduled-job-form/scheduledJobFormHelpers";
 
 type EditScheduledJobDialogViewProps = {
   job: ScheduledJobRecord;
@@ -23,7 +23,6 @@ const editCustomCronDescriptionSx = { mt: -0.5 };
 /** Dialog for editing an existing scheduled job's mutable fields. */
 export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduledJobDialogViewProps) {
   const { t } = useTranslation();
-  const { updateScheduledJob } = useScheduledJobCommands();
   const orgId = useSelectedOrganizationId();
   const projects = useProjects();
   useDialogRegistration(open);

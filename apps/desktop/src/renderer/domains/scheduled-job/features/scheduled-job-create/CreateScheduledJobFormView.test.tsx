@@ -4,9 +4,9 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../../domains/project/state/projectStore";
-import { sessionStore } from "../../../domains/session/state/sessionStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
+import { projectStore } from "../../../../domains/project/state/projectStore";
+import { sessionStore } from "../../../../domains/session/state/sessionStore";
+import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { CreateScheduledJobFormView } from "./CreateScheduledJobFormView";
 
 const mocked = vi.hoisted(() => ({
@@ -20,30 +20,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
+vi.mock("../../commands/scheduledJobCommands", () => ({
     createScheduledJob: mocked.createScheduledJob,
-  });
-  return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
-  };
-});
+}));
 
-vi.mock("../../../api", () => ({
+vi.mock("../../../../api", () => ({
   api: {
     node: {
       listByOrg: mocked.listNodesByOrg,

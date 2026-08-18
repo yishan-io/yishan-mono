@@ -2,13 +2,13 @@ import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/mat
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
-import { listScheduledJobRuns } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
+import { listScheduledJobRuns } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 import type {
   ScheduledJobRecord,
   ScheduledJobRunRecord,
-} from "../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";
+} from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import { ScheduledJobRunStatusIcon } from "../../ui/ScheduledJobRunStatusIcon";
 
 type ScheduledJobRunsSidebarProps = {
   orgId: string;

@@ -36,7 +36,7 @@ import { MainPaneView } from "../../app/ui/MainPaneView";
 import { AgentChatRecoveryCoordinator } from "../../domains/agent/runtime/agentChatRecovery";
 import { OverviewView } from "@renderer/domains/overview";
 import { projectStore } from "../../domains/project/state/projectStore";
-import { ScheduledJobView } from "../../domains/scheduled-job/ui/ScheduledJobView";
+import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "../../domains/session";
 import { TerminalRecoveryCoordinator } from "../../domains/terminal/runtime/terminalRecovery";
 import { layoutStore } from "../../domains/workbench/state/layoutStore";

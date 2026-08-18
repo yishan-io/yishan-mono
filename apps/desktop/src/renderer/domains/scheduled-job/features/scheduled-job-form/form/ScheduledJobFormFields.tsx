@@ -15,7 +15,7 @@ import { renderProjectIcon } from "@renderer/domains/project";
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock3, LuCloud, LuGlobe, LuServer } from "react-icons/lu";
-import { VirtualizedListbox } from "../../../../ui/components/VirtualizedListbox";
+import { VirtualizedListbox } from "../../../../../ui/components/VirtualizedListbox";
 import {
   SCHEDULE_TYPE_OPTIONS,
   type ScheduleType,

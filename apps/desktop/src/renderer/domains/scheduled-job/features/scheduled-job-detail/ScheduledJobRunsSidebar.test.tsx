@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   ScheduledJobRecord,
   ScheduledJobRunRecord,
-} from "../../../domains/scheduled-job/commands/scheduledJobCommands";
+} from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { ScheduledJobRunsSidebar } from "./ScheduledJobRunsSidebar";
 
 vi.mock("@mui/material", async (importOriginal) => {
@@ -30,7 +30,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../../api", () => ({
+vi.mock("../../../../api", () => ({
   api: {
     scheduledJob: {
       listRuns: mocked.listRuns,
@@ -38,7 +38,7 @@ vi.mock("../../../api", () => ({
   },
 }));
 
-vi.mock("./ScheduledJobRunStatusIcon", () => ({
+vi.mock("../../ui/ScheduledJobRunStatusIcon", () => ({
   ScheduledJobRunStatusIcon: ({ status, size }: { status: string; size: number }) => (
     <span data-testid="scheduled-job-run-status-icon" data-size={size} data-status={status} />
   ),

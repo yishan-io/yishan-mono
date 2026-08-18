@@ -106,7 +106,7 @@ vi.mock("@renderer/domains/overview", () => ({
   OverviewView: () => <div data-testid="overview-view" />,
 }));
 
-vi.mock("../../domains/scheduled-job/ui/ScheduledJobView", () => ({
+vi.mock("@renderer/domains/scheduled-job", () => ({
   ScheduledJobView: () => <div data-testid="scheduled-job-view" />,
 }));
 

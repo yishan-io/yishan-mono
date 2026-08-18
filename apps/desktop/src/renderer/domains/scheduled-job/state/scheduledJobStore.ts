@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { ScheduledJobRecord } from "../../../api/scheduledJobApi";
+import type { ScheduledJobRecord } from "../model/scheduledJobTypes";
 
 type ScheduledJobLoadState = "idle" | "loading" | "loaded" | "error";
 

@@ -4,7 +4,7 @@ import { LuCircleCheck, LuCircleX, LuClock, LuRefreshCw } from "react-icons/lu";
 import type {
   ScheduledJobLastRunStatus,
   ScheduledJobRunStatus,
-} from "../../../domains/scheduled-job/commands/scheduledJobCommands";
+} from "../commands/scheduledJobCommands";
 
 type ScheduledJobRunStatusIconProps = {
   /** The run status to present, or null when the job has not run yet. */

@@ -2,10 +2,10 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { projectStore } from "../../../domains/project/state/projectStore";
-import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
+import { projectStore } from "../../../../domains/project/state/projectStore";
+import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
+import { scheduledJobStore } from "../../../../domains/scheduled-job/state/scheduledJobStore";
+import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";
 
 vi.mock("@mui/material", async (importOriginal) => {
@@ -30,28 +30,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => mocked;
-  return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
-  };
-});
-
-vi.mock("./ScheduledJobRunStatusIcon", () => ({
+vi.mock("../../ui/ScheduledJobRunStatusIcon", () => ({
   ScheduledJobRunStatusIcon: ({ status, size }: { status: string; size: number }) => (
     <span data-testid="scheduled-job-run-status-icon" data-size={size} data-status={status} />
   ),
