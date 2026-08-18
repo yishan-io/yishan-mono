@@ -1,3 +1,4 @@
+import type { WorkspaceGitChangeTotals } from "@renderer/domains/workspace";
 /**
  * Git feature projection Store (desktop6-adjust.md W4).
  *
@@ -10,7 +11,6 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import type { WorkspaceGitChangeTotals } from "../../workspace/model/workspaceTypes";
 
 export type GitProjectionStoreState = {
   pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;

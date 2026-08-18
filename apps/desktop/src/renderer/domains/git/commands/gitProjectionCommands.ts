@@ -1,4 +1,5 @@
 import { supportsGitFeatures } from "@renderer/domains/project";
+import { selectProjectById } from "@renderer/domains/project";
 import { selectWorkspaces } from "@renderer/domains/workspace";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
@@ -13,7 +14,6 @@ import { api } from "../../../api";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { selectProjectById } from "../../project/state/projectSelectors";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,

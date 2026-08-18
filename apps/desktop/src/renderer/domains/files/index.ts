@@ -3,6 +3,7 @@
  */
 export type { FileCommands } from "./commands/contract";
 export { listDetectedExternalAppIds, openEntryInExternalApp, readFile, renameEntry } from "./commands/fileCommands";
+export { resolveWorkspaceAbsolutePath } from "./features/file-manager/fileTreeHelpers";
 export { useDetectedExternalAppIds } from "./hooks/useDetectedExternalAppIds";
 export {
   incrementFileTreeRefreshVersion,

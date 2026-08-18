@@ -1,6 +1,6 @@
+import type { FileDiffEntry } from "@renderer/domains/workbench";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { FileDiffEntry } from "../../workbench/model/tabTypes";
 
 export type DiffTabContent = {
   path: string;

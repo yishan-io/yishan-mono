@@ -253,11 +253,6 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("@renderer/domains/git", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/domains/git")>();
-  return { ...actual };
-});
-
 vi.mock("../../../../domains/git/state/gitProjectionStore", () => {
   const project = (
     selector: (state: {
@@ -340,13 +335,23 @@ vi.mock("../../../../domains/files/commands/fileCommands", async (importOriginal
   };
 });
 
-vi.mock("../../../../domains/git/commands/gitCommands", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../domains/git/commands/gitCommands")>();
-  return {
-    ...actual,
-    inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
-  };
-});
+vi.mock("../../../../domains/git/commands/gitCommands", () => ({
+  // Full mock (no importOriginal) — importOriginal recurses through workspace ->
+  // create-workspace -> git index and leaks the real inspectGitRepository (D10).
+  inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
+  listGitBranches: vi.fn(async () => ({ branches: [] })),
+  readDiff: vi.fn(),
+  readCommitDiff: vi.fn(),
+  readBranchComparisonDiff: vi.fn(),
+  listGitChanges: vi.fn(),
+  listGitCommitsToTarget: vi.fn(),
+  getGitAuthorName: vi.fn(),
+  revertGitChanges: vi.fn(),
+  trackGitChanges: vi.fn(),
+  unstageGitChanges: vi.fn(),
+  mergePullRequest: vi.fn(),
+  closePullRequest: vi.fn(),
+}));
 
 vi.mock("../../../../helpers/platform", () => ({
   getRendererPlatform: () => mocked.rendererPlatform,

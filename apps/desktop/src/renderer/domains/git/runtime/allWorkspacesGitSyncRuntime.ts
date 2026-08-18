@@ -1,4 +1,5 @@
 import { supportsGitFeatures } from "@renderer/domains/project";
+import { selectProjects } from "@renderer/domains/project";
 /**
  * All-workspaces git sync runtime (desktop6-adjust.md W4).
  *
@@ -12,7 +13,6 @@ import { supportsGitFeatures } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { selectWorkspaces } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "../../../helpers/localFolder";
-import { selectProjects } from "../../project/state/projectSelectors";
 import { refreshWorkspaceGitChanges } from "../commands/gitProjectionCommands";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 

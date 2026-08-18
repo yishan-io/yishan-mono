@@ -1,6 +1,23 @@
 // @vitest-environment jsdom
 
+vi.mock("@renderer/domains/git", () => {
+  const projectionState: Record<string, unknown> = { pullRequestByWorkspaceId: {}, currentBranchByWorkspaceId: {} };
+  const gitProjectionStore = Object.assign(vi.fn(), {
+    getState: () => projectionState,
+    setState: (next: Record<string, unknown>) => Object.assign(projectionState, next),
+  });
+  return {
+    gitProjectionStore,
+    setWorkspacePullRequest: (workspaceId: string, pullRequest: unknown) => {
+      const state = gitProjectionStore.getState() as { pullRequestByWorkspaceId: Record<string, unknown> };
+      state.pullRequestByWorkspaceId[workspaceId] = pullRequest;
+    },
+    refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,
+  };
+});
+
 import { gitProjectionStore } from "@renderer/domains/git";
+import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
@@ -59,36 +76,17 @@ vi.mock("@renderer/domains/browser", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../domains/git/commands/gitCommands", () => ({
-  mergePullRequest: (options: {
-    workspaceId: string;
-    prNumber: number;
-    method: string;
-    deleteBranch: boolean;
-  }) => mocked.mergePullRequest(options),
-  closePullRequest: (options: { workspaceId: string; prNumber: number }) => mocked.closePullRequest(options),
-}));
-
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,
-  });
+vi.mock("../../../domains/git/commands/gitCommands", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../domains/git/commands/gitCommands")>();
   return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
+    ...actual,
+    mergePullRequest: (options: {
+      workspaceId: string;
+      prNumber: number;
+      method: string;
+      deleteBranch: boolean;
+    }) => mocked.mergePullRequest(options),
+    closePullRequest: (options: { workspaceId: string; prNumber: number }) => mocked.closePullRequest(options),
   };
 });
 
@@ -154,7 +152,6 @@ describe("PullRequestTabView", () => {
 
   it("refreshes daemon PR state from the empty state button", () => {
     setupSelectedWorkspace();
-
     render(<PullRequestTabView />);
 
     fireEvent.click(screen.getByRole("button", { name: "workspace.pr.refresh" }));

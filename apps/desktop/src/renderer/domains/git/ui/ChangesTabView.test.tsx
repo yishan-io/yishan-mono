@@ -90,37 +90,12 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
     ),
     { getState: navState },
   );
-  return { ...actual, workbenchNavigationStore: navStore };
-});
-
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    openTab: mocks.openTab,
-    listGitChanges: mocks.listGitChanges,
-    readBranchComparisonDiff: mocks.readBranchComparisonDiff,
-    readCommitDiff: mocks.readCommitDiff,
-    readDiff: mocks.readDiff,
-    listGitCommitsToTarget: mocks.listGitCommitsToTarget,
-    trackGitChanges: mocks.trackGitChanges,
-    revertGitChanges: mocks.revertGitChanges,
-    unstageGitChanges: mocks.unstageGitChanges,
-  });
   return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
+    ...actual,
+    workbenchNavigationStore: navStore,
+    get openTab() {
+      return mocks.openTab;
+    },
   };
 });
 

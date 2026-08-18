@@ -5,12 +5,17 @@ export type { GitCommands } from "./commands/contract";
 export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
 export { refreshDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
 export {
+  getGitAuthorName,
   inspectGitRepository,
   listGitBranches,
   listGitChanges,
+  listGitCommitsToTarget,
   readBranchComparisonDiff,
   readCommitDiff,
   readDiff,
+  revertGitChanges,
+  trackGitChanges,
+  unstageGitChanges,
 } from "./commands/gitCommands";
 export { useGitAuthorName } from "./ui/hooks/useGitAuthorName";
 export {

@@ -1,4 +1,4 @@
-import type { DiffFileChangeKind } from "../../workbench/model/tabTypes";
+import type { DiffFileChangeKind } from "@renderer/domains/workbench";
 
 function getFileName(path: string): string {
   const normalized = path.replace(/\\/g, "/");

@@ -64,12 +64,40 @@ vi.mock("@renderer/domains/workspace", () => ({
   },
 }));
 
-vi.mock("@renderer/domains/git", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/domains/git")>();
+vi.mock("@renderer/domains/git", async () => {
+  const { useEffect, useState } = await import("react");
   return {
-    ...actual,
     get listGitBranches() {
       return getMockedCommands().listGitBranches;
+    },
+    get getGitAuthorName() {
+      return getMockedCommands().getGitAuthorName;
+    },
+    useGitAuthorName: (worktreePath: string) => {
+      const [name, setName] = useState("");
+      useEffect(() => {
+        if (!worktreePath) {
+          setName("");
+          return;
+        }
+        let cancelled = false;
+        const fetchAuthorName = getMockedCommands().getGitAuthorName as unknown as (input: {
+          workspaceId: string;
+        }) => Promise<string | null | undefined>;
+        void fetchAuthorName({
+          workspaceId: worktreePath === "/tmp/repo-1" ? "workspace-author-1" : "workspace-1",
+        })
+          .then((author: string | null | undefined) => {
+            if (!cancelled) setName(author?.trim() ?? "");
+          })
+          .catch(() => {
+            if (!cancelled) setName("");
+          });
+        return () => {
+          cancelled = true;
+        };
+      }, [worktreePath]);
+      return name;
     },
   };
 });

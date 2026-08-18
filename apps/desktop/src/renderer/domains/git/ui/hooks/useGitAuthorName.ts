@@ -1,6 +1,6 @@
+import { getGitAuthorName } from "@renderer/domains/git";
+import { selectWorkspaces } from "@renderer/domains/workspace";
 import { useEffect, useState } from "react";
-import { useGitCommands } from "../../../../app/commands/useCommands";
-import { selectWorkspaces } from "../../../../domains/workspace/state/workspaceSelectors";
 
 /**
  * Fetches the git author name for the given workspace path.
@@ -9,7 +9,6 @@ import { selectWorkspaces } from "../../../../domains/workspace/state/workspaceS
  * dependency change.
  */
 export function useGitAuthorName(worktreePath: string): string {
-  const { getGitAuthorName } = useGitCommands();
   const [resolvedGitUserName, setResolvedGitUserName] = useState("");
 
   useEffect(() => {

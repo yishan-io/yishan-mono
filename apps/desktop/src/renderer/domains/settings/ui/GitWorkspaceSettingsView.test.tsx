@@ -12,6 +12,10 @@ const mocked = vi.hoisted(() => ({
   getGitAuthorName: vi.fn(),
 }));
 
+vi.mock("@renderer/domains/git", () => ({
+  getGitAuthorName: mocked.getGitAuthorName,
+}));
+
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     getGitAuthorName: mocked.getGitAuthorName,

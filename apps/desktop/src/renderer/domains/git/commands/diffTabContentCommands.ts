@@ -1,4 +1,4 @@
-import type { FileDiffEntry } from "../../workbench/model/tabTypes";
+import type { FileDiffEntry } from "@renderer/domains/workbench";
 import { diffTabContentStore } from "../state/diffTabContentStore";
 
 /**
