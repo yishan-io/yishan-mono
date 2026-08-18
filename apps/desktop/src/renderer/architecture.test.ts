@@ -4,34 +4,43 @@
  * Architecture test — Desktop renderer dependency rules (Phases 1–20).
  *
  * Phase 16 restructured this file into one focused test group per stable rule
- * and hardened the allowlist lifecycle:
+ * and hardened the allowlist lifecycle. Phase D2 (Domains plan) re-owned the
+ * terminology and the allowlist mechanism:
  *
  *   - each rule has its own `describe` with a focused assertion;
  *   - a NEW boundary violation fails the test with file + import target;
  *   - a STALE allowlist row (violation already fixed) fails the test;
  *   - an allowlist row tagged with a completed phase fails the test;
- *   - normal Zustand imports from Feature State files are permitted (no false
- *     positive), and State may import the owning Feature's Model.
+ *   - allowlist rows carry the Domain phase that owns their removal
+ *     (`D3`-`D17`); the single `CURRENT_PHASE` tag was replaced by
+ *     `COMPLETED_PHASES`, and rows tagged with a completed phase are rejected;
+ *   - normal Zustand imports from Domain State files are permitted (no false
+ *     positive), and State may import the owning Domain's Model.
  *
- * Rule set (desktop.md … desktop6.md):
+ * Rule set (desktop.md … desktop6.md, desktop-domains-refactor-plan.md):
  *
- *   - R1  UI (components/, ui/, Feature ui, app/routes/) must not VALUE-import
+ *   - R1  UI (components/, ui/, Domain ui, app/routes/) must not VALUE-import
  *         renderer/api/* or renderer/rpc/*, `electron`, or main-process code.
  *   - R1b @shared/contracts DTO imports from UI: report-only (deferred).
  *   - R3  domains/workbench/model/tabs|split-pane must not import react,
  *         zustand, transport, commands, or electron.
  *   - R4  Commands must not import Views or Components.
- *   - R5  Feature code must not import another Feature's internal State,
+ *   - R5  Domain code must not import another Domain's internal State,
  *         Events, Runtime, or Store Model; only public surfaces (Commands,
  *         Selectors, Actions, index, Model types).
  *   - R6  State files own Zustand State, Selectors, and synchronous mutations;
- *         they may import Zustand and their own Feature's Model/State, but not
- *         transport, Electron, Commands, Runtime, or another Feature's State.
+ *         they may import Zustand and their own Domain's Model/State, but not
+ *         transport, Electron, Commands, Runtime, or another Domain's State.
  *   - R7  Model files must not import React, Zustand, Electron, transport,
  *         Runtime, or State.
- *   - R8  Infrastructure (api/, rpc/) must not import Feature UI, app routes,
+ *   - R8  Infrastructure (api/, rpc/) must not import Domain UI, app routes,
  *         or shared ui.
- *   - R9  Shared ui/ and components/ must not import Feature or app code.
+ *   - R9  Shared ui/ and components/ must not import Domain or app code.
+ *   - R14 Cross-Domain code must import another Domain only through its public
+ *         index.ts (or the Domain root); deep imports into another Domain's
+ *         internals are violations.
+ *   - R15 Domain code must not import `app`.
+ *   - R16 App code must not deep-import a Domain (only the public index.ts).
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -39,7 +48,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { beforeAll, describe, expect, it } from "vitest";
-import { CURRENT_PHASE, KNOWN_VIOLATIONS, type KnownViolation, type RuleName } from "./architecture.knownViolations";
+import { COMPLETED_PHASES, KNOWN_VIOLATIONS, type KnownViolation, type RuleName } from "./architecture.knownViolations";
 
 const RENDERER_ROOT = resolve(dirname(fileURLToPath(import.meta.url)));
 const SHARED_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../shared");
@@ -50,7 +59,9 @@ const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
 /**
  * Recorded Phase 16 baseline counts (occurrences, not files). A phase must not
  * increase a count; update an entry only when a phase intentionally fixes
- * violations and its pull request records the new number.
+ * violations and its pull request records the new number. Phase D2 added the
+ * R14/R15/R16 baseline counts from the Domains plan (production code only;
+ * the walk excludes test files).
  */
 const BASELINE_COUNTS: Record<RuleName, number> = {
   "R1-value-api-rpc": 0,
@@ -67,6 +78,9 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R11-workbench-product-import": 0,
   "R12-store-action-promise": 0,
   "R13-getter-forwarding-action-file": 0,
+  "R14-cross-domain-deep": 148,
+  "R15-app-from-domain": 65,
+  "R16-app-deep-into-domain": 96,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -171,17 +185,17 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       if ((rel.startsWith("commands/") || /^domains\/[^/]+\/commands\//.test(rel)) && isViews) {
         violations.push({ rule: "R4", file: rel, target: imp.spec });
       }
-      // ---- Rule 5: Feature A must not import Feature B's internal State,
+      // ---- Rule 5: Domain A must not import Domain B's internal State,
       // Runtime, Event Handler, or Store Model. Cross-feature imports are
       // allowed only to another feature's public surface: Commands, State
       // Selectors/Actions, Model types, or its index.ts (Phase 12, desktop5.md). ----
       const crossFeature = /^domains\/([^/]+)\//.exec(rel);
       const crossTarget = /^domains\/([^/]+)\//.exec(relT);
       // ---- Rule 6: State files own Zustand State, Selectors, and synchronous
-      // mutations. They may import Zustand and the owning Feature's Model and
+      // mutations. They may import Zustand and the owning Domain's Model and
       // State. They must not import transport implementations, Electron,
-      // Commands, Runtime implementations (own or other Feature), or another
-      // Feature's State internals. Selectors/Actions files are the public State
+      // Commands, Runtime implementations (own or other Domain), or another
+      // Domain's State internals. Selectors/Actions files are the public State
       // surface and are excluded. (Phase 15, corrected in Phase 16) ----
       if (/^domains\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
         const isOwnFeature = crossTarget && crossFeature && crossTarget[1] === crossFeature[1];
@@ -213,14 +227,14 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
           violations.push({ rule: "R7-model-layer", file: rel, target: imp.spec });
         }
       }
-      // ---- Rule 8: Infrastructure (api/, rpc/) must not import Feature UI,
+      // ---- Rule 8: Infrastructure (api/, rpc/) must not import Domain UI,
       // app routes, or shared ui. ----
       if ((rel.startsWith("api/") || rel.startsWith("rpc/")) && !rel.includes(".test.")) {
         if (/^domains\/[^/]+\/ui\//.test(relT) || relT.startsWith("app/routes/") || relT.startsWith("ui/")) {
           violations.push({ rule: "R8-infra-layer", file: rel, target: imp.spec });
         }
       }
-      // ---- Rule 9: Domain-free shared ui/components must not import Feature
+      // ---- Rule 9: Domain-free shared ui/components must not import Domain
       // internals or application code. ----
       if ((rel.startsWith("ui/") || rel.startsWith("components/")) && !rel.includes(".test.")) {
         if (/^domains\//.test(relT) || relT.startsWith("app/")) {
@@ -247,13 +261,13 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       if (
         !imp.isTypeOnly &&
         rel.startsWith("domains/workbench/") &&
-        /^features\/[^/]+/.test(relT) &&
+        /^domains\/[^/]+/.test(relT) &&
         relT !== "domains/workbench" &&
         !relT.startsWith("domains/workbench/")
       ) {
         violations.push({ rule: "R11-workbench-product-import", file: rel, target: imp.spec });
       }
-      // ---- Rule 5 (cont.): the owning Feature's public State surface
+      // ---- Rule 5 (cont.): the owning Domain's public State surface
       // (Selectors = read models, Actions = state-change surface) is
       // importable; the Store itself and other internals are not. ----
       if (crossFeature && crossTarget && crossFeature[1] !== crossTarget[1]) {
@@ -266,6 +280,34 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
             /\/model\/[^/]*Store(\.ts)?$/.test(relT));
         if (targetInternal) {
           violations.push({ rule: "R5-cross-feature-internal", file: rel, target: imp.spec });
+        }
+      }
+      // ---- Rule 14 (desktop-domains-refactor-plan.md D2): cross-Domain code
+      // imports another Domain only through its public index.ts (or the Domain
+      // root). A deep import into another Domain's internals is a violation.
+      // Domain code may use its own relative imports. ----
+      if (/^domains\/([^/]+)\//.test(rel) && /^domains\/([^/]+)\//.test(relT)) {
+        const srcDomain = /^domains\/([^/]+)\//.exec(rel)?.[1];
+        const tgtDomain = /^domains\/([^/]+)\//.exec(relT)?.[1];
+        if (srcDomain !== tgtDomain) {
+          const rest = relT.replace(/^domains\/[^/]+\/?/, "");
+          if (rest !== "" && rest !== "index.ts") {
+            violations.push({ rule: "R14-cross-domain-deep", file: rel, target: imp.spec });
+          }
+        }
+      }
+      // ---- Rule 15 (desktop-domains-refactor-plan.md D2): Domain code must
+      // not import `app`. App owns composition; Domains must not depend on it. ----
+      if (/^domains\//.test(rel) && relT.startsWith("app/")) {
+        violations.push({ rule: "R15-app-from-domain", file: rel, target: imp.spec });
+      }
+      // ---- Rule 16 (desktop-domains-refactor-plan.md D2): App code must not
+      // deep-import a Domain. App uses each Domain through its public index.ts
+      // (or the Domain root). ----
+      if (rel.startsWith("app/") && /^domains\/([^/]+)\//.test(relT)) {
+        const rest = relT.replace(/^domains\/[^/]+\/?/, "");
+        if (rest !== "" && rest !== "index.ts") {
+          violations.push({ rule: "R16-app-deep-into-domain", file: rel, target: imp.spec });
         }
       }
     }
@@ -319,7 +361,7 @@ function unbaselined(violations: Violation[], rule: RuleName): Violation[] {
 function failureMessages(fresh: Violation[]): string[] {
   return fresh.map(
     (v) =>
-      `[archtest] NEW violation ${v.rule}: ${v.file} imports ${v.target} — fix it or add to KNOWN_VIOLATIONS with phase ${CURRENT_PHASE}`,
+      `[archtest] NEW violation ${v.rule}: ${v.file} imports ${v.target} — fix it or add to KNOWN_VIOLATIONS with its owning Domain phase`,
   );
 }
 
@@ -361,7 +403,7 @@ describe("renderer architecture dependency rules", () => {
     });
   });
 
-  describe("R5: Features import other Features through public surfaces only", () => {
+  describe("R5: Domains import other Domains through public surfaces only", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R5-cross-feature-internal"));
       expect(messages, messages.join("\n")).toEqual([]);
@@ -374,14 +416,14 @@ describe("renderer architecture dependency rules", () => {
       expect(messages, messages.join("\n")).toEqual([]);
     });
 
-    it("permits normal Zustand imports from Feature State files (no false positive)", () => {
+    it("permits normal Zustand imports from Domain State files (no false positive)", () => {
       const zustandFlags = violations.filter((v) => v.rule === "R6-state-layer" && v.target === "zustand");
       expect(zustandFlags, "State files use Zustand to define their stores").toEqual([]);
     });
 
-    it("permits State imports of the owning Feature's Model", () => {
+    it("permits State imports of the owning Domain's Model", () => {
       const modelFlags = violations.filter((v) => v.rule === "R6-state-layer" && v.target.includes("/model/"));
-      expect(modelFlags, "State files may read their owning Feature's Model types").toEqual([]);
+      expect(modelFlags, "State files may read their owning Domain's Model types").toEqual([]);
     });
   });
 
@@ -392,14 +434,14 @@ describe("renderer architecture dependency rules", () => {
     });
   });
 
-  describe("R8: Infrastructure must not import Feature UI, app routes, or shared ui", () => {
+  describe("R8: Infrastructure must not import Domain UI, app routes, or shared ui", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R8-infra-layer"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });
 
-  describe("R9: Shared UI must not import Feature or app code", () => {
+  describe("R9: Shared UI must not import Domain or app code", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R9-ui-components"));
       expect(messages, messages.join("\n")).toEqual([]);
@@ -427,9 +469,30 @@ describe("renderer architecture dependency rules", () => {
     });
   });
 
-  describe("R13: no Getter layers in Feature State (desktop6-adjust W8)", () => {
+  describe("R13: no Getter layers in Domain State (desktop6-adjust W8)", () => {
     it("reports no new Getter files", () => {
       const messages = failureMessages(unbaselined(violations, "R13-getter-forwarding-action-file"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R14: cross-Domain imports go through the public index.ts (Domains D2)", () => {
+    it("reports no unbaselined deep imports into another Domain", () => {
+      const messages = failureMessages(unbaselined(violations, "R14-cross-domain-deep"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R15: Domain code must not import app (Domains D2)", () => {
+    it("reports no unbaselined app imports from Domain code", () => {
+      const messages = failureMessages(unbaselined(violations, "R15-app-from-domain"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R16: App must not deep-import a Domain (Domains D2)", () => {
+    it("reports no unbaselined deep imports into a Domain", () => {
+      const messages = failureMessages(unbaselined(violations, "R16-app-deep-into-domain"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });
@@ -445,10 +508,12 @@ describe("renderer architecture dependency rules", () => {
     });
 
     it("rejects allowlist rows tagged with a completed phase", () => {
-      const badPhase = KNOWN_VIOLATIONS.filter((v: KnownViolation) => v.phase !== CURRENT_PHASE);
+      const badPhase = KNOWN_VIOLATIONS.filter((v: KnownViolation) =>
+        (COMPLETED_PHASES as readonly string[]).includes(v.phase),
+      );
       const messages = badPhase.map(
         (v) =>
-          `[archtest] allowlist row ${v.rule}: ${v.file} tagged ${v.phase} — rows must carry ${CURRENT_PHASE} (no allowlist rows for completed phases)`,
+          `[archtest] allowlist row ${v.rule}: ${v.file} tagged ${v.phase} — completed phase, remove the row`,
       );
       expect(messages, messages.join("\n")).toEqual([]);
     });
