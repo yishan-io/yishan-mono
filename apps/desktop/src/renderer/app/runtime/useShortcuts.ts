@@ -1,4 +1,5 @@
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import { popupStore } from "@renderer/domains/workbench";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,7 +10,6 @@ import { tabStore } from "../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { getShortcutDefinitions } from "../../shortcuts/keybindings";
 import { compileShortcutDefinitions } from "../../shortcuts/shortcutRunner";
-import { popupStore } from "../state/popupStore";
 import { startShortcutRuntime } from "./shortcutRuntime";
 
 const WORKSPACE_ROUTE = "/";

@@ -7,8 +7,8 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
 import { useRefreshableLoader } from "../../../../ui/hooks/useRefreshableLoader";
-import { RemoveProviderDialog } from "./RemoveProviderDialog";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
+import { RemoveProviderDialog } from "./RemoveProviderDialog";
 
 type ProviderCredentialDialogTarget = {
   mode: "add" | "edit";

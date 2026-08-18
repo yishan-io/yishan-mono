@@ -99,3 +99,8 @@ export {
   type WorkspaceTabPlacement,
   useWorkspaceTabPlacements,
 } from "./features/workspace-tabs/useWorkspaceTabPlacements";
+
+export { useDialogRegistration } from "./hooks/useDialogRegistration";
+export { popupStore, type PopupStoreState } from "./state/popupStore";
+
+export { ConfirmationDialog } from "./ui/ConfirmationDialog";

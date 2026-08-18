@@ -4,11 +4,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sessionStore } from "../../../../domains/session/state/sessionStore";
+import { AppThemePreferenceProvider } from "../../../../domains/settings";
 import {
   DISPLAY_SETTINGS_STORE_STORAGE_KEY,
   displaySettingsStore,
 } from "../../../../domains/settings/state/displaySettingsStore";
-import { AppThemePreferenceProvider } from "../../../../ui/hooks/useThemePreference";
 import { SettingsView } from "./SettingsView";
 
 vi.mock("react-i18next", () => ({

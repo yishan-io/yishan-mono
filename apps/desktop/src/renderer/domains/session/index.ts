@@ -38,3 +38,5 @@ export {
   useSessionLoaded,
   useSessionVersions,
 } from "./ui/hooks/useSessionReadHooks";
+
+export { useRemoteHealthQuery } from "./hooks/useRemoteHealthQuery";

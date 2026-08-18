@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { popupStore } from "../../app/state/popupStore";
+import { popupStore } from "../state/popupStore";
 
 export function useDialogRegistration(open: boolean): void {
   useEffect(() => {

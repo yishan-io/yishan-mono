@@ -15,3 +15,5 @@ export {
   removeOrgMember,
   switchOrganization,
 } from "./commands/orgCommands";
+
+export { CreateOrganizationDialogView } from "./features/create-organization/CreateOrganizationDialogView";

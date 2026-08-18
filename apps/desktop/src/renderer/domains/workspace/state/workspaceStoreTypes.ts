@@ -11,7 +11,7 @@
  * baselined by the R6 allowlist.
  */
 import type { StateCreator } from "zustand";
-import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
+import type { DaemonLocalFolder } from "../model/snapshotTypes";
 import type { AddWorkspaceInput, WorkspaceItem } from "../model/workspaceTypes";
 
 export type { DaemonLocalFolder } from "../../../rpc/daemonTypes";

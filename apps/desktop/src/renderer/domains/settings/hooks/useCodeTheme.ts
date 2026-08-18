@@ -1,5 +1,5 @@
-import { getMonacoThemeName, resolveCodeTheme } from "../../helpers/codeThemes";
-import { editorSettingsStore } from "../../domains/settings/state/editorSettingsStore";
+import { getMonacoThemeName, resolveCodeTheme } from "../../../helpers/codeThemes";
+import { editorSettingsStore } from "../state/editorSettingsStore";
 import { useThemePreference } from "./useThemePreference";
 
 /**

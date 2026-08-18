@@ -49,7 +49,7 @@ vi.mock("@renderer/domains/agent", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../../ui/hooks/useDialogRegistration", () => ({
+vi.mock("../../../domains/workbench", () => ({
   useDialogRegistration: () => {},
 }));
 

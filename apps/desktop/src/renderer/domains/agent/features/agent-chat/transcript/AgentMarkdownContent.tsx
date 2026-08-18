@@ -7,7 +7,7 @@ import { editorSettingsStore } from "@renderer/domains/settings";
 import { openTab, openTabInOppositePane } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { selectFolderInFileTree } from "@renderer/domains/workspace";
-import { useCodeTheme } from "@renderer/ui/hooks/useCodeTheme";
+import { useCodeTheme } from "@renderer/domains/settings";
 import { useEffect, useRef, useState } from "react";
 import { openChatFileTab } from "../../../../../domains/agent/commands/agentChatCommands";
 import { getErrorMessage } from "../../../../../helpers/errorHelpers";

@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../../domains/session/state/sessionStore";
+import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { AppMenuView } from "./AppMenuView";
 
 vi.mock("react-i18next", () => ({
@@ -20,16 +20,15 @@ const { setThemePreference, openExternalUrl, switchOrganization, logout } = vi.h
   logout: vi.fn(async () => undefined),
 }));
 
-vi.mock("../../ui/hooks/useThemePreference", () => ({
+vi.mock("../../../domains/settings/hooks/useThemePreference", () => ({
   useThemePreference: () => ({
     themePreference: "system",
     setThemePreference,
   }),
 }));
 
-vi.mock("../../app/commands/useCommands", () => {
+vi.mock("../../../commands/useCommands", () => {
   const commandSurface = () => ({
-
     openExternalUrl,
     switchOrganization,
     logout,
@@ -53,16 +52,15 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-
-vi.mock("../../helpers/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: () => "⌘+K",
 }));
 
-vi.mock("./CreateOrganizationDialogView", () => ({
+vi.mock("../../../domains/organization/features/create-organization/CreateOrganizationDialogView", () => ({
   CreateOrganizationDialogView: ({ open }: { open: boolean }) =>
     open ? <div data-testid="create-organization-dialog">create-organization-dialog</div> : null,
 }));

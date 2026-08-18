@@ -16,33 +16,33 @@ import { useTranslation } from "react-i18next";
 import type { BiCog } from "react-icons/bi";
 import { RxExit } from "react-icons/rx";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useThemePreference } from "../../../../domains/settings";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { SearchInput } from "../../../../ui/components/SearchInput";
-import { useThemePreference } from "../../../../ui/hooks/useThemePreference";
+import { SettingsErrorBoundary, SettingsPageLayout, SettingsSectionHeader } from "../../ui/controls";
+import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
 import { AccountSettingsView } from "../account/AccountSettingsView";
+import { MemberSettingsView } from "../account/MemberSettingsView";
+import { ServiceTokenSettingsView } from "../account/ServiceTokenSettingsView";
 import { AgentProviderSettingsView } from "../agent-providers/AgentProviderSettingsView";
 import { CLISettingsView } from "../cli/CLISettingsView";
 import { ComputerUseSettingsView } from "../computer-use/ComputerUseSettingsView";
+import { CustomizeSettingsView } from "../customize/CustomizeSettingsView";
+import { DaemonSettingsView } from "../daemon/DaemonSettingsView";
 import { EditorSettingsView } from "../editor/EditorSettingsView";
 import { KeybindingsSettingsView } from "../keybindings/KeybindingsSettingsView";
 import { LanguageSettingsView } from "../language/LanguageSettingsView";
 import { LinkSettingsView } from "../link/LinkSettingsView";
 import { MarkdownSettingsView } from "../markdown/MarkdownSettingsView";
-import { MemberSettingsView } from "../account/MemberSettingsView";
 import { MemorySettingsView } from "../memory/MemorySettingsView";
 import { NodesSettingsView } from "../nodes/NodesSettingsView";
-import { ServiceTokenSettingsView } from "../account/ServiceTokenSettingsView";
-import { TerminalSettingsView } from "../terminal/TerminalSettingsView";
-import { WorkspaceSettingsView } from "../workspace/WorkspaceSettingsView";
-import { SettingsErrorBoundary, SettingsPageLayout, SettingsSectionHeader } from "../../ui/controls";
-import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
-import { CustomizeSettingsView } from "../customize/CustomizeSettingsView";
-import { DaemonSettingsView } from "../daemon/DaemonSettingsView";
 import { NotificationSettingsView } from "../notifications/NotificationSettingsView";
 import {
   type NotificationSettingsFocusItemId,
   isNotificationSettingsFocusItemId,
 } from "../notifications/notificationSettingsCatalog";
+import { TerminalSettingsView } from "../terminal/TerminalSettingsView";
+import { WorkspaceSettingsView } from "../workspace/WorkspaceSettingsView";
 import {
   type CustomizeFocusItemId,
   SETTINGS_NAV_SECTIONS,

@@ -6,11 +6,18 @@
  * (api/restClient, api/sessionApi, api/systemApi, rpc) directly.
  */
 import type { DaemonInfoResult } from "../../../../main/ipc";
-import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../../../api/systemApi";
-import { onAuthExpired, resetAuthExpiredState as resetAuthExpiredStateFromApi, RestApiError } from "../../../api/restClient";
+import {
+  RestApiError,
+  onAuthExpired,
+  resetAuthExpiredState as resetAuthExpiredStateFromApi,
+} from "../../../api/restClient";
 import { getSessionBootstrapData as getSessionBootstrapDataFromApi } from "../../../api/sessionApi";
-import { subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromRpc, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
+import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../../../api/systemApi";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
+import {
+  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromRpc,
+  subscribeDesktopRpcEvent,
+} from "../../../rpc/rpcTransport";
 
 /** Loads the session bootstrap payload (user, orgs, preferences). */
 export function getSessionBootstrapData() {

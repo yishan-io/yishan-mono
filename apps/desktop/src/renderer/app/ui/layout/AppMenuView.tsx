@@ -1,15 +1,15 @@
 import { ClickAwayListener, Divider, Popper, Stack } from "@mui/material";
+import { CreateOrganizationDialogView } from "@renderer/domains/organization";
+import { sessionStore } from "@renderer/domains/session";
 import { useTranslation } from "react-i18next";
-import { FloatingSurface } from "../../ui/components/FloatingSurface";
-import { getRendererPlatform } from "../../helpers/platform";
-import { useThemePreference } from "../../ui/hooks/useThemePreference";
-import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { sessionStore } from "../../domains/session/state/sessionStore";
+import { useThemePreference } from "../../../domains/settings";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { FloatingSurface } from "../../../ui/components/FloatingSurface";
 import { AppMenuMainMenuSection } from "./AppMenuMainMenuSection";
 import { AppMenuOrganizationSubmenu } from "./AppMenuOrganizationSubmenu";
 import { AppMenuThemeControls } from "./AppMenuThemeControls";
 import { AppMenuTriggerButton } from "./AppMenuTriggerButton";
-import { CreateOrganizationDialogView } from "./CreateOrganizationDialogView";
 import { useAppMenuViewState } from "./useAppMenuViewState";
 
 export interface AppMenuViewProps {

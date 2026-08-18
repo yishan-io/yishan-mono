@@ -1,5 +1,5 @@
 import { Alert, Box } from "@mui/material";
-import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
+import { ConfirmationDialog } from "@renderer/domains/workbench";
 import { useTranslation } from "react-i18next";
 
 type PendingFileDeletion = {

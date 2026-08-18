@@ -12,7 +12,7 @@ import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons
 import { useAppCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
 import { getRendererPlatform } from "../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { AppMenuView } from "../../ui/layout/AppMenuView";
+import { AppMenuView } from "../ui/layout/AppMenuView";
 
 type LeftPaneViewProps = {
   onCreateRepository?: () => void;

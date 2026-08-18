@@ -10,7 +10,7 @@ import { scheduledJobStore } from "../../../../domains/scheduled-job/state/sched
 import { useSelectedOrganizationId } from "../../../../domains/session";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
-import { ConfirmationDialog } from "../../../../ui/components/ConfirmationDialog";
+import { ConfirmationDialog } from "../../../../domains/workbench";
 import { EditScheduledJobDialogView } from "../scheduled-job-update/EditScheduledJobDialogView";
 import { ScheduledJobDetailFields } from "./ScheduledJobDetailFields";
 import { ScheduledJobRunsSidebar } from "./ScheduledJobRunsSidebar";

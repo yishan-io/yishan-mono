@@ -24,7 +24,7 @@ vi.mock("../../commands/scheduledJobCommands", () => ({
     updateScheduledJob: mocked.updateScheduledJob,
 }));
 
-vi.mock("../../../../ui/hooks/useDialogRegistration", () => ({
+vi.mock("../../../domains/workbench", () => ({
   useDialogRegistration: () => {},
 }));
 

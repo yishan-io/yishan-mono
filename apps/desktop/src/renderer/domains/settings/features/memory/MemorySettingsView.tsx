@@ -16,7 +16,13 @@ import {
 } from "../../../../domains/settings/commands/settingsCommands";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { MemoryConfig } from "../../../../rpc/daemonTypes";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader, SettingsToggleRow } from "../../ui/controls";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+  SettingsToggleRow,
+} from "../../ui/controls";
 
 const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
 

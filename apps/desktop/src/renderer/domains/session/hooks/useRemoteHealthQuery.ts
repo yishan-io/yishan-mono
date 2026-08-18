@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getRemoteHealthStatus } from "../../domains/session/commands/sessionCommands";
+import { getRemoteHealthStatus } from "../commands/sessionCommands";
 
 /** Tracks remote api-service reachability for login-screen diagnostics. */
 export function useRemoteHealthQuery() {

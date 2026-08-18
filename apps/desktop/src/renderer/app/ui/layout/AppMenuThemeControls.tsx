@@ -1,7 +1,7 @@
 import { Button, ButtonGroup, Tooltip } from "@mui/material";
 import type { IconType } from "react-icons";
 import { LuLaptop, LuMoon, LuSun } from "react-icons/lu";
-import type { AppThemePreference } from "../../theme";
+import type { AppThemePreference } from "../../../theme";
 import { themeButtonSx } from "./appMenuStyles";
 
 const themeOptions: Array<{

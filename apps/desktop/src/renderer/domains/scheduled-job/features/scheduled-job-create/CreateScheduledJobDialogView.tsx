@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTitle } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";
+import { useDialogRegistration } from "../../../../domains/workbench";
 import { CreateScheduledJobFormView } from "./CreateScheduledJobFormView";
 
 type CreateScheduledJobDialogViewProps = {

@@ -1,8 +1,8 @@
 import { Box, Tab, Tabs } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SkillsSettingsView } from "../agent-skills/SkillsSettingsView";
 import { SettingsSectionHeader } from "../../ui/controls";
+import { SkillsSettingsView } from "../agent-skills/SkillsSettingsView";
 import type { CustomizeFocusItemId } from "../settings-shell/settingsSearchCatalog";
 import { AgentsSettingsView } from "./AgentsSettingsView";
 import { ExtensionsSettingsView } from "./ExtensionsSettingsView";

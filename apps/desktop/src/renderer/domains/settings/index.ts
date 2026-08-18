@@ -7,6 +7,8 @@ export {
   useKeybindingOverrides,
   useWorkspaceBranchPrefixSettings,
 } from "./hooks/useSettingsReadHooks";
+export { useCodeTheme } from "./hooks/useCodeTheme";
+export { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
 export { listSkills } from "./commands/skillCommands";
 export {
   type GitBranchPrefixMode,

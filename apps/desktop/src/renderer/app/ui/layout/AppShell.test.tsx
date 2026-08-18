@@ -16,11 +16,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../app/runtime/useDaemonConnectionMonitor", () => ({
+vi.mock("../../runtime/useDaemonConnectionMonitor", () => ({
   useDaemonConnectionMonitor: mocks.useDaemonConnectionMonitor,
 }));
 
-vi.mock("../../app/runtime/useShortcuts", () => ({
+vi.mock("../../runtime/useShortcuts", () => ({
   useShortcuts: mocks.useShortcuts,
 }));
 

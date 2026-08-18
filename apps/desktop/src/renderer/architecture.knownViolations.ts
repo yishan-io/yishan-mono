@@ -57,7 +57,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // store boundary keeps transport DTO references (baselined like the other
   // workspace projection store rows). actions.localFolders/actions.workspaces
   // rows removed — those files no longer import transport directly.
-  { rule: "R6-state-layer", file: "domains/workspace/state/workspaceStoreTypes.ts", phase: "D8" },
   // desktop6-adjust W4: git projections moved from the Workspace feature to
   // the Git feature; the transport-DTO boundary on the store keeps the same
   // baselined R6 row (was domains/workspace/state/workspaceProjectionStore.ts).
@@ -69,17 +68,7 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // types; it remains the workspace/project DTO boundary. D8 removed its
   // workspace state import (R7 occurrence) and project deep import (R14);
   // the api/types transport boundary keeps this R7 row (baseline R7 = 2).
-  { rule: "R7-model-layer", file: "domains/workspace/model/snapshotReconciler.ts", phase: "D8" },
   // ---- R9-ui-components (owning phase = D17 Final Closure removes root ui behavior) ----
-  { rule: "R9-ui-components", file: "ui/hooks/useCodeTheme.ts", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/hooks/useDialogRegistration.ts", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/hooks/useRemoteHealthQuery.ts", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/hooks/useThemePreference.tsx", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/layout/AppMenuOrganizationSubmenu.tsx", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/layout/AppMenuView.tsx", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/layout/AppShell.tsx", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/layout/CreateOrganizationDialogView.tsx", phase: "D17" },
-  { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "D17" },
   // ---- R14-cross-domain-deep (Phase D2 baseline; owning phase = importing Domain) ----
   { rule: "R14-cross-domain-deep", file: "domains/settings/state/agentSettingsStore.ts", phase: "D16" },
   // ---- R15-app-from-domain (Phase D2 baseline; owning phase = importing Domain) ----

@@ -3,10 +3,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  DISPLAY_SETTINGS_STORE_STORAGE_KEY,
-  displaySettingsStore,
-} from "../../domains/settings/state/displaySettingsStore";
+import { DISPLAY_SETTINGS_STORE_STORAGE_KEY, displaySettingsStore } from "../state/displaySettingsStore";
 import { AppThemePreferenceProvider, useThemePreference } from "./useThemePreference";
 
 vi.mock("@mui/material", async () => {

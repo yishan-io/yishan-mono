@@ -23,12 +23,12 @@ import type { OrganizationMemberRecord } from "../../../../api/types";
 import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../../../domains/organization";
 import { setSessionData as applySetSessionData } from "../../../../domains/session";
 import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../../domains/session";
+import { ConfirmationDialog } from "../../../../domains/workbench";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { ConfirmationDialog } from "../../../../ui/components/ConfirmationDialog";
+import { SettingsCard, SettingsSectionHeader } from "../../ui/controls";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
-import { SettingsCard, SettingsSectionHeader } from "../../ui/controls";
 
 function getMemberInitials(member: OrganizationMemberRecord): string {
   const displayName = member.name?.trim() || member.email?.trim() || member.userId.trim();

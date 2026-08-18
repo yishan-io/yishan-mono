@@ -1,11 +1,14 @@
 import { Box } from "@mui/material";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useAllWorkspacesGitSync } from "@renderer/domains/git";
+import { OverviewView } from "@renderer/domains/overview";
 import { CreateProjectDialogView } from "@renderer/domains/project";
+import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { resizeLeftPane } from "@renderer/domains/workbench";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/domains/workbench";
 import { SplitPaneLayout } from "@renderer/domains/workbench";
+import { popupStore } from "@renderer/domains/workbench";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -30,13 +33,10 @@ import {
   useWorkspaceCommands,
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
-import { popupStore } from "../../app/state/popupStore";
 import { LeftPaneView } from "../../app/ui/LeftPaneView";
 import { MainPaneView } from "../../app/ui/MainPaneView";
 import { AgentChatRecoveryCoordinator } from "../../domains/agent/runtime/agentChatRecovery";
-import { OverviewView } from "@renderer/domains/overview";
 import { projectStore } from "../../domains/project/state/projectStore";
-import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "../../domains/session";
 import { TerminalRecoveryCoordinator } from "../../domains/terminal/runtime/terminalRecovery";
 import { layoutStore } from "../../domains/workbench/state/layoutStore";

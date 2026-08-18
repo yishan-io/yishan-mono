@@ -7,7 +7,7 @@ import { useProjects } from "@renderer/domains/project";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { useSelectedOrganizationId } from "../../../../domains/session";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";
+import { useDialogRegistration } from "../../../../domains/workbench";
 import { ScheduledJobFormFields } from "../scheduled-job-form/form/ScheduledJobFormFields";
 import { useScheduledJobFormState } from "../scheduled-job-form/form/useScheduledJobFormState";
 import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "../scheduled-job-form/scheduledJobFormHelpers";

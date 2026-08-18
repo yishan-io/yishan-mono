@@ -210,32 +210,6 @@ vi.mock("@renderer/domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocks.workspaceStore,
 }));
 
-vi.mock("@renderer/domains/workbench", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
-  const navState = () => ({
-    activeProjectId: (mocks.stateRef.current.selectedProjectId as string) ?? "",
-    activeWorkspaceId: (mocks.stateRef.current.selectedWorkspaceId as string) ?? "",
-  });
-  const navStore = Object.assign(
-    vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
-      selector(navState()),
-    ),
-    { getState: navState },
-  );
-  return {
-    ...actual,
-    workbenchNavigationStore: navStore,
-    tabStore: mocks.workspaceStore,
-    createFixedRuntimeLayer: vi.fn(() => ({
-      register: vi.fn(),
-      attach: vi.fn(),
-      detach: vi.fn(),
-      remove: vi.fn(),
-      refresh: vi.fn(),
-    })),
-  };
-});
-
 vi.mock("@renderer/domains/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: { lastUsedExternalAppId?: string; setLastUsedExternalAppId: (id: string) => void }) => unknown,
@@ -270,7 +244,29 @@ vi.mock("./file-tree", () => ({
   },
 }));
 
-vi.mock("@renderer/ui/components/ConfirmationDialog", () => ({
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
+  const navState = () => ({
+    activeProjectId: (mocks.stateRef.current.selectedProjectId as string) ?? "",
+    activeWorkspaceId: (mocks.stateRef.current.selectedWorkspaceId as string) ?? "",
+  });
+  const navStore = Object.assign(
+    vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
+      selector(navState()),
+    ),
+    { getState: navState },
+  );
+  return {
+    ...actual,
+    workbenchNavigationStore: navStore,
+    tabStore: mocks.workspaceStore,
+    createFixedRuntimeLayer: vi.fn(() => ({
+      register: vi.fn(),
+      attach: vi.fn(),
+      detach: vi.fn(),
+      remove: vi.fn(),
+      refresh: vi.fn(),
+    })),
   ConfirmationDialog: ({
     open,
     title,
@@ -300,7 +296,9 @@ vi.mock("@renderer/ui/components/ConfirmationDialog", () => ({
         </button>
       </div>
     ) : null,
-}));
+
+  };
+});
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

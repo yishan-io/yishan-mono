@@ -24,8 +24,8 @@ import {
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { SkillInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import { AddSkillDialog, RemoveSkillDialog, SkillDetailDialog } from "./AgentSkillsCardDialogs";
 import { SettingsCard } from "../../ui/controls";
+import { AddSkillDialog, RemoveSkillDialog, SkillDetailDialog } from "./AgentSkillsCardDialogs";
 
 // Skills are installed/updated via the pi ecosystem (npm packages, `npx skill
 // add`), so the settings card only displays them. Discovered-only kinds

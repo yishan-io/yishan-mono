@@ -13,10 +13,10 @@ import {
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { MONOSPACE_SX } from "../../../../helpers/styles";
 import { useRefreshableLoader } from "../../../../ui/hooks/useRefreshableLoader";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
 import { AgentCLISettingsCard } from "./AgentCLISettingsCard";
 import { DaemonCliInstallCard } from "./DaemonCliInstallCard";
 import { PiCliInstallCard } from "./PiCliInstallCard";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../ui/controls";
 
 const CLI_STATUS_TIMEOUT_MS = 15_000;
 const RECHECK_MIN_DURATION_MS = 500;

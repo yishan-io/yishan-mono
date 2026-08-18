@@ -15,7 +15,7 @@ import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { resolveTargetBranchForCreate } from "../../../../helpers/workspaceBranchNaming";
 import { buildWorkspaceNavigationPath } from "../../../../navigation/workspaceNavigation";
-import { useDialogRegistration } from "../../../../ui/hooks/useDialogRegistration";
+import { useDialogRegistration } from "../../../../domains/workbench";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";
 import { ProjectAndSourceBranchSection } from "./createWorkspaceDialog/ProjectAndSourceBranchSection";
 import { TaskRunSection } from "./createWorkspaceDialog/TaskRunSection";
