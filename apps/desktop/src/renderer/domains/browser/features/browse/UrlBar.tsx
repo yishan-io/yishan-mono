@@ -11,8 +11,8 @@ import {
   TextField,
   Tooltip,
 } from "@mui/material";
-import type { BrowserHistoryGroup } from "@renderer/domains/workbench";
-import { openExternalUrl } from "@renderer/domains/workbench";
+import type { BrowserHistoryGroup } from "@renderer/domains/browser";
+import { openExternalUrl } from "@renderer/domains/browser";
 import type { FormEvent } from "react";
 import { LuArrowLeft, LuArrowRight, LuGlobe, LuLock, LuLockOpen, LuMousePointer2, LuRefreshCcw } from "react-icons/lu";
 import { RxExternalLink } from "react-icons/rx";

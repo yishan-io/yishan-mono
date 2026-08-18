@@ -1,4 +1,4 @@
-import { openExternalUrl } from "@renderer/domains/workbench";
+import { openExternalUrl } from "@renderer/domains/browser";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppCommands, useOrganizationCommands } from "../../app/commands/useCommands";

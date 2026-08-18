@@ -32,11 +32,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("../../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: (shortcutId: string) =>
     shortcutId === "activate-files-pane" ? "⌘1" : `⌘ ${shortcutId}`,
 }));

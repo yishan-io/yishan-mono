@@ -209,7 +209,17 @@ vi.mock("@renderer/domains/workbench", () => {
     ),
     { getState: navState },
   );
-  return { workbenchNavigationStore: navStore, tabStore: mocks.workspaceStore };
+  return {
+    workbenchNavigationStore: navStore,
+    tabStore: mocks.workspaceStore,
+    createFixedRuntimeLayer: vi.fn(() => ({
+      register: vi.fn(),
+      attach: vi.fn(),
+      detach: vi.fn(),
+      remove: vi.fn(),
+      refresh: vi.fn(),
+    })),
+  };
 });
 
 vi.mock("@renderer/domains/project/state/projectStore", () => {

@@ -37,6 +37,13 @@ const navMock = vi.hoisted(() => {
 
 vi.mock("@renderer/domains/workbench", () => ({
   workbenchNavigationStore: navMock.navStore,
+  createFixedRuntimeLayer: vi.fn(() => ({
+    register: vi.fn(),
+    attach: vi.fn(),
+    detach: vi.fn(),
+    remove: vi.fn(),
+    refresh: vi.fn(),
+  })),
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({

@@ -1,5 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { AgentChatView } from "@renderer/domains/agent";
+import { BrowserView } from "@renderer/domains/browser";
 import { fileTabContentStore } from "@renderer/domains/files";
 import {
   AudioPreview,
@@ -12,7 +13,6 @@ import {
 } from "@renderer/domains/files";
 import { diffTabContentStore } from "@renderer/domains/git";
 import { TerminalView } from "@renderer/domains/terminal";
-import { BrowserView } from "@renderer/domains/workbench";
 import { TabPanel } from "@renderer/domains/workbench";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";

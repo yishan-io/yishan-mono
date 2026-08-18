@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { copyToClipboard } from "../../../../helpers/clipboard";
+import { copyToClipboard } from "../../../../../helpers/clipboard";
 import { TabBar } from "./TabBar";
 
 const fetchAgentSessionFilePathMock = vi.fn(async () => "");
@@ -41,15 +41,15 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../helpers/platform", () => ({
+vi.mock("../../../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../../helpers/clipboard", () => ({
+vi.mock("../../../../../helpers/clipboard", () => ({
   copyToClipboard: vi.fn(),
 }));
 
-vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: (shortcutId: string) => {
     if (shortcutId === "new-tab") {
       return "⌘+Y";

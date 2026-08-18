@@ -1,4 +1,4 @@
-import { createFixedRuntimeLayer } from "../../runtime/runtimeSurfaceLayer";
+import { createFixedRuntimeLayer } from "@renderer/domains/workbench";
 
 const webviewsByTabId = new Map<string, Electron.WebviewTag>();
 const requestedUrlByTabId = new Map<string, string>();

@@ -12,21 +12,21 @@ import {
 } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { PaneLeaf, SplitPaneNode } from "../../../domains/workbench/model/split-pane";
-import type { WorkbenchTab } from "../../../domains/workbench/model/types";
-import { selectPaneForTab } from "../../../domains/workbench/state/workbenchSelectors";
+import type { ExternalAppId } from "../../../../../shared/contracts/externalApps";
+import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/model/split-pane";
+import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
+import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
+import { splitPaneStore } from "../../state/splitPaneStore";
+import { tabStore } from "../../state/tabStore";
+import { selectLayoutByWorkspaceId } from "../../state/workbenchSelectors";
+import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
+import { SplitPaneContainer } from "./pane/SplitPaneContainer";
+import { SplitPaneGroup } from "./pane/SplitPaneGroup";
 import {
   type OpenTabAutoRefreshCommands,
   type RefreshableOpenTab,
   useOpenTabAutoRefresh,
-} from "../../../domains/workbench/ui/hooks/useOpenTabAutoRefresh";
-import { splitPaneStore } from "../state/splitPaneStore";
-import { tabStore } from "../state/tabStore";
-import { selectLayoutByWorkspaceId } from "../state/workbenchSelectors";
-import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
-import { SplitPaneContainer } from "./pane/SplitPaneContainer";
-import { SplitPaneGroup } from "./pane/SplitPaneGroup";
+} from "./useOpenTabAutoRefresh";
 import { type AgentPresetMeta, usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
 import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";

@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
 import { useCallback } from "react";
 import { createPortal } from "react-dom";
-import type { WorkbenchTab } from "../../../domains/workbench/model/types";
-import { getOrCreateRuntimeRoot } from "../runtime/runtimeRoot";
+import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
+import { getOrCreateRuntimeRoot } from "../../runtime/runtimeRoot";
 import type { WorkspaceTabPlacement } from "./useWorkspaceTabPlacements";
 
 type WorkspaceTabSurfaceLayerProps = {

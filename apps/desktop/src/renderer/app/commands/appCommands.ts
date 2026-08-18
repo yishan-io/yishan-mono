@@ -1,4 +1,5 @@
-import { openExternalUrl, openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { openExternalUrl } from "@renderer/domains/browser";
+import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import type {
   AuthStatusResult,
   DaemonInfoResult,

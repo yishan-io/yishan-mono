@@ -207,7 +207,7 @@ vi.mock("../../domains/files/commands/fileCommands", () => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock("../../domains/workbench/ui/pane/TabBar", () => ({
+vi.mock("../../domains/workbench/features/workspace-tabs/pane/TabBar", () => ({
   TabBar: ({
     tabs,
     onCreateTab,
@@ -233,7 +233,7 @@ vi.mock("../../domains/workbench/ui/pane/TabBar", () => ({
   ),
 }));
 
-vi.mock("../../domains/workbench/ui/pane/SplitPaneGroup", () => ({
+vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitPaneGroup", () => ({
   SplitPaneGroup: ({
     pane,
     tabs,
@@ -262,7 +262,7 @@ vi.mock("../../domains/workbench/ui/pane/SplitPaneGroup", () => ({
   ),
 }));
 
-vi.mock("../../domains/workbench/ui/pane/SplitPaneContainer", () => ({
+vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitPaneContainer", () => ({
   SplitPaneContainer: ({
     node,
     renderPane,
@@ -283,7 +283,7 @@ vi.mock("../../domains/workbench/ui/pane/SplitPaneContainer", () => ({
   },
 }));
 
-vi.mock("../../domains/workbench/ui/pane/SplitDropZone", () => ({
+vi.mock("../../domains/workbench/features/workspace-tabs/pane/SplitDropZone", () => ({
   SplitDropZone: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   resolveDropResult: () => null,
 }));

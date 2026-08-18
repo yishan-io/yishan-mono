@@ -1,6 +1,7 @@
 import { Badge, Box } from "@mui/material";
 import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/domains/agent";
 import { AgentIcon, SessionHistoryMenu } from "@renderer/domains/agent";
+import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
 import { FileSearchOverlay } from "@renderer/domains/files";
 import { getFileTreeIcon } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
@@ -14,7 +15,6 @@ import {
   type RightPaneTabDef,
   WorkspaceSplitPane,
   layoutStore,
-  removeWebviewsForClosedTabs,
   resizeRightPane,
   setRightPaneTab,
   tabStore,

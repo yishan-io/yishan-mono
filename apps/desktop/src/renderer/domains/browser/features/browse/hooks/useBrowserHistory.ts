@@ -1,5 +1,5 @@
-import { appendBrowserHistory, loadBrowserHistory } from "@renderer/domains/workbench";
-import type { BrowserHistoryGroup } from "@renderer/domains/workbench";
+import { appendBrowserHistory, loadBrowserHistory } from "@renderer/domains/browser";
+import type { BrowserHistoryGroup } from "@renderer/domains/browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useBrowserHistory() {

@@ -21,6 +21,13 @@ vi.mock("@renderer/domains/files/commands/fileCommands", () => ({
 vi.mock("@renderer/domains/workbench", () => ({
   openTab: (input: unknown) => openTabMock(input),
   openTabInOppositePane: (input: unknown) => openTabMock(input),
+  createFixedRuntimeLayer: vi.fn(() => ({
+    register: vi.fn(),
+    attach: vi.fn(),
+    detach: vi.fn(),
+    remove: vi.fn(),
+    refresh: vi.fn(),
+  })),
 }));
 
 vi.mock("@renderer/domains/workspace/state/workspaceLifecycleNoticeStore", () => ({

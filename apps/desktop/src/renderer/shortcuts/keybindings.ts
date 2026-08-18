@@ -1,10 +1,10 @@
-import { reloadWebview } from "@renderer/domains/workbench";
+import { reloadWebview } from "@renderer/domains/browser";
 import { activateWorkspace } from "@renderer/domains/workbench";
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
-import { requestAgentChatComposerFocus } from "../events/agentChatComposerFocus";
 import { createNewWhiteboard } from "../domains/files/commands/whiteboardCommands";
 import { projectStore } from "../domains/project/state/projectStore";
+import { requestAgentChatComposerFocus } from "../events/agentChatComposerFocus";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
 import { toSupportedKeyBinding } from "./shortcutMetadata";

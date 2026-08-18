@@ -9,13 +9,13 @@ import type {
 } from "@renderer/domains/workbench";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkbenchTab } from "../../../domains/workbench/model/types";
+import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
 import type { SplitDropRegion } from "./pane/SplitDropZone";
 import { resolveDropResult } from "./pane/SplitDropZone";
 import type { TabBarCreateOption } from "./pane/TabBar";
 
-import { splitPaneStore } from "../state/splitPaneStore";
-import { selectActivePane, selectPane } from "../state/workbenchSelectors";
+import { splitPaneStore } from "../../state/splitPaneStore";
+import { selectActivePane, selectPane } from "../../state/workbenchSelectors";
 
 /** Agent terminal preset metadata for the tab create menu (supplied by the caller; agent-owned). */
 export type AgentPresetMeta = {

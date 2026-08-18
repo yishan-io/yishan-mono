@@ -1,8 +1,9 @@
 import { Box } from "@mui/material";
 import { setBrowserTabFaviconUrl } from "@renderer/domains/workbench";
+import { tabStore } from "@renderer/domains/workbench";
 import { type FormEvent, useCallback, useMemo, useRef } from "react";
 import { LuWrench } from "react-icons/lu";
-import { tabStore } from "../../state/tabStore";
+import { normalizeUrl } from "../../model/normalizeUrl";
 import { BlankView } from "./BlankView";
 import { ToolsMenu } from "./ToolsMenu";
 import { UrlBar } from "./UrlBar";
@@ -12,7 +13,6 @@ import { useBrowserTools } from "./hooks/useBrowserTools";
 import { useBrowserUrl } from "./hooks/useBrowserUrl";
 import { useElementInspector } from "./hooks/useElementInspector";
 import { useWebviewEvents } from "./hooks/useWebviewEvents";
-import { normalizeUrl } from "./normalizeUrl";
 
 type BrowserViewProps = {
   tabId: string;

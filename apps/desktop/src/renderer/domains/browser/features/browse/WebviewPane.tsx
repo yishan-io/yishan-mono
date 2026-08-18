@@ -7,7 +7,7 @@ import {
   getOrCreateWebview,
   parkWebview,
   syncWebviewUrl,
-} from "./webviewRegistry";
+} from "../../runtime/webviewRegistry";
 
 type WebviewPaneProps = {
   tabId: string;

@@ -1,12 +1,6 @@
 /**
  * Workbench feature public API (Phase 12, desktop5.md).
  */
-export {
-  appendBrowserHistory,
-  loadBrowserHistory,
-  openExternalUrl,
-} from "./infrastructure/browserHostCommands";
-export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "./infrastructure/browserHostCommands";
 export { createFixedRuntimeLayer } from "./runtime/runtimeSurfaceLayer";
 export { getOrCreateRuntimeRoot } from "./runtime/runtimeRoot";
 export {
@@ -66,11 +60,9 @@ export {
 } from "./state/layoutStore";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { BrowserView } from "./ui/browser/BrowserView";
-export { reloadWebview, removeWebviewsForClosedTabs } from "./ui/browser/webviewRegistry";
-export { WorkspaceSplitPane } from "./ui/WorkspaceSplitPaneView";
-export { WorkspaceTabSurfaceLayer } from "./ui/WorkspaceTabSurfaceLayer";
-export { RightPaneTabBar, type RightPaneTabDef } from "./ui/RightPaneTabBar";
+export { WorkspaceSplitPane } from "./features/workspace-tabs/WorkspaceSplitPaneView";
+export { WorkspaceTabSurfaceLayer } from "./features/workspace-tabs/WorkspaceTabSurfaceLayer";
+export { RightPaneTabBar, type RightPaneTabDef } from "./features/workspace-tabs/RightPaneTabBar";
 export {
   ColumnSeparator,
   PaneHeader,
@@ -81,19 +73,22 @@ export {
   SplitPaneGroup,
   SplitPaneLayout,
   TabPanel,
-} from "./ui/pane";
+} from "./features/workspace-tabs/pane";
 export {
   TabBar,
   type AgentCreateOptionDef,
   type TabBarCreateOption,
-} from "./ui/pane/TabBar";
-export { TabBarItem } from "./ui/pane/TabBarItem";
-export { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./ui/pane/TabBarMenus";
-export { TabRenameDialog } from "./ui/pane/TabRenameDialog";
+} from "./features/workspace-tabs/pane/TabBar";
+export { TabBarItem } from "./features/workspace-tabs/pane/TabBarItem";
+export { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./features/workspace-tabs/pane/TabBarMenus";
+export { TabRenameDialog } from "./features/workspace-tabs/pane/TabRenameDialog";
 export {
   WorkspacePaneVisibilityProvider,
   type WorkspacePaneVisibilityValue,
   useWorkspacePaneVisibility,
   useWorkspacePaneVisibilityContext,
-} from "./ui/hooks/useWorkspacePaneVisibility";
-export { type WorkspaceTabPlacement, useWorkspaceTabPlacements } from "./ui/useWorkspaceTabPlacements";
+} from "./hooks/useWorkspacePaneVisibility";
+export {
+  type WorkspaceTabPlacement,
+  useWorkspaceTabPlacements,
+} from "./features/workspace-tabs/useWorkspaceTabPlacements";

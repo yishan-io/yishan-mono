@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import type { WorkspaceTabPlacement } from "@renderer/domains/workbench/ui/useWorkspaceTabPlacements";
+import type { WorkspaceTabPlacement } from "@renderer/domains/workbench/features/workspace-tabs/useWorkspaceTabPlacements";
 import { memo } from "react";
 import type { MutableRefObject } from "react";
 import type { WorkbenchTab } from "../../../workbench/model/types";

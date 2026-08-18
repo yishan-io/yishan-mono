@@ -2,8 +2,8 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { createLeaf } from "../../model/split-pane";
-import type { PaneBranch, PaneLeaf } from "../../model/split-pane";
+import { createLeaf } from "../../../model/split-pane";
+import type { PaneBranch, PaneLeaf } from "../../../model/split-pane";
 import { SplitPaneContainer } from "./SplitPaneContainer";
 
 function createTestBranch(overrides?: Partial<PaneBranch>): PaneBranch {
