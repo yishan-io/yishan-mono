@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 import { openChatFileTab, renameAgentChatSessionByTab, startAgentChatSession } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();

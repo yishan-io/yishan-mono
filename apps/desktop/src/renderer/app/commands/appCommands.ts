@@ -1,3 +1,4 @@
+import type { DesktopAgentKind } from "@renderer/domains/agent";
 import { openExternalUrl } from "@renderer/domains/browser";
 import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import type {
@@ -10,7 +11,6 @@ import type {
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
-import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { rendererQueryClient } from "../../queryClient";
 import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
 

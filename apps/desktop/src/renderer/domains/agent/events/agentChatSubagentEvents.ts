@@ -1,7 +1,7 @@
 import { tabStore } from "@renderer/domains/workbench";
-import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../../../helpers/agentChatBudget";
-import { agentChatStore } from "../model/agentChatStore";
+import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../model/agentChatBudget";
 import type { AgentMessage, AgentModel } from "../model/agentChatTypes";
+import { agentChatStore } from "../state/agentChatStore";
 import { isRecord, normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
 
 // ─── Subagent event parsers ───────────────────────────────────────────────────

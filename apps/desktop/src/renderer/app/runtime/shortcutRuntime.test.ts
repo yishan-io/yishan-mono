@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { startShortcutRuntime } from "./shortcutRuntime";
 import type { ShortContext } from "../../shortcuts/types";
+import { startShortcutRuntime } from "./shortcutRuntime";
 
 type DesktopRpcEvent = { method: string; payload?: unknown };
 type RpcListener = (event: DesktopRpcEvent) => void;

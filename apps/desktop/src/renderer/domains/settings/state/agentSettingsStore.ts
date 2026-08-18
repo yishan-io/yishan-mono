@@ -5,7 +5,7 @@ import {
   type DesktopAgentKind,
   createDefaultAgentInUseByKind,
   isDesktopAgentKind,
-} from "../../../helpers/agentSettings";
+} from "../../../domains/agent/model/agentSettings";
 
 export const AGENT_SETTINGS_STORE_STORAGE_KEY = "yishan-agent-settings-store";
 

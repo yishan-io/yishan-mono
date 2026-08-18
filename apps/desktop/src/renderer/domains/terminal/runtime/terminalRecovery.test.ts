@@ -1,4 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+
+// Agent kind check comes through the agent public API; mock it to keep the
+// node-env test from pulling the full agent UI graph (monaco etc).
+vi.mock("@renderer/domains/agent", () => ({
+  SUPPORTED_DESKTOP_AGENT_KINDS: ["opencode", "codex", "claude", "gemini", "pi", "copilot", "cursor"],
+  isDesktopAgentKind: (value: string) =>
+    ["opencode", "codex", "claude", "gemini", "pi", "copilot", "cursor"].includes(value),
+}));
 import type { TabStoreState } from "../../../domains/workbench/state/tabStore";
 import type { WorkspaceStoreState } from "../../../domains/workspace/state/workspaceStoreTypes";
 import { TerminalRecoveryCoordinator } from "./terminalRecovery";

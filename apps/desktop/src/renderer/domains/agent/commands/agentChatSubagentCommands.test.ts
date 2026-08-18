@@ -5,7 +5,7 @@ import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore"
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../commands/agentChatSubagentCommands";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();

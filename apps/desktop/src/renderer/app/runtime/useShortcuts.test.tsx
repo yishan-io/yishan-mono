@@ -117,7 +117,6 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,

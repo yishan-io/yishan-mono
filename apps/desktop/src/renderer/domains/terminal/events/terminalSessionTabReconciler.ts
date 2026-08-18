@@ -9,7 +9,7 @@ import {
 import { selectWorkspaces } from "@renderer/domains/workspace";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import type { WorkbenchTab } from "../../../domains/workbench";
-import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
+import { type DesktopAgentKind, isDesktopAgentKind } from "@renderer/domains/agent";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   consumeExplicitlyClosedTerminalTabId,

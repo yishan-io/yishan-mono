@@ -15,8 +15,8 @@ import {
 } from "@renderer/domains/workbench";
 import { findOppositePaneId } from "@renderer/domains/workbench";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../model/agentChatStore";
 import { isAgentSessionBusy } from "../model/agentChatTypes";
+import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";
 
 const SUBAGENT_SPLIT_DIRECTION = "horizontal";

@@ -1,4 +1,9 @@
 import {
+  AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+} from "@renderer/domains/agent";
+import {
   BiBell,
   BiBot,
   BiChip,
@@ -17,11 +22,6 @@ import {
   BiWorld,
 } from "react-icons/bi";
 import { LuHammer, LuPuzzle } from "react-icons/lu";
-import {
-  AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-} from "../../../helpers/agentSettings";
 import {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
   type NotificationSettingsFocusItemId,

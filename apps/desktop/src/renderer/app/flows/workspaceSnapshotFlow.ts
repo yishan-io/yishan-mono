@@ -71,7 +71,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       // list/read/write and terminal.start work after a daemon restart.
       void openFoldersForSnapshot(orphanFolders, "");
 
-      syncTabStoreWithWorkspace(previousWorkspaces);
+      await syncTabStoreWithWorkspace(previousWorkspaces);
       return;
     }
 
@@ -136,7 +136,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     workspaceCreateProgressStore
       .getState()
       .reconcileHydratedWorkspaceCreateProgress(workspaceStore.getState().workspaces);
-    syncTabStoreWithWorkspace(previousWorkspaces);
+    await syncTabStoreWithWorkspace(previousWorkspaces);
 
     // Warm up workspaces for currently pinned projects so the daemon has them
     // open and indexed for restart recovery. Already-open workspaces are skipped.

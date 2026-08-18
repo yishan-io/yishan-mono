@@ -111,7 +111,7 @@ export async function deleteLocalFolder(id: string): Promise<void> {
   }
 
   workspaceStore.getState().removeLocalFolder(folderId);
-  syncTabStoreWithWorkspace(previousWorkspaces);
+  await syncTabStoreWithWorkspace(previousWorkspaces);
 
   // The deleted folder may have been the active workspace; re-activate the
   // remaining selection through the Workbench navigation command.

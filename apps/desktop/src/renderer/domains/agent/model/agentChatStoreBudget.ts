@@ -4,7 +4,7 @@ import {
   MAX_SUBAGENT_CHILDREN,
   MAX_SUBAGENT_MESSAGES_PER_CHILD,
   countMessageUtf8Bytes,
-} from "../../../helpers/agentChatBudget";
+} from "./agentChatBudget";
 import type { AgentMessage } from "./agentChatTypes";
 
 /** Maximum messages retained per chat tab transcript. */

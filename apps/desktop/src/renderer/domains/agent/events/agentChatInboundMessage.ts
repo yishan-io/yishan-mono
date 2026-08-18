@@ -1,10 +1,10 @@
+import { generateId } from "../../../helpers/generateId";
 import {
   MAX_DETAILS_DEPTH,
   MAX_DETAILS_ITEMS,
   MAX_DETAILS_STRING_UTF8_BYTES,
   PER_MESSAGE_UTF8_BYTES,
-} from "../../../helpers/agentChatBudget";
-import { generateId } from "../../../helpers/generateId";
+} from "../model/agentChatBudget";
 import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "../model/agentChatTypes";
 
 // Re-export for callers that import budget constants from this module.
@@ -13,7 +13,7 @@ export {
   MAX_DETAILS_ITEMS,
   MAX_DETAILS_STRING_UTF8_BYTES,
   PER_MESSAGE_UTF8_BYTES,
-} from "../../../helpers/agentChatBudget";
+} from "../model/agentChatBudget";
 
 // ─── UTF-8 helpers ───────────────────────────────────────────────────────────
 

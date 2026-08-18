@@ -1,5 +1,5 @@
-import { agentChatStore } from "../model/agentChatStore";
 import type { AgentPendingUiAutoResponse } from "../model/agentChatTypes";
+import { agentChatStore } from "../state/agentChatStore";
 import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./chatStore";
 import { chatStore } from "./chatStore";
 

@@ -16,6 +16,9 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuLogIn } from "react-icons/lu";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import { openPiProviderLogin, savePiProvider } from "../../commands/piProviderCommands";
+import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../commands/piProviderCommands";
+import { ProviderMark } from "../../features/model-picker/ProviderMark";
 import {
   PI_PROVIDER_CATALOG,
   getPiProviderCatalogEntry,
@@ -23,10 +26,7 @@ import {
   isPiProviderApiKeyCapable,
   isPiProviderOAuthCapable,
   isPiProviderSubscriptionCapable,
-} from "../../../../helpers/piProviders";
-import { openPiProviderLogin, savePiProvider } from "../../commands/piProviderCommands";
-import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../commands/piProviderCommands";
-import { ProviderMark } from "../model-picker/ProviderMark";
+} from "../../model/piProviders";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 

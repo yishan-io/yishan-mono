@@ -262,7 +262,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   }
 
   projectStore.getState().deleteProject(projectId);
-  syncTabStoreWithWorkspace(previousWorkspaces);
+  await syncTabStoreWithWorkspace(previousWorkspaces);
 }
 
 /** Persists project config to backend and updates local config state when successful. */

@@ -1,5 +1,5 @@
+import { type DesktopAgentKind, isDesktopAgentKind } from "@renderer/domains/agent";
 import type { TabStoreState } from "../../../domains/workbench";
-import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
 import type { TerminalSessionSummary } from "../../../rpc/daemonTypes";
 

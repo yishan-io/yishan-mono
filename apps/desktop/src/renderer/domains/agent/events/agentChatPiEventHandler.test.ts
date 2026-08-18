@@ -7,7 +7,7 @@ import { compactAgent, respondToAgentExtensionUiRequest } from "../commands/agen
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import { refreshAgentSessionStats, registerAgentSession } from "../events/agentChatPiEventShared";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();

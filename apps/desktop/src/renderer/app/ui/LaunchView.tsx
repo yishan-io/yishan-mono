@@ -1,6 +1,12 @@
 import { Box, Typography } from "@mui/material";
 import { RecentAgentSessions } from "@renderer/domains/agent";
 import { AgentIcon } from "@renderer/domains/agent";
+import {
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  DEFAULT_AGENT_COMMANDS,
+  type DesktopAgentKind,
+} from "@renderer/domains/agent";
 import { createNewWhiteboard } from "@renderer/domains/files";
 import { workspaceCreateProgressStore } from "@renderer/domains/workspace";
 import { useWorkspaces } from "@renderer/domains/workspace";
@@ -19,12 +25,6 @@ import {
   LuTriangleAlert,
 } from "react-icons/lu";
 import { useWorkbenchCommands, useWorkspaceCommands } from "../../app/commands/useCommands";
-import {
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
-  DEFAULT_AGENT_COMMANDS,
-  type DesktopAgentKind,
-} from "../../helpers/agentSettings";
 import { getRendererPlatform } from "../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 

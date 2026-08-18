@@ -25,7 +25,7 @@ import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../events/agentChatPiEventShared";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
 type PiSessionHandle = {

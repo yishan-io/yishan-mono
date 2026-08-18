@@ -2,9 +2,9 @@ import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "../../../domains/workbench";
-import { DEFAULT_AGENT_COMMANDS } from "../../../helpers/agentSettings";
 import { delay } from "../../../helpers/delay";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { DEFAULT_AGENT_COMMANDS } from "../model/agentSettings";
 
 /** How long to wait after the Pi TUI boots before typing /login. */
 const PI_LOGIN_INPUT_DELAY_MS = 2_000;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 import {
   clearPendingUiAutoResponse,
   markWorkspaceNotificationsRead,

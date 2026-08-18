@@ -104,7 +104,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   // Cleanup per-workspace right-pane signals to avoid accumulating stale entries.
   removeRightPaneStateForWorkspace(workspaceId);
 
-  syncTabStoreWithWorkspace(previousWorkspaces);
+  await syncTabStoreWithWorkspace(previousWorkspaces);
 
   void removeWorkspaceInBackground({
     workspaceId,

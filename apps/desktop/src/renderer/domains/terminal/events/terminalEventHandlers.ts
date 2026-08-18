@@ -9,7 +9,7 @@ import { setTerminalTabAgentKind } from "@renderer/domains/workbench";
  * default deps subscribe via the router selectors.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { isDesktopAgentKind } from "../../../helpers/agentSettings";
+import { isDesktopAgentKind } from "@renderer/domains/agent";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 

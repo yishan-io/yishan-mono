@@ -7,7 +7,7 @@ import {
   stripProviderPrefix,
 } from "@renderer/domains/agent";
 import type { AgentModelInfo } from "@renderer/domains/agent";
-import type { DesktopAgentKind } from "@renderer/helpers/agentSettings";
+import type { DesktopAgentKind } from "@renderer/domains/agent";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown, LuSparkles } from "react-icons/lu";
 import { useAgentModels } from "./useAgentModels";

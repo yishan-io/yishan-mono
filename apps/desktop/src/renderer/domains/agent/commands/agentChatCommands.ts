@@ -5,7 +5,6 @@ import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
-import { agentChatStore } from "../model/agentChatStore";
 import { isAgentSessionBusy } from "../model/agentChatTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import {
@@ -19,6 +18,7 @@ import {
   recoverAgentSessionAfterReconnect,
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
+import { agentChatStore } from "../state/agentChatStore";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the

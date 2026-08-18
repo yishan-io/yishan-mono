@@ -1,12 +1,12 @@
 import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { ProviderMark } from "@renderer/domains/agent";
 import { ProviderCredentialDialog } from "@renderer/domains/agent";
+import { getPiProviderDisplayName, getPiProviderPinEnv } from "@renderer/domains/agent";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
 import { useAgentCommands } from "../../../app/commands/useCommands";
 import type { PiProviderStatus } from "../../../domains/agent/commands/piProviderCommands";
-import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../../helpers/piProviders";
 import { useRefreshableLoader } from "../../../ui/hooks/useRefreshableLoader";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "./controls";

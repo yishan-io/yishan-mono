@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../workbench/state/tabStore";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 import {
   applySubagentLifecycleWidget,
   applySubagentLiveTranscripts,

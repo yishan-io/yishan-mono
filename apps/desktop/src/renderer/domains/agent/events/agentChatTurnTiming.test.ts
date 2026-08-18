@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 import { handleAgentPiEvent } from "./agentChatPiEventHandler";
 
 const initialAgentChatStoreState = agentChatStore.getState();

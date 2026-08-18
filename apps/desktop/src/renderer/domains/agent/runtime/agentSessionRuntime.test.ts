@@ -7,7 +7,7 @@ import { sendAgentPrompt } from "../commands/agentChatCommands";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import { registerAgentSession } from "../events/agentChatPiEventShared";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 import { clearPiSessionHandle, ensurePiSession, stopPiSession } from "./agentSessionRuntime";
 
 const initialAgentChatStoreState = agentChatStore.getState();

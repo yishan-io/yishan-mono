@@ -1,6 +1,12 @@
 import { Badge, Box } from "@mui/material";
 import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/domains/agent";
 import { AgentIcon, SessionHistoryMenu } from "@renderer/domains/agent";
+import {
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  DEFAULT_AGENT_COMMANDS,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+} from "@renderer/domains/agent";
+import { formatAgentSessionTitle } from "@renderer/domains/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
 import { FileSearchOverlay } from "@renderer/domains/files";
 import { getFileTreeIcon } from "@renderer/domains/files";
@@ -31,12 +37,6 @@ import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
 import { retainOpenAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
-import {
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  DEFAULT_AGENT_COMMANDS,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-} from "../../helpers/agentSettings";
-import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { isFolderWorkspace } from "../../helpers/localFolder";
 import { DARK_SURFACE_COLORS } from "../../theme";
 import { useFileCommands, useGitCommands, useTerminalCommands, useWorkbenchCommands } from "../commands/useCommands";

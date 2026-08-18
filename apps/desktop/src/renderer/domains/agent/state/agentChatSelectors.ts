@@ -1,4 +1,4 @@
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 
 /**
  * Agent feature selectors — the public read surface for Agent Chat State

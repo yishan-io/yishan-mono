@@ -1,5 +1,5 @@
 import type { AgentModelInfo } from "@renderer/domains/agent";
-import type { DesktopAgentKind } from "@renderer/helpers/agentSettings";
+import type { DesktopAgentKind } from "@renderer/domains/agent";
 import { useEffect, useState } from "react";
 
 type UseAgentModelsInput = {

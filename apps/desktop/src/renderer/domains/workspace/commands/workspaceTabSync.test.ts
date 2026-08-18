@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("workspaceTabSync", () => {
-  it("reconciles tab and chat state when workspaces are removed", () => {
+  it("reconciles tab and chat state when workspaces are removed", async () => {
     workbenchNavigationStore.setState({
       activeWorkspaceId: "workspace-2",
     });
@@ -57,7 +57,7 @@ describe("workspaceTabSync", () => {
     const removeWorkspaceTaskCounts = vi.fn();
     chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
 
-    syncTabStoreWithWorkspace([
+    await syncTabStoreWithWorkspace([
       {
         id: "workspace-1",
         repoId: "repo-1",

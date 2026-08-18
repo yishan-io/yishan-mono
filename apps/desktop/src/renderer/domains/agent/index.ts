@@ -8,6 +8,30 @@ export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
 export { listAgentModels } from "./commands/agentCommands";
 export { clearTerminalAgentStatus } from "./commands/agentSessionLifecycle";
+export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./model/agentSkillTextHelpers";
+export {
+  THINKING_LEVELS,
+  clampThinkingLevel,
+  formatSupportedThinkingLevels,
+  getSupportedThinkingLevels,
+  isThinkingLevelSupported,
+  type ThinkingLevel,
+} from "./model/agentThinkingLevels";
+export {
+  getPiProviderCatalogEntry,
+  getPiProviderDisplayName,
+  getPiProviderIcon,
+  getPiProviderIconColor,
+  getPiProviderPinEnv,
+  isKnownPiProviderId,
+  isPiProviderApiKeyCapable,
+  isPiProviderOAuthCapable,
+  isPiProviderSubscriptionCapable,
+  PI_PROVIDER_CATALOG,
+  type PiProviderAuthMode,
+  type PiProviderCatalogEntry,
+} from "./model/piProviders";
+export { KimiIcon } from "./ui/piProviderIcons";
 export {
   AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
@@ -47,13 +71,13 @@ export {
 } from "./events/agentChatPiEventShared";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { AgentChatView } from "./ui/chat/AgentChatView";
-export { RecentAgentSessions } from "./ui/chat/RecentAgentSessions";
-export { WorkspaceAgentChatSurface } from "./ui/chat/WorkspaceAgentChatSurface";
+export { AgentChatView } from "./features/agent-chat/chat/AgentChatView";
+export { RecentAgentSessions } from "./features/agent-chat/chat/RecentAgentSessions";
+export { WorkspaceAgentChatSurface } from "./features/agent-chat/chat/WorkspaceAgentChatSurface";
 export { AgentIcon } from "./ui/AgentIcon";
-export { AgentModelSelector } from "./ui/session/AgentModelSelector";
-export { SessionHistoryMenu } from "./ui/session/SessionHistoryMenu";
-export { ThinkingLevelControl, THINKING_LEVEL_LABELS } from "./ui/session/ThinkingLevelControl";
+export { AgentModelSelector } from "./features/agent-chat/session/AgentModelSelector";
+export { SessionHistoryMenu } from "./features/agent-chat/session/SessionHistoryMenu";
+export { ThinkingLevelControl, THINKING_LEVEL_LABELS } from "./features/agent-chat/session/ThinkingLevelControl";
 export {
   ModelPickerMenu,
   ProviderMark,
@@ -62,11 +86,11 @@ export {
   splitModelId,
   stripProviderPrefix,
   type ModelPickerOption,
-} from "./ui/model-picker";
+} from "./features/model-picker";
 export {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,
-} from "./ui/hooks/useAgentChatReadHooks";
+} from "./hooks/useAgentChatReadHooks";
 export { findTabWithSession } from "./commands/agentChatCommands";
 export { fetchAgentSessionFilePath } from "./commands/agentChatSessionHistory";
 export { ProviderCredentialDialog } from "./ui/credentials/ProviderCredentialDialog";

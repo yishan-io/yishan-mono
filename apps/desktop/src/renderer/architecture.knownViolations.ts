@@ -64,7 +64,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // the Git feature; the transport-DTO boundary on the store keeps the same
   // baselined R6 row (was domains/workspace/state/workspaceProjectionStore.ts).
   // ---- R7-model-layer (owning phase = the Domain that owns the model) ----
-  { rule: "R7-model-layer", file: "domains/agent/model/agentChatStore.ts", phase: "D12" },
   // desktop6-adjust W1: workbench/model/types.ts row removed — the generic
   // types file no longer imports transport/zustand (tab types moved to
   // tabTypes.ts, Workspace Store types moved to Workspace State).
@@ -84,6 +83,7 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R9-ui-components", file: "ui/layout/CreateOrganizationDialogView.tsx", phase: "D17" },
   { rule: "R9-ui-components", file: "ui/layout/useAppMenuViewState.ts", phase: "D17" },
   // ---- R14-cross-domain-deep (Phase D2 baseline; owning phase = importing Domain) ----
+  { rule: "R14-cross-domain-deep", file: "domains/settings/state/agentSettingsStore.ts", phase: "D16" },
   { rule: "R14-cross-domain-deep", file: "domains/notification/events/notificationEventHandlers.ts", phase: "D13" },
   { rule: "R14-cross-domain-deep", file: "domains/overview/ui/OverviewFiltersView.tsx", phase: "D14" },
   { rule: "R14-cross-domain-deep", file: "domains/overview/ui/OverviewView.tsx", phase: "D14" },

@@ -1,7 +1,7 @@
+import type { DesktopAgentKind } from "@renderer/domains/agent";
 import type { RpcSchema } from "../../../../shared/contracts/rpcSchema";
 import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../domains/agent/model/chatTypes";
 import { chatStore } from "../../../domains/agent/state/chatStore";
-import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
 

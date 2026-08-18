@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { agentChatStore } from "../model/agentChatStore";
+import { agentChatStore } from "../state/agentChatStore";
 import { selectAgentChatSession } from "./agentChatSelectors";
 
 const initialAgentChatStoreState = agentChatStore.getState();

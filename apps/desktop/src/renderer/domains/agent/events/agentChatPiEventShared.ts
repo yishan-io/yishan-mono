@@ -1,6 +1,5 @@
 import { generateId } from "../../../helpers/generateId";
 import { getDaemonClient } from "../../../rpc/rpcTransport";
-import { agentChatStore } from "../model/agentChatStore";
 import type {
   AgentMessage,
   AgentModel,
@@ -14,6 +13,7 @@ import {
   queueAgentChatStreamMessage,
   setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
 } from "../runtime/agentChatStreamBuffer";
+import { agentChatStore } from "../state/agentChatStore";
 import {
   PER_MESSAGE_UTF8_BYTES,
   isRecord,
