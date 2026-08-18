@@ -91,28 +91,6 @@ export function setupCreateWorkspaceDialogViewTests() {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
-        projects: [
-          {
-            id: "repo-1",
-            key: "repo-1",
-            name: "Repo One",
-            path: "/tmp/repo-1",
-            localPath: "/tmp/repo-1",
-            worktreePath: "/tmp/worktrees-1",
-            defaultBranch: "main",
-            missing: false,
-          },
-          {
-            id: "repo-2",
-            key: "repo-2",
-            name: "Repo Two",
-            path: "/tmp/repo-2",
-            localPath: "/tmp/repo-2",
-            worktreePath: "/tmp/worktrees-2",
-            defaultBranch: "develop",
-            missing: false,
-          },
-        ],
       },
       true,
     );

@@ -98,37 +98,12 @@ describe("CreateWorkspaceDialogView node payload", () => {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
-        projects: [
-          {
-            id: "repo-1",
-            key: "repo-1",
-            name: "Repo One",
-            path: "/tmp/repo-1",
-            localPath: "/tmp/repo-1",
-            worktreePath: "/tmp/worktrees-1",
-            defaultBranch: "main",
-            missing: false,
-          },
-        ],
         workspaces: [],
       },
       true,
     );
     projectStore.setState({ displayProjectIds: ["repo-1"] });
-    projectStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-1",
-          name: "Repo One",
-          path: "/tmp/repo-1",
-          localPath: "/tmp/repo-1",
-          worktreePath: "/tmp/worktrees-1",
-          defaultBranch: "main",
-          missing: false,
-        },
-      ],
-    });
+    projectStore.setState({});
     agentSettingsStore.setState(
       {
         ...initialAgentSettingsStoreState,

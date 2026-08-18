@@ -30,9 +30,7 @@ export {
 export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
 export {
   addWorkspace,
-  deleteProject,
   setOrderedWorkspaceIds,
-  updateProjectConfig,
 } from "./state/workspaceActions";
 export {
   workspaceCreateProgressStore,

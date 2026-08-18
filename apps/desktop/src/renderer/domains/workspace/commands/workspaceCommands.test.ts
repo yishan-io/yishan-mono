@@ -87,17 +87,6 @@ describe("workspaceCommands", () => {
     const resolveTabForWorkspace = vi.fn();
     tabStore.setState({ resolveTabForWorkspace });
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-1",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          localPath: "/tmp/repo-1",
-          worktreePath: "/tmp/worktrees",
-        },
-      ],
       addWorkspace,
     });
     projectStore.setState({
@@ -235,19 +224,7 @@ describe("workspaceCommands", () => {
 
   it("does not call lifecycle warnings from direct create response (warnings come via workspaceCreateCompleted event)", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-1",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          localPath: "/tmp/repo-1",
-          worktreePath: "/tmp/worktrees",
-        },
-      ],
-    });
+    workspaceStore.setState({});
     projectStore.setState({
       projects: [
         {
@@ -302,17 +279,6 @@ describe("workspaceCommands", () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     const addWorkspace = vi.fn();
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-1",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          localPath: "/tmp/repo-1",
-          worktreePath: "/tmp/worktrees",
-        },
-      ],
       addWorkspace,
     });
     projectStore.setState({
@@ -833,7 +799,6 @@ describe("workspaceCommands", () => {
       activeWorkspaceId: "folder-workspace-1",
     });
     workspaceStore.setState({
-      projects: [],
       workspaces: [
         {
           id: "folder-workspace-1",
@@ -865,9 +830,7 @@ describe("workspaceCommands", () => {
     workbenchNavigationStore.setState({
       activeProjectId: "project-plain",
     });
-    workspaceStore.setState({
-      projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
-    });
+
     projectStore.setState({ projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }] });
 
     const eventListener = vi.fn();

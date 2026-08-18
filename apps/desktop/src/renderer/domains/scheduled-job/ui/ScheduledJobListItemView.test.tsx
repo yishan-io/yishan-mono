@@ -2,8 +2,8 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../../domains/project/state/projectStore";
+import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";
@@ -51,7 +51,6 @@ vi.mock("../../../app/commands/useCommands", () => {
   };
 });
 
-
 vi.mock("./ScheduledJobRunStatusIcon", () => ({
   ScheduledJobRunStatusIcon: ({ status, size }: { status: string; size: number }) => (
     <span data-testid="scheduled-job-run-status-icon" data-size={size} data-status={status} />
@@ -95,7 +94,6 @@ afterEach(() => {
 describe("ScheduledJobListItemView", () => {
   it("wraps a non-null last-run 14px icon in its translated caller-owned tooltip", async () => {
     scheduledJobStore.setState({ pendingActionIds: [] });
-    workspaceStore.setState({ projects: [] });
     projectStore.setState({ projects: [] });
 
     render(

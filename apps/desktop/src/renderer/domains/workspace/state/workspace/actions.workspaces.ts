@@ -4,10 +4,12 @@ import {
   applyRenamedWorkspaceBranchState,
   applyRenamedWorkspaceState,
 } from "../../../../helpers/workspaceHelpers";
+import type { WorkspaceItem } from "../../model/workspaceTypes";
 import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../workspaceStoreTypes";
 
 type WorkspaceActions = Pick<
   WorkspaceStoreActions,
+  | "load"
   | "addWorkspace"
   | "removeWorkspace"
   | "renameWorkspace"
@@ -23,6 +25,11 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
   };
 
   return {
+    load: (_organizationId: string, workspaces: WorkspaceItem[]) => {
+      set((state) => {
+        state.workspaces = workspaces;
+      });
+    },
     addWorkspace: ({
       organizationId,
       projectId,

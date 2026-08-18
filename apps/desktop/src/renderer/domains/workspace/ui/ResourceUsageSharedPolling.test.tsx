@@ -88,16 +88,6 @@ describe("Resource usage shared polling", () => {
       activeWorkspaceId: "workspace-1",
     });
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-1",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          worktreePath: "/tmp/repo-1",
-        },
-      ],
       workspaces: [
         {
           id: "workspace-1",

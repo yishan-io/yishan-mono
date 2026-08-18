@@ -58,7 +58,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         return;
       }
 
-      workspaceStore.getState().load("", [], []);
+      workspaceStore.getState().load("", []);
 
       const orphanDaemonClient = await getDaemonClient();
       const orphanFolders = await orphanDaemonClient.workspace.listLocalFolders();
@@ -86,10 +86,10 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       return;
     }
 
-    workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
-
-    // Phase 3: project records + preferences live in the project store. Mirror
-    // the reconciled result so the UI reads one source of truth per owner.
+    // Phase 3: project records + preferences live in the project store. The
+    // reconciler is the single owner of snapshot reconciliation; the flow
+    // applies the reconciled result to each owner (projects -> project store,
+    // workspaces -> workspace store view models).
     const reconciled = reconcileWorkspaceSnapshot({
       projects,
       workspacesFromApi: workspaces,
@@ -113,6 +113,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         reconciled.organizationPreferencesById,
         reconciled.lastUsedExternalAppId,
       );
+    workspaceStore.getState().load(selectedOrganization.id, reconciled.workspaces);
 
     // Active Workspace/Project context lives in the Workbench navigation
     // Store (desktop6-adjust.md W2); the reconciler resolves it, the flow

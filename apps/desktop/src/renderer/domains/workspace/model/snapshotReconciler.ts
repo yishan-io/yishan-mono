@@ -11,11 +11,9 @@
  */
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspaceRecord } from "../../../api/types";
-import { buildWorkspaceStateFromData } from "../../../domains/workspace/state/workspace/state";
+import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../../../domains/project";
 import { getFileName } from "../../../helpers/pathHelpers";
 import { resolveHydratedWorkspaceDisplayMetadata } from "../../../helpers/workspaceDisplayNames";
-import type { WorkspaceStoreOrganizationPreference } from "../../project/model/projectTypes";
-import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { WorkspaceItem } from "./workspaceTypes";
 import type { WorkspaceGitChangeTotals } from "./workspaceTypes";
 import type { WorkspaceStatus } from "./workspaceTypes";
@@ -290,10 +288,10 @@ export function reconcileWorkspaceSnapshot(input: SnapshotReconcilerInput): Snap
   const previousSelectedWorkspaceId = previousState.selectedWorkspaceId ?? "";
   const { projects: mappedProjects, workspaces } = mapApiData(projects, workspacesFromApi);
   const reconciledWorkspaces = preservePendingWorkspaceDisplayMetadata(workspaces, previousState.workspaces);
-  const nextBaseState = buildWorkspaceStateFromData({
+  const nextBaseState = {
     projects: mappedProjects,
     workspaces: reconciledWorkspaces,
-  });
+  };
   const nextDisplayProjectIds = resolveNextDisplayProjectIds({
     mappedProjects,
     orgPreferences,

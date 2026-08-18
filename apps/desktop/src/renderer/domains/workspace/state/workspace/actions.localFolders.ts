@@ -12,7 +12,7 @@ import type { DaemonLocalFolder } from "../workspaceStoreTypes";
 
 type LocalFolderActions = Pick<WorkspaceStoreActions, "loadLocalFolders" | "addLocalFolder" | "removeLocalFolder">;
 
-type FolderStoreSlice = Pick<WorkspaceStoreState, "projects" | "workspaces"> & {
+type FolderStoreSlice = Pick<WorkspaceStoreState, "workspaces"> & {
   gitChangesCountByWorkspaceId?: Record<string, unknown>;
   gitChangeTotalsByWorkspaceId?: Record<string, unknown>;
 };

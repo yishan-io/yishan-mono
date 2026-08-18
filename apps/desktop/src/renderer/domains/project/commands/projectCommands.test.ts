@@ -105,11 +105,9 @@ afterEach(() => {
 
 describe("projectCommands", () => {
   it("loads backend snapshot and hydrates store", async () => {
-    const hydrate = vi.fn();
     const retainWorkspaceTabs = vi.fn().mockReturnValue([]);
     const resolveTabForWorkspace = vi.fn();
     tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
-    workspaceStore.setState({ load: hydrate });
     sessionStore.setState({
       organizations: [{ id: "org-1", name: "Org 1" }],
       selectedOrganizationId: "org-1",
@@ -133,22 +131,10 @@ describe("projectCommands", () => {
     await loadWorkspaceSnapshot();
 
     expect(rpcMocks.listProjects).toHaveBeenCalledWith("org-1", { withWorkspaces: true });
-    expect(hydrate).toHaveBeenCalledTimes(1);
-    expect(hydrate.mock.calls[0]?.[0]).toBe("org-1");
-    expect(hydrate.mock.calls[0]?.[1]).toEqual([
-      {
-        id: "project-1",
-        name: "Project 1",
-        sourceType: "git",
-        repoProvider: "github",
-        repoUrl: "https://github.com/test/project-1.git",
-        repoKey: "project-1",
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-        createdByUserId: "user-1",
-      },
-    ]);
-    expect(hydrate.mock.calls[0]?.[2]).toEqual([]);
+    // Projects reconcile into the project store; workspaces (view models) into
+    // the workspace store (D8: workspace store no longer holds projects).
+    expect(projectStore.getState().projects).toEqual([expect.objectContaining({ id: "project-1", name: "Project 1" })]);
+    expect(workspaceStore.getState().workspaces).toEqual([]);
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
   });
@@ -506,8 +492,7 @@ describe("projectCommands", () => {
 
     const olderLoad = loadWorkspaceSnapshot();
 
-    workspaceStore.setState((state) => ({
-      ...state,
+    projectStore.setState({
       projects: [
         {
           id: "project-1",
@@ -525,7 +510,6 @@ describe("projectCommands", () => {
           setupScript: "",
           postScript: "",
           contextEnabled: true,
-          organizationId: "org-1",
           createdByUserId: "user-1",
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
@@ -534,6 +518,8 @@ describe("projectCommands", () => {
           commands: [],
         },
       ],
+    });
+    workspaceStore.setState({
       workspaces: [
         {
           id: "workspace-1",
@@ -550,9 +536,7 @@ describe("projectCommands", () => {
           kind: "managed",
         },
       ],
-      selectedProjectId: "project-1",
-      selectedWorkspaceId: "workspace-1",
-    }));
+    });
 
     const newerLoad = loadWorkspaceSnapshot();
 
@@ -623,7 +607,7 @@ describe("projectCommands", () => {
     const appendRepo = vi.fn();
     const addWorkspace = vi.fn();
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    workspaceStore.setState({ createProject: appendRepo, addWorkspace });
+    workspaceStore.setState({ addWorkspace });
     projectStore.setState({ createProject: appendRepo });
     rpcMocks.gitInspect.mockResolvedValueOnce({
       isGitRepository: true,
@@ -680,21 +664,6 @@ describe("projectCommands", () => {
     const addWorkspace = vi.fn();
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceStore.setState({
-      projects: [
-        {
-          id: "project-plain",
-          key: "project-plain",
-          repoKey: null,
-          name: "Plain Git Repo",
-          path: "/tmp/plain-folder",
-          missing: false,
-          localPath: "/tmp/plain-folder",
-          gitUrl: "",
-          worktreePath: "/tmp/plain-folder",
-          sourceType: "git-local",
-          contextEnabled: true,
-        },
-      ],
       workspaces: [
         {
           id: "workspace-1",
@@ -708,27 +677,10 @@ describe("projectCommands", () => {
           worktreePath: "/tmp/plain-folder",
         },
       ],
-      createProject: appendRepo,
       addWorkspace,
     });
 
-    projectStore.setState({
-      projects: [
-        {
-          id: "project-plain",
-          key: "project-plain",
-          repoKey: null,
-          name: "Plain Git Repo",
-          path: "/tmp/plain-folder",
-          missing: false,
-          localPath: "/tmp/plain-folder",
-          gitUrl: "",
-          worktreePath: "/tmp/plain-folder",
-          sourceType: "git-local",
-          contextEnabled: true,
-        },
-      ],
-    });
+    projectStore.setState({});
     projectStore.setState({ createProject: appendRepo });
     // A git repo without a remote is git-local: still a backend project.
     rpcMocks.gitInspect.mockResolvedValueOnce({
@@ -811,7 +763,7 @@ describe("projectCommands", () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     // Keep the real addWorkspace so the returned primary workspace lands in
     // the store and the import-open path can run.
-    workspaceStore.setState({ createProject: appendRepo });
+    // project records live in the project store
     projectStore.setState({ createProject: appendRepo });
     // git-local (no remote) still flows through the backend api.project.create.
     rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: true });
@@ -982,7 +934,7 @@ describe("projectCommands", () => {
   it("adds created backend workspace entries for remote projects", async () => {
     const appendRepo = vi.fn();
     const addWorkspace = vi.fn();
-    workspaceStore.setState({ createProject: appendRepo, addWorkspace });
+    workspaceStore.setState({ addWorkspace });
     projectStore.setState({ createProject: appendRepo });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     apiMocks.createProject.mockResolvedValueOnce({
@@ -1047,7 +999,7 @@ describe("projectCommands", () => {
 
     tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
     chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
-    workspaceStore.setState({ deleteProject: removeRepo });
+
     projectStore.setState({ deleteProject: removeRepo });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     apiMocks.deleteProject.mockResolvedValueOnce(undefined);
@@ -1064,11 +1016,7 @@ describe("projectCommands", () => {
 
   it("persists config and updates local store fields", async () => {
     const applyProjectConfig = vi.fn();
-    const applyWorkspaceConfig = vi.fn();
     const bumpRefreshVersion = vi.fn();
-    workspaceStore.setState({
-      updateProjectConfig: applyWorkspaceConfig,
-    });
     projectStore.setState({
       projects: [
         {
@@ -1124,7 +1072,6 @@ describe("projectCommands", () => {
       contextEnabled: true,
     });
     expect(applyProjectConfig).toHaveBeenCalledTimes(1);
-    expect(applyWorkspaceConfig).toHaveBeenCalledTimes(1);
     expect(bumpRefreshVersion).toHaveBeenCalledTimes(1);
     expect(rpcMocks.workspaceSyncContextLink).not.toHaveBeenCalled();
   });
@@ -1132,7 +1079,7 @@ describe("projectCommands", () => {
   it("syncs context links across all project workspaces when contextEnabled changes", async () => {
     const applyRepoConfig = vi.fn();
     const bumpRefreshVersion = vi.fn();
-    workspaceStore.setState({
+    projectStore.setState({
       projects: [
         {
           id: "repo-1",
@@ -1147,6 +1094,8 @@ describe("projectCommands", () => {
           contextEnabled: false,
         },
       ],
+    });
+    workspaceStore.setState({
       workspaces: [
         {
           id: "ws-primary",
@@ -1182,25 +1131,8 @@ describe("projectCommands", () => {
           worktreePath: "/tmp/other-repo",
         },
       ],
-      updateProjectConfig: applyRepoConfig,
     });
     projectStore.setState({ updateProjectConfig: applyRepoConfig });
-    projectStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-key",
-          repoKey: "repo-key",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          localPath: "/tmp/repo-1",
-          gitUrl: "",
-          worktreePath: "/tmp/repo-1",
-          contextEnabled: false,
-        },
-      ],
-    });
     const incrementFileTreeRefreshVersionSpy = vi
       .spyOn(fileTreeStore.getState(), "incrementFileTreeRefreshVersion")
       .mockImplementation(bumpRefreshVersion);
@@ -1246,22 +1178,7 @@ describe("projectCommands", () => {
     const applyRepoConfig = vi.fn();
     const bumpRefreshVersion = vi.fn();
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-key",
-          repoKey: "repo-key",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          localPath: "/tmp/repo-1",
-          gitUrl: "",
-          worktreePath: "/tmp/repo-1",
-          contextEnabled: true,
-        },
-      ],
       workspaces: [],
-      updateProjectConfig: applyRepoConfig,
     });
     projectStore.setState({ updateProjectConfig: applyRepoConfig });
     projectStore.setState({
@@ -1276,7 +1193,7 @@ describe("projectCommands", () => {
           localPath: "/tmp/repo-1",
           gitUrl: "",
           worktreePath: "/tmp/repo-1",
-          contextEnabled: true,
+          contextEnabled: false,
         },
       ],
     });

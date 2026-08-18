@@ -106,16 +106,7 @@ describe("WorkspacePortsMenuControl", () => {
       activeWorkspaceId: "workspace-1",
     });
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-1",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          worktreePath: "/tmp/repo-1",
-        },
-      ],
+
       workspaces: [
         {
           id: "workspace-1",
@@ -125,9 +116,9 @@ describe("WorkspacePortsMenuControl", () => {
           sourceBranch: "main",
           branch: "main",
           summaryId: "workspace-1",
-          worktreePath: "/tmp/repo-1/workspace-1",
+          worktreePath: "/tmp/repo-1/workspace-1"
         },
-      ],
+      ]
     });
 
     tabStore.setState({
@@ -141,14 +132,14 @@ describe("WorkspacePortsMenuControl", () => {
           data: {
             title: "Terminal",
             paneId: "pane-1",
-            sessionId: "terminal-session-1",
-          },
+            sessionId: "terminal-session-1"
+          }
         },
       ],
       selectedTabId: "terminal-tab-1",
       selectedTabIdByWorkspaceId: {
-        "workspace-1": "terminal-tab-1",
-      },
+        "workspace-1": "terminal-tab-1"
+      }
     });
   });
 

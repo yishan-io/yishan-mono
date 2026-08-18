@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addWorkspace, deleteProject, updateProjectConfig } from "./workspaceActions";
+import { addWorkspace, setOrderedWorkspaceIds } from "./workspaceActions";
 import { workspaceStore } from "./workspaceStore";
 
 const initialWorkspaceState = workspaceStore.getState();
@@ -12,12 +12,10 @@ afterEach(() => {
 describe("workspaceActions — workspace state-change surface (desktop6-adjust W3)", () => {
   it("workspace-list actions forward to the workspace store", () => {
     const addWorkspace = vi.fn();
-    const deleteProject = vi.fn();
-    const updateProjectConfig = vi.fn();
+    const setOrderedWorkspaceIds = vi.fn();
     workspaceStore.setState({
       addWorkspace,
-      deleteProject,
-      updateProjectConfig,
+      setOrderedWorkspaceIds,
     });
 
     addWorkspace({
@@ -27,8 +25,7 @@ describe("workspaceActions — workspace state-change surface (desktop6-adjust W
       branch: "main",
       worktreePath: "/tmp/a",
     });
-    deleteProject("project-1");
-    updateProjectConfig("project-1", { contextEnabled: true });
+    setOrderedWorkspaceIds(["workspace-1"]);
 
     expect(addWorkspace).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
@@ -37,7 +34,6 @@ describe("workspaceActions — workspace state-change surface (desktop6-adjust W
       branch: "main",
       worktreePath: "/tmp/a",
     });
-    expect(deleteProject).toHaveBeenCalledWith("project-1");
-    expect(updateProjectConfig).toHaveBeenCalledWith("project-1", { contextEnabled: true });
+    expect(setOrderedWorkspaceIds).toHaveBeenCalledWith(["workspace-1"]);
   });
 });

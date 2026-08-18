@@ -10,8 +10,6 @@ import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../do
 import { selectIsDefaultContextEnabled } from "../../../domains/settings";
 import {
   addWorkspace as applyAddWorkspace,
-  deleteProject as applyDeleteProject,
-  updateProjectConfig as applyUpdateProjectConfig,
   buildWorkspaceOpenProjectEntries,
   createLocalFolderImport,
   openWorkspaceEntries,
@@ -264,7 +262,6 @@ export async function deleteProject(projectId: string): Promise<void> {
   }
 
   projectStore.getState().deleteProject(projectId);
-  applyDeleteProject(projectId);
   syncTabStoreWithWorkspace(previousWorkspaces);
 }
 
@@ -314,7 +311,6 @@ export async function updateProjectConfig(
       };
 
       projectStore.getState().updateProjectConfig(projectId, persistedConfig);
-      applyUpdateProjectConfig(projectId, persistedConfig);
       incrementFileTreeRefreshVersion();
 
       if (config.contextEnabled !== undefined && updatedProject.contextEnabled !== previousContextEnabled) {
@@ -332,7 +328,6 @@ export async function updateProjectConfig(
   }
 
   projectStore.getState().updateProjectConfig(projectId, config);
-  applyUpdateProjectConfig(projectId, config);
   incrementFileTreeRefreshVersion();
 }
 

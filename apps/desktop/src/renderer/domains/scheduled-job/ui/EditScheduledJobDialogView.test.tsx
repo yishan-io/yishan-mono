@@ -3,8 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { projectStore } from "../../../domains/project/state/projectStore";
+import type { ScheduledJobRecord } from "../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";
@@ -22,7 +22,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     updateScheduledJob: mocked.updateScheduledJob,
   });
   return {
@@ -43,7 +42,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 vi.mock("../../../ui/hooks/useDialogRegistration", () => ({
   useDialogRegistration: () => {},
@@ -106,27 +104,7 @@ describe("EditScheduledJobDialogView", () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    workspaceStore.setState({
-      projects: [{ id: "project-1", name: "Alpha", icon: "terminal", color: "#111111" }],
-    });
-    projectStore.setState({ projects: [{ id: "project-1", name: "Alpha", icon: "terminal", color: "#111111" }] });
-    mocked.listNodesByOrg.mockResolvedValueOnce([
-      {
-        id: "node-2",
-        name: "Shared node",
-        kind: "managed",
-        scope: "shared",
-        endpoint: null,
-        metadata: null,
-        ownerUserId: "user-1",
-        organizationId: "org-1",
-        canUse: true,
-        createdByUserId: "user-1",
-        createdAt: "2024-01-01T00:00:00.000Z",
-        updatedAt: "2024-01-01T00:00:00.000Z",
-        isOnline: true,
-      },
-    ]);
+    workspaceStore.setState({ workspaces: [] });
 
     renderEditScheduledJobDialogView();
 

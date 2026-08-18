@@ -1,7 +1,7 @@
 import type { WorkspaceStoreState } from "../domains/workspace/state/workspaceStoreTypes";
 import { resolveExplicitWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
 
-type WorkspaceStoreSlice = Pick<WorkspaceStoreState, "projects" | "workspaces"> & {
+type WorkspaceStoreSlice = Pick<WorkspaceStoreState, "workspaces"> & {
   pullRequestByWorkspaceId?: Record<string, unknown>;
   gitChangesCountByWorkspaceId?: Record<string, unknown>;
   gitChangeTotalsByWorkspaceId?: Record<string, unknown>;

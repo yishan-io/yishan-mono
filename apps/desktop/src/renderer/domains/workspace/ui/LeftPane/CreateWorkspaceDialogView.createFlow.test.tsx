@@ -282,11 +282,10 @@ describe("CreateWorkspaceDialogView create flow", () => {
     workspaceStore.setState(
       {
         ...workspaceStore.getState(),
-        projects: [...workspaceStore.getState().projects],
       },
       true,
     );
-    projectStore.setState({ projects: [...workspaceStore.getState().projects] });
+    projectStore.setState({ projects: [...projectStore.getState().projects] });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
       target: { value: "Keep Repo Two" },
@@ -352,40 +351,11 @@ describe("CreateWorkspaceDialogView non-git exclusion", () => {
     workspaceStore.setState(
       {
         ...state,
-        projects: [
-          ...state.projects,
-          {
-            id: "repo-plain",
-            key: "repo-plain",
-            name: "Plain Folder",
-            path: "/tmp/plain-folder",
-            localPath: "/tmp/plain-folder",
-            worktreePath: "/tmp/plain-folder",
-            sourceType: "unknown",
-            defaultBranch: "",
-            missing: false,
-          },
-        ],
       },
       true,
     );
     projectStore.setState({ displayProjectIds: ["repo-1", "repo-2", "repo-plain"] });
-    projectStore.setState({
-      projects: [
-        ...state.projects,
-        {
-          id: "repo-plain",
-          key: "repo-plain",
-          name: "Plain Folder",
-          path: "/tmp/plain-folder",
-          localPath: "/tmp/plain-folder",
-          worktreePath: "/tmp/plain-folder",
-          sourceType: "unknown",
-          defaultBranch: "",
-          missing: false,
-        },
-      ],
-    });
+    projectStore.setState({});
 
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 

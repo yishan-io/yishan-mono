@@ -53,19 +53,8 @@ afterEach(() => {
 describe("ProjectConfigDialogView", () => {
   it("renders git url and repo key as static text rows", () => {
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "core-repo",
-          name: "Core Repo",
-          path: "/Users/test/core-repo",
-          localPath: "/Users/test/core-repo",
-          worktreePath: "/Users/test/worktrees",
-          gitUrl: "git@github.com:acme/core-repo.git",
-          missing: false,
-        },
-      ],
-      workspaces: [],
+
+      workspaces: []
     });
     projectStore.setState({
       projects: [
@@ -92,19 +81,8 @@ describe("ProjectConfigDialogView", () => {
 
   it("labels the context toggle generically", () => {
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "core-repo",
-          name: "Core Repo",
-          path: "/Users/test/core-repo",
-          localPath: "/Users/test/core-repo",
-          worktreePath: "/Users/test/worktrees",
-          gitUrl: "git@github.com:acme/core-repo.git",
-          missing: false,
-        },
-      ],
-      workspaces: [],
+
+      workspaces: []
     });
     projectStore.setState({
       projects: [
@@ -130,19 +108,8 @@ describe("ProjectConfigDialogView", () => {
 
   it("keeps focus while editing a quick command name", () => {
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "core-repo",
-          name: "Core Repo",
-          path: "/Users/test/core-repo",
-          localPath: "/Users/test/core-repo",
-          worktreePath: "/Users/test/worktrees",
-          gitUrl: "git@github.com:acme/core-repo.git",
-          missing: false,
-        },
-      ],
-      workspaces: [],
+
+      workspaces: []
     });
     projectStore.setState({
       projects: [

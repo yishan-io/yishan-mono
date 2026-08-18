@@ -124,24 +124,6 @@ describe("LeftPaneResourceUsageControl", () => {
       activeWorkspaceId: "workspace-1",
     });
     workspaceStore.setState({
-      projects: [
-        {
-          id: "repo-1",
-          key: "repo-1",
-          name: "Repo 1",
-          path: "/tmp/repo-1",
-          missing: false,
-          worktreePath: "/tmp/repo-1",
-        },
-        {
-          id: "repo-2",
-          key: "repo-2",
-          name: "Repo 2",
-          path: "/tmp/repo-2",
-          missing: false,
-          worktreePath: "/tmp/repo-2",
-        },
-      ],
       workspaces: [
         {
           id: "workspace-1",

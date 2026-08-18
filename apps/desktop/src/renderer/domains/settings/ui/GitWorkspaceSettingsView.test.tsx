@@ -43,17 +43,6 @@ describe("GitWorkspaceSettingsView", () => {
     workspaceStore.setState(
       {
         ...initialWorkspaceState,
-        projects: [
-          {
-            id: "repo-1",
-            key: "repo-1",
-            name: "Repo One",
-            path: "/tmp/repo-1",
-            localPath: "/tmp/repo-1",
-            worktreePath: "/tmp/worktrees-1",
-            missing: false,
-          },
-        ],
         workspaces: [
           {
             id: "workspace-1",

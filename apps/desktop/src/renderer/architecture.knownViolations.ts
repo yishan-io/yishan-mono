@@ -70,8 +70,9 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // types file no longer imports transport/zustand (tab types moved to
   // tabTypes.ts, Workspace Store types moved to Workspace State).
   // desktop6-adjust W4: snapshotReconciler no longer imports git transport
-  // types; it remains the workspace/project DTO boundary (api/types +
-  // workspace state import), so its R7 row stays.
+  // types; it remains the workspace/project DTO boundary. D8 removed its
+  // workspace state import (R7 occurrence) and project deep import (R14);
+  // the api/types transport boundary keeps this R7 row (baseline R7 = 2).
   { rule: "R7-model-layer", file: "domains/workspace/model/snapshotReconciler.ts", phase: "D8" },
   // ---- R9-ui-components (owning phase = D17 Final Closure removes root ui behavior) ----
   { rule: "R9-ui-components", file: "ui/hooks/useCodeTheme.ts", phase: "D17" },
@@ -140,10 +141,7 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   { rule: "R14-cross-domain-deep", file: "domains/workspace/commands/workspaceCloseCommand.ts", phase: "D8" },
   { rule: "R14-cross-domain-deep", file: "domains/workspace/commands/workspaceCommands.ts", phase: "D8" },
   { rule: "R14-cross-domain-deep", file: "domains/workspace/commands/workspaceCreateCommand.ts", phase: "D8" },
-  { rule: "R14-cross-domain-deep", file: "domains/workspace/model/snapshotReconciler.ts", phase: "D8" },
   { rule: "R14-cross-domain-deep", file: "domains/workspace/state/workspace/actions.localFolders.ts", phase: "D8" },
-  { rule: "R14-cross-domain-deep", file: "domains/workspace/state/workspace/state.ts", phase: "D8" },
-  { rule: "R14-cross-domain-deep", file: "domains/workspace/state/workspaceStoreTypes.ts", phase: "D8" },
   { rule: "R14-cross-domain-deep", file: "domains/workspace/ui/LeftPane/CreateWorkspaceDialogView.tsx", phase: "D8" },
   {
     rule: "R14-cross-domain-deep",

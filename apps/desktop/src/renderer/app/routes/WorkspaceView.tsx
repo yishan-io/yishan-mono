@@ -338,7 +338,7 @@ export function WorkspaceView() {
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
   const projects = projectStore((state) => state.projects);
-  const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
+  const isProjectsLoaded = projectStore((state) => state.isProjectsLoaded);
   const { selectedWorkspaceId, selectedWorkspace } = useSelectedWorkspaceWithProject();
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const workspaceGitRefreshVersion = gitProjectionStore((state) =>

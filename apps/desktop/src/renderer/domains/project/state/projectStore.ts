@@ -10,11 +10,6 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import {
-  type RepoConfigUpdate,
-  applyUpdatedRepoConfigState,
-  normalizeCreateRepoInput,
-} from "../../../helpers/projectHelpers";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import type { WorkspaceProjectRecord } from "../model/projectTypes";
 
@@ -106,6 +101,47 @@ type CreatedProjectInput = {
   resolvedPath: string;
   backendProject: WorkspaceProjectRecord;
 };
+
+type RepoConfigUpdate = Pick<
+  WorkspaceProjectRecord,
+  "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript" | "commands"
+>;
+
+/** Normalizes one create-project input into trimmed path/gitUrl plus a resolved source path. */
+function normalizeCreateRepoInput(input: {
+  path?: string;
+  gitUrl?: string;
+  source: "local" | "remote";
+}): { normalizedPath: string; normalizedGitUrl: string; resolvedPath: string } {
+  const normalizedPath = input.path?.trim() ?? "";
+  const normalizedGitUrl = input.gitUrl?.trim() ?? "";
+  return {
+    normalizedPath,
+    normalizedGitUrl,
+    resolvedPath: input.source === "local" ? normalizedPath : normalizedGitUrl || normalizedPath,
+  };
+}
+
+/** Applies repo config updates to local state after save attempts. */
+function applyUpdatedRepoConfigState(
+  state: Pick<ProjectStoreState, "projects">,
+  repoId: string,
+  config: RepoConfigUpdate,
+): void {
+  const project = state.projects.find((project) => project.id === repoId);
+  if (!project) {
+    return;
+  }
+
+  project.name = config.name;
+  project.worktreePath = config.worktreePath ?? project.worktreePath;
+  project.contextEnabled = config.contextEnabled ?? project.contextEnabled;
+  project.icon = config.icon ?? project.icon;
+  project.color = config.color ?? project.color;
+  project.setupScript = config.setupScript ?? project.setupScript;
+  project.postScript = config.postScript ?? project.postScript;
+  project.commands = config.commands ?? project.commands;
+}
 
 /** Project-slice create: appends the project + display id. Selection is set by the command layer. */
 function applyCreatedProjectState(

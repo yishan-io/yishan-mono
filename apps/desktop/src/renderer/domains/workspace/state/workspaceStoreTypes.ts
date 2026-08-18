@@ -11,35 +11,15 @@
  * baselined by the R6 allowlist.
  */
 import type { StateCreator } from "zustand";
-import type { ProjectRecord, WorkspaceRecord } from "../../../api/types";
 import type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
-import type { WorkspaceProjectRecord } from "../../project/model/projectTypes";
 import type { AddWorkspaceInput, WorkspaceItem } from "../model/workspaceTypes";
 
 export type { DaemonLocalFolder } from "../../../rpc/daemonTypes";
 
 export type WorkspaceStoreState = {
-  projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
-  isProjectsLoaded: boolean;
   orderedWorkspaceIds: string[];
-  load: (organizationId: string, projects: ProjectRecord[], workspaces: WorkspaceRecord[]) => void;
-  createProject: (input: {
-    name: string;
-    source: "local" | "remote";
-    path?: string;
-    gitUrl?: string;
-    backendProject: WorkspaceProjectRecord;
-    organizationId: string;
-  }) => void;
-  deleteProject: (projectId: string) => void;
-  updateProjectConfig: (
-    projectId: string,
-    config: Pick<
-      WorkspaceProjectRecord,
-      "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript" | "commands"
-    >,
-  ) => void;
+  load: (organizationId: string, workspaces: WorkspaceItem[]) => void;
   addWorkspace: (input: AddWorkspaceInput) => void;
   removeWorkspace: (input: {
     projectId?: string;
@@ -74,9 +54,6 @@ export type WorkspaceStorePersistedState = Record<string, never>;
 export type WorkspaceStoreActions = Pick<
   WorkspaceStoreState,
   | "load"
-  | "createProject"
-  | "deleteProject"
-  | "updateProjectConfig"
   | "addWorkspace"
   | "removeWorkspace"
   | "renameWorkspace"

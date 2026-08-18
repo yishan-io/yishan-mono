@@ -77,38 +77,8 @@ describe("CreateScheduledJobFormView", () => {
     workbenchNavigationStore.setState({
       activeProjectId: "project-2",
     });
-    workspaceStore.setState({
-      projects: [
-        {
-          id: "project-1",
-          name: "Alpha",
-          icon: "terminal",
-          color: "#111111",
-        },
-        {
-          id: "project-2",
-          name: "Beta",
-          icon: "terminal",
-          color: "#222222",
-        },
-      ],
-    });
-    projectStore.setState({
-      projects: [
-        {
-          id: "project-1",
-          name: "Alpha",
-          icon: "terminal",
-          color: "#111111",
-        },
-        {
-          id: "project-2",
-          name: "Beta",
-          icon: "terminal",
-          color: "#222222",
-        },
-      ],
-    });
+    workspaceStore.setState({});
+    projectStore.setState({});
     mocked.listNodesByOrg.mockResolvedValueOnce([
       {
         id: "node-daemon",

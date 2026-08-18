@@ -164,12 +164,10 @@ describe("WorkspaceView", () => {
     workspaceStore.setState({
       displayProjectIds: [],
       gitRefreshVersionByWorktreePath: {},
-      isProjectsLoaded: false,
       lastUsedExternalAppId: null,
-      projects: [],
       workspaces: [],
     });
-    projectStore.setState({ projects: [] });
+    projectStore.setState({ isProjectsLoaded: false, projects: [] });
     workbenchNavigationStore.getState().closeOverlayPanel();
   });
 
@@ -179,11 +177,10 @@ describe("WorkspaceView", () => {
   });
 
   function setWorkspaceProjectsLoaded() {
-    workspaceStore.setState({
+    projectStore.setState({
       isProjectsLoaded: true,
       projects: [{ id: "project-1", name: "Project 1" }],
     });
-    projectStore.setState({ projects: [{ id: "project-1", name: "Project 1" }] });
   }
 
   it("loads the workspace snapshot on mount and again when selected organization changes", async () => {
@@ -317,7 +314,7 @@ describe("WorkspaceView", () => {
   });
 
   it("renders onboarding view when projects are loaded but empty", () => {
-    workspaceStore.setState({ isProjectsLoaded: true, projects: [] });
+    projectStore.setState({ isProjectsLoaded: true, projects: [] });
     projectStore.setState({ projects: [] });
 
     render(

@@ -10,9 +10,7 @@ export type { WorkspaceStoreState } from "./workspaceStoreTypes";
 export const workspaceStore = create<WorkspaceStoreState>()(
   persist(
     immer((set, get) => ({
-      projects: initialWorkspaceState.projects,
       workspaces: initialWorkspaceState.workspaces,
-      isProjectsLoaded: false,
       orderedWorkspaceIds: [],
       ...createWorkspaceStoreActions(set, get),
     })),

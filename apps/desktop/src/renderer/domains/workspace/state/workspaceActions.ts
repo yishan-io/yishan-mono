@@ -8,21 +8,10 @@ import type { WorkspaceStoreState } from "./workspaceStoreTypes";
  * Workspace Store directly.
  */
 type AddWorkspaceInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
-type UpdateProjectConfigInput = Parameters<WorkspaceStoreState["updateProjectConfig"]>[1];
 
 /** Adds one workspace record. */
 export function addWorkspace(input: AddWorkspaceInput): void {
   workspaceStore.getState().addWorkspace(input);
-}
-
-/** Deletes one project (and its workspaces) from workspace state. */
-export function deleteProject(projectId: string): void {
-  workspaceStore.getState().deleteProject(projectId);
-}
-
-/** Updates one project config in workspace state. */
-export function updateProjectConfig(projectId: string, config: UpdateProjectConfigInput): void {
-  workspaceStore.getState().updateProjectConfig(projectId, config);
 }
 
 /** Reorders the workspace display ids. */

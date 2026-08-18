@@ -41,23 +41,7 @@ afterEach(() => {
 
 describe("gitProjectionCommands", () => {
   it("does not refresh pull request for a folder workspace (no daemon PR call)", async () => {
-    workspaceStore.setState({
-      projects: [],
-      workspaces: [
-        {
-          id: "folder-workspace-1",
-          projectId: "local-folder",
-          repoId: "folder-workspace-1",
-          name: "Folder",
-          title: "Folder",
-          summaryId: "folder-workspace-1",
-          sourceBranch: "",
-          branch: "",
-          worktreePath: "/tmp/plain-folder",
-          kind: "folder",
-        },
-      ],
-    });
+    workspaceStore.setState({});
     projectStore.setState({ projects: [] });
 
     await refreshWorkspacePullRequest("folder-workspace-1");
@@ -145,23 +129,7 @@ describe("gitProjectionCommands", () => {
   it("skips git refresh for a folder workspace (no project / no RPC)", async () => {
     const setWorkspaceGitChangesCount = vi.fn();
     const setWorkspaceGitChangeTotals = vi.fn();
-    workspaceStore.setState({
-      projects: [],
-      workspaces: [
-        {
-          id: "folder-workspace-1",
-          projectId: "local-folder",
-          repoId: "folder-workspace-1",
-          name: "Folder",
-          title: "Folder",
-          summaryId: "folder-workspace-1",
-          sourceBranch: "",
-          branch: "",
-          worktreePath: "/tmp/plain-folder",
-          kind: "folder",
-        },
-      ],
-    });
+    workspaceStore.setState({});
     gitProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
@@ -178,22 +146,7 @@ describe("gitProjectionCommands", () => {
   it("skips git refresh for a non-git workspace", async () => {
     const setWorkspaceGitChangesCount = vi.fn();
     const setWorkspaceGitChangeTotals = vi.fn();
-    workspaceStore.setState({
-      projects: [{ id: "project-plain", name: "Plain", sourceType: "unknown" }],
-      workspaces: [
-        {
-          id: "workspace-1",
-          projectId: "project-plain",
-          repoId: "project-plain",
-          name: "local",
-          title: "local",
-          summaryId: "workspace-1",
-          sourceBranch: "",
-          branch: "",
-          worktreePath: "/tmp/plain-folder",
-        },
-      ],
-    });
+    workspaceStore.setState({});
     gitProjectionStore.setState({
       setWorkspaceGitChangesCount,
       setWorkspaceGitChangeTotals,
