@@ -3,7 +3,7 @@
  */
 export type { FileCommands } from "./commands/contract";
 export { listDetectedExternalAppIds, openEntryInExternalApp, readFile, renameEntry } from "./commands/fileCommands";
-export { useDetectedExternalAppIds } from "./ui/hooks/useDetectedExternalAppIds";
+export { useDetectedExternalAppIds } from "./hooks/useDetectedExternalAppIds";
 export {
   incrementFileTreeRefreshVersion,
   requestDeleteSelection,
@@ -24,9 +24,9 @@ export {
 } from "./commands/fileTabContentCommands";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { useFileSearchController } from "./ui/useFileSearchController";
-export { FileSearchOverlay } from "./ui/FileSearchOverlay";
-export { FileManagerView } from "./ui/FileManagerView";
+export { useFileSearchController } from "./features/file-manager/useFileSearchController";
+export { FileSearchOverlay } from "./features/file-manager/FileSearchOverlay";
+export { FileManagerView } from "./features/file-manager/FileManagerView";
 export {
   FILETREE_DRAG_MIME,
   extractInternalDragRelativePaths,
@@ -37,9 +37,9 @@ export {
   resolveInternalFileTreeDragEntries,
   resolveInternalFileTreeDragPaths,
   type FileTreeDragEntry,
-} from "./ui/file-tree/dataTransfer";
+} from "./features/file-manager/file-tree/dataTransfer";
 export { getFileTreeIcon } from "./ui/fileTreeIcons";
-export { FileTree, type FileTreeProps } from "./ui/file-tree";
+export { FileTree, type FileTreeProps } from "./features/file-manager/file-tree";
 export {
   buildHighlightedPathSegments,
   splitFilePathForDisplay,
@@ -56,4 +56,4 @@ export {
   MultiFileDiffViewer,
   UnsupportedFileView,
   VideoPreview,
-} from "./ui/editors";
+} from "./features/file-editor/editors";

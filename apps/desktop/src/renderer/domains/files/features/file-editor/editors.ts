@@ -1,0 +1,9 @@
+export { AudioPreview } from "./AudioPreview";
+export { DiffSearchPanel } from "../file-manager/DiffSearchPanel";
+export { FileDiffViewer } from "../diff-viewer/diff/FileDiffViewer";
+export { FileEditor } from "./FileEditor";
+export { FileQuickOpenDialog } from "../file-manager/FileQuickOpenDialog";
+export { ImagePreview } from "./ImagePreview";
+export { MultiFileDiffViewer } from "../diff-viewer/diff/MultiFileDiffViewer";
+export { UnsupportedFileView } from "./UnsupportedFileView";
+export { VideoPreview } from "./VideoPreview";

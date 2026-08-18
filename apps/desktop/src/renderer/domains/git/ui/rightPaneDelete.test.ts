@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "../../../domains/files/ui/rightPaneDelete";
+import {
+  isDeletedPathDirectory,
+  resolveTabIdsToCloseAfterDelete,
+} from "../../../domains/files/features/file-manager/rightPaneDelete";
 
 describe("isDeletedPathDirectory", () => {
   it("returns true for folder paths", () => {
