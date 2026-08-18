@@ -20,7 +20,7 @@ import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { DaemonVersionWarningControl } from "../launch/DaemonVersionWarningControl";
-import { WorkspacePortsMenuControl } from "../workspace-shell/WorkspacePortsMenuControl";
+import { WorkspacePortsMenuControl } from "../main-workspace-shell/WorkspacePortsMenuControl";
 import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
 import {
   AddProjectCommandDialog,

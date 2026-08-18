@@ -91,7 +91,7 @@ vi.mock("../launch/DaemonVersionWarningControl", () => ({
   DaemonVersionWarningControl: () => null,
 }));
 
-vi.mock("../workspace-shell/WorkspacePortsMenuControl", () => ({
+vi.mock("../main-workspace-shell/WorkspacePortsMenuControl", () => ({
   WorkspacePortsMenuControl: () => null,
 }));
 

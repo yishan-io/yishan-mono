@@ -1,6 +1,7 @@
 import { Box, IconButton, Tooltip, useTheme } from "@mui/material";
 import { GitChangeTotals } from "@renderer/domains/git";
 import { resolveWorkspaceNotificationColor } from "@renderer/domains/notification";
+import { renderProjectIcon } from "@renderer/domains/project";
 import type { DragEvent, MouseEvent } from "react";
 import { CgSpinner } from "react-icons/cg";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
@@ -9,8 +10,7 @@ import { LuEllipsis } from "react-icons/lu";
 import { LuPlus } from "react-icons/lu";
 import { LuArchive } from "react-icons/lu";
 import { LuTriangleAlert } from "react-icons/lu";
-import { CliSpinner } from "../../../../../ui/components/CliSpinner";
-import { renderProjectIcon } from "../../../ui/projectIcons";
+import { CliSpinner } from "../../../../ui/components/CliSpinner";
 import type { WorkspaceTreeRow } from "./types";
 
 export const WORKSPACE_TREE_ROW_HEIGHT = 30;

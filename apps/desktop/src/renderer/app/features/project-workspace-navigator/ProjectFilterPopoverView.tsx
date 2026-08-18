@@ -14,16 +14,16 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import {
+  setWorkspaceListHierarchyMode as applyWorkspaceListHierarchyMode,
+  useDisplayProjectIds,
+  useProjects,
+  useWorkspaceListHierarchyMode,
+} from "@renderer/domains/project";
 import { setDisplayRepoIds } from "@renderer/domains/workspace";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEye } from "react-icons/lu";
-import {
-  useDisplayProjectIds,
-  useProjects,
-  useWorkspaceListHierarchyMode,
-} from "../../../../domains/project/hooks/useProjectReadHooks";
-import { setWorkspaceListHierarchyMode as applyWorkspaceListHierarchyMode } from "../../../../domains/project/state/projectActions";
 
 /** Returns true when a repository row matches the quick-search keyword. */
 function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: string): boolean {

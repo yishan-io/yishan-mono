@@ -2,7 +2,7 @@
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useProjectListFoldState } from "./useProjectListFoldState";
+import { useWorkspaceNavigatorFoldState } from "./useWorkspaceNavigatorFoldState";
 
 const EMPTY_MODE = {
   projectOrderIds: [] as string[],
@@ -29,13 +29,13 @@ const mocked = vi.hoisted(() => {
   return { getListPreferences, setListPreferences, sessionState, workspaceState };
 });
 
-vi.mock("../../../../domains/session/state/sessionStore", () => ({
+vi.mock("../../../domains/session/state/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector(mocked.sessionState),
   ),
 }));
 
-vi.mock("../../../../domains/project/state/projectStore", () => {
+vi.mock("../../../domains/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: {
       projects: unknown[];
@@ -59,13 +59,13 @@ vi.mock("../../../../domains/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: vi.fn((selector: (state: typeof mocked.workspaceState) => unknown) =>
     selector(mocked.workspaceState),
   ),
 }));
 
-vi.mock("../../../../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
@@ -76,7 +76,7 @@ vi.mock("../../../../rpc/rpcTransport", () => ({
   })),
 }));
 
-describe("useProjectListFoldState", () => {
+describe("useWorkspaceNavigatorFoldState", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mocked.sessionState.selectedOrganizationId = "org-1";
@@ -104,7 +104,7 @@ describe("useProjectListFoldState", () => {
       workspaceOrderByParentId: { "project-1:node-a": ["workspace-2", "workspace-1"] },
     });
 
-    const { result } = renderHook(() => useProjectListFoldState());
+    const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -117,7 +117,7 @@ describe("useProjectListFoldState", () => {
   });
 
   it("keeps workspace order when switching between hierarchy modes", async () => {
-    const { result } = renderHook(() => useProjectListFoldState());
+    const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -153,7 +153,7 @@ describe("useProjectListFoldState", () => {
       workspaceOrderByParentId: {},
     });
 
-    renderHook(() => useProjectListFoldState());
+    renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -162,7 +162,7 @@ describe("useProjectListFoldState", () => {
   });
 
   it("pushes a debounced snapshot after a user change", async () => {
-    const { result } = renderHook(() => useProjectListFoldState());
+    const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -199,7 +199,7 @@ describe("useProjectListFoldState", () => {
       workspaceOrderByParentId: {},
     });
 
-    const { result, rerender } = renderHook(() => useProjectListFoldState());
+    const { result, rerender } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -219,7 +219,7 @@ describe("useProjectListFoldState", () => {
   it("does not push while the daemon is unreachable, and retries the fetch until it succeeds", async () => {
     mocked.getListPreferences.mockRejectedValueOnce(new Error("daemon down"));
 
-    const { result } = renderHook(() => useProjectListFoldState());
+    const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1100);
     });
@@ -247,7 +247,7 @@ describe("useProjectListFoldState", () => {
   it("never pushes before a successful fetch so persisted state is not overwritten", async () => {
     mocked.getListPreferences.mockRejectedValue(new Error("daemon down"));
 
-    const { result } = renderHook(() => useProjectListFoldState());
+    const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2500);
     });
@@ -265,7 +265,7 @@ describe("useProjectListFoldState", () => {
   });
 
   it("coalesces rapid changes into a single debounced push", async () => {
-    const { result } = renderHook(() => useProjectListFoldState());
+    const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -291,7 +291,7 @@ describe("useProjectListFoldState", () => {
   });
 
   it("cancels a pending push when the organization switches", async () => {
-    const { result, rerender } = renderHook(() => useProjectListFoldState());
+    const { result, rerender } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -314,7 +314,7 @@ describe("useProjectListFoldState", () => {
   });
 
   it("flushes a pending push on unmount so the last reorder survives a restart", async () => {
-    const { result, unmount } = renderHook(() => useProjectListFoldState());
+    const { result, unmount } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.runAllTimersAsync();
     });

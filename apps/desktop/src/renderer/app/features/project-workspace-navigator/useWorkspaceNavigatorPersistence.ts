@@ -1,10 +1,7 @@
+import { getProjectListPreferences, setProjectListPreferences } from "@renderer/domains/project";
 import { useEffect, useRef } from "react";
-import {
-  getProjectListPreferences,
-  setProjectListPreferences,
-} from "../../../../domains/project/commands/projectCommands";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { ProjectListPreference } from "../../../../rpc/daemonTypes";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
+import type { ProjectListPreference } from "../../../rpc/daemonTypes";
 import {
   EMPTY_FOLD_STATE,
   EMPTY_ORDER_STATE,
@@ -18,7 +15,7 @@ import {
   buildSignatureFromPreferences,
   buildSignatureFromState,
   seedFromPreferences,
-} from "./projectListPreferences";
+} from "./workspaceNavigatorPreferences";
 
 type ProjectListPersistenceInput = {
   organizationId: string;
@@ -51,7 +48,7 @@ type PendingPush = {
  *   state; any changes made before the first successful fetch are display-only
  *   and are replaced by the persisted state once it loads.
  */
-export function useProjectListPersistence(input: ProjectListPersistenceInput): void {
+export function useWorkspaceNavigatorPersistence(input: ProjectListPersistenceInput): void {
   const {
     organizationId,
     orderStateByMode,

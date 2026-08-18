@@ -1,5 +1,6 @@
 import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
 import type { GitPullRequest, GitPullRequestSummary } from "@renderer/domains/git";
+import { ProjectConfigDialogView, ProjectDeleteDialogView } from "@renderer/domains/project";
 import { CreateWorkspaceDialogView, RenameWorkspaceDialogView } from "@renderer/domains/workspace";
 import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
@@ -12,10 +13,8 @@ import {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   findExternalAppPreset,
-} from "../../../../../shared/contracts/externalApps";
-import { ContextMenu, type ContextMenuEntry } from "../../../../ui/components/ContextMenu";
-import { ProjectConfigDialogView } from "../project-config/ProjectConfigDialogView";
-import { ProjectDeleteDialogView } from "../project-delete/ProjectDeleteDialogView";
+} from "../../../../shared/contracts/externalApps";
+import { ContextMenu, type ContextMenuEntry } from "../../../ui/components/ContextMenu";
 
 type PendingProjectDeletion = {
   projectName: string;

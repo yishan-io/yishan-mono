@@ -1,6 +1,5 @@
+import { LOCAL_FOLDER_PROJECT_ID, supportsGitFeatures } from "@renderer/domains/project";
 import { useMemo, useState } from "react";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../../domains/project/model/projectTypes";
-import { supportsGitFeatures } from "../../../model/projectGitCapability";
 import type { WorkspaceTreeNode, WorkspaceTreeProject, WorkspaceTreeRow, WorkspaceTreeWorkspace } from "./types";
 
 type UseVisibleWorkspaceTreeInput = {

@@ -72,7 +72,7 @@ const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
 const BASELINE_COUNTS: Record<RuleName, number> = {
   "R1-value-api-rpc": 0,
   "R1-main": 0,
-  "R1b-shared-contracts": 21,
+  "R1b-shared-contracts": 19,
   R3: 0,
   R4: 0,
   "R5-cross-feature-internal": 0,

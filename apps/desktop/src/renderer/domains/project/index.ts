@@ -16,7 +16,9 @@ export type {
 export {
   createProject,
   deleteProject,
+  getProjectListPreferences,
   inspectLocalProjectSource,
+  setProjectListPreferences,
   updateProjectConfig,
 } from "./commands/projectCommands";
 export { getDefaultWorktreeLocation, openLocalFolderDialog } from "./infrastructure/projectHostCommands";
@@ -43,13 +45,14 @@ export {
 } from "./hooks/useProjectReadHooks";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
+// The combined Project/Node/Workspace navigator moved to
+// `app/features/project-workspace-navigator` (desktop7 Phase 24); Project keeps its
+// list rules, read surface, and the project-config/delete dialogs.
 export { CreateProjectDialogView } from "./features/create-project/CreateProjectDialogView";
 export { CreateProjectFormView } from "./features/create-project/CreateProjectFormView";
 export { ProjectConfigDialogView } from "./features/project-config/ProjectConfigDialogView";
 export { ProjectDeleteDialogView } from "./features/project-delete/ProjectDeleteDialogView";
-export { ProjectFilterPopoverView } from "./features/project-list/ProjectFilterPopoverView";
-export { ProjectListMenus } from "./features/project-list/ProjectListMenus";
-export { ProjectListView } from "./features/project-list/ProjectListView";
+export { useProjectDeletionFlow } from "./features/project-delete/useProjectDeletionFlow";
 export { renderProjectIcon } from "./ui/projectIcons";
 export {
   DEFAULT_PROJECT_ICON_ID,

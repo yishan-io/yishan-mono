@@ -1,9 +1,9 @@
 import { Avatar, Box, IconButton, ListItem, ListItemButton, Tooltip, Typography, useTheme } from "@mui/material";
+import type { WorkspaceProjectRecord } from "@renderer/domains/project";
+import { renderProjectIcon } from "@renderer/domains/project";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { LuChevronDown, LuChevronRight, LuPlus } from "react-icons/lu";
-import { buildListItemButtonSx } from "../../../../helpers/leftPaneStyles";
-import type { WorkspaceProjectRecord } from "../../model/projectTypes";
-import { renderProjectIcon } from "../../ui/projectIcons";
+import { buildListItemButtonSx } from "./leftPaneStyles";
 
 type ProjectRowProps = {
   repo: WorkspaceProjectRecord;

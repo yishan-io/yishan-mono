@@ -1,8 +1,7 @@
+import { selectProjectById, supportsGitFeatures } from "@renderer/domains/project";
 import { useCallback, useState } from "react";
-import { selectProjectById } from "../../../../domains/project/state/projectSelectors";
-import { supportsGitFeatures } from "../../model/projectGitCapability";
 
-export function useProjectListDialogState() {
+export function useWorkspaceNavigatorDialogState() {
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
   const [createWorkspaceProjectId, setCreateWorkspaceProjectId] = useState("");
   const [renameWorkspaceContext, setRenameWorkspaceContext] = useState<{

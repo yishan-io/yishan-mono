@@ -1,6 +1,4 @@
 import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { ProjectFilterPopoverView } from "@renderer/domains/project";
-import { ProjectListView } from "@renderer/domains/project";
 import { projectStore, useDisplayProjectIds, useProjects } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { PaneHeader } from "@renderer/domains/workbench";
@@ -13,6 +11,8 @@ import { useAppCommands, useWorkspaceCommands } from "../../../app/commands/useC
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../app-menu/AppMenuView";
+import { ProjectFilterPopoverView } from "../project-workspace-navigator/ProjectFilterPopoverView";
+import { WorkspaceNavigatorView } from "../project-workspace-navigator/WorkspaceNavigatorView";
 
 type LeftPaneViewProps = {
   onCreateRepository?: () => void;
@@ -193,7 +193,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           <ProjectFilterPopoverView />
         </Box>
       </Box>
-      <ProjectListView />
+      <WorkspaceNavigatorView />
       {!isProjectsLoaded ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
           <CircularProgress size={20} />

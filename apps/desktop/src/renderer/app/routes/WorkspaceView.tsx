@@ -1,9 +1,13 @@
 import { Box } from "@mui/material";
+import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { OverviewView } from "@renderer/domains/overview";
 import { CreateProjectDialogView } from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import { ScheduledJobView } from "@renderer/domains/scheduled-job";
+import { sessionStore } from "@renderer/domains/session";
+import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { resizeLeftPane } from "@renderer/domains/workbench";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/domains/workbench";
@@ -11,6 +15,7 @@ import { SplitPaneLayout } from "@renderer/domains/workbench";
 import { layoutStore } from "@renderer/domains/workbench";
 import { popupStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
+import { WorkspaceLifecycleNoticeView, resolveWorkspaceProjectId, workspaceStore } from "@renderer/domains/workspace";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -35,20 +40,11 @@ import {
   useWorkspaceCommands,
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
-import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
-import { projectStore } from "@renderer/domains/project";
-import { sessionStore } from "@renderer/domains/session";
-import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
-import {
-  WorkspaceLifecycleNoticeView,
-  resolveWorkspaceProjectId,
-  workspaceStore,
-} from "@renderer/domains/workspace";
 import { subscribeAppActionEvent } from "../../events";
 import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";
-import { LeftPaneView } from "../features/workspace-shell/LeftPaneView";
-import { MainPaneView } from "../features/workspace-shell/MainPaneView";
+import { LeftPaneView } from "../features/main-workspace-shell/LeftPaneView";
+import { MainPaneView } from "../features/main-workspace-shell/MainPaneView";
 import { OnboardingView } from "./OnboardingView";
 
 const LEFT_MIN_WIDTH = 240;

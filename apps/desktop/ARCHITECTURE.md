@@ -238,12 +238,12 @@ Helpers importer, no new `ui/hooks` file, no new root UI dependency violation.
 | `monacoSetup`, `monacoThemeRules` | Files Infrastructure (Monaco) |
 | `diffTheme` | Files UI or a named code-theme capability |
 | `syntaxThemeComparison` | Remove (no production consumer) |
-| `workspaceBranchNaming` | Workspace `create-workspace` Feature |
-| `workspaceDisplayNames` | Workspace Model or Services |
-| `localFolder` | Workspace Model or Services (sentinel ownership review) |
+| `workspaceBranchNaming` | Workspace `create-workspace` Feature — **moved (Phase 24)** |
+| `workspaceDisplayNames` | Workspace Services — **moved (Phase 24)** |
+| `localFolder` | Workspace Model — **moved (Phase 24)** |
 | `pullRequestUtils` | Git Model or Services |
-| `leftPaneStyles` | App `workspace-navigator` Feature |
-| `terminalTabUtils` | Workbench Model |
+| `leftPaneStyles` | App `project-workspace-navigator` Feature — **moved (Phase 24)** |
+| `terminalTabUtils` | Workbench Model — **moved (Phase 24)** |
 | `terminalCloseTombstones` | App Runtime |
 | `clipboard`, `platform` | Named platform Infrastructure |
 | `delay`, `withTimeout` | Named shared async capability |
@@ -262,11 +262,11 @@ Helpers importer, no new `ui/hooks` file, no new root UI dependency violation.
 | Item | Provisional owner |
 |---|---|
 | `BranchBadge`, `PullRequestIcon` | Git UI |
-| `BranchDropdown` | Workspace `create-workspace` Feature |
-| `ResourceUsageMenu` | Workspace resource-usage Feature |
+| `BranchDropdown` | Workspace `create-workspace` Feature — **moved (Phase 24)** |
+| `ResourceUsageMenu` | Workspace resource-usage Feature — **moved (Phase 24)** |
 | `DiagramZoomOverlay` | Files UI plus Files React behavior |
 | `KeybindingDisplay` | Settings keybindings Feature — **moved (Phase 23)** |
-| `PortsTableMenu` | App workspace-shell Feature — **moved (Phase 22)** |
+| `PortsTableMenu` | App main-workspace-shell Feature — **moved (Phase 22)** |
 | `AppBootstrapLoadingView` | App launch Feature — **moved (Phase 22)** |
 | `RouteCloseWatcher` | Root Hook — **moved to `renderer/hooks` (Phase 22)** |
 | `CenteredSpinner`, `FloatingSurface`, `SearchInput`, `StatusBadge`, `StatusIndicator`, `TableDropdownMenu`, `VirtualizedListbox`, `CenteredContentLayout` | Root UI (domain-free) |

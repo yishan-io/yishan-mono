@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { inspectGitRepository } from "../../../../domains/git/commands/gitCommands";
-import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../../domains/workspace/commands/workspaceCommands";
-import { ProjectListView } from "./ProjectListView";
+import { inspectGitRepository } from "../../../domains/git/commands/gitCommands";
+import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../domains/workspace/commands/workspaceCommands";
+import { WorkspaceNavigatorView } from "./WorkspaceNavigatorView";
 
 const mocked = vi.hoisted(() => {
   const renameWorkspace = vi.fn();
@@ -161,7 +161,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
+vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: (shortcutId: string) => {
     if (shortcutId === "create-workspace") {
       return "⌘+N";
@@ -171,17 +171,12 @@ vi.mock("../../../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../ui/projectIcons", () => ({
-  renderProjectIcon: () => "R",
-  renderRepoIcon: () => "R",
-}));
-
-vi.mock("../../../../domains/workspace/features/create-workspace/CreateWorkspaceDialogView", () => ({
+vi.mock("../../../domains/workspace/features/create-workspace/CreateWorkspaceDialogView", () => ({
   CreateWorkspaceDialogView: ({ open }: { open: boolean }) =>
     open ? <div data-testid="create-workspace-dialog" /> : null,
 }));
 
-vi.mock("../../../../domains/workspace/features/rename-workspace/RenameWorkspaceDialogView", () => ({
+vi.mock("../../../domains/workspace/features/rename-workspace/RenameWorkspaceDialogView", () => ({
   RenameWorkspaceDialogView: ({ open }: { open: boolean }) =>
     open ? <div data-testid="rename-workspace-dialog" /> : null,
 }));
@@ -202,20 +197,18 @@ vi.mock("@renderer/domains/workspace", async (importOriginal) => {
   };
 });
 
-vi.mock("../project-config/ProjectConfigDialogView", () => ({
-  ProjectConfigDialogView: ({ open }: { open: boolean }) => (open ? <div data-testid="repo-config-dialog" /> : null),
-}));
-
 vi.mock("@renderer/domains/project", async () => {
   // The workspace feature graph (reached through @renderer/domains/workspace)
   // imports project public-API members; load the stateless ones from deep
   // paths (async factory avoids the project<->workspace index cycle).
-  const projectTypes = await import("../../../../domains/project/model/projectTypes");
-  const projectCapability = await import("../../../../domains/project/model/projectGitCapability");
-  const projectListRules = await import("../../../../domains/project/model/projectListRules");
-  const projectSelectors = await import("../../../../domains/project/state/projectSelectors");
-  const projectReadHooks = await import("../../../../domains/project/hooks/useProjectReadHooks");
-  const projectIcons = await import("../../../../domains/project/ui/projectIcons");
+  const projectTypes = await import("../../../domains/project/model/projectTypes");
+  const projectCapability = await import("../../../domains/project/model/projectGitCapability");
+  const projectListRules = await import("../../../domains/project/model/projectListRules");
+  const projectSelectors = await import("../../../domains/project/state/projectSelectors");
+  const projectReadHooks = await import("../../../domains/project/hooks/useProjectReadHooks");
+  const projectActions = await import("../../../domains/project/state/projectActions");
+  const projectDeletionFlow = await import("../../../domains/project/features/project-delete/useProjectDeletionFlow");
+  const projectDeleteDialog = await import("../../../domains/project/features/project-delete/ProjectDeleteDialogView");
   return {
     deleteProject: mocked.deleteProject,
     LOCAL_FOLDER_PROJECT_ID: projectTypes.LOCAL_FOLDER_PROJECT_ID,
@@ -226,12 +219,34 @@ vi.mock("@renderer/domains/project", async () => {
     selectProjects: projectSelectors.selectProjects,
     useProjects: projectReadHooks.useProjects,
     useDisplayProjectIds: projectReadHooks.useDisplayProjectIds,
+    useWorkspaceListHierarchyMode: projectReadHooks.useWorkspaceListHierarchyMode,
     useLastUsedExternalAppId: projectReadHooks.useLastUsedExternalAppId,
-    renderProjectIcon: projectIcons.renderProjectIcon,
+    setWorkspaceListHierarchyMode: projectActions.setWorkspaceListHierarchyMode,
+    renderProjectIcon: () => "R",
+    ProjectDeleteDialogView: projectDeleteDialog.ProjectDeleteDialogView,
+    useProjectDeletionFlow: projectDeletionFlow.useProjectDeletionFlow,
+    ProjectConfigDialogView: ({ open }: { open: boolean }) => (open ? <div data-testid="repo-config-dialog" /> : null),
+    getProjectListPreferences: async () => ({
+      version: 1,
+      by_project: {
+        projectOrderIds: [],
+        nodeOrderByParentId: {},
+        foldedProjectIds: [],
+        foldedNodeKeys: [],
+      },
+      by_node: {
+        projectOrderIds: [],
+        nodeOrderByParentId: {},
+        foldedProjectIds: [],
+        foldedNodeKeys: [],
+      },
+      workspaceOrderByParentId: {},
+    }),
+    setProjectListPreferences: async () => undefined,
   };
 });
 
-vi.mock("../../../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
@@ -262,7 +277,7 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../../domains/git/state/gitProjectionStore", () => {
+vi.mock("../../../domains/git/state/gitProjectionStore", () => {
   const project = (
     selector: (state: {
       pullRequestByWorkspaceId: Record<string, unknown>;
@@ -281,7 +296,7 @@ vi.mock("../../../../domains/git/state/gitProjectionStore", () => {
   return { gitProjectionStore: project };
 });
 
-vi.mock("../../../../domains/project/state/projectStore", () => {
+vi.mock("../../../domains/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: { projects: unknown[]; displayProjectIds: string[]; lastUsedExternalAppId?: string }) => unknown,
   ) =>
@@ -302,13 +317,13 @@ vi.mock("../../../../domains/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../../domains/session/state/sessionStore", () => ({
+vi.mock("../../../domains/session/state/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector({ selectedOrganizationId: "" }),
   ),
 }));
 
-vi.mock("../../../../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   getDaemonClient: vi.fn(async () => ({
@@ -324,19 +339,19 @@ vi.mock("../../../../rpc/rpcTransport", () => ({
   })),
 }));
 
-vi.mock("../../../../domains/agent/state/chatStore", () => ({
+vi.mock("../../../domains/agent/state/chatStore", () => ({
   chatStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../../domains/workspace/state/workspaceCreateProgressStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: vi.fn(
     (selector: (state: { progressByWorkspaceId: Record<string, { isComplete: boolean }> }) => unknown) =>
       selector({ progressByWorkspaceId: mocked.stateRef.current.progressByWorkspaceId }),
   ),
 }));
 
-vi.mock("../../../../domains/files/commands/fileCommands", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../domains/files/commands/fileCommands")>();
+vi.mock("../../../domains/files/commands/fileCommands", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../domains/files/commands/fileCommands")>();
   return {
     ...actual,
     openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),
@@ -344,7 +359,7 @@ vi.mock("../../../../domains/files/commands/fileCommands", async (importOriginal
   };
 });
 
-vi.mock("../../../../domains/git/commands/gitCommands", () => ({
+vi.mock("../../../domains/git/commands/gitCommands", () => ({
   // Full mock (no importOriginal) — importOriginal recurses through workspace ->
   // create-workspace -> git index and leaks the real inspectGitRepository (D10).
   inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
@@ -362,7 +377,7 @@ vi.mock("../../../../domains/git/commands/gitCommands", () => ({
   closePullRequest: vi.fn(),
 }));
 
-vi.mock("../../../../helpers/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => mocked.rendererPlatform,
 }));
 
@@ -373,12 +388,12 @@ afterEach(() => {
   mocked.stateRef.current.progressByWorkspaceId = {};
 });
 
-function renderProjectListView() {
+function renderWorkspaceNavigatorView() {
   const queryClient = new QueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <ProjectListView />
+        <WorkspaceNavigatorView />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -436,7 +451,7 @@ function renderFolderList() {
     setOrderedWorkspaceIds: vi.fn(),
     progressByWorkspaceId: {},
   };
-  renderProjectListView();
+  renderWorkspaceNavigatorView();
 }
 
 function createDeferred<T>() {
@@ -520,7 +535,7 @@ function renderRepoList(
   const rendered = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <ProjectListView />
+        <WorkspaceNavigatorView />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -537,7 +552,7 @@ function renderRepoList(
   };
 }
 
-describe("ProjectListView", () => {
+describe("WorkspaceNavigatorView", () => {
   it("shows workspace items when repository is expanded", () => {
     renderRepoList();
 
@@ -596,7 +611,7 @@ describe("ProjectListView", () => {
       setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
     };
 
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     expect(screen.queryByTestId("workspace-change-totals-workspace-1")).toBeNull();
   });
@@ -672,7 +687,7 @@ describe("ProjectListView", () => {
       orderedWorkspaceIds: [],
       setOrderedWorkspaceIds: vi.fn(),
     };
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     expect(screen.getByTestId("workspace-kind-local-workspace-local-1")).toBeTruthy();
     expect(screen.queryByTestId("workspace-actions-workspace-local-1")).toBeNull();
@@ -1046,7 +1061,7 @@ describe("ProjectListView", () => {
     renderRepoList();
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
     expect(screen.getByTestId("workspace-status-running-spinner-workspace-1")).toBeTruthy();
   });
 
@@ -1054,7 +1069,7 @@ describe("ProjectListView", () => {
     renderRepoList();
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "waiting_input" };
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
     expect(screen.getByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeTruthy();
   });
 
@@ -1065,7 +1080,7 @@ describe("ProjectListView", () => {
       mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "waiting_input" };
       mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": unreadTone };
       cleanup();
-      renderProjectListView();
+      renderWorkspaceNavigatorView();
 
       expect(screen.getByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeTruthy();
       expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
@@ -1076,7 +1091,7 @@ describe("ProjectListView", () => {
   it("renders no indicator when workspace has no active runtime status and no unread notifications", () => {
     renderRepoList();
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
     expect(screen.queryByTestId("workspace-status-running-spinner-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
@@ -1098,7 +1113,7 @@ describe("ProjectListView", () => {
       },
     ];
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
     expect(screen.getByTestId("workspace-creating-spinner-workspace-1")).toBeTruthy();
   });
 
@@ -1113,7 +1128,7 @@ describe("ProjectListView", () => {
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "error" };
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     expect(screen.getByTestId("workspace-creating-spinner-workspace-1")).toBeTruthy();
     expect(screen.queryByTestId("workspace-status-running-spinner-workspace-1")).toBeNull();
@@ -1125,7 +1140,7 @@ describe("ProjectListView", () => {
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     expect(screen.getByTestId("workspace-status-running-spinner-workspace-1")).toBeTruthy();
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
@@ -1138,7 +1153,7 @@ describe("ProjectListView", () => {
       "workspace-1": { isComplete: false },
     };
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
     expect(screen.queryByTestId("workspace-creating-spinner-workspace-1")).toBeNull();
   });
 
@@ -1146,7 +1161,7 @@ describe("ProjectListView", () => {
     renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     const doneBadge = screen.getByTestId("workspace-status-done-badge-workspace-1");
     expect(doneBadge).toBeTruthy();
@@ -1156,7 +1171,7 @@ describe("ProjectListView", () => {
     renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "error" };
     cleanup();
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     const failedBadge = screen.getByTestId("workspace-status-failed-badge-workspace-1");
     expect(failedBadge).toBeTruthy();
@@ -1165,14 +1180,14 @@ describe("ProjectListView", () => {
   it("clears unread indicator after opening that workspace while app is focused", () => {
     const { rerender } = renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
-    rerender(<ProjectListView />);
+    rerender(<WorkspaceNavigatorView />);
     expect(screen.getByTestId("workspace-status-done-badge-workspace-1")).toBeTruthy();
 
     mocked.stateRef.current.selectedWorkspaceId = "workspace-1";
     act(() => {
       window.dispatchEvent(new Event("focus"));
     });
-    rerender(<ProjectListView />);
+    rerender(<WorkspaceNavigatorView />);
 
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
   });
@@ -1212,7 +1227,7 @@ describe("ProjectListView", () => {
         status: "review",
       },
     };
-    view.rerender(<ProjectListView />);
+    view.rerender(<WorkspaceNavigatorView />);
 
     fireEvent.mouseEnter(screen.getByTestId("workspace-row-workspace-1"));
     await act(async () => {
@@ -1297,7 +1312,7 @@ describe("ProjectListView", () => {
       gitChangeTotalsByWorkspaceId: {},
     };
 
-    const view = renderProjectListView();
+    const view = renderWorkspaceNavigatorView();
 
     fireEvent.mouseEnter(screen.getByTestId("workspace-row-workspace-1"));
 
@@ -1311,7 +1326,7 @@ describe("ProjectListView", () => {
     view.rerender(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
-          <ProjectListView />
+          <WorkspaceNavigatorView />
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -1363,7 +1378,7 @@ describe("ProjectListView", () => {
       setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
     };
 
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     fireEvent.mouseEnter(screen.getByTestId("workspace-row-workspace-1"));
     await act(async () => {
@@ -1410,7 +1425,7 @@ describe("ProjectListView", () => {
       pullRequestByWorkspaceId: {},
       currentBranchByWorkspaceId: {},
     };
-    renderProjectListView();
+    renderWorkspaceNavigatorView();
 
     fireEvent.mouseEnter(screen.getByTestId("workspace-row-workspace-1"));
     await act(async () => {

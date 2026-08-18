@@ -1,20 +1,23 @@
 import { useWorkspaceAgentStatusByWorkspaceId, useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
 import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/domains/git";
+import { listOrgNodes } from "@renderer/domains/node";
 import { resolveWorkspaceNotificationTone } from "@renderer/domains/notification";
+import {
+  LOCAL_FOLDER_PROJECT_ID,
+  filterVisibleProjects,
+  supportsGitFeatures,
+  useDisplayProjectIds,
+  useProjects,
+} from "@renderer/domains/project";
+import { useSelectedOrganizationId } from "@renderer/domains/session";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/domains/workspace";
+import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { listOrgNodes } from "../../../../domains/node";
-import { useDisplayProjectIds, useProjects } from "../../../../domains/project/hooks/useProjectReadHooks";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../domains/project/model/projectTypes";
-import { useSelectedOrganizationId } from "../../../../domains/session";
-import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
-import { supportsGitFeatures } from "../../model/projectGitCapability";
-import { filterVisibleProjects } from "../../model/projectListRules";
-import { reconcileOrder } from "./projectListHelpers";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
+import { reconcileOrder } from "./workspaceNavigatorHelpers";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;
@@ -41,7 +44,7 @@ export type ProjectListTreeDataResult = {
  * Derives the tree data structures (projects, nodes, workspaces, expanded items)
  * consumed by the WorkspaceTree component. All derivations are memoized.
  */
-export function useProjectListTreeData(input: {
+export function useWorkspaceNavigatorTreeData(input: {
   projectOrderIds: string[];
   nodeOrderByParentId: Record<string, string[]>;
   workspaceOrderByParentId: Record<string, string[]>;

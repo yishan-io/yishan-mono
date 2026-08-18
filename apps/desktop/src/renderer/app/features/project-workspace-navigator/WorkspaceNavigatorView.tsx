@@ -5,7 +5,12 @@ import {
 } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
-import { deleteProject } from "@renderer/domains/project";
+import {
+  deleteProject,
+  useLastUsedExternalAppId,
+  useProjectDeletionFlow,
+  useProjects,
+} from "@renderer/domains/project";
 import { activateProject, activateWorkspace } from "@renderer/domains/workbench";
 import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
 import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
@@ -30,26 +35,30 @@ import {
   isExternalAppPlatformSupported,
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
-} from "../../../../../shared/contracts/externalApps";
-import { useLastUsedExternalAppId, useProjects } from "../../../../domains/project/hooks/useProjectReadHooks";
-import { getRendererPlatform } from "../../../../helpers/platform";
-import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
-import { ContextMenu, type ContextMenuEntry } from "../../../../ui/components/ContextMenu";
-import { useContextMenuState } from "../../../../ui/hooks/useContextMenuState";
-import { useSuppressNativeContextMenuWhileOpen } from "../../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
-import { useProjectDeletionFlow } from "../project-delete/useProjectDeletionFlow";
+} from "../../../../shared/contracts/externalApps";
+import { getRendererPlatform } from "../../../helpers/platform";
+import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { ContextMenu, type ContextMenuEntry } from "../../../ui/components/ContextMenu";
+import { useContextMenuState } from "../../../ui/hooks/useContextMenuState";
+import { useSuppressNativeContextMenuWhileOpen } from "../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { ProjectListMenus } from "./ProjectListMenus";
-import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./projectListHelpers";
-import { useProjectListDialogState } from "./useProjectListDialogState";
-import { useProjectListFoldState } from "./useProjectListFoldState";
-import { useProjectListTreeData } from "./useProjectListTreeData";
-import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
+import { useWorkspaceNavigatorDialogState } from "./useWorkspaceNavigatorDialogState";
+import { useWorkspaceNavigatorFoldState } from "./useWorkspaceNavigatorFoldState";
+import { useWorkspaceNavigatorTreeData } from "./useWorkspaceNavigatorTreeData";
+import { useWorkspaceNavigatorTreeHandlers } from "./useWorkspaceNavigatorTreeHandlers";
 import { WorkspaceTree } from "./workspace-tree";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeRow } from "./workspace-tree/types";
+import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorHelpers";
 
-/** Renders project rows and nested workspace rows with per-project fold controls. */
-export function ProjectListView() {
+/**
+ * Cross-Domain workspace navigator: renders project rows and nested workspace
+ * rows with per-project fold controls, composed from Domain public APIs.
+ *
+ * Owned by the App (desktop7 Phase 24); Project keeps its list rules and
+ * state, Workspace keeps workspace lifecycle and presentation.
+ */
+export function WorkspaceNavigatorView() {
   const { t } = useTranslation();
   const projects = useProjects();
   const workspaces = useWorkspaces() ?? [];
@@ -92,7 +101,7 @@ export function ProjectListView() {
     setProjectConfigProjectId,
     handleOpenCreateWorkspace,
     handleOpenProjectConfig,
-  } = useProjectListDialogState();
+  } = useWorkspaceNavigatorDialogState();
   const {
     pendingWorkspaceDeletion,
     isDeletingWorkspace,
@@ -130,7 +139,7 @@ export function ProjectListView() {
     setFoldedNodeKeys,
     toggleProjectFold,
     workspaceListHierarchyMode,
-  } = useProjectListFoldState();
+  } = useWorkspaceNavigatorFoldState();
 
   const {
     filteredProjects,
@@ -140,7 +149,7 @@ export function ProjectListView() {
     expandedTreeItems,
     displayWorkspaceIdByProjectId,
     workspaceByProjectId,
-  } = useProjectListTreeData({
+  } = useWorkspaceNavigatorTreeData({
     projectOrderIds,
     nodeOrderByParentId,
     workspaceOrderByParentId,
@@ -341,7 +350,7 @@ export function ProjectListView() {
         : undefined,
     [workspaceContextMenu],
   );
-  const treeHandlers = useProjectListTreeHandlers({
+  const treeHandlers = useWorkspaceNavigatorTreeHandlers({
     workspaceListHierarchyMode,
     treeWorkspaces,
     filteredProjects,

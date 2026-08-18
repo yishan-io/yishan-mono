@@ -128,19 +128,22 @@ vi.mock("@renderer/domains/project", async (importOriginal) => {
     ...actual,
     CreateProjectDialogView: () => null,
     ProjectConfigDialogView: () => null,
-    ProjectListView: () => (
-      <>
-        {mocked.stateRef.current.projects
-          .filter((repo) => mocked.stateRef.current.displayProjectIds.includes(repo.id))
-          .map((repo) => (
-            <div key={repo.id} data-testid={`visible-repo-${repo.id}`}>
-              {repo.name}
-            </div>
-          ))}
-      </>
-    ),
   };
 });
+
+vi.mock("@renderer/app/features/project-workspace-navigator/WorkspaceNavigatorView", () => ({
+  WorkspaceNavigatorView: () => (
+    <>
+      {mocked.stateRef.current.projects
+        .filter((repo) => mocked.stateRef.current.displayProjectIds.includes(repo.id))
+        .map((repo) => (
+          <div key={repo.id} data-testid={`visible-repo-${repo.id}`}>
+            {repo.name}
+          </div>
+        ))}
+    </>
+  ),
+}));
 
 vi.mock("./LeftPaneResourceUsageControl", () => ({
   LeftPaneResourceUsageControl: () => <div data-testid="left-pane-resource-usage-control" />,

@@ -2,8 +2,8 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../domains/project/model/projectTypes";
-import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
+import { useWorkspaceNavigatorTreeHandlers } from "./useWorkspaceNavigatorTreeHandlers";
 
 function makeSetters() {
   const setters = {
@@ -30,7 +30,7 @@ function makeSetters() {
   return setters;
 }
 
-function buildInput(overrides: Partial<Parameters<typeof useProjectListTreeHandlers>[0]> = {}) {
+function buildInput(overrides: Partial<Parameters<typeof useWorkspaceNavigatorTreeHandlers>[0]> = {}) {
   return {
     workspaceListHierarchyMode: "by_project" as const,
     treeWorkspaces: [],
@@ -45,11 +45,11 @@ function buildInput(overrides: Partial<Parameters<typeof useProjectListTreeHandl
   };
 }
 
-describe("useProjectListTreeHandlers onExpandedItemsChange", () => {
+describe("useWorkspaceNavigatorTreeHandlers onExpandedItemsChange", () => {
   it("by_project: folding the Local Folders group persists its sentinel id in foldedProjectIds", () => {
     const setters = makeSetters();
     const { result } = renderHook(() =>
-      useProjectListTreeHandlers(
+      useWorkspaceNavigatorTreeHandlers(
         buildInput({
           workspaceListHierarchyMode: "by_project",
           treeWorkspaces: [
@@ -77,7 +77,7 @@ describe("useProjectListTreeHandlers onExpandedItemsChange", () => {
   it("by_project: expanding the Local Folders group keeps it out of foldedProjectIds", () => {
     const setters = makeSetters();
     const { result } = renderHook(() =>
-      useProjectListTreeHandlers(
+      useWorkspaceNavigatorTreeHandlers(
         buildInput({
           workspaceListHierarchyMode: "by_project",
           treeWorkspaces: [
@@ -101,7 +101,7 @@ describe("useProjectListTreeHandlers onExpandedItemsChange", () => {
   it("by_node: the per-node Local Folders group key is folded when its group row is collapsed", () => {
     const setters = makeSetters();
     const { result } = renderHook(() =>
-      useProjectListTreeHandlers(
+      useWorkspaceNavigatorTreeHandlers(
         buildInput({
           workspaceListHierarchyMode: "by_node",
           treeWorkspaces: [

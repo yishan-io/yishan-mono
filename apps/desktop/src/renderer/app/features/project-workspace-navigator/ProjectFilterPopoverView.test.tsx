@@ -2,7 +2,7 @@
 
 import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithAppTheme } from "../../../../testUtils/renderWithAppTheme";
+import { renderWithAppTheme } from "../../../testUtils/renderWithAppTheme";
 import { ProjectFilterPopoverView } from "./ProjectFilterPopoverView";
 
 const mocked = vi.hoisted(() => {
@@ -57,7 +57,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../domains/project/state/projectStore", () => {
+vi.mock("../../../domains/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: {
       projects: unknown[];
@@ -86,7 +86,7 @@ vi.mock("../../../../domains/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../../../domains/workspace/state/workspaceStore", () => ({
+vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 

@@ -1,19 +1,16 @@
+import { useDisplayProjectIds, useWorkspaceListHierarchyMode } from "@renderer/domains/project";
+import { useSelectedOrganizationId } from "@renderer/domains/session";
 import { useEffect, useState } from "react";
-import {
-  useDisplayProjectIds,
-  useWorkspaceListHierarchyMode,
-} from "../../../../domains/project/hooks/useProjectReadHooks";
-import { useSelectedOrganizationId } from "../../../../domains/session";
+import { useWorkspaceNavigatorPersistence } from "./useWorkspaceNavigatorPersistence";
 import {
   EMPTY_FOLD_STATE,
   EMPTY_ORDER_STATE,
   type FoldState,
   type HierarchyMode,
   type OrderState,
-} from "./projectListPreferences";
-import { useProjectListPersistence } from "./useProjectListPersistence";
+} from "./workspaceNavigatorPreferences";
 
-export type ProjectListFoldStateResult = {
+export type WorkspaceNavigatorFoldStateResult = {
   projectOrderIds: string[];
   nodeOrderByParentId: Record<string, string[]>;
   workspaceOrderByParentId: Record<string, string[]>;
@@ -30,7 +27,7 @@ export type ProjectListFoldStateResult = {
 
 /**
  * Owns the left-pane project list fold and order state and persists it per
- * organization via useProjectListPersistence.
+ * organization via useWorkspaceNavigatorPersistence.
  *
  * Project/node order and fold state are stored per mode so that switching
  * between by_project and by_node gives a fully isolated arrangement for each
@@ -38,7 +35,7 @@ export type ProjectListFoldStateResult = {
  * same workspaces hang under the same projectId:nodeId groups in both modes,
  * so reordering workspaces in one mode must apply to the other.
  */
-export function useProjectListFoldState(): ProjectListFoldStateResult {
+export function useWorkspaceNavigatorFoldState(): WorkspaceNavigatorFoldStateResult {
   const displayProjectIds = useDisplayProjectIds();
   const workspaceListHierarchyMode = useWorkspaceListHierarchyMode();
   const activeHierarchyMode: HierarchyMode = workspaceListHierarchyMode === "by_node" ? "by_node" : "by_project";
@@ -56,7 +53,7 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
 
   const [workspaceOrderByParentId, updateWorkspaceOrderByParentId] = useState<Record<string, string[]>>({}); // shared across modes
 
-  useProjectListPersistence({
+  useWorkspaceNavigatorPersistence({
     organizationId: selectedOrganizationId,
     orderStateByMode,
     foldStateByMode,

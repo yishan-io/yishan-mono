@@ -1,10 +1,10 @@
+import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
 import { useCallback } from "react";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../domains/project/model/projectTypes";
-import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./projectListHelpers";
+import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorHelpers";
 
 type TreeWorkspace = { id: string; projectId: string; nodeId: string; isLocalFolder?: boolean };
 
-type UseProjectListTreeHandlersInput = {
+type UseWorkspaceNavigatorTreeHandlersInput = {
   workspaceListHierarchyMode: "by_project" | "by_node";
   treeWorkspaces: TreeWorkspace[];
   filteredProjects: Array<{ id: string }>;
@@ -37,7 +37,7 @@ type UseProjectListTreeHandlersInput = {
   handleRequestWorkspaceDeletion: (projectId: string, workspaceId: string) => void;
 };
 
-export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInput) {
+export function useWorkspaceNavigatorTreeHandlers(input: UseWorkspaceNavigatorTreeHandlersInput) {
   const {
     workspaceListHierarchyMode,
     treeWorkspaces,

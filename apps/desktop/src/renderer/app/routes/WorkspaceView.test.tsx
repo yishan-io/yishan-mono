@@ -118,11 +118,11 @@ vi.mock("../../domains/workspace/ui/LeftPane/CreateProjectDialogView", () => ({
   CreateProjectDialogView: () => null,
 }));
 
-vi.mock("../features/workspace-shell/LeftPaneView", () => ({
+vi.mock("../features/main-workspace-shell/LeftPaneView", () => ({
   LeftPaneView: () => <div data-testid="left-pane-view" />,
 }));
 
-vi.mock("../features/workspace-shell/MainPaneView", () => ({
+vi.mock("../features/main-workspace-shell/MainPaneView", () => ({
   MainPaneView: () => <div data-testid="main-pane-view" />,
 }));
 
