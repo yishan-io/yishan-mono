@@ -194,6 +194,13 @@ displays and imports behavior from many Domains.
 | D16 | `settings` | `completed` | Keep only the settings shell and preferences without a stronger Domain owner. |
 | D17 | (Final Closure) | `superseded` | R6/R7/R9 and the app/ui split closed; the R16 App audit is deferred to desktop7 Phase 22. |
 
+Settings (desktop7 Phase 23): owns the settings shell (navigation, search,
+composition), appearance (theme/language/editor/markdown), keybindings, CLI
+install, daemon preferences, and account (profile + account-scoped service
+tokens). Agent, Node, Organization-member, Notification, Terminal-session, and
+Workspace behavior moved to their owning Domains. Domain-free settings layout
+primitives moved to root `ui/components`.
+
 A Domain is complete when its per-Domain exit criteria pass: one-sentence
 owner, explicit responsibility list, Feature-local code in use-case Features,
 Domain UI only Domain-shared presentation, Model only stable concepts, external
@@ -258,7 +265,7 @@ Helpers importer, no new `ui/hooks` file, no new root UI dependency violation.
 | `BranchDropdown` | Workspace `create-workspace` Feature |
 | `ResourceUsageMenu` | Workspace resource-usage Feature |
 | `DiagramZoomOverlay` | Files UI plus Files React behavior |
-| `KeybindingDisplay` | Settings keybindings Feature (currently violates: imports `helpers/platform`) |
+| `KeybindingDisplay` | Settings keybindings Feature — **moved (Phase 23)** |
 | `PortsTableMenu` | App workspace-shell Feature — **moved (Phase 22)** |
 | `AppBootstrapLoadingView` | App launch Feature — **moved (Phase 22)** |
 | `RouteCloseWatcher` | Root Hook — **moved to `renderer/hooks` (Phase 22)** |
@@ -267,5 +274,4 @@ Helpers importer, no new `ui/hooks` file, no new root UI dependency violation.
 | `ui/hooks/*` (4 files) | Root `renderer/hooks` |
 
 Root UI dependency violations (final rule: no App/Domains/API/RPC/Helpers
-imports): `ui/components/KeybindingDisplay.tsx` and
-`ui/hooks/useRefreshableLoader.ts`. Both are baselined; Phases 23/26 move them.
+imports): `ui/hooks/useRefreshableLoader.ts`. It is baselined; Phase 26 moves it.

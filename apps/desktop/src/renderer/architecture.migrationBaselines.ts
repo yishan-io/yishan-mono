@@ -130,7 +130,7 @@ export const ROOT_HELPERS_IMPORTERS = [
   "domains/scheduled-job/features/scheduled-job-form/form/useScheduledJobFormState.ts",
   "domains/scheduled-job/features/scheduled-job-list/ScheduledJobView.tsx",
   "domains/scheduled-job/features/scheduled-job-update/EditScheduledJobDialogView.tsx",
-  "domains/settings/features/account/MemberSettingsView.tsx",
+  "domains/organization/features/manage-members/MemberSettingsView.tsx",
   "domains/settings/features/account/ServiceTokenSettingsView.tsx",
   "domains/agent/features/manage-providers/RemoveProviderDialog.tsx",
   "domains/agent/features/manage-skills/AgentSkillsCard.tsx",
@@ -187,7 +187,7 @@ export const ROOT_HELPERS_IMPORTERS = [
   "rpc/daemonFileClient.ts",
   "rpc/daemonTerminalClient.ts",
   "rpc/helpers.ts",
-  "ui/components/KeybindingDisplay.tsx",
+  "domains/settings/features/keybindings/KeybindingDisplay.tsx",
   "ui/hooks/useRefreshableLoader.ts",
 ];
 
@@ -203,6 +203,5 @@ export const ROOT_UI_HOOKS_FILES = [
 /** Root UI files that currently import App/Domains/API/RPC/Helpers (2).
  * These must move to their owning Feature/Domain in Phases 22-26. */
 export const ROOT_UI_DEP_VIOLATION_FILES = [
-  "ui/components/KeybindingDisplay.tsx", // helpers/platform -> Settings keybindings Feature (Phase 23)
   "ui/hooks/useRefreshableLoader.ts", // helpers/withTimeout -> root hooks
 ];

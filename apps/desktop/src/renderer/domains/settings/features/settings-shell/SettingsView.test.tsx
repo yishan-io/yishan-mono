@@ -59,7 +59,7 @@ vi.mock("../keybindings/KeybindingsSettingsView", () => ({
   KeybindingsSettingsView: () => <div data-testid="keybindings-settings-panel" />,
 }));
 
-vi.mock("../account/MemberSettingsView", () => ({
+vi.mock("@renderer/domains/organization/features/manage-members/MemberSettingsView", () => ({
   MemberSettingsView: () => <div data-testid="member-settings-panel" />,
 }));
 

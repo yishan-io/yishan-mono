@@ -47,7 +47,7 @@ const AccountSettingsView = lazy(() =>
   import("../account/AccountSettingsView").then((m) => ({ default: m.AccountSettingsView })),
 );
 const MemberSettingsView = lazy(() =>
-  import("../account/MemberSettingsView").then((m) => ({ default: m.MemberSettingsView })),
+  import("@renderer/domains/organization").then((m) => ({ default: m.MemberSettingsView })),
 );
 const ServiceTokenSettingsView = lazy(() =>
   import("../account/ServiceTokenSettingsView").then((m) => ({ default: m.ServiceTokenSettingsView })),

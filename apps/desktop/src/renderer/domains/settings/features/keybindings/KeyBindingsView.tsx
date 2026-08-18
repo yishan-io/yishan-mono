@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { keybindingSettingsStore } from "../../../../domains/settings/state/keybindingSettingsStore";
 import { getSupportedKeyBindings } from "../../../../shortcuts/keybindings";
-import { KeybindingTable } from "../../../../ui/components/KeybindingDisplay";
+import { KeybindingTable } from "./KeybindingDisplay";
 
 const WORKSPACE_ROUTE = "/";
 

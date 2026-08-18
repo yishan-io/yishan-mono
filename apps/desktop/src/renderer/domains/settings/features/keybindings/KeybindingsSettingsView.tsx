@@ -5,7 +5,7 @@ import { keybindingSettingsStore } from "../../../../domains/settings/state/keyb
 import { getRendererPlatform } from "../../../../helpers/platform";
 import { detectShortcutConflicts, normalizeKeysString } from "../../../../shortcuts/customKeybindings";
 import { getShortcutDefinitions, getSupportedKeyBindings } from "../../../../shortcuts/keybindings";
-import { HotkeyDisplay } from "../../../../ui/components/KeybindingDisplay";
+import { HotkeyDisplay } from "./KeybindingDisplay";
 import {SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 type EditingState = {

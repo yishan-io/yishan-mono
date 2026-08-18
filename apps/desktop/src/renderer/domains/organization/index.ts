@@ -17,3 +17,4 @@ export {
 } from "./commands/orgCommands";
 
 export { CreateOrganizationDialogView } from "./features/create-organization/CreateOrganizationDialogView";
+export { MemberSettingsView } from "./features/manage-members/MemberSettingsView";

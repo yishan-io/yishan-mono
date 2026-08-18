@@ -34,3 +34,4 @@ export { listCLIToolStatuses } from "./commands/cliToolCommands";
 
 export { SettingsView } from "./features/settings-shell/SettingsView";
 export type { CustomizeFocusItemId } from "./features/settings-shell/settingsSearchCatalog";
+export { HotkeyDisplay, KeybindingTable } from "./features/keybindings/KeybindingDisplay";
