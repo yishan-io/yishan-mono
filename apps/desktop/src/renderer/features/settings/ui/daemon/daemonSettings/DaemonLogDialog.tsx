@@ -1,5 +1,5 @@
 import { Alert, Box, Chip, Dialog, DialogContent, DialogTitle, IconButton, Typography } from "@mui/material";
-import { CenteredSpinner } from "@renderer/components/CenteredSpinner";
+import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { LuX } from "react-icons/lu";

@@ -25,7 +25,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     createProject: mocked.createProject,
     inspectLocalProjectSource: mocked.inspectLocalProjectSource,
     openLocalFolderDialog: mocked.openLocalFolderDialog,
@@ -48,7 +47,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 function renderForm(props: { onCreated?: () => void } = {}) {
   const queryClient = new QueryClient({

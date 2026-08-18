@@ -1,8 +1,8 @@
 import { Box, Typography } from "@mui/material";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { isExcalidrawFile } from "../../../../helpers/editorLanguage";
 import { useGitGutterDecorations } from "../../../../features/files/ui/hooks/useGitGutterDecorations";
-import { CliSpinner } from "../../../../components/CliSpinner";
+import { isExcalidrawFile } from "../../../../helpers/editorLanguage";
+import { CliSpinner } from "../../../../ui/components/CliSpinner";
 import { FileViewerToolbar } from "../FileViewerToolbar";
 import { MarkdownViewToggle } from "./MarkdownViewToggle";
 import type { VditorFileEditorHandle } from "./VditorFileEditor";
@@ -200,9 +200,7 @@ function MonacoFileEditor({
   );
 }
 
-const VditorFileEditor = lazy(() =>
-  import("./VditorFileEditor").then((m) => ({ default: m.VditorFileEditor })),
-);
+const VditorFileEditor = lazy(() => import("./VditorFileEditor").then((m) => ({ default: m.VditorFileEditor })));
 const ExcalidrawFileEditor = lazy(() => import("./ExcalidrawFileEditor"));
 
 /** Dispatches to the Excalidraw editor for .excalidraw files, or Monaco/Vditor for all others. */

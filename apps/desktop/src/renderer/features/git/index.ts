@@ -34,3 +34,4 @@ export { ChangesTabView } from "./ui/ChangesTabView";
 export { PullRequestTabView } from "./ui/PullRequestTabView";
 export { useWorkspacePullRequestState } from "./ui/useWorkspacePullRequestState";
 export { GitChangeTotals } from "./ui/GitChangeTotals";
+export { ProjectCommitComparison } from "./ui/ProjectCommitComparison";

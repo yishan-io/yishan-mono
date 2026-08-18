@@ -1,7 +1,4 @@
 import { Alert, Box, Button, Stack } from "@mui/material";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { LuChevronDown } from "react-icons/lu";
 import { ModelPickerMenu } from "@renderer/features/agent";
 import { ProviderMark } from "@renderer/features/agent";
 import {
@@ -9,21 +6,17 @@ import {
   groupModelPickerOptionsByProvider,
   stripProviderPrefix,
 } from "@renderer/features/agent";
-import {
-  SettingsCard,
-  SettingsControlRow,
-  SettingsRows,
-  SettingsSectionHeader,
-  SettingsToggleRow,
-} from "../../../components/settings";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { LuChevronDown } from "react-icons/lu";
 import {
   getMemoryConfig,
   listAgentModelsForMemorySettings,
   updateMemoryConfig,
 } from "../../../features/settings/commands/settingsCommands";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { MemoryConfig } from "../../../rpc/daemonTypes";
-
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader, SettingsToggleRow } from "./controls";
 
 const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
 

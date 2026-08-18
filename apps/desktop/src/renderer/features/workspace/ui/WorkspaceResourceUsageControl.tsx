@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { ResourceUsageMenu, type ResourceUsageMenuRow } from "../../../components/ResourceUsageMenu";
-import { RouteCloseWatcher } from "../../../components/RouteCloseWatcher";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import { useTerminalTabLookups } from "../../../features/terminal/ui/hooks/useTerminalTabLookups";
 import { workspaceStore } from "../../../features/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../helpers/terminalTabUtils";
+import { ResourceUsageMenu, type ResourceUsageMenuRow } from "../../../ui/components/ResourceUsageMenu";
+import { RouteCloseWatcher } from "../../../ui/components/RouteCloseWatcher";
 
 const MAX_VISIBLE_PROCESSES = 20;
 

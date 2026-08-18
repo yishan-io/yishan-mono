@@ -1,9 +1,9 @@
 import { Alert, Box, Stack, Switch, Typography } from "@mui/material";
+import { AgentIcon } from "@renderer/features/agent";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CLIToolStatus } from "../../../features/settings/commands/cliToolCommands";
-import { AgentIcon } from "@renderer/features/agent";
-import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
+import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
 import {
   AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
@@ -11,7 +11,7 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
 } from "../../../helpers/agentSettings";
-import { agentSettingsStore } from "../../../features/settings/state/agentSettingsStore";
+import { SettingsCard, SettingsRows, SettingsSectionHeader } from "./controls";
 
 type AgentCLISettingsCardProps = {
   statuses: CLIToolStatus[];

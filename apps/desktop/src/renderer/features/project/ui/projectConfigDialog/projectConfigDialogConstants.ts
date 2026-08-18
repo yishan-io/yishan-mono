@@ -1,4 +1,4 @@
-import { PROJECT_COLOR_PRESETS } from "@renderer/components/projectIcons";
+import { PROJECT_COLOR_PRESETS } from "@renderer/features/project";
 import type { TFunction } from "i18next";
 
 export type ProjectConfigSectionId = "general" | "scripts" | "commands";

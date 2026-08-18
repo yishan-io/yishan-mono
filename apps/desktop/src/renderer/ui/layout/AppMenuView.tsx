@@ -1,6 +1,6 @@
 import { ClickAwayListener, Divider, Popper, Stack } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { FloatingSurface } from "../../components/FloatingSurface";
+import { FloatingSurface } from "../../ui/components/FloatingSurface";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useThemePreference } from "../../ui/hooks/useThemePreference";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";

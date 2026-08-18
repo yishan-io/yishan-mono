@@ -1,7 +1,7 @@
 import { ClickAwayListener, Popper } from "@mui/material";
 import type { ReactNode, RefObject } from "react";
 import { useEffect } from "react";
-import { FloatingSurface } from "../../../../../components/FloatingSurface";
+import { FloatingSurface } from "../../../../../ui/components/FloatingSurface";
 
 type ComposerSuggestionMenuShellProps = {
   anchorEl: HTMLElement | null;

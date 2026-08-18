@@ -9,7 +9,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { renderProjectIcon } from "@renderer/components/projectIcons";
+import { renderProjectIcon } from "@renderer/features/project";
 import type { Dispatch, SetStateAction } from "react";
 import { LuCircleHelp, LuExternalLink, LuFolderOpen } from "react-icons/lu";
 import type { ProjectConfigDraft } from "../useProjectConfigFormState";

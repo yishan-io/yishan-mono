@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPause, LuPlay } from "react-icons/lu";
 import { useScheduledJobCommands } from "../../../app/commands/useCommands";
-import { renderProjectIcon } from "../../../components/projectIcons";
+import { renderProjectIcon } from "@renderer/features/project";
 import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import type { ScheduledJobRecord } from "../../../features/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../features/scheduled-job/state/scheduledJobStore";

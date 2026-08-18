@@ -20,9 +20,6 @@ import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
 import type { OrganizationMemberRecord } from "../../../api/types";
-import { CenteredSpinner } from "../../../components/CenteredSpinner";
-import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
-import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
 import {
   leaveOrg,
   listOrganizationMembers,
@@ -35,8 +32,11 @@ import {
   useSelectedOrganizationId,
 } from "../../../features/session/ui/hooks/useSessionReadHooks";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
+import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
+import { SettingsCard, SettingsSectionHeader } from "./controls";
 
 function getMemberInitials(member: OrganizationMemberRecord): string {
   const displayName = member.name?.trim() || member.email?.trim() || member.userId.trim();

@@ -20,16 +20,16 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiCopy, BiTrash } from "react-icons/bi";
+import type { ServiceTokenRecord } from "../../../api/serviceTokenTypes";
 import {
   createServiceToken,
   listServiceTokens,
   revokeServiceToken,
 } from "../../../features/settings/commands/settingsCommands";
-import type { ServiceTokenRecord } from "../../../api/serviceTokenTypes";
-import { CenteredSpinner } from "../../../components/CenteredSpinner";
-import { StatusIndicator } from "../../../components/StatusIndicator";
-import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
 import { copyToClipboard } from "../../../helpers/clipboard";
+import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
+import { StatusIndicator } from "../../../ui/components/StatusIndicator";
+import { SettingsCard, SettingsSectionHeader } from "./controls";
 
 function formatTokenDate(dateString: string | null): string {
   if (!dateString) {

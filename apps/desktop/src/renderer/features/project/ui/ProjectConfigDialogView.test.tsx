@@ -16,7 +16,6 @@ const mocked = vi.hoisted(() => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     updateProjectConfig: mocked.updateProjectConfig,
     getDefaultWorktreeLocation: mocked.getDefaultWorktreeLocation,
     openEntryInExternalApp: mocked.openEntryInExternalApp,
@@ -40,7 +39,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 const initialWorkspaceStoreState = workspaceStore.getState();
 

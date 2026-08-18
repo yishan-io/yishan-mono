@@ -1,7 +1,6 @@
 import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "../../../components/settings";
 import { useGitAuthorName } from "../../../features/git/ui/hooks/useGitAuthorName";
 import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import {
@@ -10,6 +9,7 @@ import {
   workspaceSettingsStore,
 } from "../../../features/settings/state/workspaceSettingsStore";
 import { useSelectedProjectId } from "../../../features/workspace/ui/hooks/useWorkspaceReadHooks";
+import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "./controls";
 
 const GIT_WORKSPACE_PREFIX_SELECT_WIDTH = 200;
 const GIT_WORKSPACE_CUSTOM_PREFIX_WIDTH = 140;

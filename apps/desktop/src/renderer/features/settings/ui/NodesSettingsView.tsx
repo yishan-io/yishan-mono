@@ -15,10 +15,6 @@ import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 
 import type { NodeRecord, OrganizationMemberRecord } from "../../../api/types";
-import { CenteredSpinner } from "../../../components/CenteredSpinner";
-import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
-import { StatusIndicator } from "../../../components/StatusIndicator";
-import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
 import { listOrgNodes } from "../../../features/node/commands/nodeCommands";
 import { unregisterNode, updateNodeScope } from "../../../features/node/commands/nodeCommands";
 import { listOrganizationMembers } from "../../../features/organization/commands/orgCommands";
@@ -28,6 +24,10 @@ import {
   useSelectedOrganizationId,
 } from "../../../features/session/ui/hooks/useSessionReadHooks";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
+import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";
+import { StatusIndicator } from "../../../ui/components/StatusIndicator";
+import { SettingsCard, SettingsSectionHeader } from "./controls";
 
 function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {
   if (!node.ownerUserId) {

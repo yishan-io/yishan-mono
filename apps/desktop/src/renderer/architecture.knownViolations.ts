@@ -59,16 +59,6 @@ export const KNOWN_VIOLATIONS: KnownViolation[] = [
   // workspace state import), so its R7 row stays.
   { rule: "R7-model-layer", file: "features/workspace/model/snapshotReconciler.ts", phase: "P16" },
   // ---- R9-ui-components (Phase 16 baseline) ----
-  { rule: "R9-ui-components", file: "components/AppUpdateSnackbar.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/AuthSessionExpiredSnackbar.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/MessageList.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/ProjectRow.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/WorkspaceRow.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/markdown/MarkdownPreviewRenderer.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/markdown/MarkdownPreviewThemeProvider.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/markdown/markdownPreviewDom.ts", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/projectIcons.tsx", phase: "P16" },
-  { rule: "R9-ui-components", file: "components/useVoiceRecording.ts", phase: "P16" },
   { rule: "R9-ui-components", file: "ui/hooks/useCodeTheme.ts", phase: "P16" },
   { rule: "R9-ui-components", file: "ui/hooks/useDialogRegistration.ts", phase: "P16" },
   { rule: "R9-ui-components", file: "ui/hooks/useRemoteHealthQuery.ts", phase: "P16" },

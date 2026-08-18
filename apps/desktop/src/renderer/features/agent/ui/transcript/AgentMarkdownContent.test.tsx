@@ -14,7 +14,7 @@ const mocked = vi.hoisted(() => ({
   workspaceState: { workspaces: [] as Array<{ id: string; worktreePath?: string | null }>, selectedWorkspaceId: "" },
 }));
 
-vi.mock("@renderer/components/markdown/markdownService", () => ({
+vi.mock("@renderer/features/files/ui/markdown/markdownService", () => ({
   markdownService: {
     parse: mocked.parse,
   },

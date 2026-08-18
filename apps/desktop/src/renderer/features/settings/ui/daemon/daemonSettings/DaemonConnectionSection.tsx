@@ -1,9 +1,9 @@
-import type { DaemonInfoResult } from "@renderer/app/commands/appCommands";
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
-import { CenteredSpinner } from "@renderer/components/CenteredSpinner";
-import { StatusIndicator } from "@renderer/components/StatusIndicator";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "@renderer/components/settings";
+import type { DaemonInfoResult } from "@renderer/app/commands/appCommands";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "@renderer/features/settings";
 import { MONOSPACE_SX } from "@renderer/helpers/styles";
+import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
+import { StatusIndicator } from "@renderer/ui/components/StatusIndicator";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
 

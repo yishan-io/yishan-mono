@@ -1,5 +1,5 @@
+import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "@renderer/features/project";
 import { useEffect, useState } from "react";
-import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../../components/projectIcons";
 import { generateId } from "../../../helpers/generateId";
 
 export type ProjectConfigCommandDraft = {

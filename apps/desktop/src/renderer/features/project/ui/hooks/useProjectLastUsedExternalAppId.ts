@@ -1,6 +1,6 @@
 import type { ExternalAppId } from "../../../../../shared/contracts/externalApps";
-import { projectStore } from "../../state/projectStore";
 import { selectProjectLastUsedExternalAppIdFromState } from "../../state/projectSelectors";
+import { projectStore } from "../../state/projectStore";
 
 /**
  * Subscribes to the last-used external app id from the Project Store.

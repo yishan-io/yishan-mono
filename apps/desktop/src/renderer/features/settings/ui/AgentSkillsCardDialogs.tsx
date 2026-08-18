@@ -10,14 +10,14 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { MarkdownPreview } from "@renderer/components/markdown/MarkdownPreview";
+import { MarkdownPreview } from "@renderer/features/files/ui/markdown/MarkdownPreview";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
 import { addSkill, getSkillDetail } from "../../../features/settings/commands/skillCommands";
-import { CenteredSpinner } from "../../../components/CenteredSpinner";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { SkillDetail, SkillInfo } from "../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
 
 const DIALOG_SIZE = { xs: "100%", sm: 800 };
 

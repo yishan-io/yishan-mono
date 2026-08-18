@@ -15,8 +15,8 @@ import {
   Typography,
 } from "@mui/material";
 import { openLink } from "@renderer/app/commands/appCommands";
-import { BranchBadge } from "@renderer/components/BranchBadge";
-import { PullRequestIcon } from "@renderer/components/PullRequestIcon";
+import { BranchBadge } from "@renderer/ui/components/BranchBadge";
+import { PullRequestIcon } from "@renderer/ui/components/PullRequestIcon";
 import { useTranslation } from "react-i18next";
 import { LuArrowRight, LuChevronDown, LuRefreshCw } from "react-icons/lu";
 import type { MergeMethod } from "./pullRequestTabHelpers";

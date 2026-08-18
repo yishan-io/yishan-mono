@@ -191,8 +191,8 @@ vi.mock("../../components/PaneToggleButton", () => ({
   PaneToggleButton: () => null,
 }));
 
-vi.mock("../../components/projectIcons", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../components/projectIcons")>();
+vi.mock("@renderer/features/project", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/features/project")>();
   return {
     ...actual,
     renderProjectIcon: (iconId: string | undefined, size: number) => {

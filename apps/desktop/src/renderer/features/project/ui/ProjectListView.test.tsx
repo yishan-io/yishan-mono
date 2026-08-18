@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { inspectGitRepository } from "../../../features/git/commands/gitCommands";
 import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../features/workspace/commands/workspaceCommands";
@@ -164,9 +165,14 @@ vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../../../components/projectIcons", () => ({
+vi.mock("./projectIcons", () => ({
   renderProjectIcon: () => "R",
   renderRepoIcon: () => "R",
+}));
+
+vi.mock("../../../features/workspace/ui/LeftPane/CreateWorkspaceDialogView", () => ({
+  CreateWorkspaceDialogView: ({ open, mode }: { open: boolean; mode?: "create" | "rename" }) =>
+    open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
 }));
 
 vi.mock("@renderer/features/workspace", async (importOriginal) => {
@@ -176,8 +182,8 @@ vi.mock("@renderer/features/workspace", async (importOriginal) => {
     useSelectedProjectId: () => mocked.stateRef.current.selectedProjectId ?? "",
     useSelectedWorkspaceId: () => mocked.stateRef.current.selectedWorkspaceId ?? "",
     useWorkspaces: () => mocked.stateRef.current.workspaces ?? [],
-    CreateWorkspaceDialogView: ({ open, mode }: { open: boolean; mode?: "create" | "rename" }) =>
-      open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
+    useSelectedWorkspaceWorktreePath: () => "",
+    setOrderedWorkspaceIds: vi.fn(),
   };
 });
 
@@ -304,6 +310,8 @@ vi.mock("../../../app/commands/useCommands", () => {
     listDetectedExternalAppIds: mocked.listDetectedExternalAppIds,
     setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
     deleteLocalFolder: mocked.deleteLocalFolder,
+    listAgentModels: vi.fn().mockResolvedValue([]),
+    openTab: vi.fn(),
   });
   return {
     useAppCommands: commandSurface,
@@ -348,7 +356,9 @@ function renderProjectListView() {
   const queryClient = new QueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <ProjectListView />
+      <MemoryRouter>
+        <ProjectListView />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -488,7 +498,9 @@ function renderRepoList(
   const queryClient = new QueryClient();
   const rendered = render(
     <QueryClientProvider client={queryClient}>
-      <ProjectListView />
+      <MemoryRouter>
+        <ProjectListView />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 
@@ -1277,7 +1289,9 @@ describe("ProjectListView", () => {
 
     view.rerender(
       <QueryClientProvider client={new QueryClient()}>
-        <ProjectListView />
+        <MemoryRouter>
+          <ProjectListView />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 

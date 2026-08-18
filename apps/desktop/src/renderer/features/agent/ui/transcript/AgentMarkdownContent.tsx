@@ -3,9 +3,9 @@ import {
   isAbsoluteUrl,
   resolveRelativePath,
   toWorkspaceRelativePath,
-} from "@renderer/components/markdown/markdownHelpers";
-import { markdownService } from "@renderer/components/markdown/markdownService";
-import { useMarkdownStyles } from "@renderer/components/markdown/markdownStyles";
+} from "@renderer/features/files/ui/markdown/markdownHelpers";
+import { markdownService } from "@renderer/features/files/ui/markdown/markdownService";
+import { useMarkdownStyles } from "@renderer/features/files/ui/markdown/markdownStyles";
 import { editorSettingsStore } from "@renderer/features/settings";
 import { openTab, openTabInOppositePane } from "@renderer/features/workbench";
 import { useCodeTheme } from "@renderer/ui/hooks/useCodeTheme";

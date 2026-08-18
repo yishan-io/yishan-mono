@@ -1,6 +1,6 @@
-import type { FileTreeGitChangeKind } from "./file-tree/types";
 import { isWorkspaceNotFoundError } from "@renderer/helpers/errorHelpers";
 import { useEffect, useRef, useState } from "react";
+import type { FileTreeGitChangeKind } from "./file-tree/types";
 
 function normalizeGitChangeKind(kind: string): FileTreeGitChangeKind {
   if (kind === "added" || kind === "modified" || kind === "deleted" || kind === "renamed") {

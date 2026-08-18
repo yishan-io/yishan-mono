@@ -11,9 +11,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { renderProjectIcon } from "@renderer/features/project";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuPlay } from "react-icons/lu";
-import { renderProjectIcon } from "../../components/projectIcons";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../features/project/model/projectTypes";
 import type { WorkspaceProjectRecord } from "../../features/project/model/projectTypes";
 import type { WorkspaceItem } from "../../features/workspace/model/workspaceTypes";

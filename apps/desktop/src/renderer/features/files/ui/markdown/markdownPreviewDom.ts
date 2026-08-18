@@ -1,7 +1,7 @@
-import { openLink } from "@renderer/app/commands/appCommands";
-import { buildWorkspaceFileUrl } from "@renderer/features/files/commands/fileCommands";
 import { openTab, openTabInOppositePane } from "@renderer/features/workbench";
-import { enqueueWorkspaceErrorNotice } from "@renderer/features/workspace/state/workspaceLifecycleNoticeStore";
+import { enqueueWorkspaceErrorNotice } from "@renderer/features/workspace";
+import { openLink } from "../../../../app/commands/appCommands";
+import { buildWorkspaceFileUrl } from "../../commands/fileCommands";
 import { getTaskListItemChecked, isAbsoluteUrl, resolveRelativePath, toggleTaskListItem } from "./markdownHelpers";
 import { type MarkdownOutlineData, extractMarkdownOutline } from "./markdownOutlineTree";
 

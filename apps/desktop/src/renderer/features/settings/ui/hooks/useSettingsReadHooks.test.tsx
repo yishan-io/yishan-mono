@@ -5,11 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { agentSettingsStore } from "../../state/agentSettingsStore";
 import { keybindingSettingsStore } from "../../state/keybindingSettingsStore";
 import { workspaceSettingsStore } from "../../state/workspaceSettingsStore";
-import {
-  useAgentKindsInUse,
-  useKeybindingOverrides,
-  useWorkspaceBranchPrefixSettings,
-} from "./useSettingsReadHooks";
+import { useAgentKindsInUse, useKeybindingOverrides, useWorkspaceBranchPrefixSettings } from "./useSettingsReadHooks";
 
 const initialWorkspaceSettingsState = workspaceSettingsStore.getState();
 const initialAgentSettingsState = agentSettingsStore.getState();

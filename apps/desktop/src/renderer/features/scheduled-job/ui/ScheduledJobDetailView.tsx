@@ -1,7 +1,7 @@
 import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeft, LuPanelLeft, LuPause, LuPencil, LuPlay, LuTrash2, LuZap } from "react-icons/lu";
-import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
+import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";
 import { PaneHeader } from "@renderer/features/workbench";
 import { PaneToggleButton } from "@renderer/features/workbench";
 import { SplitPaneLayout } from "@renderer/features/workbench";

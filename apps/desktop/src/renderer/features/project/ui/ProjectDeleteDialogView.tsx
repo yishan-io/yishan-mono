@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
+import { ConfirmationDialog } from "../../../ui/components/ConfirmationDialog";
 
 type ProjectDeleteDialogViewProps = {
   open: boolean;

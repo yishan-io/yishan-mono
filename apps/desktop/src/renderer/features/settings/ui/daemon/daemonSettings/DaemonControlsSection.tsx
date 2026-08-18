@@ -5,7 +5,7 @@ import {
   SettingsRows,
   SettingsSectionHeader,
   SettingsToggleRow,
-} from "@renderer/components/settings";
+} from "@renderer/features/settings";
 import { useTranslation } from "react-i18next";
 import { LuPower } from "react-icons/lu";
 

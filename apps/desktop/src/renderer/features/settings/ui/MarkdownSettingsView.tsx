@@ -1,17 +1,12 @@
 import { MenuItem, Stack, Switch } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import {
-  SettingsCard,
-  SettingsCompactSelect,
-  SettingsControlRow,
-  SettingsSectionHeader,
-} from "../../../components/settings";
 import type {
   MarkdownPreviewFontSize,
   MarkdownPreviewWidth,
   MarkdownThemePreference,
 } from "../state/displaySettingsStore";
 import { displaySettingsStore } from "../state/displaySettingsStore";
+import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "./controls";
 
 /** Renders markdown editor preference controls. */
 export function MarkdownSettingsView() {

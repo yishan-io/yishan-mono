@@ -11,11 +11,11 @@
  * lands in the lazy chunk alongside the factory.
  */
 
-import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
+import { displaySettingsStore } from "@renderer/features/settings";
+import { DiagramZoomOverlay } from "@renderer/ui/components/DiagramZoomOverlay";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type Vditor from "vditor";
-import { displaySettingsStore } from "@renderer/features/settings";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { i18n } from "../../../../i18n";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";

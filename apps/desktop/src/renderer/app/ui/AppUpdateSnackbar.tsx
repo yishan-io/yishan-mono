@@ -8,8 +8,8 @@ import {
   getPendingDesktopUpdate,
   installDesktopUpdate,
   subscribeDesktopUpdates,
-} from "../app/commands/appCommands";
-import type { DesktopUpdateEventPayload } from "../app/commands/appCommands";
+} from "../commands/appCommands";
+import type { DesktopUpdateEventPayload } from "../commands/appCommands";
 
 function isDesktopUpdatePayload(value: unknown): value is DesktopUpdateEventPayload {
   return Boolean(value && typeof value === "object" && "status" in value);
@@ -185,10 +185,7 @@ export function AppUpdateSnackbar() {
               disabled={isBusy}
               onClick={() => {
                 setIsBusy(true);
-                const request =
-                  update.status === "downloaded"
-                    ? installDesktopUpdate()
-                    : downloadDesktopUpdate();
+                const request = update.status === "downloaded" ? installDesktopUpdate() : downloadDesktopUpdate();
                 void request
                   .then((result) => {
                     if ("ok" in result && !result.ok) {

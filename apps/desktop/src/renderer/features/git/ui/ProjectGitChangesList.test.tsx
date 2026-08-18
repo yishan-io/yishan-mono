@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
+import { FILETREE_DRAG_MIME } from "@renderer/features/files";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FILETREE_DRAG_MIME } from "@renderer/features/files";
 import { ProjectGitChangesList } from "./ProjectGitChangesList";
 
 afterEach(() => {

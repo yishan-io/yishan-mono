@@ -26,10 +26,10 @@ import {
   removeExtension,
   updateExtension,
 } from "../../../../features/settings/commands/customizeCommands";
-import { CenteredSpinner } from "../../../../components/CenteredSpinner";
-import { SettingsCard } from "../../../../components/settings";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { PiExtensionInfo } from "../../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
+import { SettingsCard } from "../controls";
 
 const LOCAL_FILE_SOURCE = "local file";
 

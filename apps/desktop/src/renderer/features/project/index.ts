@@ -29,3 +29,13 @@ export { ProjectFilterPopoverView } from "./ui/ProjectFilterPopoverView";
 export { ProjectListMenus } from "./ui/ProjectListMenus";
 export { ProjectListView } from "./ui/ProjectListView";
 export { useDisplayProjectIds, useProjects, useLastUsedExternalAppId } from "./ui/hooks/useProjectReadHooks";
+export { renderProjectIcon } from "./ui/projectIcons";
+export {
+  DEFAULT_PROJECT_ICON_ID,
+  PROJECT_COLOR_PRESETS,
+  PROJECT_ICON_OPTIONS,
+  REPO_ICON_OPTIONS,
+  findProjectIconOption,
+  pickRandomProjectColor,
+  pickRandomProjectIcon,
+} from "./ui/projectIcons";

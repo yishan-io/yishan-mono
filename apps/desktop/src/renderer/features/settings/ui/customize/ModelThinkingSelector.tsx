@@ -1,8 +1,8 @@
 import { Box, Typography } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { AgentModelSelector } from "@renderer/features/agent";
 import { splitModelId, stripProviderPrefix } from "@renderer/features/agent";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { listAgentModels } from "../../../../features/agent/commands/agentCommands";
 import type { AgentModel } from "../../../../features/agent/model/agentChatTypes";
 import {

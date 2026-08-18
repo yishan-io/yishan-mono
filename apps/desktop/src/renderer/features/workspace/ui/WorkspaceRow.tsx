@@ -9,14 +9,14 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import { GitChangeTotals } from "@renderer/features/git";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuArchive, LuLoaderCircle } from "react-icons/lu";
-import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../features/workspace/model/workspaceTypes";
-import { workspaceCreateProgressStore } from "../features/workspace/state/workspaceCreateProgressStore";
-import { buildListItemButtonSx } from "../helpers/leftPaneStyles";
-import { CliSpinner } from "./CliSpinner";
-import { GitChangeTotals } from "@renderer/features/git";
+import { buildListItemButtonSx } from "../../../helpers/leftPaneStyles";
+import { CliSpinner } from "../../../ui/components/CliSpinner";
+import type { WorkspaceGitChangeTotals, WorkspaceItem } from "../model/workspaceTypes";
+import { workspaceCreateProgressStore } from "../state/workspaceCreateProgressStore";
 
 export type WorkspaceRowIndicator = "running" | "waiting_input" | "done" | "failed" | "none";
 type WorkspaceBadgeIndicator = Extract<WorkspaceRowIndicator, "waiting_input" | "failed" | "done">;

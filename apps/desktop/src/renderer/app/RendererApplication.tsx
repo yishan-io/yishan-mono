@@ -4,15 +4,15 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
 import { openLink } from "../app/commands/appCommands";
-import { AppUpdateSnackbar } from "../components/AppUpdateSnackbar";
-import { AuthSessionExpiredSnackbar } from "../components/AuthSessionExpiredSnackbar";
 import { startBackendEventHandlers, startBackendEventPipeline } from "../events";
-import { AppThemePreferenceProvider, useThemePreference } from "../ui/hooks/useThemePreference";
 import { i18n } from "../i18n";
 import { rendererQueryClient } from "../queryClient";
 import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
 import { createAppTheme } from "../theme";
+import { AppThemePreferenceProvider, useThemePreference } from "../ui/hooks/useThemePreference";
 import { AppRoutes } from "./routes/AppRoutes";
+import { AppUpdateSnackbar } from "./ui/AppUpdateSnackbar";
+import { AuthSessionExpiredSnackbar } from "./ui/AuthSessionExpiredSnackbar";
 
 // React 19 dev mode emits performance.measure() entries for every component render/update.
 // These accumulate indefinitely in the Performance API buffer and cause unbounded memory growth.

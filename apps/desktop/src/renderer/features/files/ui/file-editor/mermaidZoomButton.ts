@@ -14,7 +14,7 @@
  */
 
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { mermaidIframeRenderer } from "../../../../components/markdown/mermaidIframeRenderer";
+import { mermaidIframeRenderer } from "../markdown/mermaidIframeRenderer";
 
 const ZOOM_BUTTON_CLASS = "vditor-mermaid-zoom-btn";
 const ATTACHED_ATTR = "data-zoom-attached";

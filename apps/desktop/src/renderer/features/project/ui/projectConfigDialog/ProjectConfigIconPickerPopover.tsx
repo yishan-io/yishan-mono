@@ -1,5 +1,5 @@
 import { Box, IconButton, Popover } from "@mui/material";
-import { PROJECT_ICON_OPTIONS } from "@renderer/components/projectIcons";
+import { PROJECT_ICON_OPTIONS } from "@renderer/features/project";
 import type { Dispatch, SetStateAction } from "react";
 import type { ProjectConfigDraft } from "../useProjectConfigFormState";
 

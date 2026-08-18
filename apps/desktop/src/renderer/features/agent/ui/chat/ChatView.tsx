@@ -2,8 +2,6 @@ import { Autocomplete, Box, TextField, Typography, createFilterOptions } from "@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgentCommands } from "../../../../app/commands/useCommands";
-import { MessageList } from "../../../../components/MessageList";
-import { RichComposer } from "./composer/RichComposer";
 import { subscribeWorkspaceChatEvent } from "../../../../events";
 import type { DesktopAgentKind } from "../../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
@@ -14,6 +12,8 @@ import {
   useChatCurrentModelByTabId,
   useChatMessagesByTabId,
 } from "../../ui/hooks/useAgentChatReadHooks";
+import { MessageList } from "./MessageList";
+import { RichComposer } from "./composer/RichComposer";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({

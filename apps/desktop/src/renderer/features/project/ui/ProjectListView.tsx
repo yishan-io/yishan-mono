@@ -17,10 +17,6 @@ import {
   isExternalAppPresetSupportedOnPlatform,
 } from "../../../../shared/contracts/externalApps";
 import { useFileCommands, useProjectCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
-import { WorkspaceTree } from "./workspace-tree";
-import type { WorkspaceTreeWorkspace } from "./workspace-tree";
-import type { WorkspaceTreeRow } from "./workspace-tree/types";
 import { markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead } from "../../../features/agent/state/chatActions";
 import { useWorkspaceUnreadToneByWorkspaceId } from "../../../features/agent/ui/hooks/useAgentChatReadHooks";
 import { useDetectedExternalAppIds } from "../../../features/files/ui/hooks/useDetectedExternalAppIds";
@@ -28,6 +24,7 @@ import { useLastUsedExternalAppId, useProjects } from "../../../features/project
 import { subscribeOpenCreateWorkspaceDialog } from "../../../features/workspace/commands/workspaceCommands";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { ContextMenu, type ContextMenuEntry } from "../../../ui/components/ContextMenu";
 import { useContextMenuState } from "../../../ui/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { ProjectListMenus } from "./ProjectListMenus";
@@ -37,6 +34,9 @@ import { useProjectListDialogState } from "./useProjectListDialogState";
 import { useProjectListFoldState } from "./useProjectListFoldState";
 import { useProjectListTreeData } from "./useProjectListTreeData";
 import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
+import { WorkspaceTree } from "./workspace-tree";
+import type { WorkspaceTreeWorkspace } from "./workspace-tree";
+import type { WorkspaceTreeRow } from "./workspace-tree/types";
 
 /** Renders project rows and nested workspace rows with per-project fold controls. */
 export function ProjectListView() {

@@ -3,17 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { useTerminalCommands, useWorkspaceCommands } from "../../../../app/commands/useCommands";
-import { RouteCloseWatcher } from "../../../../components/RouteCloseWatcher";
-import {
-  WorkspaceResourceTableMenu,
-  type WorkspaceResourceTableMenuRow,
-} from "../../../../components/WorkspaceResourceTableMenu";
 import { useProjects } from "../../../../features/project/ui/hooks/useProjectReadHooks";
 import type { TerminalResourceUsageSnapshot } from "../../../../features/terminal/commands/terminalCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../../features/terminal/ui/hooks/useSharedTerminalResourceUsageSnapshot";
 import { workspaceStore } from "../../../../features/workspace/state/workspaceStore";
 import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../../../helpers/terminalTabUtils";
+import { RouteCloseWatcher } from "../../../../ui/components/RouteCloseWatcher";
+import { WorkspaceResourceTableMenu, type WorkspaceResourceTableMenuRow } from "../WorkspaceResourceTableMenu";
 
 type WorkspaceResourceUsageRow = {
   workspaceId: string;

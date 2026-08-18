@@ -1,9 +1,9 @@
-import { resolveDestinationDirectoryPath } from "./file-tree/treeUtils";
-import type { FileTreeContextMenuRequest } from "./file-tree/types";
 import type { ExternalAppId, ExternalAppMenuEntry } from "@shared/contracts/externalApps";
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
 import { buildWorkspaceFileTreeContextMenuItems } from "./buildWorkspaceFileTreeContextMenuItems";
+import { resolveDestinationDirectoryPath } from "./file-tree/treeUtils";
+import type { FileTreeContextMenuRequest } from "./file-tree/types";
 
 type ExternalAppPresetLike = {
   id: ExternalAppId;

@@ -1,7 +1,6 @@
 import { Avatar, Box, LinearProgress, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
 import type { SessionUser } from "../../../features/session";
 import { setOrganizationVoiceUsage as applySetOrganizationVoiceUsage } from "../../../features/session/state/sessionActions";
 import {
@@ -11,6 +10,7 @@ import {
   useSessionLoaded,
 } from "../../../features/session/ui/hooks/useSessionReadHooks";
 import { getVoiceUsage } from "../../../features/settings/commands/settingsCommands";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "./controls";
 
 const PLAN_LABELS = {
   free: "Free",

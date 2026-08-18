@@ -15,12 +15,17 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck } from "react-icons/lu";
-import { listSkills, removeSkill, updateAllSkills, updateSkill } from "../../../features/settings/commands/skillCommands";
-import { CenteredSpinner } from "../../../components/CenteredSpinner";
-import { SettingsCard } from "../../../components/settings";
+import {
+  listSkills,
+  removeSkill,
+  updateAllSkills,
+  updateSkill,
+} from "../../../features/settings/commands/skillCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { SkillInfo } from "../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
 import { AddSkillDialog, RemoveSkillDialog, SkillDetailDialog } from "./AgentSkillsCardDialogs";
+import { SettingsCard } from "./controls";
 
 // Skills are installed/updated via the pi ecosystem (npm packages, `npx skill
 // add`), so the settings card only displays them. Discovered-only kinds

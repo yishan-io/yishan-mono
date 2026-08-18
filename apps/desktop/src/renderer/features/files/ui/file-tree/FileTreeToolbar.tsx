@@ -7,8 +7,8 @@ import {
   type ExternalAppMenuEntry,
   findExternalAppPreset,
 } from "../../../../../shared/contracts/externalApps";
-import { ContextMenu } from "../../../../components/ContextMenu";
-import type { ContextMenuEntry } from "../../../../components/ContextMenu";
+import { ContextMenu } from "../../../../ui/components/ContextMenu";
+import type { ContextMenuEntry } from "../../../../ui/components/ContextMenu";
 
 type FileTreeToolbarProps = {
   createFileActionLabel: string;

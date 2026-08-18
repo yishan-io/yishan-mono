@@ -246,7 +246,7 @@ vi.mock("./file-tree", () => ({
   },
 }));
 
-vi.mock("@renderer/components/ConfirmationDialog", () => ({
+vi.mock("@renderer/ui/components/ConfirmationDialog", () => ({
   ConfirmationDialog: ({
     open,
     title,

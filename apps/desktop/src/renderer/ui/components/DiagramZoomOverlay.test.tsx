@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
+import { renderWithAppTheme } from "../../testUtils/renderWithAppTheme";
 import { DiagramZoomOverlay } from "./DiagramZoomOverlay";
 
 const SAMPLE_SVG =

@@ -45,7 +45,7 @@ import {
   PROJECT_ICON_IDS,
   pickRandomProjectColor,
   pickRandomProjectIcon,
-} from "../features/project/model/projectIconPresets";
+} from "../model/projectIconPresets";
 
 const PROJECT_ICON_BY_ID: Record<string, IconType> = {
   folder: LuFolder,

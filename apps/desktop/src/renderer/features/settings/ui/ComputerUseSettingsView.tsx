@@ -3,15 +3,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiBluetooth, BiCamera, BiChip, BiHdd, BiShield, BiSolidKeyboard, BiUsb, BiWindow } from "react-icons/bi";
 import { LuGlobe } from "react-icons/lu";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   getComputerUsePermissions,
   openComputerUsePermissionSettings,
 } from "../../../features/settings/commands/settingsCommands";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../helpers/platform";
 import type { ComputerPermissionState, ComputerPermissionStatus } from "../../../rpc/daemonTypes";
-
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "./controls";
 
 type PermissionRowKey = "accessibility" | "screenRecording" | "inputMonitoring" | "automation";
 

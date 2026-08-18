@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import recordStartSound from "../../assets/record-start.mp3";
-import { transcribeVoiceForOrganization } from "../features/agent/commands/voiceTranscriptionCommands";
-import { getErrorMessage } from "../helpers/errorHelpers";
-import { sessionStore } from "../features/session/state/sessionStore";
+import recordStartSound from "../../../../../assets/record-start.mp3";
+import { transcribeVoiceForOrganization } from "../../../../features/agent/commands/voiceTranscriptionCommands";
+import { selectSelectedOrganizationId } from "../../../../features/session/state/sessionSelectors";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
 
 const MAX_RECORDING_MS = 60_000;
 const AUDIO_BITS_PER_SECOND = 48_000;
@@ -92,7 +92,7 @@ export function useVoiceRecording({
         });
       }
 
-      const organizationId = sessionStore.getState().selectedOrganizationId?.trim();
+      const organizationId = selectSelectedOrganizationId()?.trim();
       if (!organizationId) {
         setErrorMessage("Select an organization before using voice input.");
         clearRecordedAudio();

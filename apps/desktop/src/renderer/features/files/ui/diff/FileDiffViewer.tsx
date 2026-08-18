@@ -2,6 +2,7 @@ import { Box, IconButton, Tooltip } from "@mui/material";
 import { parseDiffFromFile } from "@pierre/diffs";
 import type { SelectedLineRange } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
+import { editorSettingsStore } from "@renderer/features/settings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuDiff,
@@ -17,7 +18,6 @@ import { MONO_FONT_FAMILY } from "../../../../helpers/codeThemes";
 import { findDiffMatches } from "../../../../helpers/diffSearch";
 import { getDiffCssVariablesForPalette } from "../../../../helpers/diffTheme";
 import { useCodeTheme } from "../../../../ui/hooks/useCodeTheme";
-import { editorSettingsStore } from "@renderer/features/settings";
 import { DiffSearchPanel } from "../DiffSearchPanel";
 
 type FileDiffViewerProps = {

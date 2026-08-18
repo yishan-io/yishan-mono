@@ -34,5 +34,6 @@ export { WorkspaceDeleteDialogView } from "./ui/LeftPane/WorkspaceDeleteDialogVi
 export { WorkspaceInfoPopperView } from "./ui/LeftPane/WorkspaceInfoPopperView";
 export { type PendingWorkspaceDeletion, useWorkspaceDeletionFlow } from "./ui/LeftPane/useWorkspaceDeletionFlow";
 export { useWorkspaceInfoHover } from "./ui/LeftPane/useWorkspaceInfoHover";
+export { enqueueWorkspaceErrorNotice } from "./state/workspaceLifecycleNoticeStore";
 export { WorkspaceErrorStateView } from "./ui/WorkspaceErrorStateView";
 export { WorkspaceLifecycleNoticeView } from "./ui/WorkspaceLifecycleNoticeView";

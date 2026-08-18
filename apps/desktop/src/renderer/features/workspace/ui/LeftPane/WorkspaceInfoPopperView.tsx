@@ -1,8 +1,8 @@
 import { Box, Paper, Popper, Stack, Typography } from "@mui/material";
+import { PullRequestIcon } from "@renderer/ui/components/PullRequestIcon";
 import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
 import type { WorkspacePullRequestSummary } from "../../../../api/types";
-import { PullRequestIcon } from "../../../../components/PullRequestIcon";
 import type { WorkspaceItem } from "../../../../features/workspace/model/workspaceTypes";
 import { isFolderWorkspace } from "../../../../helpers/localFolder";
 import { livePrStatus } from "../../../../helpers/pullRequestUtils";

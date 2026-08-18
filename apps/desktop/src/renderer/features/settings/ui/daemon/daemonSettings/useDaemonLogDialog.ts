@@ -1,6 +1,6 @@
 import type { DaemonLogResult } from "@renderer/app/commands/appCommands";
-import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import { getDaemonLog } from "@renderer/features/settings/commands/settingsCommands";
+import { getErrorMessage } from "@renderer/helpers/errorHelpers";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 const INITIAL_VISIBLE_ENTRY_COUNT = 100;
@@ -27,8 +27,6 @@ function parseLogEntries(logContent: string | null): LogEntry[] {
       }
     });
 }
-
-
 
 /** Manages daemon log dialog loading state, parsing, and prepend-on-scroll behavior. */
 export function useDaemonLogDialog() {

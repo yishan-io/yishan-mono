@@ -19,7 +19,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
-
     listPiProviders: mocked.listPiProviders,
     savePiProvider: mocked.savePiProvider,
     removePiProvider: mocked.removePiProvider,
@@ -43,7 +42,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useSettingsCommands: commandSurface,
   };
 });
-
 
 const apiKeyProvider = { provider: "deepseek", type: "api_key" };
 const oauthProvider = { provider: "openai-codex", type: "oauth" };

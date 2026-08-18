@@ -17,9 +17,9 @@ import {
   getAgentDefinitionDetail,
   updateAgentDefinition,
 } from "../../../../features/settings/commands/customizeCommands";
-import { CenteredSpinner } from "../../../../components/CenteredSpinner";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { FieldLabel } from "./AgentDefinitionFieldLabel";
 import { AgentToolsEditor, sameToolList } from "./AgentToolsEditor";
 import { ModelThinkingSelector } from "./ModelThinkingSelector";

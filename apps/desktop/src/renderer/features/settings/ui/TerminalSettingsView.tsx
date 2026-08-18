@@ -4,13 +4,13 @@ import { closeTab } from "@renderer/features/workbench";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTerminalCommands } from "../../../app/commands/useCommands";
-import { CenteredSpinner } from "../../../components/CenteredSpinner";
-import { StatusIndicator } from "../../../components/StatusIndicator";
-import { SettingsCard, SettingsSectionHeader } from "../../../components/settings";
 import { useProjects } from "../../../features/project/ui/hooks/useProjectReadHooks";
 import { useWorkspaces } from "../../../features/workspace/ui/hooks/useWorkspaceReadHooks";
 import { MONOSPACE_SX } from "../../../helpers/styles";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
+import { StatusIndicator } from "../../../ui/components/StatusIndicator";
+import { SettingsCard, SettingsSectionHeader } from "./controls";
 
 /** Builds one stable map key for in-flight close action tracking. */
 function buildSessionActionKey(sessionId: string): string {

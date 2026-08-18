@@ -2,10 +2,10 @@ import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material"
 import { useTranslation } from "react-i18next";
 import { BiTerminal } from "react-icons/bi";
 import type { CLIToolStatus } from "../../../features/settings/commands/cliToolCommands";
-import { CenteredSpinner } from "../../../components/CenteredSpinner";
-import { SettingsCard, SettingsControlRow, SettingsRows } from "../../../components/settings";
 import { MONOSPACE_SX } from "../../../helpers/styles";
 import { isNewerVersion } from "../../../helpers/version";
+import { CenteredSpinner } from "../../../ui/components/CenteredSpinner";
+import { SettingsCard, SettingsControlRow, SettingsRows } from "./controls";
 
 type PiCliInstallCardProps = {
   status: CLIToolStatus | null;

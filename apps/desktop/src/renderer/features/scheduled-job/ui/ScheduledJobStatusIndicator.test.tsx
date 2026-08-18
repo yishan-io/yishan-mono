@@ -8,7 +8,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../../components/StatusIndicator", () => ({
+vi.mock("../../../ui/components/StatusIndicator", () => ({
   StatusIndicator: ({
     label,
     color,

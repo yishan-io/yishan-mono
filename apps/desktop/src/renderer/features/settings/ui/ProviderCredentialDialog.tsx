@@ -12,11 +12,12 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { ProviderMark } from "@renderer/features/agent";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuLogIn } from "react-icons/lu";
+import { useAgentCommands } from "../../../app/commands/useCommands";
 import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../../features/agent/commands/piProviderCommands";
-import { ProviderMark } from "@renderer/features/agent";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   PI_PROVIDER_CATALOG,
@@ -26,7 +27,6 @@ import {
   isPiProviderOAuthCapable,
   isPiProviderSubscriptionCapable,
 } from "../../../helpers/piProviders";
-import { useAgentCommands } from "../../../app/commands/useCommands";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 

@@ -12,9 +12,9 @@ import {
   findExternalAppPreset,
 } from "../../../../shared/contracts/externalApps";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
-import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
 import type { WorkspaceItem } from "../../../features/workspace/model/workspaceTypes";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import { ContextMenu, type ContextMenuEntry } from "../../../ui/components/ContextMenu";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";
 

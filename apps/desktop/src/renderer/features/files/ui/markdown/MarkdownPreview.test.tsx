@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { displaySettingsStore } from "@renderer/features/settings/state/displaySettingsStore";
+import { displaySettingsStore } from "@renderer/features/settings";
 import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { act } from "react";

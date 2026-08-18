@@ -1,6 +1,6 @@
 import { Box, Typography, useTheme } from "@mui/material";
-import { displaySettingsStore } from "@renderer/features/settings/state/displaySettingsStore";
-import { editorSettingsStore } from "@renderer/features/settings/state/editorSettingsStore";
+import { displaySettingsStore } from "@renderer/features/settings";
+import { editorSettingsStore } from "@renderer/features/settings";
 import { useCodeTheme } from "@renderer/ui/hooks/useCodeTheme";
 import { memo, useMemo, useRef } from "react";
 import { MarkdownFindBar } from "./MarkdownFindBar";

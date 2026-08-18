@@ -3,8 +3,6 @@ import type { WorkspaceItem } from "@renderer/features/workspace";
 import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/features/workspace";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import type { WorkspaceTreeWorkspace } from "./workspace-tree";
-import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
 import {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,
@@ -18,6 +16,8 @@ import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
 import { resolveWorkspaceNotificationTone } from "../../../helpers/workspaceNotification";
 import { reconcileOrder } from "./projectListHelpers";
+import type { WorkspaceTreeWorkspace } from "./workspace-tree";
+import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;

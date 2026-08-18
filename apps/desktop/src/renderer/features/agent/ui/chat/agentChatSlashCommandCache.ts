@@ -1,7 +1,7 @@
-import type { RichComposerSlashCommand } from "./composer/RichComposer";
 import type { SkillInfo } from "../../../../rpc/daemonTypes";
 import { listSkills } from "../../../settings/commands/skillCommands";
 import { buildSubagentSlashCommands } from "./agentChatSlashCommandCatalog";
+import type { RichComposerSlashCommand } from "./composer/RichComposer";
 
 const SUBAGENT_SLASH_COMMANDS = buildSubagentSlashCommands();
 

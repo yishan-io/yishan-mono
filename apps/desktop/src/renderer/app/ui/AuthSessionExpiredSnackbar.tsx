@@ -2,9 +2,9 @@ import { Box, Button, IconButton, Paper, Slide, Snackbar, Stack, Typography } fr
 import type { SlideProps } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { subscribeAuthExpired } from "../features/session/commands/sessionCommands";
-import { rendererQueryClient } from "../queryClient";
-import { sessionStore } from "../features/session/state/sessionStore";
+import { subscribeAuthExpired } from "../../features/session/commands/sessionCommands";
+import { sessionStore } from "../../features/session/state/sessionStore";
+import { rendererQueryClient } from "../../queryClient";
 
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;

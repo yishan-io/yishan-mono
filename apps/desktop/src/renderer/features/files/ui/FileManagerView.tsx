@@ -1,9 +1,9 @@
 import { Alert, Box } from "@mui/material";
 import { useGitCommands } from "@renderer/app/commands/useCommands";
-import { ContextMenu } from "@renderer/components/ContextMenu";
 import { useDetectedExternalAppIds } from "@renderer/features/files/ui/hooks/useDetectedExternalAppIds";
 import { tabStore } from "@renderer/features/workbench";
 import { getRendererPlatform } from "@renderer/helpers/platform";
+import { ContextMenu } from "@renderer/ui/components/ContextMenu";
 import { useContextMenuState } from "@renderer/ui/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { FileTree } from "./file-tree";

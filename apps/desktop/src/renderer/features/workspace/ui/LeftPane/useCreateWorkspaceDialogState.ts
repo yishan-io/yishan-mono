@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import type { BranchDropdownGroups } from "../../../../components/BranchDropdown";
 import { useGitAuthorName } from "../../../../features/git/ui/hooks/useGitAuthorName";
 import { listOrgNodes } from "../../../../features/node/commands/nodeCommands";
 import type { WorkspaceProjectRecord } from "../../../../features/project/model/projectTypes";
@@ -11,6 +10,7 @@ import {
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
 } from "../../../../helpers/workspaceBranchNaming";
+import type { BranchDropdownGroups } from "../../../../ui/components/BranchDropdown";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 
 type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean };

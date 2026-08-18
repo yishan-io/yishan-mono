@@ -3,16 +3,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGitCommands } from "../../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../../app/selectors";
+import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
+import { isFolderWorkspace } from "../../../helpers/localFolder";
+import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
   ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
-} from "../../../components/ProjectCommitComparison";
+} from "./ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "./ProjectGitChangesList";
-import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
-import { isFolderWorkspace } from "../../../helpers/localFolder";
-import { supportsGitFeatures } from "../../../helpers/projectGitCapability";
 import {
   type RepoChangesBySection,
   buildAllCommitChangesSection,

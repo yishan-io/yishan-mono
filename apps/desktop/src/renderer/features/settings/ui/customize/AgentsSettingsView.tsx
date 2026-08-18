@@ -20,10 +20,10 @@ import {
   removeAgentDefinition,
   restoreAgentDefinition,
 } from "../../../../features/settings/commands/customizeCommands";
-import { CenteredSpinner } from "../../../../components/CenteredSpinner";
-import { SettingsCard } from "../../../../components/settings";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import type { AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
+import { SettingsCard } from "../controls";
 import { AgentDetailDialog, ConfirmDialog, CreateAgentDialog } from "./AgentDefinitionDialogs";
 
 const AGENT_TABLE_SX = {

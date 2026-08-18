@@ -10,9 +10,9 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { BranchDropdown, type BranchDropdownGroups } from "@renderer/components/BranchDropdown";
-import { renderProjectIcon } from "@renderer/components/projectIcons";
+import { renderProjectIcon } from "@renderer/features/project";
 import type { WorkspaceProjectRecord } from "@renderer/features/project/model/projectTypes";
+import { BranchDropdown, type BranchDropdownGroups } from "@renderer/ui/components/BranchDropdown";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuFolderGit2, LuGitBranch } from "react-icons/lu";
 import { compactSelectSx } from "../createWorkspaceHelpers";

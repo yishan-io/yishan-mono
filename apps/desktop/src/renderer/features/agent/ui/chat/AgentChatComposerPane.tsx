@@ -4,12 +4,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
 import { setAgentModel, setAgentThinkingLevel } from "../..";
-import { AgentChatVoiceButton } from "../../../../components/AgentChatVoiceButton";
-import { type ComposerAttachment, ComposerAttachmentBlock } from "./composer/ComposerAttachmentBlock";
-import { type DroppedFileEntry, RichComposer } from "./composer/RichComposer";
-import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
-import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
-import { AgentModelSelector } from "../session/AgentModelSelector";
 import {
   AGENT_CHAT_COMPOSER_FOCUS_EVENT,
   consumeAgentChatComposerFocus,
@@ -27,7 +21,13 @@ import { abortAgent, compactAgent, sendAgentPrompt } from "../../commands/agentC
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../model/agentChatTypes";
 import { setTurnError } from "../../state/chatActions";
 import { useAgentChatSessionMeta } from "../../ui/hooks/useAgentChatReadHooks";
+import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
+import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
+import { AgentModelSelector } from "../session/AgentModelSelector";
+import { AgentChatVoiceButton } from "./AgentChatVoiceButton";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
+import { type ComposerAttachment, ComposerAttachmentBlock } from "./composer/ComposerAttachmentBlock";
+import { type DroppedFileEntry, RichComposer } from "./composer/RichComposer";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";

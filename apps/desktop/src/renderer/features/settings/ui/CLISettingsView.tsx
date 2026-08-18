@@ -10,13 +10,13 @@ import {
   listCLIToolStatuses,
   uninstallCliTool,
 } from "../../../features/settings/commands/cliToolCommands";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../../components/settings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { MONOSPACE_SX } from "../../../helpers/styles";
 import { useRefreshableLoader } from "../../../ui/hooks/useRefreshableLoader";
 import { AgentCLISettingsCard } from "./AgentCLISettingsCard";
 import { DaemonCliInstallCard } from "./DaemonCliInstallCard";
 import { PiCliInstallCard } from "./PiCliInstallCard";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "./controls";
 
 const CLI_STATUS_TIMEOUT_MS = 15_000;
 const RECHECK_MIN_DURATION_MS = 500;

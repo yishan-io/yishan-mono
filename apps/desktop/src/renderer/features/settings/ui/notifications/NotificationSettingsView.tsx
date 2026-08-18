@@ -1,5 +1,4 @@
 import { Alert, Box, Button, CircularProgress, MenuItem, Stack, Typography } from "@mui/material";
-import { CenteredSpinner } from "@renderer/components/CenteredSpinner";
 import {
   SettingsCard,
   SettingsCheckboxRow,
@@ -9,7 +8,8 @@ import {
   SettingsSoundSelectRow,
   SettingsToggleRow,
   SettingsVolumeRow,
-} from "@renderer/components/settings";
+} from "@renderer/features/settings";
+import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
 import {
   type NotificationEventType,
   type NotificationSoundId,

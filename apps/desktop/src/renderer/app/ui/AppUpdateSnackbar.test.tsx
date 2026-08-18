@@ -13,7 +13,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../app/commands/appCommands", () => ({
+vi.mock("../commands/appCommands", () => ({
   getPendingDesktopUpdate: getPendingUpdate,
   subscribeDesktopUpdates: vi.fn(() => () => undefined),
   dismissDesktopUpdate: dismissUpdate,

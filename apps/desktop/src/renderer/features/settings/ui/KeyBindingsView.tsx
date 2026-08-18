@@ -2,9 +2,9 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { KeybindingTable } from "../../../components/KeybindingDisplay";
-import { getSupportedKeyBindings } from "../../../shortcuts/keybindings";
 import { keybindingSettingsStore } from "../../../features/settings/state/keybindingSettingsStore";
+import { getSupportedKeyBindings } from "../../../shortcuts/keybindings";
+import { KeybindingTable } from "../../../ui/components/KeybindingDisplay";
 
 const WORKSPACE_ROUTE = "/";
 

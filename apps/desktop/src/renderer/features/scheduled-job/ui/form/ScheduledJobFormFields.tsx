@@ -14,8 +14,8 @@ import type { SxProps, Theme } from "@mui/material/styles";
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock3, LuCloud, LuGlobe, LuServer } from "react-icons/lu";
-import { VirtualizedListbox } from "../../../../components/VirtualizedListbox";
-import { renderProjectIcon } from "../../../../components/projectIcons";
+import { VirtualizedListbox } from "../../../../ui/components/VirtualizedListbox";
+import { renderProjectIcon } from "@renderer/features/project";
 import {
   SCHEDULE_TYPE_OPTIONS,
   type ScheduleType,

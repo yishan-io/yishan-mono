@@ -1,14 +1,9 @@
 import { MenuItem, Stack, Switch } from "@mui/material";
 import { TYPOGRAPHY_TOKENS } from "@yishan-io/design-tokens";
 import { useTranslation } from "react-i18next";
-import {
-  SettingsCard,
-  SettingsCompactSelect,
-  SettingsControlRow,
-  SettingsSectionHeader,
-} from "../../../components/settings";
-import { CODE_THEME_FAMILIES, type CodeThemeFamilyId } from "../../../helpers/codeThemes";
 import { editorSettingsStore } from "../../../features/settings/state/editorSettingsStore";
+import { CODE_THEME_FAMILIES, type CodeThemeFamilyId } from "../../../helpers/codeThemes";
+import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "./controls";
 
 const FONT_SIZE_OPTIONS: number[] = Array.from(
   { length: TYPOGRAPHY_TOKENS.editorFontSizeMaxPx - TYPOGRAPHY_TOKENS.editorFontSizeMinPx + 1 },
