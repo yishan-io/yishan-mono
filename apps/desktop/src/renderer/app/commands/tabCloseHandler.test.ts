@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../../features/agent/state/chatStore";
-import { splitPaneStore } from "../../features/workbench/state/splitPaneStore";
-import { tabStore } from "../../features/workbench/state/tabStore";
+import { chatStore } from "../../domains/agent/state/chatStore";
+import { splitPaneStore } from "../../domains/workbench/state/splitPaneStore";
+import { tabStore } from "../../domains/workbench/state/tabStore";
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
@@ -22,8 +22,8 @@ const rpcMocks = vi.hoisted(() => ({
   closeAllTabs: vi.fn(),
 }));
 
-vi.mock("@renderer/features/workbench", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
   return {
     ...actual,
     closeTab: rpcMocks.closeTab,
@@ -32,11 +32,11 @@ vi.mock("@renderer/features/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../features/agent/commands/agentChatCommands", () => ({
+vi.mock("../../domains/agent/commands/agentChatCommands", () => ({
   stopPiSession: rpcMocks.stopPiSession,
 }));
 
-vi.mock("../../features/agent/commands/agentSessionLifecycle", () => ({
+vi.mock("../../domains/agent/commands/agentSessionLifecycle", () => ({
   clearTerminalAgentStatus: rpcMocks.clearTerminalAgentStatus,
 }));
 
@@ -44,7 +44,7 @@ vi.mock("../../events/agentChatComposerFocus", () => ({
   clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
 }));
 
-vi.mock("../../features/workspace/state/workspaceActions", () => ({
+vi.mock("../../domains/workspace/state/workspaceActions", () => ({
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
 

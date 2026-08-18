@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { tabStore } from "../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import { tabStore } from "../../domains/workbench/state/tabStore";
+import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 
 const mocked = vi.hoisted(() => ({

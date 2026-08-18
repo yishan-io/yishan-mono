@@ -1,11 +1,11 @@
 import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { ProjectFilterPopoverView } from "@renderer/features/project";
-import { ProjectListView } from "@renderer/features/project";
-import { useDisplayProjectIds, useProjects } from "@renderer/features/project";
-import { workbenchNavigationStore } from "@renderer/features/workbench";
-import { PaneHeader } from "@renderer/features/workbench";
-import { PaneToggleButton } from "@renderer/features/workbench";
-import { workspaceStore } from "@renderer/features/workspace";
+import { ProjectFilterPopoverView } from "@renderer/domains/project";
+import { ProjectListView } from "@renderer/domains/project";
+import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import { PaneHeader } from "@renderer/domains/workbench";
+import { PaneToggleButton } from "@renderer/domains/workbench";
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";

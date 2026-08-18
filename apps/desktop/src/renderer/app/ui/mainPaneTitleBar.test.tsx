@@ -2,9 +2,9 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../features/project/model/projectTypes";
-import type { WorkspaceProjectRecord } from "../../features/project/model/projectTypes";
-import type { WorkspaceItem } from "../../features/workspace/model/workspaceTypes";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../domains/project/model/projectTypes";
+import type { WorkspaceProjectRecord } from "../../domains/project/model/projectTypes";
+import type { WorkspaceItem } from "../../domains/workspace/model/workspaceTypes";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 import { RepoSelectorMenu } from "./mainPaneTitleBarMenus";
@@ -98,18 +98,18 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../features/session/state/sessionStore", () => ({
+vi.mock("../../domains/session/state/sessionStore", () => ({
   sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
     selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
 }));
 
-vi.mock("../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: (typeof mocked.stateRef)["current"]) => unknown) =>
     selector(mocked.stateRef.current),
 }));
 
-vi.mock("@renderer/features/workbench", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
   return {
     ...actual,
     workbenchNavigationStore: (
@@ -128,7 +128,7 @@ vi.mock("@renderer/features/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../features/project/state/projectStore", () => {
+vi.mock("../../domains/project/state/projectStore", () => {
   const projectStore = (selector: (state: { projects: unknown[] }) => unknown) =>
     selector({ projects: mocked.stateRef.current.projects ?? [] });
   (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
@@ -137,7 +137,7 @@ vi.mock("../../features/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../features/agent/state/chatStore", () => ({
+vi.mock("../../domains/agent/state/chatStore", () => ({
   chatStore: (
     selector: (state: {
       workspaceAgentStatusByWorkspaceId: Record<string, unknown>;
@@ -191,8 +191,8 @@ vi.mock("../../components/PaneToggleButton", () => ({
   PaneToggleButton: () => null,
 }));
 
-vi.mock("@renderer/features/project", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/features/project")>();
+vi.mock("@renderer/domains/project", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/project")>();
   return {
     ...actual,
     renderProjectIcon: (iconId: string | undefined, size: number) => {

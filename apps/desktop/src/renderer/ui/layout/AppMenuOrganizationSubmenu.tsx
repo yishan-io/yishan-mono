@@ -1,7 +1,7 @@
 import { Button, Divider, Popper, Stack, Typography } from "@mui/material";
 import { LuCheck, LuPlus } from "react-icons/lu";
 import { FloatingSurface } from "../../ui/components/FloatingSurface";
-import type { SessionOrganization } from "../../features/session/state/sessionStore";
+import type { SessionOrganization } from "../../domains/session/state/sessionStore";
 
 export interface AppMenuOrganizationSubmenuProps {
   anchorElement: HTMLElement | null;

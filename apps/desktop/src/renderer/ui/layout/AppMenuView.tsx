@@ -4,7 +4,7 @@ import { FloatingSurface } from "../../ui/components/FloatingSurface";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useThemePreference } from "../../ui/hooks/useThemePreference";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { sessionStore } from "../../features/session/state/sessionStore";
+import { sessionStore } from "../../domains/session/state/sessionStore";
 import { AppMenuMainMenuSection } from "./AppMenuMainMenuSection";
 import { AppMenuOrganizationSubmenu } from "./AppMenuOrganizationSubmenu";
 import { AppMenuThemeControls } from "./AppMenuThemeControls";

@@ -18,7 +18,7 @@
  *   - R1  UI (components/, ui/, Feature ui, app/routes/) must not VALUE-import
  *         renderer/api/* or renderer/rpc/*, `electron`, or main-process code.
  *   - R1b @shared/contracts DTO imports from UI: report-only (deferred).
- *   - R3  features/workbench/model/tabs|split-pane must not import react,
+ *   - R3  domains/workbench/model/tabs|split-pane must not import react,
  *         zustand, transport, commands, or electron.
  *   - R4  Commands must not import Views or Components.
  *   - R5  Feature code must not import another Feature's internal State,
@@ -134,9 +134,9 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       rel.startsWith("components/") ||
       rel.startsWith("ui/") ||
       rel.startsWith("app/routes/") ||
-      /^features\/[^/]+\/ui\//.test(rel);
+      /^domains\/[^/]+\/ui\//.test(rel);
     const isPureDomain =
-      rel.startsWith("features/workbench/model/tabs/") || rel.startsWith("features/workbench/model/split-pane/");
+      rel.startsWith("domains/workbench/model/tabs/") || rel.startsWith("domains/workbench/model/split-pane/");
 
     for (const imp of extractImports(file)) {
       const target = resolveSpecifier(imp.spec, file);
@@ -146,7 +146,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // slash; treat the bare dir as transport too (Phase 4 gap closure).
       const isTransport = relT.startsWith("api/") || relT.startsWith("rpc/") || relT === "api" || relT === "rpc";
       const isCommands = relT.startsWith("commands/");
-      const isViews = relT.startsWith("components/") || relT.startsWith("ui/") || /^features\/[^/]+\/ui\//.test(relT);
+      const isViews = relT.startsWith("components/") || relT.startsWith("ui/") || /^domains\/[^/]+\/ui\//.test(relT);
       const isMain = relT.startsWith("../main/") || relT.startsWith("main/");
 
       // ---- Rule 1: UI value-imports of transport or main-process code. ----
@@ -168,22 +168,22 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
         violations.push({ rule: "R3", file: rel, target: imp.spec });
       }
       // ---- Rule 4: Commands must not import Views or Components. ----
-      if ((rel.startsWith("commands/") || /^features\/[^/]+\/commands\//.test(rel)) && isViews) {
+      if ((rel.startsWith("commands/") || /^domains\/[^/]+\/commands\//.test(rel)) && isViews) {
         violations.push({ rule: "R4", file: rel, target: imp.spec });
       }
       // ---- Rule 5: Feature A must not import Feature B's internal State,
       // Runtime, Event Handler, or Store Model. Cross-feature imports are
       // allowed only to another feature's public surface: Commands, State
       // Selectors/Actions, Model types, or its index.ts (Phase 12, desktop5.md). ----
-      const crossFeature = /^features\/([^/]+)\//.exec(rel);
-      const crossTarget = /^features\/([^/]+)\//.exec(relT);
+      const crossFeature = /^domains\/([^/]+)\//.exec(rel);
+      const crossTarget = /^domains\/([^/]+)\//.exec(relT);
       // ---- Rule 6: State files own Zustand State, Selectors, and synchronous
       // mutations. They may import Zustand and the owning Feature's Model and
       // State. They must not import transport implementations, Electron,
       // Commands, Runtime implementations (own or other Feature), or another
       // Feature's State internals. Selectors/Actions files are the public State
       // surface and are excluded. (Phase 15, corrected in Phase 16) ----
-      if (/^features\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
+      if (/^domains\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
         const isOwnFeature = crossTarget && crossFeature && crossTarget[1] === crossFeature[1];
         const isPublicStateSurface = /\/state\/[^/]+(Selectors|Actions)(\.ts)?$/.test(relT);
         if (!isPublicStateSurface && (isTransport || imp.spec === "electron")) {
@@ -201,7 +201,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       }
       // ---- Rule 7: Model files are pure data and rules. They must not import
       // React, Zustand, Electron, transport, Runtime, or State (Phase 15). ----
-      if (/^features\/[^/]+\/model\//.test(rel) && !rel.includes(".test.")) {
+      if (/^domains\/[^/]+\/model\//.test(rel) && !rel.includes(".test.")) {
         if (
           imp.spec === "react" ||
           imp.spec === "zustand" ||
@@ -216,14 +216,14 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // ---- Rule 8: Infrastructure (api/, rpc/) must not import Feature UI,
       // app routes, or shared ui. ----
       if ((rel.startsWith("api/") || rel.startsWith("rpc/")) && !rel.includes(".test.")) {
-        if (/^features\/[^/]+\/ui\//.test(relT) || relT.startsWith("app/routes/") || relT.startsWith("ui/")) {
+        if (/^domains\/[^/]+\/ui\//.test(relT) || relT.startsWith("app/routes/") || relT.startsWith("ui/")) {
           violations.push({ rule: "R8-infra-layer", file: rel, target: imp.spec });
         }
       }
       // ---- Rule 9: Domain-free shared ui/components must not import Feature
       // internals or application code. ----
       if ((rel.startsWith("ui/") || rel.startsWith("components/")) && !rel.includes(".test.")) {
-        if (/^features\//.test(relT) || relT.startsWith("app/")) {
+        if (/^domains\//.test(relT) || relT.startsWith("app/")) {
           violations.push({ rule: "R9-ui-components", file: rel, target: imp.spec });
         }
       }
@@ -231,10 +231,10 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // not import Workbench, and Workbench Model must not import Workspace
       // State (Workspace Store types under Workbench Model are an ownership
       // inversion). Workspace Commands and UI may use the Workbench public API. ----
-      if (/^features\/workspace\/(model|state)\//.test(rel) && relT.startsWith("features/workbench/")) {
+      if (/^domains\/workspace\/(model|state)\//.test(rel) && relT.startsWith("domains/workbench/")) {
         violations.push({ rule: "R10-workspace-workbench", file: rel, target: imp.spec });
       }
-      if (/^features\/workbench\/model\//.test(rel) && relT.startsWith("features/workspace/")) {
+      if (/^domains\/workbench\/model\//.test(rel) && relT.startsWith("domains/workspace/")) {
         violations.push({ rule: "R10-workspace-workbench", file: rel, target: imp.spec });
       }
       // ---- Rule 11 (desktop6-adjust.md W8): Workbench must not import
@@ -246,10 +246,10 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       // model legitimately references agent kind types). ----
       if (
         !imp.isTypeOnly &&
-        rel.startsWith("features/workbench/") &&
+        rel.startsWith("domains/workbench/") &&
         /^features\/[^/]+/.test(relT) &&
-        relT !== "features/workbench" &&
-        !relT.startsWith("features/workbench/")
+        relT !== "domains/workbench" &&
+        !relT.startsWith("domains/workbench/")
       ) {
         violations.push({ rule: "R11-workbench-product-import", file: rel, target: imp.spec });
       }
@@ -273,7 +273,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
     // synchronous. A Store Action changes one owning Store synchronously; it
     // must not return a Promise. Scan Store State files for async method
     // definitions or Promise-returning action signatures. ----
-    if (/^features\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
+    if (/^domains\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
       const source = readFileSync(file, "utf8");
       const scriptKind = file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
       const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, scriptKind);
@@ -302,7 +302,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
     // that only wraps store.getState() is banned (W6 removed workbenchGetters;
     // this rule prevents new ones). The public Selectors/Actions State surface
     // is allowed (Rule 5), so only *Getters* file names are rejected. ----
-    if (/^features\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
+    if (/^domains\/[^/]+\/state\//.test(rel) && !rel.includes(".test.")) {
       const baseName = rel.split("/").pop() ?? "";
       if (/(?:Getter|Getters)\.ts$/.test(baseName)) {
         violations.push({ rule: "R13-getter-forwarding-action-file", file: rel, target: baseName });

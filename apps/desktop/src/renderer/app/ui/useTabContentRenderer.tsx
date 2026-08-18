@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/material";
-import { AgentChatView } from "@renderer/features/agent";
-import { fileTabContentStore } from "@renderer/features/files";
+import { AgentChatView } from "@renderer/domains/agent";
+import { fileTabContentStore } from "@renderer/domains/files";
 import {
   AudioPreview,
   FileDiffViewer,
@@ -9,14 +9,14 @@ import {
   MultiFileDiffViewer,
   UnsupportedFileView,
   VideoPreview,
-} from "@renderer/features/files";
-import { diffTabContentStore } from "@renderer/features/git";
-import { TerminalView } from "@renderer/features/terminal";
-import { BrowserView } from "@renderer/features/workbench";
-import { TabPanel } from "@renderer/features/workbench";
+} from "@renderer/domains/files";
+import { diffTabContentStore } from "@renderer/domains/git";
+import { TerminalView } from "@renderer/domains/terminal";
+import { BrowserView } from "@renderer/domains/workbench";
+import { TabPanel } from "@renderer/domains/workbench";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkbenchTab } from "../../features/workbench/model/types";
+import type { WorkbenchTab } from "../../domains/workbench/model/types";
 import { copyToClipboard } from "../../helpers/clipboard";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../commands/useCommands";

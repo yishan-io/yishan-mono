@@ -1,12 +1,12 @@
 import { Badge, Box } from "@mui/material";
-import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/features/agent";
-import { AgentIcon, SessionHistoryMenu } from "@renderer/features/agent";
-import { FileSearchOverlay } from "@renderer/features/files";
-import { getFileTreeIcon } from "@renderer/features/files";
-import { gitProjectionStore } from "@renderer/features/git";
-import { useLastUsedExternalAppId } from "@renderer/features/project";
-import { useAgentKindsInUse } from "@renderer/features/settings";
-import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/features/terminal";
+import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/domains/agent";
+import { AgentIcon, SessionHistoryMenu } from "@renderer/domains/agent";
+import { FileSearchOverlay } from "@renderer/domains/files";
+import { getFileTreeIcon } from "@renderer/domains/files";
+import { gitProjectionStore } from "@renderer/domains/git";
+import { useLastUsedExternalAppId } from "@renderer/domains/project";
+import { useAgentKindsInUse } from "@renderer/domains/settings";
+import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/domains/terminal";
 import {
   DEFAULT_RIGHT_PANE_TAB,
   RightPaneTabBar,
@@ -18,13 +18,13 @@ import {
   setRightPaneTab,
   tabStore,
   workbenchNavigationStore,
-} from "@renderer/features/workbench";
-import type { WorkbenchTab } from "@renderer/features/workbench";
-import { useWorkspacePaneVisibilityContext } from "@renderer/features/workbench";
-import { ColumnSeparator } from "@renderer/features/workbench";
-import { TabPanel } from "@renderer/features/workbench";
-import { workspaceStore } from "@renderer/features/workspace";
-import { WorkspaceErrorStateView } from "@renderer/features/workspace";
+} from "@renderer/domains/workbench";
+import type { WorkbenchTab } from "@renderer/domains/workbench";
+import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
+import { ColumnSeparator } from "@renderer/domains/workbench";
+import { TabPanel } from "@renderer/domains/workbench";
+import { workspaceStore } from "@renderer/domains/workspace";
+import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";

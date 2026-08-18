@@ -11,7 +11,7 @@ export {
   subscribeBackendEvent,
 } from "./backendEventPipeline";
 export { startBackendEventHandlers } from "../app/events";
-export { clearTerminalAgentStatus } from "../features/agent/commands/agentSessionLifecycle";
+export { clearTerminalAgentStatus } from "../domains/agent/commands/agentSessionLifecycle";
 export {
   subscribeAppActionEvent,
   subscribeInAppNotificationEvent,

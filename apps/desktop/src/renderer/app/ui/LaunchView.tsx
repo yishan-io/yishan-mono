@@ -1,10 +1,10 @@
 import { Box, Typography } from "@mui/material";
-import { RecentAgentSessions } from "@renderer/features/agent";
-import { AgentIcon } from "@renderer/features/agent";
-import { createNewWhiteboard } from "@renderer/features/files";
-import { workspaceCreateProgressStore } from "@renderer/features/workspace";
-import { useWorkspaces } from "@renderer/features/workspace";
-import type { WorkspaceCreateProgressStep } from "@renderer/features/workspace";
+import { RecentAgentSessions } from "@renderer/domains/agent";
+import { AgentIcon } from "@renderer/domains/agent";
+import { createNewWhiteboard } from "@renderer/domains/files";
+import { workspaceCreateProgressStore } from "@renderer/domains/workspace";
+import { useWorkspaces } from "@renderer/domains/workspace";
+import type { WorkspaceCreateProgressStep } from "@renderer/domains/workspace";
 import { useTranslation } from "react-i18next";
 import {
   LuCircle,

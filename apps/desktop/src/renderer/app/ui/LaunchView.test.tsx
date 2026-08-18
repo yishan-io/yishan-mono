@@ -34,11 +34,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../features/agent/commands/agentChatSessionHistory", () => ({
+vi.mock("../../domains/agent/commands/agentChatSessionHistory", () => ({
   fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 
-vi.mock("@renderer/features/files", () => ({
+vi.mock("@renderer/domains/files", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
 }));
 
@@ -86,17 +86,17 @@ vi.mock("../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../../features/workspace/state/workspaceCreateProgressStore", () => ({
+vi.mock("../../domains/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: (selector: (state: { progressByWorkspaceId: Record<string, unknown> }) => unknown) =>
     selector({ progressByWorkspaceId: mocks.progressByWorkspaceId }),
 }));
 
-vi.mock("../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: { workspaces: Array<{ id: string; status?: string }> }) => unknown) =>
     selector({ workspaces: mocks.workspaces }),
 }));
 
-vi.mock("../../features/settings/state/agentSettingsStore", () => ({
+vi.mock("../../domains/settings/state/agentSettingsStore", () => ({
   agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
     selector({ customCommandByAgentKind: {} }),
 }));

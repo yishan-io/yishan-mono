@@ -1,4 +1,4 @@
-import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "../features/agent/state/chatStore";
+import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "../domains/agent/state/chatStore";
 
 /** The display state selected from a workspace's runtime and unread notification state. */
 export type WorkspaceNotificationTone = "none" | "waiting_input" | "done" | "failed";

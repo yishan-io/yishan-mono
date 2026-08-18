@@ -1,10 +1,10 @@
-import { tabStore } from "@renderer/features/workbench";
-import { renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand } from "../../features/agent/commands/agentChatCommands";
-import { listActivePiSessions as listActivePiSessionsCommand } from "../../features/agent/commands/agentChatSessionHistory";
+import { tabStore } from "@renderer/domains/workbench";
+import { renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand } from "../../domains/agent/commands/agentChatCommands";
+import { listActivePiSessions as listActivePiSessionsCommand } from "../../domains/agent/commands/agentChatSessionHistory";
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
   listAgentModels as listAgentModelsCommand,
-} from "../../features/agent/commands/agentCommands";
+} from "../../domains/agent/commands/agentCommands";
 import {
   appendChatMessages as appendChatMessagesCommand,
   closeAgentSession as closeAgentSessionCommand,
@@ -15,13 +15,13 @@ import {
   setChatAvailableModels as setChatAvailableModelsCommand,
   setChatCurrentModel as setChatCurrentModelCommand,
   updateChatMessage as updateChatMessageCommand,
-} from "../../features/agent/commands/chatCommands";
+} from "../../domains/agent/commands/chatCommands";
 import {
   listPiProviders as listPiProvidersCommand,
   openPiProviderLogin as openPiProviderLoginCommand,
   removePiProvider as removePiProviderCommand,
   savePiProvider as savePiProviderCommand,
-} from "../../features/agent/commands/piProviderCommands";
+} from "../../domains/agent/commands/piProviderCommands";
 import {
   createFile as createFileCommand,
   createFolder as createFolderCommand,
@@ -33,22 +33,22 @@ import {
   readFile as readFileCommand,
   renameEntry as renameEntryCommand,
   writeFile as writeFileCommand,
-} from "../../features/files/commands/fileCommands";
+} from "../../domains/files/commands/fileCommands";
 import {
   markFileTabSaved as markFileTabSavedCommand,
   refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
   seedFileTabContent as seedFileTabContentCommand,
   updateFileTabContent as updateFileTabContentCommand,
-} from "../../features/files/commands/fileTabContentCommands";
+} from "../../domains/files/commands/fileTabContentCommands";
 import {
   createNewWhiteboard as createNewWhiteboardCommand,
   resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
-} from "../../features/files/commands/whiteboardCommands";
-import { createFileTabPlaceholder } from "../../features/files/model/fileTabPlaceholder";
+} from "../../domains/files/commands/whiteboardCommands";
+import { createFileTabPlaceholder } from "../../domains/files/model/fileTabPlaceholder";
 import {
   refreshDiffTabContent as refreshDiffTabContentCommand,
   seedDiffTabContent as seedDiffTabContentCommand,
-} from "../../features/git/commands/diffTabContentCommands";
+} from "../../domains/git/commands/diffTabContentCommands";
 import {
   commitGitChanges as commitGitChangesCommand,
   getGitAuthorName as getGitAuthorNameCommand,
@@ -64,34 +64,34 @@ import {
   revertGitChanges as revertGitChangesCommand,
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
-} from "../../features/git/commands/gitCommands";
+} from "../../domains/git/commands/gitCommands";
 import {
   listPullRequestHistory as listPullRequestHistoryCommand,
   refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
   refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
-} from "../../features/git/commands/gitProjectionCommands";
-import { createDiffTabPlaceholder } from "../../features/git/model/diffTabPlaceholder";
-import { listOrgNodes as listOrgNodesCommand } from "../../features/node/commands/nodeCommands";
+} from "../../domains/git/commands/gitProjectionCommands";
+import { createDiffTabPlaceholder } from "../../domains/git/model/diffTabPlaceholder";
+import { listOrgNodes as listOrgNodesCommand } from "../../domains/node/commands/nodeCommands";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
   previewNotification as previewNotificationCommand,
   updateNotificationPreferences as updateNotificationPreferencesCommand,
-} from "../../features/notification/commands/notificationCommands";
-import { switchOrganization as switchOrganizationCommand } from "../../features/organization/commands/orgCommands";
+} from "../../domains/notification/commands/notificationCommands";
+import { switchOrganization as switchOrganizationCommand } from "../../domains/organization/commands/orgCommands";
 import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,
   setOverviewTimeRange as setOverviewTimeRangeCommand,
-} from "../../features/overview/commands/overviewCommands";
+} from "../../domains/overview/commands/overviewCommands";
 import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
   loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
   updateProjectConfig as updateProjectConfigCommand,
-} from "../../features/project/commands/projectCommands";
-import type { WorkspaceProjectRecord } from "../../features/project/model/projectTypes";
+} from "../../domains/project/commands/projectCommands";
+import type { WorkspaceProjectRecord } from "../../domains/project/model/projectTypes";
 import {
   createScheduledJob as createScheduledJobCommand,
   deleteScheduledJob as deleteScheduledJobCommand,
@@ -100,13 +100,13 @@ import {
   resumeScheduledJob as resumeScheduledJobCommand,
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
-} from "../../features/scheduled-job/commands/scheduledJobCommands";
+} from "../../domains/scheduled-job/commands/scheduledJobCommands";
 import {
   getRemoteHealthStatus as getRemoteHealthStatusCommand,
   getSessionBootstrapData as getSessionBootstrapDataCommand,
   resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../features/session/commands/sessionCommands";
-import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../features/settings/commands/cliToolCommands";
+} from "../../domains/session/commands/sessionCommands";
+import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../domains/settings/commands/cliToolCommands";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -123,11 +123,11 @@ import {
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
-} from "../../features/terminal/commands/terminalCommands";
+} from "../../domains/terminal/commands/terminalCommands";
 import {
   activateProject as activateProjectCommand,
   activateWorkspace as activateWorkspaceCommand,
-} from "../../features/workbench/commands/navigationCommands";
+} from "../../domains/workbench/commands/navigationCommands";
 import {
   closeAllTabs as closeAllTabsCommand,
   closeOtherTabs as closeOtherTabsCommand,
@@ -142,7 +142,7 @@ import {
   setBrowserTabUrl as setBrowserTabUrlCommand,
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
-} from "../../features/workbench/commands/tabCommands";
+} from "../../domains/workbench/commands/tabCommands";
 import {
   activateWorkspacePane as activateWorkspacePaneCommand,
   closeWorkspace as closeWorkspaceCommand,
@@ -160,7 +160,7 @@ import {
   toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "../../features/workspace/commands/workspaceCommands";
+} from "../../domains/workspace/commands/workspaceCommands";
 import {
   appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,

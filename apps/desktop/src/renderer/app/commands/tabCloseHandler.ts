@@ -1,5 +1,5 @@
-import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/features/workbench";
-import type { WorkbenchTab } from "@renderer/features/workbench";
+import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/domains/workbench";
+import type { WorkbenchTab } from "@renderer/domains/workbench";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
  *
@@ -14,13 +14,13 @@ import type { WorkbenchTab } from "@renderer/features/workbench";
  *         -> Workbench remove-Tab Command
  */
 import { clearAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
-import { stopPiSession } from "../../features/agent/commands/agentChatCommands";
-import { clearTerminalAgentStatus } from "../../features/agent/commands/agentSessionLifecycle";
-import { removeTabData } from "../../features/agent/state/chatActions";
-import { removeFileTabContent } from "../../features/files/commands/fileTabContentCommands";
-import { removeDiffTabContent } from "../../features/git/commands/diffTabContentCommands";
-import type { CloseTabOptions } from "../../features/workbench/state/tabStore";
-import { enqueueWorkspaceErrorNotice } from "../../features/workspace/state/workspaceActions";
+import { stopPiSession } from "../../domains/agent/commands/agentChatCommands";
+import { clearTerminalAgentStatus } from "../../domains/agent/commands/agentSessionLifecycle";
+import { removeTabData } from "../../domains/agent/state/chatActions";
+import { removeFileTabContent } from "../../domains/files/commands/fileTabContentCommands";
+import { removeDiffTabContent } from "../../domains/git/commands/diffTabContentCommands";
+import type { CloseTabOptions } from "../../domains/workbench/state/tabStore";
+import { enqueueWorkspaceErrorNotice } from "../../domains/workspace/state/workspaceActions";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../../rpc/rpcTransport";

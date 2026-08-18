@@ -1,4 +1,4 @@
-import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStoreTypes";
+import type { WorkspaceStoreState } from "../domains/workspace/state/workspaceStoreTypes";
 import { resolveExplicitWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
 
 type WorkspaceStoreSlice = Pick<WorkspaceStoreState, "projects" | "workspaces"> & {

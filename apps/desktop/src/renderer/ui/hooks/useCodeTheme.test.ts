@@ -4,7 +4,7 @@ import { useMediaQuery } from "@mui/material";
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CODE_THEME_FAMILIES, type CodeThemeFamilyId, resolveCodeTheme } from "../../helpers/codeThemes";
-import { editorSettingsStore } from "../../features/settings/state/editorSettingsStore";
+import { editorSettingsStore } from "../../domains/settings/state/editorSettingsStore";
 import { useCodeTheme } from "./useCodeTheme";
 import { AppThemePreferenceProvider } from "./useThemePreference";
 

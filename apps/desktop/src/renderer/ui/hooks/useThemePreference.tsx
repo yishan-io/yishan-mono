@@ -2,8 +2,8 @@ import { useMediaQuery } from "@mui/material";
 import { TYPOGRAPHY_TOKENS } from "@yishan-io/design-tokens";
 import { createCssThemeVariables } from "@yishan-io/design-tokens/v1/css";
 import { type ReactNode, createContext, useContext, useLayoutEffect, useMemo } from "react";
-import { displaySettingsStore } from "../../features/settings/state/displaySettingsStore";
-import { editorSettingsStore } from "../../features/settings/state/editorSettingsStore";
+import { displaySettingsStore } from "../../domains/settings/state/displaySettingsStore";
+import { editorSettingsStore } from "../../domains/settings/state/editorSettingsStore";
 import type { AppThemeMode, AppThemePreference } from "../../theme";
 import { resolveAppThemeMode } from "../../theme";
 

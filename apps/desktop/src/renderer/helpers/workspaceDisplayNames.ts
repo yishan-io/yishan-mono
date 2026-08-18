@@ -1,5 +1,5 @@
 import type { WorkspaceRecord } from "../api/types";
-import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
+import type { WorkspaceItem } from "../domains/workspace/model/workspaceTypes";
 import { getFileName } from "./pathHelpers";
 
 export const LOCAL_WORKSPACE_DISPLAY_NAME = "local";

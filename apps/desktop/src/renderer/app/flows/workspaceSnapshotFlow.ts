@@ -1,4 +1,4 @@
-import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 /**
  * WorkspaceSnapshotFlow — the shared workspace-snapshot load.
  *
@@ -19,17 +19,17 @@ import { workbenchNavigationStore } from "@renderer/features/workbench";
  */
 import { api } from "../../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
-import { projectStore } from "../../features/project/state/projectStore";
-import { sessionStore } from "../../features/session/state/sessionStore";
+import { projectStore } from "../../domains/project/state/projectStore";
+import { sessionStore } from "../../domains/session/state/sessionStore";
 import {
   openFoldersForSnapshot,
   restoreFolderSelectionIfNeeded,
-} from "../../features/workspace/commands/localFolderCommands";
-import { syncTabStoreWithWorkspace } from "../../features/workspace/commands/workspaceTabSync";
-import { warmupWorkspacesForProjects } from "../../features/workspace/commands/workspaceWarmupCommand";
-import { reconcileWorkspaceSnapshot } from "../../features/workspace/model/snapshotReconciler";
-import { workspaceCreateProgressStore } from "../../features/workspace/state/workspaceCreateProgressStore";
-import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+} from "../../domains/workspace/commands/localFolderCommands";
+import { syncTabStoreWithWorkspace } from "../../domains/workspace/commands/workspaceTabSync";
+import { warmupWorkspacesForProjects } from "../../domains/workspace/commands/workspaceWarmupCommand";
+import { reconcileWorkspaceSnapshot } from "../../domains/workspace/model/snapshotReconciler";
+import { workspaceCreateProgressStore } from "../../domains/workspace/state/workspaceCreateProgressStore";
+import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 
 let latestWorkspaceSnapshotRequestId = 0;

@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 
-import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { switchOrganization } from "../../features/organization/commands/orgCommands";
-import { projectStore } from "../../features/project/state/projectStore";
-import { sessionStore } from "../../features/session/state/sessionStore";
-import { layoutStore } from "../../features/workbench/state/layoutStore";
-import { tabStore } from "../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import { switchOrganization } from "../../domains/organization/commands/orgCommands";
+import { projectStore } from "../../domains/project/state/projectStore";
+import { sessionStore } from "../../domains/session/state/sessionStore";
+import { layoutStore } from "../../domains/workbench/state/layoutStore";
+import { tabStore } from "../../domains/workbench/state/tabStore";
+import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { WorkspaceView } from "./WorkspaceView";
 
 const commandMocks = {
@@ -64,8 +64,8 @@ vi.mock("../../rpc/rpcTransport", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("@renderer/features/git", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/features/git")>();
+vi.mock("@renderer/domains/git", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/git")>();
   return {
     ...actual,
     useAllWorkspacesGitSync: vi.fn(),
@@ -93,8 +93,8 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("@renderer/features/workbench", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/features/workbench")>();
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
   return {
     ...actual,
     WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -102,15 +102,15 @@ vi.mock("@renderer/features/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../features/overview/ui/OverviewView", () => ({
+vi.mock("../../domains/overview/ui/OverviewView", () => ({
   OverviewView: () => <div data-testid="overview-view" />,
 }));
 
-vi.mock("../../features/scheduled-job/ui/ScheduledJobView", () => ({
+vi.mock("../../domains/scheduled-job/ui/ScheduledJobView", () => ({
   ScheduledJobView: () => <div data-testid="scheduled-job-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/LeftPane/CreateProjectDialogView", () => ({
+vi.mock("../../domains/workspace/ui/LeftPane/CreateProjectDialogView", () => ({
   CreateProjectDialogView: () => null,
 }));
 
@@ -126,11 +126,11 @@ vi.mock("./OnboardingView", () => ({
   OnboardingView: () => <div data-testid="onboarding-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/WorkspaceLifecycleNoticeView", () => ({
+vi.mock("../../domains/workspace/ui/WorkspaceLifecycleNoticeView", () => ({
   WorkspaceLifecycleNoticeView: () => null,
 }));
 
-vi.mock("../../features/terminal/runtime/terminalRecovery", () => ({
+vi.mock("../../domains/terminal/runtime/terminalRecovery", () => ({
   TerminalRecoveryCoordinator: vi.fn(
     class {
       restoreTerminalTabsFromDaemon = terminalRecoveryMocks.restoreTerminalTabsFromDaemon;

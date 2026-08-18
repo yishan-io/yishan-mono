@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { sessionStore } from "../../features/session/state/sessionStore";
+import { sessionStore } from "../../domains/session/state/sessionStore";
 import { AppMenuView } from "./AppMenuView";
 
 vi.mock("react-i18next", () => ({

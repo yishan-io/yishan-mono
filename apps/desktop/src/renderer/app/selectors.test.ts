@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import { gitProjectionStore } from "@renderer/features/git";
-import { workbenchNavigationStore } from "@renderer/features/workbench";
+import { gitProjectionStore } from "@renderer/domains/git";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { describe, expect, it } from "vitest";
-import { projectStore } from "../features/project/state/projectStore";
-import { workspaceStore } from "../features/workspace/state/workspaceStore";
+import { projectStore } from "../domains/project/state/projectStore";
+import { workspaceStore } from "../domains/workspace/state/workspaceStore";
 import {
   selectLastUsedExternalAppId,
   selectProjectTree,

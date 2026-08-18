@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DISPLAY_SETTINGS_STORE_STORAGE_KEY,
   displaySettingsStore,
-} from "../../features/settings/state/displaySettingsStore";
+} from "../../domains/settings/state/displaySettingsStore";
 import { AppThemePreferenceProvider, useThemePreference } from "./useThemePreference";
 
 vi.mock("@mui/material", async () => {

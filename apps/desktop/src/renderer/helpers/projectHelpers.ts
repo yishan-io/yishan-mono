@@ -1,12 +1,12 @@
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../features/project/model/projectIconPresets";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../domains/project/model/projectIconPresets";
 import type {
   WorkspaceProjectRecord,
   WorkspaceStoreOrganizationPreference,
-} from "../features/project/model/projectTypes";
-import { type ProjectStoreSlice, reconcileWorkspaceSnapshot } from "../features/workspace/model/snapshotReconciler";
-import type { WorkspaceItem } from "../features/workspace/model/workspaceTypes";
-import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStoreTypes";
+} from "../domains/project/model/projectTypes";
+import { type ProjectStoreSlice, reconcileWorkspaceSnapshot } from "../domains/workspace/model/snapshotReconciler";
+import type { WorkspaceItem } from "../domains/workspace/model/workspaceTypes";
+import type { WorkspaceStoreState } from "../domains/workspace/state/workspaceStoreTypes";
 import { getFileName } from "./pathHelpers";
 import { resolveHydratedWorkspaceDisplayMetadata } from "./workspaceDisplayNames";
 

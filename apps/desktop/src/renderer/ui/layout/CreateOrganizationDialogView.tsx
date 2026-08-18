@@ -1,10 +1,10 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createOrganization, listOrganizations } from "../../features/organization/commands/orgCommands";
-import { switchOrganization } from "../../features/organization/commands/orgCommands";
+import { createOrganization, listOrganizations } from "../../domains/organization/commands/orgCommands";
+import { switchOrganization } from "../../domains/organization/commands/orgCommands";
 import { useDialogRegistration } from "../../ui/hooks/useDialogRegistration";
-import { sessionStore } from "../../features/session/state/sessionStore";
+import { sessionStore } from "../../domains/session/state/sessionStore";
 
 type CreateOrganizationDialogViewProps = {
   open: boolean;

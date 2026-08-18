@@ -1,4 +1,4 @@
-import { resetAgentLifecycleState } from "../../features/agent/commands/agentSessionLifecycle";
+import { resetAgentLifecycleState } from "../../domains/agent/commands/agentSessionLifecycle";
 /**
  * Event composition — starts all feature event handlers with their default
  * deps and returns a combined teardown. This replaces `backendEventStoreBindings.ts`.
@@ -7,10 +7,10 @@ import { resetAgentLifecycleState } from "../../features/agent/commands/agentSes
  * selection in `backendEventRouter.ts` (+ per-family selectors), and each
  * feature handler subscribes to the router in its default deps.
  */
-import { startNotificationEventHandlers } from "../../features/notification/events/notificationEventHandlers";
-import { startTerminalEventHandlers } from "../../features/terminal/events/terminalEventHandlers";
-import { startWorkbenchEventHandlers } from "../../features/workbench/events/workbenchEventHandlers";
-import { startWorkspaceEventHandlers } from "../../features/workspace/events/workspaceEventHandlers";
+import { startNotificationEventHandlers } from "../../domains/notification/events/notificationEventHandlers";
+import { startTerminalEventHandlers } from "../../domains/terminal/events/terminalEventHandlers";
+import { startWorkbenchEventHandlers } from "../../domains/workbench/events/workbenchEventHandlers";
+import { startWorkspaceEventHandlers } from "../../domains/workspace/events/workspaceEventHandlers";
 
 /**
  * Starts all feature event handlers and returns one teardown function.

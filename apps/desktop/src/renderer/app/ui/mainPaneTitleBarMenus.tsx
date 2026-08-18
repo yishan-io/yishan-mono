@@ -11,12 +11,12 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { renderProjectIcon } from "@renderer/features/project";
+import { renderProjectIcon } from "@renderer/domains/project";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuPlay } from "react-icons/lu";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../features/project/model/projectTypes";
-import type { WorkspaceProjectRecord } from "../../features/project/model/projectTypes";
-import type { WorkspaceItem } from "../../features/workspace/model/workspaceTypes";
+import { LOCAL_FOLDER_PROJECT_ID } from "../../domains/project/model/projectTypes";
+import type { WorkspaceProjectRecord } from "../../domains/project/model/projectTypes";
+import type { WorkspaceItem } from "../../domains/workspace/model/workspaceTypes";
 import type { WorkspaceNotificationColor } from "../../helpers/workspaceNotification";
 import { MenuSearchField, renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 

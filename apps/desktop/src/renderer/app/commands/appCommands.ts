@@ -1,4 +1,4 @@
-import { openTab, workbenchNavigationStore } from "@renderer/features/workbench";
+import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import type {
   AppendBrowserHistoryInput,
   AuthStatusResult,
@@ -9,9 +9,9 @@ import type {
   DesktopUpdateEventPayload,
 } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
-import { sessionStore } from "../../features/session/state/sessionStore";
-import { type LinkTarget, displaySettingsStore } from "../../features/settings/state/displaySettingsStore";
-import { workspaceStore } from "../../features/workspace/state/workspaceStore";
+import { sessionStore } from "../../domains/session/state/sessionStore";
+import { type LinkTarget, displaySettingsStore } from "../../domains/settings/state/displaySettingsStore";
+import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { rendererQueryClient } from "../../queryClient";
 import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";

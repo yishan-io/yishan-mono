@@ -72,7 +72,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../features/project/state/projectStore", () => {
+vi.mock("../../domains/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: {
       projects: unknown[];
@@ -101,7 +101,7 @@ vi.mock("../../features/project/state/projectStore", () => {
   return { projectStore };
 });
 
-vi.mock("../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
@@ -117,8 +117,8 @@ vi.mock("../../ui/layout/AppMenuView", () => ({
   AppMenuView: () => <div data-testid="app-menu-view" />,
 }));
 
-vi.mock("@renderer/features/project", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/features/project")>();
+vi.mock("@renderer/domains/project", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/project")>();
   return {
     ...actual,
     CreateProjectDialogView: () => null,

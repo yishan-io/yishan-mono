@@ -1,4 +1,4 @@
-import type { TabStoreState } from "../features/workbench/state/tabStore";
+import type { TabStoreState } from "../domains/workbench/state/tabStore";
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
 

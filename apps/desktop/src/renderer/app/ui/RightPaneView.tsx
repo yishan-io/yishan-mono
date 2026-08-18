@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
-import { FileManagerView } from "@renderer/features/files";
-import { ChangesTabView } from "@renderer/features/git";
-import { PullRequestTabView } from "@renderer/features/git";
-import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/features/workbench";
+import { FileManagerView } from "@renderer/domains/files";
+import { ChangesTabView } from "@renderer/domains/git";
+import { PullRequestTabView } from "@renderer/domains/git";
+import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/domains/workbench";
 import { isFolderWorkspace } from "../../helpers/localFolder";
 import { supportsGitFeatures } from "../../helpers/projectGitCapability";
 import { useSelectedWorkspaceWithProject } from "../selectors";

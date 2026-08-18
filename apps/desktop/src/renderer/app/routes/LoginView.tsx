@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { FaGoogle } from "react-icons/fa";
 import logo from "../../../assets/images/yishan-transparent.png";
 import { login } from "../../app/commands/appCommands";
-import { resetAuthExpiredState } from "../../features/session/commands/sessionCommands";
-import { sessionStore } from "../../features/session/state/sessionStore";
+import { resetAuthExpiredState } from "../../domains/session/commands/sessionCommands";
+import { sessionStore } from "../../domains/session/state/sessionStore";
 import { AppBackgroundContainer } from "../../ui/components/AppBackgroundContainer";
 import { CenteredContentLayout } from "../../ui/components/CenteredContentLayout";
 

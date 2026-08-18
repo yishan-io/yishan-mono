@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fileTreeStore } from "@renderer/features/files";
-import { layoutStore } from "@renderer/features/workbench";
+import { fileTreeStore } from "@renderer/domains/files";
+import { layoutStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -108,7 +108,7 @@ vi.mock("../../helpers/clipboard", () => ({
   writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
 }));
 
-vi.mock("../../features/files/commands/fileCommands", () => ({
+vi.mock("../../domains/files/commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => listFiles(...args),
   listFilesBatch: async (input: {
     workspaceId: string;
@@ -140,7 +140,7 @@ vi.mock("../../features/files/commands/fileCommands", () => ({
   writeFileBase64: (...args: unknown[]) => writeFileBase64(...args),
 }));
 
-vi.mock("../../features/git/commands/gitCommands", () => ({
+vi.mock("../../domains/git/commands/gitCommands", () => ({
   readDiff: (...args: unknown[]) => readWorkspaceDiff(...args),
   readCommitDiff: vi.fn(),
   readBranchComparisonDiff: vi.fn(),
@@ -162,9 +162,9 @@ vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../features/files/ui/FileManagerView", async () => {
-  const actual = await vi.importActual<typeof import("../../features/files/ui/FileManagerView")>(
-    "../../features/files/ui/FileManagerView",
+vi.mock("../../domains/files/ui/FileManagerView", async () => {
+  const actual = await vi.importActual<typeof import("../../domains/files/ui/FileManagerView")>(
+    "../../domains/files/ui/FileManagerView",
   );
 
   function TrackedFileManagerView(props: Parameters<typeof actual.FileManagerView>[0]) {
@@ -198,8 +198,8 @@ function TrackedChangesTabView() {
   return <div data-testid="mock-changes-tab" />;
 }
 
-vi.mock("@renderer/features/git", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/features/git")>();
+vi.mock("@renderer/domains/git", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/git")>();
   return {
     ...actual,
     ChangesTabView: TrackedChangesTabView,
@@ -208,11 +208,11 @@ vi.mock("@renderer/features/git", async (importOriginal) => {
   };
 });
 
-vi.mock("../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) => selector(workspaceStoreState.current),
 }));
 
-vi.mock("../../features/workbench/state/workbenchNavigationStore", () => ({
+vi.mock("../../domains/workbench/state/workbenchNavigationStore", () => ({
   workbenchNavigationStore: Object.assign(
     vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
       selector(navStoreState.current),
@@ -221,7 +221,7 @@ vi.mock("../../features/workbench/state/workbenchNavigationStore", () => ({
   ),
 }));
 
-vi.mock("../../features/workbench/state/layoutStore", () => ({
+vi.mock("../../domains/workbench/state/layoutStore", () => ({
   DEFAULT_RIGHT_PANE_TAB: "files",
   layoutStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) => selector(layoutStoreState.current),
@@ -232,7 +232,7 @@ vi.mock("../../features/workbench/state/layoutStore", () => ({
   ),
 }));
 
-vi.mock("../../features/project/state/projectStore", () => ({
+vi.mock("../../domains/project/state/projectStore", () => ({
   projectStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({ projects: workspaceStoreState.current.projects ?? [] }),
 }));

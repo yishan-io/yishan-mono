@@ -13,7 +13,7 @@ when a Renderer boundary requires a host contract change.
 | Path | Owner | Examples |
 |---|---|---|
 | `app/` | Renderer composition root | `RendererApplication.tsx`, `routes/`, `commands/`, `flows/`, `events/`, `runtime/`, `selectors.ts` |
-| `features/` | Product behavior, split by Feature | `workspace/`, `agent/`, `settings/`, `terminal/`, `workbench/`, … |
+| `domains/` | Product behavior, split by Feature | `workspace/`, `agent/`, `settings/`, `terminal/`, `workbench/`, … |
 | `api/`, `rpc/` | Infrastructure (transport) | REST clients, daemon JSON-RPC clients, DTO types |
 | `ui/` | Shared UI (components, hooks, layout) | `ui/components`, `ui/hooks`, `ui/layout` |
 | `components/`, `helpers/` | Migration buckets, being retired | Product behavior here is being moved to Feature owners (Phase 19) |
@@ -69,7 +69,7 @@ APIs but not Feature internals.
 
 ## Store and Selector Placement
 
-- Each Feature owns its Zustand stores in `features/<feature>/state/`.
+- Each Feature owns its Zustand stores in `domains/<domain>/state/`.
 - A Selector reads its own Feature's State only.
 - Cross-Feature reads use the other Feature's public Selectors, or an
   application read model in `app/selectors.ts` when the read combines data
