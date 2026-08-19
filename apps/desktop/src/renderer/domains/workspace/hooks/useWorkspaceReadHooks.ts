@@ -9,13 +9,6 @@ import { workspaceStore } from "../state/workspaceStore";
 
 /** Subscribes to the selected workspace id. */
 export function useSelectedWorkspaceId() {
-  // eslint-disable-next-line no-console
-  console.log(
-    "[probe-hook] navStore:",
-    workbenchNavigationStore.getState?.().activeWorkspaceId,
-    "isMock:",
-    (workbenchNavigationStore as unknown as { isMock?: boolean }).isMock,
-  );
   return workbenchNavigationStore((state) => state.activeWorkspaceId);
 }
 
