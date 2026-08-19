@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgentMessage } from "../model/agentChatTypes";
+import type { AgentMessage } from "../agentChatTypes";
 import { applyStreamDelta, cloneContentBlock } from "./agentChatStreamMessageHelpers";
 
 describe("agentChatStreamMessageHelpers", () => {

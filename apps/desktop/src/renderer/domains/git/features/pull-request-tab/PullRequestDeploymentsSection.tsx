@@ -1,7 +1,7 @@
 import { Box, Chip, Divider, Link, Stack, Typography } from "@mui/material";
 import { openLink } from "@renderer/domains/browser";
 import { useTranslation } from "react-i18next";
-import type { GitPullRequestDeployment } from "../../model/gitPullRequestTypes";
+import type { GitPullRequestDeployment } from "../../gitPullRequestTypes";
 
 interface PullRequestDeploymentsSectionProps {
   deployments: GitPullRequestDeployment[];

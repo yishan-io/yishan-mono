@@ -15,7 +15,7 @@ import {
 } from "@renderer/domains/workbench";
 import { findOppositePaneId } from "@renderer/domains/workbench";
 import { sendPiCommand } from "../infrastructure/daemonAgentProcedures";
-import { isAgentSessionBusy } from "../model/agentChatTypes";
+import { isAgentSessionBusy } from "../agentChatTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";
 

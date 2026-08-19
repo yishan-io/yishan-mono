@@ -19,7 +19,7 @@ export {
   createDefaultAgentInUseByKind,
   isDesktopAgentKind,
   type DesktopAgentKind,
-} from "./model/agentSettings";
+} from "./agentSettings";
 export {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
@@ -44,7 +44,7 @@ export {
   recordAgentObserverStatus,
   resetAgentLifecycleState,
 } from "./commands/agentSessionLifecycle";
-export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./model/agentSkillText";
+export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./agentSkillText";
 export {
   THINKING_LEVELS,
   clampThinkingLevel,
@@ -52,7 +52,7 @@ export {
   getSupportedThinkingLevels,
   isThinkingLevelSupported,
   type ThinkingLevel,
-} from "./model/agentThinkingLevels";
+} from "./agentThinkingLevels";
 export {
   getPiProviderCatalogEntry,
   getPiProviderDisplayName,
@@ -64,7 +64,7 @@ export {
   PI_PROVIDER_CATALOG,
   type PiProviderAuthMode,
   type PiProviderCatalogEntry,
-} from "./model/piProviders";
+} from "./piProviders";
 export {
   FALLBACK_PROVIDER_ICON,
   getPiProviderIcon,
@@ -85,8 +85,8 @@ export type {
   AgentSubagentCancelState,
   AgentThinkingSignature,
   AgentThinkingSignatureSummary,
-} from "./model/agentChatTypes";
-export { isAgentSessionBusy } from "./model/agentChatTypes";
+} from "./agentChatTypes";
+export { isAgentSessionBusy } from "./agentChatTypes";
 export {
   recordWorkspaceUnreadNotification,
   removeTabData,

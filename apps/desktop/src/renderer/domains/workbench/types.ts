@@ -8,7 +8,7 @@
  *   - Project Store re-exports (import from features/project/model/projectTypes)
  *   - Workspace type re-exports (import from features/workspace/workspaceTypes)
  *   - API and RPC client types (no transport imports in Workbench Model)
- *   - Agent chat type re-exports (import from features/agent/model/chatTypes)
+ *   - Agent chat type re-exports (import from features/agent/chatTypes)
  *
  * Removal wave: W6 (WorkbenchTab → WorkbenchTab rename; callers import tab
  * types from the Workbench root API).

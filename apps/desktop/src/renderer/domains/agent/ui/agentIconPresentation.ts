@@ -1,11 +1,11 @@
-import type { DesktopAgentKind } from "../model/agentSettings";
+import type { DesktopAgentKind } from "../agentSettings";
 
 /**
  * Agent icon and label presentation (desktop8 Phase 29).
  *
  * Icon assets, sizing, CSS filters, and settings label keys moved out of the
  * Agent Model into the Agent UI layer. The kind vocabulary itself stays in
- * `../model/agentSettings`.
+ * `../agentSettings`.
  */
 
 export type AgentIconContext = "tabMenu" | "settingsRow" | "launchGrid";

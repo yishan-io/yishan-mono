@@ -11,7 +11,7 @@ import {
   isImageFile,
   isUnsupportedFileTab,
   isVideoFile,
-} from "../../model/editorLanguage";
+} from "../../editorLanguage";
 import { fileTreeStore } from "../../state/fileTreeStore";
 import { FileQuickOpenDialog } from "../file-editor/editors";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../file-manager/fileTreeHelpers";

@@ -1,7 +1,7 @@
 import { Box, Button, Menu, MenuItem } from "@mui/material";
 import { type MouseEvent, useState } from "react";
 import { LuCheck } from "react-icons/lu";
-import { THINKING_LEVELS, type ThinkingLevel } from "../../../model/agentThinkingLevels";
+import { THINKING_LEVELS, type ThinkingLevel } from "../../../agentThinkingLevels";
 
 type ThinkingLevelControlProps = {
   thinkingLevel: string;

@@ -7,7 +7,7 @@ import {
   getOverviewTokenUsage,
   getOverviewWorkspaceInsights,
 } from "../infrastructure/overviewApi";
-import type { OverviewTimeRange } from "../model/overviewTypes";
+import type { OverviewTimeRange } from "../overviewTypes";
 
 function selectedOrganizationId(): string {
   const organizationId = selectSelectedOrganizationId()?.trim() || "";

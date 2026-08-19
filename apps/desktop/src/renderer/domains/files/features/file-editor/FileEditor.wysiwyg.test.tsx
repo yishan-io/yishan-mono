@@ -128,7 +128,7 @@ vi.mock("../../infrastructure/monacoSetup", () => ({
   },
 }));
 
-vi.mock("../../model/editorLanguage", () => ({
+vi.mock("../../editorLanguage", () => ({
   getLanguageId: (path: string) => {
     if (path.endsWith(".unknown")) return null;
     if (path.endsWith(".ts")) return "typescript";

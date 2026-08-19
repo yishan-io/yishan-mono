@@ -1,13 +1,13 @@
 import { generateId } from "@shared/ids/generateId";
 import type { RpcSchema } from "../../../../shared/contracts/rpcSchema";
-import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../domains/agent/model/chatTypes";
+import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../domains/agent/chatTypes";
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import {
   closeAgentSession as closeAgentSessionProcedure,
   ensureWorkspaceChatSession as ensureWorkspaceChatSessionProcedure,
   runWorkspaceChatPrompt as runWorkspaceChatPromptProcedure,
 } from "../infrastructure/daemonAgentProcedures";
-import type { DesktopAgentKind } from "../model/agentSettings";
+import type { DesktopAgentKind } from "../agentSettings";
 
 type WorkspaceAgentKind = DesktopAgentKind;
 type EnsureWorkspaceChatSessionResponse = {

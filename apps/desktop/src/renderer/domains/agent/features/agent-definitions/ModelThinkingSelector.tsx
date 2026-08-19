@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listAgentModels } from "../../commands/agentCommands";
 import { AgentModelSelector } from "../../features/agent-chat/session/AgentModelSelector";
-import type { AgentModel } from "../../model/agentChatTypes";
+import type { AgentModel } from "../../agentChatTypes";
 import {
   clampThinkingLevel,
   formatSupportedThinkingLevels,
   isThinkingLevelSupported,
-} from "../../model/agentThinkingLevels";
-import { getPiProviderDisplayName } from "../../model/piProviders";
+} from "../../agentThinkingLevels";
+import { getPiProviderDisplayName } from "../../piProviders";
 import { splitModelId, stripProviderPrefix } from "../select-model";
 
 type ModelThinkingSelectorProps = {

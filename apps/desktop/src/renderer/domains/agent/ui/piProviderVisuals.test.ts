@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PI_PROVIDER_CATALOG } from "../model/piProviders";
+import { PI_PROVIDER_CATALOG } from "../piProviders";
 import {
   FALLBACK_PROVIDER_ICON,
   PI_PROVIDER_VISUAL_BY_ID,

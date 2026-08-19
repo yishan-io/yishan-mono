@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { trimSessionMessages, trimSubagentLiveTranscripts } from "../model/agentChatRetention";
+import { trimSessionMessages, trimSubagentLiveTranscripts } from "../agentChatRetention";
 import {
   type RunningSubagentSummary,
   deriveFinishedSubagents,
   deriveRunningSubagents,
-} from "../model/agentChatSubagents";
+} from "../agentChatSubagents";
 import type {
   AgentCompactionReason,
   AgentMessage,
@@ -16,7 +16,7 @@ import type {
   AgentSessionState,
   AgentSessionStats,
   AgentSubagentCancelState,
-} from "../model/agentChatTypes";
+} from "../agentChatTypes";
 
 type AgentSubagentProgressTarget = {
   agentName: string;

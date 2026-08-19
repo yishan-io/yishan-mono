@@ -19,8 +19,8 @@ import {
   useChatCurrentModelByTabId,
   useChatMessagesByTabId,
 } from "../../../hooks/useAgentChatReadHooks";
-import type { DesktopAgentKind } from "../../../model/agentSettings";
-import type { AvailableModel, ChatMessage } from "../../../model/chatTypes";
+import type { DesktopAgentKind } from "../../../agentSettings";
+import type { AvailableModel, ChatMessage } from "../../../chatTypes";
 import { MessageList } from "./MessageList";
 import { RichComposer } from "./composer/RichComposer";
 

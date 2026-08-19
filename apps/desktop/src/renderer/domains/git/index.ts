@@ -6,7 +6,7 @@ export type {
   GitPullRequestCheck,
   GitPullRequestDeployment,
   GitPullRequestSummary,
-} from "./model/gitPullRequestTypes";
+} from "./gitPullRequestTypes";
 export { useDiffTabContents } from "./hooks/useDiffTabContents";
 export type { DiffTabContentStoreState } from "./state/diffTabContentStore";
 export { refreshDiffTabContent, removeDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
@@ -64,4 +64,4 @@ export { BranchBadge } from "./ui/BranchBadge";
 export { PullRequestIcon } from "./ui/PullRequestIcon";
 export { ProjectCommitComparison } from "./features/project-git-changes/ProjectCommitComparison";
 
-export { livePrStatus } from "./model/gitPullRequestStatus";
+export { livePrStatus } from "./gitPullRequestStatus";

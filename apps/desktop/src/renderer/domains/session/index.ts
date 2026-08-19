@@ -5,7 +5,7 @@
  * surfaces (selectors + actions), the read Store, and the read-only React
  * hooks. Cross-Domain code imports session through this file only.
  */
-export type { SessionOrganization, SessionUser } from "./model/sessionTypes";
+export type { SessionOrganization, SessionUser } from "./sessionTypes";
 export {
   getRemoteHealthStatus,
   getSessionBootstrapData,

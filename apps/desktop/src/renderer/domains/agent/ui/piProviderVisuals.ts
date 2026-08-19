@@ -25,7 +25,7 @@ import { KimiIcon } from "./piProviderIcons";
  * Provider visual metadata (desktop8 Phase 29).
  *
  * Presentation counterpart of the authentication catalog in
- * `../model/piProviders`: brand icons, official colors, and SVG asset hints
+ * `../piProviders`: brand icons, official colors, and SVG asset hints
  * keyed by provider id. Model stays framework-free; UI consumes this module.
  */
 
@@ -45,7 +45,7 @@ export const FALLBACK_PROVIDER_ICON: IconType = LuCloud;
 
 /**
  * Visual metadata by provider id. Keep ids aligned with
- * `PI_PROVIDER_CATALOG` in `../model/piProviders`.
+ * `PI_PROVIDER_CATALOG` in `../piProviders`.
  *
  * Icons: react-icons/si (Simple Icons brand marks) + react-icons/fa6 for
  * Amazon/Microsoft, with brandColor values from the Simple Icons v16 dataset;

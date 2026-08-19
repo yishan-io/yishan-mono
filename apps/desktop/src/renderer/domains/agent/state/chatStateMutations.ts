@@ -1,4 +1,4 @@
-import type { AgentPendingUiAutoResponse } from "../model/agentChatTypes";
+import type { AgentPendingUiAutoResponse } from "../agentChatTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./chatStore";
 import { chatStore } from "./chatStore";
@@ -49,7 +49,7 @@ export function recordWorkspaceUnreadNotification(workspaceId: string, tone: Wor
   chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
 }
 
-import type { DesktopAgentKind } from "../model/agentSettings";
+import type { DesktopAgentKind } from "../agentSettings";
 import { agentSettingsStore } from "./agentSettingsStore";
 
 /** Sets one desktop agent's in-use flag (Agent enablement State mutation). */

@@ -1,4 +1,4 @@
-import type { AgentContentBlock, AgentMessage, AgentStreamEvent } from "../model/agentChatTypes";
+import type { AgentContentBlock, AgentMessage, AgentStreamEvent } from "../agentChatTypes";
 
 export function cloneContentBlock(block: AgentContentBlock): AgentContentBlock {
   switch (block.type) {

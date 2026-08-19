@@ -1,5 +1,5 @@
-import type { NotificationPreferences } from "../../../../shared/notifications/notificationPreferences";
-import type { SupportedLanguageCode } from "../../../i18n";
+import type { NotificationPreferences } from "../../../shared/notifications/notificationPreferences";
+import type { SupportedLanguageCode } from "../../i18n";
 
 /**
  * Session domain model — stable identity and session concepts.

@@ -1,4 +1,4 @@
-import type { AgentPendingUiOption, AgentPendingUiRequest } from "../model/agentChatTypes";
+import type { AgentPendingUiOption, AgentPendingUiRequest } from "../agentChatTypes";
 import { MAX_DETAILS_STRING_UTF8_BYTES, PER_MESSAGE_UTF8_BYTES, truncateUtf8Bytes } from "./agentChatInboundMessage";
 
 // ─── Pending UI request parser ────────────────────────────────────────────────

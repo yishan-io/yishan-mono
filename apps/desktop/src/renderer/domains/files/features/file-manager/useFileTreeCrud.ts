@@ -22,7 +22,7 @@ import {
   isImageFile,
   isUnsupportedFileTab,
   isVideoFile,
-} from "../../model/editorLanguage";
+} from "../../editorLanguage";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../model/agentSettings";
+import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../agentSettings";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { fetchAgentMessages } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
 import { useAgentChatSubagentState } from "../../../hooks/useAgentChatReadHooks";
-import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../model/agentChatSubagents";
+import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../agentChatSubagents";
 import { selectAgentChatSession } from "../../../state/agentChatSelectors";
 
 type UseAgentChatSubagentActionsOptions = {

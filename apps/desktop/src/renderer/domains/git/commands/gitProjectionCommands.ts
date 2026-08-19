@@ -21,7 +21,7 @@ import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
   summarizeReconciledWorkspaceGitChangeTotals,
-} from "../model/gitChangeSummary";
+} from "../gitChangeSummary";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 
 /**

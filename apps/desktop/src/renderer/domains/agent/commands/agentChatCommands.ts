@@ -5,7 +5,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
 import { renamePiSession, sendPiCommand } from "../infrastructure/daemonAgentProcedures";
-import { isAgentSessionBusy } from "../model/agentChatTypes";
+import { isAgentSessionBusy } from "../agentChatTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import {
   clearPiSessionHandle,

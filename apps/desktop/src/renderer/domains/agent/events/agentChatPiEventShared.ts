@@ -6,7 +6,7 @@ import type {
   AgentQueueState,
   AgentSessionStats,
   AgentStreamEvent,
-} from "../model/agentChatTypes";
+} from "../agentChatTypes";
 import {
   flushAgentChatStreamBuffer,
   peekAgentChatStreamMessage,

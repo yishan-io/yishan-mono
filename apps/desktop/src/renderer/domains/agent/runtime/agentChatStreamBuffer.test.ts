@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage } from "../model/agentChatTypes";
+import type { AgentMessage } from "../agentChatTypes";
 import {
   disposeAgentChatStreamBuffer,
   flushAgentChatStreamBuffer,

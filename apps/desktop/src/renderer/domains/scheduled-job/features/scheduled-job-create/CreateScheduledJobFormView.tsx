@@ -10,7 +10,7 @@ import type { CreateScheduledJobInput } from "../../../../domains/scheduled-job/
 import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
 import { createScheduledJob } from "../../commands/scheduledJobCommands";
 import { DEFAULT_FORM_DRAFT, useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
-import { SCHEDULED_JOB_AGENT_KIND } from "../../model/scheduledJobScheduleRules";
+import { SCHEDULED_JOB_AGENT_KIND } from "../../scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
 
 type CreateScheduledJobFormViewProps = {

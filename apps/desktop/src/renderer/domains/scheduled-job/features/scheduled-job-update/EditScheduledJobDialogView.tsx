@@ -10,7 +10,7 @@ import { useSelectedOrganizationId } from "../../../../domains/session";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { updateScheduledJob } from "../../commands/scheduledJobCommands";
 import { useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
-import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "../../model/scheduledJobScheduleRules";
+import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "../../scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
 
 type EditScheduledJobDialogViewProps = {

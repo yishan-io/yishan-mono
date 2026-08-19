@@ -1,4 +1,4 @@
-import { parseCronExpression } from "../model/scheduledJobScheduleRules";
+import { parseCronExpression } from "../scheduledJobScheduleRules";
 
 /**
  * Scheduled-job schedule display (desktop8 Phase 30).

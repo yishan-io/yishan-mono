@@ -2,7 +2,7 @@
 
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { describe, expect, it, vi } from "vitest";
-import type { GitLineChange } from "../../../model/gitGutterDiff";
+import type { GitLineChange } from "../../../gitGutterDiff";
 import {
   GUTTER_ADDED_CLASS,
   GUTTER_DELETED_CLASS,

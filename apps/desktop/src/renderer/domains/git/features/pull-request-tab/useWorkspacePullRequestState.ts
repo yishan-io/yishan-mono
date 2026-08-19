@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { listPullRequestHistory, refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
 import { useWorkspacePullRequestByWorkspaceId } from "../../hooks/useGitProjectionReadHooks";
 import type { WorkspacePullRequestRecord } from "../../infrastructure/workspacePullRequestApi";
-import type { GitPullRequest } from "../../model/gitPullRequestTypes";
+import type { GitPullRequest } from "../../gitPullRequestTypes";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;
