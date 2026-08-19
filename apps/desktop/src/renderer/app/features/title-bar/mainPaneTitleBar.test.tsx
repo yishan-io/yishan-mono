@@ -169,20 +169,14 @@ vi.mock("../../../app/commands/useCommands", () => {
   });
   return {
     useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
     useWorkspaceCommands: commandSurface,
     useAgentCommands: commandSurface,
     useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
     useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
     useFileCommands: commandSurface,
     useProjectCommands: commandSurface,
     useWorkbenchCommands: commandSurface,
     useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
   };
 });
 
@@ -295,7 +289,7 @@ describe("mainPaneTitleBarMenus RepoSelectorMenu", () => {
 
 describe("mainPaneTitleBarHelpers renderWorkspaceKindIcon", () => {
   it("renders a folder icon for a folder workspace", () => {
-    const { container } = render(<>{renderWorkspaceKindIcon(folderWorkspace, false, 14)}</>);
+    const { container } = render(renderWorkspaceKindIcon(folderWorkspace, false, 14));
     expect(container.querySelector("svg")).toBeTruthy();
   });
 });

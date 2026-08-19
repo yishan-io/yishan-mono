@@ -58,17 +58,6 @@ import {
   unstageGitChanges as unstageGitChangesCommand,
 } from "@renderer/domains/git";
 import {
-  getNotificationPreferences as getNotificationPreferencesCommand,
-  playNotificationSound as playNotificationSoundCommand,
-  previewNotification as previewNotificationCommand,
-  updateNotificationPreferences as updateNotificationPreferencesCommand,
-} from "@renderer/domains/notification";
-import {
-  loadAllOverviewData as loadAllOverviewDataCommand,
-  setOverviewProjectId as setOverviewProjectIdCommand,
-  setOverviewTimeRange as setOverviewTimeRangeCommand,
-} from "@renderer/domains/overview";
-import {
   type WorkspaceProjectRecord,
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
@@ -76,16 +65,6 @@ import {
   projectStore,
   updateProjectConfig as updateProjectConfigCommand,
 } from "@renderer/domains/project";
-import {
-  createScheduledJob as createScheduledJobCommand,
-  deleteScheduledJob as deleteScheduledJobCommand,
-  loadScheduledJobs as loadScheduledJobsCommand,
-  pauseScheduledJob as pauseScheduledJobCommand,
-  resumeScheduledJob as resumeScheduledJobCommand,
-  runScheduledJobNow as runScheduledJobNowCommand,
-  updateScheduledJob as updateScheduledJobCommand,
-} from "@renderer/domains/scheduled-job";
-import { listCLIToolStatuses as listCLIToolStatusesCommand } from "@renderer/domains/settings";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -138,13 +117,7 @@ import {
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "@renderer/domains/workspace";
-import { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
 import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
-import {
-  getRemoteHealthStatus as getRemoteHealthStatusCommand,
-  getSessionBootstrapData as getSessionBootstrapDataCommand,
-  resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../domains/session";
 import {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -171,14 +144,8 @@ import type {
   Commands,
   FileCommandSurface,
   GitCommandSurface,
-  NodeCommandSurface,
-  NotificationCommandSurface,
   OrganizationCommandSurface,
-  OverviewCommandSurface,
   ProjectCommandSurface,
-  ScheduledJobCommandSurface,
-  SessionCommandSurface,
-  SettingsCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
@@ -191,14 +158,6 @@ export function createAppCommands(): AppCommandSurface {
     ensureAgentGlobalConfigExternalDirectoryPermission: ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
     toggleMainWindowMaximized: toggleMainWindowMaximizedCommand,
     loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
-  };
-}
-
-export function createSessionCommands(): SessionCommandSurface {
-  return {
-    getSessionBootstrapData: getSessionBootstrapDataCommand,
-    getRemoteHealthStatus: getRemoteHealthStatusCommand,
-    resetAuthExpiredState: resetAuthExpiredStateCommand,
   };
 }
 
@@ -269,44 +228,9 @@ export function createGitCommands(): GitCommandSurface {
   };
 }
 
-export function createNodeCommands(): NodeCommandSurface {
-  return {
-    listOrgNodes: listOrgNodesCommand,
-  };
-}
-
-export function createNotificationCommands(): NotificationCommandSurface {
-  return {
-    getNotificationPreferences: getNotificationPreferencesCommand,
-    updateNotificationPreferences: updateNotificationPreferencesCommand,
-    previewNotification: previewNotificationCommand,
-    playNotificationSound: playNotificationSoundCommand,
-  };
-}
-
 export function createOrganizationCommands(): OrganizationCommandSurface {
   return {
     switchOrganization: switchOrganizationCommand,
-  };
-}
-
-export function createOverviewCommands(): OverviewCommandSurface {
-  return {
-    loadAllOverviewData: loadAllOverviewDataCommand,
-    setOverviewTimeRange: setOverviewTimeRangeCommand,
-    setOverviewProjectId: setOverviewProjectIdCommand,
-  };
-}
-
-export function createScheduledJobCommands(): ScheduledJobCommandSurface {
-  return {
-    loadScheduledJobs: loadScheduledJobsCommand,
-    createScheduledJob: createScheduledJobCommand,
-    updateScheduledJob: updateScheduledJobCommand,
-    deleteScheduledJob: deleteScheduledJobCommand,
-    pauseScheduledJob: pauseScheduledJobCommand,
-    resumeScheduledJob: resumeScheduledJobCommand,
-    runScheduledJobNow: runScheduledJobNowCommand,
   };
 }
 
@@ -410,30 +334,18 @@ export function createTerminalCommands(): TerminalCommandSurface {
   };
 }
 
-export function createSettingsCommands(): SettingsCommandSurface {
-  return {
-    listCLIToolStatuses: listCLIToolStatusesCommand,
-  };
-}
-
 /** Returns the composed UI-facing command surface (all features). */
 export function createCommands(): Commands {
   return {
     ...createAppCommands(),
-    ...createSessionCommands(),
     ...createWorkspaceCommands(),
     ...createAgentCommands(),
     ...createGitCommands(),
-    ...createNodeCommands(),
-    ...createNotificationCommands(),
     ...createOrganizationCommands(),
-    ...createOverviewCommands(),
-    ...createScheduledJobCommands(),
     ...createFileCommands(),
     ...createProjectCommands(),
     ...createWorkbenchCommands(),
     ...createTerminalCommands(),
-    ...createSettingsCommands(),
   };
 }
 export type {
@@ -441,14 +353,8 @@ export type {
   AppCommandSurface,
   FileCommandSurface,
   GitCommandSurface,
-  NodeCommandSurface,
-  NotificationCommandSurface,
   OrganizationCommandSurface,
-  OverviewCommandSurface,
   ProjectCommandSurface,
-  ScheduledJobCommandSurface,
-  SessionCommandSurface,
-  SettingsCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,

@@ -5,14 +5,8 @@ import {
   type Commands,
   type FileCommandSurface,
   type GitCommandSurface,
-  type NodeCommandSurface,
-  type NotificationCommandSurface,
   type OrganizationCommandSurface,
-  type OverviewCommandSurface,
   type ProjectCommandSurface,
-  type ScheduledJobCommandSurface,
-  type SessionCommandSurface,
-  type SettingsCommandSurface,
   type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
@@ -21,14 +15,8 @@ import {
   createCommands,
   createFileCommands,
   createGitCommands,
-  createNodeCommands,
-  createNotificationCommands,
   createOrganizationCommands,
-  createOverviewCommands,
   createProjectCommands,
-  createScheduledJobCommands,
-  createSessionCommands,
-  createSettingsCommands,
   createTerminalCommands,
   createWorkbenchCommands,
   createWorkspaceCommands,
@@ -50,10 +38,6 @@ export function useAppCommands(): AppCommandSurface {
   return useMemo(() => createAppCommands(), []);
 }
 
-export function useSessionCommands(): SessionCommandSurface {
-  return useMemo(() => createSessionCommands(), []);
-}
-
 export function useWorkspaceCommands(): WorkspaceCommandSurface {
   return useMemo(() => createWorkspaceCommands(), []);
 }
@@ -66,24 +50,8 @@ export function useGitCommands(): GitCommandSurface {
   return useMemo(() => createGitCommands(), []);
 }
 
-export function useNodeCommands(): NodeCommandSurface {
-  return useMemo(() => createNodeCommands(), []);
-}
-
-export function useNotificationCommands(): NotificationCommandSurface {
-  return useMemo(() => createNotificationCommands(), []);
-}
-
 export function useOrganizationCommands(): OrganizationCommandSurface {
   return useMemo(() => createOrganizationCommands(), []);
-}
-
-export function useOverviewCommands(): OverviewCommandSurface {
-  return useMemo(() => createOverviewCommands(), []);
-}
-
-export function useScheduledJobCommands(): ScheduledJobCommandSurface {
-  return useMemo(() => createScheduledJobCommands(), []);
 }
 
 export function useFileCommands(): FileCommandSurface {
@@ -102,24 +70,14 @@ export function useTerminalCommands(): TerminalCommandSurface {
   return useMemo(() => createTerminalCommands(), []);
 }
 
-export function useSettingsCommands(): SettingsCommandSurface {
-  return useMemo(() => createSettingsCommands(), []);
-}
-
 export type {
   AgentCommandSurface,
   AppCommandSurface,
   Commands,
   FileCommandSurface,
   GitCommandSurface,
-  NodeCommandSurface,
-  NotificationCommandSurface,
   OrganizationCommandSurface,
-  OverviewCommandSurface,
   ProjectCommandSurface,
-  ScheduledJobCommandSurface,
-  SessionCommandSurface,
-  SettingsCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,

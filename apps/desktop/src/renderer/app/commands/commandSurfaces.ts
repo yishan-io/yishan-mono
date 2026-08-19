@@ -65,17 +65,6 @@ import {
   type trackGitChanges as trackGitChangesCommand,
   type unstageGitChanges as unstageGitChangesCommand,
 } from "@renderer/domains/git";
-import type {
-  getNotificationPreferences as getNotificationPreferencesCommand,
-  playNotificationSound as playNotificationSoundCommand,
-  previewNotification as previewNotificationCommand,
-  updateNotificationPreferences as updateNotificationPreferencesCommand,
-} from "@renderer/domains/notification";
-import type {
-  loadAllOverviewData as loadAllOverviewDataCommand,
-  setOverviewProjectId as setOverviewProjectIdCommand,
-  setOverviewTimeRange as setOverviewTimeRangeCommand,
-} from "@renderer/domains/overview";
 import {
   type WorkspaceProjectRecord,
   createProject as createProjectCommand,
@@ -83,16 +72,6 @@ import {
   type inspectLocalProjectSource as inspectLocalProjectSourceCommand,
   type updateProjectConfig as updateProjectConfigCommand,
 } from "@renderer/domains/project";
-import type {
-  createScheduledJob as createScheduledJobCommand,
-  deleteScheduledJob as deleteScheduledJobCommand,
-  loadScheduledJobs as loadScheduledJobsCommand,
-  pauseScheduledJob as pauseScheduledJobCommand,
-  resumeScheduledJob as resumeScheduledJobCommand,
-  runScheduledJobNow as runScheduledJobNowCommand,
-  updateScheduledJob as updateScheduledJobCommand,
-} from "@renderer/domains/scheduled-job";
-import type { listCLIToolStatuses as listCLIToolStatusesCommand } from "@renderer/domains/settings";
 import type {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -145,13 +124,7 @@ import {
   type toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   type undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "@renderer/domains/workspace";
-import type { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
 import type { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
-import type {
-  getRemoteHealthStatus as getRemoteHealthStatusCommand,
-  getSessionBootstrapData as getSessionBootstrapDataCommand,
-  resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../domains/session";
 import type {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -179,13 +152,6 @@ export type AppCommandSurface = {
   ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
   toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
   loadWorkspaceSnapshot: () => Promise<void>;
-};
-
-/** Session feature command surface. */
-export type SessionCommandSurface = {
-  getSessionBootstrapData: typeof getSessionBootstrapDataCommand;
-  getRemoteHealthStatus: typeof getRemoteHealthStatusCommand;
-  resetAuthExpiredState: typeof resetAuthExpiredStateCommand;
 };
 
 /** Workspace feature command surface. */
@@ -263,40 +229,9 @@ export type GitCommandSurface = {
   refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
-/** Node feature command surface. */
-export type NodeCommandSurface = {
-  listOrgNodes: typeof listOrgNodesCommand;
-};
-
-/** Notification feature command surface. */
-export type NotificationCommandSurface = {
-  getNotificationPreferences: typeof getNotificationPreferencesCommand;
-  updateNotificationPreferences: typeof updateNotificationPreferencesCommand;
-  previewNotification: typeof previewNotificationCommand;
-  playNotificationSound: typeof playNotificationSoundCommand;
-};
-
 /** Organization feature command surface. */
 export type OrganizationCommandSurface = {
   switchOrganization: typeof switchOrganizationCommand;
-};
-
-/** Overview feature command surface. */
-export type OverviewCommandSurface = {
-  loadAllOverviewData: typeof loadAllOverviewDataCommand;
-  setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
-  setOverviewProjectId: typeof setOverviewProjectIdCommand;
-};
-
-/** ScheduledJob feature command surface. */
-export type ScheduledJobCommandSurface = {
-  loadScheduledJobs: typeof loadScheduledJobsCommand;
-  createScheduledJob: typeof createScheduledJobCommand;
-  updateScheduledJob: typeof updateScheduledJobCommand;
-  deleteScheduledJob: typeof deleteScheduledJobCommand;
-  pauseScheduledJob: typeof pauseScheduledJobCommand;
-  resumeScheduledJob: typeof resumeScheduledJobCommand;
-  runScheduledJobNow: typeof runScheduledJobNowCommand;
 };
 
 /** Files feature command surface. */
@@ -367,24 +302,13 @@ export type TerminalCommandSurface = {
   killTerminalProcess: typeof killTerminalProcessCommand;
 };
 
-/** Settings feature command surface. */
-export type SettingsCommandSurface = {
-  listCLIToolStatuses: typeof listCLIToolStatusesCommand;
-};
-
 /** The composed application command surface (all features). */
 export type Commands = AppCommandSurface &
-  SessionCommandSurface &
   WorkspaceCommandSurface &
   AgentCommandSurface &
   GitCommandSurface &
-  NodeCommandSurface &
-  NotificationCommandSurface &
   OrganizationCommandSurface &
-  OverviewCommandSurface &
-  ScheduledJobCommandSurface &
   FileCommandSurface &
   ProjectCommandSurface &
   WorkbenchCommandSurface &
-  TerminalCommandSurface &
-  SettingsCommandSurface;
+  TerminalCommandSurface;
