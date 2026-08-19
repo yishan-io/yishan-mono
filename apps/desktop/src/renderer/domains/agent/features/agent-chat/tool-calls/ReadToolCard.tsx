@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { useState } from "react";
 import { LuBookOpen } from "react-icons/lu";
-import { SkillUsageMarker } from "../../../ui/SkillUsageMarker";
+import { SkillUsageMarker } from "../SkillUsageMarker";
 import { ToolLineRange } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";

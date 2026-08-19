@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { parseSkillMessage } from "../../../skills/agentSkillText";
-import { SkillUsageMarker } from "../../../ui/SkillUsageMarker";
+import { SkillUsageMarker } from "../SkillUsageMarker";
 
 type UserMessageContentProps = {
   messageText: string;
