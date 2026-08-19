@@ -1,5 +1,5 @@
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../model/projectTypes";
+import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../projectTypes";
 import { projectStore } from "./projectStore";
 
 /**

@@ -202,8 +202,8 @@ vi.mock("@renderer/domains/project", async () => {
   // imports project public-API members; load the stateless ones from deep
   // paths (async factory avoids the project<->workspace index cycle).
   const sharedWorkspace = await import("@shared/workspace/localFolderProjectId");
-  const projectCapability = await import("../../../domains/project/model/projectGitCapability");
-  const projectListRules = await import("../../../domains/project/model/projectListRules");
+  const projectCapability = await import("../../../domains/project/projectGitCapability");
+  const projectListRules = await import("../../../domains/project/projectListRules");
   const projectSelectors = await import("../../../domains/project/state/projectSelectors");
   const projectReadHooks = await import("../../../domains/project/hooks/useProjectReadHooks");
   const projectActions = await import("../../../domains/project/state/projectStateMutations");

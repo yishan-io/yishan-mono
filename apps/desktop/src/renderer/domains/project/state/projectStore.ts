@@ -10,8 +10,8 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../model/projectTypes";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../projectIconSelection";
+import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../projectTypes";
 
 export type ProjectStoreState = {
   projects: WorkspaceProjectRecord[];

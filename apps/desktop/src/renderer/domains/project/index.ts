@@ -6,13 +6,13 @@
  * project Store stays internal; cross-Domain code imports project through
  * this file only.
  */
-export { isGitProject, supportsGitFeatures } from "./model/projectGitCapability";
-export { filterVisibleProjects } from "./model/projectListRules";
+export { isGitProject, supportsGitFeatures } from "./projectGitCapability";
+export { filterVisibleProjects } from "./projectListRules";
 export type {
   WorkspaceProjectCommand,
   WorkspaceProjectRecord,
   WorkspaceStoreOrganizationPreference,
-} from "./model/projectTypes";
+} from "./projectTypes";
 export {
   createProject,
   deleteProject,
