@@ -14,11 +14,11 @@ import {
 import { diffTabContentStore } from "@renderer/domains/git";
 import { TerminalView } from "@renderer/domains/terminal";
 import { TabPanel } from "@renderer/domains/workbench";
+import type { WorkbenchTab } from "@renderer/domains/workbench";
+import { copyToClipboard } from "@renderer/platform/clipboard";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkbenchTab } from "@renderer/domains/workbench";
-import { copyToClipboard } from "../../../helpers/clipboard";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../../commands/useCommands";
 
 type TabContentRendererProps = {

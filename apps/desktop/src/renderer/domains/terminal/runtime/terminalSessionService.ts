@@ -1,5 +1,6 @@
 import { bindTerminalTabSession, closeTab, renameTab } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import {
   closeTerminalSession,
   createTerminalSession,
@@ -9,7 +10,6 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../domains/terminal/commands/terminalCommands";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import {
   shouldClearTerminalOutputShortcut,

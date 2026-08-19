@@ -3,11 +3,11 @@ import type { TerminalDetectedPort } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice, workspaceStore } from "@renderer/domains/workspace";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { useTerminalCommands, useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { RouteCloseWatcher } from "../../../hooks/RouteCloseWatcher";
 import { PortsTableMenu, type PortsTableMenuRow } from "./PortsTableMenu";
 

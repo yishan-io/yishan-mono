@@ -5,6 +5,7 @@ import { FileDiff } from "@pierre/diffs/react";
 import { getDiffCssVariablesForPalette } from "@renderer/domains/files";
 import { editorSettingsStore } from "@renderer/domains/settings";
 import { useCodeTheme } from "@renderer/domains/settings";
+import { MONO_FONT_FAMILY } from "@renderer/ui/codeThemes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuDiff,
@@ -15,7 +16,6 @@ import {
   LuStretchVertical,
   LuWrapText,
 } from "react-icons/lu";
-import { MONO_FONT_FAMILY } from "../../../../helpers/codeThemes";
 import { DiffSearchPanel } from "./DiffSearchPanel";
 import { isBinaryPath } from "./binaryExtensions";
 import { findDiffMatches } from "./diffSearch";

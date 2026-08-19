@@ -1,10 +1,10 @@
 import { Alert, Box, Button, Chip, Stack } from "@mui/material";
+import { getRendererPlatform } from "@renderer/platform/platform";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiBluetooth, BiCamera, BiChip, BiHdd, BiShield, BiSolidKeyboard, BiUsb, BiWindow } from "react-icons/bi";
 import { LuGlobe } from "react-icons/lu";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { getRendererPlatform } from "../../../../helpers/platform";
 import {
   SettingsCard,
   SettingsControlRow,

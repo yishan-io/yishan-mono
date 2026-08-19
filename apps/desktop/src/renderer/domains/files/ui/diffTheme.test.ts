@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
+import { resolveCodeTheme } from "@renderer/ui/codeThemes";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { describe, expect, it } from "vitest";
-import { resolveCodeTheme } from "../../../helpers/codeThemes";
 import {
   EDITOR_COLORS,
   buildOverriddenRules,

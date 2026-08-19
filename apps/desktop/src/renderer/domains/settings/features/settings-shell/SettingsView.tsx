@@ -11,6 +11,11 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  type NotificationSettingsFocusItemId,
+  isNotificationSettingsFocusItemId,
+} from "@renderer/domains/notification";
+import { getRendererPlatform } from "@renderer/platform/platform";
+import {
   type ComponentType,
   type LazyExoticComponent,
   type ReactNode,
@@ -25,15 +30,10 @@ import type { BiCog } from "react-icons/bi";
 import { RxExit } from "react-icons/rx";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useThemePreference } from "../../../../domains/settings";
-import { getRendererPlatform } from "../../../../helpers/platform";
 import { SearchInput } from "../../../../ui/components/SearchInput";
-import { SettingsErrorBoundary, SettingsPageLayout } from "../../ui/controls";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
+import { SettingsErrorBoundary, SettingsPageLayout } from "../../ui/controls";
 import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
-import {
-  type NotificationSettingsFocusItemId,
-  isNotificationSettingsFocusItemId,
-} from "@renderer/domains/notification";
 import {
   type CustomizeFocusItemId,
   SETTINGS_NAV_SECTIONS,
@@ -71,9 +71,7 @@ const LinkSettingsView = lazy(() => import("../link/LinkSettingsView").then((m) 
 const MarkdownSettingsView = lazy(() =>
   import("../markdown/MarkdownSettingsView").then((m) => ({ default: m.MarkdownSettingsView })),
 );
-const NodesSettingsView = lazy(() =>
-  import("@renderer/domains/node").then((m) => ({ default: m.NodesSettingsView })),
-);
+const NodesSettingsView = lazy(() => import("@renderer/domains/node").then((m) => ({ default: m.NodesSettingsView })));
 const NotificationSettingsView = lazy(() =>
   import("@renderer/domains/notification").then((m) => ({ default: m.NotificationSettingsView })),
 );

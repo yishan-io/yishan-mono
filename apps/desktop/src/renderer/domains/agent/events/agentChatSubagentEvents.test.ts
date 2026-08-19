@@ -13,7 +13,7 @@ import {
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
 
-vi.mock("../../../helpers/generateId", () => ({
+vi.mock("@renderer/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-id"),
 }));
 

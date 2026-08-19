@@ -1,8 +1,8 @@
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { api } from "../../../api";
-import type { OverviewTimeRange } from "../model/overviewTypes";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
 import { selectSelectedOrganizationId } from "../../../domains/session";
+import type { OverviewTimeRange } from "../model/overviewTypes";
 
 function selectedOrganizationId(): string {
   const organizationId = selectSelectedOrganizationId()?.trim() || "";
@@ -111,6 +111,5 @@ export function setOverviewGranularity(granularity: "hour" | "day"): void {
   overviewStore.getState().setGranularity(granularity);
   void refreshOverviewTokenUsage();
 }
-
 
 export type { OverviewTimeRange } from "../../../api/overviewApi.types";

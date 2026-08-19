@@ -1,4 +1,4 @@
-import { generateId } from "../../../helpers/generateId";
+import { generateId } from "@renderer/ids/generateId";
 import {
   MAX_DETAILS_DEPTH,
   MAX_DETAILS_ITEMS,

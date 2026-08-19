@@ -1,6 +1,6 @@
+import { isFileNotFoundError } from "@shared/helpers/errorHelpers";
 import type { ExternalAppId, WorkspaceEntryAppId } from "../../../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../../../shared/contracts/rpcRequestTypes";
-import { isFileNotFoundError } from "../../../helpers/errorHelpers";
 import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
 import type { FileSearchResult } from "../infrastructure/daemonFileClient";
 import { getFileRpc } from "../infrastructure/daemonFileClient";

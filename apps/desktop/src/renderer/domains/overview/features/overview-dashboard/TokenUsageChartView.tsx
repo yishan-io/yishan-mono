@@ -3,8 +3,8 @@ import { BarChart } from "@mui/x-charts/BarChart";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { OverviewTimeRange } from "../../../../domains/overview/commands/overviewCommands";
-import { formatTokens } from "../../../../helpers/formatters";
 import { overviewStore } from "../../../../domains/overview/state/overviewStore";
+import { formatTokens } from "./tokenFormatting";
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",

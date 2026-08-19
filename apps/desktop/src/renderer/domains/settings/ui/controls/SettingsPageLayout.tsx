@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import type { ReactNode } from "react";
-import { getRendererPlatform } from "../../../../helpers/platform";
 
 export type SettingsPageLayoutProps = {
   /** The sidebar navigation content (left pane). */

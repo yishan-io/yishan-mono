@@ -1,8 +1,8 @@
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import type { CaptureUpdateActionType } from "@excalidraw/excalidraw/store";
 import type { BinaryFiles, ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { createEmptyScene, parseExcalidrawScene, pickSceneAppState, serializeExcalidrawScene } from "./excalidrawScene";
 import type { ParsedExcalidrawScene } from "./excalidrawScene";
 

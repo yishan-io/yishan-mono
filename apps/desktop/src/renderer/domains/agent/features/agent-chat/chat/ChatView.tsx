@@ -1,9 +1,9 @@
 import { Autocomplete, Box, TextField, Typography, createFilterOptions } from "@mui/material";
+import { generateId } from "@renderer/ids/generateId";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { subscribeWorkspaceChatEvent } from "../../../../../events";
-import { getErrorMessage } from "../../../../../helpers/errorHelpers";
-import { generateId } from "../../../../../helpers/generateId";
 import {
   appendChatMessages,
   createWorkspaceChatEventHandler,

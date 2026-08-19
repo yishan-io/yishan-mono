@@ -294,7 +294,7 @@ vi.mock("../../../../../rpc/rpcTransport", () => ({
 }));
 
 // Keep the provider-visibility poll (useAgentChatProviderAdd) fast in tests.
-vi.mock("../../../../../helpers/delay", () => ({
+vi.mock("@renderer/async/delay", () => ({
   delay: mocked.delay,
 }));
 

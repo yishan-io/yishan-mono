@@ -19,12 +19,12 @@ import { useTranslation } from "react-i18next";
 import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import type { OrganizationMemberRecord } from "../../../../api/types";
 import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../../../domains/organization";
 import { setSessionData as applySetSessionData } from "../../../../domains/session";
 import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../../domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";

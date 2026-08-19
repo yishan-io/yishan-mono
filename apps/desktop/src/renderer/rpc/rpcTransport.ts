@@ -1,7 +1,7 @@
+import { delay } from "@renderer/async/delay";
 import type { DesktopBridge, DesktopHostBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
 import { DaemonClient } from "./daemonClient";
 import type { ApiNamespace } from "./daemonTypes";
-import { delay } from "./helpers";
 import type { ApiSubscriptionHandlers, DaemonRpcClient, DaemonTransport } from "./types";
 
 type DesktopRpcEventListener = (envelope: DesktopRpcEventEnvelope) => void;

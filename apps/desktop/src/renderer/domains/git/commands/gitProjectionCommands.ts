@@ -5,6 +5,7 @@ import {
   isFolderWorkspace,
   refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc,
 } from "@renderer/domains/workspace";
+import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
  *
@@ -15,7 +16,6 @@ import {
  * projections to its own Store.
  */
 import { api } from "../../../api";
-import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { getGitRpc } from "../infrastructure/daemonGitClient";
 import {
   computeUniqueGitChangeFileCount,

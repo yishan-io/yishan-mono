@@ -1,15 +1,15 @@
 import { Alert, Box, Button, CircularProgress, Paper, Typography } from "@mui/material";
+import { useProjects } from "@renderer/domains/project";
 import { PaneHeader } from "@renderer/domains/workbench";
 import { PaneToggleButton } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar } from "react-icons/lu";
-import { loadAllOverviewData } from "../../commands/overviewCommands";
 import { overviewStore } from "../../../../domains/overview/state/overviewStore";
-import { useProjects } from "@renderer/domains/project";
-import { getRendererPlatform } from "../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
+import { loadAllOverviewData } from "../../commands/overviewCommands";
 import { AgentKindChartView } from "./AgentKindChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
 import { OverviewFiltersView } from "./OverviewFiltersView";
@@ -44,7 +44,6 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const workspaceInsightsLoadState = overviewStore((state) => state.workspaceInsightsLoadState);
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
   const projects = useProjects();
-
 
   useEffect(() => {
     void loadAllOverviewData();

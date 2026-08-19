@@ -9,9 +9,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { workspaceLifecycleNoticeStore } from "../../../../domains/workspace/state/workspaceLifecycleNoticeStore";
-import { MONOSPACE_SX } from "../../../../helpers/styles";
 
 /** Renders in-app snackbar and detail dialog for lifecycle script warnings. */
 export function WorkspaceLifecycleNoticeView() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDaemonVersionOutdated } from "./versionHelpers";
+import { isDaemonVersionOutdated } from "./version";
 
 describe("isDaemonVersionOutdated", () => {
   it("returns true when daemon version is behind app version", () => {

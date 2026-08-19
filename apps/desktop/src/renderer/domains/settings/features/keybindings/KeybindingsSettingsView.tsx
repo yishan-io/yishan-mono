@@ -1,12 +1,12 @@
 import { Alert, Box, Button, Stack, SvgIcon, Tooltip, Typography } from "@mui/material";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { keybindingSettingsStore } from "../../../../domains/settings/state/keybindingSettingsStore";
-import { getRendererPlatform } from "../../../../helpers/platform";
 import { detectShortcutConflicts, normalizeKeysString } from "../../../../shortcuts/customKeybindings";
 import { getShortcutDefinitions, getSupportedKeyBindings } from "../../../../shortcuts/keybindings";
+import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { HotkeyDisplay } from "./KeybindingDisplay";
-import {SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 type EditingState = {
   shortcutId: string;

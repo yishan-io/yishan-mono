@@ -12,10 +12,10 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard } from "../../../../ui/components/SettingsPrimitives";
 import {

@@ -1,8 +1,8 @@
+import { CODE_THEME_FAMILIES, type CodeThemeFamilyId } from "@renderer/ui/codeThemes";
 import { TYPOGRAPHY_TOKENS } from "@yishan-io/design-tokens";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import { CODE_THEME_FAMILIES, type CodeThemeFamilyId } from "../../../helpers/codeThemes";
 
 export const EDITOR_SETTINGS_STORE_STORAGE_KEY = "yishan-editor-settings-store";
 

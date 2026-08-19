@@ -8,7 +8,7 @@ import { handleAgentPiEvent } from "./agentChatPiEventHandler";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
-vi.mock("../../../helpers/generateId", () => ({
+vi.mock("@renderer/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-id"),
 }));
 

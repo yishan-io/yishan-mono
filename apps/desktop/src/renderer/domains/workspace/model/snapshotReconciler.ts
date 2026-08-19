@@ -1,3 +1,4 @@
+import { getFileName } from "@renderer/path/pathHelpers";
 /**
  * Pure workspace snapshot reconciler.
  *
@@ -11,7 +12,6 @@
  */
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../../../domains/project";
-import { getFileName } from "../../../helpers/pathHelpers";
 import { resolveHydratedWorkspaceDisplayMetadata } from "../services/workspaceDisplayNames";
 import type { ProjectRecord, WorkspaceRecord } from "./snapshotTypes";
 import type { WorkspaceItem } from "./workspaceTypes";

@@ -2,8 +2,8 @@ import { Box, Typography } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { formatTokens } from "../../../../helpers/formatters";
 import { overviewStore } from "../../../../domains/overview/state/overviewStore";
+import { formatTokens } from "./tokenFormatting";
 
 const AGENT_KIND_COLORS: Record<string, string> = {
   opencode: "#6366F1",

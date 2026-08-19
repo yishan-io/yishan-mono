@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
+import { copyToClipboard } from "@renderer/platform/clipboard";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { copyToClipboard } from "../../../../../helpers/clipboard";
 import { TabBar } from "./TabBar";
 
 const fetchAgentSessionFilePathMock = vi.fn(async () => "");
@@ -41,11 +41,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../../helpers/platform", () => ({
+vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../../../helpers/clipboard", () => ({
+vi.mock("@renderer/platform/clipboard", () => ({
   copyToClipboard: vi.fn(),
 }));
 

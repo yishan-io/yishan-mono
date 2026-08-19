@@ -190,7 +190,7 @@ vi.mock("../../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => Promise.resolve({ isFullscreen: false }),
 }));
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 

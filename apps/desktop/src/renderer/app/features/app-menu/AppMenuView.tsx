@@ -1,9 +1,9 @@
 import { ClickAwayListener, Divider, Popper, Stack } from "@mui/material";
 import { CreateOrganizationDialogView } from "@renderer/domains/organization";
 import { sessionStore } from "@renderer/domains/session";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import { useTranslation } from "react-i18next";
 import { useThemePreference } from "../../../domains/settings";
-import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { FloatingSurface } from "../../../ui/components/FloatingSurface";
 import { AppMenuMainMenuSection } from "./AppMenuMainMenuSection";

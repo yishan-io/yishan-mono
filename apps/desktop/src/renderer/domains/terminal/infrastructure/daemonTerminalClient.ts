@@ -1,5 +1,5 @@
 import { resolveWorkspaceId as resolveWorkspaceIdCommand } from "@renderer/domains/workspace";
-import { generateId } from "../../../helpers/generateId";
+import { generateId } from "@renderer/ids/generateId";
 import type { DaemonNotification } from "../../../rpc/daemonTypes";
 import { asRecord, readOptionalNumber, readOptionalString, readOptionalStringArray } from "../../../rpc/helpers";
 import { getDaemonTransport } from "../../../rpc/rpcTransport";

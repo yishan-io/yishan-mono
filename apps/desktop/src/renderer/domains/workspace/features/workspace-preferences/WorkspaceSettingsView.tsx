@@ -1,7 +1,7 @@
 import { Alert, Box, Stack, Switch, Typography } from "@mui/material";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import {
   SettingsCard,
   SettingsControlRow,

@@ -1,4 +1,7 @@
 import { Alert, Box, Button, Chip, CircularProgress, Typography } from "@mui/material";
+import { useRefreshableLoader } from "@renderer/hooks/useRefreshableLoader";
+import { MONOSPACE_SX } from "@renderer/ui/typography";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiLogoGithub } from "react-icons/bi";
@@ -10,10 +13,12 @@ import {
   listCLIToolStatuses,
   uninstallCliTool,
 } from "../../../../domains/settings/commands/cliToolCommands";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { MONOSPACE_SX } from "../../../../helpers/styles";
-import { useRefreshableLoader } from "../../../../ui/hooks/useRefreshableLoader";
-import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+} from "../../../../ui/components/SettingsPrimitives";
 import { AgentCLISettingsCard } from "./AgentCLISettingsCard";
 import { DaemonCliInstallCard } from "./DaemonCliInstallCard";
 import { PiCliInstallCard } from "./PiCliInstallCard";

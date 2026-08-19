@@ -75,7 +75,7 @@ vi.mock("../../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 

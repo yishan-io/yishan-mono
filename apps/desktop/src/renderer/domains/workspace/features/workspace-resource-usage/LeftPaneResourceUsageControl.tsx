@@ -7,9 +7,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
-import { formatCpuPercent, formatMemoryBytes } from "../../../../helpers/formatters";
 import { RouteCloseWatcher } from "../../../../hooks/RouteCloseWatcher";
 import { WorkspaceResourceTableMenu, type WorkspaceResourceTableMenuRow } from "./WorkspaceResourceTableMenu";
+import { formatCpuPercent, formatMemoryBytes } from "./resourceUsageFormatting";
 
 type WorkspaceResourceUsageRow = {
   workspaceId: string;

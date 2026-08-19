@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
+import {
+  __resetExplicitlyClosedTerminalTabIdsForTests,
+  consumeExplicitlyClosedTerminalTabId,
+} from "@renderer/domains/terminal/model/terminalCloseTombstones";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../domains/agent/state/chatStore";
 import { splitPaneStore } from "../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../domains/workbench/state/tabStore";
-import {
-  __resetExplicitlyClosedTerminalTabIdsForTests,
-  consumeExplicitlyClosedTerminalTabId,
-} from "../../helpers/terminalCloseTombstones";
 import { closeAllTabsWithCleanup, closeOtherTabsWithCleanup, closeTabWithCleanup } from "./tabCloseHandler";
 
 const rpcMocks = vi.hoisted(() => ({
@@ -52,9 +52,13 @@ vi.mock("@renderer/domains/workspace", async (importOriginal) => {
   };
 });
 
-vi.mock("@renderer/domains/terminal", () => ({
-  closeTerminalSession: rpcMocks.closeSession,
-}));
+vi.mock("@renderer/domains/terminal", async () => {
+  const { recordExplicitlyClosedTerminalTabId } = await import("@renderer/domains/terminal/model/terminalCloseTombstones");
+  return {
+    closeTerminalSession: rpcMocks.closeSession,
+    recordExplicitlyClosedTerminalTabId,
+  };
+});
 
 vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../rpc/rpcTransport")>();

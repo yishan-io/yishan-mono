@@ -1,4 +1,4 @@
-import type { CodeThemePalette } from "../../../helpers/codeThemes";
+import type { CodeThemePalette } from "@renderer/ui/codeThemes";
 
 export type MonacoThemeRule = {
   token: string;

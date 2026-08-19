@@ -2,10 +2,12 @@ import { clearTerminalAgentStatus, removeTabData, stopPiSession } from "@rendere
 import { removeFileTabContent } from "@renderer/domains/files";
 import { removeDiffTabContent } from "@renderer/domains/git";
 import { closeTerminalSession } from "@renderer/domains/terminal";
+import { recordExplicitlyClosedTerminalTabId } from "@renderer/domains/terminal";
 import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import type { CloseTabOptions } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
  *
@@ -20,8 +22,6 @@ import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
  *         -> Workbench remove-Tab Command
  */
 import { clearAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
-import { getErrorMessage } from "../../helpers/errorHelpers";
-import { recordExplicitlyClosedTerminalTabId } from "../../helpers/terminalCloseTombstones";
 
 type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type AgentChatTab = Extract<WorkbenchTab, { kind: "agent-chat" }>;

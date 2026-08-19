@@ -1,7 +1,7 @@
 import { setWorkspacePullRequest } from "@renderer/domains/git";
 import type { GitPullRequest } from "@renderer/domains/git";
 import { closePullRequest, mergePullRequest } from "@renderer/domains/git/commands/gitCommands";
-import { getErrorMessage } from "@renderer/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { type MouseEvent, useCallback, useState } from "react";
 import type { MergeMethod } from "./pullRequestTabHelpers";
 

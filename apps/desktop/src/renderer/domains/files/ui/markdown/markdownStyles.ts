@@ -1,7 +1,7 @@
 import type { Theme } from "@mui/material/styles";
+import { type CodeThemePalette, MONO_FONT_FAMILY } from "@renderer/ui/codeThemes";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { useMemo } from "react";
-import { type CodeThemePalette, MONO_FONT_FAMILY } from "../../../../helpers/codeThemes";
 
 /** highlight.js token colors mapped from the resolved code theme palette, with diff markers locked to semantic tokens. */
 export function getCodeHighlightStyles(palette: CodeThemePalette, mode: "light" | "dark") {

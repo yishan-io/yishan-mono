@@ -1,4 +1,5 @@
 import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
@@ -7,7 +8,6 @@ import type {
   ScheduledJobRecord,
   ScheduledJobRunRecord,
 } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { ScheduledJobRunStatusIcon } from "../../ui/ScheduledJobRunStatusIcon";
 
 type ScheduledJobRunsSidebarProps = {

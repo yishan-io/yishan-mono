@@ -1,5 +1,5 @@
+import { getFileName } from "@renderer/path/pathHelpers";
 import type { WorkspaceRecord } from "../../../api/types";
-import { getFileName } from "../../../helpers/pathHelpers";
 import type { WorkspaceItem } from "../model/workspaceTypes";
 
 export const LOCAL_WORKSPACE_DISPLAY_NAME = "local";

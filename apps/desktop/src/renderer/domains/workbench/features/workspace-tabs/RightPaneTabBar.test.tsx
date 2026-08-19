@@ -32,7 +32,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../helpers/platform", () => ({
+vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 

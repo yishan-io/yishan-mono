@@ -1,6 +1,6 @@
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getTerminalRuntime } from "./terminalRuntimeRegistry";
 import type { TerminalTabData } from "./terminalRuntimeTypes";
 type TerminalSnapshot = {

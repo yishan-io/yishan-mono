@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { useRefreshableLoader } from "@renderer/hooks/useRefreshableLoader";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
@@ -8,7 +9,6 @@ import {
   SettingsRows,
   SettingsSectionHeader,
 } from "../../../../ui/components/SettingsPrimitives";
-import { useRefreshableLoader } from "../../../../ui/hooks/useRefreshableLoader";
 import { listPiProviders } from "../../commands/piProviderCommands";
 import type { PiProviderStatus } from "../../commands/piProviderCommands";
 import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../model/piProviders";

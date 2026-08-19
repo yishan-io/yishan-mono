@@ -1,6 +1,6 @@
 import { Box, Stack, Typography } from "@mui/material";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import { useTranslation } from "react-i18next";
-import { getRendererPlatform } from "../../../../helpers/platform";
 import type { SupportedKeyBinding } from "../../../../shortcuts/keybindings";
 
 const LARGE_SYMBOL_KEYS = new Set(["⌘", "⇧", "⌃", "⌥", "↵"]);

@@ -13,10 +13,10 @@
 
 import { DiagramZoomOverlay } from "@renderer/domains/files";
 import { displaySettingsStore } from "@renderer/domains/settings";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type Vditor from "vditor";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { i18n } from "../../../../i18n";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
 import { attachMermaidZoomButtons, rethemeMermaidDiagrams } from "./mermaidZoomButton";

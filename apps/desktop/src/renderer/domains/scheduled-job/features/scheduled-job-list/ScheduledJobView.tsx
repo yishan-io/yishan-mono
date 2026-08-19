@@ -2,13 +2,13 @@ import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material"
 import { PaneHeader } from "@renderer/domains/workbench";
 import { PaneToggleButton } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
-import { loadScheduledJobs } from "../../commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../../domains/scheduled-job/state/scheduledJobStore";
-import { getRendererPlatform } from "../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
+import { loadScheduledJobs } from "../../commands/scheduledJobCommands";
 import { CreateScheduledJobDialogView } from "../scheduled-job-create/CreateScheduledJobDialogView";
 import { ScheduledJobDetailView } from "../scheduled-job-detail/ScheduledJobDetailView";
 import { ScheduledJobListItemView } from "./ScheduledJobListItemView";

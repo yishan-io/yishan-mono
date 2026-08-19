@@ -1,8 +1,8 @@
 import { Alert, Box, Button, Stack } from "@mui/material";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import {
   SettingsCard,
   SettingsControlRow,

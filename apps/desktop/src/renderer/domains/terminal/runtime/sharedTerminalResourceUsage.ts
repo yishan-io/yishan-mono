@@ -1,4 +1,4 @@
-import { withTimeout } from "../../../helpers/withTimeout";
+import { withTimeout } from "@renderer/async/withTimeout";
 import type { TerminalResourceUsageSnapshot } from "../infrastructure/daemonTerminalClient";
 
 const INTERACTIVE_POLL_INTERVAL_MS = 2000;

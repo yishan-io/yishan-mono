@@ -24,6 +24,9 @@ import {
   setLastUsedExternalAppId,
 } from "@renderer/domains/workspace";
 import { subscribeOpenCreateWorkspaceDialog } from "@renderer/domains/workspace";
+import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
+import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
@@ -36,11 +39,8 @@ import {
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
 } from "../../../../shared/contracts/externalApps";
-import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { ContextMenu, type ContextMenuEntry } from "../../../ui/components/ContextMenu";
-import { useContextMenuState } from "../../../ui/hooks/useContextMenuState";
-import { useSuppressNativeContextMenuWhileOpen } from "../../../ui/hooks/useSuppressNativeContextMenuWhileOpen";
 import { ProjectListMenus } from "./ProjectListMenus";
 import { useWorkspaceNavigatorDialogState } from "./useWorkspaceNavigatorDialogState";
 import { useWorkspaceNavigatorFoldState } from "./useWorkspaceNavigatorFoldState";

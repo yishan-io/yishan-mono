@@ -1,10 +1,15 @@
 import { Box, Typography } from "@mui/material";
 import type { DaemonInfoResult } from "@renderer/domains/settings";
-import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../../ui/components/SettingsPrimitives";
-import { MONOSPACE_SX } from "@renderer/helpers/styles";
 import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
 import { StatusIndicator } from "@renderer/ui/components/StatusIndicator";
+import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { useTranslation } from "react-i18next";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+} from "../../../../../ui/components/SettingsPrimitives";
 
 type DaemonRelaySectionProps = {
   daemonInfo: DaemonInfoResult | null;

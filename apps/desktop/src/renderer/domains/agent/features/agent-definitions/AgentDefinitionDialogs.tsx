@@ -9,10 +9,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import {
   createAgentDefinition,

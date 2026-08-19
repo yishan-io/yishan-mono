@@ -1,9 +1,9 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import { tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { getErrorMessage } from "../../../../../helpers/errorHelpers";
 import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
 import { setAgentChatStreamTabVisible } from "../../../events/agentChatPiEventShared";
 import { useAgentChatSession } from "../../../hooks/useAgentChatReadHooks";

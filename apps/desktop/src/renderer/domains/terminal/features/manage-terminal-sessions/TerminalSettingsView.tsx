@@ -8,7 +8,7 @@ import { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions }
 import { useProjects } from "@renderer/domains/project";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "@renderer/domains/terminal";
 import { useWorkspaces } from "@renderer/domains/workspace";
-import { MONOSPACE_SX } from "../../../../helpers/styles";
+import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";

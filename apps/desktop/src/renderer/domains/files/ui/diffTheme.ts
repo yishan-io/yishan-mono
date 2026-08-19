@@ -1,13 +1,13 @@
 import { registerCustomTheme } from "@pierre/diffs";
 import pierreDark from "@pierre/theme/pierre-dark";
 import pierreLight from "@pierre/theme/pierre-light";
-import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import {
   CODE_THEME_FAMILIES,
   type CodeThemePalette,
   getMonacoThemeName,
   resolveCodeTheme,
-} from "../../../helpers/codeThemes";
+} from "@renderer/ui/codeThemes";
+import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 
 // ---------------------------------------------------------------------------
 // EDITOR_COLORS — derived from SEMANTIC_COLOR_TOKENS (same values as before)

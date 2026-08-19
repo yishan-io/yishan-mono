@@ -1,8 +1,8 @@
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useRef, useState } from "react";
 import recordStartSound from "../../../../../../assets/record-start.mp3";
 import { transcribeVoiceForOrganization } from "../../../../../domains/agent/commands/voiceTranscriptionCommands";
 import { selectSelectedOrganizationId } from "../../../../../domains/session";
-import { getErrorMessage } from "../../../../../helpers/errorHelpers";
 
 const MAX_RECORDING_MS = 60_000;
 const AUDIO_BITS_PER_SECOND = 48_000;

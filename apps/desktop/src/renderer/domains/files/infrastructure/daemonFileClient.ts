@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { asRecord, readOptionalBoolean, readOptionalString } from "../../../rpc/helpers";
 import { getDaemonTransport } from "../../../rpc/rpcTransport";
 

@@ -17,6 +17,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { copyToClipboard } from "@renderer/platform/clipboard";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiCopy, BiTrash } from "react-icons/bi";
@@ -26,10 +27,9 @@ import {
   listServiceTokens,
   revokeServiceToken,
 } from "../../../../domains/settings/commands/settingsCommands";
-import { copyToClipboard } from "../../../../helpers/clipboard";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
+import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
-import {SettingsCard, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
 
 function formatTokenDate(dateString: string | null): string {
   if (!dateString) {

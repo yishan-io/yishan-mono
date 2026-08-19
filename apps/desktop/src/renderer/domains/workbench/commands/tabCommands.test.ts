@@ -13,7 +13,7 @@ import {
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
-} from "../../../helpers/terminalCloseTombstones";
+} from "../../terminal/model/terminalCloseTombstones";
 import {
   closeAllTabs,
   closeOtherTabs,

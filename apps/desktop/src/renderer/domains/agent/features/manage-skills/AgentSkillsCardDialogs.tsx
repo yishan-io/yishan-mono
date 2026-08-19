@@ -11,10 +11,10 @@ import {
   Typography,
 } from "@mui/material";
 import { MarkdownPreview } from "@renderer/domains/files";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { addSkill, getSkillDetail } from "../../commands/agentSkillCommands";
 import type { SkillDetail, SkillInfo } from "../../infrastructure/daemonAgentTypes";

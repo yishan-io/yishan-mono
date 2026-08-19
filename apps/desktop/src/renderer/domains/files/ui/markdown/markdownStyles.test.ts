@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { MONO_FONT_FAMILY, resolveCodeTheme } from "@renderer/helpers/codeThemes";
 import { createAppTheme } from "@renderer/theme";
+import { MONO_FONT_FAMILY, resolveCodeTheme } from "@renderer/ui/codeThemes";
 import { renderHook } from "@testing-library/react";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { describe, expect, it } from "vitest";

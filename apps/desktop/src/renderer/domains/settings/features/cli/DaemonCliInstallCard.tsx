@@ -1,10 +1,10 @@
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
+import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { useTranslation } from "react-i18next";
 import { BiTerminal } from "react-icons/bi";
 import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToolCommands";
-import { MONOSPACE_SX } from "../../../../helpers/styles";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import {SettingsCard, SettingsControlRow, SettingsRows} from "../../../../ui/components/SettingsPrimitives";
+import { SettingsCard, SettingsControlRow, SettingsRows } from "../../../../ui/components/SettingsPrimitives";
 
 type DaemonCliInstallCardProps = {
   status: CLIToolStatus | null;

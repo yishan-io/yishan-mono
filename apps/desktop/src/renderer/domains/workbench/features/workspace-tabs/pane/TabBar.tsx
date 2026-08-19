@@ -1,9 +1,9 @@
 import { Box, IconButton } from "@mui/material";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock, LuColumns2, LuGlobe, LuMessageCircle, LuPencil, LuPlus, LuSquareTerminal } from "react-icons/lu";
-import { getRendererPlatform } from "../../../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../../../shortcuts/shortcutDisplay";
 import { TabBarItem } from "./TabBarItem";
 import { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./TabBarMenus";

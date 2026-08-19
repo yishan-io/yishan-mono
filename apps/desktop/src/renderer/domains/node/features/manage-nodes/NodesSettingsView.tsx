@@ -14,15 +14,15 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import type { NodeRecord, OrganizationMemberRecord } from "../../../../api/types";
-import { listOrgNodes, unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
 import { listOrganizationMembers } from "../../../../domains/organization";
 import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../../domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
+import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
-import {SettingsCard, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import { listOrgNodes, unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
 
 function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {
   if (!node.ownerUserId) {

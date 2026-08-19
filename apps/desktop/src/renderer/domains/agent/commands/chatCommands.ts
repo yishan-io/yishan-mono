@@ -1,8 +1,8 @@
 import type { DesktopAgentKind } from "@renderer/domains/agent";
+import { generateId } from "@renderer/ids/generateId";
 import type { RpcSchema } from "../../../../shared/contracts/rpcSchema";
 import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../domains/agent/model/chatTypes";
 import { chatStore } from "../../../domains/agent/state/chatStore";
-import { generateId } from "../../../helpers/generateId";
 import {
   closeAgentSession as closeAgentSessionProcedure,
   ensureWorkspaceChatSession as ensureWorkspaceChatSessionProcedure,

@@ -1,8 +1,8 @@
 import { closeOverlayPanel } from "@renderer/domains/workbench";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { api } from "../../../api";
 import { setSelectedOrganizationId } from "../../../domains/session";
 import { selectSelectedOrganizationId } from "../../../domains/session";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { rendererQueryClient } from "../../../queryClient";
 import { setCurrentOrganization } from "../infrastructure/daemonOrganizationProcedures";
 

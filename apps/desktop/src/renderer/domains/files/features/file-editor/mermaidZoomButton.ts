@@ -13,7 +13,7 @@
  * `DiagramZoomOverlay` with it.
  */
 
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { mermaidIframeRenderer } from "../../ui/markdown/mermaidIframeRenderer";
 
 const ZOOM_BUTTON_CLASS = "vditor-mermaid-zoom-btn";

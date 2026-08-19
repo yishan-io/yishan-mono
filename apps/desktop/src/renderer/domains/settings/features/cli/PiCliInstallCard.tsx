@@ -1,11 +1,11 @@
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
+import { MONOSPACE_SX } from "@renderer/ui/typography";
+import { isNewerVersion } from "@renderer/version/version";
 import { useTranslation } from "react-i18next";
 import { BiTerminal } from "react-icons/bi";
 import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToolCommands";
-import { MONOSPACE_SX } from "../../../../helpers/styles";
-import { isNewerVersion } from "../../../../helpers/version";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import {SettingsCard, SettingsControlRow, SettingsRows} from "../../../../ui/components/SettingsPrimitives";
+import { SettingsCard, SettingsControlRow, SettingsRows } from "../../../../ui/components/SettingsPrimitives";
 
 type PiCliInstallCardProps = {
   status: CLIToolStatus | null;

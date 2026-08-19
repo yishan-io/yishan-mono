@@ -3,6 +3,8 @@ import { searchFiles } from "@renderer/domains/files";
 import { useKeybindingOverrides } from "@renderer/domains/settings";
 import { tabStore } from "@renderer/domains/workbench";
 import { renameTab } from "@renderer/domains/workbench";
+import { generateId } from "@renderer/ids/generateId";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
@@ -11,8 +13,6 @@ import {
   consumeAgentChatComposerFocus,
   getAgentChatComposerFocusRequest,
 } from "../../../../../events/agentChatComposerFocus";
-import { getErrorMessage } from "../../../../../helpers/errorHelpers";
-import { generateId } from "../../../../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
 import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";

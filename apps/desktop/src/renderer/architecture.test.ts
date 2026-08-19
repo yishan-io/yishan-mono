@@ -43,7 +43,7 @@
  *   - R16 App code must not deep-import a Domain (only the public index.ts).
  */
 
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -90,6 +90,9 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
+  if (!existsSync(dir)) {
+    return out;
+  }
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {

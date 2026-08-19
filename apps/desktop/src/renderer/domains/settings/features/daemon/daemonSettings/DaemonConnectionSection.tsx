@@ -1,11 +1,16 @@
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import type { DaemonInfoResult } from "@renderer/domains/settings";
-import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../../ui/components/SettingsPrimitives";
-import { MONOSPACE_SX } from "@renderer/helpers/styles";
 import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
 import { StatusIndicator } from "@renderer/ui/components/StatusIndicator";
+import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+} from "../../../../../ui/components/SettingsPrimitives";
 
 type DaemonConnectionSectionProps = {
   daemonInfo: DaemonInfoResult | null;

@@ -1,6 +1,6 @@
+import { generateId } from "@renderer/ids/generateId";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { generateId } from "../../../helpers/generateId";
 
 export type WorkspaceLifecycleScriptWarning = {
   scriptKind: "setup" | "post";

@@ -12,10 +12,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuLogIn } from "react-icons/lu";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { openPiProviderLogin, savePiProvider } from "../../commands/piProviderCommands";
 import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../commands/piProviderCommands";
 import {

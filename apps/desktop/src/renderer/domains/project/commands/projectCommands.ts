@@ -5,6 +5,7 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { api } from "../../../api";
 import type { ProjectWithWorkspacesRecord } from "../../../api";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
@@ -18,7 +19,6 @@ import {
   syncTabStoreWithWorkspace,
   syncWorkspaceContextLinks,
 } from "../../../domains/workspace";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { type ProjectListPreference, getProjectRpc } from "../infrastructure/daemonProjectClient";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../state/projectStore";

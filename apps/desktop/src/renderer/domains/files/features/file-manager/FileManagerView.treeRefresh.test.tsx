@@ -249,7 +249,7 @@ vi.mock("@renderer/domains/workbench/state/workbenchNavigationStore", () => ({
   workbenchNavigationStore: mocks.navStore,
 }));
 
-vi.mock("@renderer/helpers/platform", () => ({
+vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 

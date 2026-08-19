@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTokens } from "./formatters";
+import { formatTokens } from "./tokenFormatting";
 
 describe("formatTokens", () => {
   it("formats null as zero", () => {

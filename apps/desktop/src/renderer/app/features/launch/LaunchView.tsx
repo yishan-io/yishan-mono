@@ -11,6 +11,7 @@ import { createNewWhiteboard } from "@renderer/domains/files";
 import { workspaceCreateProgressStore } from "@renderer/domains/workspace";
 import { useWorkspaces } from "@renderer/domains/workspace";
 import type { WorkspaceCreateProgressStep } from "@renderer/domains/workspace";
+import { getRendererPlatform } from "@renderer/platform/platform";
 import { useTranslation } from "react-i18next";
 import {
   LuCircle,
@@ -25,7 +26,6 @@ import {
   LuTriangleAlert,
 } from "react-icons/lu";
 import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
-import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {

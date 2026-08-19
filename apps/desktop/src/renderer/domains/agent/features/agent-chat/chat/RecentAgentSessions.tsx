@@ -1,9 +1,9 @@
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { openTab } from "@renderer/domains/workbench";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
-import { getErrorMessage } from "../../../../../helpers/errorHelpers";
 import { fetchSessionHistory } from "../../../commands/agentChatSessionHistory";
 import type * as Rpc from "../../../infrastructure/daemonAgentTypes";
 import { formatAgentSessionTitle } from "../../../model/agentSkillTextHelpers";

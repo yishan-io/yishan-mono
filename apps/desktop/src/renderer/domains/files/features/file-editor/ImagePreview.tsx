@@ -1,7 +1,7 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
+import { getFileName } from "@renderer/path/pathHelpers";
 import { useCallback, useState } from "react";
 import { LuMaximize2, LuMinus, LuPlus } from "react-icons/lu";
-import { getFileName } from "../../../../helpers/pathHelpers";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 
 type ImagePreviewProps = {

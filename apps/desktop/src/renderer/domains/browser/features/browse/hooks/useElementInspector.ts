@@ -1,5 +1,5 @@
+import { writeClipboardText } from "@renderer/platform/clipboard";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { writeClipboardText } from "../../../../../helpers/clipboard";
 
 const INSPECT_MESSAGE_TYPE = "yishan-inspect-element";
 

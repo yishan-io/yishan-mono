@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { useMediaQuery } from "@mui/material";
+import { CODE_THEME_FAMILIES, type CodeThemeFamilyId, resolveCodeTheme } from "@renderer/ui/codeThemes";
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CODE_THEME_FAMILIES, type CodeThemeFamilyId, resolveCodeTheme } from "../../../helpers/codeThemes";
 import { editorSettingsStore } from "../state/editorSettingsStore";
 import { useCodeTheme } from "./useCodeTheme";
 import { AppThemePreferenceProvider } from "./useThemePreference";

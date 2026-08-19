@@ -1,8 +1,8 @@
+import { delay } from "@renderer/async/delay";
 import { tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
-import { delay } from "../../../helpers/delay";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { generateId } from "../../../helpers/generateId";
+import { generateId } from "@renderer/ids/generateId";
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
 import { renamePiSession, sendPiCommand } from "../infrastructure/daemonAgentProcedures";
 import { isAgentSessionBusy } from "../model/agentChatTypes";

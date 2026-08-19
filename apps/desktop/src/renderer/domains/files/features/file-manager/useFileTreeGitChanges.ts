@@ -1,4 +1,4 @@
-import { isWorkspaceNotFoundError } from "@renderer/helpers/errorHelpers";
+import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
 import { useEffect, useRef, useState } from "react";
 import type { FileTreeGitChangeKind } from "./file-tree/types";
 

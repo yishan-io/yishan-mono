@@ -7,7 +7,7 @@ import { workspaceStore } from "../../../domains/workspace/state/workspaceStore"
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
-} from "../../../helpers/terminalCloseTombstones";
+} from "../model/terminalCloseTombstones";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;

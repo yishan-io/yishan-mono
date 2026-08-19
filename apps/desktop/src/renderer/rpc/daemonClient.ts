@@ -1,4 +1,4 @@
-import { generateId } from "../helpers/generateId";
+import { generateId } from "@renderer/ids/generateId";
 import type * as Rpc from "./daemonTypes";
 import {
   asRecord,

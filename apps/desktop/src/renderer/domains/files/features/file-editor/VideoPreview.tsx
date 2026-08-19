@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
+import { getFileName } from "@renderer/path/pathHelpers";
 import { useCallback, useState } from "react";
 import { PiWarningThin } from "react-icons/pi";
-import { getFileName } from "../../../../helpers/pathHelpers";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 
 type VideoPreviewProps = {

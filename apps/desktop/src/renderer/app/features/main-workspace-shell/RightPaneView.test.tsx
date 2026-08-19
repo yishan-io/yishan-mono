@@ -104,7 +104,7 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
-vi.mock("../../../helpers/clipboard", () => ({
+vi.mock("@renderer/platform/clipboard", () => ({
   writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
 }));
 
@@ -158,7 +158,7 @@ vi.mock("../../../domains/git/commands/gitCommands", () => ({
   subscribeWorkspaceGitChanged: () => () => {},
 }));
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 

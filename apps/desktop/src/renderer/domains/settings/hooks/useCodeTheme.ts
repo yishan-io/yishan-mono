@@ -1,4 +1,4 @@
-import { getMonacoThemeName, resolveCodeTheme } from "../../../helpers/codeThemes";
+import { getMonacoThemeName, resolveCodeTheme } from "@renderer/ui/codeThemes";
 import { editorSettingsStore } from "../state/editorSettingsStore";
 import { useThemePreference } from "./useThemePreference";
 

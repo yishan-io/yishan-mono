@@ -377,7 +377,7 @@ vi.mock("../../../domains/git/commands/gitCommands", () => ({
   closePullRequest: vi.fn(),
 }));
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => mocked.rendererPlatform,
 }));
 

@@ -1,5 +1,5 @@
+import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useRef, useState } from "react";
-import { getErrorMessage } from "../../../../../helpers/errorHelpers";
 
 export function useBrowserTools(webviewRef: React.RefObject<Electron.WebviewTag | null>) {
   const [toolsAnchor, setToolsAnchor] = useState<HTMLElement | null>(null);
