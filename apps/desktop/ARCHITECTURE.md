@@ -227,60 +227,66 @@ combined Project/Node/Workspace navigator moved to
 Features; every Domain RPC client and DTO moved to Domain Infrastructure over
 the root transport (`getDaemonTransport`), so root RPC is now a pure transport
 core (connection, correlation, timeouts, raw subscriptions, binary frames) with
-zero domain clients or domain DTOs. Root helpers are down to 15 files. R1b is
-19 (was 21). Root helpers/UI/events/navigation/search/shortcuts/api residue
-closes in Phase 26.
+zero domain clients or domain DTOs.
 
-## Root Migration Baselines (desktop7 Phase 21)
+Phase 26 (complete): session/node/organization/notification/overview/
+scheduled-job each pass the Domain Completion Method; scheduled-job form split
+(create/update/detail/list Features, shared fields in `ui`, form behavior in
+`hooks`, cron/schedule rules in `model`). Root residue closed:
+- Root `helpers/` removed. Capabilities: `platform/` (clipboard, platform),
+  `async/` (delay, withTimeout), `ids/` (generateId), `path/` (pathHelpers),
+  `version/` (version compare), `ui/typography` (MONOSPACE_SX),
+  `ui/codeThemes`. `errorHelpers` facade removed (importers use
+  `@shared/helpers/errorHelpers`); `issueLinks`/`tabHelpers` removed (zero
+  consumers); formatters split to the resource-usage and overview Features;
+  `terminalCloseTombstones` moved to Terminal Model (app consumes via the
+  Terminal public API).
+- Root `ui/hooks` removed → `renderer/hooks`.
+- Root `events/` is now the named backend-event + focus-intent capability
+  (adapter/router/selectors implementation moved from `app/events`, which
+  keeps only the handler composition).
+- Root `navigation/` removed (zero consumers); root `search/` removed
+  (provider functions had zero consumers; the quick-open type comes from the
+  Files Domain).
+- Root `api/` keeps only the REST transport (`restClient`) and shared record
+  types (`types`); every per-resource REST client moved to its Domain
+  Infrastructure.
+- Root `shortcuts/` stays the named keybinding framework capability.
 
-Baselines recorded 2026-08-18 in `architecture.migrationBaselines.ts`; the
-architecture test rejects growth: no new root Helpers file, no new production
-Helpers importer, no new `ui/hooks` file, no new root UI dependency violation.
+## Root Capabilities (desktop7 Phase 26)
 
-### Root Helpers (44 files: 29 production, 15 tests)
+Root `helpers` and root `ui/hooks` no longer exist (desktop7 Phase 26).
+The migration baselines in `architecture.migrationBaselines.ts` are empty but
+the guard tests remain: the architecture test rejects re-creating root
+`helpers` files/importers, new `ui/hooks` files, and new root UI dependency
+violations.
 
-| Helper | Provisional owner |
-|---|---|
-| `binaryExtensions`, `diffSearch` | Files `diff-viewer` Feature |
-| `excalidrawScene` | Files `file-editor` Feature |
-| `editorLanguage`, `gitGutterDiff` | Files Services or Model (dependency review) |
-| `monacoSetup`, `monacoThemeRules` | Files Infrastructure (Monaco) |
-| `diffTheme` | Files UI or a named code-theme capability |
-| `syntaxThemeComparison` | Remove (no production consumer) |
-| `workspaceBranchNaming` | Workspace `create-workspace` Feature — **moved (Phase 24)** |
-| `workspaceDisplayNames` | Workspace Services — **moved (Phase 24)** |
-| `localFolder` | Workspace Model — **moved (Phase 24)** |
-| `pullRequestUtils` | Git Model or Services |
-| `leftPaneStyles` | App `project-workspace-navigator` Feature — **moved (Phase 24)** |
-| `terminalTabUtils` | Workbench Model — **moved (Phase 24)** |
-| `terminalCloseTombstones` | App Runtime |
-| `clipboard`, `platform` | Named platform Infrastructure |
-| `delay`, `withTimeout` | Named shared async capability |
-| `generateId` | Named shared ID capability |
-| `pathHelpers` | Named shared path capability |
-| `styles` | Root UI typography capability |
-| `codeThemes` | Settings theme capability |
-| `version` | Shared version capability (App runtime) |
-| `versionHelpers` | App launch Feature |
-| `errorHelpers` | Canonical shared error module; remove the Renderer re-export facade |
-| `formatters` | Split by meaning: resource-usage UI formatting vs token formatting Feature |
-| `issueLinks`, `tabHelpers` | Remove after consumer search (none found) |
+Named root capabilities (business-neutral, with written dependency rules):
 
-### Root UI (33 files: 29 components, 4 `ui/hooks`)
+| Capability | Contents | Dependency rule |
+|---|---|---|
+| `rpc/` | Transport core: connection, correlation, timeouts, raw subscriptions, binary frames, wire types | Domain access only through Domain Infrastructure adapters; root RPC imports only from `app/events`, `app/runtime`, and Domain Infrastructure (Phase 27) |
+| `events/` | Backend-event adapter/router/selectors + composer/terminal focus-intent bridges | May import root `rpc` and `shared` only; must not import App, Domains, API, or UI |
+| `api/` | REST transport (`restClient`) + shared REST record types (`types`) | Per-resource clients live in Domain Infrastructure; UI may type-import `api/types` only |
+| `shortcuts/` | Keybinding framework (metadata, runner, display, overrides) | Framework capability; Domains/App consume via named exports only |
+| `platform/` | clipboard, platform detection | May import root `rpc` (host bridge) only |
+| `async/` | delay, withTimeout | No product imports |
+| `ids/` | generateId (re-export of `@shared/helpers/generateId`) | No product imports |
+| `path/` | getFileName | No product imports |
+| `version/` | isNewerVersion, isDaemonVersionOutdated | No product imports |
+| `hooks/` | Domain-free React behavior (RouteCloseWatcher, context-menu state, request guard, refreshable loader) | No App/Domains/API/RPC imports |
+| `ui/` | Domain-free stateless presentation (components, typography, codeThemes) | No App/Domains/API/RPC/Stores/Commands/Runtime imports |
 
-| Item | Provisional owner |
-|---|---|
-| `BranchBadge`, `PullRequestIcon` | Git UI |
-| `BranchDropdown` | Workspace `create-workspace` Feature — **moved (Phase 24)** |
-| `ResourceUsageMenu` | Workspace resource-usage Feature — **moved (Phase 24)** |
-| `DiagramZoomOverlay` | Files UI plus Files React behavior |
-| `KeybindingDisplay` | Settings keybindings Feature — **moved (Phase 23)** |
-| `PortsTableMenu` | App main-workspace-shell Feature — **moved (Phase 22)** |
-| `AppBootstrapLoadingView` | App launch Feature — **moved (Phase 22)** |
-| `RouteCloseWatcher` | Root Hook — **moved to `renderer/hooks` (Phase 22)** |
-| `CenteredSpinner`, `FloatingSurface`, `SearchInput`, `StatusBadge`, `StatusIndicator`, `TableDropdownMenu`, `VirtualizedListbox`, `CenteredContentLayout` | Root UI (domain-free) |
-| `ModelAutocomplete` | Remove after consumer search (test-only) |
-| `ui/hooks/*` (4 files) | Root `renderer/hooks` |
+Phase 26 resolutions of the Phase 21 provisional owners: workspace helpers →
+Workspace (Phase 24); files/git/terminal/agent helpers → their Domains
+(Phase 25); `terminalCloseTombstones` → Terminal Model; `clipboard`/`platform`
+→ `platform/`; `delay`/`withTimeout` → `async/`; `generateId` → `ids/`;
+`pathHelpers` → `path/`; `styles` → `ui/typography`; `codeThemes` →
+`ui/codeThemes`; `version`/`versionHelpers` → `version/`; `errorHelpers`
+facade removed (canonical `@shared/helpers/errorHelpers`); `formatters` split
+to owning Features; `issueLinks`/`tabHelpers`/`syntaxThemeComparison` removed
+after consumer search. `ui/hooks/*` → `renderer/hooks`; `RouteCloseWatcher`
+already at `renderer/hooks`; root UI components stayed domain-free.
 
 Root UI dependency violations (final rule: no App/Domains/API/RPC/Helpers
 imports): `ui/hooks/useRefreshableLoader.ts`. It is baselined; Phase 26 moves it.
