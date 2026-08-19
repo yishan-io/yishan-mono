@@ -1,5 +1,6 @@
-import { setOrganizationVoiceUsage } from "../../../domains/session";
+
 import { getVoiceTranscriptionUsage, transcribeVoice } from "../infrastructure/voiceTranscriptionApi";
+import { sessionStore } from "@renderer/domains/session";
 
 export async function transcribeVoiceForOrganization(input: {
   organizationId: string;
@@ -12,7 +13,7 @@ export async function transcribeVoiceForOrganization(input: {
     durationSeconds: input.durationSeconds,
   });
   const usage = await getVoiceTranscriptionUsage(input.organizationId);
-  setOrganizationVoiceUsage(input.organizationId, usage);
+  sessionStore.getState().setOrganizationVoiceUsage(input.organizationId, usage);
 
   return result;
 }

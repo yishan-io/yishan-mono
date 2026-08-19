@@ -8,13 +8,14 @@ import { useTranslation } from "react-i18next";
 import { LuArrowLeft, LuPanelLeft, LuPause, LuPencil, LuPlay, LuTrash2, LuZap } from "react-icons/lu";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../../domains/scheduled-job/state/scheduledJobStore";
-import { useSelectedOrganizationId } from "../../../../domains/session";
+
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { EditScheduledJobDialogView } from "../scheduled-job-update/EditScheduledJobDialogView";
 import { ScheduledJobDetailFields } from "./ScheduledJobDetailFields";
 import { ScheduledJobRunsSidebar } from "./ScheduledJobRunsSidebar";
 import { useScheduledJobDetailState } from "./useScheduledJobDetailState";
+import { sessionStore } from "@renderer/domains/session";
 
 type ScheduledJobDetailViewProps = {
   job: ScheduledJobRecord;
@@ -29,7 +30,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
   const toggleLeftTooltipLabel = `${t("layout.toggleLeftSidebar")} (${toggleLeftShortcutLabel})`;
   const shouldReserveMacInset = getRendererPlatform() === "darwin" && leftCollapsed;
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
-  const orgId = useSelectedOrganizationId() ?? "";
+  const orgId = sessionStore((state) => state.selectedOrganizationId) ?? "";
   const {
     runsPaneWidth,
     isEditOpen,

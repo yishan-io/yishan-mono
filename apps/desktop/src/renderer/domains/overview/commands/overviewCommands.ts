@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+
 import {
   getOverviewAgentKindBreakdown,
   getOverviewModelBreakdown,
@@ -8,9 +8,10 @@ import {
   getOverviewWorkspaceInsights,
 } from "../infrastructure/overviewApi";
 import type { OverviewTimeRange } from "../overviewTypes";
+import { sessionStore } from "@renderer/domains/session";
 
 function selectedOrganizationId(): string {
-  const organizationId = selectSelectedOrganizationId()?.trim() || "";
+  const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
   if (!organizationId) {
     throw new Error("No organization selected");
   }

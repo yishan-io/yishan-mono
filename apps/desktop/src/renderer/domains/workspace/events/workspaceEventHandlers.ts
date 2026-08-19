@@ -14,12 +14,13 @@ import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion, setWorkspaceCurrentBranch, setWorkspacePullRequest } from "@renderer/domains/git";
 import { inspectGitRepository } from "@renderer/domains/git";
 import { openTab } from "@renderer/domains/workbench";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { subscribeDaemonConnectionStatus } from "../infrastructure/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
+import { sessionStore } from "@renderer/domains/session";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;
 const WORKSPACE_SNAPSHOT_REFRESH_DEBOUNCE_MS = 300;
@@ -182,7 +183,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
     setWorkspacePullRequest(workspaceId, pullRequest);
   },
-  getSelectedOrganizationId: () => selectSelectedOrganizationId(),
+  getSelectedOrganizationId: () => sessionStore.getState().selectedOrganizationId,
   workspaceExistsLocally: (workspaceId) =>
     workspaceStore.getState().workspaces.some((workspace) => workspace.id === workspaceId),
 };

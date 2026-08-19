@@ -2,14 +2,15 @@ import { Box, Paper, Stack, Typography } from "@mui/material";
 import { CreateProjectFormView } from "@renderer/domains/project";
 import { useTranslation } from "react-i18next";
 import { LuFolderGit2 } from "react-icons/lu";
-import { useOrganizations, useSelectedOrganizationId } from "../../domains/session";
+
 import { AppMenuView } from "../features/app-menu/AppMenuView";
+import { sessionStore } from "@renderer/domains/session";
 
 /** Renders the first-run project creation view for organizations without projects. */
 export function OnboardingView() {
   const { t } = useTranslation();
-  const organizations = useOrganizations();
-  const selectedOrganizationId = useSelectedOrganizationId();
+  const organizations = sessionStore((state) => state.organizations);
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const selectedOrganization = organizations.find((organization) => organization.id === selectedOrganizationId);
 
   return (

@@ -3,7 +3,7 @@ import { useWorkspaceAgentStatusByWorkspaceId, useWorkspaceUnreadToneByWorkspace
 import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/domains/git";
 import { listOrgNodes } from "@renderer/domains/node";
 import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
-import { useSelectedOrganizationId } from "@renderer/domains/session";
+
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/domains/workspace";
 import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
@@ -13,6 +13,7 @@ import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
 import { reconcileOrder } from "./workspaceNavigatorHelpers";
+import { sessionStore } from "@renderer/domains/session";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;
@@ -62,7 +63,7 @@ export function useWorkspaceNavigatorTreeData(input: {
   const gitChangeTotalsByWorkspaceId = useWorkspaceGitChangeTotalsByWorkspaceId();
   const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
   const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
-  const selectedOrganizationId = useSelectedOrganizationId();
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({
     queryKey: ["org-nodes", selectedOrganizationId],

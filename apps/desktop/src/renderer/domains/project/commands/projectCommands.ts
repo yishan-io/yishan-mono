@@ -8,7 +8,7 @@ import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import type { ProjectWithWorkspacesRecord } from "../../../api/types";
-import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
+
 import {
   addWorkspace as applyAddWorkspace,
   buildWorkspaceOpenProjectEntries,
@@ -24,6 +24,7 @@ import {
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
+import { sessionStore } from "@renderer/domains/session";
 
 async function inspectLocalRepository(path: string): Promise<{
   isGitRepository: boolean;
@@ -87,7 +88,7 @@ export async function createProject(input: {
   const localRepositoryMetadata = isLocalSource ? await inspectLocalRepository(normalizedPath) : undefined;
 
   if (isLocalSource && localRepositoryMetadata) {
-    inferredNodeId = selectSessionDaemonId()?.trim();
+    inferredNodeId = sessionStore.getState().daemonId?.trim();
     inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
     inferredSourceTypeHint = inferredRemoteUrl
       ? "git"
@@ -113,7 +114,7 @@ export async function createProject(input: {
     return;
   }
 
-  const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
+  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (!selectedOrganizationId) {
     return;
   }
@@ -234,7 +235,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   }
 
   const previousWorkspaces = selectWorkspaces();
-  const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
+  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
       await deleteProjectFromApi(selectedOrganizationId, projectId);
@@ -269,7 +270,7 @@ export async function updateProjectConfig(
 
   const previousContextEnabled = project.contextEnabled ?? true;
 
-  const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
+  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
       const updatedProject = await updateProjectFromApi(selectedOrganizationId, projectId, {

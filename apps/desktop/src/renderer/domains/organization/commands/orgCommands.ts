@@ -1,7 +1,7 @@
 import { closeOverlayPanel } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { setSelectedOrganizationId } from "../../../domains/session";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+
+
 import { rendererQueryClient } from "../../../queryClient";
 import { setCurrentOrganization } from "../infrastructure/daemonOrganizationProcedures";
 import {
@@ -14,11 +14,12 @@ import {
   listOrganizations as listOrganizationsFromApi,
   removeOrganizationMember as removeOrganizationMemberFromApi,
 } from "../infrastructure/orgApi";
+import { sessionStore } from "@renderer/domains/session";
 
 const errNoOrgSelected = "No organization selected.";
 
 function resolveOrgId(): string {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     throw new Error(errNoOrgSelected);
   }
@@ -37,7 +38,7 @@ function wrapOrgCommand<T>(fn: (orgId: string) => Promise<T>): Promise<T> {
  */
 export async function switchOrganization(orgId: string): Promise<void> {
   closeOverlayPanel();
-  setSelectedOrganizationId(orgId);
+  sessionStore.getState().setSelectedOrganizationId(orgId);
 
   try {
     await setCurrentOrganization(orgId);

@@ -10,12 +10,13 @@ import {
   DEFAULT_NOTIFICATION_PREFERENCES,
 } from "../../../../shared/notifications/notificationPreferences";
 import { requestJson } from "../../../api/restClient";
-import { selectCurrentUserNotificationPreferences } from "../../../domains/session";
-import { updateCurrentUserNotificationPreferences } from "../../../domains/session";
+import { sessionStore } from "@renderer/domains/session";
+
+
 
 /** Loads notification preferences from current session user, then falls back to local cache. */
 export async function getNotificationPreferences() {
-  const currentUserPreferences = selectCurrentUserNotificationPreferences();
+  const currentUserPreferences = sessionStore.getState().currentUser?.notificationPreferences;
   if (currentUserPreferences) {
     const normalized = normalizeNotificationPreferences(currentUserPreferences);
     cacheNotificationPreferences(normalized);
@@ -36,7 +37,17 @@ export async function updateNotificationPreferences(patch: Partial<NotificationP
   });
   const normalized = normalizeNotificationPreferences(response.preferences);
   cacheNotificationPreferences(normalized);
-  updateCurrentUserNotificationPreferences(normalized);
+  const sessionState = sessionStore.getState();
+  if (sessionState.currentUser) {
+    sessionState.setSessionData({
+      currentUser: {
+        ...sessionState.currentUser,
+        notificationPreferences: normalized,
+      },
+      organizations: sessionState.organizations,
+      selectedOrganizationId: sessionState.selectedOrganizationId,
+    });
+  }
   return normalized;
 }
 

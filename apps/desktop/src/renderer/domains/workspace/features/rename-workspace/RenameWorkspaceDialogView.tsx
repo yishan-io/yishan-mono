@@ -3,11 +3,12 @@ import { useDialogRegistration } from "@renderer/domains/workbench";
 import { getRendererPlatform } from "@renderer/platform/platform";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useTranslation } from "react-i18next";
-import { useSelectedOrganizationId } from "../../../../domains/session";
+
 import { workspaceStore } from "../../state/workspaceStore";
 import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
 import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { useRenameWorkspaceDialogState } from "./useRenameWorkspaceDialogState";
+import { sessionStore } from "@renderer/domains/session";
 
 type RenameWorkspaceDialogViewProps = {
   open: boolean;
@@ -19,7 +20,7 @@ type RenameWorkspaceDialogViewProps = {
 /** Renders the workspace rename dialog (desktop7 Phase 24 — split from create-workspace). */
 export function RenameWorkspaceDialogView({ open, projectId, workspaceId, onClose }: RenameWorkspaceDialogViewProps) {
   const { t } = useTranslation();
-  const organizationId = useSelectedOrganizationId();
+  const organizationId = sessionStore((state) => state.selectedOrganizationId);
   const workspaces = workspaceStore((state) => state.workspaces);
 
   useDialogRegistration(open);

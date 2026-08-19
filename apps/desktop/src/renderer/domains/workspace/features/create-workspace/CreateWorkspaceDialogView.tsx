@@ -8,7 +8,7 @@ import { getRendererPlatform } from "@renderer/platform/platform";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
+
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { createWorkspace } from "../../commands/workspaceCommands";
@@ -20,6 +20,7 @@ import { ProjectAndSourceBranchSection } from "./createWorkspaceDialog/ProjectAn
 import { TaskRunSection } from "./createWorkspaceDialog/TaskRunSection";
 import { useCreateWorkspaceDialogState } from "./useCreateWorkspaceDialogState";
 import { resolveTargetBranchForCreate } from "./workspaceBranchNaming";
+import { sessionStore } from "@renderer/domains/session";
 
 type CreateWorkspaceDialogViewProps = {
   open: boolean;
@@ -31,8 +32,8 @@ type CreateWorkspaceDialogViewProps = {
 export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWorkspaceDialogViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const organizationId = useSelectedOrganizationId();
-  const daemonId = useDaemonId();
+  const organizationId = sessionStore((state) => state.selectedOrganizationId);
+  const daemonId = sessionStore((state) => state.daemonId);
   const projects = projectStore((state) => state.projects);
   const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);

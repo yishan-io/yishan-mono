@@ -1,15 +1,16 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+
 import {
   listOrganizationNodes,
   unregisterOrganizationNode,
   updateOrganizationNodeScope,
 } from "../infrastructure/nodeApi";
+import { sessionStore } from "@renderer/domains/session";
 
 const errNoOrgSelected = "No organization selected.";
 
 function resolveOrgId(): string {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     throw new Error(errNoOrgSelected);
   }

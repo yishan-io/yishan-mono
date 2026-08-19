@@ -1,6 +1,7 @@
 import { emitDesktopRpcEventToBus } from "../../events/desktopRpcEventBus";
 import { getDesktopHostBridge } from "../../platform/hostBridge";
 import { subscribeConnectionStatus } from "../../rpc";
+import { sessionStore } from "@renderer/domains/session";
 
 /**
  * Daemon identity refresh runtime (desktop8 Phase 31: moved out of root RPC

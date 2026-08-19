@@ -1,6 +1,6 @@
 import { projectStore } from "@renderer/domains/project";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import {
   type WorkspaceLifecycleScriptWarning,
@@ -12,6 +12,7 @@ import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
 import { selectIsDefaultContextEnabled } from "../state/workspaceSettingsSelectors";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
+import { sessionStore } from "@renderer/domains/session";
 
 type CreateWorkspaceInput = {
   projectId: string;
@@ -109,7 +110,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
   }
 
   const project = projectStore.getState().projects.find((item) => item.id === projectId);
-  const organizationId = selectSelectedOrganizationId()?.trim() || "";
+  const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
 
   const repoKey = project?.repoKey?.trim() || project?.key?.trim() || project?.id || "";
   const sourcePath = project?.localPath?.trim() || project?.path?.trim() || "";

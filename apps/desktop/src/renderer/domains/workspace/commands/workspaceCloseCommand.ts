@@ -1,6 +1,6 @@
 import { projectStore } from "@renderer/domains/project";
 import { removeRightPaneStateForWorkspace } from "@renderer/domains/workbench";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import type { WorkspaceLifecycleScriptWarning } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
@@ -9,6 +9,7 @@ import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../localFolder";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
+import { sessionStore } from "@renderer/domains/session";
 
 type CloseWorkspaceResponse = {
   workspace: { id: string; status: string };
@@ -109,7 +110,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   void removeWorkspaceInBackground({
     workspaceId,
     workspaceName: workspace.name,
-    organizationId: workspace.organizationId?.trim() || selectSelectedOrganizationId()?.trim() || undefined,
+    organizationId: workspace.organizationId?.trim() || sessionStore.getState().selectedOrganizationId?.trim() || undefined,
     projectId,
     branch: workspace.branch,
     removeBranch: options?.removeBranch,

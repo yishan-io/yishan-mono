@@ -140,11 +140,7 @@ import {
 } from "@renderer/domains/workspace";
 import { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
 import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
-import {
-  getRemoteHealthStatus as getRemoteHealthStatusCommand,
-  getSessionBootstrapData as getSessionBootstrapDataCommand,
-  resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../domains/session";
+import { getRemoteHealthStatus as getRemoteHealthStatusCommand, getSessionBootstrapData as getSessionBootstrapDataCommand, resetAuthExpiredState as resetAuthExpiredStateCommand } from "../../domains/session";
 import {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,

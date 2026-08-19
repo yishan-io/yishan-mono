@@ -1,6 +1,6 @@
 import { getFileName } from "@shared/path/pathHelpers";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
-import { selectSessionDaemonId } from "../../../../domains/session";
+
 import type { DaemonLocalFolder } from "../../snapshotTypes";
 import type { WorkspaceHealth, WorkspaceItem, WorkspaceLifecycleState } from "../../workspaceTypes";
 import type {
@@ -9,6 +9,7 @@ import type {
   WorkspaceStoreSetState,
   WorkspaceStoreState,
 } from "../workspaceStoreTypes";
+import { sessionStore } from "@renderer/domains/session";
 
 type LocalFolderActions = Pick<WorkspaceStoreActions, "loadLocalFolders" | "addLocalFolder" | "removeLocalFolder">;
 
@@ -43,7 +44,7 @@ function toFolderWorkspaceItem(folder: DaemonLocalFolder): WorkspaceItem {
     branch: "",
     summaryId: folder.id,
     worktreePath: path,
-    nodeId: selectSessionDaemonId()?.trim() || undefined,
+    nodeId: sessionStore.getState().daemonId?.trim() || undefined,
     kind: "folder",
     status: "active",
     state: normalizeFolderState(folder.state),

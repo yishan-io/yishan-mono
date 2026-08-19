@@ -7,11 +7,12 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CreateScheduledJobInput } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
+
 import { createScheduledJob } from "../../commands/scheduledJobCommands";
 import { DEFAULT_FORM_DRAFT, useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
 import { SCHEDULED_JOB_AGENT_KIND } from "../../scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
+import { sessionStore } from "@renderer/domains/session";
 
 type CreateScheduledJobFormViewProps = {
   onCreated: () => void;
@@ -25,8 +26,8 @@ const createCustomCronDescriptionSx = { display: "block", mt: 0.75 };
 /** Form for creating a new scheduled job. */
 export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }: CreateScheduledJobFormViewProps) {
   const { t } = useTranslation();
-  const orgId = useSelectedOrganizationId();
-  const daemonId = useDaemonId();
+  const orgId = sessionStore((state) => state.selectedOrganizationId);
+  const daemonId = sessionStore((state) => state.daemonId);
   const selectedProjectId = useSelectedProjectId();
   const projects = projectStore((state) => state.projects);
   const initialState = useMemo(
