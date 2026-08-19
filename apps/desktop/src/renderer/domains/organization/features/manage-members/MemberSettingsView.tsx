@@ -22,7 +22,8 @@ import { LuLogOut } from "react-icons/lu";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
 import { sessionStore } from "@renderer/domains/session";
-import { ConfirmationDialog } from "../../../../domains/workbench";
+import { useDialogRegistration } from "@renderer/domains/workbench";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import type { OrganizationMemberRecord } from "../../api/orgApi";
@@ -73,6 +74,9 @@ export function MemberSettingsView() {
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isLeavingOrg, setIsLeavingOrg] = useState(false);
   const [leaveErrorMessage, setLeaveErrorMessage] = useState<string | null>(null);
+
+  useDialogRegistration(pendingRemoveMember !== null || removeErrorMessage !== null);
+
   const organizationId = resolveOrganizationId(
     selectedOrganizationId,
     organizations.map((organization) => organization.id),

@@ -4,8 +4,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 afterEach(cleanup);
-import { SettingsSoundSelectRow } from "../../../../ui/components/SettingsSoundSelectRow";
-import { SettingsVolumeRow } from "../../../../ui/components/SettingsVolumeRow";
+import { SettingsSoundSelectRow } from "./SettingsSoundSelectRow";
+import { SettingsVolumeRow } from "./SettingsVolumeRow";
 
 describe("SettingsVolumeRow", () => {
   it("jumps to clicked hit area position and commits value", () => {

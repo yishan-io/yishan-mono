@@ -1,7 +1,7 @@
 import { ThemeProvider } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { AppThemePreferenceProvider } from "@renderer/domains/settings";
-import { type AppThemeMode, createAppTheme } from "@renderer/theme";
+import { type AppThemeMode, createAppTheme } from "@renderer/ui/theme";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";

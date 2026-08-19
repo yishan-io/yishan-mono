@@ -4,7 +4,7 @@ import { cleanup } from "@testing-library/react";
 import { COLOR_PRIMITIVES } from "@yishan-io/design-tokens";
 import { afterEach, describe, expect, it } from "vitest";
 import { renderWithAppTheme } from "../../../../../testUtils/renderWithAppTheme";
-import { createAppTheme } from "../../../../../theme";
+import { createAppTheme } from "../../../../../ui/theme";
 import { ToolSummaryPanel } from "./ToolCardShell";
 
 function getComputedColor(color: string): string {

@@ -10,7 +10,8 @@ import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/comma
 import { scheduledJobStore } from "../../../../domains/scheduled-job/state/scheduledJobStore";
 
 import { sessionStore } from "@renderer/domains/session";
-import { ConfirmationDialog } from "../../../../domains/workbench";
+import { useDialogRegistration } from "@renderer/domains/workbench";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { EditScheduledJobDialogView } from "../scheduled-job-update/EditScheduledJobDialogView";
 import { ScheduledJobDetailFields } from "./ScheduledJobDetailFields";
@@ -45,6 +46,8 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
     handleConfirmDelete,
     handleRunNow,
   } = useScheduledJobDetailState({ job, orgId, onBack });
+
+  useDialogRegistration(isDeleteOpen);
 
   const primaryAction = job.status === "active" ? "pause" : job.status === "paused" ? "resume" : null;
 

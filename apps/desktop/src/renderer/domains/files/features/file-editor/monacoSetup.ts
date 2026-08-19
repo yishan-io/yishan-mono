@@ -1,6 +1,7 @@
 import * as monaco from "monaco-editor";
 import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
+import "./monacoFindWidget.css";
 import { CODE_THEME_FAMILIES, getMonacoThemeName } from "@renderer/ui/codeThemes";
 import { buildMonacoThemeRules } from "./monacoThemeRules";
 

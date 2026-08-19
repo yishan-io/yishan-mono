@@ -1,7 +1,7 @@
 import { Box, CircularProgress, IconButton, MenuItem, Typography } from "@mui/material";
+import { SettingsCompactSelect } from "@renderer/ui/components/SettingsCompactControls";
+import { SettingsControlRow } from "@renderer/ui/components/SettingsPrimitives";
 import { BiPlay } from "react-icons/bi";
-import { SettingsCompactSelect } from "./SettingsCompactControls";
-import { SettingsControlRow } from "./SettingsPrimitives";
 
 const SETTINGS_SOUND_SELECT_LAYOUT = {
   width: 220,

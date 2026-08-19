@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentModel } from "../../chat/agentChatTypes";
 import { listAgentModels } from "../../commands/agentCommands";
-import { AgentModelSelector } from "../../features/agent-chat/session/AgentModelSelector";
 import {
   clampThinkingLevel,
   formatSupportedThinkingLevels,
@@ -11,6 +10,7 @@ import {
 } from "../../providers/agentThinkingLevels";
 import { getPiProviderDisplayName } from "../../providers/piProviders";
 import { splitModelId, stripProviderPrefix } from "../select-model";
+import { AgentModelSelector } from "../select-model/AgentModelSelector";
 
 type ModelThinkingSelectorProps = {
   model: string;

@@ -45,7 +45,6 @@ export {
 export { formatAgentSessionTitle } from "./skills/agentSkillText";
 export type { ThinkingLevel } from "./providers";
 export type { PiProviderAuthMode, PiProviderCatalogEntry } from "./providers";
-export type { PiProviderVisual } from "./ui/piProviderVisuals";
 
 export type {
   AgentCompactionReason,

@@ -5,7 +5,7 @@ import { openSubagentSessionInRightSplitPane } from "../../../commands/agentChat
 
 import type { AgentMessage, AgentModel, AgentQueueState } from "../../../chat/agentChatTypes";
 import { formatSupportedThinkingLevels } from "../../../providers/agentThinkingLevels";
-import { THINKING_LEVEL_LABELS } from "../session/ThinkingLevelControl";
+import { THINKING_LEVEL_LABELS } from "../../select-model/ThinkingLevelControl";
 import { AgentMessageList } from "../transcript/AgentMessageList";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];

@@ -19,10 +19,10 @@ import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
 
 import { keybindingSettingsStore } from "@renderer/domains/settings";
-import { ProviderCredentialDialog } from "../../../ui/credentials/ProviderCredentialDialog";
+import { ProviderCredentialDialog } from "../../provider-credentials/ProviderCredentialDialog";
+import { AgentModelSelector } from "../../select-model/AgentModelSelector";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
-import { AgentModelSelector } from "../session/AgentModelSelector";
 import { AgentChatVoiceButton } from "./AgentChatVoiceButton";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { type ComposerAttachment, ComposerAttachmentBlock } from "./composer/ComposerAttachmentBlock";

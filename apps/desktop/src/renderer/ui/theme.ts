@@ -4,29 +4,16 @@ import type { DesignTokenThemeMode } from "@yishan-io/design-tokens/v1";
 import { createMuiThemeOptions } from "@yishan-io/design-tokens/v1/mui";
 
 export type AppThemeMode = DesignTokenThemeMode;
-export type AppThemePreference = AppThemeMode | "system";
 
 export const DARK_SURFACE_COLORS = _DARK_SURFACE_COLORS;
 
-function isAppThemeMode(value: string): value is AppThemeMode {
-  return value === "light" || value === "dark";
-}
-
-export function resolveAppThemeMode(preference: AppThemePreference, systemPrefersDark: boolean): AppThemeMode {
-  if (preference === "system") {
-    return systemPrefersDark ? "dark" : "light";
-  }
-
-  if (typeof preference === "string" && isAppThemeMode(preference)) {
-    return preference;
-  }
-
-  return systemPrefersDark ? "dark" : "light";
-}
-
 /**
- * Creates the renderer theme, including compact defaults for MUI `IconButton` and `TextField` controls.
- * Runtime controls inherit these defaults unless their component contract explicitly overrides the size.
+ * Creates the renderer theme, including compact defaults for MUI `IconButton`
+ * and `TextField` controls. Runtime controls inherit these defaults unless
+ * their component contract explicitly overrides the size.
+ *
+ * Business-neutral root UI: Theme creation belongs to the Renderer; user
+ * preference and mode resolution live in the Settings Domain.
  */
 export function createAppTheme(mode: AppThemeMode) {
   const tokenThemeOptions = createMuiThemeOptions(mode);

@@ -1,4 +1,5 @@
 import { readDiff } from "@renderer/domains/git";
+import "./gitInlineDiff.css";
 import { useEffect, useRef, useState } from "react";
 import {
   type GitLineChange,

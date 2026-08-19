@@ -11,7 +11,7 @@ import {
   rethemeMermaidDiagrams,
 } from "./mermaidZoomButton";
 
-vi.mock("../../ui/markdown/mermaidIframeRenderer", () => ({
+vi.mock("../markdown-preview/mermaidIframeRenderer", () => ({
   mermaidIframeRenderer: {
     render: vi
       .fn()
@@ -21,7 +21,7 @@ vi.mock("../../ui/markdown/mermaidIframeRenderer", () => ({
   },
 }));
 
-import { mermaidIframeRenderer } from "../../ui/markdown/mermaidIframeRenderer";
+import { mermaidIframeRenderer } from "../markdown-preview/mermaidIframeRenderer";
 
 /** Builds a fake Vditor IR code-block preview panel with a rendered mermaid. */
 function buildMermaidPanel(): HTMLElement {

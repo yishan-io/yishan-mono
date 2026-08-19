@@ -4,6 +4,8 @@ import { monaco } from "../../../features/file-editor/monacoSetup";
 
 // CSS class names injected for gutter decorations.
 // These are defined in style.css and matched by Monaco's margin decoration class mechanism.
+import "./gitGutterDecorations.css";
+
 export const GUTTER_ADDED_CLASS = "git-gutter-added";
 export const GUTTER_MODIFIED_CLASS = "git-gutter-modified";
 export const GUTTER_DELETED_CLASS = "git-gutter-deleted";

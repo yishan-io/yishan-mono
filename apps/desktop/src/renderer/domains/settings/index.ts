@@ -4,9 +4,8 @@
 
 export { useCodeTheme } from "./hooks/useCodeTheme";
 export { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
+export type { AppThemePreference } from "./state/themePreference";
 
-export type { SettingsErrorBoundaryProps } from "./ui/controls/SettingsErrorBoundary";
-export type { SettingsPageLayoutProps } from "./ui/controls/SettingsPageLayout";
 export { editorSettingsStore, type EditorSettingsStoreState } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
 export { keybindingSettingsStore, type KeybindingOverrideMap } from "./state/keybindingSettingsStore";
