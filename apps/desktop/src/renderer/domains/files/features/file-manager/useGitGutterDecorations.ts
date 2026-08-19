@@ -6,7 +6,7 @@ import {
   type GitLineChangeKind,
   computeGitLineChanges,
   getHunkForLine,
-} from "../../gitGutterDiff";
+} from "../../features/file-editor/git-gutter/gitGutterDiff";
 import {
   GIT_GUTTER_DIFF_DEBOUNCE_MS,
   MAX_LIVE_GUTTER_DIFF_LINES,

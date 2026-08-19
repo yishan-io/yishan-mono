@@ -1,4 +1,4 @@
-import { isExcalidrawFile } from "../../editorLanguage";
+import { isExcalidrawFile } from "../../features/file-editor/editorLanguage";
 
 /**
  * Produces minimal placeholder content for a file tab opened without

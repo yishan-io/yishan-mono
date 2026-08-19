@@ -106,11 +106,11 @@ export {
   isMarkdownFile,
   isUnsupportedFileTab,
   isVideoFile,
-} from "./editorLanguage";
+} from "./features/file-editor/editorLanguage";
 export {
   computeGitLineChanges,
   getHunkForLine,
   type GitLineChange,
   type GitLineChangeKind,
-} from "./gitGutterDiff";
+} from "./features/file-editor/git-gutter/gitGutterDiff";
 export { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } from "./features/file-editor/monacoSetup";

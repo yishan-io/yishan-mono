@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { CliSpinner } from "../../../../ui/components/CliSpinner";
-import { isExcalidrawFile } from "../../editorLanguage";
+import { isExcalidrawFile } from "../../features/file-editor/editorLanguage";
 import { useGitGutterDecorations } from "../file-manager/useGitGutterDecorations";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 import { MarkdownViewToggle } from "./MarkdownViewToggle";
