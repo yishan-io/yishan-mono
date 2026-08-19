@@ -71,6 +71,13 @@ export const COMPLETED_PHASES = [
   "D14",
   "D15",
   "D16",
+  "P21",
+  "P22",
+  "P23",
+  "P24",
+  "P25",
+  "P26",
+  "P27",
 ] as const;
 
 export const KNOWN_VIOLATIONS: KnownViolation[] = [

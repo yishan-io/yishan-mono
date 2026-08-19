@@ -229,7 +229,7 @@ the root transport (`getDaemonTransport`), so root RPC is now a pure transport
 core (connection, correlation, timeouts, raw subscriptions, binary frames) with
 zero domain clients or domain DTOs.
 
-Phase 26 (complete): session/node/organization/notification/overview/
+Phases 26–27 (complete): see the per-phase records below. Phase 26 normalized the six remaining Domains and closed root residue; Phase 27 enforced the final architecture (see below). Phase 26 (complete): session/node/organization/notification/overview/
 scheduled-job each pass the Domain Completion Method; scheduled-job form split
 (create/update/detail/list Features, shared fields in `ui`, form behavior in
 `hooks`, cron/schedule rules in `model`). Root residue closed:
@@ -252,6 +252,24 @@ scheduled-job each pass the Domain Completion Method; scheduled-job form split
   types (`types`); every per-resource REST client moved to its Domain
   Infrastructure.
 - Root `shortcuts/` stays the named keybinding framework capability.
+
+Phase 27 (complete): final architecture enforcement.
+- New enforced rules (archtest now 29): R17 Domain must not VALUE-import its
+  own root index (type-only allowed), R18 no wildcard exports in Domain root
+  indexes, R19 root RPC imports only from `app/events`, `app/runtime`, and
+  Domain Infrastructure, R20 Model/State/Hooks/UI/Features do not import root
+  transport; the root UI rejection list adds IPC/Stores/Commands/Runtime.
+- R1b (@shared/contracts UI imports) is now enforced at 0.
+- The desktop host bridge (`getDesktopBridge`/`getDesktopHostBridge`) moved
+  out of root RPC into `platform/hostBridge`; root RPC keeps only connection,
+  wire protocol, correlation, timeouts, and raw subscription code.
+- The backend-event pipeline implementation lives in `app/events` (the
+  whitelisted home for transport access); root `events/` re-exports it for
+  Domains (R15-safe) and keeps the composer/terminal focus-intent bridges.
+- Domain transport subscriptions route through Domain Infrastructure
+  (session/agent/terminal/workbench/workspace wrappers).
+- `ModelAutocomplete` removed (test-only, no production consumer).
+- Allowlist rows: none (empty); `COMPLETED_PHASES` includes P21–P27.
 
 ## Root Capabilities (desktop7 Phase 26)
 
