@@ -14,12 +14,12 @@ import { useTranslation } from "react-i18next";
 import { LuPlus } from "react-icons/lu";
 import { FloatingSurface } from "../../../../ui/components/FloatingSurface";
 import { SearchInput } from "../../../../ui/components/SearchInput";
-import { ProviderMark } from "./ProviderMark";
 import {
   type ModelPickerOption,
   type ModelPickerProviderGroup,
   groupModelPickerOptionsByProvider,
-} from "./modelPicker";
+} from "../../model/modelPicker";
+import { ProviderMark } from "../../ui/ProviderMark";
 
 type ModelPickerMenuProps = {
   anchorEl: HTMLElement | null;

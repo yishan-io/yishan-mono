@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
 import type { AgentModel } from "../../../../../domains/agent/model/agentChatTypes";
 import { getSupportedThinkingLevels } from "../../../model/agentThinkingLevels";
-import { ModelPickerMenu } from "../../model-picker/ModelPickerMenu";
-import { ProviderMark } from "../../model-picker/ProviderMark";
 import {
   type ModelPickerOption,
   buildModelPickerOption,
   groupModelPickerOptionsByProvider,
-} from "../../model-picker/modelPicker";
+} from "../../../model/modelPicker";
+import { ProviderMark } from "../../../ui/ProviderMark";
+import { ModelPickerMenu } from "../../select-model/ModelPickerMenu";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
 import { formatAgentModelLabel } from "./helpers";
 

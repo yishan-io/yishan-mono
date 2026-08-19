@@ -30,7 +30,13 @@ export {
 export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
 export { listAgentDetectionStatuses, listAgentModels } from "./commands/agentCommands";
-export { listPiProviders, openPiProviderLogin, removePiProvider, savePiProvider, type PiProviderStatus } from "./commands/piProviderCommands";
+export {
+  listPiProviders,
+  openPiProviderLogin,
+  removePiProvider,
+  savePiProvider,
+  type PiProviderStatus,
+} from "./commands/piProviderCommands";
 export {
   clearTerminalAgentStatus,
   parseObserverSessionKey,
@@ -101,13 +107,13 @@ export { SessionHistoryMenu } from "./features/agent-chat/session/SessionHistory
 export { ThinkingLevelControl, THINKING_LEVEL_LABELS } from "./features/agent-chat/session/ThinkingLevelControl";
 export {
   ModelPickerMenu,
-  ProviderMark,
   buildModelPickerOption,
   groupModelPickerOptionsByProvider,
   splitModelId,
   stripProviderPrefix,
   type ModelPickerOption,
-} from "./features/model-picker";
+} from "./features/select-model";
+export { ProviderMark } from "./ui/ProviderMark";
 export {
   useWorkspaceAgentStatusByWorkspaceId,
   useWorkspaceUnreadToneByWorkspaceId,

@@ -1,4 +1,4 @@
-import { getPiProviderDisplayName } from "../../model/piProviders";
+import { getPiProviderDisplayName } from "./piProviders";
 
 export const FALLBACK_MODEL_PROVIDER_ID = "other";
 export const FALLBACK_MODEL_PROVIDER_NAME = "Other";

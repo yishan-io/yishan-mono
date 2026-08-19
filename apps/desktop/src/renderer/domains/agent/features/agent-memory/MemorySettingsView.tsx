@@ -1,18 +1,24 @@
 import { Alert, Box, Button, Stack } from "@mui/material";
-import { ModelPickerMenu } from "../model-picker";
-import { ProviderMark } from "../model-picker/ProviderMark";
-import { buildModelPickerOption, groupModelPickerOptionsByProvider, stripProviderPrefix } from "../model-picker";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import type { MemoryConfig } from "../../../../rpc/daemonTypes";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+  SettingsToggleRow,
+} from "../../../../ui/components/SettingsPrimitives";
 import {
   getMemoryConfig,
   listAgentModelsForMemorySettings,
   updateMemoryConfig,
 } from "../../commands/agentConfigCommands";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { MemoryConfig } from "../../../../rpc/daemonTypes";
-import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader, SettingsToggleRow} from "../../../../ui/components/SettingsPrimitives";
+import { ProviderMark } from "../../ui/ProviderMark";
+import { ModelPickerMenu } from "../select-model";
+import { buildModelPickerOption, groupModelPickerOptionsByProvider, stripProviderPrefix } from "../select-model";
 
 const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
 

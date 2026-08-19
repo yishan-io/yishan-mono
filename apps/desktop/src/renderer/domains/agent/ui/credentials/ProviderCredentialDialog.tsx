@@ -18,7 +18,6 @@ import { LuLogIn } from "react-icons/lu";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { openPiProviderLogin, savePiProvider } from "../../commands/piProviderCommands";
 import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../commands/piProviderCommands";
-import { ProviderMark } from "../../features/model-picker/ProviderMark";
 import {
   PI_PROVIDER_CATALOG,
   getPiProviderCatalogEntry,
@@ -27,6 +26,7 @@ import {
   isPiProviderOAuthCapable,
   isPiProviderSubscriptionCapable,
 } from "../../model/piProviders";
+import { ProviderMark } from "../ProviderMark";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 

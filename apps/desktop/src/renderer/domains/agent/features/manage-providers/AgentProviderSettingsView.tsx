@@ -1,14 +1,19 @@
 import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { ProviderMark } from "../model-picker/ProviderMark";
-import { listPiProviders } from "../../commands/piProviderCommands";
-import { ProviderCredentialDialog } from "../../ui/credentials/ProviderCredentialDialog";
-import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../model/piProviders";
-import type { PiProviderStatus } from "../../commands/piProviderCommands";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+} from "../../../../ui/components/SettingsPrimitives";
 import { useRefreshableLoader } from "../../../../ui/hooks/useRefreshableLoader";
-import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import { listPiProviders } from "../../commands/piProviderCommands";
+import type { PiProviderStatus } from "../../commands/piProviderCommands";
+import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../model/piProviders";
+import { ProviderMark } from "../../ui/ProviderMark";
+import { ProviderCredentialDialog } from "../../ui/credentials/ProviderCredentialDialog";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 
 type ProviderCredentialDialogTarget = {

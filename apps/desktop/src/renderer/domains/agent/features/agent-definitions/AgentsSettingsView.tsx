@@ -15,15 +15,15 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import type { AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
+import { SettingsCard } from "../../../../ui/components/SettingsPrimitives";
 import {
   listAgentDefinitions,
   removeAgentDefinition,
   restoreAgentDefinition,
 } from "../../commands/agentDefinitionCommands";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
-import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import {SettingsCard} from "../../../../ui/components/SettingsPrimitives";
 import { AgentDetailDialog, ConfirmDialog, CreateAgentDialog } from "./AgentDefinitionDialogs";
 
 const AGENT_TABLE_SX = {

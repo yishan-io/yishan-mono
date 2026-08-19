@@ -1,5 +1,5 @@
 import { Box, useTheme } from "@mui/material";
-import { getPiProviderCatalogEntry, getPiProviderIcon, getPiProviderIconColor } from "../../model/piProviders";
+import { getPiProviderCatalogEntry, getPiProviderIcon, getPiProviderIconColor } from "../model/piProviders";
 
 const MONOCHROME_WHITE_FILTER = "brightness(0) saturate(100%) invert(1)";
 

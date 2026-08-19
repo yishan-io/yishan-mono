@@ -20,16 +20,16 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import type { PiExtensionInfo } from "../../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
+import { SettingsCard } from "../../../../ui/components/SettingsPrimitives";
 import {
   installExtension,
   listExtensions,
   removeExtension,
   updateExtension,
 } from "../../commands/agentDefinitionCommands";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { PiExtensionInfo } from "../../../../rpc/daemonTypes";
-import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import {SettingsCard} from "../../../../ui/components/SettingsPrimitives";
 
 const LOCAL_FILE_SOURCE = "local file";
 

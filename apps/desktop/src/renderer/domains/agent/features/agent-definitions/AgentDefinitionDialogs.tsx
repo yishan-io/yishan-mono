@@ -12,14 +12,14 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
+import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
+import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import {
   createAgentDefinition,
   getAgentDefinitionDetail,
   updateAgentDefinition,
 } from "../../commands/agentDefinitionCommands";
-import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../../../rpc/daemonTypes";
-import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { FieldLabel } from "./AgentDefinitionFieldLabel";
 import { AgentToolsEditor, sameToolList } from "./AgentToolsEditor";
 import { ModelThinkingSelector } from "./ModelThinkingSelector";
