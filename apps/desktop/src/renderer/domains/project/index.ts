@@ -25,7 +25,7 @@ export {
   setProjectListPreferences,
 } from "./daemon/projectDaemonClient";
 export { getDefaultWorktreeLocation } from "./daemon/projectDaemonClient";
-export { openLocalFolderDialog } from "./host/projectHostCommands";
+export { openLocalFolderDialog } from "./host/folderPicker";
 export type {
   ProjectListModePreference,
   ProjectListPreference,

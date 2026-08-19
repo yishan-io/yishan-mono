@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { getDefaultWorktreeLocation } from "../daemon/projectDaemonClient";
-import { openLocalFolderDialog } from "./projectHostCommands";
+import { openLocalFolderDialog } from "./folderPicker";
 
 const mocks = vi.hoisted(() => ({
   openLocalFolderDialog: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock("@renderer/platform/hostBridge", () => ({
   })),
 }));
 
-describe("projectHostCommands", () => {
+describe("project folderPicker host adapter", () => {
   it("opens a native folder picker through the host bridge", async () => {
     mocks.openLocalFolderDialog.mockResolvedValueOnce("/tmp/worktrees");
     const result = await openLocalFolderDialog("/tmp");

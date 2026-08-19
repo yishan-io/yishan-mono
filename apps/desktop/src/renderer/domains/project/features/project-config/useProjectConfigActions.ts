@@ -3,7 +3,7 @@ import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
 import { useMutation } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
 import { updateProjectConfig } from "../../commands/projectCommands";
-import { openLocalFolderDialog } from "../../host/projectHostCommands";
+import { openLocalFolderDialog } from "../../host/folderPicker";
 import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../ui/projectIcons";
 import { DEFAULT_ICON_BG_COLOR, type ProjectConfigDraft } from "./useProjectConfigFormState";
 
