@@ -436,7 +436,11 @@ function scanViolations(): Violation[] {
     // ---- Rule 26 (desktop9 Phase 39): a nested index.ts is an internal-module
     // API. It is allowed only under features/<use-case>/ or a named business
     // module directory, never under technical directories. ----
-    if (/^domains\/[^/]+\/(state|commands|hooks|ui|daemon|api|host|subscriptions|runtime)\/(?:[^/]+\/)*index\.ts$/.test(rel)) {
+    if (
+      /^domains\/[^/]+\/(state|commands|hooks|ui|daemon|api|host|subscriptions|runtime)\/(?:[^/]+\/)*index\.ts$/.test(
+        rel,
+      )
+    ) {
       violations.push({ rule: "R26-technical-nested-index", file: rel, target: "technical nested index" });
     }
     // ---- Rule 12 (desktop6-adjust.md W8): Store Actions must stay
