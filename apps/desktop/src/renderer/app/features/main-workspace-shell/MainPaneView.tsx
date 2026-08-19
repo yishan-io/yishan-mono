@@ -7,7 +7,7 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "@renderer/domains/agent";
 import { formatAgentSessionTitle } from "@renderer/domains/agent";
-import { useAgentKindsInUse } from "@renderer/domains/agent";
+import { agentSettingsStore } from "@renderer/domains/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
 import { FileSearchOverlay } from "@renderer/domains/files";
 import { getFileTreeIcon } from "@renderer/domains/files";
@@ -113,7 +113,7 @@ export function MainPaneView() {
     },
     [],
   );
-  const inUseByAgentKind = useAgentKindsInUse();
+  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
   const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
   const rightWidth = layoutStore((state) => state.rightWidth);
   const enabledAgentKinds = useMemo(

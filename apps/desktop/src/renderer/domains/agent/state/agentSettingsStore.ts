@@ -5,7 +5,7 @@ import { type DesktopAgentKind, createDefaultAgentInUseByKind, isDesktopAgentKin
 
 export const AGENT_SETTINGS_STORE_STORAGE_KEY = "yishan-agent-settings-store";
 
-type AgentSettingsStoreState = {
+export type AgentSettingsStoreState = {
   inUseByAgentKind: Record<DesktopAgentKind, boolean>;
   setAgentInUse: (agentKind: DesktopAgentKind, inUse: boolean) => void;
 };

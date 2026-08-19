@@ -51,8 +51,3 @@ export function recordWorkspaceUnreadNotification(workspaceId: string, tone: Wor
 
 import type { DesktopAgentKind } from "../agentSettings";
 import { agentSettingsStore } from "./agentSettingsStore";
-
-/** Sets one desktop agent's in-use flag (Agent enablement State mutation). */
-export function setAgentInUse(agentKind: DesktopAgentKind, inUse: boolean): void {
-  agentSettingsStore.getState().setAgentInUse(agentKind, inUse);
-}

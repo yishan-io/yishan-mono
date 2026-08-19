@@ -93,7 +93,6 @@ export {
   removeWorkspaceTaskCounts,
   setWorkspaceAgentStatusByWorkspaceId,
   markWorkspaceNotificationsRead,
-  setAgentInUse,
 } from "./state/chatStateMutations";
 export type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
@@ -132,7 +131,7 @@ export { ProviderCredentialDialog } from "./ui/credentials/ProviderCredentialDia
 // feature through the public API (desktop7 Phase 21 — moved from Settings so
 // the settings→agent edge never evaluates this store mid-cycle).
 export { AGENT_SETTINGS_STORE_STORAGE_KEY } from "./state/agentSettingsStore";
-export { useAgentKindsInUse } from "./hooks/useAgentKindsInUse";
+export { agentSettingsStore, type AgentSettingsStoreState } from "./state/agentSettingsStore";
 export { AgentChatRecoveryCoordinator } from "./runtime/agentChatRecovery";
 export {
   appendChatMessages,
