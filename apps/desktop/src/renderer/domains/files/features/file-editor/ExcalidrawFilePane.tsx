@@ -5,7 +5,7 @@ import { Box, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import type { ParsedExcalidrawScene } from "../../../../helpers/excalidrawScene";
+import type { ParsedExcalidrawScene } from "./excalidrawScene";
 
 // CSS must be imported inside the lazy module tree — never in statically-imported code.
 import "@excalidraw/excalidraw/index.css";

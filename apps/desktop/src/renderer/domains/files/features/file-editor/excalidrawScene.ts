@@ -1,7 +1,7 @@
 import { restore, serializeAsJSON } from "@excalidraw/excalidraw";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
-import { getErrorMessage } from "./errorHelpers";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
 
 /**
  * Return type for {@link parseExcalidrawScene}.

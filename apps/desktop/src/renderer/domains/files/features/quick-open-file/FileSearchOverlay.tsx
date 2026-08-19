@@ -1,20 +1,14 @@
 import { FileQuickOpenDialog } from "@renderer/domains/files";
+import { isAudioFile, isExcalidrawFile, isImageFile, isUnsupportedFileTab, isVideoFile } from "@renderer/domains/files";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  isAudioFile,
-  isExcalidrawFile,
-  isImageFile,
-  isUnsupportedFileTab,
-  isVideoFile,
-} from "../../../../helpers/editorLanguage";
 import { buildWorkspaceFileUrl, readFile } from "../../commands/fileCommands";
 import { setExpandedFileTreeItems, setSelectedEntryPath } from "../../commands/fileTreeCommands";
 import { fileTreeStore } from "../../state/fileTreeStore";
-import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "./fileTreeHelpers";
+import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../file-manager/fileTreeHelpers";
 import { useFileSearchController } from "./useFileSearchController";
 
 export function FileSearchOverlay() {
@@ -170,13 +164,13 @@ export function FileSearchOverlay() {
       onClose={() => {
         setIsFileSearchOpen(false);
       }}
-      onQueryChange={(nextQuery) => {
+      onQueryChange={(nextQuery: string) => {
         setFileSearchQuery(nextQuery);
         setSelectedSearchResultIndex(0);
       }}
       onInputKeyDown={handleFileSearchInputKeyDown}
       onSelectResultIndex={setSelectedSearchResultIndex}
-      onOpenResult={(path, index) => {
+      onOpenResult={(path: string, index: number) => {
         setSelectedSearchResultIndex(index);
         void openSearchResultAndClose(path);
       }}

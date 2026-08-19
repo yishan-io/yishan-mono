@@ -71,9 +71,9 @@ import { language as typescriptDef } from "monaco-editor/esm/vs/basic-languages/
 import { language as yamlDef } from "monaco-editor/esm/vs/basic-languages/yaml/yaml.js";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 import { createHighlighterCore } from "shiki/core";
+import { buildMonacoThemeRules, resolveMonacoTokenColor } from "../domains/files/infrastructure/monacoThemeRules";
 import { buildOverriddenRules } from "../domains/files/ui/diffTheme";
 import { type CodeThemePalette, resolveCodeTheme } from "./codeThemes";
-import { buildMonacoThemeRules, resolveMonacoTokenColor } from "./monacoThemeRules";
 
 // Register the Monarch grammars directly (their lazy contribution loaders need
 // the full editor bootstrapping, which is unavailable in jsdom).

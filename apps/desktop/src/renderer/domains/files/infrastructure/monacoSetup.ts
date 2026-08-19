@@ -1,7 +1,7 @@
 import * as monaco from "monaco-editor";
 import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
-import { CODE_THEME_FAMILIES, getMonacoThemeName } from "./codeThemes";
+import { CODE_THEME_FAMILIES, getMonacoThemeName } from "../../../helpers/codeThemes";
 import { buildMonacoThemeRules } from "./monacoThemeRules";
 
 // Configure Monaco to use locally bundled workers instead of loading from CDN.

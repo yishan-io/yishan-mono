@@ -40,8 +40,8 @@ export {
 } from "./commands/fileTabContentCommands";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { useFileSearchController } from "./features/file-manager/useFileSearchController";
-export { FileSearchOverlay } from "./features/file-manager/FileSearchOverlay";
+export { useFileSearchController } from "./features/quick-open-file/useFileSearchController";
+export { FileSearchOverlay } from "./features/quick-open-file/FileSearchOverlay";
 export { FileManagerView } from "./features/file-manager/FileManagerView";
 export {
   FILETREE_DRAG_MIME,
@@ -82,3 +82,22 @@ export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
 
 export { MarkdownPreview } from "./ui/markdown/MarkdownPreview";
 export { createFileTabPlaceholder } from "./model/fileTabPlaceholder";
+export {
+  getFileExtension,
+  getLanguageId,
+  getSupportedExtensions,
+  isAudioFile,
+  isExcalidrawFile,
+  isImageFile,
+  isLanguageSupported,
+  isMarkdownFile,
+  isUnsupportedFileTab,
+  isVideoFile,
+} from "./model/editorLanguage";
+export {
+  computeGitLineChanges,
+  getHunkForLine,
+  type GitLineChange,
+  type GitLineChangeKind,
+} from "./model/gitGutterDiff";
+export { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } from "./infrastructure/monacoSetup";

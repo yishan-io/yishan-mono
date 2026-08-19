@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * mount onChange carries a restore-defaulted appState (viewBackgroundColor),
  * and user edits may carry transient fields that serialization strips.
  */
-vi.mock("../../helpers/excalidrawScene", () => {
+vi.mock("./excalidrawScene", () => {
   const TRANSIENT_KEYS = new Set([
     "scrollX",
     "scrollY",
