@@ -21,10 +21,15 @@ import { delay } from "../../../helpers/delay";
  */
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../events/agentChatPiEventShared";
+import {
+  attachPiSession as attachPiSessionProcedure,
+  sendPiCommand as sendPiCommandProcedure,
+  startPiSession as startPiSessionProcedure,
+  stopPiSession as stopPiSessionProcedure,
+} from "../infrastructure/daemonAgentProcedures";
 import { agentChatStore } from "../state/agentChatStore";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
@@ -123,14 +128,13 @@ export async function ensurePiSession(opts: {
     startPromise: deferredStartPromise,
   };
   activePiSessions.set(opts.tabId, handle);
-  const client = await getDaemonClient();
   await ensureAgentChatEventRouterReady();
   // A previous tab may have just been closed for this session id; wait for its
   // teardown to finish so pi.start spawns a fresh process instead of falling
   // back to attaching to a process that is being killed.
   await closingSessions.get(sessionId)?.catch(() => undefined);
   const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
-    return await client.pi.start({
+    return await startPiSessionProcedure({
       sessionId,
       tabId: opts.tabId,
       paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
@@ -145,7 +149,7 @@ export async function ensurePiSession(opts: {
         throw error;
       }
       didAttach = true;
-      return await client.pi.attach({
+      return await attachPiSessionProcedure({
         sessionId,
         tabId: opts.tabId,
         workspaceId: opts.workspaceId,
@@ -221,8 +225,7 @@ export async function reattachPiSession(tabId: string): Promise<void> {
   }
 
   const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
-  const client = await getDaemonClient();
-  await client.pi.attach({
+  await attachPiSessionProcedure({
     sessionId: session.sessionId,
     tabId,
     workspaceId: tab?.workspaceId,
@@ -248,8 +251,7 @@ export async function stopPiSession(tabId: string): Promise<void> {
       (fallbackTab?.kind === "agent-chat" ? fallbackTab.data.sessionId : undefined);
 
     if (fallbackSessionId && !isReadOnlySubagentDetail) {
-      const client = await getDaemonClient();
-      const stopPromise = Promise.resolve(client.pi.stop({ sessionId: fallbackSessionId })).catch(() => {});
+      const stopPromise = Promise.resolve(stopPiSessionProcedure({ sessionId: fallbackSessionId })).catch(() => {});
       trackClosingSession(fallbackSessionId, stopPromise);
       await stopPromise;
     }
@@ -288,8 +290,7 @@ export async function fetchAgentModels(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommandProcedure({
     sessionId: opts.sessionId,
     command: { type: "get_available_models" },
   });
@@ -300,8 +301,7 @@ export async function fetchAgentState(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommandProcedure({
     sessionId: opts.sessionId,
     command: { type: "get_state" },
   });
@@ -312,8 +312,7 @@ export async function fetchAgentMessages(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommandProcedure({
     sessionId: opts.sessionId,
     command: { type: "get_messages" },
   });
@@ -418,8 +417,7 @@ async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Pr
 
   session.state = "closing";
 
-  const client = await getDaemonClient();
-  const stopPromise = Promise.resolve(client.pi.stop({ sessionId: session.sessionId })).catch(() => {});
+  const stopPromise = Promise.resolve(stopPiSessionProcedure({ sessionId: session.sessionId })).catch(() => {});
   trackClosingSession(session.sessionId, stopPromise);
   await stopPromise;
 

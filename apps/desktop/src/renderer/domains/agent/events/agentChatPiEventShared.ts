@@ -1,5 +1,5 @@
 import { generateId } from "../../../helpers/generateId";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { sendPiCommand } from "../infrastructure/daemonAgentProcedures";
 import type {
   AgentMessage,
   AgentModel,
@@ -238,8 +238,7 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
 
 /** Sends a get_state command to Pi to resync session state (e.g. after a rejected model change). */
 async function resyncAgentState(tabId: string, sessionId: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.send({ sessionId, command: { type: "get_state" } });
+  await sendPiCommand({ sessionId, command: { type: "get_state" } });
 }
 
 const statsRequestSequenceBySessionId = new Map<string, number>();
@@ -247,8 +246,7 @@ const statsRequestSequenceBySessionId = new Map<string, number>();
 export async function refreshAgentSessionStats(sessionId: string): Promise<void> {
   const requestSequence = (statsRequestSequenceBySessionId.get(sessionId) ?? 0) + 1;
   statsRequestSequenceBySessionId.set(sessionId, requestSequence);
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommand({
     sessionId,
     command: { type: "get_session_stats", id: `agent-chat-stats-${requestSequence}` },
   });
@@ -321,8 +319,7 @@ export async function setAgentModel(opts: {
   provider: string;
   modelId: string;
 }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommand({
     sessionId: opts.sessionId,
     command: { type: "set_model", provider: opts.provider, modelId: opts.modelId },
   });
@@ -334,8 +331,7 @@ export async function setAgentThinkingLevel(opts: {
   sessionId: string;
   level: string;
 }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommand({
     sessionId: opts.sessionId,
     command: { type: "set_thinking_level", level: opts.level },
   });

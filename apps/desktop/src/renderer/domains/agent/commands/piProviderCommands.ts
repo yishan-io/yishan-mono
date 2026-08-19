@@ -3,7 +3,11 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "../../../domains/workbench";
 import { delay } from "../../../helpers/delay";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import {
+  listPiProviders as listPiProvidersProcedure,
+  removePiProvider as removePiProviderProcedure,
+  savePiProvider as savePiProviderProcedure,
+} from "../infrastructure/daemonAgentProcedures";
 import { DEFAULT_AGENT_COMMANDS } from "../model/agentSettings";
 
 /** How long to wait after the Pi TUI boots before typing /login. */
@@ -61,21 +65,18 @@ function normalizePiProviderList(payload: unknown): PiProviderStatus[] {
 
 /** Lists providers registered in the yishan pi agent (credential type only). */
 export async function listPiProviders(): Promise<PiProviderStatus[]> {
-  const client = await getDaemonClient();
-  const payload = await client.pi.listProviders();
+  const payload = await listPiProvidersProcedure();
   return normalizePiProviderList(payload);
 }
 
 /** Saves (adds or replaces) one api_key credential for a pi agent provider. */
 export async function savePiProvider(provider: string, key: string, env?: Record<string, string>): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.saveProvider({ provider, key, env });
+  await savePiProviderProcedure({ provider, key, env });
 }
 
 /** Removes one provider credential from the yishan pi agent. */
 export async function removePiProvider(provider: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.removeProvider({ provider });
+  await removePiProviderProcedure({ provider });
 }
 
 /**

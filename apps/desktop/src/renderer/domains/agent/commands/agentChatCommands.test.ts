@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renamePiSession } from "../../../domains/agent/infrastructure/daemonAgentProcedures";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { agentChatStore } from "../state/agentChatStore";
 import { openChatFileTab, renameAgentChatSessionByTab, startAgentChatSession } from "./agentChatCommands";
 
@@ -18,6 +18,17 @@ const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
+  getSessionFile: vi.fn(),
+  listModels: vi.fn(),
+  listProviders: vi.fn(),
+  removeProvider: vi.fn(),
+  rename: vi.fn(),
+  runChatPrompt: vi.fn(),
+  saveProvider: vi.fn(),
+  closeAgentSession: vi.fn(),
+  ensureChatSession: vi.fn(),
+  getDetectionStatuses: vi.fn(),
+  listDetectionStatuses: vi.fn(),
 }));
 
 vi.mock("../../../helpers/generateId", () => ({
@@ -29,19 +40,28 @@ vi.mock("../events/agentChatEventRouter", () => ({
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));
 
+vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+  attachPiSession: mocks.attach,
+  closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
+  ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
+  getPiSessionFile: mocks.getSessionFile ?? vi.fn(),
+  listActivePiSessions: mocks.listActiveSessions ?? vi.fn(),
+  listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
+  listAgentModels: mocks.listModels ?? vi.fn(),
+  listPiProviders: mocks.listProviders ?? vi.fn(),
+  listPiSessions: mocks.listSessions ?? vi.fn(),
+  removePiProvider: mocks.removeProvider ?? vi.fn(),
+  renamePiSession: mocks.rename ?? vi.fn(),
+  runWorkspaceChatPrompt: mocks.runChatPrompt ?? vi.fn(),
+  savePiProvider: mocks.saveProvider ?? vi.fn(),
+  sendPiCommand: mocks.send ?? vi.fn(),
+  startPiSession: mocks.start ?? vi.fn(),
+  stopPiSession: mocks.stop ?? vi.fn(),
+}));
+
 vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    pi: {
-      start: mocks.start,
-      attach: mocks.attach,
-      stop: mocks.stop,
-      send: mocks.send,
-      listSessions: mocks.listSessions,
-      listActiveSessions: mocks.listActiveSessions,
-    },
-  })),
 }));
 
 afterEach(() => {
@@ -163,18 +183,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
 
 describe("renameAgentChatSessionByTab", () => {
   it("renames the pi session that backs an agent-chat tab", async () => {
-    const rename = vi.fn(async () => ({ ok: true }));
-    vi.mocked(getDaemonClient).mockResolvedValueOnce({
-      pi: {
-        start: mocks.start,
-        attach: mocks.attach,
-        stop: mocks.stop,
-        send: mocks.send,
-        listSessions: mocks.listSessions,
-        listActiveSessions: mocks.listActiveSessions,
-        rename,
-      },
-    } as never);
+    vi.mocked(renamePiSession).mockResolvedValue({ ok: true });
     tabStore.setState({
       tabs: [
         {
@@ -190,22 +199,11 @@ describe("renameAgentChatSessionByTab", () => {
 
     await renameAgentChatSessionByTab("tab-chat", "New Chat Name");
 
-    expect(rename).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
+    expect(renamePiSession).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
   });
 
   it("does nothing for non-agent-chat tabs", async () => {
-    const rename = vi.fn(async () => ({ ok: true }));
-    vi.mocked(getDaemonClient).mockResolvedValueOnce({
-      pi: {
-        start: mocks.start,
-        attach: mocks.attach,
-        stop: mocks.stop,
-        send: mocks.send,
-        listSessions: mocks.listSessions,
-        listActiveSessions: mocks.listActiveSessions,
-        rename,
-      },
-    } as never);
+    vi.mocked(renamePiSession).mockResolvedValue({ ok: true });
     tabStore.setState({
       tabs: [
         {
@@ -221,22 +219,11 @@ describe("renameAgentChatSessionByTab", () => {
 
     await renameAgentChatSessionByTab("tab-term", "New Terminal");
 
-    expect(rename).not.toHaveBeenCalled();
+    expect(renamePiSession).not.toHaveBeenCalled();
   });
 
   it("does nothing when the agent-chat tab has no session id", async () => {
-    const rename = vi.fn(async () => ({ ok: true }));
-    vi.mocked(getDaemonClient).mockResolvedValueOnce({
-      pi: {
-        start: mocks.start,
-        attach: mocks.attach,
-        stop: mocks.stop,
-        send: mocks.send,
-        listSessions: mocks.listSessions,
-        listActiveSessions: mocks.listActiveSessions,
-        rename,
-      },
-    } as never);
+    vi.mocked(renamePiSession).mockResolvedValue({ ok: true });
     tabStore.setState({
       tabs: [
         {
@@ -252,6 +239,6 @@ describe("renameAgentChatSessionByTab", () => {
 
     await renameAgentChatSessionByTab("tab-chat", "New Name");
 
-    expect(rename).not.toHaveBeenCalled();
+    expect(renamePiSession).not.toHaveBeenCalled();
   });
 });

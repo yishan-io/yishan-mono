@@ -3,8 +3,8 @@ import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "../../../helpers/delay";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { generateId } from "../../../helpers/generateId";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
+import { renamePiSession, sendPiCommand } from "../infrastructure/daemonAgentProcedures";
 import { isAgentSessionBusy } from "../model/agentChatTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import {
@@ -99,11 +99,10 @@ export async function sendAgentPrompt(opts: {
   sessionId: string;
   message: string;
 }): Promise<void> {
-  const client = await getDaemonClient();
   const tabSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
 
   const isBusy = isAgentSessionBusy(tabSession?.state);
-  await client.pi.send({
+  await sendPiCommand({
     sessionId: opts.sessionId,
     command: {
       type: "prompt",
@@ -132,8 +131,7 @@ export async function sendAgentPrompt(opts: {
 export async function abortAgent(opts: { tabId: string; sessionId: string }): Promise<void> {
   flushAgentChatStreamBuffer(opts.tabId);
 
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommand({
     sessionId: opts.sessionId,
     command: { type: "abort" },
   });
@@ -141,8 +139,7 @@ export async function abortAgent(opts: { tabId: string; sessionId: string }): Pr
 
 /** Manually compacts the current Pi session context. */
 export async function compactAgent(opts: { sessionId: string }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.send({
+  await sendPiCommand({
     sessionId: opts.sessionId,
     command: { type: "compact" },
   });
@@ -157,7 +154,6 @@ export async function respondToAgentExtensionUiRequest(opts: {
   confirmed?: boolean;
   cancelled?: boolean;
 }): Promise<void> {
-  const client = await getDaemonClient();
   const command: Record<string, unknown> = {
     type: "extension_ui_response",
     id: opts.requestId,
@@ -171,7 +167,7 @@ export async function respondToAgentExtensionUiRequest(opts: {
     command.value = opts.value ?? "";
   }
 
-  await client.pi.send({
+  await sendPiCommand({
     sessionId: opts.sessionId,
     command,
   });
@@ -319,6 +315,5 @@ export async function renameAgentChatSessionByTab(tabId: string, title: string):
   if (!sessionId) {
     return;
   }
-  const client = await getDaemonClient();
-  await client.pi.rename({ sessionId, title });
+  await renamePiSession({ sessionId, title });
 }

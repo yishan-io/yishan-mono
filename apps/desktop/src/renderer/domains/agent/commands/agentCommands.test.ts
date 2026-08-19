@@ -5,15 +5,15 @@ import { listAgentDetectionStatuses } from "./agentCommands";
 
 const mocks = vi.hoisted(() => ({
   listDetectionStatuses: vi.fn(),
+  listModels: vi.fn(),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({
-    agent: {
-      listDetectionStatuses: mocks.listDetectionStatuses,
-    },
-  })),
+vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+  listAgentDetectionStatuses: mocks.listDetectionStatuses,
+  listAgentModels: mocks.listModels,
 }));
+
+vi.mock("../../../rpc/rpcTransport", () => ({}));
 
 describe("agentCommands", () => {
   it("normalizes detection statuses in supported-agent order", async () => {

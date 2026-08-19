@@ -18,6 +18,17 @@ const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
+  getSessionFile: vi.fn(),
+  listModels: vi.fn(),
+  listProviders: vi.fn(),
+  removeProvider: vi.fn(),
+  rename: vi.fn(),
+  runChatPrompt: vi.fn(),
+  saveProvider: vi.fn(),
+  closeAgentSession: vi.fn(),
+  ensureChatSession: vi.fn(),
+  getDetectionStatuses: vi.fn(),
+  listDetectionStatuses: vi.fn(),
 }));
 
 vi.mock("../../../helpers/generateId", () => ({
@@ -29,19 +40,28 @@ vi.mock("../events/agentChatEventRouter", () => ({
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));
 
+vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+  attachPiSession: mocks.attach,
+  closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
+  ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
+  getPiSessionFile: mocks.getSessionFile ?? vi.fn(),
+  listActivePiSessions: mocks.listActiveSessions ?? vi.fn(),
+  listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
+  listAgentModels: mocks.listModels ?? vi.fn(),
+  listPiProviders: mocks.listProviders ?? vi.fn(),
+  listPiSessions: mocks.listSessions ?? vi.fn(),
+  removePiProvider: mocks.removeProvider ?? vi.fn(),
+  renamePiSession: mocks.rename ?? vi.fn(),
+  runWorkspaceChatPrompt: mocks.runChatPrompt ?? vi.fn(),
+  savePiProvider: mocks.saveProvider ?? vi.fn(),
+  sendPiCommand: mocks.send ?? vi.fn(),
+  startPiSession: mocks.start ?? vi.fn(),
+  stopPiSession: mocks.stop ?? vi.fn(),
+}));
+
 vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    pi: {
-      start: mocks.start,
-      attach: mocks.attach,
-      stop: mocks.stop,
-      send: mocks.send,
-      listSessions: mocks.listSessions,
-      listActiveSessions: mocks.listActiveSessions,
-    },
-  })),
 }));
 
 afterEach(() => {

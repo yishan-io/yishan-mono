@@ -3,7 +3,11 @@ import type { RpcSchema } from "../../../../shared/contracts/rpcSchema";
 import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../domains/agent/model/chatTypes";
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import { generateId } from "../../../helpers/generateId";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import {
+  closeAgentSession as closeAgentSessionProcedure,
+  ensureWorkspaceChatSession as ensureWorkspaceChatSessionProcedure,
+  runWorkspaceChatPrompt as runWorkspaceChatPromptProcedure,
+} from "../infrastructure/daemonAgentProcedures";
 
 type WorkspaceAgentKind = DesktopAgentKind;
 type EnsureWorkspaceChatSessionResponse = {
@@ -97,8 +101,7 @@ export async function ensureChatSession(params: {
   title?: string;
   agentKind?: WorkspaceAgentKind;
 }): Promise<EnsureWorkspaceChatSessionResponse> {
-  const client = await getDaemonClient();
-  return (await client.chat.ensureWorkspaceChatSession({
+  return (await ensureWorkspaceChatSessionProcedure({
     workspaceId: params.workspaceId,
     sessionId: params.sessionId,
     title: params.title,
@@ -114,8 +117,7 @@ export async function runChatPrompt(params: {
   agentKind?: WorkspaceAgentKind;
   suppressCompletionNotification?: boolean;
 }) {
-  const client = await getDaemonClient();
-  return client.chat.runWorkspaceChatPrompt({
+  return runWorkspaceChatPromptProcedure({
     workspaceId: params.workspaceId,
     sessionId: params.sessionId,
     prompt: params.prompt,
@@ -126,8 +128,7 @@ export async function runChatPrompt(params: {
 
 /** Closes one agent session and optionally deletes its persisted record. */
 export async function closeAgentSession(params: { sessionId: string; deleteRecord?: boolean }) {
-  const client = await getDaemonClient();
-  return client.chat.closeAgentSession({
+  return closeAgentSessionProcedure({
     sessionId: params.sessionId,
     deleteRecord: params.deleteRecord,
   });

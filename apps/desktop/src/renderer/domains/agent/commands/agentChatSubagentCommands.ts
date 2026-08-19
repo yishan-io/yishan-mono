@@ -14,7 +14,7 @@ import {
   unregisterTabFromPane,
 } from "@renderer/domains/workbench";
 import { findOppositePaneId } from "@renderer/domains/workbench";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { sendPiCommand } from "../infrastructure/daemonAgentProcedures";
 import { isAgentSessionBusy } from "../model/agentChatTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";
@@ -231,10 +231,9 @@ export async function cancelSubagentRun(opts: {
   agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, { status: "cancelling" });
 
   try {
-    const client = await getDaemonClient();
     const sessionState = agentChatStore.getState().sessionsByTabId[opts.tabId]?.state;
     const streamingBehavior = isAgentSessionBusy(sessionState) ? "steer" : undefined;
-    await client.pi.send({
+    await sendPiCommand({
       sessionId: opts.sessionId,
       command: {
         type: "prompt",
@@ -246,7 +245,7 @@ export async function cancelSubagentRun(opts: {
     if (streamingBehavior === "steer") {
       const cancelledAgentLabel =
         opts.agentName?.trim() || opts.childSessionId?.trim() || opts.agentId?.trim() || stopTarget;
-      await client.pi.send({
+      await sendPiCommand({
         sessionId: opts.sessionId,
         command: {
           type: "prompt",

@@ -1,4 +1,7 @@
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import {
+  listAgentDetectionStatuses as listAgentDetectionStatusesProcedure,
+  listAgentModels as listAgentModelsProcedure,
+} from "../infrastructure/daemonAgentProcedures";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS, isDesktopAgentKind } from "../model/agentSettings";
 
 export type AgentDetectionStatus = {
@@ -68,13 +71,11 @@ function normalizeAgentDetectionStatuses(payload: unknown): AgentDetectionStatus
 
 /** Lists supported desktop agents with current system detection state. */
 export async function listAgentDetectionStatuses(forceRefresh = false): Promise<AgentDetectionStatus[]> {
-  const client = await getDaemonClient();
-  const payload = await client.agent.listDetectionStatuses(forceRefresh ? { refresh: true } : undefined);
+  const payload = await listAgentDetectionStatusesProcedure(forceRefresh ? { refresh: true } : undefined);
   return normalizeAgentDetectionStatuses(payload);
 }
 
 /** Fetches available models for one agent kind from the daemon cache. */
 export async function listAgentModels(agentKind: string, forceRefresh = false): Promise<AgentModelsResult> {
-  const client = await getDaemonClient();
-  return (await client.agent.listModels({ agentKind, forceRefresh })) as AgentModelsResult;
+  return (await listAgentModelsProcedure({ agentKind, forceRefresh })) as AgentModelsResult;
 }
