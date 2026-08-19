@@ -1,6 +1,6 @@
 import type { WorkspaceFileEntry } from "../../externalApps";
-import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";
-import { getParentRelativePath, normalizeRelativePath } from "./fileTreePathHelpers";
+import { mergeWorkspaceEntries } from "./fileTreeMerge";
+import { getParentRelativePath, normalizeRelativePath } from "./fileTreePaths";
 
 /**
  * File-tree refresh + eviction rules (desktop8 Phase 33: split from

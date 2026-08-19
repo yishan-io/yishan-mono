@@ -22,7 +22,7 @@ import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { DaemonVersionWarningControl } from "../launch/DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "../main-workspace-shell/WorkspacePortsMenuControl";
-import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
+import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBar";
 import {
   AddProjectCommandDialog,
   ProjectCommandsMenu,

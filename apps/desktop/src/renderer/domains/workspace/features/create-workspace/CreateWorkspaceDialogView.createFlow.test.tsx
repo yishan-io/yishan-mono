@@ -15,7 +15,7 @@ import {
   renderDialog,
   renderDialogWithLocation,
   setupCreateWorkspaceDialogViewTests,
-} from "./CreateWorkspaceDialogView.testUtils";
+} from "./CreateWorkspaceDialogView.testRender";
 
 describe("CreateWorkspaceDialogView create flow", () => {
   setupCreateWorkspaceDialogViewTests();

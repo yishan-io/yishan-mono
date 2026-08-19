@@ -56,6 +56,13 @@ import {
   WorkspaceSettingsView,
 } from "./settingsLazyPages";
 import {
+  type SettingsSearchResult,
+  normalizeSettingsSearchQuery,
+  rankSettingsSearchResult,
+  renderExperimentalSidebarLabel,
+  renderSidebarLabel,
+} from "./settingsSearch";
+import {
   type CustomizeFocusItemId,
   SETTINGS_NAV_SECTIONS,
   SETTINGS_SEARCH_CATALOG,
@@ -63,13 +70,6 @@ import {
   type SettingsTab,
   isCustomizeFocusItemId,
 } from "./settingsSearchCatalog";
-import {
-  type SettingsSearchResult,
-  normalizeSettingsSearchQuery,
-  rankSettingsSearchResult,
-  renderExperimentalSidebarLabel,
-  renderSidebarLabel,
-} from "./settingsSearchHelpers";
 
 export function SettingsView() {
   const { themePreference, setThemePreference } = useThemePreference();

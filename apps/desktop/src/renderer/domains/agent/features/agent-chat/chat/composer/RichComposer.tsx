@@ -4,7 +4,7 @@ import type { ClipboardEvent, SyntheticEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RichComposerFileMentionMenu } from "./RichComposerFileMentionMenu";
 import { RichComposerSlashCommandMenu } from "./RichComposerSlashCommandMenu";
-import { getCaretOffset, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerHelpers";
+import { getCaretOffset, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerText";
 import type { FileMentionResult, RichComposerSlashCommand } from "./richComposerTypes";
 import { useComposerFileDrop } from "./useComposerFileDrop";
 import { useComposerFileMentionMenu } from "./useComposerFileMentionMenu";

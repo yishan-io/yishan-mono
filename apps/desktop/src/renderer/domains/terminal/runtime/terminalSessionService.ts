@@ -17,7 +17,7 @@ import {
   shouldClearTerminalOutputShortcut,
   shouldReleaseCommandWForTabCloseShortcut,
   shouldReleaseWorkspaceNavigationShortcut,
-} from "./terminalKeyboardUtils";
+} from "./terminalKeyboard";
 import {
   ensureTerminalRuntime,
   getActiveTerminalRuntimes,
@@ -32,11 +32,7 @@ import {
 } from "./terminalRuntimeRegistry";
 import type { TerminalRuntimeEntry, TerminalTabData } from "./terminalRuntimeRegistry";
 import { TerminalSessionOrchestrator } from "./terminalSessionOrchestrator";
-import {
-  formatTerminalCommandTitle,
-  formatTerminalPathTitle,
-  resolveTerminalWorkspacePath,
-} from "./terminalTitleUtils";
+import { formatTerminalCommandTitle, formatTerminalPathTitle, resolveTerminalWorkspacePath } from "./terminalTitle";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 

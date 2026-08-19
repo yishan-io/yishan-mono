@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findMentionRange } from "./richComposerHelpers";
+import { findMentionRange } from "./richComposerText";
 
 describe("findMentionRange", () => {
   it("returns a range for a bare @ token", () => {

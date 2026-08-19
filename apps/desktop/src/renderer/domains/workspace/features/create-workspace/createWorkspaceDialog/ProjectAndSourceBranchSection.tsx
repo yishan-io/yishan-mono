@@ -15,7 +15,7 @@ import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuFolderGit2, LuGitBranch } from "react-icons/lu";
 import { BranchDropdown, type BranchDropdownGroups } from "../BranchDropdown";
-import { compactSelectSx } from "../createWorkspaceHelpers";
+import { compactSelectSx } from "../createWorkspaceForm";
 
 type ProjectAndSourceBranchSectionProps = {
   selectableProjects: WorkspaceProjectRecord[];

@@ -1,4 +1,4 @@
-import { getFileName } from "@shared/path/pathHelpers";
+import { getFileName } from "@shared/path/paths";
 import type { WorkspaceRecord } from "../../../api/types";
 import type { WorkspaceItem } from "../workspaceTypes";
 

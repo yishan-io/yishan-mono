@@ -1,6 +1,6 @@
 import { Box, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { LuCloud, LuServer } from "react-icons/lu";
-import { compactSelectSx } from "../createWorkspaceHelpers";
+import { compactSelectSx } from "../createWorkspaceForm";
 
 type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean };
 

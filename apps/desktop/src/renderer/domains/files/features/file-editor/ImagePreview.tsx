@@ -1,5 +1,5 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
-import { getFileName } from "@shared/path/pathHelpers";
+import { getFileName } from "@shared/path/paths";
 import { useCallback, useState } from "react";
 import { LuMaximize2, LuMinus, LuPlus } from "react-icons/lu";
 import { FileViewerToolbar } from "./FileViewerToolbar";

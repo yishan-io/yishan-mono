@@ -2,7 +2,7 @@ import type { Virtualizer } from "@tanstack/react-virtual";
 import type { KeyboardEvent } from "react";
 import { isEditableTarget } from "../../../../../shortcuts/editableTarget";
 import { handleFileTreeShortcutFromRegistry } from "../fileTreeActionRegistry";
-import { resolveDestinationDirectoryPath } from "./treeUtils";
+import { resolveDestinationDirectoryPath } from "./treeRows";
 import type { EditingEntry, FileTreeProps, VisibleRow } from "./types";
 
 type RowByPath = Map<string, { row: VisibleRow; index: number }>;

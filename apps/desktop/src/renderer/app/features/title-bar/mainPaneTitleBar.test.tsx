@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceProjectRecord } from "../../../domains/project/projectTypes";
 import type { WorkspaceItem } from "../../../domains/workspace/workspaceTypes";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
-import { renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
+import { renderWorkspaceKindIcon } from "./mainPaneTitleBar";
 import { RepoSelectorMenu } from "./mainPaneTitleBarMenus";
 
 const t = (key: string) => key;

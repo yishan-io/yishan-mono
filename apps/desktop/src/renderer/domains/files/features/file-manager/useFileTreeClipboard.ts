@@ -11,8 +11,8 @@ import {
   captureNativeExternalClipboardSourcePathsSnapshot,
   resolveExternalClipboardSourcePaths,
 } from "./fileTreeClipboardResolvers";
-import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeHelpers";
-import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePathHelpers";
+import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeEntries";
+import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePaths";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 
 type UseFileTreeClipboardInput = {

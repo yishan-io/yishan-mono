@@ -37,7 +37,7 @@ import { useWorkspaceNavigatorTreeHandlers } from "./useWorkspaceNavigatorTreeHa
 import { WorkspaceTree } from "./workspace-tree";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeRow } from "./workspace-tree/types";
-import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorHelpers";
+import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorOrder";
 
 /**
  * Cross-Domain workspace navigator: renders project rows and nested workspace

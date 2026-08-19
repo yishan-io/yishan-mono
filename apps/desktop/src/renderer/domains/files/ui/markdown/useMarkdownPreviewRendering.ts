@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownPreviewProps } from "./MarkdownPreview";
-import { parseFrontmatter } from "./markdownHelpers";
 import type { MarkdownOutlineData } from "./markdownOutlineTree";
 import { postProcessMarkdownPreview } from "./markdownPreviewDom";
 import { clearHighlights, highlightMatches, setActiveMatch } from "./markdownSearch";
 import { markdownService } from "./markdownService";
+import { parseFrontmatter } from "./markdownTransform";
 import { useMarkdownPreviewOutlineState } from "./useMarkdownPreviewOutlineState";
 
 /** Manages markdown parsing, DOM post-processing, outline data, and find highlights. */

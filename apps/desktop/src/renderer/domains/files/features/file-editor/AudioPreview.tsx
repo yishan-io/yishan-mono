@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import { getFileName } from "@shared/path/pathHelpers";
+import { getFileName } from "@shared/path/paths";
 import { useCallback, useState } from "react";
 import { PiMusicNotesThin, PiWarningThin } from "react-icons/pi";
 import { FileViewerToolbar } from "./FileViewerToolbar";

@@ -1,4 +1,4 @@
-import { getFileName } from "@shared/path/pathHelpers";
+import { getFileName } from "@shared/path/paths";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 
 import { sessionStore } from "@renderer/domains/session";

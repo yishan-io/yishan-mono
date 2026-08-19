@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from "react";
 import { useCallback, useRef } from "react";
-import { normalizeComposerText } from "./richComposerHelpers";
+import { normalizeComposerText } from "./richComposerText";
 import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
 type UseComposerKeyDownOptions = {

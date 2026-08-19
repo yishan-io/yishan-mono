@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProjectCommitComparisonFile } from "../project-git-changes/ProjectCommitComparison";
-import { buildAllCommitChangesSection, buildCommitChangesSection, toCommitFile } from "./changesTabHelpers";
+import { buildAllCommitChangesSection, buildCommitChangesSection, toCommitFile } from "./changesTabPaths";
 
 describe("toCommitFile", () => {
   it("passes through a typed file object unchanged", () => {

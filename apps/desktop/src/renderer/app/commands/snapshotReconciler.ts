@@ -10,7 +10,7 @@ import type { ProjectRecord, WorkspaceRecord } from "@renderer/api/types";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "@renderer/domains/project";
 import { resolveHydratedWorkspaceDisplayMetadata } from "@renderer/domains/workspace";
 import type { WorkspaceItem, WorkspaceStatus } from "@renderer/domains/workspace";
-import { getFileName } from "@shared/path/pathHelpers";
+import { getFileName } from "@shared/path/paths";
 import type { ExternalAppId } from "../../../shared/contracts/externalApps";
 
 type ProjectStoreSlice = {

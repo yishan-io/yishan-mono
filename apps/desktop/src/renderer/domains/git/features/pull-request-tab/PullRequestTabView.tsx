@@ -9,7 +9,7 @@ import PullRequestDeploymentsSection from "./PullRequestDeploymentsSection";
 import PullRequestEmptyState from "./PullRequestEmptyState";
 import PullRequestHeaderSection from "./PullRequestHeaderSection";
 import PullRequestHistorySection from "./PullRequestHistorySection";
-import { type MergeMethod, derivePullRequestTabState } from "./pullRequestTabHelpers";
+import { type MergeMethod, derivePullRequestTabState } from "./pullRequestTabState";
 import { usePullRequestTabActions } from "./usePullRequestTabActions";
 import { useWorkspacePullRequestState } from "./useWorkspacePullRequestState";
 

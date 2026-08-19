@@ -25,9 +25,9 @@ import {
   normalizeWorkspaceRelativePath,
   reconcileRenameLikePairs,
   toCommitFile,
-} from "./changesTabHelpers";
+} from "./changesTabPaths";
 
-export { normalizeWorkspaceRelativePath } from "./changesTabHelpers";
+export { normalizeWorkspaceRelativePath } from "./changesTabPaths";
 
 const GIT_CHANGES_REFRESH_RETRY_MS = 5_000;
 const MAX_GIT_CHANGES_REFRESH_RETRIES = 3;

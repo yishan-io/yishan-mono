@@ -19,7 +19,7 @@ import {
   isUnsupportedFileTab,
   isVideoFile,
 } from "../../features/file-editor/editorLanguage";
-import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
+import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbsolutePath } from "./fileTreeEntries";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 

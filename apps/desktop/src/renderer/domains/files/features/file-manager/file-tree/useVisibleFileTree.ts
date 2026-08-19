@@ -1,5 +1,5 @@
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useState } from "react";
-import { buildTree, collectDirectoryPaths, collectExpandedItems, computeVisibleRows, sortNodes } from "./treeUtils";
+import { buildTree, collectDirectoryPaths, collectExpandedItems, computeVisibleRows, sortNodes } from "./treeRows";
 import type { EditingEntry, VisibleRow } from "./types";
 
 type UseVisibleFileTreeInput = {

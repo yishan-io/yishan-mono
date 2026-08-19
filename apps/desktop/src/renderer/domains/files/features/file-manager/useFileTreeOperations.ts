@@ -11,9 +11,9 @@ import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExternalAppId, WorkspaceFileEntry } from "../../externalApps";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
-import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeHelpers";
-import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";
-import { normalizeRelativePath } from "./fileTreePathHelpers";
+import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeEntries";
+import { mergeWorkspaceEntries } from "./fileTreeMerge";
+import { normalizeRelativePath } from "./fileTreePaths";
 import {
   applyDirectoryRefreshes,
   getImmediateChildPath,

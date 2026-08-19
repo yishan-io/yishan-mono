@@ -16,7 +16,7 @@ export {
   searchFiles,
   writeFile,
 } from "./commands/fileCommands";
-export { resolveWorkspaceAbsolutePath } from "./features/file-manager/fileTreeHelpers";
+export { resolveWorkspaceAbsolutePath } from "./features/file-manager/fileTreeEntries";
 export { useDetectedExternalAppIds } from "./hooks/useDetectedExternalAppIds";
 export {
   incrementFileTreeRefreshVersion,
@@ -56,7 +56,7 @@ export {
   splitFilePathForDisplay,
   type FilePathDisplayParts,
   type HighlightedPathSegment,
-} from "./ui/filePathDisplayHelpers";
+} from "./ui/filePathDisplay";
 export {
   AudioPreview,
   FileDiffViewer,
@@ -82,7 +82,7 @@ export {
 } from "./externalApps";
 export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./externalApps";
 
-export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
+export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownTransform";
 export { markdownService } from "./ui/markdown/markdownService";
 export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
 

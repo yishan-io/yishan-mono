@@ -86,7 +86,7 @@ vi.mock("./terminalSessionOrchestrator", async (importOriginal) => {
   return original;
 });
 
-vi.mock("./terminalTitleUtils", () => ({
+vi.mock("./terminalTitle", () => ({
   formatTerminalCommandTitle: vi.fn(() => ""),
   formatTerminalPathTitle: vi.fn(() => ""),
   resolveTerminalWorkspacePath: vi.fn(() => undefined),

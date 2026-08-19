@@ -6,7 +6,7 @@ import {
   createInitialCollapsedKeys,
   getChangeKindLabel,
   getDiffTotals,
-} from "./multiFileDiffViewerHelpers";
+} from "./multiFileDiffState";
 
 const files: FileDiffEntry[] = [
   {

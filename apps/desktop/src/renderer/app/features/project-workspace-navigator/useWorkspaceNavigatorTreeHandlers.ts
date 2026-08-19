@@ -1,6 +1,6 @@
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useCallback } from "react";
-import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorHelpers";
+import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorOrder";
 
 type TreeWorkspace = { id: string; projectId: string; nodeId: string; isLocalFolder?: boolean };
 

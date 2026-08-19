@@ -29,7 +29,7 @@ import {
 } from "./useOpenTabAutoRefresh";
 import { type AgentPresetMeta, usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
-import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";
+import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPane";
 
 // ─── Per-workspace split pane ─────────────────────────────────────────────────
 

@@ -22,7 +22,7 @@ import {
   truncateMessageContent,
   truncateUtf8Bytes,
 } from "./agentChatInboundMessage";
-import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessageHelpers";
+import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessages";
 import {
   applySubagentLifecycleWidget,
   applySubagentLiveTranscripts,

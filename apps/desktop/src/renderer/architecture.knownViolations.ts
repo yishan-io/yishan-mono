@@ -50,7 +50,8 @@ export type RuleName =
   | "R23-removed-root-capabilities"
   | "R24-platform-app-domain"
   | "R25-forbidden-domain-bucket"
-  | "R26-technical-nested-index";
+  | "R26-technical-nested-index"
+  | "R27-utils-helpers-suffix";
 
 export type KnownViolation = { rule: RuleName; file: string; phase: string };
 

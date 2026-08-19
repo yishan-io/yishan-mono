@@ -100,6 +100,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R24-platform-app-domain": 0,
   "R25-forbidden-domain-bucket": 0,
   "R26-technical-nested-index": 0,
+  "R27-utils-helpers-suffix": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -111,7 +112,7 @@ function walkFiles(dir: string, out: string[] = []): string[] {
     if (entry.isDirectory()) {
       if (entry.name === "node_modules" || entry.name === "public" || entry.name === "generated") continue;
       walkFiles(path, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|testUtils)\./.test(entry.name)) {
+    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|testSetup|testRender|testUtils)\./.test(entry.name)) {
       out.push(path);
     }
   }
@@ -442,6 +443,12 @@ function scanViolations(): Violation[] {
       )
     ) {
       violations.push({ rule: "R26-technical-nested-index", file: rel, target: "technical nested index" });
+    }
+    // ---- Rule 27 (desktop9 Phase 39): new filenames must not end in
+    // Utils/Helpers. Ownership and responsibility belong in the name, not a
+    // technical suffix. ----
+    if (/\/[^/]+(?:Utils|Helpers)\.tsx?$/.test(rel) && !rel.includes(".test.")) {
+      violations.push({ rule: "R27-utils-helpers-suffix", file: rel, target: "Utils/Helpers suffix" });
     }
     // ---- Rule 12 (desktop6-adjust.md W8): Store Actions must stay
     // synchronous. A Store Action changes one owning Store synchronously; it

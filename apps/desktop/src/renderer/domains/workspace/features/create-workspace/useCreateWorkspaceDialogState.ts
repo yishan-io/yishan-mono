@@ -7,7 +7,7 @@ import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes
 import { resolveGitBranchPrefix } from "../../naming/branchPrefix";
 import type { GitBranchPrefixMode } from "../../naming/branchPrefix";
 import type { BranchDropdownGroups } from "./BranchDropdown";
-import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
+import { resolveSourceBranchGroups } from "./createWorkspaceForm";
 import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,

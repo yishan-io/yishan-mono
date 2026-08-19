@@ -9,7 +9,7 @@ import {
   renderDialog,
   seedRenameWorkspace,
   setupCreateWorkspaceDialogViewTests,
-} from "../create-workspace/CreateWorkspaceDialogView.testUtils";
+} from "../create-workspace/CreateWorkspaceDialogView.testRender";
 import { RenameWorkspaceDialogView } from "./RenameWorkspaceDialogView";
 
 describe("CreateWorkspaceDialogView rename flow", () => {

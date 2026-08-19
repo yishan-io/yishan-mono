@@ -1,7 +1,7 @@
 import { FILETREE_DRAG_MIME } from "@renderer/domains/files";
 import { type DragEvent as ReactDragEvent, type MouseEvent as ReactMouseEvent, useCallback, useState } from "react";
 import type { ProjectGitChangeItem, ProjectGitChangesSection } from "./ProjectGitChangesList.types";
-import { canMoveFileBetweenSections, getFileSelectionKey } from "./projectGitChangesListHelpers";
+import { canMoveFileBetweenSections, getFileSelectionKey } from "./projectGitChangesSections";
 
 type UseProjectGitChangesListInteractionsParams = {
   sections: ProjectGitChangesSection[];
