@@ -2,8 +2,8 @@ import type { DesktopAgentKind } from "@renderer/domains/agent";
 import { generateId } from "@shared/ids/generateId";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { OpenTabInput, WorkbenchTab } from "../types";
-import { resolveSelectedTabIdForWorkspace } from "../tabs";
+import type { OpenTabInput, WorkbenchTab } from "../tabs";
+import { resolveSelectedTabIdForWorkspace } from "../tabs/selection";
 import {
   closeAllTabsState,
   closeAllTerminalTabsState,

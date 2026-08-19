@@ -1,4 +1,4 @@
-import type { WorkbenchTab } from "../types";
+import type { WorkbenchTab } from "./types";
 import type { TabStoreStateSlice } from "./types";
 
 function remapPathByRename(path: string, fromPath: string, toPath: string): string | null {

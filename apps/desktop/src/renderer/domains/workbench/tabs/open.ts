@@ -1,4 +1,4 @@
-import type { OpenTabInput, WorkbenchTab, WorkbenchTabDataByKind } from "../types";
+import type { OpenTabInput, WorkbenchTab, WorkbenchTabDataByKind } from "./types";
 import { findExistingTab } from "./shared";
 import type { TabStoreStateSlice } from "./types";
 

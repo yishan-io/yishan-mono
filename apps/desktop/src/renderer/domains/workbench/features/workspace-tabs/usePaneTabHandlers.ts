@@ -2,7 +2,7 @@ import type { DesktopAgentKind } from "@renderer/domains/agent";
 import type { createNewWhiteboard, renameEntry } from "@renderer/domains/files";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkbenchTab } from "../../../../domains/workbench/types";
+import type { WorkbenchTab } from "../../../../domains/workbench/tabs";
 import type {
   closeTab,
   openTab,

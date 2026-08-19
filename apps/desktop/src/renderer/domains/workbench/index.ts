@@ -52,7 +52,7 @@ export type {
   FileDiffEntry,
   OpenTabInput,
   WorkbenchTab,
-} from "./types";
+} from "./tabs";
 export {
   workbenchNavigationStore,
   type OverlayPanel,
@@ -121,4 +121,4 @@ export { popupStore, type PopupStoreState } from "./state/popupStore";
 
 export { ConfirmationDialog } from "./ui/ConfirmationDialog";
 export { createWorkbenchEventHandlers } from "./subscriptions/workbenchEventHandlers";
-export { isTerminalTabWithSessionId } from "./terminalTabUtils";
+export { isTerminalTabWithSessionId } from "./tabs";

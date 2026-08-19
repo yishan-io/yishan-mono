@@ -5,7 +5,7 @@ import {
   removeTabFromPane,
   splitRootPane,
 } from "../../../domains/workbench/split-pane";
-import type { OpenTabInput } from "../../../domains/workbench/types";
+import type { OpenTabInput } from "../../../domains/workbench/tabs";
 import { type WorkspaceRightPaneTab, layoutStore } from "../../../domains/workbench/state/layoutStore";
 import { createPaneId, splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../domains/workbench/state/tabStore";

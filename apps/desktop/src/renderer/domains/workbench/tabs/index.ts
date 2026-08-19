@@ -23,4 +23,16 @@ export {
   toggleTabPinnedState,
 };
 
-export type { TabStoreStateSlice } from "./types";
+export type {
+  AgentChatSessionView,
+  DiffFileChangeKind,
+  DiffTabSource,
+  FileDiffEntry,
+  OpenTabInput,
+  TabStoreStateSlice,
+  WorkbenchTab,
+  WorkbenchTabBase,
+  WorkbenchTabDataByKind,
+} from "./types";
+export { resolveSelectedTabIdForWorkspace } from "./selection";
+export { isTerminalTabWithSessionId } from "./terminalTab";
