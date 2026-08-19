@@ -12,7 +12,7 @@ import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
 import type { TerminalSessionSummary } from "../../commands/terminalCommands";
-import type { TerminalSessionLifecycleEvent } from "../../infrastructure/daemonTerminalClient";
+import type { TerminalSessionLifecycleEvent } from "../../infrastructure/terminalWireTypes";
 
 /** Builds one stable map key for in-flight close action tracking. */
 function buildSessionActionKey(sessionId: string): string {

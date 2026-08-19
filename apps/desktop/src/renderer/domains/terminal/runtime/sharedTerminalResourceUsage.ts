@@ -1,5 +1,5 @@
 import { withTimeout } from "@shared/async/withTimeout";
-import type { TerminalResourceUsageSnapshot } from "../infrastructure/daemonTerminalClient";
+import type { TerminalResourceUsageSnapshot } from "../infrastructure/terminalWireTypes";
 
 const INTERACTIVE_POLL_INTERVAL_MS = 2000;
 const IDLE_POLL_INTERVAL_MS = 15_000;

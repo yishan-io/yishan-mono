@@ -6,15 +6,15 @@ import type {
   TerminalSessionLifecycleEvent,
   TerminalSessionSummary,
   TerminalStreamEvent,
-} from "../infrastructure/daemonTerminalClient";
-import type { TerminalDetectedPort } from "../infrastructure/daemonTerminalClient";
+} from "../infrastructure/terminalWireTypes";
+import type { TerminalDetectedPort } from "../infrastructure/terminalWireTypes";
 
-export type { TerminalSessionSummary } from "../infrastructure/daemonTerminalClient";
+export type { TerminalSessionSummary } from "../infrastructure/terminalWireTypes";
 import { subscribeDesktopRpcEvent } from "../infrastructure/daemonTerminalClient";
 import { getTerminalRpc } from "../infrastructure/daemonTerminalClient";
 import type { DaemonTerminalClient } from "../infrastructure/daemonTerminalClient";
 
-export type { TerminalDetectedPort } from "../infrastructure/daemonTerminalClient";
+export type { TerminalDetectedPort } from "../infrastructure/terminalWireTypes";
 
 type TerminalCreateSessionParams = TerminalCreateSessionInput;
 
@@ -153,4 +153,4 @@ export async function subscribeTerminalSessions(params: {
   });
 }
 
-export type { TerminalResourceUsageSnapshot } from "../infrastructure/daemonTerminalClient";
+export type { TerminalResourceUsageSnapshot } from "../infrastructure/terminalWireTypes";
