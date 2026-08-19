@@ -165,221 +165,24 @@ import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspa
  */
 
 /** App-level commands (Electron host, auth, app flows). */
-export type AppCommandSurface = {
-  logout: typeof logoutCommand;
-  checkAgentGlobalConfigExternalDirectoryPermission: typeof checkAgentGlobalConfigExternalDirectoryPermissionCommand;
-  ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
-  toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
-  loadWorkspaceSnapshot: () => Promise<void>;
-};
-
-/** Session feature command surface. */
-export type SessionCommandSurface = {
-  getSessionBootstrapData: typeof getSessionBootstrapDataCommand;
-  getRemoteHealthStatus: typeof getRemoteHealthStatusCommand;
-  resetAuthExpiredState: typeof resetAuthExpiredStateCommand;
-};
-
-/** Workspace feature command surface. */
-export type WorkspaceCommandSurface = {
-  activateProject: typeof activateProjectCommand;
-  activateWorkspace: typeof activateWorkspaceCommand;
-  setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
-  setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
-  toggleLeftPaneVisibility: typeof toggleLeftPaneVisibilityCommand;
-  toggleRightPaneVisibility: typeof toggleRightPaneVisibilityCommand;
-  activateWorkspacePane: typeof activateWorkspacePaneCommand;
-  openCreateWorkspaceDialog: typeof openCreateWorkspaceDialogCommand;
-  focusWorkspaceFileTree: typeof focusWorkspaceFileTreeCommand;
-  deleteSelectedFileTreeEntry: typeof deleteSelectedFileTreeEntryCommand;
-  undoFileTreeOperation: typeof undoFileTreeOperationCommand;
-  openWorkspaceFileSearch: typeof openWorkspaceFileSearchCommand;
-  renameWorkspace: typeof renameWorkspaceCommand;
-  reorderWorkspace: typeof reorderWorkspaceCommand;
-  renameWorkspaceBranch: typeof renameWorkspaceBranchCommand;
-  createWorkspace: (input: {
-    projectId: string;
-    name: string;
-    sourceBranch?: string;
-    targetBranch?: string;
-    nodeId?: string;
-    taskRun?: {
-      agentKind: string;
-      prompt: string;
-      model?: string;
-    };
-  }) => Promise<string | undefined>;
-  closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
-  deleteLocalFolder: typeof deleteLocalFolderCommand;
-};
-
-/** Agent feature command surface. */
-export type AgentCommandSurface = {
-  listAgentDetectionStatuses: typeof listAgentDetectionStatusesCommand;
-  listAgentModels: typeof listAgentModelsCommand;
-  listPiProviders: typeof listPiProvidersCommand;
-  savePiProvider: typeof savePiProviderCommand;
-  removePiProvider: typeof removePiProviderCommand;
-  openPiProviderLogin: typeof openPiProviderLoginCommand;
-  ensureChatSession: typeof ensureChatSessionCommand;
-  runChatPrompt: typeof runChatPromptCommand;
-  closeAgentSession: typeof closeAgentSessionCommand;
-  getChatMessages: typeof getChatMessagesCommand;
-  appendChatMessages: typeof appendChatMessagesCommand;
-  updateChatMessage: typeof updateChatMessageCommand;
-  setChatAvailableModels: typeof setChatAvailableModelsCommand;
-  setChatCurrentModel: typeof setChatCurrentModelCommand;
-  createWorkspaceChatEventHandler: typeof createWorkspaceChatEventHandlerCommand;
-  listActivePiSessions: typeof listActivePiSessionsCommand;
-};
-
-/** Git feature command surface. */
-export type GitCommandSurface = {
-  readDiff: typeof readDiffCommand;
-  readCommitDiff: typeof readCommitDiffCommand;
-  readBranchComparisonDiff: typeof readBranchComparisonDiffCommand;
-  listGitChanges: typeof listGitChangesCommand;
-  trackGitChanges: typeof trackGitChangesCommand;
-  unstageGitChanges: typeof unstageGitChangesCommand;
-  revertGitChanges: typeof revertGitChangesCommand;
-  commitGitChanges: typeof commitGitChangesCommand;
-  getGitBranchStatus: typeof getGitBranchStatusCommand;
-  listGitCommitsToTarget: typeof listGitCommitsToTargetCommand;
-  listGitBranches: typeof listGitBranchesCommand;
-  getGitAuthorName: typeof getGitAuthorNameCommand;
-  pushGitBranch: typeof pushGitBranchCommand;
-  publishGitBranch: typeof publishGitBranchCommand;
-  refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChangesCommand;
-  refreshWorkspacePullRequest: typeof refreshWorkspacePullRequestCommand;
-  listPullRequestHistory: typeof listPullRequestHistoryCommand;
-  refreshDiffTabContent: typeof refreshDiffTabContentCommand;
-};
-
-/** Node feature command surface. */
-export type NodeCommandSurface = {
-  listOrgNodes: typeof listOrgNodesCommand;
-};
-
-/** Notification feature command surface. */
-export type NotificationCommandSurface = {
-  getNotificationPreferences: typeof getNotificationPreferencesCommand;
-  updateNotificationPreferences: typeof updateNotificationPreferencesCommand;
-  previewNotification: typeof previewNotificationCommand;
-  playNotificationSound: typeof playNotificationSoundCommand;
-};
-
-/** Organization feature command surface. */
-export type OrganizationCommandSurface = {
-  switchOrganization: typeof switchOrganizationCommand;
-};
-
-/** Overview feature command surface. */
-export type OverviewCommandSurface = {
-  loadAllOverviewData: typeof loadAllOverviewDataCommand;
-  setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
-  setOverviewProjectId: typeof setOverviewProjectIdCommand;
-};
-
-/** ScheduledJob feature command surface. */
-export type ScheduledJobCommandSurface = {
-  loadScheduledJobs: typeof loadScheduledJobsCommand;
-  createScheduledJob: typeof createScheduledJobCommand;
-  updateScheduledJob: typeof updateScheduledJobCommand;
-  deleteScheduledJob: typeof deleteScheduledJobCommand;
-  pauseScheduledJob: typeof pauseScheduledJobCommand;
-  resumeScheduledJob: typeof resumeScheduledJobCommand;
-  runScheduledJobNow: typeof runScheduledJobNowCommand;
-};
-
-/** Files feature command surface. */
-export type FileCommandSurface = {
-  listFiles: typeof listFilesCommand;
-  readFile: typeof readFileCommand;
-  writeFile: typeof writeFileCommand;
-  createFile: typeof createFileCommand;
-  createFolder: typeof createFolderCommand;
-  renameEntry: typeof renameEntryCommand;
-  deleteEntry: typeof deleteEntryCommand;
-  openEntryInExternalApp: typeof openEntryInExternalAppCommand;
-  listDetectedExternalAppIds: typeof listDetectedExternalAppIdsCommand;
-  readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
-  createNewWhiteboard: typeof createNewWhiteboardCommand;
-  resolveNextWhiteboardPath: typeof resolveNextWhiteboardPathCommand;
-  updateFileTabContent: typeof updateFileTabContentCommand;
-  markFileTabSaved: typeof markFileTabSavedCommand;
-  refreshFileTabFromDisk: typeof refreshFileTabFromDiskCommand;
-};
-
-/** Project feature command surface. */
-export type ProjectCommandSurface = {
-  inspectLocalProjectSource: typeof inspectLocalProjectSourceCommand;
-  createProject: (input: {
-    name: string;
-    sourceTypeHint?: "unknown" | "git-local" | "git";
-    path?: string;
-    gitUrl?: string;
-  }) => Promise<void>;
-  deleteProject: (repoId: string) => Promise<void>;
-  updateProjectConfig: typeof updateProjectConfigCommand;
-};
-
-/** Workbench feature command surface. */
-export type WorkbenchCommandSurface = {
-  selectTab: typeof setSelectedTabCommand;
-  openTab: typeof openTabCommand;
-  openTabInOppositePane: typeof openTabInOppositePaneCommand;
-  closeTab: typeof closeTabCommand;
-  closeOtherTabs: (tabId: string) => void;
-  closeAllTabs: (tabId: string) => void;
-  toggleTabPinned: typeof toggleTabPinnedCommand;
-  promoteTemporaryTab: typeof promoteTemporaryTabCommand;
-  reorderTab: typeof reorderTabCommand;
-  renameTab: typeof renameTabCommand;
-  setBrowserTabFaviconUrl: typeof setBrowserTabFaviconUrlCommand;
-  setBrowserTabUrl: typeof setBrowserTabUrlCommand;
-  renameTabsForEntryRename: typeof renameTabsForEntryRenameCommand;
-};
-
-/** Terminal feature command surface. */
-export type TerminalCommandSurface = {
-  createTerminalSession: typeof createTerminalSessionCommand;
-  writeTerminalInput: typeof writeTerminalInputCommand;
-  resizeTerminal: typeof resizeTerminalCommand;
-  readTerminalOutput: typeof readTerminalOutputCommand;
-  listDetectedPorts: typeof listDetectedPortsCommand;
-  subscribeDetectedPorts: typeof subscribeDetectedPortsCommand;
-  setActiveWorkspace: typeof setActiveWorkspaceCommand;
-  getTerminalResourceUsage: typeof getTerminalResourceUsageCommand;
-  listTerminalSessions: typeof listTerminalSessionsCommand;
-  subscribeTerminalOutput: typeof subscribeTerminalOutputCommand;
-  subscribeTerminalSessions: typeof subscribeTerminalSessionsCommand;
-  closeTerminalSession: typeof closeTerminalSessionCommand;
-  consumeTerminalTabFocus: typeof consumeTerminalTabFocusCommand;
-  retainOpenTerminalTabFocus: typeof retainOpenTerminalTabFocusCommand;
-  killTerminalProcess: typeof killTerminalProcessCommand;
-};
-
-/** Settings feature command surface. */
-export type SettingsCommandSurface = {
-  listCLIToolStatuses: typeof listCLIToolStatusesCommand;
-};
-
-/** The composed application command surface (all features). */
-export type Commands = AppCommandSurface &
-  SessionCommandSurface &
-  WorkspaceCommandSurface &
-  AgentCommandSurface &
-  GitCommandSurface &
-  NodeCommandSurface &
-  NotificationCommandSurface &
-  OrganizationCommandSurface &
-  OverviewCommandSurface &
-  ScheduledJobCommandSurface &
-  FileCommandSurface &
-  ProjectCommandSurface &
-  WorkbenchCommandSurface &
-  TerminalCommandSurface &
-  SettingsCommandSurface;
+import type {
+  AgentCommandSurface,
+  AppCommandSurface,
+  Commands,
+  FileCommandSurface,
+  GitCommandSurface,
+  NodeCommandSurface,
+  NotificationCommandSurface,
+  OrganizationCommandSurface,
+  OverviewCommandSurface,
+  ProjectCommandSurface,
+  ScheduledJobCommandSurface,
+  SessionCommandSurface,
+  SettingsCommandSurface,
+  TerminalCommandSurface,
+  WorkbenchCommandSurface,
+  WorkspaceCommandSurface,
+} from "./commandSurfaces";
 
 export function createAppCommands(): AppCommandSurface {
   return {
@@ -633,3 +436,21 @@ export function createCommands(): Commands {
     ...createSettingsCommands(),
   };
 }
+export type {
+  AgentCommandSurface,
+  AppCommandSurface,
+  FileCommandSurface,
+  GitCommandSurface,
+  NodeCommandSurface,
+  NotificationCommandSurface,
+  OrganizationCommandSurface,
+  OverviewCommandSurface,
+  ProjectCommandSurface,
+  ScheduledJobCommandSurface,
+  SessionCommandSurface,
+  SettingsCommandSurface,
+  TerminalCommandSurface,
+  WorkbenchCommandSurface,
+  WorkspaceCommandSurface,
+  Commands,
+} from "./commandSurfaces";
