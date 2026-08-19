@@ -32,7 +32,7 @@ vi.mock("../../../domains/workbench", () => ({
   useDialogRegistration: () => {},
 }));
 
-vi.mock("../../../../domains/node/infrastructure/nodeApi", () => ({
+vi.mock("../../../../domains/node/api/nodeApi", () => ({
   listOrganizationNodes: mocked.listNodesByOrg,
 }));
 
