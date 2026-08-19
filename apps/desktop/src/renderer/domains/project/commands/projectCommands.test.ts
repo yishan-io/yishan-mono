@@ -38,7 +38,7 @@ vi.mock("../../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../../domains/project/infrastructure/projectApi", () => ({
+vi.mock("../../../domains/project/api/projectApi", () => ({
   createProject: apiMocks.createProject,
   deleteProject: apiMocks.deleteProject,
   updateProject: apiMocks.updateProject,

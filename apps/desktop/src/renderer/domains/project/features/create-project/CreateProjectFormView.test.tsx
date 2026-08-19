@@ -28,7 +28,7 @@ vi.mock("../../commands/projectCommands", () => ({
   inspectLocalProjectSource: mocked.inspectLocalProjectSource,
 }));
 
-vi.mock("../../infrastructure/projectHostCommands", () => ({
+vi.mock("../../host/projectHostCommands", () => ({
   openLocalFolderDialog: mocked.openLocalFolderDialog,
 }));
 

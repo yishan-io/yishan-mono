@@ -214,3 +214,9 @@ export async function setProjectListPreferences(
   const projectRpc = await getProjectRpc();
   return projectRpc.setListPreferences(organizationId, preferences);
 }
+
+/** Reads the default workspace worktree location from backend app settings. */
+export async function getDefaultWorktreeLocation(): Promise<string> {
+  const response = (await request("app.getDefaultWorktreeLocation", {})) as { worktreePath: string };
+  return response.worktreePath;
+}

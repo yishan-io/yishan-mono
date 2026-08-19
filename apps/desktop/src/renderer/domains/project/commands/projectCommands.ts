@@ -22,7 +22,7 @@ import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
   updateProject as updateProjectFromApi,
-} from "../infrastructure/projectApi";
+} from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../projectIconSelection";
 import { projectStore } from "../state/projectStore";
 

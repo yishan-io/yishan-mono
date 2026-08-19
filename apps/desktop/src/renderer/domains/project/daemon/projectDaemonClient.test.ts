@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DaemonProjectClient } from "./daemonProjectClient";
+import { DaemonProjectClient } from "./projectDaemonClient";
 
 describe("DaemonProjectClient", () => {
   it("carries workspace lifecycle state and health through listWithWorkspaces", async () => {

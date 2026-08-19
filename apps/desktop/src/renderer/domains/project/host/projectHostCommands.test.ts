@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { getDefaultWorktreeLocation, openLocalFolderDialog } from "./projectHostCommands";
+import { getDefaultWorktreeLocation } from "../daemon/projectDaemonClient";
+import { openLocalFolderDialog } from "./projectHostCommands";
 
 const mocks = vi.hoisted(() => ({
   openLocalFolderDialog: vi.fn(),

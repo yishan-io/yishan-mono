@@ -23,12 +23,13 @@ export {
   getProjectListPreferences,
   listProjectsByOrg,
   setProjectListPreferences,
-} from "./infrastructure/daemonProjectClient";
-export { getDefaultWorktreeLocation, openLocalFolderDialog } from "./infrastructure/projectHostCommands";
+} from "./daemon/projectDaemonClient";
+export { getDefaultWorktreeLocation } from "./daemon/projectDaemonClient";
+export { openLocalFolderDialog } from "./host/projectHostCommands";
 export type {
   ProjectListModePreference,
   ProjectListPreference,
-} from "./infrastructure/daemonProjectClient";
+} from "./daemon/projectDaemonClient";
 export {
   selectLastUsedExternalAppId,
   selectOrganizationPreferencesById,

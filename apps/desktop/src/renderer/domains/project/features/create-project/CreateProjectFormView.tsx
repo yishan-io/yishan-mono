@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
 import { createProject, inspectLocalProjectSource } from "../../commands/projectCommands";
-import { openLocalFolderDialog } from "../../infrastructure/projectHostCommands";
+import { openLocalFolderDialog } from "../../host/projectHostCommands";
 
 type RepoDraft = {
   name: string;

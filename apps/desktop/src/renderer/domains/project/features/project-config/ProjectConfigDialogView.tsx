@@ -3,7 +3,7 @@ import { useProjects } from "@renderer/domains/project/hooks/useProjectReadHooks
 import { useDialogRegistration } from "@renderer/domains/workbench";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getDefaultWorktreeLocation } from "../../infrastructure/projectHostCommands";
+import { getDefaultWorktreeLocation } from "../../daemon/projectDaemonClient";
 import { ProjectConfigCommandsSection } from "./projectConfigDialog/ProjectConfigCommandsSection";
 import { ProjectConfigGeneralSection } from "./projectConfigDialog/ProjectConfigGeneralSection";
 import { ProjectConfigIconPickerPopover } from "./projectConfigDialog/ProjectConfigIconPickerPopover";

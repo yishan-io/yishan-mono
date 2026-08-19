@@ -255,6 +255,10 @@ function scanViolations(): Violation[] {
           relT.startsWith(`domains/${ownDomain}/commands/`) ||
           relT.startsWith(`domains/${ownDomain}/events/`) ||
           relT.startsWith(`domains/${ownDomain}/infrastructure/`) ||
+          relT.startsWith(`domains/${ownDomain}/daemon/`) ||
+          relT.startsWith(`domains/${ownDomain}/api/`) ||
+          relT.startsWith(`domains/${ownDomain}/host/`) ||
+          relT.startsWith(`domains/${ownDomain}/persistence/`) ||
           imp.spec === "react-icons" ||
           imp.spec.startsWith("react-icons/") ||
           imp.spec.startsWith("@mui/") ||
@@ -372,18 +376,20 @@ function scanViolations(): Violation[] {
         }
       }
       // ---- Rule 19 (desktop7 Phase 27; desktop8 Phase 31): root RPC is
-      // imported only by app/events, app/runtime, Domain Infrastructure, and
-      // the root events capability (which owns backend-event composition).
-      // Consumers must use the RPC public API (rpc/index); importing RPC
-      // implementation files is a violation. Root RPC's own wiring is
-      // exempt. ----
+      // imported only by app/events, app/runtime, Domain boundary
+      // directories (infrastructure/, daemon/, api/, host/, persistence/),
+      // and the root events capability (which owns backend-event
+      // composition). Consumers must use the RPC public API (rpc/index);
+      // importing RPC implementation files is a violation. Root RPC's own
+      // wiring is exempt. ----
       const isRpcImport = relT.startsWith("rpc/") || relT === "rpc";
       if (isRpcImport && !rel.startsWith("rpc/")) {
         const whitelisted =
           rel.startsWith("app/events/") ||
           rel.startsWith("app/runtime/") ||
           rel.startsWith("events/") ||
-          rel.includes("/infrastructure/");
+          rel.includes("/infrastructure/") ||
+          /^domains\/[^/]+\/(daemon|api|host|persistence)\//.test(rel);
         const publicApiOnly = relT === "rpc" || relT.startsWith("rpc/index");
         if (!whitelisted || !publicApiOnly) {
           violations.push({ rule: "R19-rpc-whitelist", file: rel, target: imp.spec });
