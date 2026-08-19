@@ -59,7 +59,7 @@ export {
 // Stable UI entry points for cross-feature composition.
 export { workspaceSettingsStore, type WorkspaceSettingsStoreState } from "./state/workspaceSettingsStore";
 
-export type { GitBranchPrefixMode } from "./naming/branchPrefix";
+export type { GitBranchPrefixMode } from "./naming";
 export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWorkspaceDialogView";
 export { RenameWorkspaceDialogView } from "./features/rename-workspace/RenameWorkspaceDialogView";
 export { WorkspaceDeleteDialogView } from "./features/delete-workspace/WorkspaceDeleteDialogView";
@@ -79,7 +79,7 @@ export { WorkspaceSettingsView } from "./features/workspace-preferences/Workspac
 export {
   resolveHydratedWorkspaceDisplayMetadata,
   resolveWorkspaceListDisplayName,
-} from "./naming/workspaceDisplayNames";
-export { isFolderWorkspace } from "./local-folder/localFolder";
+} from "./naming";
+export { isFolderWorkspace } from "./local-folder";
 
 export type { BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";

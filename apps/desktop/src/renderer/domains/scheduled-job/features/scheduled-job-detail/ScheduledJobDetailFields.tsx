@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { listOrgNodes } from "../../../../domains/node";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { describeCronExpression } from "../../scheduledJobScheduleDisplay";
+import { describeCronExpression } from "../../schedule/scheduledJobScheduleDisplay";
 import { ScheduledJobStatusIndicator } from "../../ui/ScheduledJobStatusIndicator";
 
 type ScheduledJobDetailFieldsProps = {

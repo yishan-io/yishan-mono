@@ -12,7 +12,7 @@ import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { createScheduledJob } from "../../commands/scheduledJobCommands";
 import { DEFAULT_FORM_DRAFT, useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
-import { SCHEDULED_JOB_AGENT_KIND } from "../../scheduledJobScheduleRules";
+import { SCHEDULED_JOB_AGENT_KIND } from "../../schedule/scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
 
 type CreateScheduledJobFormViewProps = {

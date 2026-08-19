@@ -6,7 +6,7 @@ export type {
   GitPullRequestCheck,
   GitPullRequestDeployment,
   GitPullRequestSummary,
-} from "./pull-request/gitPullRequestTypes";
+} from "./pull-request";
 export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
 export { refreshDiffTabContent, removeDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
 export {
@@ -51,4 +51,4 @@ export { GitChangeTotals } from "./ui/GitChangeTotals";
 
 export { PullRequestIcon } from "./ui/PullRequestIcon";
 
-export { livePrStatus } from "./pull-request/gitPullRequestStatus";
+export { livePrStatus } from "./pull-request";

@@ -123,7 +123,7 @@ export async function resumeScheduledJob(jobId: string): Promise<void> {
 /** Triggers one scheduled job immediately. */
 export async function runScheduledJobNow(
   jobId: string,
-): Promise<import("../scheduledJobTypes").ScheduledJobRunRecord | null> {
+): Promise<import("../schedule/scheduledJobTypes").ScheduledJobRunRecord | null> {
   const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return null;
@@ -143,7 +143,7 @@ export async function listScheduledJobRuns(
   orgId: string,
   jobId: string,
   limit = 20,
-): Promise<import("../scheduledJobTypes").ScheduledJobRunRecord[]> {
+): Promise<import("../schedule/scheduledJobTypes").ScheduledJobRunRecord[]> {
   return listScheduledJobRunsFromApi(orgId, jobId, limit);
 }
 
@@ -153,5 +153,5 @@ export type {
   ScheduledJobStatus,
   ScheduledJobLastRunStatus,
   ScheduledJobRunStatus,
-} from "../scheduledJobTypes";
+} from "../schedule/scheduledJobTypes";
 export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";

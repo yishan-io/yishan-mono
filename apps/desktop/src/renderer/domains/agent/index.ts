@@ -18,7 +18,7 @@ export {
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
   type DesktopAgentKind,
-} from "./providers/agentSettings";
+} from "./providers";
 export {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
@@ -43,8 +43,8 @@ export {
   resetAgentLifecycleState,
 } from "./commands/agentSessionLifecycle";
 export { formatAgentSessionTitle } from "./skills/agentSkillText";
-export type { ThinkingLevel } from "./providers/agentThinkingLevels";
-export type { PiProviderAuthMode, PiProviderCatalogEntry } from "./providers/piProviders";
+export type { ThinkingLevel } from "./providers";
+export type { PiProviderAuthMode, PiProviderCatalogEntry } from "./providers";
 export type { PiProviderVisual } from "./ui/piProviderVisuals";
 
 export type {
@@ -59,7 +59,7 @@ export type {
   AgentSubagentCancelState,
   AgentThinkingSignature,
   AgentThinkingSignatureSummary,
-} from "./chat/agentChatTypes";
+} from "./chat";
 
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
