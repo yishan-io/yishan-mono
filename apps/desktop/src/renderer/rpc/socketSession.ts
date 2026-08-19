@@ -1,4 +1,4 @@
-import { delay } from "@renderer/async/delay";
+import { delay } from "@shared/async/delay";
 
 /**
  * Daemon WebSocket session (desktop8 Phase 31).

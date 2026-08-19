@@ -16,6 +16,7 @@ export {
   listDetectedPorts,
   listTerminalSessions,
   readTerminalOutput,
+  requestTerminalFocus,
   resizeTerminal,
   retainOpenTerminalTabFocus,
   setActiveWorkspace,

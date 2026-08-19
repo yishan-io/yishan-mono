@@ -94,6 +94,10 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R18-wildcard-domain-index": 0,
   "R19-rpc-whitelist": 0,
   "R20-layer-transport": 0,
+  "R21-events-app-domain": 0,
+  "R22-shared-renderer-import": 0,
+  "R23-removed-root-capabilities": 0,
+  "R24-platform-app-domain": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -154,7 +158,7 @@ type Violation = { rule: RuleName; file: string; target: string };
 
 function scanViolations(): Violation[] {
   const violations: Violation[] = [];
-  const files = walkFiles(RENDERER_ROOT);
+  const files = [...walkFiles(RENDERER_ROOT), ...walkFiles(SHARED_ROOT)];
 
   for (const file of files) {
     const rel = relative(RENDERER_ROOT, file).replace(/\\/g, "/");
@@ -390,6 +394,30 @@ function scanViolations(): Violation[] {
       if (isTransport && /^domains\/[^/]+\/(model|state|hooks|ui|features)\//.test(rel)) {
         violations.push({ rule: "R20-layer-transport", file: rel, target: imp.spec });
       }
+      // ---- Rule 21 (desktop8 Phase 32): root events capability must not
+      // import App or Domains. App composes events; Domains consume the
+      // root events facade. ----
+      if (rel.startsWith("events/") && (relT.startsWith("app/") || relT.startsWith("domains/"))) {
+        violations.push({ rule: "R21-events-app-domain", file: rel, target: imp.spec });
+      }
+      // ---- Rule 22 (desktop8 Phase 32): src/shared technical modules must
+      // not import Renderer, Main, or product Domains. Shared capabilities
+      // are business-neutral and process-agnostic; external packages stay
+      // allowed (unresolved specifiers resolve to an empty relT). ----
+      if (rel.startsWith("../shared/") && relT !== "" && !relT.startsWith("../shared/")) {
+        violations.push({ rule: "R22-shared-renderer-import", file: rel, target: imp.spec });
+      }
+      // ---- Rule 23 (desktop8 Phase 32): the root async/ids/path/version
+      // capabilities moved to src/shared; the root directories must not
+      // return. ----
+      if (/^async\//.test(relT) || /^ids\//.test(relT) || /^path\//.test(relT) || /^version\//.test(relT)) {
+        violations.push({ rule: "R23-removed-root-capabilities", file: rel, target: imp.spec });
+      }
+      // ---- Rule 24 (desktop8 Phase 32): root platform capability must not
+      // import App or Domains (host bridge + platform detection only). ----
+      if (rel.startsWith("platform/") && (relT.startsWith("app/") || relT.startsWith("domains/"))) {
+        violations.push({ rule: "R24-platform-app-domain", file: rel, target: imp.spec });
+      }
     }
     // ---- Rule 12 (desktop6-adjust.md W8): Store Actions must stay
     // synchronous. A Store Action changes one owning Store synchronously; it
@@ -489,6 +517,40 @@ describe("renderer architecture dependency rules", () => {
   describe("R20: Model, State, Hooks, UI, and Features do not import root transport (desktop7 Phase 27)", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R20-layer-transport"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R21: root events must not import App or Domains (desktop8 Phase 32)", () => {
+    it("reports no violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R21-events-app-domain"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R22: src/shared technical modules must not import Renderer, Main, or Domains (desktop8 Phase 32)", () => {
+    it("reports no violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R22-shared-renderer-import"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R23: removed root async/ids/path/version capabilities must not return (desktop8 Phase 32)", () => {
+    it("rejects imports of the removed root capability paths", () => {
+      const messages = failureMessages(unbaselined(violations, "R23-removed-root-capabilities"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("keeps the root capability directories deleted", () => {
+      for (const capability of ["async", "ids", "path", "version"]) {
+        expect(existsSync(join(RENDERER_ROOT, capability)), `root ${capability}/ must not return`).toBe(false);
+      }
+    });
+  });
+
+  describe("R24: root platform must not import App or Domains (desktop8 Phase 32)", () => {
+    it("reports no violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R24-platform-app-domain"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });

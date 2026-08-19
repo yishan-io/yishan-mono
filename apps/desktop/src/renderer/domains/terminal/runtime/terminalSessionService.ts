@@ -1,4 +1,5 @@
 import { bindTerminalTabSession, closeTab, renameTab } from "@renderer/domains/workbench";
+import { TAB_FOCUS_REQUEST_EVENT } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import {
@@ -11,6 +12,7 @@ import {
   writeTerminalInput,
 } from "../../../domains/terminal/commands/terminalCommands";
 import { subscribeDaemonConnectionStatus } from "../infrastructure/daemonTerminalClient";
+import { terminalFocusStore } from "../state/terminalFocusStore";
 import {
   shouldClearTerminalOutputShortcut,
   shouldReleaseCommandWForTabCloseShortcut,
@@ -76,6 +78,18 @@ subscribeDaemonConnectionStatus((status) => {
 
   daemonReconnectSeen = false;
   reconnectAllTerminalSessions();
+});
+
+// ─── Workbench tab-focus bridge (desktop8 Phase 32) ──────────────────────────
+// Workbench records content-agnostic tab-focus intents; the Terminal Domain
+// interprets intents targeting terminal tabs by feeding its focus store.
+
+window.addEventListener(TAB_FOCUS_REQUEST_EVENT, (event) => {
+  const detail = (event as CustomEvent<{ tabId?: string; target?: string }>).detail;
+  if (detail?.target !== "terminal" || !detail.tabId) {
+    return;
+  }
+  terminalFocusStore.getState().requestFocus(detail.tabId);
 });
 
 // ─── Public API ────────────────────────────────────────────────────────────────

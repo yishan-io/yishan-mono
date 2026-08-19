@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
+import { requestTabFocus } from "@renderer/domains/workbench";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { requestAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../../../events";
 import type { AgentMessage, AgentModel } from "../../../model/agentChatTypes";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { AgentChatView } from "./AgentChatView";
@@ -285,7 +285,7 @@ vi.mock("../../../ui/credentials/ProviderCredentialDialog", () => ({
 }));
 
 // Keep the provider-visibility poll (useAgentChatProviderAdd) fast in tests.
-vi.mock("@renderer/async/delay", () => ({
+vi.mock("@shared/async/delay", () => ({
   delay: mocked.delay,
 }));
 
@@ -559,7 +559,7 @@ describe("AgentChatView", () => {
     focusTarget.focus();
 
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
-    requestAgentChatComposerFocus("tab-1");
+    requestTabFocus("tab-1", "agent-composer", "manual");
 
     expect(document.activeElement).toBe(focusTarget);
 
@@ -579,7 +579,7 @@ describe("AgentChatView", () => {
     focusTarget.focus();
 
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
-    requestNewAgentChatComposerFocus("tab-1");
+    requestTabFocus("tab-1", "agent-composer", "auto");
 
     expect(document.activeElement).toBe(focusTarget);
 
@@ -600,7 +600,7 @@ describe("AgentChatView", () => {
     focusTarget.focus();
 
     const view = render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive={false} />);
-    requestAgentChatComposerFocus("tab-1");
+    requestTabFocus("tab-1", "agent-composer", "manual");
 
     act(() => {
       agentChatStore.getState().setSessionState("tab-1", "idle");

@@ -323,7 +323,7 @@ describe("getShortcutDefinitions", () => {
     expect(focusAgentChatComposer).toBeTruthy();
 
     const handler = vi.fn();
-    window.addEventListener("agent-chat-composer-focus", handler);
+    window.addEventListener("yishan-tab-focus-request", handler);
     const context = createShortcutContext({
       tabStoreState: {
         ...createShortcutContext().tabStoreState,
@@ -344,8 +344,10 @@ describe("getShortcutDefinitions", () => {
     focusAgentChatComposer?.run(context, new KeyboardEvent("keydown", { key: "l", metaKey: true }));
 
     expect(handler).toHaveBeenCalledTimes(1);
-    expect((handler.mock.calls[0]?.[0] as CustomEvent<{ tabId: string }>).detail).toEqual({ tabId: "tab-agent-chat" });
-    window.removeEventListener("agent-chat-composer-focus", handler);
+    expect((handler.mock.calls[0]?.[0] as CustomEvent<{ tabId: string; target: string; kind: string }>).detail).toEqual(
+      { tabId: "tab-agent-chat", target: "agent-composer", kind: "manual" },
+    );
+    window.removeEventListener("yishan-tab-focus-request", handler);
   });
 
   it("reloads the active browser tab from Cmd+R shortcut", async () => {

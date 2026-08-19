@@ -1,4 +1,4 @@
-import { generateId } from "@renderer/ids/generateId";
+import { generateId } from "@shared/ids/generateId";
 import type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "../../infrastructure/externalApps";
 import type { ClipboardFilePayload } from "./clipboardSourceResolvers";
 

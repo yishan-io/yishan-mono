@@ -1,5 +1,5 @@
+import { generateId } from "@shared/ids/generateId";
 import { Notification } from "electron";
-import { generateId } from "../../shared/helpers/generateId";
 import type { NativeNotificationRequest, NotificationClickEvent, NotificationDriver } from "./types";
 
 /**

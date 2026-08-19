@@ -30,6 +30,7 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { ColumnSeparator } from "@renderer/domains/workbench";
 import { TabPanel } from "@renderer/domains/workbench";
+import { retainOpenTabFocus } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
@@ -37,7 +38,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
-import { retainOpenAgentChatComposerFocus } from "../../../events";
 import { DARK_SURFACE_COLORS } from "../../../theme";
 import { useFileCommands, useGitCommands, useTerminalCommands, useWorkbenchCommands } from "../../commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../selectors";
@@ -205,7 +205,7 @@ export function MainPaneView() {
     const terminalTabIds = new Set(tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
     const agentChatTabIds = new Set(tabs.filter((tab) => tab.kind === "agent-chat").map((tab) => tab.id));
     cmd.retainOpenTerminalTabFocus(terminalTabIds);
-    retainOpenAgentChatComposerFocus(agentChatTabIds);
+    retainOpenTabFocus(agentChatTabIds);
     disposeTerminalRuntimesForClosedTabs(terminalTabIds);
   }, [cmd, tabs]);
 

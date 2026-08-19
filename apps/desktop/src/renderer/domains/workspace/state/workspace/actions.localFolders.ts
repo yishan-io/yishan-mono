@@ -1,4 +1,4 @@
-import { getFileName } from "@renderer/path/pathHelpers";
+import { getFileName } from "@shared/path/pathHelpers";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { selectSessionDaemonId } from "../../../../domains/session";
 import type { DaemonLocalFolder } from "../../model/snapshotTypes";

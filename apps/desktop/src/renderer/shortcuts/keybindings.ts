@@ -1,11 +1,11 @@
 import { reloadWebview } from "@renderer/domains/browser";
 import { activateWorkspace } from "@renderer/domains/workbench";
+import { requestTabFocus } from "@renderer/domains/workbench";
+import { SHORTCUT_KEYS } from "@shared/shortcuts/shortcutKeyCatalog";
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
 import { createNewWhiteboard } from "../domains/files/commands/whiteboardCommands";
 import { projectStore } from "../domains/project/state/projectStore";
-import { requestAgentChatComposerFocus } from "../events";
-import { SHORTCUT_KEYS } from "@shared/shortcuts/shortcutKeyCatalog";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
 import { toSupportedKeyBinding } from "./shortcutMetadata";
@@ -165,7 +165,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
       return false;
     }
 
-    requestAgentChatComposerFocus(selectedTab.id);
+    requestTabFocus(selectedTab.id, "agent-composer", "manual");
     event.preventDefault();
     return true;
   }

@@ -3,16 +3,12 @@ import { searchFiles } from "@renderer/domains/files";
 import { useKeybindingOverrides } from "@renderer/domains/settings";
 import { tabStore } from "@renderer/domains/workbench";
 import { renameTab } from "@renderer/domains/workbench";
-import { generateId } from "@renderer/ids/generateId";
+import { TAB_FOCUS_REQUEST_EVENT, consumeTabFocus, getTabFocusRequest } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { generateId } from "@shared/ids/generateId";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
-import {
-  AGENT_CHAT_COMPOSER_FOCUS_EVENT,
-  consumeAgentChatComposerFocus,
-  getAgentChatComposerFocusRequest,
-} from "../../../../../events";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
 import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";
@@ -98,36 +94,40 @@ function AgentChatComposerPaneComponent({
 
   useEffect(() => {
     const handleFocusRequest = (event: Event) => {
-      const request = event as CustomEvent<{ tabId: string }>;
-      if (request.detail.tabId !== tabId || sessionState === "starting" || !isActive) {
+      const request = event as CustomEvent<{ tabId: string; target?: string }>;
+      if (request.detail.target !== "agent-composer" || request.detail.tabId !== tabId) {
+        return;
+      }
+      if (sessionState === "starting" || !isActive) {
         return;
       }
 
-      const requestKind = getAgentChatComposerFocusRequest(tabId);
+      const requestKind = getTabFocusRequest(tabId)?.kind;
       if (requestKind === "auto" && !isReadyForAutoFocus) {
         return;
       }
 
       focusComposer();
       if (requestKind) {
-        consumeAgentChatComposerFocus(tabId);
+        consumeTabFocus(tabId);
       }
     };
 
-    window.addEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
+    window.addEventListener(TAB_FOCUS_REQUEST_EVENT, handleFocusRequest);
     return () => {
-      window.removeEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
+      window.removeEventListener(TAB_FOCUS_REQUEST_EVENT, handleFocusRequest);
     };
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
   useEffect(() => {
-    const requestKind = getAgentChatComposerFocusRequest(tabId);
+    const request = getTabFocusRequest(tabId);
+    const requestKind = request?.target === "agent-composer" ? request.kind : undefined;
     if (!requestKind || sessionState === "starting" || !isActive || (requestKind === "auto" && !isReadyForAutoFocus)) {
       return;
     }
 
     focusComposer();
-    consumeAgentChatComposerFocus(tabId);
+    consumeTabFocus(tabId);
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
   const handleSubmit = useCallback(

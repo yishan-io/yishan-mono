@@ -6,9 +6,9 @@ import { recordExplicitlyClosedTerminalTabId } from "@renderer/domains/terminal"
 import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import type { CloseTabOptions } from "@renderer/domains/workbench";
+import { clearTabFocus } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { clearAgentChatComposerFocus } from "../../events";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
  *
@@ -29,7 +29,7 @@ type AgentChatTab = Extract<WorkbenchTab, { kind: "agent-chat" }>;
 /** Releases agent-chat sessions for tabs that are being closed. */
 function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {
   for (const tab of tabs) {
-    clearAgentChatComposerFocus(tab.id);
+    clearTabFocus(tab.id);
     // fire-and-forget: tab closure must not wait for daemon session cleanup.
     void stopPiSession(tab.id).catch(() => {});
   }
@@ -72,7 +72,7 @@ export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): v
   }
 
   if (tab.kind === "agent-chat") {
-    clearAgentChatComposerFocus(tab.id);
+    clearTabFocus(tab.id);
     void stopPiSession(tab.id).catch(() => {});
   }
   if (tab.kind === "terminal") {

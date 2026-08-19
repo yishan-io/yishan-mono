@@ -1,5 +1,5 @@
 import { IconButton, Tooltip } from "@mui/material";
-import { isDaemonVersionOutdated } from "@renderer/version/version";
+import { isDaemonVersionOutdated } from "@shared/version/version";
 import { useTranslation } from "react-i18next";
 import { LuTriangleAlert } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";

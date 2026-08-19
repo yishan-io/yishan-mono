@@ -1,6 +1,6 @@
-import type { DesktopRpcEventEnvelope } from "../../../main/ipc";
-import type { RpcFrontendMessageKey, RpcFrontendMessagePayload } from "../../../shared/contracts/rpcSchema";
-import { SUPPORTED_NOTIFICATION_EVENT_TYPES } from "../../../shared/notifications/notificationPreferences";
+import type { DesktopRpcEventEnvelope } from "../../main/ipc";
+import type { RpcFrontendMessageKey, RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
+import { SUPPORTED_NOTIFICATION_EVENT_TYPES } from "../../shared/notifications/notificationPreferences";
 
 const FRONTEND_MESSAGE_KEYS = [
   "appAction",

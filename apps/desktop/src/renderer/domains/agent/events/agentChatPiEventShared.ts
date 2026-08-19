@@ -1,4 +1,4 @@
-import { generateId } from "@renderer/ids/generateId";
+import { generateId } from "@shared/ids/generateId";
 import { sendPiCommand } from "../infrastructure/daemonAgentProcedures";
 import type {
   AgentMessage,

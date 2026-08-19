@@ -1,4 +1,4 @@
-import { delay } from "@renderer/async/delay";
+import { delay } from "@shared/async/delay";
 import { getDesktopHostBridge } from "../platform/hostBridge";
 
 const SOCKET_CONNECT_RETRY_COUNT = 30;

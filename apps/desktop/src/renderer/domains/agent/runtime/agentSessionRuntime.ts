@@ -1,8 +1,7 @@
-import { delay } from "@renderer/async/delay";
 import { tabStore } from "@renderer/domains/workbench";
 import { bindAgentChatTabSession } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
-import { generateId } from "@renderer/ids/generateId";
+import { delay } from "@shared/async/delay";
 /**
  * AgentSessionRuntime — one owner for Pi session handles and lifecycle races.
  *
@@ -21,6 +20,7 @@ import { generateId } from "@renderer/ids/generateId";
  * double-mounts reuse the same Pi process instead of starting a second one.
  */
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { generateId } from "@shared/ids/generateId";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
 import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../events/agentChatPiEventShared";

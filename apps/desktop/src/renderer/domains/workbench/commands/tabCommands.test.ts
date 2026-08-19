@@ -3,13 +3,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import { createLeaf } from "../../../domains/workbench/model/split-pane";
+import {
+  __resetTabFocusIntentForTests,
+  consumeTabFocus,
+  getTabFocusRequest,
+} from "../../../domains/workbench/runtime/tabFocusIntent";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
-import {
-  __resetPendingTerminalTabFocusForTests,
-  consumeTerminalTabFocus,
-  hasPendingTerminalTabFocus,
-} from "../../../events/terminalTabFocus";
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
@@ -47,11 +47,6 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
 
-vi.mock("../../../events/agentChatComposerFocus", () => ({
-  clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
-  requestNewAgentChatComposerFocus: rpcMocks.requestNewAgentChatComposerFocus,
-}));
-
 vi.mock("../../../views/workspace/terminal/terminalRuntimeRegistry", () => ({
   clearTerminalRuntimeFocus: rpcMocks.clearTerminalRuntimeFocus,
   requestTerminalRuntimeFocus: rpcMocks.requestTerminalRuntimeFocus,
@@ -67,7 +62,7 @@ afterEach(() => {
   splitPaneStore.setState(initialSplitPaneStoreState, true);
   vi.clearAllMocks();
   __resetExplicitlyClosedTerminalTabIdsForTests();
-  __resetPendingTerminalTabFocusForTests();
+  __resetTabFocusIntentForTests();
 });
 
 describe("tabCommands", () => {
@@ -87,11 +82,11 @@ describe("tabCommands", () => {
 
     const createdTabId = tabStore.getState().selectedTabId;
     expect(createdTabId).not.toBe("");
-    expect(hasPendingTerminalTabFocus(createdTabId)).toBe(false);
+    expect(getTabFocusRequest(createdTabId)).toBeUndefined();
     focusFrame?.(0);
-    expect(hasPendingTerminalTabFocus(createdTabId)).toBe(true);
+    expect(getTabFocusRequest(createdTabId)).toEqual({ target: "terminal", kind: "auto" });
 
-    consumeTerminalTabFocus(createdTabId);
+    consumeTabFocus(createdTabId);
     openTab({ workspaceId: "workspace-1", kind: "terminal", title: "Terminal" });
 
     expect(rpcMocks.requestTerminalRuntimeFocus).not.toHaveBeenCalled();
@@ -111,11 +106,14 @@ describe("tabCommands", () => {
 
     openTab({ workspaceId: "workspace-1", kind: "agent-chat", cwd: "/tmp/project" });
 
-    expect(rpcMocks.requestNewAgentChatComposerFocus).not.toHaveBeenCalled();
+    expect(getTabFocusRequest(tabStore.getState().selectedTabId)).toBeUndefined();
     focusFrame?.(0);
-    expect(rpcMocks.requestNewAgentChatComposerFocus).toHaveBeenCalledWith(tabStore.getState().selectedTabId);
+    expect(getTabFocusRequest(tabStore.getState().selectedTabId)).toEqual({
+      target: "agent-composer",
+      kind: "auto",
+    });
 
-    rpcMocks.requestNewAgentChatComposerFocus.mockClear();
+    consumeTabFocus(tabStore.getState().selectedTabId);
     openTab({
       workspaceId: "workspace-1",
       kind: "agent-chat",

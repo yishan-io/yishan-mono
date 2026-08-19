@@ -1,4 +1,4 @@
-import { generateId } from "@renderer/ids/generateId";
+import { generateId } from "@shared/ids/generateId";
 import type { RpcSchema } from "../../../../shared/contracts/rpcSchema";
 import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../domains/agent/model/chatTypes";
 import { chatStore } from "../../../domains/agent/state/chatStore";

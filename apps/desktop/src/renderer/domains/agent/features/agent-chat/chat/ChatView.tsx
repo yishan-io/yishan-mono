@@ -1,6 +1,6 @@
 import { Autocomplete, Box, TextField, Typography, createFilterOptions } from "@mui/material";
-import { generateId } from "@renderer/ids/generateId";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { generateId } from "@shared/ids/generateId";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { subscribeWorkspaceChatEvent } from "../../../../../events";

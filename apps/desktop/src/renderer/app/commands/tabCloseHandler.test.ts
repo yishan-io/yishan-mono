@@ -40,8 +40,8 @@ vi.mock("../../domains/agent/commands/agentSessionLifecycle", () => ({
   clearTerminalAgentStatus: rpcMocks.clearTerminalAgentStatus,
 }));
 
-vi.mock("../../events/agentChatComposerFocus", () => ({
-  clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
+vi.mock("../../domains/workbench/runtime/tabFocusIntent", () => ({
+  clearTabFocus: rpcMocks.clearAgentChatComposerFocus,
 }));
 
 vi.mock("@renderer/domains/workspace", async (importOriginal) => {

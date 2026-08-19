@@ -1,7 +1,7 @@
-import { delay } from "@renderer/async/delay";
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
+import { delay } from "@shared/async/delay";
 import type { WorkbenchTab } from "../../../domains/workbench";
 import {
   listPiProviders as listPiProvidersProcedure,

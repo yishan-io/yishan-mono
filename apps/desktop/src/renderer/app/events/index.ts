@@ -15,9 +15,9 @@ import { createNotificationEventHandlers } from "@renderer/domains/notification"
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
 import { createWorkbenchEventHandlers } from "@renderer/domains/workbench";
 import { createWorkspaceEventHandlers } from "@renderer/domains/workspace";
+import { subscribeBackendEvent } from "@renderer/events";
 import { subscribeDesktopRpcEvent } from "../../events/desktopRpcEventBus";
 import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
-import { subscribeBackendEvent } from "./backendEventRouter";
 
 /** Subscribes to webview new-window requests forwarded by the main process. */
 function subscribeWebviewOpenUrlHandler(): () => void {

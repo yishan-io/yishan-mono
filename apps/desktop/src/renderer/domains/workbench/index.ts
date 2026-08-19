@@ -58,6 +58,18 @@ export {
   type OverlayPanel,
   type WorkbenchNavigationState,
 } from "./state/workbenchNavigationStore";
+export {
+  TAB_FOCUS_REQUEST_EVENT,
+  __resetTabFocusIntentForTests,
+  clearTabFocus,
+  consumeTabFocus,
+  getTabFocusRequest,
+  requestTabFocus,
+  retainOpenTabFocus,
+  type TabFocusKind,
+  type TabFocusRequest,
+  type TabFocusTarget,
+} from "./runtime/tabFocusIntent";
 export { splitPaneStore, type SplitPaneStoreState } from "./state/splitPaneStore";
 export { findOppositePaneId } from "./model/split-pane";
 export type { ExternalAppId } from "@shared/contracts/externalApps";

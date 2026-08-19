@@ -31,7 +31,7 @@ const mocks = vi.hoisted(() => ({
   listDetectionStatuses: vi.fn(),
 }));
 
-vi.mock("@renderer/ids/generateId", () => ({
+vi.mock("@shared/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
 

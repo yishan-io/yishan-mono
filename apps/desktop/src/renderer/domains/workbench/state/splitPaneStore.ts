@@ -1,4 +1,4 @@
-import { generateId } from "@renderer/ids/generateId";
+import { generateId } from "@shared/ids/generateId";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import {

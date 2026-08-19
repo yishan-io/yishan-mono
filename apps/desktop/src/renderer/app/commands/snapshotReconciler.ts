@@ -1,4 +1,3 @@
-import { getFileName } from "@renderer/path/pathHelpers";
 /**
  * Pure workspace snapshot reconciler (desktop8 Phase 30: moved beside its App
  * workflow in app/commands; the Project+Workspace projection is app-owned).
@@ -10,8 +9,9 @@ import { getFileName } from "@renderer/path/pathHelpers";
 import type { ProjectRecord, WorkspaceRecord } from "@renderer/api/types";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "@renderer/domains/project";
 import { resolveHydratedWorkspaceDisplayMetadata } from "@renderer/domains/workspace";
-import type { ExternalAppId } from "../../../shared/contracts/externalApps";
 import type { WorkspaceItem, WorkspaceStatus } from "@renderer/domains/workspace";
+import { getFileName } from "@shared/path/pathHelpers";
+import type { ExternalAppId } from "../../../shared/contracts/externalApps";
 
 type ProjectStoreSlice = {
   projects: WorkspaceProjectRecord[];
