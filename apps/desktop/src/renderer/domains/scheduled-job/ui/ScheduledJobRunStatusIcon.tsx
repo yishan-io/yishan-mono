@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import type { IconType } from "react-icons";
 import { LuCircleCheck, LuCircleX, LuClock, LuRefreshCw } from "react-icons/lu";
-import type { ScheduledJobLastRunStatus, ScheduledJobRunStatus } from "../commands/scheduledJobCommands";
+import type { ScheduledJobLastRunStatus, ScheduledJobRunStatus } from "../schedule/scheduledJobTypes";
 
 type ScheduledJobRunStatusIconProps = {
   /** The run status to present, or null when the job has not run yet. */
