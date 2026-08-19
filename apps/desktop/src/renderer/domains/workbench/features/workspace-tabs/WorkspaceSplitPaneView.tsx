@@ -2,8 +2,8 @@ import { Box } from "@mui/material";
 import type { ExternalAppId } from "@renderer/domains/files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
-import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/model/split-pane";
-import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
+import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/split-pane";
+import type { WorkbenchTab } from "../../../../domains/workbench/types";
 import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
 import {
   closeAllTabs,

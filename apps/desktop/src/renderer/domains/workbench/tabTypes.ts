@@ -1,7 +1,7 @@
 /**
  * Workbench Tab types (desktop6-adjust.md W1 task 8).
  *
- * Split from `features/workbench/model/types.ts` so the generic types file no
+ * Split from `features/workbench/types.ts` so the generic types file no
  * longer owns tab presentation vocabulary. These are Workbench-owned
  * presentation types; resource identifiers live in tab descriptors but the
  * tabs do not own another module's mutable state.

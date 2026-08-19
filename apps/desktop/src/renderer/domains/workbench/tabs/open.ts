@@ -1,8 +1,8 @@
-import type { OpenTabInput, WorkbenchTab, WorkbenchTabDataByKind } from "../../../../domains/workbench/model/types";
+import type { OpenTabInput, WorkbenchTab, WorkbenchTabDataByKind } from "../types";
 import { findExistingTab } from "./shared";
 import type { TabStoreStateSlice } from "./types";
 
-// ─── Tab-data builder (moved from features/workbench/model/tabs.ts) ──────────────────────────────
+// ─── Tab-data builder (moved from features/workbench/tabs.ts) ──────────────────────────────
 
 function getFileName(path: string): string {
   const normalized = path.replace(/\\/g, "/");

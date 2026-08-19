@@ -1,4 +1,4 @@
-import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
+import type { WorkbenchTab } from "../types";
 
 export type TabStoreStateSlice = {
   tabs: WorkbenchTab[];

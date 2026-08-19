@@ -1,7 +1,7 @@
 import type { readFile, refreshFileTabFromDisk } from "@renderer/domains/files";
 import type { readBranchComparisonDiff, readCommitDiff, readDiff, refreshDiffTabContent } from "@renderer/domains/git";
 import { isFileNotFoundError } from "@shared/errors/getErrorMessage";
-import type { DiffTabSource } from "../../../domains/workbench/model/types";
+import type { DiffTabSource } from "../../../domains/workbench/types";
 import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events";
 import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../infrastructure/daemonSubscriptions";
 

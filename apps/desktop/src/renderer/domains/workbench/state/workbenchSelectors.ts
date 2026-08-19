@@ -1,5 +1,5 @@
-import { findLeaf, findLeafByTabId } from "../model/split-pane/operations";
-import type { PaneLeaf, SplitPaneStateSlice } from "../model/split-pane/types";
+import { findLeaf, findLeafByTabId } from "../split-pane/operations";
+import type { PaneLeaf, SplitPaneStateSlice } from "../split-pane/types";
 
 /**
  * Workbench feature selectors — pure functions from State to values

@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../domains/agent/state/chatStore";
-import { createLeaf } from "../../../domains/workbench/model/split-pane";
+import { createLeaf } from "../../../domains/workbench/split-pane";
 import {
   __resetTabFocusIntentForTests,
   consumeTabFocus,

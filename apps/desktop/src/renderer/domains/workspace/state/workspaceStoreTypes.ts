@@ -2,7 +2,7 @@
  * Workspace Store State types (desktop6-adjust.md W1).
  *
  * Owned by the Workspace feature State. Previously defined under
- * `features/workbench/model/types.ts`; that file must not define Workspace
+ * `features/workbench/types.ts`; that file must not define Workspace
  * Store types.
  *
  * Transport DTO references (ProjectRecord, WorkspaceRecord, DaemonLocalFolder)

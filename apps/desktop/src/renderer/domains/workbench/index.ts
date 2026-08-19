@@ -52,7 +52,7 @@ export type {
   FileDiffEntry,
   OpenTabInput,
   WorkbenchTab,
-} from "./model/types";
+} from "./types";
 export {
   workbenchNavigationStore,
   type OverlayPanel,
@@ -71,7 +71,7 @@ export {
   type TabFocusTarget,
 } from "./runtime/tabFocusIntent";
 export { splitPaneStore, type SplitPaneStoreState } from "./state/splitPaneStore";
-export { findOppositePaneId } from "./model/split-pane";
+export { findOppositePaneId } from "./split-pane";
 export type { ExternalAppId } from "@shared/contracts/externalApps";
 
 export { tabStore, type CloseTabOptions, type TabStoreState } from "./state/tabStore";
@@ -121,4 +121,4 @@ export { popupStore, type PopupStoreState } from "./state/popupStore";
 
 export { ConfirmationDialog } from "./ui/ConfirmationDialog";
 export { createWorkbenchEventHandlers } from "./events/workbenchEventHandlers";
-export { isTerminalTabWithSessionId } from "./model/terminalTabUtils";
+export { isTerminalTabWithSessionId } from "./terminalTabUtils";

@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
-import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/model/split-pane";
+import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/split-pane";
 import { collectPaneLeaves } from "./workspaceSplitPaneHelpers";
 
 export type WorkspaceTabPlacement = {

@@ -6,7 +6,7 @@ import { WorkspacePaneVisibilityProvider } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileTabContentStore } from "../../../domains/files/state/fileTabContentStore";
-import type { SplitPaneNode } from "../../../domains/workbench/model/split-pane";
+import type { SplitPaneNode } from "../../../domains/workbench/split-pane";
 import { MainPaneView } from "./MainPaneView";
 
 type MockLeafPane = {

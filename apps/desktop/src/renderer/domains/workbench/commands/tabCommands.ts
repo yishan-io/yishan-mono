@@ -4,8 +4,8 @@ import {
   findOppositePaneId,
   removeTabFromPane,
   splitRootPane,
-} from "../../../domains/workbench/model/split-pane";
-import type { OpenTabInput } from "../../../domains/workbench/model/types";
+} from "../../../domains/workbench/split-pane";
+import type { OpenTabInput } from "../../../domains/workbench/types";
 import { type WorkspaceRightPaneTab, layoutStore } from "../../../domains/workbench/state/layoutStore";
 import { createPaneId, splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../domains/workbench/state/tabStore";

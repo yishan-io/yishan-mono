@@ -21,7 +21,7 @@ export type AddWorkspaceInput = {
 };
 
 /**
- * Workspace feature vocabulary (Phase 3 split of features/workbench/model/types.ts).
+ * Workspace feature vocabulary (Phase 3 split of features/workbench/types.ts).
  * Feature-owned status unions replace transport DTO references.
  */
 

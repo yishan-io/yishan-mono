@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createLeaf } from "../model/split-pane";
-import type { SplitPaneStateSlice } from "../model/split-pane/types";
+import { createLeaf } from "../split-pane";
+import type { SplitPaneStateSlice } from "../split-pane/types";
 import { selectActivePane, selectLayoutByWorkspaceId, selectPane, selectPaneForTab } from "./workbenchSelectors";
 
 /**

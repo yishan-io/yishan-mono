@@ -1,4 +1,4 @@
-import type { FileDiffEntry } from "@renderer/domains/workbench/model/types";
+import type { FileDiffEntry } from "@renderer/domains/workbench/types";
 import { describe, expect, it } from "vitest";
 import {
   createCodeViewItems,
