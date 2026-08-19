@@ -9,7 +9,7 @@ import { AppThemePreferenceProvider, useThemePreference } from "../domains/setti
 import { startBackendEventPipeline } from "../events";
 import { i18n } from "../i18n";
 import { rendererQueryClient } from "../queryClient";
-import { createAppTheme } from "../theme";
+import { createAppTheme } from "../ui/theme";
 import { AppUpdateSnackbar } from "./features/launch/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./features/launch/AuthSessionExpiredSnackbar";
 import { AppRoutes } from "./routes/AppRoutes";

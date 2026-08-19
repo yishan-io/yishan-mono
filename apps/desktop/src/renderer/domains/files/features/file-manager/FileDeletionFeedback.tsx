@@ -1,5 +1,6 @@
 import { Alert, Box } from "@mui/material";
-import { ConfirmationDialog } from "@renderer/domains/workbench";
+import { useDialogRegistration } from "@renderer/domains/workbench";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { useTranslation } from "react-i18next";
 
 type PendingFileDeletion = {
@@ -28,6 +29,7 @@ export function FileDeletionFeedback({
   onDismissError,
 }: FileDeletionFeedbackProps) {
   const { t } = useTranslation();
+  useDialogRegistration(Boolean(pendingFileDeletion));
 
   return (
     <>

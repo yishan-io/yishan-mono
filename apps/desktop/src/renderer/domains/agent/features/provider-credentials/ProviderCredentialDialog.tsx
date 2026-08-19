@@ -26,7 +26,7 @@ import {
   isPiProviderOAuthCapable,
   isPiProviderSubscriptionCapable,
 } from "../../providers/piProviders";
-import { ProviderMark } from "../ProviderMark";
+import { ProviderMark } from "../../ui/ProviderMark";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 

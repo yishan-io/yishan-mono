@@ -3,9 +3,9 @@
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithAppTheme } from "../../../../../testUtils/renderWithAppTheme";
-import { createAppTheme } from "../../../../../theme";
-import { THINKING_LEVELS } from "../../../providers/agentThinkingLevels";
+import { renderWithAppTheme } from "../../../../testUtils/renderWithAppTheme";
+import { createAppTheme } from "../../../../ui/theme";
+import { THINKING_LEVELS } from "../../providers/agentThinkingLevels";
 import { THINKING_LEVEL_LABELS, ThinkingLevelControl } from "./ThinkingLevelControl";
 
 const ACTIVE_BAR_COUNTS: Record<string, number> = {

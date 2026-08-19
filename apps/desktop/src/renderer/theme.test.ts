@@ -9,7 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createMuiThemeOptions } from "@yishan-io/design-tokens/v1/mui";
 import { Fragment, createElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { createAppTheme } from "./theme";
+import { createAppTheme } from "./ui/theme";
 
 afterEach(() => {
   cleanup();

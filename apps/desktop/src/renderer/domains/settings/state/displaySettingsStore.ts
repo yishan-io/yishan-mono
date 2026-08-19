@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { AppThemePreference } from "../../../theme";
+import type { AppThemePreference } from "./themePreference";
 
 export const DISPLAY_SETTINGS_STORE_STORAGE_KEY = "yishan-display-settings-store";
 

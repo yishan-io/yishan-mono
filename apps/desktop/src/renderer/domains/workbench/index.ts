@@ -105,6 +105,5 @@ export type { WorkspaceTabPlacement } from "./features/workspace-tabs/useWorkspa
 export { useDialogRegistration } from "./hooks/useDialogRegistration";
 export { popupStore, type PopupStoreState } from "./state/popupStore";
 
-export { ConfirmationDialog } from "./ui/ConfirmationDialog";
 export { createWorkbenchEventHandlers } from "./subscriptions/workbenchEventHandlers";
 export { isTerminalTabWithSessionId } from "./tabs";

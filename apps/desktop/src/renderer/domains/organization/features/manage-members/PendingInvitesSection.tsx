@@ -14,7 +14,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiX } from "react-icons/bi";
 
-import { ConfirmationDialog } from "../../../../domains/workbench";
+import { useDialogRegistration } from "@renderer/domains/workbench";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import type { OrganizationInviteRecord } from "../../api/orgApi";
@@ -37,6 +38,8 @@ export function PendingInvitesSection({ organizationId, reloadKey }: PendingInvi
   const [invites, setInvites] = useState<OrganizationInviteRecord[]>([]);
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  useDialogRegistration(pendingCancelId !== null);
 
   const loadInvites = useCallback(async (orgId: string, signal: { cancelled: boolean }) => {
     setIsLoading(true);

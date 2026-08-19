@@ -1,6 +1,6 @@
 import { Alert, Box, Snackbar } from "@mui/material";
-import { ConfirmationDialog } from "@renderer/domains/workbench";
 import { useDialogRegistration } from "@renderer/domains/workbench";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DaemonConnectionSection } from "./daemonSettings/DaemonConnectionSection";

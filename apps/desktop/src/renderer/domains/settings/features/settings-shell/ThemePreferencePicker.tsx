@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
-import type { AppThemeMode, AppThemePreference } from "../../../../theme";
+import type { AppThemeMode } from "@renderer/ui/theme";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
+import type { AppThemePreference } from "../../state/themePreference";
 
 type ThemePreferencePickerProps = {
   preference: AppThemePreference;

@@ -19,7 +19,8 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { listOrganizationMembers } from "../../../../domains/organization";
 
 import { sessionStore } from "@renderer/domains/session";
-import { ConfirmationDialog } from "../../../../domains/workbench";
+import { useDialogRegistration } from "@renderer/domains/workbench";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
@@ -72,6 +73,8 @@ export function NodesSettingsView() {
   const [unregisterTarget, setUnregisterTarget] = useState<NodeRecord | null>(null);
   const [isUnregistering, setIsUnregistering] = useState(false);
   const [unregisterError, setUnregisterError] = useState<string | null>(null);
+
+  useDialogRegistration(scopeChangeTarget !== null || unregisterTarget !== null);
 
   const organizationId = selectedOrganizationId ?? organizations[0]?.id;
 

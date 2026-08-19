@@ -283,37 +283,40 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
       remove: vi.fn(),
       refresh: vi.fn(),
     })),
-    ConfirmationDialog: ({
-      open,
-      title,
-      description,
-      confirmLabel,
-      cancelLabel,
-      onCancel,
-      onConfirm,
-    }: {
-      open: boolean;
-      title: string;
-      description: string;
-      confirmLabel: string;
-      cancelLabel?: string;
-      onCancel: () => void;
-      onConfirm: () => void;
-    }) =>
-      open ? (
-        <div data-testid="confirmation-dialog">
-          <div>{title}</div>
-          <div>{description}</div>
-          <button type="button" onClick={onCancel}>
-            {cancelLabel ?? "Cancel"}
-          </button>
-          <button type="button" onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
-      ) : null,
   };
 });
+
+vi.mock("@renderer/ui/components/ConfirmationDialog", () => ({
+  ConfirmationDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    cancelLabel,
+    onCancel,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    cancelLabel?: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-testid="confirmation-dialog">
+        <div>{title}</div>
+        <div>{description}</div>
+        <button type="button" onClick={onCancel}>
+          {cancelLabel ?? "Cancel"}
+        </button>
+        <button type="button" onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
 
 vi.mock("react-i18next", () => ({
   initReactI18next: {

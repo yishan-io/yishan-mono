@@ -1,5 +1,6 @@
+import { useDialogRegistration } from "@renderer/domains/workbench";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { useTranslation } from "react-i18next";
-import { ConfirmationDialog } from "../../../../domains/workbench";
 
 type ProjectDeleteDialogViewProps = {
   open: boolean;
@@ -18,6 +19,7 @@ export function ProjectDeleteDialogView({
   onConfirm,
 }: ProjectDeleteDialogViewProps) {
   const { t } = useTranslation();
+  useDialogRegistration(open);
 
   return (
     <ConfirmationDialog

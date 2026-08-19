@@ -1,6 +1,6 @@
 import { ThemeProvider, useTheme } from "@mui/material/styles";
 import { displaySettingsStore } from "@renderer/domains/settings";
-import { createAppTheme } from "@renderer/theme";
+import { createAppTheme } from "@renderer/ui/theme";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 

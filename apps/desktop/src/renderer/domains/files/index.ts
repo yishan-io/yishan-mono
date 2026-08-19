@@ -82,11 +82,15 @@ export {
 } from "./externalApps";
 export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./externalApps";
 
-export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownTransform";
-export { markdownService } from "./ui/markdown/markdownService";
-export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
+export {
+  isAbsoluteUrl,
+  resolveRelativePath,
+  toWorkspaceRelativePath,
+} from "./features/markdown-preview/markdownTransform";
+export { markdownService } from "./features/markdown-preview/markdownService";
+export { useMarkdownStyles } from "./features/markdown-preview/markdownStyles";
 
-export { MarkdownPreview } from "./ui/markdown/MarkdownPreview";
+export { MarkdownPreview } from "./features/markdown-preview/MarkdownPreview";
 export { createFileTabPlaceholder } from "./features/file-editor/fileTabPlaceholder";
 export { getFileExtension } from "./features/file-editor/editorLanguage";
 export type { GitLineChange, GitLineChangeKind } from "./features/file-editor/git-gutter/gitGutterDiff";

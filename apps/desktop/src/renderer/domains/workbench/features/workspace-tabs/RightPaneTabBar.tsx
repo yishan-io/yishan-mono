@@ -1,9 +1,9 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
 import { getRendererPlatform } from "@renderer/platform/platform";
+import { DARK_SURFACE_COLORS } from "@renderer/ui/theme";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
-import { DARK_SURFACE_COLORS } from "../../../../theme";
 import type { WorkspaceRightPaneTab } from "../../state/layoutStore";
 import { PANE_HEADER_MIN_HEIGHT } from "./pane/PaneHeader";
 

@@ -16,8 +16,8 @@ import {
   SettingsSectionHeader,
   SettingsToggleRow,
 } from "../../../../ui/components/SettingsPrimitives";
-import { SettingsSoundSelectRow } from "../../../../ui/components/SettingsSoundSelectRow";
-import { SettingsVolumeRow } from "../../../../ui/components/SettingsVolumeRow";
+import { SettingsSoundSelectRow } from "./SettingsSoundSelectRow";
+import { SettingsVolumeRow } from "./SettingsVolumeRow";
 import {
   type NotificationSettingsFocusItemId,
   getNotificationSettingsAnchorId,

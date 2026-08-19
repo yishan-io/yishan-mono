@@ -248,7 +248,7 @@ vi.mock("@renderer/domains/agent/features/agent-chat/transcript/AgentMessageList
   AgentMessageList: mocked.agentMessageList,
 }));
 
-vi.mock("@renderer/domains/agent/features/agent-chat/session/AgentModelSelector", () => ({
+vi.mock("@renderer/domains/agent/features/select-model/AgentModelSelector", () => ({
   AgentModelSelector: ({
     onModelChange,
     onAddProvider,
@@ -272,7 +272,7 @@ vi.mock("@renderer/domains/agent/features/agent-chat/session/AgentModelSelector"
   },
 }));
 
-vi.mock("../../../ui/credentials/ProviderCredentialDialog", () => ({
+vi.mock("../../provider-credentials/ProviderCredentialDialog", () => ({
   ProviderCredentialDialog: (props: {
     open: boolean;
     mode: "add" | "edit";

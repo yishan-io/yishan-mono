@@ -1,0 +1,50 @@
+/* Git gutter decorations — owned by the file-editor git-gutter integration. */
+/* Class names are exported by gitGutterDecorations.ts and matched by Monaco's */
+/* margin decoration mechanism. The file-manager gutter decorations reuse the  */
+/* same class names.                                                           */
+
+.git-gutter-added {
+  width: 3px !important;
+  margin-left: 3px;
+  border-radius: 1.5px;
+  background-color: var(--yishan-color-git-diff-added);
+  cursor: pointer;
+}
+
+.git-gutter-modified {
+  width: 3px !important;
+  margin-left: 3px;
+  border-radius: 1.5px;
+  background-color: var(--yishan-color-git-diff-modified);
+  cursor: pointer;
+}
+
+.git-gutter-deleted {
+  width: 0 !important;
+  height: 0 !important;
+  margin-left: 1px;
+  border-radius: 0;
+  background-color: transparent;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--yishan-color-git-diff-deleted);
+  box-sizing: border-box;
+  cursor: pointer;
+  position: relative;
+  top: -4px;
+}
+
+/* Dark theme adjustments (slightly brighter) */
+html[data-app-theme-mode="dark"] .git-gutter-added {
+  background-color: var(--yishan-color-git-diff-added);
+}
+
+html[data-app-theme-mode="dark"] .git-gutter-modified {
+  background-color: var(--yishan-color-git-diff-modified);
+}
+
+html[data-app-theme-mode="dark"] .git-gutter-deleted {
+  border-left-color: var(--yishan-color-git-diff-deleted);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}

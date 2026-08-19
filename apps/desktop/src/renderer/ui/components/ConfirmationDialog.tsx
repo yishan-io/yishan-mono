@@ -1,5 +1,4 @@
 import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
-import { useDialogRegistration } from "../hooks/useDialogRegistration";
 
 export type ConfirmationDialogProps = {
   open: boolean;
@@ -13,7 +12,12 @@ export type ConfirmationDialogProps = {
   onConfirm: () => void;
 };
 
-/** Renders a generic two-button confirmation dialog. */
+/**
+ * Renders a generic two-button confirmation dialog.
+ *
+ * Business-neutral root UI: dialogs that need popup registration (for example
+ * Workbench popup tracking) apply it at the Consumer with their own hook.
+ */
 export function ConfirmationDialog({
   open,
   title,
@@ -25,8 +29,6 @@ export function ConfirmationDialog({
   onCancel,
   onConfirm,
 }: ConfirmationDialogProps) {
-  useDialogRegistration(open);
-
   return (
     <Dialog
       open={open}

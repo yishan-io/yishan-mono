@@ -1,15 +1,15 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
-import type { AgentModel } from "../../../../../domains/agent/chat/agentChatTypes";
-import { getSupportedThinkingLevels } from "../../../providers/agentThinkingLevels";
+import type { AgentModel } from "../../../../domains/agent/chat/agentChatTypes";
+import { getSupportedThinkingLevels } from "../../providers/agentThinkingLevels";
 import {
   type ModelPickerOption,
   buildModelPickerOption,
   groupModelPickerOptionsByProvider,
-} from "../../../providers/modelPicker";
-import { ProviderMark } from "../../../ui/ProviderMark";
-import { ModelPickerMenu } from "../../select-model/ModelPickerMenu";
+} from "../../providers/modelPicker";
+import { ProviderMark } from "../../ui/ProviderMark";
+import { ModelPickerMenu } from "./ModelPickerMenu";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
 import { formatAgentModelLabel } from "./helpers";
 
