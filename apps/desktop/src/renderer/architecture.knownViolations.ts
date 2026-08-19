@@ -51,7 +51,8 @@ export type RuleName =
   | "R24-platform-app-domain"
   | "R25-forbidden-domain-bucket"
   | "R26-technical-nested-index"
-  | "R27-utils-helpers-suffix";
+  | "R27-utils-helpers-suffix"
+  | "R28-domain-ui-business-deps";
 
 export type KnownViolation = { rule: RuleName; file: string; phase: string };
 

@@ -101,6 +101,7 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R25-forbidden-domain-bucket": 0,
   "R26-technical-nested-index": 0,
   "R27-utils-helpers-suffix": 0,
+  "R28-domain-ui-business-deps": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -296,6 +297,30 @@ function scanViolations(): Violation[] {
       if ((rel.startsWith("ui/") || rel.startsWith("components/")) && !rel.includes(".test.")) {
         if (/^domains\//.test(relT) || relT.startsWith("app/")) {
           violations.push({ rule: "R9-ui-components", file: rel, target: imp.spec });
+        }
+      }
+      // ---- Rule 28 (desktop10.md Phase 44): Domain UI is business-stateless
+      // presentation. It must not VALUE-import State, Commands, API/RPC/
+      // daemon/host/persistence transport, Runtime, or Subscriptions (own or
+      // other Domain), and must not create stores with Zustand. Local
+      // interaction state and React Hooks are allowed; type-only imports and
+      // other-Domain public UI are allowed. ----
+      if (/^domains\/[^/]+\/ui\//.test(rel) && !rel.includes(".test.")) {
+        if (
+          !imp.isTypeOnly &&
+          (relT.includes("/state/") ||
+            relT.includes("/commands/") ||
+            relT.includes("/api/") ||
+            relT.includes("/daemon/") ||
+            relT.includes("/host/") ||
+            relT.includes("/rpc/") ||
+            relT.includes("/runtime/") ||
+            relT.includes("/subscriptions/") ||
+            relT === "api" ||
+            relT === "rpc" ||
+            imp.spec.startsWith("zustand"))
+        ) {
+          violations.push({ rule: "R28-domain-ui-business-deps", file: rel, target: imp.spec });
         }
       }
       // ---- Rule 10 (desktop6-adjust.md W1): Workspace Model and State must
@@ -648,6 +673,13 @@ describe("renderer architecture dependency rules", () => {
   describe("R9: Shared UI must not import Domain or app code", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R9-ui-components"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R28: Domain UI must not import business behavior (desktop10 Phase 44)", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R28-domain-ui-business-deps"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });

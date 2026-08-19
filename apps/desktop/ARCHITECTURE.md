@@ -299,12 +299,26 @@ module closure are complete. The final tree obeys `desktop-domain-rules.md`:
   `subscriptions/`, `runtime/`) and one-file directories do not.
 - **No `Utils`/`Helpers` suffixes.** New filenames ending in `Utils`/`Helpers`
   are rejected (R27).
+- **Domain UI is business-stateless.** A Domain `ui/` file must not
+  VALUE-import State, Commands, API/RPC/daemon/host/persistence transport,
+  Runtime, Subscriptions, or Zustand (R28, desktop10 Phase 44). It receives
+  business data and actions through Props and may own local interaction
+  state. Type-only imports and other-Domain public UI are allowed.
+- **Theme creation and preference are separated.** `renderer/ui/theme.ts`
+  owns MUI theme creation and Renderer-wide Theme types
+  (`createAppTheme`, `AppThemeMode`, `DARK_SURFACE_COLORS`); Settings owns
+  the user preference type and mode resolution
+  (`AppThemePreference`, `resolveAppThemeMode` in `settings/state/`,
+  exported via the settings index). The Renderer global stylesheet
+  (`global.css`) keeps only document reset, sizing, default font, global
+  background, and Electron drag-region rules; Feature/third-party CSS
+  overrides live beside their owning integration.
 - **Domain event listeners live in `subscriptions/`.** No Domain has an
   `events/` directory.
 - **Command contracts are gone.** No Domain has a `commands/contract.ts`
   mirror.
 
-The architecture test enforces these rules with zero allowlist rows (R1–R27).
+The architecture test enforces these rules with zero allowlist rows (R1–R28).
 
 Business-neutral primitives `async`, `ids`, `path`, and `version` live in
 `src/shared` (Phase 32) — `shared/async`, `shared/ids/generateId`,
