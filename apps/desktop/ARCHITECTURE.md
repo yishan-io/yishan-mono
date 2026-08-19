@@ -268,17 +268,47 @@ Named root capabilities (business-neutral, with written dependency rules):
 
 | Capability | Contents | Dependency rule |
 |---|---|---|
-| `rpc/` | Transport core: connection, correlation, timeouts, raw subscriptions, binary frames, wire types | Domain access only through Domain Infrastructure adapters; root RPC imports only from `app/events`, `app/runtime`, and Domain Infrastructure (Phase 27) |
-| `events/` | Backend-event adapter/router/selectors + composer/terminal focus-intent bridges | May import root `rpc` and `shared` only; must not import App, Domains, API, or UI |
-| `api/` | REST transport (`restClient`) + shared REST record types (`types`) | Per-resource clients live in Domain Infrastructure; UI may type-import `api/types` only |
+| `rpc/` | Transport core: connection, correlation, timeouts, raw subscriptions, binary frames, wire types | Domain access only through concrete Domain boundary directories (`daemon/`, `api/`, `host/`, `persistence/`); root RPC imports only from `app/events`, `app/runtime`, root `events`, and those boundaries |
+| `events/` | Root backend-event capability: adapter/router/selectors + the desktop RPC event bus | May import root `rpc` and `shared` only; must not import App, Domains, API, or UI |
+| `api/` | REST transport (`restClient`) + shared REST record types (`types`) | Per-resource clients live in Domain `api/` directories; UI may type-import `api/types` only |
 | `shortcuts/` | Keybinding framework (metadata, runner, display, overrides) | Framework capability; Domains/App consume via named exports only |
-| `platform/` | clipboard, platform detection | May import root `rpc` (host bridge) only |
-| `async/` | delay, withTimeout | No product imports |
-| `ids/` | generateId (re-export of `@shared/helpers/generateId`) | No product imports |
-| `path/` | getFileName | No product imports |
-| `version/` | isNewerVersion, isDaemonVersionOutdated | No product imports |
+| `platform/` | clipboard, platform detection, host bridge | May import root `rpc` (host bridge) only |
 | `hooks/` | Domain-free React behavior (RouteCloseWatcher, context-menu state, request guard, refreshable loader) | No App/Domains/API/RPC imports |
 | `ui/` | Domain-free stateless presentation (components, typography, codeThemes) | No App/Domains/API/RPC/Stores/Commands/Runtime imports |
+
+## Current State (desktop8/desktop9)
+
+The Desktop 8 domain-by-domain normalization (Model A) and the Desktop 9
+module closure are complete. The final tree obeys `desktop-domain-rules.md`:
+
+- **No generic buckets.** No Domain has `model/`, `services/`, `rules/`, or
+  `infrastructure/` directories. Concepts are named root files or named
+  internal modules (e.g. `tabs/`, `split-pane/`, `chat/`, `providers/`,
+  `naming/`, `local-folder/`, `pull-request/`, `schedule/`).
+- **Stores are public State APIs.** A Domain exports its raw Store from its
+  `index.ts`. External code reads with `store.getState()`, subscribes with
+  `store(selector)`, and calls actions with `store.getState().action()`.
+  Getter/action/Hook wrapper layers are banned; external `setState()` is
+  banned; deep `state/` imports are banned (index only).
+- **Concrete external boundaries.** Each Domain uses `daemon/`, `api/`,
+  `host/`, or `persistence/` for external I/O. Host adapters are not named
+  `Commands`.
+- **Named modules have indexes.** A named business module (multi-file,
+  several consumers) has an explicit `index.ts`; technical directories
+  (`state/`, `commands/`, `hooks/`, `ui/`, `daemon/`, `api/`, `host/`,
+  `subscriptions/`, `runtime/`) and one-file directories do not.
+- **No `Utils`/`Helpers` suffixes.** New filenames ending in `Utils`/`Helpers`
+  are rejected (R27).
+- **Domain event listeners live in `subscriptions/`.** No Domain has an
+  `events/` directory.
+- **Command contracts are gone.** No Domain has a `commands/contract.ts`
+  mirror.
+
+The architecture test enforces these rules with zero allowlist rows (R1–R27).
+
+Business-neutral primitives `async`, `ids`, `path`, and `version` live in
+`src/shared` (Phase 32) — `shared/async`, `shared/ids/generateId`,
+`shared/path/paths`, `shared/version`.
 
 Phase 26 resolutions of the Phase 21 provisional owners: workspace helpers →
 Workspace (Phase 24); files/git/terminal/agent helpers → their Domains

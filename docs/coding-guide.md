@@ -121,7 +121,7 @@ bun run lint
 - `getErrorMessage(error: unknown): string` — use this everywhere an error needs to be
   converted to a string. Located at `apps/desktop/src/renderer/errors/getErrorMessage.ts`.
 - `generateId(): string` — use this for all UUID/random-ID generation. Located at
-  `apps/desktop/src/renderer/helpers/generateId.ts`.
+  `apps/desktop/src/shared/ids/generateId.ts`.
 - Do not inline `error instanceof Error ? error.message : String(error)` — that is what
   `getErrorMessage` is for.
 - Do not inline `crypto.randomUUID()` — use `generateId()`.
@@ -654,7 +654,7 @@ These rules exist to prevent common AI-assisted mistakes.
 ### TypeScript shared utilities
 | Utility | Location | Use for |
 |---|---|---|
-| `generateId()` | `desktop/src/renderer/helpers/generateId.ts` | All UUID/random ID generation |
+| `generateId()` | `src/shared/ids/generateId.ts` | All UUID/random ID generation |
 | `getErrorMessage(e)` | `desktop/src/renderer/errors/getErrorMessage.ts` | Extracting message from `unknown` catch value |
 
 ### api-service shared helpers
