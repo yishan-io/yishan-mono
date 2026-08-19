@@ -42,18 +42,6 @@ export type DaemonRpcClient = {
     setActiveProject: (projectId: string) => Promise<unknown>;
     setActiveFile: (filePath: string) => Promise<unknown>;
   };
-  file: {
-    listFiles: (input: Rpc.FileListInput) => Promise<Rpc.FileListResponse>;
-    listFilesBatch: (input: Rpc.FileListBatchInput) => Promise<Rpc.FileListBatchResponse>;
-    searchFiles: (input: Rpc.FileSearchInput) => Promise<Rpc.FileSearchResult[]>;
-    readFile: (input: Rpc.FileReadInput) => Promise<Rpc.FileReadResponse>;
-    writeFile: (input: Rpc.FileWriteInput) => Promise<Rpc.FileWriteResponse>;
-    createFile: (input: Rpc.FileWriteInput) => Promise<Rpc.FileMutationOkResponse>;
-    createFolder: (input: Rpc.FileCreateFolderInput) => Promise<Rpc.FileMutationOkResponse>;
-    renameEntry: (input: Rpc.FileRenameInput) => Promise<Rpc.FileMutationOkResponse>;
-    deleteEntry: (input: Rpc.FileDeleteInput) => Promise<Rpc.FileMutationOkResponse>;
-    readDiff: (input: Rpc.FileReadInput) => Promise<Rpc.FileDiffResponse>;
-  };
   git: {
     inspect: (input: Rpc.GitInspectInput) => Promise<Rpc.GitInspectResponse>;
     inspectPath: (input: Rpc.GitInspectPathInput) => Promise<Rpc.GitInspectResponse>;

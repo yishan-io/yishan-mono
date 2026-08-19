@@ -31,25 +31,25 @@ const mocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
 }));
 
+vi.mock("../../../domains/files/infrastructure/daemonFileClient", () => ({
+  getFileRpc: () =>
+    Promise.resolve({
+      createFile: mocks.createFile,
+      createFolder: mocks.createFolder,
+      deleteEntry: mocks.deleteEntry,
+      listFiles: mocks.listFiles,
+      listFilesBatch: mocks.listFilesBatch,
+      readFile: mocks.readFile,
+      renameEntry: mocks.renameEntry,
+      searchFiles: mocks.searchFiles,
+      writeFile: mocks.writeFile,
+    }),
+}));
+
 vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
   return {
     ...actual,
-    getDaemonClient: vi.fn(async () => ({
-      file: {
-        createFile: mocks.createFile,
-        createFolder: mocks.createFolder,
-        deleteEntry: mocks.deleteEntry,
-        listFiles: mocks.listFiles,
-        listFilesBatch: mocks.listFilesBatch,
-        openEntryInExternalApp: mocks.openEntryInExternalApp,
-        readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
-        readFile: mocks.readFile,
-        renameEntry: mocks.renameEntry,
-        searchFiles: mocks.searchFiles,
-        writeFile: mocks.writeFile,
-      },
-    })),
     getDesktopHostBridge: vi.fn(() => ({
       openEntryInExternalApp: mocks.openEntryInExternalApp,
       listDetectedExternalAppIds: mocks.listDetectedExternalAppIds,
@@ -99,7 +99,7 @@ describe("fileCommands", () => {
       relativePath: "a.ts",
       content: "x",
     });
-    expect(mocks.createFile).toHaveBeenCalledWith({
+    expect(mocks.writeFile).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
       relativePath: "b.ts",
       content: "y",

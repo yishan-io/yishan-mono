@@ -1,3 +1,4 @@
+import { readDiff as readWorkspaceFileDiff } from "@renderer/domains/files";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { selectProjectById } from "@renderer/domains/project";
 import { selectWorkspaces } from "@renderer/domains/workspace";
@@ -20,11 +21,7 @@ function resolveWorkspaceIdFromPath(workspaceWorktreePath: string): string {
 
 /** Reads old/new file content for one workspace diff view. */
 export async function readDiff(params: { workspaceId: string; relativePath: string }) {
-  const client = await getDaemonClient();
-  return client.file.readDiff({
-    workspaceId: params.workspaceId,
-    relativePath: params.relativePath,
-  });
+  return readWorkspaceFileDiff(params);
 }
 
 /** Reads old/new file content for one specific commit file diff view. */

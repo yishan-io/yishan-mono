@@ -1,5 +1,4 @@
 import { generateId } from "../helpers/generateId";
-import { DaemonFileClient } from "./daemonFileClient";
 import { DaemonGitClient } from "./daemonGitClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
@@ -56,7 +55,6 @@ export class DaemonClient {
   private reconnectPromise: Promise<void> | null = null;
   private disposed = false;
 
-  private readonly _fileClient: DaemonFileClient;
   private readonly _gitClient: DaemonGitClient;
   private readonly _terminalClient: DaemonTerminalClient;
 
@@ -70,7 +68,6 @@ export class DaemonClient {
     const invoke = this.invoke.bind(this);
     const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
 
-    this._fileClient = new DaemonFileClient(invoke);
     this._gitClient = new DaemonGitClient(invoke);
     this._terminalClient = new DaemonTerminalClient({
       invoke,
@@ -94,19 +91,6 @@ export class DaemonClient {
   };
 
   readonly tokenUsage = {};
-
-  readonly file = {
-    listFiles: (input: Rpc.FileListInput) => this._fileClient.listFiles(input),
-    listFilesBatch: (input: Rpc.FileListBatchInput) => this._fileClient.listFilesBatch(input),
-    searchFiles: (input: Rpc.FileSearchInput) => this._fileClient.searchFiles(input),
-    readFile: (input: Rpc.FileReadInput) => this._fileClient.readFile(input),
-    writeFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
-    createFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
-    createFolder: (input: Rpc.FileCreateFolderInput) => this._fileClient.createFolder(input),
-    renameEntry: (input: Rpc.FileRenameInput) => this._fileClient.renameEntry(input),
-    deleteEntry: (input: Rpc.FileDeleteInput) => this._fileClient.deleteEntry(input),
-    readDiff: (input: Rpc.FileReadInput) => this._fileClient.readDiff(input),
-  };
 
   readonly git = {
     inspect: (input: Rpc.GitInspectInput) => this._gitClient.inspect(input),

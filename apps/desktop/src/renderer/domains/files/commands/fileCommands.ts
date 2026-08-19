@@ -1,8 +1,9 @@
 import type { ExternalAppId, WorkspaceEntryAppId } from "../../../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../../../shared/contracts/rpcRequestTypes";
 import { isFileNotFoundError } from "../../../helpers/errorHelpers";
-import type { FileSearchResult } from "../../../rpc/daemonTypes";
-import { getDaemonClient, getDesktopHostBridge } from "../../../rpc/rpcTransport";
+import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
+import type { FileSearchResult } from "../infrastructure/daemonFileClient";
+import { getFileRpc } from "../infrastructure/daemonFileClient";
 
 const WORKSPACE_FILE_PROTOCOL_URL = "yishan-file://workspace-file";
 
@@ -12,8 +13,8 @@ export async function listFiles(params: {
   relativePath?: string;
   recursive?: boolean;
 }) {
-  const client = await getDaemonClient();
-  return client.file.listFiles({
+  const fileRpc = await getFileRpc();
+  return fileRpc.listFiles({
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
     recursive: params.recursive,
@@ -28,8 +29,8 @@ export async function listFilesBatch(params: {
     recursive?: boolean;
   }>;
 }) {
-  const client = await getDaemonClient();
-  return client.file.listFilesBatch({
+  const fileRpc = await getFileRpc();
+  return fileRpc.listFilesBatch({
     workspaceId: params.workspaceId,
     requests: params.requests,
   });
@@ -42,8 +43,8 @@ export async function searchFiles(params: {
   limit?: number;
   includeDirectories?: boolean;
 }) {
-  const client = await getDaemonClient();
-  return client.file.searchFiles({
+  const fileRpc = await getFileRpc();
+  return fileRpc.searchFiles({
     workspaceId: params.workspaceId,
     query: params.query,
     limit: params.limit,
@@ -53,8 +54,8 @@ export async function searchFiles(params: {
 
 /** Reads one file from one workspace worktree path. */
 export async function readFile(params: { workspaceId: string; relativePath: string }) {
-  const client = await getDaemonClient();
-  return client.file.readFile({
+  const fileRpc = await getFileRpc();
+  return fileRpc.readFile({
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
@@ -120,8 +121,8 @@ export async function writeFile(params: {
   relativePath: string;
   content: string;
 }) {
-  const client = await getDaemonClient();
-  return client.file.writeFile({
+  const fileRpc = await getFileRpc();
+  return fileRpc.writeFile({
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
     content: params.content,
@@ -134,8 +135,8 @@ export async function createFile(params: {
   relativePath: string;
   content: string;
 }) {
-  const client = await getDaemonClient();
-  return client.file.createFile({
+  const fileRpc = await getFileRpc();
+  return fileRpc.writeFile({
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
     content: params.content,
@@ -144,8 +145,8 @@ export async function createFile(params: {
 
 /** Creates one folder inside one workspace worktree path. */
 export async function createFolder(params: { workspaceId: string; relativePath: string }) {
-  const client = await getDaemonClient();
-  return client.file.createFolder({
+  const fileRpc = await getFileRpc();
+  return fileRpc.createFolder({
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
@@ -157,8 +158,8 @@ export async function renameEntry(params: {
   fromRelativePath: string;
   toRelativePath: string;
 }) {
-  const client = await getDaemonClient();
-  return client.file.renameEntry({
+  const fileRpc = await getFileRpc();
+  return fileRpc.renameEntry({
     workspaceId: params.workspaceId,
     fromRelativePath: params.fromRelativePath,
     toRelativePath: params.toRelativePath,
@@ -167,8 +168,17 @@ export async function renameEntry(params: {
 
 /** Deletes one file-system entry in one workspace worktree path. */
 export async function deleteEntry(params: { workspaceId: string; relativePath: string }) {
-  const client = await getDaemonClient();
-  return client.file.deleteEntry({
+  const fileRpc = await getFileRpc();
+  return fileRpc.deleteEntry({
+    workspaceId: params.workspaceId,
+    relativePath: params.relativePath,
+  });
+}
+
+/** Reads old/new file content for one workspace diff view (git domain consumes this). */
+export async function readDiff(params: { workspaceId: string; relativePath: string }) {
+  const fileRpc = await getFileRpc();
+  return fileRpc.readDiff({
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
@@ -222,4 +232,4 @@ export async function writeFileBase64(params: { absolutePath: string; contentBas
   });
 }
 
-export type { FileSearchResult } from "../../../rpc/daemonTypes";
+export type { FileSearchResult } from "../infrastructure/daemonFileClient";

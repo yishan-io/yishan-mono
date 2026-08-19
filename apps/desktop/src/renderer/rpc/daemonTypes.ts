@@ -94,54 +94,6 @@ export type ReloadAuthConfigOutput = {
   ok: boolean;
 };
 
-export type FileListInput = {
-  workspaceId: string;
-  relativePath?: string;
-  recursive?: boolean;
-};
-
-export type FileListBatchInput = {
-  workspaceId: string;
-  requests: Array<{
-    relativePath?: string;
-    recursive?: boolean;
-  }>;
-};
-
-export type FileSearchInput = {
-  workspaceId: string;
-  query: string;
-  limit?: number;
-  includeDirectories?: boolean;
-};
-
-export type FileReadInput = {
-  workspaceId: string;
-  relativePath: string;
-};
-
-export type FileWriteInput = {
-  workspaceId: string;
-  relativePath: string;
-  content: string;
-};
-
-export type FileCreateFolderInput = {
-  workspaceId: string;
-  relativePath: string;
-};
-
-export type FileRenameInput = {
-  workspaceId: string;
-  fromRelativePath: string;
-  toRelativePath: string;
-};
-
-export type FileDeleteInput = {
-  workspaceId: string;
-  relativePath: string;
-};
-
 export type GitWorktreeInput = {
   workspaceId: string;
 };
@@ -241,57 +193,6 @@ export type TerminalListSessionsInput = {
 
 export type SetActiveWorkspaceInput = {
   workspaceId?: string;
-};
-
-export type DaemonFileEntry = {
-  path: string;
-  name: string;
-  isDir: boolean;
-  isIgnored: boolean;
-  size: number;
-  mode: number;
-  modifiedAt: string;
-};
-
-export type FileListResponse = {
-  files: DaemonFileEntry[];
-};
-
-export type FileSearchResult = {
-  path: string;
-  score: number;
-  highlightedPathIndexes: number[];
-  isDirectory?: boolean;
-};
-
-export type FileListBatchResponse = {
-  results: Array<{
-    request: {
-      relativePath: string;
-      recursive: boolean;
-    };
-    files: DaemonFileEntry[];
-    error?: string;
-  }>;
-};
-
-export type FileReadResponse = {
-  content: string;
-};
-
-export type FileWriteResponse = {
-  ok: true;
-  written: number;
-};
-
-export type FileMutationOkResponse = {
-  ok: true;
-};
-
-export type FileDiffResponse = {
-  oldContent: string;
-  newContent: string;
-  shouldSkipDecorations?: boolean;
 };
 
 export type GitChange = {

@@ -13,11 +13,11 @@ import {
   LuStretchVertical,
   LuWrapText,
 } from "react-icons/lu";
+import { useCodeTheme } from "../../../../../domains/settings";
 import { isBinaryPath } from "../../../../../helpers/binaryExtensions";
 import { MONO_FONT_FAMILY } from "../../../../../helpers/codeThemes";
 import { findDiffMatches } from "../../../../../helpers/diffSearch";
 import { getDiffCssVariablesForPalette } from "../../../../../helpers/diffTheme";
-import { useCodeTheme } from "../../../../../domains/settings";
 import { DiffSearchPanel } from "../../file-manager/DiffSearchPanel";
 
 type FileDiffViewerProps = {

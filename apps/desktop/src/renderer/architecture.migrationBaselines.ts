@@ -76,6 +76,7 @@ export const ROOT_HELPERS_IMPORTERS = [
   "domains/browser/features/browse/hooks/useBrowserTools.ts",
   "domains/browser/features/browse/hooks/useElementInspector.ts",
   "domains/files/commands/fileCommands.ts",
+  "domains/files/infrastructure/daemonFileClient.ts",
   "domains/files/features/diff-viewer/diff/FileDiffViewer.tsx",
   "domains/files/features/diff-viewer/diff/MultiFileDiffViewer.tsx",
   "domains/files/features/file-editor/AudioPreview.tsx",

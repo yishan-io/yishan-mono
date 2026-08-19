@@ -9,6 +9,7 @@ export {
   listDetectedExternalAppIds,
   listFiles,
   openEntryInExternalApp,
+  readDiff,
   readExternalClipboardSourcePaths,
   readFile,
   renameEntry,
