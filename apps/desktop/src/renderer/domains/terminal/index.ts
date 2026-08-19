@@ -6,7 +6,7 @@
 // below is still evaluating, so the leaf bindings must already be available.
 export { getTerminalResourceUsage } from "./commands/terminalCommands";
 export type { TerminalResourceUsageSnapshot } from "./commands/terminalCommands";
-export type { TerminalSessionLifecycleEvent, TerminalStreamEvent } from "./infrastructure/terminalWireTypes";
+export type { TerminalSessionLifecycleEvent, TerminalStreamEvent } from "./daemon/terminalWireTypes";
 export {
   closeTerminalSession,
   consumeTerminalTabFocus,

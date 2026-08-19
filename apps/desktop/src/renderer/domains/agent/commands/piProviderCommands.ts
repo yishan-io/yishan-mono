@@ -7,7 +7,7 @@ import {
   listPiProviders as listPiProvidersProcedure,
   removePiProvider as removePiProviderProcedure,
   savePiProvider as savePiProviderProcedure,
-} from "../infrastructure/daemonAgentProcedures";
+} from "../daemon/daemonAgentProcedures";
 import { DEFAULT_AGENT_COMMANDS } from "../agentSettings";
 
 /** How long to wait after the Pi TUI boots before typing /login. */

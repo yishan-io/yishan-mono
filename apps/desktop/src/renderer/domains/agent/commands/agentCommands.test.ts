@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   listModels: vi.fn(),
 }));
 
-vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   listAgentDetectionStatuses: mocks.listDetectionStatuses,
   listAgentModels: mocks.listModels,
 }));

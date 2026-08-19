@@ -13,6 +13,6 @@ export {
   appendBrowserHistory,
   loadBrowserHistory,
   openExternalUrl,
-} from "./infrastructure/browserHostCommands";
-export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "./infrastructure/browserHostCommands";
+} from "./host/browserHostCommands";
+export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "./host/browserHostCommands";
 export { openLink, type OpenLinkOptions, type OpenLinkResult } from "./commands/browserLinkCommands";

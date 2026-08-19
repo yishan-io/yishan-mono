@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renamePiSession } from "../../../domains/agent/infrastructure/daemonAgentProcedures";
+import { renamePiSession } from "../../../domains/agent/daemon/daemonAgentProcedures";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
@@ -40,7 +40,7 @@ vi.mock("../events/agentChatEventRouter", () => ({
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));
 
-vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   attachPiSession: mocks.attach,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),

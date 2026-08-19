@@ -14,7 +14,7 @@ import {
   unregisterTabFromPane,
 } from "@renderer/domains/workbench";
 import { findOppositePaneId } from "@renderer/domains/workbench";
-import { sendPiCommand } from "../infrastructure/daemonAgentProcedures";
+import { sendPiCommand } from "../daemon/daemonAgentProcedures";
 import { isAgentSessionBusy } from "../agentChatTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";

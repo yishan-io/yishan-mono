@@ -16,7 +16,7 @@ export {
   subscribeDaemonInfoRefresh,
   subscribeDaemonInfoRefreshed,
 } from "./commands/sessionCommands";
-export { updateLanguagePreference } from "./infrastructure/sessionApi";
+export { updateLanguagePreference } from "./api/sessionApi";
 export {
   checkAuthStatus,
   getAccessToken,
@@ -28,7 +28,7 @@ export {
   type LogoutOutput,
   type PersistAuthTokensInput,
   type ReloadAuthConfigOutput,
-} from "./infrastructure/daemonSessionProcedures";
+} from "./daemon/daemonSessionProcedures";
 export {
   selectCurrentUser,
   selectCurrentUserNotificationPreferences,

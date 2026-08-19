@@ -5,8 +5,8 @@ import {
   removeAgentSkill,
   updateAgentSkill,
   updateAllAgentSkills,
-} from "../infrastructure/daemonAgentProcedures";
-import type { SkillDetail, SkillInfo, SkillSourceKind } from "../infrastructure/daemonAgentTypes";
+} from "../daemon/daemonAgentProcedures";
+import type { SkillDetail, SkillInfo, SkillSourceKind } from "../daemon/daemonAgentTypes";
 
 const SKILL_SOURCE_KINDS: SkillSourceKind[] = ["official", "url", "global", "project", "package", "settings"];
 

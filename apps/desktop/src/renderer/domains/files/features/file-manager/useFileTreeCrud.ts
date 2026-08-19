@@ -15,7 +15,7 @@ import {
   type ExternalAppId,
   SYSTEM_FILE_MANAGER_APP_ID,
   type WorkspaceFileEntry,
-} from "../../infrastructure/externalApps";
+} from "../../externalApps";
 import {
   isAudioFile,
   isExcalidrawFile,

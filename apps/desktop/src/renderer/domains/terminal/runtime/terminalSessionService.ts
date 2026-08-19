@@ -11,7 +11,7 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../domains/terminal/commands/terminalCommands";
-import { subscribeDaemonConnectionStatus } from "../infrastructure/daemonTerminalClient";
+import { subscribeDaemonConnectionStatus } from "../daemon/daemonTerminalClient";
 import { terminalFocusStore } from "../state/terminalFocusStore";
 import {
   shouldClearTerminalOutputShortcut,

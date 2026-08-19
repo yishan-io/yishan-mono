@@ -29,7 +29,7 @@ const mocks = vi.hoisted(() => ({
   writeInput: vi.fn(),
 }));
 
-vi.mock("../../../domains/terminal/infrastructure/daemonTerminalClient", () => ({
+vi.mock("../../../domains/terminal/daemon/daemonTerminalClient", () => ({
   getTerminalRpc: () =>
     Promise.resolve({
       closeSession: mocks.closeSession,

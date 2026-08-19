@@ -29,7 +29,7 @@ import {
   removeExtension,
   updateExtension,
 } from "../../commands/agentDefinitionCommands";
-import type { PiExtensionInfo } from "../../infrastructure/daemonAgentTypes";
+import type { PiExtensionInfo } from "../../daemon/daemonAgentTypes";
 
 const LOCAL_FILE_SOURCE = "local file";
 

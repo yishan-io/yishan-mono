@@ -23,7 +23,7 @@ vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   getComputerUsePermissions: mocked.permissions,
   openComputerUsePermissionSettings: mocked.openPermissionSettings,
 }));

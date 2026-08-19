@@ -1,4 +1,4 @@
-import { subscribeDesktopRpcEvent } from "../infrastructure/daemonAgentProcedures";
+import { subscribeDesktopRpcEvent } from "../daemon/daemonAgentProcedures";
 import type { PiEventPayload } from "./agentChatPiEventHandler";
 
 type RouterEntry = {

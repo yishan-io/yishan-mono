@@ -15,7 +15,7 @@ import {
   listAgentModelsForMemorySettings,
   updateMemoryConfig,
 } from "../../commands/agentConfigCommands";
-import type { MemoryConfig } from "../../infrastructure/daemonAgentTypes";
+import type { MemoryConfig } from "../../daemon/daemonAgentTypes";
 import { ProviderMark } from "../../ui/ProviderMark";
 import { ModelPickerMenu } from "../select-model";
 import { buildModelPickerOption, groupModelPickerOptionsByProvider, stripProviderPrefix } from "../select-model";

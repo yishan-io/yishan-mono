@@ -86,8 +86,8 @@ export {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   type ExternalAppPreset,
-} from "./infrastructure/externalApps";
-export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./infrastructure/externalApps";
+} from "./externalApps";
+export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./externalApps";
 
 export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
 export { markdownService } from "./ui/markdown/markdownService";
@@ -113,4 +113,4 @@ export {
   type GitLineChange,
   type GitLineChangeKind,
 } from "./gitGutterDiff";
-export { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } from "./infrastructure/monacoSetup";
+export { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } from "./features/file-editor/monacoSetup";

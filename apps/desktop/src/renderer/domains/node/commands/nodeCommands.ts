@@ -4,7 +4,7 @@ import {
   listOrganizationNodes,
   unregisterOrganizationNode,
   updateOrganizationNodeScope,
-} from "../infrastructure/nodeApi";
+} from "../api/nodeApi";
 import { sessionStore } from "@renderer/domains/session";
 
 const errNoOrgSelected = "No organization selected.";

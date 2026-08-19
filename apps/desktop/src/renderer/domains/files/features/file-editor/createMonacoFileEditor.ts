@@ -1,5 +1,5 @@
 import { MONO_FONT_FAMILY } from "@renderer/ui/codeThemes";
-import { ensureEditorThemes, monaco } from "../../infrastructure/monacoSetup";
+import { ensureEditorThemes, monaco } from "../../features/file-editor/monacoSetup";
 import { getLanguageId } from "../../editorLanguage";
 
 /** Props for creating the Monaco editor instance used by FileEditor. */

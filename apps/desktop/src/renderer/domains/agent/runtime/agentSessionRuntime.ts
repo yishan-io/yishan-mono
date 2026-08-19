@@ -29,7 +29,7 @@ import {
   sendPiCommand as sendPiCommandProcedure,
   startPiSession as startPiSessionProcedure,
   stopPiSession as stopPiSessionProcedure,
-} from "../infrastructure/daemonAgentProcedures";
+} from "../daemon/daemonAgentProcedures";
 import { agentChatStore } from "../state/agentChatStore";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 

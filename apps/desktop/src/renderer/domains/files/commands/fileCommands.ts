@@ -2,8 +2,8 @@ import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import { isFileNotFoundError } from "@shared/errors/getErrorMessage";
 import type { ExternalAppId, WorkspaceEntryAppId } from "../../../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../../../shared/contracts/rpcRequestTypes";
-import type { FileSearchResult } from "../infrastructure/daemonFileClient";
-import { getFileRpc } from "../infrastructure/daemonFileClient";
+import type { FileSearchResult } from "../daemon/daemonFileClient";
+import { getFileRpc } from "../daemon/daemonFileClient";
 
 const WORKSPACE_FILE_PROTOCOL_URL = "yishan-file://workspace-file";
 
@@ -232,4 +232,4 @@ export async function writeFileBase64(params: { absolutePath: string; contentBas
   });
 }
 
-export type { FileSearchResult } from "../infrastructure/daemonFileClient";
+export type { FileSearchResult } from "../daemon/daemonFileClient";

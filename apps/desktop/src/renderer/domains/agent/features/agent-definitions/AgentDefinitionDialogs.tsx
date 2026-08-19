@@ -19,7 +19,7 @@ import {
   getAgentDefinitionDetail,
   updateAgentDefinition,
 } from "../../commands/agentDefinitionCommands";
-import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../infrastructure/daemonAgentTypes";
+import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../daemon/daemonAgentTypes";
 import { FieldLabel } from "./AgentDefinitionFieldLabel";
 import { AgentToolsEditor, sameToolList } from "./AgentToolsEditor";
 import { ModelThinkingSelector } from "./ModelThinkingSelector";

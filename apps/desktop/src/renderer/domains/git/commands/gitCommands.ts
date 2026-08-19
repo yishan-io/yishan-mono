@@ -3,8 +3,8 @@ import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
 import { selectWorkspaces } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
-import type { GitChangesBySection } from "../infrastructure/daemonGitClient";
-import { getGitRpc } from "../infrastructure/daemonGitClient";
+import type { GitChangesBySection } from "../daemon/daemonGitClient";
+import { getGitRpc } from "../daemon/daemonGitClient";
 
 const inFlightListGitChangesByWorkspaceId = new Map<string, Promise<GitChangesBySection>>();
 const inFlightGitAuthorNameByWorkspaceId = new Map<string, Promise<string | null>>();

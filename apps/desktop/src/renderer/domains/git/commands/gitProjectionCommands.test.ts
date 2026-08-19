@@ -13,7 +13,7 @@ const rpcMocks = vi.hoisted(() => ({
   gitInspect: vi.fn(async () => ({ isGitRepository: true })),
 }));
 
-vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
     Promise.resolve({
@@ -21,7 +21,7 @@ vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () =>
     }),
 }));
 
-vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
+vi.mock("../../../domains/git/daemon/daemonGitClient", () => ({
   getGitRpc: () =>
     Promise.resolve({
       inspectPath: rpcMocks.gitInspect,

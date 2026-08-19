@@ -23,7 +23,7 @@ import {
   removeAgentDefinition,
   restoreAgentDefinition,
 } from "../../commands/agentDefinitionCommands";
-import type { AgentDefinitionInfo } from "../../infrastructure/daemonAgentTypes";
+import type { AgentDefinitionInfo } from "../../daemon/daemonAgentTypes";
 import { AgentDetailDialog, ConfirmDialog, CreateAgentDialog } from "./AgentDefinitionDialogs";
 
 const AGENT_TABLE_SX = {

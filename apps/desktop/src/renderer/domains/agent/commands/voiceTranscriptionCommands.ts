@@ -1,5 +1,5 @@
 
-import { getVoiceTranscriptionUsage, transcribeVoice } from "../infrastructure/voiceTranscriptionApi";
+import { getVoiceTranscriptionUsage, transcribeVoice } from "../api/voiceTranscriptionApi";
 import { sessionStore } from "@renderer/domains/session";
 
 export async function transcribeVoiceForOrganization(input: {

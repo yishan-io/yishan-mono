@@ -5,7 +5,7 @@ import {
   type ExternalAppMenuEntry,
   type ExternalAppPreset,
   findExternalAppPreset,
-} from "../../infrastructure/externalApps";
+} from "../../externalApps";
 import { buildFileTreeContextMenuItems as buildBaseContextMenuItems } from "./fileTreeActionRegistry";
 
 type BuildWorkspaceFileTreeContextMenuItemsInput = {

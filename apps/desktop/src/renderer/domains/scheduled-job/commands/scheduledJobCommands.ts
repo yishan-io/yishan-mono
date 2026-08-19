@@ -1,7 +1,7 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
 
-import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../infrastructure/scheduledJobApi";
+import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";
 import {
   createScheduledJob as createScheduledJobFromApi,
   deleteScheduledJob as deleteScheduledJobFromApi,
@@ -11,7 +11,7 @@ import {
   resumeScheduledJob as resumeScheduledJobFromApi,
   runScheduledJobNow as runScheduledJobNowFromApi,
   updateScheduledJob as updateScheduledJobFromApi,
-} from "../infrastructure/scheduledJobApi";
+} from "../api/scheduledJobApi";
 import { sessionStore } from "@renderer/domains/session";
 
 /**
@@ -154,4 +154,4 @@ export type {
   ScheduledJobLastRunStatus,
   ScheduledJobRunStatus,
 } from "../scheduledJobTypes";
-export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../infrastructure/scheduledJobApi";
+export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";

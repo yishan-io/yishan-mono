@@ -1,6 +1,6 @@
 import { readDiff } from "@renderer/domains/git";
 import { useEffect, useRef, useState } from "react";
-import { monaco } from "../../infrastructure/monacoSetup";
+import { monaco } from "../../features/file-editor/monacoSetup";
 import {
   type GitLineChange,
   type GitLineChangeKind,

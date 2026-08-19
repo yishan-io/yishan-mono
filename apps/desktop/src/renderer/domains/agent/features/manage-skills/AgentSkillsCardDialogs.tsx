@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { addSkill, getSkillDetail } from "../../commands/agentSkillCommands";
-import type { SkillDetail, SkillInfo } from "../../infrastructure/daemonAgentTypes";
+import type { SkillDetail, SkillInfo } from "../../daemon/daemonAgentTypes";
 
 const DIALOG_SIZE = { xs: "100%", sm: 800 };
 

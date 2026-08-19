@@ -8,7 +8,7 @@ import { projectStore } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath, useWorkspaces } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExternalAppId, WorkspaceFileEntry } from "../../infrastructure/externalApps";
+import type { ExternalAppId, WorkspaceFileEntry } from "../../externalApps";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
 import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeHelpers";
 import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";

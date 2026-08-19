@@ -43,7 +43,7 @@ vi.mock("../events/agentChatEventRouter", () => ({
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));
 
-vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   attachPiSession: mocks.attach,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),

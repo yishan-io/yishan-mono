@@ -1,6 +1,6 @@
 import { readExternalClipboardSourcePaths as readExternalClipboardSourcePathsFromRpc } from "@renderer/domains/files/commands/fileCommands";
 import { extractPathsFromClipboardText } from "@shared/fileClipboardPaths";
-import type { ExternalClipboardReadOutcome } from "../../infrastructure/externalApps";
+import type { ExternalClipboardReadOutcome } from "../../externalApps";
 import { reportNativeExternalClipboardOutcome } from "./fileTreeHelpers";
 
 /**

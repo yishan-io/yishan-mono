@@ -16,9 +16,9 @@ import { sessionStore } from "../../../domains/session/state/sessionStore";
 import {
   subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromSessionInfra,
   subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromSessionInfra,
-} from "../infrastructure/daemonSessionProcedures";
-import { getCurrentUser } from "../infrastructure/sessionApi";
-import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../infrastructure/systemApi";
+} from "../daemon/daemonSessionProcedures";
+import { getCurrentUser } from "../api/sessionApi";
+import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../api/systemApi";
 
 /** Loads the session bootstrap payload (user, orgs, preferences). */
 export async function getSessionBootstrapData() {

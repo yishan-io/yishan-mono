@@ -27,7 +27,7 @@ export {
   type DaemonInfoResult,
   type DaemonLogResult,
   type DaemonRestartResult,
-} from "./infrastructure/daemonHostCommands";
+} from "./daemon/daemonHostCommands";
 export { listCLIToolStatuses } from "./commands/cliToolCommands";
 
 export { SettingsView } from "./features/settings-shell/SettingsView";

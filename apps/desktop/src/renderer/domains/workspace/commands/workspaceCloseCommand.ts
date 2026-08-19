@@ -5,7 +5,7 @@ import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/w
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import type { WorkspaceLifecycleScriptWarning } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
+import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../localFolder";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";

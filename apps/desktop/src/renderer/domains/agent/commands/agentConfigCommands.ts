@@ -6,8 +6,8 @@ import {
   listAgentModels,
   openComputerUsePermissionSettings as openComputerUsePermissionSettingsProcedure,
   updateMemoryConfig as updateMemoryConfigProcedure,
-} from "../infrastructure/daemonAgentProcedures";
-import type { MemoryConfig } from "../infrastructure/daemonAgentTypes";
+} from "../daemon/daemonAgentProcedures";
+import type { MemoryConfig } from "../daemon/daemonAgentTypes";
 
 /**
  * Agent configuration commands (desktop7 Phase 23/26).

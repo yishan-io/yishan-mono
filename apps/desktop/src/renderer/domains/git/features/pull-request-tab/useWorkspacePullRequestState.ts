@@ -2,7 +2,7 @@ import { useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspa
 import { useEffect, useRef, useState } from "react";
 import { listPullRequestHistory, refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
 import { useWorkspacePullRequestByWorkspaceId } from "../../hooks/useGitProjectionReadHooks";
-import type { WorkspacePullRequestRecord } from "../../infrastructure/workspacePullRequestApi";
+import type { WorkspacePullRequestRecord } from "../../api/workspacePullRequestApi";
 import type { GitPullRequest } from "../../gitPullRequestTypes";
 
 export type WorkspacePullRequestState = {

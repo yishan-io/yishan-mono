@@ -1,6 +1,6 @@
 import { Divider, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import type { WorkspacePullRequestRecord } from "../../infrastructure/workspacePullRequestApi";
+import type { WorkspacePullRequestRecord } from "../../api/workspacePullRequestApi";
 import PullRequestHistoryRow from "./PullRequestHistoryRow";
 
 interface PullRequestHistorySectionProps {

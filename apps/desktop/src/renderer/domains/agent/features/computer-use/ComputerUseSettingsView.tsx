@@ -12,7 +12,7 @@ import {
   SettingsSectionHeader,
 } from "../../../../ui/components/SettingsPrimitives";
 import { getComputerUsePermissions, openComputerUsePermissionSettings } from "../../commands/agentConfigCommands";
-import type { ComputerPermissionState, ComputerPermissionStatus } from "../../infrastructure/daemonAgentTypes";
+import type { ComputerPermissionState, ComputerPermissionStatus } from "../../daemon/daemonAgentTypes";
 
 type PermissionRowKey = "accessibility" | "screenRecording" | "inputMonitoring" | "automation";
 

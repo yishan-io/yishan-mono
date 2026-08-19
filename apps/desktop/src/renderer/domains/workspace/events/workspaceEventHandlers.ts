@@ -18,7 +18,7 @@ import { openTab } from "@renderer/domains/workbench";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { subscribeDaemonConnectionStatus } from "../infrastructure/daemonWorkspaceClient";
+import { subscribeDaemonConnectionStatus } from "../daemon/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
 import { sessionStore } from "@renderer/domains/session";
 

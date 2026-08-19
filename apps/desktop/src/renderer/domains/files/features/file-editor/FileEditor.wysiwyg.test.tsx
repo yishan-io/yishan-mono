@@ -53,7 +53,7 @@ const mockEditorState: {
   setThemeCalls: [] as string[],
 };
 
-vi.mock("../../infrastructure/monacoSetup", () => ({
+vi.mock("../../features/file-editor/monacoSetup", () => ({
   YISHAN_THEME_DARK: "yishan-dark",
   YISHAN_THEME_LIGHT: "yishan-light",
   ensureEditorThemes: vi.fn(),

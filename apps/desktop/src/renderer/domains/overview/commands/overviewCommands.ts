@@ -6,7 +6,7 @@ import {
   getOverviewModelBreakdown,
   getOverviewTokenUsage,
   getOverviewWorkspaceInsights,
-} from "../infrastructure/overviewApi";
+} from "../api/overviewApi";
 import type { OverviewTimeRange } from "../overviewTypes";
 import { sessionStore } from "@renderer/domains/session";
 
@@ -118,4 +118,4 @@ export function setOverviewGranularity(granularity: "hour" | "day"): void {
   void refreshOverviewTokenUsage();
 }
 
-export type { OverviewTimeRange } from "../infrastructure/overviewApi.types";
+export type { OverviewTimeRange } from "../api/overviewApi.types";

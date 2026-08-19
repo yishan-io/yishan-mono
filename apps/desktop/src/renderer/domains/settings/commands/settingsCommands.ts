@@ -2,12 +2,12 @@ import { getVoiceTranscriptionUsage } from "@renderer/domains/agent";
 import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "@renderer/domains/session";
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import type { DaemonLogResult } from "../../../../main/ipc";
-import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../infrastructure/daemonHostCommands";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../daemon/daemonHostCommands";
 import {
   createServiceToken as createServiceTokenFromApi,
   listServiceTokens as listServiceTokensFromApi,
   revokeServiceToken as revokeServiceTokenFromApi,
-} from "../infrastructure/serviceTokenApi";
+} from "../api/serviceTokenApi";
 
 /**
  * SettingsCommands — the public command surface for the Settings feature.

@@ -6,7 +6,7 @@ import {
   closeAgentSession as closeAgentSessionProcedure,
   ensureWorkspaceChatSession as ensureWorkspaceChatSessionProcedure,
   runWorkspaceChatPrompt as runWorkspaceChatPromptProcedure,
-} from "../infrastructure/daemonAgentProcedures";
+} from "../daemon/daemonAgentProcedures";
 import type { DesktopAgentKind } from "../agentSettings";
 
 type WorkspaceAgentKind = DesktopAgentKind;

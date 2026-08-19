@@ -49,7 +49,7 @@ vi.mock("../../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
     Promise.resolve({
@@ -63,7 +63,7 @@ vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () =>
     }),
 }));
 
-vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
+vi.mock("../../../domains/git/daemon/daemonGitClient", () => ({
   getGitRpc: () =>
     Promise.resolve({
       renameBranch: rpcMocks.renameGitBranch,

@@ -1,7 +1,7 @@
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesProcedure,
   listAgentModels as listAgentModelsProcedure,
-} from "../infrastructure/daemonAgentProcedures";
+} from "../daemon/daemonAgentProcedures";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS, isDesktopAgentKind } from "../agentSettings";
 
 export type AgentDetectionStatus = {

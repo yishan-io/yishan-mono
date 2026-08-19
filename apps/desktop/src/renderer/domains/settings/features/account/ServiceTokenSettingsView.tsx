@@ -29,7 +29,7 @@ import {
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
-import type { ServiceTokenRecord } from "../../infrastructure/serviceTokenTypes";
+import type { ServiceTokenRecord } from "../../api/serviceTokenTypes";
 
 function formatTokenDate(dateString: string | null): string {
   if (!dateString) {

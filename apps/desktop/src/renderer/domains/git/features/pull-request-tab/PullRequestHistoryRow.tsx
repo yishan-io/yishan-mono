@@ -2,7 +2,7 @@ import { Box, Chip, Link, Stack, Typography } from "@mui/material";
 import { openLink } from "@renderer/domains/browser";
 import { useTranslation } from "react-i18next";
 import { LuArrowRight } from "react-icons/lu";
-import type { WorkspacePullRequestRecord } from "../../infrastructure/workspacePullRequestApi";
+import type { WorkspacePullRequestRecord } from "../../api/workspacePullRequestApi";
 import { BranchBadge } from "../../ui/BranchBadge";
 import { PullRequestIcon } from "../../ui/PullRequestIcon";
 

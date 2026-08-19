@@ -14,8 +14,8 @@ import {
 import type { FormEvent } from "react";
 import { LuArrowLeft, LuArrowRight, LuGlobe, LuLock, LuLockOpen, LuMousePointer2, LuRefreshCcw } from "react-icons/lu";
 import { RxExternalLink } from "react-icons/rx";
-import type { BrowserHistoryGroup } from "../../infrastructure/browserHostCommands";
-import { openExternalUrl } from "../../infrastructure/browserHostCommands";
+import type { BrowserHistoryGroup } from "../../host/browserHostCommands";
+import { openExternalUrl } from "../../host/browserHostCommands";
 
 type UrlBarProps = {
   displayUrl: string;

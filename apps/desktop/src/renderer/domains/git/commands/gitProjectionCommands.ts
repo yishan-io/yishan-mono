@@ -15,8 +15,8 @@ import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
  * through the Workspace public API (`workspaceStore`) and writes the
  * projections to its own Store.
  */
-import { getGitRpc } from "../infrastructure/daemonGitClient";
-import { listWorkspacePullRequests } from "../infrastructure/workspacePullRequestApi";
+import { getGitRpc } from "../daemon/daemonGitClient";
+import { listWorkspacePullRequests } from "../api/workspacePullRequestApi";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,

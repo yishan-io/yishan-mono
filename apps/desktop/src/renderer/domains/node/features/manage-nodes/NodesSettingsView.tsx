@@ -23,7 +23,7 @@ import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
 import { listOrgNodes, unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
-import type { NodeRecord } from "../../infrastructure/nodeApi";
+import type { NodeRecord } from "../../api/nodeApi";
 import { sessionStore } from "@renderer/domains/session";
 
 function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {

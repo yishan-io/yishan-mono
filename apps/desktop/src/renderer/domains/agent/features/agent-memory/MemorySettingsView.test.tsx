@@ -37,7 +37,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   getMemoryConfig: mocked.getConfig,
   updateMemoryConfig: mocked.updateConfig,
   listAgentModels: mocked.listModels,

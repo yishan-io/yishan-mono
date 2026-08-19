@@ -18,7 +18,7 @@ import {
   workbenchNavigationStore,
 } from "@renderer/domains/workbench";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
+import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../localFolder";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";

@@ -5,7 +5,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
+import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../localFolder";
 import type { DaemonLocalFolder } from "../snapshotTypes";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";

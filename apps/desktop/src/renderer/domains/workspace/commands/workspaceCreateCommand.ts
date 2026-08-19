@@ -8,7 +8,7 @@ import {
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
+import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
 import { selectIsDefaultContextEnabled } from "../state/workspaceSettingsSelectors";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";

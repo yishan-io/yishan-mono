@@ -12,7 +12,7 @@ import {
   getRulerColor,
 } from "./gitGutterDecorations";
 
-vi.mock("../../../infrastructure/monacoSetup", () => ({
+vi.mock("../../../features/file-editor/monacoSetup", () => ({
   monaco: {
     editor: {
       OverviewRulerLane: { Full: 7 },

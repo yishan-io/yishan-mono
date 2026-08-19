@@ -23,7 +23,7 @@ import {
   isExternalAppPlatformSupported,
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
-} from "../../infrastructure/externalApps";
+} from "../../externalApps";
 import { fileTreeStore } from "../../state/fileTreeStore";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";

@@ -10,7 +10,7 @@ import {
   SettingsRows,
   SettingsSectionHeader,
 } from "../../../../../ui/components/SettingsPrimitives";
-import type { DaemonInfoResult } from "../../../infrastructure/daemonHostCommands";
+import type { DaemonInfoResult } from "../../../daemon/daemonHostCommands";
 
 type DaemonConnectionSectionProps = {
   daemonInfo: DaemonInfoResult | null;

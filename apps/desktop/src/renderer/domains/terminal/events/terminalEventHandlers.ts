@@ -10,7 +10,7 @@ import { setTerminalTabAgentKind } from "@renderer/domains/workbench";
  * default deps subscribe via the router selectors.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { getTerminalRpc } from "../infrastructure/daemonTerminalClient";
+import { getTerminalRpc } from "../daemon/daemonTerminalClient";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 export type TerminalEventDependencies = {

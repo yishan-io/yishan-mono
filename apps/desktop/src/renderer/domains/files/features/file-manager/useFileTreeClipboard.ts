@@ -1,7 +1,7 @@
 import { copyFiles, renameEntry, writeFileBase64 } from "@renderer/domains/files/commands/fileCommands";
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkspaceFileEntry } from "../../infrastructure/externalApps";
+import type { WorkspaceFileEntry } from "../../externalApps";
 import {
   DEFAULT_CLIPBOARD_SOURCE_RESOLVERS,
   type FileTreeClipboardState,
