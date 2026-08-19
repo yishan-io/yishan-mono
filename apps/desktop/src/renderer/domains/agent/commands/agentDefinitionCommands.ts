@@ -1,5 +1,16 @@
-import type { AgentDefinitionDetail, AgentDefinitionInfo, PiExtensionInfo } from "../../../rpc/daemonTypes";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import {
+  createAgentDefinition as createAgentDefinitionProcedure,
+  getAgentDefinitionDetail as getAgentDefinitionDetailProcedure,
+  installPiExtension as installPiExtensionProcedure,
+  listAgentDefinitions as listAgentDefinitionsProcedure,
+  listPiExtensions as listPiExtensionsProcedure,
+  removeAgentDefinition as removeAgentDefinitionProcedure,
+  removePiExtension as removePiExtensionProcedure,
+  restoreAgentDefinition as restoreAgentDefinitionProcedure,
+  updateAgentDefinition as updateAgentDefinitionProcedure,
+  updatePiExtension as updatePiExtensionProcedure,
+} from "../infrastructure/daemonAgentProcedures";
+import type { AgentDefinitionDetail, AgentDefinitionInfo, PiExtensionInfo } from "../infrastructure/daemonAgentTypes";
 
 function parsePiExtension(entry: Record<string, unknown>): PiExtensionInfo {
   return {
@@ -27,49 +38,40 @@ function parseAgentDefinition(entry: Record<string, unknown>): AgentDefinitionIn
 
 /** Lists installed pi extensions with official-vs-user classification. */
 export async function listExtensions(): Promise<PiExtensionInfo[]> {
-  const client = await getDaemonClient();
-  const payload = await client.customize.extensions.list(undefined);
-  const raw = payload as { extensions?: unknown[] };
-  if (!Array.isArray(raw.extensions)) {
+  const payload = await listPiExtensionsProcedure();
+  if (!Array.isArray(payload.extensions)) {
     return [];
   }
-  return raw.extensions.map((entry) => parsePiExtension(entry as Record<string, unknown>));
+  return payload.extensions.map((entry) => parsePiExtension(entry as Record<string, unknown>));
 }
 
 /** Installs a pi package source spec (npm:, git:, https://, or a local path). */
 export async function installExtension(source: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.extensions.install({ source });
+  await installPiExtensionProcedure({ source });
 }
 
 /** Removes an extension by its full source spec (e.g. npm:pi-web-fetch). */
 export async function removeExtension(source: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.extensions.remove({ source });
+  await removePiExtensionProcedure({ source });
 }
 
 /** Re-installs an extension from the same source spec (pinned specs are not bumped). */
 export async function updateExtension(source: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.extensions.update({ source });
+  await updatePiExtensionProcedure({ source });
 }
 
 /** Lists agent definitions with official-vs-user classification (metadata only). */
 export async function listAgentDefinitions(): Promise<AgentDefinitionInfo[]> {
-  const client = await getDaemonClient();
-  const payload = await client.customize.agents.list(undefined);
-  const raw = payload as { agents?: unknown[] };
-  if (!Array.isArray(raw.agents)) {
+  const payload = await listAgentDefinitionsProcedure();
+  if (!Array.isArray(payload.agents)) {
     return [];
   }
-  return raw.agents.map((entry) => parseAgentDefinition(entry as Record<string, unknown>));
+  return payload.agents.map((entry) => parseAgentDefinition(entry as Record<string, unknown>));
 }
 
 /** Fetches one agent definition including its full content. */
 export async function getAgentDefinitionDetail(name: string): Promise<AgentDefinitionDetail> {
-  const client = await getDaemonClient();
-  const payload = await client.customize.agents.detail({ name });
-  const entry = payload as Record<string, unknown>;
+  const entry = (await getAgentDefinitionDetailProcedure({ name })) as unknown as Record<string, unknown>;
   return {
     ...parseAgentDefinition(entry),
     content: typeof entry.content === "string" ? entry.content : "",
@@ -85,24 +87,20 @@ export async function createAgentDefinition(input: {
   thinking: string;
   tools: string[];
 }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.agents.create(input);
+  await createAgentDefinitionProcedure(input);
 }
 
 /** Overwrites an agent definition (official or user) with full content. */
 export async function updateAgentDefinition(input: { name: string; content: string }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.agents.update(input);
+  await updateAgentDefinitionProcedure(input);
 }
 
 /** Removes a user agent definition. */
 export async function removeAgentDefinition(name: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.agents.remove({ name });
+  await removeAgentDefinitionProcedure({ name });
 }
 
 /** Restores an official agent definition to its shipped content. */
 export async function restoreAgentDefinition(name: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.customize.agents.restore({ name });
+  await restoreAgentDefinitionProcedure({ name });
 }

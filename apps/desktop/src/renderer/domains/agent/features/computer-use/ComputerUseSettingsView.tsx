@@ -5,7 +5,6 @@ import { BiBluetooth, BiCamera, BiChip, BiHdd, BiShield, BiSolidKeyboard, BiUsb,
 import { LuGlobe } from "react-icons/lu";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../../helpers/platform";
-import type { ComputerPermissionState, ComputerPermissionStatus } from "../../../../rpc/daemonTypes";
 import {
   SettingsCard,
   SettingsControlRow,
@@ -13,6 +12,7 @@ import {
   SettingsSectionHeader,
 } from "../../../../ui/components/SettingsPrimitives";
 import { getComputerUsePermissions, openComputerUsePermissionSettings } from "../../commands/agentConfigCommands";
+import type { ComputerPermissionState, ComputerPermissionStatus } from "../../infrastructure/daemonAgentTypes";
 
 type PermissionRowKey = "accessibility" | "screenRecording" | "inputMonitoring" | "automation";
 

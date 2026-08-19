@@ -16,10 +16,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck } from "react-icons/lu";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { SkillInfo } from "../../../../rpc/daemonTypes";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard } from "../../../../ui/components/SettingsPrimitives";
 import { listSkills, removeSkill, updateAllSkills, updateSkill } from "../../commands/agentSkillCommands";
+import type { SkillInfo } from "../../infrastructure/daemonAgentTypes";
 import { AddSkillDialog, RemoveSkillDialog, SkillDetailDialog } from "./AgentSkillsCardDialogs";
 
 // Skills are installed/updated via the pi ecosystem (npm packages, `npx skill

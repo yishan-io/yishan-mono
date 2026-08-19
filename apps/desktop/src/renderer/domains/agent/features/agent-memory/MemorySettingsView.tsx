@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import type { MemoryConfig } from "../../../../rpc/daemonTypes";
 import {
   SettingsCard,
   SettingsControlRow,
@@ -16,6 +15,7 @@ import {
   listAgentModelsForMemorySettings,
   updateMemoryConfig,
 } from "../../commands/agentConfigCommands";
+import type { MemoryConfig } from "../../infrastructure/daemonAgentTypes";
 import { ProviderMark } from "../../ui/ProviderMark";
 import { ModelPickerMenu } from "../select-model";
 import { buildModelPickerOption, groupModelPickerOptionsByProvider, stripProviderPrefix } from "../select-model";

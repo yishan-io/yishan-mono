@@ -1,42 +1,44 @@
-import type { MemoryConfig } from "../../../rpc/daemonTypes";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import {
+  getComputerUsePermissions as getComputerUsePermissionsProcedure,
+  getMemoryConfig as getMemoryConfigProcedure,
+  listAgentModels,
+  openComputerUsePermissionSettings as openComputerUsePermissionSettingsProcedure,
+  updateMemoryConfig as updateMemoryConfigProcedure,
+} from "../infrastructure/daemonAgentProcedures";
+import type { MemoryConfig } from "../infrastructure/daemonAgentTypes";
 
 /**
- * Agent configuration commands (desktop7 Phase 23).
+ * Agent configuration commands (desktop7 Phase 23/26).
  *
  * Moved from Settings: memory configuration, agent-model listing for memory
  * settings, and computer-use permissions are Agent-domain behavior. Settings
- * UI consumes them through the Agent public API.
+ * UI consumes them through the Agent public API. RPC access goes through the
+ * Agent Infrastructure procedure adapters (Phase 26).
  */
 
 /** Reads the memory configuration from the daemon. */
-export async function getMemoryConfig() {
-  const client = await getDaemonClient();
-  return client.memory.getConfig();
+export function getMemoryConfig() {
+  return getMemoryConfigProcedure();
 }
 
 /** Updates the memory configuration on the daemon. */
-export async function updateMemoryConfig(config: MemoryConfig) {
-  const client = await getDaemonClient();
-  return client.memory.updateConfig(config);
+export function updateMemoryConfig(config: MemoryConfig) {
+  return updateMemoryConfigProcedure(config);
 }
 
 /** Lists agent models for the memory settings view. */
-export async function listAgentModelsForMemorySettings(input?: { agentKind?: string; forceRefresh?: boolean }) {
-  const client = await getDaemonClient();
-  return client.agent.listModels(input);
+export function listAgentModelsForMemorySettings(input?: { agentKind?: string; forceRefresh?: boolean }) {
+  return listAgentModels(input);
 }
 
 /** Reads computer-use permission state from the daemon. */
-export async function getComputerUsePermissions() {
-  const client = await getDaemonClient();
-  return client.computer.permissions();
+export function getComputerUsePermissions() {
+  return getComputerUsePermissionsProcedure();
 }
 
 /** Opens the computer-use permission settings for one permission. */
-export async function openComputerUsePermissionSettings(
+export function openComputerUsePermissionSettings(
   permission: "accessibility" | "screenRecording" | "camera" | "fullDiskAccess" | "localNetwork" | "bluetooth",
 ) {
-  const client = await getDaemonClient();
-  return client.computer.openPermissionSettings({ permission });
+  return openComputerUsePermissionSettingsProcedure({ permission });
 }

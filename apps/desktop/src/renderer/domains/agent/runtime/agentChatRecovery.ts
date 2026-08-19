@@ -1,6 +1,6 @@
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import type { TabStoreState } from "../../../domains/workbench";
-import type { PiActiveSessionSummary } from "../../../rpc/daemonTypes";
+import type { PiActiveSessionSummary } from "../infrastructure/daemonAgentTypes";
 
 type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
 

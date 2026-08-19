@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
 import { getErrorMessage } from "../../../../../helpers/errorHelpers";
-import type * as Rpc from "../../../../../rpc/daemonTypes";
 import { fetchSessionHistory } from "../../../commands/agentChatSessionHistory";
+import type * as Rpc from "../../../infrastructure/daemonAgentTypes";
 import { formatAgentSessionTitle } from "../../../model/agentSkillTextHelpers";
 
 const RECENT_SESSION_LIMIT = 5;

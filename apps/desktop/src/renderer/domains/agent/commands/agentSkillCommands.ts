@@ -1,5 +1,12 @@
-import type { SkillDetail, SkillInfo, SkillSourceKind } from "../../../rpc/daemonTypes";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import {
+  addAgentSkill,
+  getAgentSkillDetail,
+  listAgentSkills,
+  removeAgentSkill,
+  updateAgentSkill,
+  updateAllAgentSkills,
+} from "../infrastructure/daemonAgentProcedures";
+import type { SkillDetail, SkillInfo, SkillSourceKind } from "../infrastructure/daemonAgentTypes";
 
 const SKILL_SOURCE_KINDS: SkillSourceKind[] = ["official", "url", "global", "project", "package", "settings"];
 
@@ -25,22 +32,18 @@ function parseSkillInfo(entry: Record<string, unknown>): SkillInfo {
 
 /** Lists all catalog and installed skills with their current status. */
 export async function listSkills(): Promise<SkillInfo[]> {
-  const client = await getDaemonClient();
-  const payload = await client.skill.list(undefined);
-  const raw = payload as { skills?: unknown[] };
-  if (!Array.isArray(raw.skills)) {
+  const payload = await listAgentSkills();
+  if (!Array.isArray(payload.skills)) {
     return [];
   }
-  return raw.skills.map((s) => {
+  return payload.skills.map((s) => {
     return parseSkillInfo(s as Record<string, unknown>);
   });
 }
 
 /** Fetches detailed skill info including file contents. */
 export async function getSkillDetail(name: string): Promise<SkillDetail> {
-  const client = await getDaemonClient();
-  const payload = await client.skill.detail({ name });
-  const entry = payload as Record<string, unknown>;
+  const entry = (await getAgentSkillDetail({ name })) as unknown as Record<string, unknown>;
   return {
     ...parseSkillInfo(entry),
     files:
@@ -52,24 +55,20 @@ export async function getSkillDetail(name: string): Promise<SkillDetail> {
 
 /** Installs a skill package globally (~/.agents/skills) via the skills CLI. */
 export async function addSkill(source: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.skill.add({ source });
+  await addAgentSkill({ source });
 }
 
 /** Removes an installed skill by name (user-installed skills only). */
 export async function removeSkill(name: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.skill.remove({ name });
+  await removeAgentSkill({ name });
 }
 
 /** Updates one installed skill to its latest version. */
 export async function updateSkill(name: string): Promise<void> {
-  const client = await getDaemonClient();
-  await client.skill.update({ name });
+  await updateAgentSkill({ name });
 }
 
 /** Updates every installed global skill via the skills CLI. */
 export async function updateAllSkills(): Promise<void> {
-  const client = await getDaemonClient();
-  await client.skill.updateAll(undefined);
+  await updateAllAgentSkills();
 }

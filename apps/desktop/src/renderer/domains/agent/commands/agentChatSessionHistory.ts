@@ -1,9 +1,9 @@
-import type * as Rpc from "../../../rpc/daemonTypes";
 import {
   getPiSessionFile as getPiSessionFileProcedure,
   listActivePiSessions as listActivePiSessionsProcedure,
   listPiSessions as listPiSessionsProcedure,
 } from "../infrastructure/daemonAgentProcedures";
+import type * as Rpc from "../infrastructure/daemonAgentTypes";
 
 /** Fetches past session summaries for the current working directory. */
 export async function fetchSessionHistory(cwd: string): Promise<Rpc.PiSessionSummary[]> {
