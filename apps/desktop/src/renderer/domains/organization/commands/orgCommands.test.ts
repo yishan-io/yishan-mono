@@ -6,7 +6,7 @@ import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { switchOrganization } from "./orgCommands";
 
 const rpcMocks = vi.hoisted(() => ({
-  setCurrentOrg: vi.fn(async () => undefined),
+  setCurrentOrganization: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../../api", () => ({
@@ -20,16 +20,13 @@ vi.mock("../../../api", () => ({
   },
 }));
 
+vi.mock("../../../domains/organization/infrastructure/daemonOrganizationProcedures", () => ({
+  setCurrentOrganization: rpcMocks.setCurrentOrganization,
+}));
+
 vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
-  return {
-    ...actual,
-    getDaemonClient: vi.fn(async () => ({
-      context: {
-        setCurrentOrg: rpcMocks.setCurrentOrg,
-      },
-    })),
-  };
+  return actual;
 });
 
 const initialSessionStoreState = sessionStore.getState();
@@ -58,6 +55,6 @@ describe("orgCommands", () => {
 
     expect(workbenchNavigationStore.getState().overlayPanel).toBeNull();
     expect(sessionStore.getState().selectedOrganizationId).toBe("org-2");
-    expect(rpcMocks.setCurrentOrg).toHaveBeenCalledWith("org-2");
+    expect(rpcMocks.setCurrentOrganization).toHaveBeenCalledWith("org-2");
   });
 });

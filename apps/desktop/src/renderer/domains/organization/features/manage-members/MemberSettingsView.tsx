@@ -26,7 +26,7 @@ import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import {SettingsCard, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
 

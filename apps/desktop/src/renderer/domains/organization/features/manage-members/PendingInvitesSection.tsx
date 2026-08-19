@@ -18,7 +18,7 @@ import type { OrganizationInviteRecord } from "../../../../api/types";
 import { cancelOrgInvite, listPendingInvites } from "../../../../domains/organization";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
-import {SettingsCard, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 
 interface PendingInvitesSectionProps {
   organizationId: string;

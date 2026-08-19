@@ -373,12 +373,6 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         cliTools: proxyClient.cliTools,
         events: proxyClient.events,
         tokenUsage: transportClient.tokenUsage,
-        context: {
-          getState: () => transportClient.context.getState(),
-          setCurrentOrg: (orgId: string) => transportClient.context.setCurrentOrg(orgId),
-          setActiveProject: (projectId: string) => transportClient.context.setActiveProject(projectId),
-          setActiveFile: (filePath: string) => transportClient.context.setActiveFile(filePath),
-        },
       };
     });
     void daemonRpcClientPromise.then(() => {

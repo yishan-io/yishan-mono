@@ -4,7 +4,7 @@ import { setSelectedOrganizationId } from "../../../domains/session";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { rendererQueryClient } from "../../../queryClient";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { setCurrentOrganization } from "../infrastructure/daemonOrganizationProcedures";
 
 const errNoOrgSelected = "No organization selected.";
 
@@ -31,8 +31,7 @@ export async function switchOrganization(orgId: string): Promise<void> {
   setSelectedOrganizationId(orgId);
 
   try {
-    const client = await getDaemonClient();
-    await client.context.setCurrentOrg(orgId);
+    await setCurrentOrganization(orgId);
   } catch {
     // Best-effort: daemon may not be available.
   }
