@@ -14,11 +14,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiX } from "react-icons/bi";
 
-import type { OrganizationInviteRecord } from "../../../../api/types";
-import { cancelOrgInvite, listPendingInvites } from "../../../../domains/organization";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
+import { cancelOrgInvite, listPendingInvites } from "../../commands/orgCommands";
+import type { OrganizationInviteRecord } from "../../infrastructure/orgApi";
 
 interface PendingInvitesSectionProps {
   organizationId: string;

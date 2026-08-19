@@ -1,13 +1,13 @@
-import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "@renderer/domains/settings";
+import { getVoiceTranscriptionUsage } from "@renderer/domains/agent";
+import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "@renderer/domains/session";
+import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import type { DaemonLogResult } from "../../../../main/ipc";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../infrastructure/daemonHostCommands";
 import {
   createServiceToken as createServiceTokenFromApi,
   listServiceTokens as listServiceTokensFromApi,
   revokeServiceToken as revokeServiceTokenFromApi,
 } from "../infrastructure/serviceTokenApi";
-import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "@renderer/domains/session";
-import { getVoiceTranscriptionUsage } from "@renderer/domains/agent";
-import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
 
 /**
  * SettingsCommands — the public command surface for the Settings feature.

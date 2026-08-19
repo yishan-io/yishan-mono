@@ -4,6 +4,8 @@ import type {
   OrganizationMemberRecord,
   OrganizationRecord,
 } from "@renderer/api/types";
+
+export type { AddOrganizationMemberResponse, OrganizationInviteRecord, OrganizationMemberRecord, OrganizationRecord };
 import { requestJson } from "@renderer/api/restClient";
 
 /** Lists organizations visible to the signed-in user. */

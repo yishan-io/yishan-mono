@@ -1,8 +1,8 @@
 import { Box, Link, Stack, Typography } from "@mui/material";
 import { openLink } from "@renderer/domains/browser";
-import type { GitPullRequestCheck } from "@renderer/domains/git";
 import { useTranslation } from "react-i18next";
 import { LuCheck, LuCircleDashed, LuX } from "react-icons/lu";
+import type { GitPullRequestCheck } from "../../model/gitPullRequestTypes";
 
 interface PullRequestChecksSectionProps {
   checks: GitPullRequestCheck[];

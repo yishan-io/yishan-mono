@@ -10,11 +10,12 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { createProject, inspectLocalProjectSource, openLocalFolderDialog } from "@renderer/domains/project";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
+import { createProject, inspectLocalProjectSource } from "../../commands/projectCommands";
+import { openLocalFolderDialog } from "../../infrastructure/projectHostCommands";
 
 type RepoDraft = {
   name: string;

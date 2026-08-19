@@ -1,15 +1,13 @@
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
-import { openLink } from "@renderer/domains/browser";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
-import { AppThemePreferenceProvider, useThemePreference } from "../domains/settings";
 import { startBackendEventHandlers } from "../app/events";
+import { AppThemePreferenceProvider, useThemePreference } from "../domains/settings";
 import { startBackendEventPipeline } from "../events";
 import { i18n } from "../i18n";
 import { rendererQueryClient } from "../queryClient";
-import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
 import { createAppTheme } from "../theme";
 import { AppUpdateSnackbar } from "./features/launch/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./features/launch/AuthSessionExpiredSnackbar";
@@ -51,23 +49,7 @@ function AppRoot() {
     const stopPipeline = startBackendEventPipeline();
     const stopStoreBindings = startBackendEventHandlers();
 
-    // Listen for webview new-window requests forwarded from the main process
-    // (triggered by Cmd+Click, target="_blank", window.open in <webview> guests)
-    // and open the URL using the common openLink handler which respects the
-    // user's built-in vs external browser preference.
-    const unsubscribeWebviewOpenUrl = subscribeDesktopRpcEvent((event) => {
-      if (event.method !== "webviewOpenUrl") {
-        return;
-      }
-      const payload = event.payload as { url?: string } | undefined;
-      const url = payload?.url;
-      if (url) {
-        void openLink({ url });
-      }
-    });
-
     return () => {
-      unsubscribeWebviewOpenUrl();
       stopStoreBindings();
       stopPipeline();
     };

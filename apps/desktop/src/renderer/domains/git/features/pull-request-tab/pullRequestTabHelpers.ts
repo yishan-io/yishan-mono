@@ -1,6 +1,6 @@
-import type { WorkspacePullRequestRecord } from "@renderer/api/types";
-import type { GitPullRequest, GitPullRequestCheck } from "@renderer/domains/git";
-import { livePrStatus } from "@renderer/domains/git";
+import type { WorkspacePullRequestRecord } from "../../infrastructure/workspacePullRequestApi";
+import type { GitPullRequest, GitPullRequestCheck } from "../../model/gitPullRequestTypes";
+import { livePrStatus } from "../../model/pullRequestUtils";
 
 export type MergeMethod = "merge" | "squash" | "rebase";
 

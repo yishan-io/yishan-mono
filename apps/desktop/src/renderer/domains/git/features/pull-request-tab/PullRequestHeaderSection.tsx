@@ -15,10 +15,10 @@ import {
   Typography,
 } from "@mui/material";
 import { openLink } from "@renderer/domains/browser";
-import { BranchBadge } from "@renderer/domains/git";
-import { PullRequestIcon } from "@renderer/domains/git";
 import { useTranslation } from "react-i18next";
 import { LuArrowRight, LuChevronDown, LuRefreshCw } from "react-icons/lu";
+import { BranchBadge } from "../../ui/BranchBadge";
+import { PullRequestIcon } from "../../ui/PullRequestIcon";
 import type { MergeMethod } from "./pullRequestTabHelpers";
 import type { PullRequestTabActionsState } from "./usePullRequestTabActions";
 

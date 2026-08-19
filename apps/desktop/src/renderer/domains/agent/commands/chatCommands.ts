@@ -1,4 +1,3 @@
-import type { DesktopAgentKind } from "@renderer/domains/agent";
 import { generateId } from "@renderer/ids/generateId";
 import type { RpcSchema } from "../../../../shared/contracts/rpcSchema";
 import type { AvailableCommand, AvailableModel, ChatMessage } from "../../../domains/agent/model/chatTypes";
@@ -8,6 +7,7 @@ import {
   ensureWorkspaceChatSession as ensureWorkspaceChatSessionProcedure,
   runWorkspaceChatPrompt as runWorkspaceChatPromptProcedure,
 } from "../infrastructure/daemonAgentProcedures";
+import type { DesktopAgentKind } from "../model/agentSettings";
 
 type WorkspaceAgentKind = DesktopAgentKind;
 type EnsureWorkspaceChatSessionResponse = {

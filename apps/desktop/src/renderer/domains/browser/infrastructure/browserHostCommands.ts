@@ -1,5 +1,5 @@
+import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "../../../../main/ipc";
-import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
 
 /**
  * Browser host commands — external I/O for the Workbench browser surface.

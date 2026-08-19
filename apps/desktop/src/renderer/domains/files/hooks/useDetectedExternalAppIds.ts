@@ -1,6 +1,6 @@
-import { listDetectedExternalAppIds } from "@renderer/domains/files";
 import { useEffect, useState } from "react";
-import type { ExternalAppId } from "@renderer/domains/files";
+import { listDetectedExternalAppIds } from "../commands/fileCommands";
+import type { ExternalAppId } from "../model/externalApps";
 
 /** Resolves detected external-app ids from the desktop host bridge. */
 export function useDetectedExternalAppIds(): readonly ExternalAppId[] | null | undefined {

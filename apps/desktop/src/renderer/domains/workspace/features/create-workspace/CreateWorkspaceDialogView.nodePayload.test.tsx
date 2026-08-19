@@ -17,6 +17,18 @@ const listAgentModels = vi.fn();
 const setIsCreatingWorkspace = vi.fn();
 const resetDraftInputs = vi.fn();
 
+vi.mock("../../commands/workspaceCommands", () => ({
+  get createWorkspace() {
+    return createWorkspace;
+  },
+  get renameWorkspace() {
+    return renameWorkspace;
+  },
+  get renameWorkspaceBranch() {
+    return renameWorkspaceBranch;
+  },
+}));
+
 vi.mock("@renderer/domains/workspace", async () => {
   const { workspaceSettingsStore } = await import("../../state/workspaceSettingsStore");
   const { useWorkspaceBranchPrefixSettings } = await import("../../hooks/useWorkspaceBranchPrefixSettings");

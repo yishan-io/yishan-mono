@@ -2,7 +2,21 @@ import { resolveWorkspaceId as resolveWorkspaceIdCommand } from "@renderer/domai
 import { generateId } from "@renderer/ids/generateId";
 import type { DaemonNotification } from "../../../rpc/daemonTypes";
 import { asRecord, readOptionalNumber, readOptionalString, readOptionalStringArray } from "../../../rpc/helpers";
-import { getDaemonTransport } from "../../../rpc/rpcTransport";
+import {
+  getDaemonTransport,
+  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromTransport,
+  subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport,
+} from "../../../rpc/rpcTransport";
+
+export function subscribeDesktopRpcEvent(listener: (event: { method: string; payload?: unknown }) => void): () => void {
+  return subscribeDesktopRpcEventFromTransport(listener);
+}
+
+export function subscribeDaemonConnectionStatus(
+  listener: (status: "connected" | "connecting" | "disconnected") => void,
+): () => void {
+  return subscribeDaemonConnectionStatusFromTransport(listener);
+}
 
 export type TerminalCreateSessionInput = {
   workspaceId: string;

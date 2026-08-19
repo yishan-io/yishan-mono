@@ -87,8 +87,8 @@ export {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   type ExternalAppPreset,
-} from "@shared/contracts/externalApps";
-export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
+} from "./model/externalApps";
+export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./model/externalApps";
 
 export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
 export { markdownService } from "./ui/markdown/markdownService";

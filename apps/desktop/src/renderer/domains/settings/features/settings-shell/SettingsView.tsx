@@ -29,9 +29,9 @@ import { useTranslation } from "react-i18next";
 import type { BiCog } from "react-icons/bi";
 import { RxExit } from "react-icons/rx";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useThemePreference } from "../../../../domains/settings";
 import { SearchInput } from "../../../../ui/components/SearchInput";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
+import { useThemePreference } from "../../hooks/useThemePreference";
 import { SettingsErrorBoundary, SettingsPageLayout } from "../../ui/controls";
 import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
 import {

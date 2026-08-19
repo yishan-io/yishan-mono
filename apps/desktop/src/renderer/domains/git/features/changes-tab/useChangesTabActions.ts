@@ -1,4 +1,8 @@
 import { resolveWorkspaceAbsolutePath } from "@renderer/domains/files";
+import { openTab } from "@renderer/domains/workbench";
+import type { DiffFileChangeKind, FileDiffEntry } from "@renderer/domains/workbench";
+import { writeClipboardText } from "@renderer/platform/clipboard";
+import { useCallback } from "react";
 import {
   readBranchComparisonDiff,
   readCommitDiff,
@@ -6,11 +10,7 @@ import {
   revertGitChanges,
   trackGitChanges,
   unstageGitChanges,
-} from "@renderer/domains/git";
-import { openTab } from "@renderer/domains/workbench";
-import type { DiffFileChangeKind, FileDiffEntry } from "@renderer/domains/workbench";
-import { writeClipboardText } from "@renderer/platform/clipboard";
-import { useCallback } from "react";
+} from "../../commands/gitCommands";
 import type { ProjectGitChangeItem } from "../project-git-changes/ProjectGitChangesList";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 

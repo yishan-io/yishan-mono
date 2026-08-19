@@ -34,8 +34,8 @@ vi.mock("@renderer/domains/session", () => ({
   reloadAuthConfig: mocks.reloadAuthConfig,
 }));
 
-vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../rpc/rpcTransport")>();
+vi.mock("@renderer/platform/hostBridge", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/platform/hostBridge")>();
   return {
     ...actual,
     getDesktopHostBridge: vi.fn(() => ({

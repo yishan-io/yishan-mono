@@ -11,11 +11,11 @@ import {
   TextField,
   Tooltip,
 } from "@mui/material";
-import type { BrowserHistoryGroup } from "@renderer/domains/browser";
-import { openExternalUrl } from "@renderer/domains/browser";
 import type { FormEvent } from "react";
 import { LuArrowLeft, LuArrowRight, LuGlobe, LuLock, LuLockOpen, LuMousePointer2, LuRefreshCcw } from "react-icons/lu";
 import { RxExternalLink } from "react-icons/rx";
+import type { BrowserHistoryGroup } from "../../infrastructure/browserHostCommands";
+import { openExternalUrl } from "../../infrastructure/browserHostCommands";
 
 type UrlBarProps = {
   displayUrl: string;

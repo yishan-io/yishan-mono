@@ -1,11 +1,11 @@
 import { Box } from "@mui/material";
+import type { ContextMenuEntry } from "../../../../ui/components/ContextMenu";
 import {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   type ExternalAppPreset,
   findExternalAppPreset,
-} from "@renderer/domains/files";
-import type { ContextMenuEntry } from "../../../../ui/components/ContextMenu";
+} from "../../model/externalApps";
 import { buildFileTreeContextMenuItems as buildBaseContextMenuItems } from "./fileTreeActionRegistry";
 
 type BuildWorkspaceFileTreeContextMenuItemsInput = {

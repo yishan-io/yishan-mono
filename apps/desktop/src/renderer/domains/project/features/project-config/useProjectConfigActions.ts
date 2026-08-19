@@ -1,13 +1,10 @@
 import { openEntryInExternalApp } from "@renderer/domains/files";
-import {
-  DEFAULT_PROJECT_ICON_ID,
-  findProjectIconOption,
-  openLocalFolderDialog,
-  updateProjectConfig,
-} from "@renderer/domains/project";
+import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
 import { useMutation } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
-import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/project";
+import { updateProjectConfig } from "../../commands/projectCommands";
+import { openLocalFolderDialog } from "../../infrastructure/projectHostCommands";
+import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../ui/projectIcons";
 import { DEFAULT_ICON_BG_COLOR, type ProjectConfigDraft } from "./useProjectConfigFormState";
 
 type ProjectLike = {

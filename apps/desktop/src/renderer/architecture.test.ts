@@ -72,6 +72,7 @@ const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
 const BASELINE_COUNTS: Record<RuleName, number> = {
   "R1-value-api-rpc": 0,
   "R1-main": 0,
+  "R1b-shared-contracts": 0,
   R3: 0,
   R4: 0,
   "R5-cross-feature-internal": 0,
@@ -86,6 +87,10 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R14-cross-domain-deep": 0,
   "R15-app-from-domain": 0,
   "R16-app-deep-into-domain": 0,
+  "R17-domain-self-index": 0,
+  "R18-wildcard-domain-index": 0,
+  "R19-rpc-whitelist": 0,
+  "R20-layer-transport": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -319,6 +324,33 @@ function scanViolations(): Violation[] {
           violations.push({ rule: "R16-app-deep-into-domain", file: rel, target: imp.spec });
         }
       }
+      // ---- Rule 17 (desktop7 Phase 27): a Domain must not VALUE-import its
+      // own root index. Type-only imports are erased at runtime (no eval
+      // cycle) and carry cross-domain contract re-exports, so they stay
+      // allowed (mirrors the R11 type-only exception). ----
+      const selfDomainMatch = rel.match(/^domains\/([^/]+)\//);
+      if (!imp.isTypeOnly && selfDomainMatch) {
+        const ownIndex = relT === `domains/${selfDomainMatch[1]}` || relT === `domains/${selfDomainMatch[1]}/index`;
+        if (ownIndex) {
+          violations.push({ rule: "R17-domain-self-index", file: rel, target: imp.spec });
+        }
+      }
+      // ---- Rule 19 (desktop7 Phase 27): root RPC imports only from
+      // app/events, app/runtime, and Domain Infrastructure. Root RPC's own
+      // internal wiring is exempt. ----
+      const isRpcImport = relT.startsWith("rpc/") || relT === "rpc";
+      if (isRpcImport && !rel.startsWith("rpc/")) {
+        const whitelisted =
+          rel.startsWith("app/events/") || rel.startsWith("app/runtime/") || rel.includes("/infrastructure/");
+        if (!whitelisted) {
+          violations.push({ rule: "R19-rpc-whitelist", file: rel, target: imp.spec });
+        }
+      }
+      // ---- Rule 20 (desktop7 Phase 27): Model, State, Hooks, UI, and
+      // Features must not import root transport. ----
+      if (isTransport && /^domains\/[^/]+\/(model|state|hooks|ui|features)\//.test(rel)) {
+        violations.push({ rule: "R20-layer-transport", file: rel, target: imp.spec });
+      }
     }
     // ---- Rule 12 (desktop6-adjust.md W8): Store Actions must stay
     // synchronous. A Store Action changes one owning Store synchronously; it
@@ -385,6 +417,39 @@ describe("renderer architecture dependency rules", () => {
     it("reports no unbaselined value imports of api/rpc/electron/main from UI code", () => {
       const fresh = [...unbaselined(violations, "R1-value-api-rpc"), ...unbaselined(violations, "R1-main")];
       const messages = failureMessages(fresh);
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R17: Domain must not VALUE-import its own root index (desktop7 Phase 27)", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R17-domain-self-index"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R18: Domain root indexes use explicit named exports only (desktop7 Phase 27)", () => {
+    it("rejects wildcard exports", () => {
+      const wildcardFiles = walkFiles(join(RENDERER_ROOT, "domains"))
+        .filter((file) => /\/index\.ts$/.test(file))
+        .filter((file) => /\bexport\s+\*\s+from/.test(readFileSync(file, "utf8")));
+      const messages = wildcardFiles.map(
+        (p) => `[archtest] wildcard export in domain index ${relative(RENDERER_ROOT, p)} — use explicit named exports`,
+      );
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R19: root RPC imports come from app/events, app/runtime, or Domain Infrastructure (desktop7 Phase 27)", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R19-rpc-whitelist"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R20: Model, State, Hooks, UI, and Features do not import root transport (desktop7 Phase 27)", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R20-layer-transport"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });
@@ -604,7 +669,7 @@ describe("renderer architecture dependency rules", () => {
       expect(messages, messages.join("\n")).toEqual([]);
     });
 
-    it("rejects new root UI dependency violations (App/Domains/API/RPC/Helpers)", () => {
+    it("rejects new root UI dependency violations (App/Domains/API/RPC/IPC/Stores/Commands/Runtime/Helpers)", () => {
       const present = new Set(
         walkFiles(RENDERER_ROOT)
           .filter((p) => relative(RENDERER_ROOT, p).startsWith("ui/"))
@@ -627,7 +692,12 @@ describe("renderer architecture dependency rules", () => {
                   relT.startsWith("domains/") ||
                   relT.startsWith("api/") ||
                   relT.startsWith("rpc/") ||
-                  relT.startsWith("helpers/")
+                  relT.startsWith("helpers/") ||
+                  relT.startsWith("../main/") ||
+                  relT.startsWith("main/") ||
+                  relT.startsWith("stores/") ||
+                  relT.startsWith("commands/") ||
+                  relT.startsWith("runtime/")
                 ) {
                   violates = true;
                 }

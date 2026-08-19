@@ -1,4 +1,4 @@
-import type { WorkspaceFileEntry } from "@renderer/domains/files";
+import type { WorkspaceFileEntry } from "../../model/externalApps";
 import { normalizeRelativePath } from "./fileTreePathHelpers";
 
 export function mergeWorkspaceEntries(

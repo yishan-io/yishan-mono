@@ -1,9 +1,9 @@
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
-import { getDefaultWorktreeLocation } from "@renderer/domains/project";
 import { useProjects } from "@renderer/domains/project/hooks/useProjectReadHooks";
 import { useDialogRegistration } from "@renderer/domains/workbench";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getDefaultWorktreeLocation } from "../../infrastructure/projectHostCommands";
 import { ProjectConfigCommandsSection } from "./projectConfigDialog/ProjectConfigCommandsSection";
 import { ProjectConfigGeneralSection } from "./projectConfigDialog/ProjectConfigGeneralSection";
 import { ProjectConfigIconPickerPopover } from "./projectConfigDialog/ProjectConfigIconPickerPopover";

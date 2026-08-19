@@ -1,5 +1,5 @@
-import { PROJECT_COLOR_PRESETS } from "@renderer/domains/project";
 import type { TFunction } from "i18next";
+import { PROJECT_COLOR_PRESETS } from "../../../ui/projectIcons";
 
 export type ProjectConfigSectionId = "general" | "scripts" | "commands";
 

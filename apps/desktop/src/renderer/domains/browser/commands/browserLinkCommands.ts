@@ -1,6 +1,6 @@
-import { openExternalUrl } from "@renderer/domains/browser";
 import { displaySettingsStore } from "@renderer/domains/settings";
 import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { openExternalUrl } from "../infrastructure/browserHostCommands";
 
 /**
  * Browser link commands — open a URL per the user's link-target preference

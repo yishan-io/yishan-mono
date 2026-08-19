@@ -18,7 +18,7 @@ import { selectSelectedOrganizationId } from "../../../domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
+import { subscribeDaemonConnectionStatus } from "../infrastructure/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;

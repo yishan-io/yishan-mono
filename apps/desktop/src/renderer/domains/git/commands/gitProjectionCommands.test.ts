@@ -14,6 +14,7 @@ const rpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
     Promise.resolve({
       refreshPullRequest: rpcMocks.refreshWorkspacePullRequest,

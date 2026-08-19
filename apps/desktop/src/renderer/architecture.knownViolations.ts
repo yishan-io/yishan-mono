@@ -40,7 +40,11 @@ export type RuleName =
   | "R13-getter-forwarding-action-file"
   | "R14-cross-domain-deep"
   | "R15-app-from-domain"
-  | "R16-app-deep-into-domain";
+  | "R16-app-deep-into-domain"
+  | "R17-domain-self-index"
+  | "R18-wildcard-domain-index"
+  | "R19-rpc-whitelist"
+  | "R20-layer-transport";
 
 export type KnownViolation = { rule: RuleName; file: string; phase: string };
 

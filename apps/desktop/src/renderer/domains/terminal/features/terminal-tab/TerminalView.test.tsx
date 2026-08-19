@@ -160,15 +160,19 @@ vi.mock("../../../../domains/workbench/commands/tabCommands", () => ({
   setSelectedTab: mocked.selectTab,
 }));
 
-vi.mock("../../../../domains/terminal/commands/terminalCommands", () => ({
-  createTerminalSession: mocked.createTerminalSession,
-  listTerminalSessions: mocked.listTerminalSessions,
-  readTerminalOutput: mocked.readTerminalOutput,
-  resizeTerminal: mocked.resizeTerminal,
-  subscribeTerminalOutput: mocked.subscribeTerminalOutput,
-  writeTerminalInput: mocked.writeTerminalInput,
-  closeTerminalSession: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("../../../../domains/terminal/commands/terminalCommands", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../domains/terminal/commands/terminalCommands")>();
+  return {
+    ...actual,
+    createTerminalSession: mocked.createTerminalSession,
+    listTerminalSessions: mocked.listTerminalSessions,
+    readTerminalOutput: mocked.readTerminalOutput,
+    resizeTerminal: mocked.resizeTerminal,
+    subscribeTerminalOutput: mocked.subscribeTerminalOutput,
+    writeTerminalInput: mocked.writeTerminalInput,
+    closeTerminalSession: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 vi.mock("../../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: vi.fn(),

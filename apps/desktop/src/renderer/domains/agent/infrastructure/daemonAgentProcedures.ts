@@ -1,4 +1,7 @@
-import { invokeDaemonProcedure } from "../../../rpc/rpcTransport";
+import {
+  invokeDaemonProcedure,
+  subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport,
+} from "../../../rpc/rpcTransport";
 import type {
   AgentDefinitionCreateInput,
   AgentDefinitionDetail,
@@ -151,6 +154,10 @@ export async function ensureAgentGlobalConfigExternalDirectoryPermission(input?:
   agentKind?: string;
 }): Promise<unknown> {
   return invokeDaemonProcedure("app.ensureAgentGlobalConfigExternalDirectoryPermission", input ?? {});
+}
+
+export function subscribeDesktopRpcEvent(listener: (event: { method: string; payload?: unknown }) => void): () => void {
+  return subscribeDesktopRpcEventFromTransport(listener);
 }
 
 // ─── memory ──────────────────────────────────────────────────────────────────

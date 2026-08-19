@@ -1,10 +1,11 @@
 import { useGitAuthorName } from "@renderer/domains/git";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
-import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useEffect, useRef, useState } from "react";
 import { listOrgNodes } from "../../../../domains/node";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
+import { resolveGitBranchPrefix } from "../../model/branchPrefix";
+import type { GitBranchPrefixMode } from "../../model/branchPrefix";
 import type { BranchDropdownGroups } from "./BranchDropdown";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 import {

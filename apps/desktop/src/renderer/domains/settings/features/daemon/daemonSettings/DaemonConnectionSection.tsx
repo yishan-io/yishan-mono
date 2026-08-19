@@ -1,5 +1,4 @@
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
-import type { DaemonInfoResult } from "@renderer/domains/settings";
 import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
 import { StatusIndicator } from "@renderer/ui/components/StatusIndicator";
 import { MONOSPACE_SX } from "@renderer/ui/typography";
@@ -11,6 +10,7 @@ import {
   SettingsRows,
   SettingsSectionHeader,
 } from "../../../../../ui/components/SettingsPrimitives";
+import type { DaemonInfoResult } from "../../../infrastructure/daemonHostCommands";
 
 type DaemonConnectionSectionProps = {
   daemonInfo: DaemonInfoResult | null;

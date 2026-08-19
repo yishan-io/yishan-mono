@@ -18,7 +18,6 @@ vi.mock("@renderer/domains/git", async () => {
       const state = gitProjectionStore.getState() as { pullRequestByWorkspaceId: Record<string, unknown> };
       state.pullRequestByWorkspaceId[workspaceId] = pullRequest;
     },
-    refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,
   };
 });
 
@@ -85,6 +84,14 @@ vi.mock("@renderer/domains/browser", async (importOriginal) => {
     openLink: (options: { url: string }) => mocked.openLink(options),
   };
 });
+
+vi.mock("../../../../domains/git/commands/gitProjectionCommands", () => ({
+  refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,
+  setWorkspacePullRequest: (workspaceId: string, pullRequest: unknown) => {
+    const state = gitProjectionStore.getState() as { pullRequestByWorkspaceId: Record<string, unknown> };
+    state.pullRequestByWorkspaceId[workspaceId] = pullRequest;
+  },
+}));
 
 vi.mock("../../../../domains/git/commands/gitCommands", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../domains/git/commands/gitCommands")>();

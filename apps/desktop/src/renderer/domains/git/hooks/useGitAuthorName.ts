@@ -1,6 +1,6 @@
-import { getGitAuthorName } from "@renderer/domains/git";
 import { selectWorkspaces } from "@renderer/domains/workspace";
 import { useEffect, useState } from "react";
+import { getGitAuthorName } from "../commands/gitCommands";
 
 /**
  * Fetches the git author name for the given workspace path.

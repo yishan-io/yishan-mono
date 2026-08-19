@@ -1,8 +1,8 @@
-import { isMarkdownFile } from "@renderer/domains/files";
-import { monaco } from "@renderer/domains/files";
 import { editorSettingsStore } from "@renderer/domains/settings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCodeTheme } from "../../../../domains/settings";
+import { monaco } from "../../infrastructure/monacoSetup";
+import { isMarkdownFile } from "../../model/editorLanguage";
 import { createMonacoFileEditor, replaceEditorContentPreservingViewState } from "./createMonacoFileEditor";
 
 /** Props for creating and syncing the Monaco editor used by FileEditor. */

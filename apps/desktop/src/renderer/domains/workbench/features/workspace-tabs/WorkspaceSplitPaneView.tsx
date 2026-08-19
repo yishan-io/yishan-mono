@@ -1,4 +1,10 @@
 import { Box } from "@mui/material";
+import type { ExternalAppId } from "@renderer/domains/files";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
+import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/model/split-pane";
+import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
+import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
 import {
   closeAllTabs,
   closeOtherTabs,
@@ -9,13 +15,7 @@ import {
   renameTabsForEntryRename,
   setSelectedTab as selectTab,
   toggleTabPinned,
-} from "@renderer/domains/workbench";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
-import type { ExternalAppId } from "@renderer/domains/workbench";
-import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/model/split-pane";
-import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
-import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
+} from "../../commands/tabCommands";
 import { splitPaneStore } from "../../state/splitPaneStore";
 import { tabStore } from "../../state/tabStore";
 import { selectLayoutByWorkspaceId } from "../../state/workbenchSelectors";

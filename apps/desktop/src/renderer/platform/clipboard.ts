@@ -1,4 +1,4 @@
-import { getDesktopHostBridge } from "../rpc/rpcTransport";
+import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 
 /** Writes text to the system clipboard via the main process (works in file:// contexts). */
 export async function writeClipboardText(text: string): Promise<void> {

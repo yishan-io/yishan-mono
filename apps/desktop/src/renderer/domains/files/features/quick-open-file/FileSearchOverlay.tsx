@@ -1,5 +1,3 @@
-import { FileQuickOpenDialog } from "@renderer/domains/files";
-import { isAudioFile, isExcalidrawFile, isImageFile, isUnsupportedFileTab, isVideoFile } from "@renderer/domains/files";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
@@ -7,7 +5,15 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { buildWorkspaceFileUrl, readFile } from "../../commands/fileCommands";
 import { setExpandedFileTreeItems, setSelectedEntryPath } from "../../commands/fileTreeCommands";
+import {
+  isAudioFile,
+  isExcalidrawFile,
+  isImageFile,
+  isUnsupportedFileTab,
+  isVideoFile,
+} from "../../model/editorLanguage";
 import { fileTreeStore } from "../../state/fileTreeStore";
+import { FileQuickOpenDialog } from "../file-editor/editors";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../file-manager/fileTreeHelpers";
 import { useFileSearchController } from "./useFileSearchController";
 

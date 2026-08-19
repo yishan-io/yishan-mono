@@ -1,29 +1,29 @@
 import { Alert, Box } from "@mui/material";
-import { useDetectedExternalAppIds } from "@renderer/domains/files";
 import { listGitChanges } from "@renderer/domains/git";
 import { tabStore } from "@renderer/domains/workbench";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
 import { getRendererPlatform } from "@renderer/platform/platform";
 import { ContextMenu } from "@renderer/ui/components/ContextMenu";
+import { useDetectedExternalAppIds } from "../../hooks/useDetectedExternalAppIds";
 import { FileTree } from "./file-tree";
 import { FileTreeToolbar } from "./file-tree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "./file-tree/types";
 
-import { setExpandedFileTreeItems, setSelectedEntryPath } from "@renderer/domains/files";
-import { fileTreeStore } from "@renderer/domains/files";
 import { useWorkspaceGitRefreshVersion } from "@renderer/domains/git";
 import { useProjectLastUsedExternalAppId } from "@renderer/domains/project";
 import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { setExpandedFileTreeItems, setSelectedEntryPath } from "../../commands/fileTreeCommands";
 import {
   findExternalAppPreset,
   getExternalAppMenuEntries,
   isExternalAppPlatformSupported,
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
-} from "@renderer/domains/files";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+} from "../../model/externalApps";
+import { fileTreeStore } from "../../state/fileTreeStore";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";

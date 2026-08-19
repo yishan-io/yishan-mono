@@ -2,7 +2,6 @@ import { Box, IconButton, Tooltip } from "@mui/material";
 import { parseDiffFromFile } from "@pierre/diffs";
 import type { SelectedLineRange } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
-import { getDiffCssVariablesForPalette } from "@renderer/domains/files";
 import { editorSettingsStore } from "@renderer/domains/settings";
 import { useCodeTheme } from "@renderer/domains/settings";
 import { MONO_FONT_FAMILY } from "@renderer/ui/codeThemes";
@@ -16,6 +15,7 @@ import {
   LuStretchVertical,
   LuWrapText,
 } from "react-icons/lu";
+import { getDiffCssVariablesForPalette } from "../../ui/diffTheme";
 import { DiffSearchPanel } from "./DiffSearchPanel";
 import { isBinaryPath } from "./binaryExtensions";
 import { findDiffMatches } from "./diffSearch";

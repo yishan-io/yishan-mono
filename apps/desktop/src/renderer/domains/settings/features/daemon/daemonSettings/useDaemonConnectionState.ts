@@ -1,9 +1,9 @@
 import { subscribeDaemonInfoRefreshed } from "@renderer/domains/session";
-import type { DaemonInfoResult } from "@renderer/domains/settings";
-import { getDaemonInfo, restartDaemon as restartDaemonCommand } from "@renderer/domains/settings";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { DaemonInfoResult } from "../../../infrastructure/daemonHostCommands";
+import { getDaemonInfo, restartDaemon as restartDaemonCommand } from "../../../infrastructure/daemonHostCommands";
 import { closeTerminalTabsForDaemonRestart } from "./closeTerminalTabsForDaemonRestart";
 
 /** Manages daemon info loading, refresh, restart, and live update subscription state. */

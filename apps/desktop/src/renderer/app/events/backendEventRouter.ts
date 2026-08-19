@@ -1,5 +1,5 @@
-import type { DesktopRpcEventEnvelope } from "../../main/ipc";
-import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
+import type { DesktopRpcEventEnvelope } from "../../../main/ipc";
+import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
 import { type BackendEventName, type NormalizedBackendEvent, normalizeBackendEvent } from "./backendEventAdapter";
 
 type NormalizedBackendEventListener = (event: NormalizedBackendEvent) => void;

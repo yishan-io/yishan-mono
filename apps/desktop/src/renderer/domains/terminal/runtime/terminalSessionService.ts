@@ -10,7 +10,7 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../domains/terminal/commands/terminalCommands";
-import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
+import { subscribeDaemonConnectionStatus } from "../infrastructure/daemonTerminalClient";
 import {
   shouldClearTerminalOutputShortcut,
   shouldReleaseCommandWForTabCloseShortcut,

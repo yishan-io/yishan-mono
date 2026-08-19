@@ -1,4 +1,5 @@
 import { resetAgentLifecycleState } from "@renderer/domains/agent";
+import { openLink } from "@renderer/domains/browser";
 /**
  * Event composition — starts all feature event handlers and returns a
  * combined teardown. This replaces `backendEventStoreBindings.ts`.
@@ -14,8 +15,23 @@ import { createNotificationEventHandlers } from "@renderer/domains/notification"
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
 import { createWorkbenchEventHandlers } from "@renderer/domains/workbench";
 import { createWorkspaceEventHandlers } from "@renderer/domains/workspace";
-import { subscribeBackendEvent } from "../../events/backendEventRouter";
+import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
 import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
+import { subscribeBackendEvent } from "./backendEventRouter";
+
+/** Subscribes to webview new-window requests forwarded by the main process. */
+function subscribeWebviewOpenUrlHandler(): () => void {
+  return subscribeDesktopRpcEvent((event) => {
+    if (event.method !== "webviewOpenUrl") {
+      return;
+    }
+    const payload = event.payload as { url?: string } | undefined;
+    const url = payload?.url;
+    if (url) {
+      void openLink({ url });
+    }
+  });
+}
 
 /**
  * Starts all feature event handlers and returns one teardown function.
@@ -134,7 +150,9 @@ export function startBackendEventHandlers() {
       }),
   })();
 
+  const stopWebviewOpenUrl = subscribeWebviewOpenUrlHandler();
   return () => {
+    stopWebviewOpenUrl();
     stopWorkspaceEventHandlers();
     stopNotificationEventHandlers();
     stopTerminalEventHandlers();

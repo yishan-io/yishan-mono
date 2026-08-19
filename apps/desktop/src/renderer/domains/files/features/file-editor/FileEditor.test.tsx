@@ -52,21 +52,10 @@ const mockEditorState: {
   setThemeCalls: [] as string[],
 };
 
-vi.mock("@renderer/domains/files", () => ({
+vi.mock("../../infrastructure/monacoSetup", () => ({
   YISHAN_THEME_DARK: "yishan-dark",
   YISHAN_THEME_LIGHT: "yishan-light",
   ensureEditorThemes: vi.fn(),
-  getLanguageId: (path: string) => {
-    if (path.endsWith(".unknown")) return null;
-    if (path.endsWith(".ts")) return "typescript";
-    if (path.endsWith(".py")) return "python";
-    if (path.endsWith(".md") || path.endsWith(".mdx")) return "markdown";
-    return "plaintext";
-  },
-  isMarkdownFile: (path: string) => {
-    return path.endsWith(".md") || path.endsWith(".mdx");
-  },
-  isExcalidrawFile: (path: string) => path.endsWith(".excalidraw"),
   monaco: {
     KeyMod: { CtrlCmd: 2048 },
     KeyCode: { KeyS: 49, Escape: 9 },
@@ -138,7 +127,20 @@ vi.mock("@renderer/domains/files", () => ({
   },
 }));
 
-// Mock the git commands used by useGitGutterDecorations
+vi.mock("../../model/editorLanguage", () => ({
+  getLanguageId: (path: string) => {
+    if (path.endsWith(".unknown")) return null;
+    if (path.endsWith(".ts")) return "typescript";
+    if (path.endsWith(".py")) return "python";
+    if (path.endsWith(".md") || path.endsWith(".mdx")) return "markdown";
+    return "plaintext";
+  },
+  isMarkdownFile: (path: string) => {
+    return path.endsWith(".md") || path.endsWith(".mdx");
+  },
+  isExcalidrawFile: (path: string) => path.endsWith(".excalidraw"),
+}));
+
 vi.mock("../../../../domains/git/commands/gitCommands", () => ({
   readDiff: vi.fn(() => Promise.resolve({ oldContent: "", newContent: "" })),
 }));

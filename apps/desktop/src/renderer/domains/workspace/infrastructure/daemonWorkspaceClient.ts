@@ -5,8 +5,17 @@ import {
   readOptionalString,
   readOptionalStringArray,
 } from "../../../rpc/helpers";
-import { getDaemonTransport } from "../../../rpc/rpcTransport";
+import {
+  getDaemonTransport,
+  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromTransport,
+} from "../../../rpc/rpcTransport";
 import type { DaemonLocalFolder } from "../model/snapshotTypes";
+
+export function subscribeDaemonConnectionStatus(
+  listener: (status: "connected" | "connecting" | "disconnected") => void,
+): () => void {
+  return subscribeDaemonConnectionStatusFromTransport(listener);
+}
 
 /**
  * Workspace wire DTOs (desktop7 Phase 24). Owned by the Workspace Domain

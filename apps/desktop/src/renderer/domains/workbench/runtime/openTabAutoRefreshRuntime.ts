@@ -3,7 +3,7 @@ import type { readBranchComparisonDiff, readCommitDiff, readDiff, refreshDiffTab
 import { isFileNotFoundError } from "@shared/helpers/errorHelpers";
 import type { DiffTabSource } from "../../../domains/workbench/model/types";
 import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events";
-import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
+import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../infrastructure/daemonSubscriptions";
 
 export type RefreshableOpenTab =
   | {

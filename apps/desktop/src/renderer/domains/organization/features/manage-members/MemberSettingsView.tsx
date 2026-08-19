@@ -20,13 +20,13 @@ import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import type { OrganizationMemberRecord } from "../../../../api/types";
-import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../../../domains/organization";
 import { setSessionData as applySetSessionData } from "../../../../domains/session";
 import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../../domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
+import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
+import type { OrganizationMemberRecord } from "../../infrastructure/orgApi";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
 

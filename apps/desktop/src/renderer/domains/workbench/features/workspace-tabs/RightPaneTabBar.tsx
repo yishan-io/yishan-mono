@@ -1,10 +1,10 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
-import type { WorkspaceRightPaneTab } from "@renderer/domains/workbench";
 import { getRendererPlatform } from "@renderer/platform/platform";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { DARK_SURFACE_COLORS } from "../../../../theme";
+import type { WorkspaceRightPaneTab } from "../../state/layoutStore";
 import { PANE_HEADER_MIN_HEIGHT } from "./pane/PaneHeader";
 
 export type RightPaneTabDef = {

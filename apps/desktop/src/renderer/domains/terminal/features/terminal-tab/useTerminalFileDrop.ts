@@ -7,8 +7,8 @@ import {
   hasExternalFileDragIntent,
   resolveInternalFileTreeDragPaths,
 } from "@renderer/domains/files";
-import { getTerminalRuntime } from "@renderer/domains/terminal";
 import type { Terminal } from "@xterm/xterm";
+import { getTerminalRuntime } from "../../runtime/terminalRuntimeRegistry";
 import { escapePathsForShell } from "./terminalPathEscape";
 
 type UseTerminalFileDropOptions = {

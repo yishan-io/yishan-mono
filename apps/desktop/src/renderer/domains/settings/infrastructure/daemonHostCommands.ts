@@ -6,7 +6,7 @@
  * in the Settings Domain's infrastructure layer; `app/commands/appCommands`
  * re-exports them for app-level callers (e.g. session bootstrap).
  */
-import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
+import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 
 export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "../../../../main/ipc";
 

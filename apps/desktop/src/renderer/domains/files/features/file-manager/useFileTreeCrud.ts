@@ -1,4 +1,3 @@
-import { isAudioFile, isExcalidrawFile, isImageFile, isUnsupportedFileTab, isVideoFile } from "@renderer/domains/files";
 import {
   buildWorkspaceFileUrl,
   createFile,
@@ -10,9 +9,15 @@ import {
 } from "@renderer/domains/files/commands/fileCommands";
 import type { OpenTabInput, WorkbenchTab } from "@renderer/domains/workbench";
 import { writeClipboardText } from "@renderer/platform/clipboard";
-import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
-import type { WorkspaceFileEntry } from "@renderer/domains/files";
 import { useCallback, useRef } from "react";
+import {
+  isAudioFile,
+  isExcalidrawFile,
+  isImageFile,
+  isUnsupportedFileTab,
+  isVideoFile,
+} from "../../model/editorLanguage";
+import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID, type WorkspaceFileEntry } from "../../model/externalApps";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";

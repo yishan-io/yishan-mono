@@ -2,18 +2,18 @@ import { Box } from "@mui/material";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { consumeTerminalTabFocus } from "@renderer/domains/terminal";
+import { setSelectedTab as selectTab } from "@renderer/domains/workbench";
+import { memo, useEffect, useMemo, useRef } from "react";
+import { useHasPendingTerminalFocus } from "../../../../domains/terminal/hooks/useTerminalReadHooks";
+import { consumeTerminalTabFocus } from "../../commands/terminalCommands";
 import {
   attachTerminalRuntime,
   detachTerminalRuntime,
   ensureTerminalRuntime,
   getTerminalRuntime,
-  initTerminalSessionLifecycle,
   requestTerminalRuntimeFocus,
-} from "@renderer/domains/terminal";
-import { setSelectedTab as selectTab } from "@renderer/domains/workbench";
-import { memo, useEffect, useMemo, useRef } from "react";
-import { useHasPendingTerminalFocus } from "../../../../domains/terminal/hooks/useTerminalReadHooks";
+} from "../../runtime/terminalRuntimeRegistry";
+import { initTerminalSessionLifecycle } from "../../runtime/terminalSessionService";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";

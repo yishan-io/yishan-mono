@@ -1,14 +1,14 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
 import { useCallback, useRef, useState } from "react";
 import { LuChevronDown, LuFilePlus2, LuFolderPlus, LuRefreshCw } from "react-icons/lu";
+import { ContextMenu } from "../../../../../ui/components/ContextMenu";
+import type { ContextMenuEntry } from "../../../../../ui/components/ContextMenu";
 import {
   EXTERNAL_APP_MENU_ENTRIES,
   type ExternalAppId,
   type ExternalAppMenuEntry,
   findExternalAppPreset,
-} from "@renderer/domains/files";
-import { ContextMenu } from "../../../../../ui/components/ContextMenu";
-import type { ContextMenuEntry } from "../../../../../ui/components/ContextMenu";
+} from "../../../model/externalApps";
 
 type FileTreeToolbarProps = {
   createFileActionLabel: string;

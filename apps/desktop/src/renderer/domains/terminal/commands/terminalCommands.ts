@@ -10,7 +10,7 @@ import type {
 import type { TerminalDetectedPort } from "../infrastructure/daemonTerminalClient";
 
 export type { TerminalSessionSummary } from "../infrastructure/daemonTerminalClient";
-import { subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
+import { subscribeDesktopRpcEvent } from "../infrastructure/daemonTerminalClient";
 import { getTerminalRpc } from "../infrastructure/daemonTerminalClient";
 import type { DaemonTerminalClient } from "../infrastructure/daemonTerminalClient";
 

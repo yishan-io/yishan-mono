@@ -1,6 +1,6 @@
-import { appendBrowserHistory, loadBrowserHistory } from "@renderer/domains/browser";
-import type { BrowserHistoryGroup } from "@renderer/domains/browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { appendBrowserHistory, loadBrowserHistory } from "../../../infrastructure/browserHostCommands";
+import type { BrowserHistoryGroup } from "../../../infrastructure/browserHostCommands";
 
 export function useBrowserHistory() {
   const [historyGroups, setHistoryGroups] = useState<BrowserHistoryGroup[]>([]);

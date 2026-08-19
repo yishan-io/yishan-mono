@@ -1,4 +1,4 @@
-import { isExcalidrawFile } from "@renderer/domains/files";
+import { isExcalidrawFile } from "./editorLanguage";
 
 /**
  * Produces minimal placeholder content for a file tab opened without

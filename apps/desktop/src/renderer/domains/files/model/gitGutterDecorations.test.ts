@@ -12,7 +12,7 @@ import {
 } from "./gitGutterDecorations";
 import type { GitLineChange } from "./gitGutterDiff";
 
-vi.mock("@renderer/domains/files", () => ({
+vi.mock("../infrastructure/monacoSetup", () => ({
   monaco: {
     editor: {
       OverviewRulerLane: { Full: 7 },

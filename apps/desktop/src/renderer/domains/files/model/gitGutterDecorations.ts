@@ -1,5 +1,5 @@
-import { monaco } from "@renderer/domains/files";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
+import { monaco } from "../infrastructure/monacoSetup";
 import type { GitLineChange, GitLineChangeKind } from "./gitGutterDiff";
 
 // CSS class names injected for gutter decorations.

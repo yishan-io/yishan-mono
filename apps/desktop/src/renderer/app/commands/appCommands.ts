@@ -13,11 +13,11 @@ import {
 } from "@renderer/domains/settings";
 import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
+import { getDesktopBridge, getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import type { AuthStatusResult, DesktopUpdateEventPayload } from "../../../main/ipc";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
 import { rendererQueryClient } from "../../queryClient";
-import { getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
 
 /**
  * App command surface for desktop lifecycle: daemon control, auth, and

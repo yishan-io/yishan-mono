@@ -1,9 +1,9 @@
-import { listPullRequestHistory, refreshWorkspacePullRequest } from "@renderer/domains/git";
-import type { GitPullRequest } from "@renderer/domains/git";
 import { useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
 import { useEffect, useRef, useState } from "react";
-import type { WorkspacePullRequestRecord } from "../../../../api/types";
+import { listPullRequestHistory, refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
 import { useWorkspacePullRequestByWorkspaceId } from "../../hooks/useGitProjectionReadHooks";
+import type { WorkspacePullRequestRecord } from "../../infrastructure/workspacePullRequestApi";
+import type { GitPullRequest } from "../../model/gitPullRequestTypes";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;

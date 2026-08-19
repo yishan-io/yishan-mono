@@ -1,5 +1,5 @@
-import { createAllWorkspacesGitSyncRuntime } from "@renderer/domains/git";
 import { useEffect, useRef } from "react";
+import { createAllWorkspacesGitSyncRuntime } from "../runtime/allWorkspacesGitSyncRuntime";
 
 /**
  * Subscribes to git refresh version changes for ALL workspaces and triggers

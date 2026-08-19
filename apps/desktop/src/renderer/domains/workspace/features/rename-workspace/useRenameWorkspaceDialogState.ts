@@ -1,5 +1,5 @@
-import { renameWorkspace, renameWorkspaceBranch } from "@renderer/domains/workspace";
 import { useEffect, useRef, useState } from "react";
+import { renameWorkspace, renameWorkspaceBranch } from "../../commands/workspaceCommands";
 import type { WorkspaceItem } from "../../model/workspaceTypes";
 
 /**

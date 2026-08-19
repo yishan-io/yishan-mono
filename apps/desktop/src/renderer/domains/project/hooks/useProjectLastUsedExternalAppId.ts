@@ -1,4 +1,4 @@
-import type { ExternalAppId } from "@renderer/domains/project";
+import type { ExternalAppId } from "@renderer/domains/files";
 import { selectProjectLastUsedExternalAppIdFromState } from "../state/projectSelectors";
 import { projectStore } from "../state/projectStore";
 

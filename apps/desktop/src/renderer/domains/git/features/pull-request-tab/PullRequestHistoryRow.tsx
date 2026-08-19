@@ -1,10 +1,10 @@
 import { Box, Chip, Link, Stack, Typography } from "@mui/material";
-import type { WorkspacePullRequestRecord } from "@renderer/api/types";
 import { openLink } from "@renderer/domains/browser";
-import { BranchBadge } from "@renderer/domains/git";
-import { PullRequestIcon } from "@renderer/domains/git";
 import { useTranslation } from "react-i18next";
 import { LuArrowRight } from "react-icons/lu";
+import type { WorkspacePullRequestRecord } from "../../infrastructure/workspacePullRequestApi";
+import { BranchBadge } from "../../ui/BranchBadge";
+import { PullRequestIcon } from "../../ui/PullRequestIcon";
 
 interface PullRequestHistoryRowProps {
   pr: WorkspacePullRequestRecord;

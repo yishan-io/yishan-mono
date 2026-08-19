@@ -16,5 +16,11 @@ export {
   switchOrganization,
 } from "./commands/orgCommands";
 
+export type {
+  AddOrganizationMemberResponse,
+  OrganizationInviteRecord,
+  OrganizationMemberRecord,
+  OrganizationRecord,
+} from "@renderer/api/types";
 export { CreateOrganizationDialogView } from "./features/create-organization/CreateOrganizationDialogView";
 export { MemberSettingsView } from "./features/manage-members/MemberSettingsView";

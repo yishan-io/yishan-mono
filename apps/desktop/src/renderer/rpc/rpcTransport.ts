@@ -1,5 +1,6 @@
 import { delay } from "@renderer/async/delay";
-import type { DesktopBridge, DesktopHostBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
+import type { DesktopRpcEventEnvelope } from "../../main/ipc";
+import { getDesktopBridge, getDesktopHostBridge } from "../platform/hostBridge";
 import { DaemonClient } from "./daemonClient";
 import type { ApiNamespace } from "./daemonTypes";
 import type { ApiSubscriptionHandlers, DaemonRpcClient, DaemonTransport } from "./types";
@@ -212,25 +213,6 @@ function formatSubscriptionEventData(method: string, payload: unknown): unknown 
   }
 
   return payload;
-}
-
-/** Returns one preload-provided desktop bridge object when available. */
-export function getDesktopBridge(): DesktopBridge | undefined {
-  if (typeof window === "undefined") {
-    return undefined;
-  }
-
-  return (window as typeof window & { __YISHAN__?: DesktopBridge }).__YISHAN__;
-}
-
-/** Returns one preload-provided desktop host bridge for shell-only capabilities. */
-export function getDesktopHostBridge(): DesktopHostBridge {
-  const host = getDesktopBridge()?.host;
-  if (!host) {
-    throw new Error("Desktop host bridge is unavailable.");
-  }
-
-  return host;
 }
 
 /** Invokes one daemon procedure directly over websocket. */

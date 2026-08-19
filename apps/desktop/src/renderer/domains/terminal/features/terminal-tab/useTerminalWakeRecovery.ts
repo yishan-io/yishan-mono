@@ -1,5 +1,5 @@
-import { recoverAttachedTerminalRuntime } from "@renderer/domains/terminal";
 import { useCallback, useEffect, useRef } from "react";
+import { recoverAttachedTerminalRuntime } from "../../runtime/terminalRuntimeRegistry";
 
 const WAKE_RECOVERY_DELAY_MS = [100, 300] as const;
 

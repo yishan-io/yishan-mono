@@ -12,25 +12,19 @@ vi.mock("../../../git/commands/gitCommands", () => ({
 }));
 
 // Mock monaco-editor setup module; computeGitLineChanges stays real (pure diff logic).
-vi.mock("@renderer/domains/files", async () => {
-  const { computeGitLineChanges: realComputeGitLineChanges } = await import("../../model/gitGutterDiff");
-  return {
-    YISHAN_THEME_DARK: "yishan-dark",
-    YISHAN_THEME_LIGHT: "yishan-light",
-    computeGitLineChanges: realComputeGitLineChanges,
-    ensureEditorThemes: vi.fn(),
-    monaco: {
-      KeyCode: { Escape: 9 },
-      editor: {
-        MouseTargetType: {
-          GUTTER_LINE_DECORATIONS: 4,
-          CONTENT_VIEW_ZONE: 8,
-        },
-        OverviewRulerLane: { Right: 4, Full: 7 },
+vi.mock("../../infrastructure/monacoSetup", () => ({
+  ensureEditorThemes: vi.fn(),
+  monaco: {
+    KeyCode: { Escape: 9 },
+    editor: {
+      MouseTargetType: {
+        GUTTER_LINE_DECORATIONS: 4,
+        CONTENT_VIEW_ZONE: 8,
       },
+      OverviewRulerLane: { Right: 4, Full: 7 },
     },
-  };
-});
+  },
+}));
 
 // Mock Monaco editor types
 function createMockEditor() {

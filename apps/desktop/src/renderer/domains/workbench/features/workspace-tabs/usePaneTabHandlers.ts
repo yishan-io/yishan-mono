@@ -1,15 +1,15 @@
 import type { DesktopAgentKind } from "@renderer/domains/agent";
 import type { createNewWhiteboard, renameEntry } from "@renderer/domains/files";
+import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
 import type {
   closeTab,
   openTab,
   renameTab,
   renameTabsForEntryRename,
   setSelectedTab as selectTab,
-} from "@renderer/domains/workbench";
-import { useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
+} from "../../commands/tabCommands";
 import type { SplitDropRegion } from "./pane/SplitDropZone";
 import { resolveDropResult } from "./pane/SplitDropZone";
 import type { TabBarCreateOption } from "./pane/TabBar";

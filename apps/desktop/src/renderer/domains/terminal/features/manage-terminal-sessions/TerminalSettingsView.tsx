@@ -6,12 +6,13 @@ import { useTranslation } from "react-i18next";
 import { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } from "../../commands/terminalCommands";
 
 import { useProjects } from "@renderer/domains/project";
-import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "@renderer/domains/terminal";
 import { useWorkspaces } from "@renderer/domains/workspace";
 import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
+import type { TerminalSessionSummary } from "../../commands/terminalCommands";
+import type { TerminalSessionLifecycleEvent } from "../../infrastructure/daemonTerminalClient";
 
 /** Builds one stable map key for in-flight close action tracking. */
 function buildSessionActionKey(sessionId: string): string {

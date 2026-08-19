@@ -1,8 +1,8 @@
 import { Box, Stack } from "@mui/material";
-import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import { PaneLoadingBar } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
 import { useMemo, useState } from "react";
+import { refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
 import PullRequestChecksSection from "./PullRequestChecksSection";
 import PullRequestDeploymentsSection from "./PullRequestDeploymentsSection";
 import PullRequestEmptyState from "./PullRequestEmptyState";

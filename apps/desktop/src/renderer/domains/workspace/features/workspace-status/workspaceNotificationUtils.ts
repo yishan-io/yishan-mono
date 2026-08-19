@@ -1,5 +1,5 @@
 import type { WorkbenchTab } from "@renderer/domains/workbench";
-import type { RpcFrontendMessagePayload } from "@renderer/domains/workspace";
+import type { RpcFrontendMessagePayload } from "@renderer/events";
 
 export type InAppWorkspaceNotificationPayload = RpcFrontendMessagePayload<"notificationEvent">;
 

@@ -1,6 +1,6 @@
 import { Box, IconButton, Popover } from "@mui/material";
-import { PROJECT_ICON_OPTIONS } from "@renderer/domains/project";
 import type { Dispatch, SetStateAction } from "react";
+import { PROJECT_ICON_OPTIONS } from "../../../ui/projectIcons";
 import type { ProjectConfigDraft } from "../useProjectConfigFormState";
 
 type ProjectConfigIconPickerPopoverProps = {

@@ -8,16 +8,15 @@ const mocks = vi.hoisted(() => ({
   invokeDaemonProcedure: vi.fn(),
 }));
 
-vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
-  return {
-    ...actual,
-    invokeDaemonProcedure: mocks.invokeDaemonProcedure,
-    getDesktopHostBridge: vi.fn(() => ({
-      openLocalFolderDialog: mocks.openLocalFolderDialog,
-    })),
-  };
-});
+vi.mock("@renderer/platform/hostBridge", () => ({
+  getDesktopHostBridge: vi.fn(() => ({
+    openLocalFolderDialog: mocks.openLocalFolderDialog,
+  })),
+}));
+
+vi.mock("@renderer/rpc/rpcTransport", () => ({
+  invokeDaemonProcedure: mocks.invokeDaemonProcedure,
+}));
 
 describe("projectHostCommands", () => {
   it("opens a native folder picker through the host bridge", async () => {

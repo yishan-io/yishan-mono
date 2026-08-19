@@ -1,3 +1,4 @@
+import { listOrganizations } from "@renderer/domains/organization";
 /**
  * SessionCommands — the public command surface for the Session feature.
  *
@@ -11,14 +12,13 @@ import {
   onAuthExpired,
   resetAuthExpiredState as resetAuthExpiredStateFromApi,
 } from "../../../api/restClient";
-import { getCurrentUser } from "../infrastructure/sessionApi";
-import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../infrastructure/systemApi";
-import { listOrganizations } from "@renderer/domains/organization";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import {
-  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromRpc,
-  subscribeDesktopRpcEvent,
-} from "../../../rpc/rpcTransport";
+  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromSessionInfra,
+  subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromSessionInfra,
+} from "../infrastructure/daemonSessionProcedures";
+import { getCurrentUser } from "../infrastructure/sessionApi";
+import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../infrastructure/systemApi";
 
 /** Loads the session bootstrap payload (user, orgs, preferences). */
 export async function getSessionBootstrapData() {
@@ -64,7 +64,7 @@ function isDaemonInfo(value: unknown): value is DaemonInfoResult {
  * so hooks never subscribe to transport directly for daemon identity.
  */
 export function subscribeDaemonInfoRefresh(): () => void {
-  return subscribeDesktopRpcEvent((event) => {
+  return subscribeDesktopRpcEventFromSessionInfra((event) => {
     if (event.method !== "daemon.info.refreshed" || !isDaemonInfo(event.payload)) {
       return;
     }
@@ -82,7 +82,7 @@ export function subscribeDaemonInfoRefresh(): () => void {
  * daemonId/version into sessionStore.
  */
 export function subscribeDaemonInfoRefreshed(listener: (info: DaemonInfoResult) => void): () => void {
-  return subscribeDesktopRpcEvent((event) => {
+  return subscribeDesktopRpcEventFromSessionInfra((event) => {
     if (event.method !== "daemon.info.refreshed" || !isDaemonInfo(event.payload)) {
       return;
     }
@@ -97,5 +97,5 @@ export function subscribeDaemonInfoRefreshed(listener: (info: DaemonInfoResult) 
 export function subscribeDaemonConnectionStatus(
   listener: (status: "connected" | "connecting" | "disconnected") => void,
 ): () => void {
-  return subscribeDaemonConnectionStatusFromRpc(listener);
+  return subscribeDaemonConnectionStatusFromSessionInfra(listener);
 }

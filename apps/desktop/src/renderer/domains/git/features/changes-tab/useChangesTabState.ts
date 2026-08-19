@@ -1,5 +1,3 @@
-import { useWorkspaceGitRefreshVersion } from "@renderer/domains/git";
-import { listGitChanges, listGitCommitsToTarget } from "@renderer/domains/git";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { projectStore } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -8,6 +6,8 @@ import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listGitChanges, listGitCommitsToTarget } from "../../commands/gitCommands";
+import { useWorkspaceGitRefreshVersion } from "../../hooks/useGitProjectionReadHooks";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,

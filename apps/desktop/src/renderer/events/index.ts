@@ -1,27 +1,26 @@
 /**
- * Root event capability (desktop7 Phase 26).
+ * Root event capability (desktop7 Phase 26/27).
  *
- * Backend-event delivery (adapter → router → typed subscriptions) and the
- * cross-cutting tab/composer focus-intent bridges. Root-owned so Domains can
- * consume events without importing App (R15) and Workbench can signal focus
- * without importing product Domains (R11). Dependency rules: root `events`
- * may import root `rpc` and `shared` only; it must not import App, Domains,
- * API, or UI.
+ * Cross-cutting tab/composer focus-intent bridges plus the backend-event
+ * delivery facade. The transport-facing pipeline implementation lives in
+ * `app/events` (whitelisted to import root RPC); this module re-exports it so
+ * Domains consume events without importing App (R15) and Workbench signals
+ * focus without importing product Domains (R11). Dependency rules: root
+ * `events` may import App events, root `rpc`, and `shared` only; it must not
+ * import Domains, API, or UI.
  */
-export { ACTIONS, type AppAction, type AppActionPayload } from "../../shared/contracts/actions";
-
 export {
   BACKEND_EVENT_NAME_BY_SOURCE,
   normalizeBackendEvent,
   type BackendEventName,
   type NormalizedBackendEvent,
-} from "./backendEventAdapter";
+} from "../app/events/backendEventAdapter";
 export {
   createBackendEventPipeline,
   startBackendEventPipeline,
   subscribeAllBackendEvents,
   subscribeBackendEvent,
-} from "./backendEventRouter";
+} from "../app/events/backendEventRouter";
 export {
   subscribeAppActionEvent,
   subscribeInAppNotificationEvent,
@@ -29,7 +28,9 @@ export {
   type AppActionEventPayload,
   type InAppNotificationEventPayload,
   type WorkspaceChatEventPayload,
-} from "./backendEventRouter.selectors";
+} from "../app/events/backendEventRouter.selectors";
+export { ACTIONS, type AppAction, type AppActionPayload } from "../../shared/contracts/actions";
+export type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
 export {
   AGENT_CHAT_COMPOSER_FOCUS_EVENT,
   clearAgentChatComposerFocus,

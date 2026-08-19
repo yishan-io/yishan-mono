@@ -23,9 +23,12 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("@renderer/domains/project", () => ({
+vi.mock("../../commands/projectCommands", () => ({
   createProject: mocked.createProject,
   inspectLocalProjectSource: mocked.inspectLocalProjectSource,
+}));
+
+vi.mock("../../infrastructure/projectHostCommands", () => ({
   openLocalFolderDialog: mocked.openLocalFolderDialog,
 }));
 

@@ -43,6 +43,7 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
 }));
 
 vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
     Promise.resolve({
       createWorkspace: rpcMocks.createWorkspace,

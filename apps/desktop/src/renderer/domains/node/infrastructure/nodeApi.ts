@@ -1,4 +1,6 @@
 import type { NodeRecord } from "@renderer/api/types";
+
+export type { NodeRecord };
 import { requestJson } from "@renderer/api/restClient";
 
 /** Lists nodes available to one organization member. */

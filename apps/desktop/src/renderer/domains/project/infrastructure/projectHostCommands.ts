@@ -1,4 +1,5 @@
-import { getDesktopHostBridge, invokeDaemonProcedure } from "../../../rpc/rpcTransport";
+import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
+import { invokeDaemonProcedure } from "@renderer/rpc/rpcTransport";
 
 /**
  * Project host commands — external I/O for project worktree paths.

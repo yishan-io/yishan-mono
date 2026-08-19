@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
-import type { BrowserHistoryGroup } from "@renderer/domains/browser";
 import { LuGlobe } from "react-icons/lu";
+import type { BrowserHistoryGroup } from "../../infrastructure/browserHostCommands";
 
 type BlankViewProps = {
   historyGroups: BrowserHistoryGroup[];

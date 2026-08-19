@@ -1,4 +1,8 @@
-import { invokeDaemonProcedure } from "../../../rpc/rpcTransport";
+import {
+  invokeDaemonProcedure,
+  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromTransport,
+  subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport,
+} from "../../../rpc/rpcTransport";
 
 /**
  * Session procedure adapters (desktop7 Phase 26). The session Domain owns
@@ -31,6 +35,16 @@ export type LogoutOutput = {
 export type ReloadAuthConfigOutput = {
   ok: boolean;
 };
+
+export function subscribeDaemonConnectionStatus(
+  listener: (status: "connected" | "connecting" | "disconnected") => void,
+): () => void {
+  return subscribeDaemonConnectionStatusFromTransport(listener);
+}
+
+export function subscribeDesktopRpcEvent(listener: (event: { method: string; payload?: unknown }) => void): () => void {
+  return subscribeDesktopRpcEventFromTransport(listener);
+}
 
 export async function persistAuthTokens(input: PersistAuthTokensInput): Promise<{ ok: boolean }> {
   return (await invokeDaemonProcedure("app.persistAuthTokens", input)) as { ok: boolean };

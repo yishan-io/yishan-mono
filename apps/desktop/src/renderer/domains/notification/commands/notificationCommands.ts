@@ -1,3 +1,4 @@
+import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import { NOTIFICATION_PREFERENCES_STORAGE_KEY } from "../../../../shared/notifications/notificationConstants";
 import type {
   NotificationEventType,
@@ -11,7 +12,6 @@ import {
 import { requestJson } from "../../../api/restClient";
 import { selectCurrentUserNotificationPreferences } from "../../../domains/session";
 import { updateCurrentUserNotificationPreferences } from "../../../domains/session";
-import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
 
 /** Loads notification preferences from current session user, then falls back to local cache. */
 export async function getNotificationPreferences() {
