@@ -12,7 +12,7 @@ import {
 } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
-import type { ExternalAppId } from "../../../../../shared/contracts/externalApps";
+import type { ExternalAppId } from "@renderer/domains/workbench";
 import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/model/split-pane";
 import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
 import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";

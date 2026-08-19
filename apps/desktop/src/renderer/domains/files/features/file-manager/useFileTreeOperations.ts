@@ -6,8 +6,8 @@ import { getErrorMessage } from "@shared/helpers/errorHelpers";
 
 import { tabStore } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath, useWorkspaces } from "@renderer/domains/workspace";
-import type { ExternalAppId } from "@shared/contracts/externalApps";
-import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
+import type { ExternalAppId } from "@renderer/domains/files";
+import type { WorkspaceFileEntry } from "@renderer/domains/files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
 import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeHelpers";

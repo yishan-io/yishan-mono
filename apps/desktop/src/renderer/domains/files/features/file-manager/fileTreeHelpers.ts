@@ -1,5 +1,5 @@
 import { generateId } from "@renderer/ids/generateId";
-import type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "../../../../../shared/contracts/rpcRequestTypes";
+import type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "@renderer/domains/files";
 import type { ClipboardFilePayload } from "./clipboardSourceResolvers";
 
 export const LARGE_FILE_OPEN_THRESHOLD_BYTES = 2 * 1024 * 1024;

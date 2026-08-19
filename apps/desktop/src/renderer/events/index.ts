@@ -8,6 +8,8 @@
  * may import root `rpc` and `shared` only; it must not import App, Domains,
  * API, or UI.
  */
+export { ACTIONS, type AppAction, type AppActionPayload } from "../../shared/contracts/actions";
+
 export {
   BACKEND_EVENT_NAME_BY_SOURCE,
   normalizeBackendEvent,

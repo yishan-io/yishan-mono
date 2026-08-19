@@ -72,7 +72,6 @@ const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
 const BASELINE_COUNTS: Record<RuleName, number> = {
   "R1-value-api-rpc": 0,
   "R1-main": 0,
-  "R1b-shared-contracts": 19,
   R3: 0,
   R4: 0,
   "R5-cross-feature-internal": 0,
@@ -145,9 +144,8 @@ function resolveSpecifier(spec: string, fromFile: string): string | null {
 
 type Violation = { rule: RuleName; file: string; target: string };
 
-function scanViolations(): { violations: Violation[]; sharedContracts: Violation[] } {
+function scanViolations(): Violation[] {
   const violations: Violation[] = [];
-  const sharedContracts: Violation[] = [];
   const files = walkFiles(RENDERER_ROOT);
 
   for (const file of files) {
@@ -183,7 +181,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       }
       // ---- Rule 1b: @shared/contracts DTO imports from UI (report-only). ----
       if (isUi && relS.startsWith("contracts/")) {
-        sharedContracts.push({ rule: "R1b-shared-contracts", file: rel, target: imp.spec });
+        violations.push({ rule: "R1b-shared-contracts", file: rel, target: imp.spec });
       }
       // ---- Rule 3: pure Workbench domain (tabs, split-pane) stays framework-free. ----
       if (
@@ -362,7 +360,7 @@ function scanViolations(): { violations: Violation[]; sharedContracts: Violation
       }
     }
   }
-  return { violations, sharedContracts };
+  return violations;
 }
 
 function unbaselined(violations: Violation[], rule: RuleName): Violation[] {
@@ -378,10 +376,9 @@ function failureMessages(fresh: Violation[]): string[] {
 
 describe("renderer architecture dependency rules", () => {
   let violations: Violation[];
-  let sharedContracts: Violation[];
 
   beforeAll(() => {
-    ({ violations, sharedContracts } = scanViolations());
+    violations = scanViolations();
   });
 
   describe("R1: UI must not import transport implementations or main-process code", () => {
@@ -392,11 +389,10 @@ describe("renderer architecture dependency rules", () => {
     });
   });
 
-  describe("R1b: @shared/contracts DTO imports from UI (deferred, report-only)", () => {
-    it("stays at the recorded deferred baseline", () => {
-      // eslint-disable-next-line no-console
-      console.log(`[archtest] R1b @shared/contracts DTO imports (deferred): ${sharedContracts.length} imports`);
-      expect(sharedContracts.length).toBe(BASELINE_COUNTS["R1b-shared-contracts"]);
+  describe("R1b: @shared/contracts DTO imports from UI (desktop7 Phase 27, enforced)", () => {
+    it("reports no unbaselined violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R1b-shared-contracts"));
+      expect(messages, messages.join("\n")).toEqual([]);
     });
   });
 

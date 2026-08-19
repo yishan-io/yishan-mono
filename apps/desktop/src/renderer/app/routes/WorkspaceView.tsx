@@ -19,8 +19,8 @@ import { WorkspaceLifecycleNoticeView, resolveWorkspaceProjectId, workspaceStore
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ACTIONS } from "../../../shared/contracts/actions";
-import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../shared/contracts/externalApps";
+import { ACTIONS } from "../../events";
+import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
 import {
   type AgentCommandSurface,
   type AppCommandSurface,

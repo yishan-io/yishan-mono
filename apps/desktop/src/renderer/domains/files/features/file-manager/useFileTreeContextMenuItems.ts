@@ -1,4 +1,4 @@
-import type { ExternalAppId, ExternalAppMenuEntry } from "@shared/contracts/externalApps";
+import type { ExternalAppId, ExternalAppMenuEntry } from "@renderer/domains/files";
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
 import { buildWorkspaceFileTreeContextMenuItems } from "./buildWorkspaceFileTreeContextMenuItems";

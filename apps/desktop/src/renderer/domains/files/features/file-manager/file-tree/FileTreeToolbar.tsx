@@ -6,7 +6,7 @@ import {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   findExternalAppPreset,
-} from "../../../../../../shared/contracts/externalApps";
+} from "@renderer/domains/files";
 import { ContextMenu } from "../../../../../ui/components/ContextMenu";
 import type { ContextMenuEntry } from "../../../../../ui/components/ContextMenu";
 

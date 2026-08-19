@@ -13,6 +13,8 @@ export type {
   WorkspaceStatus,
 } from "./model/workspaceTypes";
 export { selectWorkspaces } from "./state/workspaceSelectors";
+export type { RpcFrontendMessagePayload } from "@shared/contracts/rpcSchema";
+
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
 export {
   activateWorkspacePane,

@@ -76,6 +76,20 @@ export {
 export { DiagramZoomOverlay } from "./ui/DiagramZoomOverlay";
 export { getDiffCssVariablesForPalette } from "./ui/diffTheme";
 
+export {
+  EXTERNAL_APP_MENU_ENTRIES,
+  SYSTEM_FILE_MANAGER_APP_ID,
+  findExternalAppPreset,
+  getExternalAppMenuEntries,
+  isExternalAppPlatformSupported,
+  isExternalAppPresetReliablyDetectableOnPlatform,
+  isExternalAppPresetSupportedOnPlatform,
+  type ExternalAppId,
+  type ExternalAppMenuEntry,
+  type ExternalAppPreset,
+} from "@shared/contracts/externalApps";
+export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
+
 export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
 export { markdownService } from "./ui/markdown/markdownService";
 export { useMarkdownStyles } from "./ui/markdown/markdownStyles";

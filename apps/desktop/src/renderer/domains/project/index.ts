@@ -55,6 +55,8 @@ export {
 // list rules, read surface, and the project-config/delete dialogs.
 export { CreateProjectDialogView } from "./features/create-project/CreateProjectDialogView";
 export { CreateProjectFormView } from "./features/create-project/CreateProjectFormView";
+export { SYSTEM_FILE_MANAGER_APP_ID, type ExternalAppId } from "@shared/contracts/externalApps";
+
 export { ProjectConfigDialogView } from "./features/project-config/ProjectConfigDialogView";
 export { ProjectDeleteDialogView } from "./features/project-delete/ProjectDeleteDialogView";
 export { useProjectDeletionFlow } from "./features/project-delete/useProjectDeletionFlow";

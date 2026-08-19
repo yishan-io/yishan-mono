@@ -7,7 +7,7 @@ import {
 } from "@renderer/domains/project";
 import { useMutation } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
-import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../../../shared/contracts/externalApps";
+import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/project";
 import { DEFAULT_ICON_BG_COLOR, type ProjectConfigDraft } from "./useProjectConfigFormState";
 
 type ProjectLike = {

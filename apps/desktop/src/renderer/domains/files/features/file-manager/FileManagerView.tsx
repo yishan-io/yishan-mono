@@ -21,7 +21,7 @@ import {
   isExternalAppPlatformSupported,
   isExternalAppPresetReliablyDetectableOnPlatform,
   isExternalAppPresetSupportedOnPlatform,
-} from "@shared/contracts/externalApps";
+} from "@renderer/domains/files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";

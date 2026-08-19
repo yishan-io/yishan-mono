@@ -60,6 +60,8 @@ export {
 } from "./state/workbenchNavigationStore";
 export { splitPaneStore, type SplitPaneStoreState } from "./state/splitPaneStore";
 export { findOppositePaneId } from "./model/split-pane";
+export type { ExternalAppId } from "@shared/contracts/externalApps";
+
 export { tabStore, type CloseTabOptions, type TabStoreState } from "./state/tabStore";
 export {
   layoutStore,

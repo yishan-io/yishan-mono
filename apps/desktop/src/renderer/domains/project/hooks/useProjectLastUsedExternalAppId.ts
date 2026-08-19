@@ -1,4 +1,4 @@
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
+import type { ExternalAppId } from "@renderer/domains/project";
 import { selectProjectLastUsedExternalAppIdFromState } from "../state/projectSelectors";
 import { projectStore } from "../state/projectStore";
 
