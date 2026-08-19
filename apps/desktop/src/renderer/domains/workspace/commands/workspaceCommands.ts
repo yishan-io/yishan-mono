@@ -4,6 +4,7 @@ import {
   requestSelectFolderInFileTree,
   requestUndo,
 } from "@renderer/domains/files";
+import { renameGitBranch } from "@renderer/domains/git";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import {
@@ -22,7 +23,6 @@ import {
 } from "@renderer/domains/workbench";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../model/localFolder";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
@@ -285,8 +285,7 @@ export async function renameWorkspaceBranch(input: {
   }
 
   try {
-    const client = await getDaemonClient();
-    await client.git.renameBranch({
+    await renameGitBranch({
       workspaceId: input.workspaceId,
       nextBranch: normalizedBranch,
     });

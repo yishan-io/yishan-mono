@@ -1,5 +1,4 @@
 import { generateId } from "../helpers/generateId";
-import { DaemonGitClient } from "./daemonGitClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
 import {
@@ -55,7 +54,6 @@ export class DaemonClient {
   private reconnectPromise: Promise<void> | null = null;
   private disposed = false;
 
-  private readonly _gitClient: DaemonGitClient;
   private readonly _terminalClient: DaemonTerminalClient;
 
   constructor(options: {
@@ -68,7 +66,6 @@ export class DaemonClient {
     const invoke = this.invoke.bind(this);
     const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
 
-    this._gitClient = new DaemonGitClient(invoke);
     this._terminalClient = new DaemonTerminalClient({
       invoke,
       resolveWorkspaceId,
@@ -91,28 +88,6 @@ export class DaemonClient {
   };
 
   readonly tokenUsage = {};
-
-  readonly git = {
-    inspect: (input: Rpc.GitInspectInput) => this._gitClient.inspect(input),
-    inspectPath: (input: Rpc.GitInspectPathInput) => this._gitClient.inspectPath(input),
-    listChanges: (input: Rpc.GitWorktreeInput) => this._gitClient.listChanges(input),
-    trackChanges: (input: Rpc.GitPathsInput) => this._gitClient.trackChanges(input),
-    unstageChanges: (input: Rpc.GitPathsInput) => this._gitClient.unstageChanges(input),
-    revertChanges: (input: Rpc.GitPathsInput) => this._gitClient.revertChanges(input),
-    commitChanges: (input: Rpc.GitCommitInput) => this._gitClient.commitChanges(input),
-    getBranchStatus: (input: Rpc.GitWorktreeInput) => this._gitClient.getBranchStatus(input),
-    listCommitsToTarget: (input: Rpc.GitTargetBranchInput) => this._gitClient.listCommitsToTarget(input),
-    getBranchDiffSummary: (input: Rpc.GitTargetBranchInput) => this._gitClient.getBranchDiffSummary(input),
-    readCommitDiff: (input: Rpc.GitCommitDiffInput) => this._gitClient.readCommitDiff(input),
-    readBranchComparisonDiff: (input: Rpc.GitBranchDiffInput) => this._gitClient.readBranchComparisonDiff(input),
-    listBranches: (input: Rpc.GitWorktreeInput) => this._gitClient.listBranches(input),
-    pushBranch: (input: Rpc.GitWorktreeInput) => this._gitClient.pushBranch(input),
-    publishBranch: (input: Rpc.GitWorktreeInput) => this._gitClient.publishBranch(input),
-    renameBranch: (input: Rpc.GitRenameBranchInput) => this._gitClient.renameBranch(input),
-    getAuthorName: (input: Rpc.GitWorktreeInput) => this._gitClient.getAuthorName(input),
-    mergePullRequest: (input: Rpc.GitPrMergeInput) => this._gitClient.mergePullRequest(input),
-    closePullRequest: (input: Rpc.GitPrCloseInput) => this._gitClient.closePullRequest(input),
-  };
 
   readonly terminal = {
     createSession: (input: Rpc.TerminalCreateSessionInput) => this._terminalClient.createSession(input),

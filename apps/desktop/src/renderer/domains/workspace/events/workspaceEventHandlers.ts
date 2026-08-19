@@ -12,12 +12,12 @@ import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpc
 
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion, setWorkspaceCurrentBranch, setWorkspacePullRequest } from "@renderer/domains/git";
+import { inspectGitRepository } from "@renderer/domains/git";
 import { openTab } from "@renderer/domains/workbench";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { buildWorkspaceCreatePlaceholder } from "../model/workspaceCreatePlaceholder";
 
@@ -98,8 +98,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
       return;
     }
     try {
-      const client = await getDaemonClient();
-      const result = await client.git.inspect({ workspaceId });
+      const result = await inspectGitRepository({ workspaceId });
       setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
     } catch {
       // Non-fatal: cache stays stale until the next gitChanged event.

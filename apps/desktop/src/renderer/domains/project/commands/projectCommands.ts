@@ -1,5 +1,6 @@
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
+import { inspectGitRepositoryPath } from "@renderer/domains/git";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
@@ -18,7 +19,6 @@ import {
   syncWorkspaceContextLinks,
 } from "../../../domains/workspace";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { type ProjectListPreference, getProjectRpc } from "../infrastructure/daemonProjectClient";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
 import { projectStore } from "../state/projectStore";
@@ -29,12 +29,7 @@ async function inspectLocalRepository(path: string): Promise<{
   currentBranch?: string;
 }> {
   try {
-    const client = await getDaemonClient();
-    const result = (await client.git.inspectPath({ path })) as {
-      isGitRepository: boolean;
-      remoteUrl?: string;
-      currentBranch?: string;
-    };
+    const result = await inspectGitRepositoryPath({ path });
 
     if (import.meta.env.DEV) {
       console.debug("[projectCommands] git.inspect result", { path, result });

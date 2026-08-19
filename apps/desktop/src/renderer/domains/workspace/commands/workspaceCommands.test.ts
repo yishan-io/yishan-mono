@@ -55,14 +55,17 @@ vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () =>
     }),
 }));
 
+vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
+  getGitRpc: () =>
+    Promise.resolve({
+      renameBranch: rpcMocks.renameGitBranch,
+    }),
+}));
+
 vi.mock("../../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    git: {
-      renameBranch: rpcMocks.renameGitBranch,
-    },
-  })),
+  getDaemonClient: vi.fn(async () => ({})),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();

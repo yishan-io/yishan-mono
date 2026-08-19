@@ -4,10 +4,10 @@ import { supportsGitFeatures } from "@renderer/domains/project";
 import { projectStore } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
+import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isWorkspaceNotFoundError } from "../../../../helpers/errorHelpers";
-import { isFolderWorkspace } from "@renderer/domains/workspace";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,

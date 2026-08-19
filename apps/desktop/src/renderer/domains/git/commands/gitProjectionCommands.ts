@@ -16,7 +16,7 @@ import {
  */
 import { api } from "../../../api";
 import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { getGitRpc } from "../infrastructure/daemonGitClient";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
@@ -82,14 +82,14 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
   }
 
   try {
-    const client = await getDaemonClient();
+    const gitRpc = await getGitRpc();
     const targetBranch = resolveWorkspaceTargetBranch(workspaceId);
 
     // Fetch uncommitted changes and (optionally) branch diff summary in parallel.
     const [sections, branchSummary] = await Promise.all([
-      client.git.listChanges({ workspaceId }),
+      gitRpc.listChanges({ workspaceId }),
       targetBranch
-        ? client.git.getBranchDiffSummary({ workspaceId, targetBranch }).catch(() => null)
+        ? gitRpc.getBranchDiffSummary({ workspaceId, targetBranch }).catch(() => null)
         : Promise.resolve(null),
     ]);
 

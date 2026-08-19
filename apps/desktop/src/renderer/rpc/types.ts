@@ -42,27 +42,6 @@ export type DaemonRpcClient = {
     setActiveProject: (projectId: string) => Promise<unknown>;
     setActiveFile: (filePath: string) => Promise<unknown>;
   };
-  git: {
-    inspect: (input: Rpc.GitInspectInput) => Promise<Rpc.GitInspectResponse>;
-    inspectPath: (input: Rpc.GitInspectPathInput) => Promise<Rpc.GitInspectResponse>;
-    listChanges: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitChangesBySection>;
-    trackChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
-    unstageChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
-    revertChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
-    commitChanges: (input: Rpc.GitCommitInput) => Promise<string>;
-    getBranchStatus: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitBranchStatusResponse>;
-    listCommitsToTarget: (input: Rpc.GitTargetBranchInput) => Promise<Rpc.GitCommitComparisonResponse>;
-    getBranchDiffSummary: (input: Rpc.GitTargetBranchInput) => Promise<Rpc.GitBranchDiffSummaryResponse>;
-    listBranches: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitBranchListResponse>;
-    pushBranch: (input: Rpc.GitWorktreeInput) => Promise<string>;
-    publishBranch: (input: Rpc.GitWorktreeInput) => Promise<string>;
-    getAuthorName: (input: Rpc.GitWorktreeInput) => Promise<string | null>;
-    readCommitDiff: (input: Rpc.GitCommitDiffInput) => Promise<Rpc.GitDiffContentResponse>;
-    readBranchComparisonDiff: (input: Rpc.GitBranchDiffInput) => Promise<Rpc.GitDiffContentResponse>;
-    renameBranch: (input: Rpc.GitRenameBranchInput) => Promise<Rpc.GitStatusOperationResponse>;
-    mergePullRequest: (input: Rpc.GitPrMergeInput) => Promise<{ output: string }>;
-    closePullRequest: (input: Rpc.GitPrCloseInput) => Promise<{ output: string }>;
-  };
   terminal: {
     createSession: (input: Rpc.TerminalCreateSessionInput) => Promise<Rpc.TerminalCreateSessionResponse>;
     writeInput: (input: Rpc.TerminalWriteInput) => Promise<Rpc.TerminalMutationOkResponse>;

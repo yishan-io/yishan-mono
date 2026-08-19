@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   getGitAuthorName: vi.fn(),
   getGitBranchStatus: vi.fn(),
   gitInspect: vi.fn(),
+  gitInspectPath: vi.fn(),
   listGitBranches: vi.fn(),
   listGitChanges: vi.fn(),
   listGitCommitsToTarget: vi.fn(),
@@ -34,6 +35,7 @@ const mocks = vi.hoisted(() => ({
   readBranchComparisonDiff: vi.fn(),
   readCommitDiff: vi.fn(),
   readDiff: vi.fn(),
+  renameGitBranch: vi.fn(),
   revertGitChanges: vi.fn(),
   trackGitChanges: vi.fn(),
   unstageGitChanges: vi.fn(),
@@ -46,15 +48,14 @@ vi.mock("../../../domains/files/infrastructure/daemonFileClient", () => ({
     }),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    git: {
+vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
+  getGitRpc: () =>
+    Promise.resolve({
       commitChanges: mocks.commitGitChanges,
       getBranchStatus: mocks.getGitBranchStatus,
       getAuthorName: mocks.getGitAuthorName,
       inspect: mocks.gitInspect,
+      inspectPath: mocks.gitInspectPath,
       listBranches: mocks.listGitBranches,
       listChanges: mocks.listGitChanges,
       listCommitsToTarget: mocks.listGitCommitsToTarget,
@@ -62,11 +63,17 @@ vi.mock("../../../rpc/rpcTransport", () => ({
       pushBranch: mocks.pushGitBranch,
       readBranchComparisonDiff: mocks.readBranchComparisonDiff,
       readCommitDiff: mocks.readCommitDiff,
+      renameBranch: mocks.renameGitBranch,
       revertChanges: mocks.revertGitChanges,
       trackChanges: mocks.trackGitChanges,
       unstageChanges: mocks.unstageGitChanges,
-    },
-  })),
+    }),
+}));
+
+vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  getDaemonClient: vi.fn(async () => ({})),
 }));
 
 describe("gitCommands", () => {
