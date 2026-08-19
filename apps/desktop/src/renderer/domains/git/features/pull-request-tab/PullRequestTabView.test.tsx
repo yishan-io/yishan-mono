@@ -21,7 +21,7 @@ vi.mock("@renderer/domains/git", async () => {
   };
 });
 
-import { gitProjectionStore } from "@renderer/domains/git";
+
 import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import type { GitPullRequest } from "@renderer/domains/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -330,3 +330,5 @@ describe("PullRequestTabView", () => {
     expect(screen.getByText("#41 Older merged PR")).toBeTruthy();
   });
 });
+
+import { gitProjectionStore } from "../../state/gitProjectionStore";

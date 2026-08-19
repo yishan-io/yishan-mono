@@ -1,7 +1,7 @@
 import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 
 import { projectStore } from "@renderer/domains/project";
-import { useSelectedProjectId } from "@renderer/domains/workspace";
+
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -13,6 +13,7 @@ import { DEFAULT_FORM_DRAFT, useScheduledJobFormState } from "../../hooks/useSch
 import { SCHEDULED_JOB_AGENT_KIND } from "../../scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
 import { sessionStore } from "@renderer/domains/session";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 
 type CreateScheduledJobFormViewProps = {
   onCreated: () => void;
@@ -28,7 +29,7 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
   const { t } = useTranslation();
   const orgId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
-  const selectedProjectId = useSelectedProjectId();
+  const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const projects = projectStore((state) => state.projects);
   const initialState = useMemo(
     () => ({ draft: { ...DEFAULT_FORM_DRAFT, projectId: selectedProjectId ?? "" }, ...createScheduleState }),

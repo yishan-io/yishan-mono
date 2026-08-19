@@ -4,7 +4,7 @@ import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { setSelectedTab as selectTab } from "@renderer/domains/workbench";
 import { memo, useEffect, useMemo, useRef } from "react";
-import { useHasPendingTerminalFocus } from "../../../../domains/terminal/hooks/useTerminalReadHooks";
+import { terminalFocusStore } from "../../state/terminalFocusStore";
 import { consumeTerminalTabFocus } from "../../commands/terminalCommands";
 import {
   attachTerminalRuntime,
@@ -18,6 +18,7 @@ import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { useTerminalWakeRecovery } from "./useTerminalWakeRecovery";
+
 
 type TerminalViewProps = {
   tabId: string;
@@ -47,7 +48,7 @@ export const TerminalView = memo(function TerminalView({ tabId, tabData, focusRe
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const hasPendingAutoFocus = useHasPendingTerminalFocus(tabId);
+  const hasPendingAutoFocus = terminalFocusStore((state) => state.pendingTabIds.has(tabId));
 
   // Stable refs that point into the registry entry — these survive remount.
   const xtermRef = useRef<Terminal | null>(null);

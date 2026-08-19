@@ -1,4 +1,5 @@
 import { workspaceStore } from "./workspaceStore";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 
 /**
  * Workspace feature selectors — the public read surface for Workspace State

@@ -2,7 +2,7 @@ import { recordWorkspaceUnreadNotification, setWorkspaceAgentStatusByWorkspaceId
 
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { selectWorkspaces } from "@renderer/domains/workspace";
+import {  selectWorkspaces, workspaceStore } from "@renderer/domains/workspace";
 /**
  * Notification event handlers — owns notification.event effects: preference-
  * backed delivery, suppression policy, effect dedupe, system notification copy

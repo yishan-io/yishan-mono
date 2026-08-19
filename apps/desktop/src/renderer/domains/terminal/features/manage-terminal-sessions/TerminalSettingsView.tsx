@@ -6,13 +6,14 @@ import { useTranslation } from "react-i18next";
 import { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } from "../../commands/terminalCommands";
 
 import { projectStore } from "@renderer/domains/project";
-import { useWorkspaces } from "@renderer/domains/workspace";
+
 import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
 import type { TerminalSessionSummary } from "../../commands/terminalCommands";
 import type { TerminalSessionLifecycleEvent } from "../../daemon/terminalWireTypes";
+import { workspaceStore } from "@renderer/domains/workspace";
 
 /** Builds one stable map key for in-flight close action tracking. */
 function buildSessionActionKey(sessionId: string): string {
@@ -85,7 +86,7 @@ function resolveSessionLocationLabel(input: {
 export function TerminalSettingsView() {
   const { t } = useTranslation();
   const projects = projectStore((state) => state.projects);
-  const workspaces = useWorkspaces();
+  const workspaces = workspaceStore((state) => state.workspaces);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [sessions, setSessions] = useState<TerminalSessionSummary[]>([]);

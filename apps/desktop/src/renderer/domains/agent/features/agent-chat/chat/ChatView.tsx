@@ -14,15 +14,12 @@ import {
   setChatCurrentModel,
   updateChatMessage,
 } from "../../../commands/chatCommands";
-import {
-  useChatAvailableModelsByTabId,
-  useChatCurrentModelByTabId,
-  useChatMessagesByTabId,
-} from "../../../hooks/useAgentChatReadHooks";
+import { chatStore } from "../../../state/chatStore";
 import type { DesktopAgentKind } from "../../../agentSettings";
 import type { AvailableModel, ChatMessage } from "../../../chatTypes";
 import { MessageList } from "./MessageList";
 import { RichComposer } from "./composer/RichComposer";
+
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({
@@ -69,10 +66,10 @@ type ChatViewProps = {
 export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: ChatViewProps) {
   const { t } = useTranslation();
 
-  const messagesByTabId = useChatMessagesByTabId();
+  const messagesByTabId = chatStore((state) => state.messagesByTabId);
   const messages = messagesByTabId[tabId] ?? EMPTY_MESSAGES;
-  const availableModelsByTabId = useChatAvailableModelsByTabId();
-  const currentModelByTabId = useChatCurrentModelByTabId();
+  const availableModelsByTabId = chatStore((state) => state.availableModelsByTabId);
+  const currentModelByTabId = chatStore((state) => state.currentModelByTabId);
   const [isSending, setIsSending] = useState(false);
   const [resolvedSessionId, setResolvedSessionId] = useState(sessionId);
   const activeAssistantMessageIdRef = useRef<string | null>(null);

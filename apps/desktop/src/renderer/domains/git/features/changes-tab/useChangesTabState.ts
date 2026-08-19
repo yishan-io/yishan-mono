@@ -6,7 +6,7 @@ import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listGitChanges, listGitCommitsToTarget } from "../../commands/gitCommands";
-import { useWorkspaceGitRefreshVersion } from "../../hooks/useGitProjectionReadHooks";
+import { gitProjectionStore } from "../../state/gitProjectionStore";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
@@ -26,6 +26,7 @@ import {
   reconcileRenameLikePairs,
   toCommitFile,
 } from "./changesTabHelpers";
+
 
 export { normalizeWorkspaceRelativePath } from "./changesTabHelpers";
 
@@ -68,7 +69,7 @@ export function useChangesTabState() {
     const raw = selectedWorkspace?.sourceBranch?.trim() || selectedProject?.defaultBranch?.trim() || "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
   }, [selectedWorkspace, selectedProject]);
-  const workspaceGitRefreshVersion = useWorkspaceGitRefreshVersion(selectedWorkspaceWorktreePath ?? "");
+  const workspaceGitRefreshVersion = gitProjectionStore((state) => { if (!(selectedWorkspaceWorktreePath ?? "")) { return 0; } return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath ?? ""] ?? 0; });
   const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}`;
   const selectedWorkspaceRequestKeyRef = useRef(selectedWorkspaceRequestKey);
   selectedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;

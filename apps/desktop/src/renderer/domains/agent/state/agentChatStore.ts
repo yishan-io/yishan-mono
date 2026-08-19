@@ -18,6 +18,7 @@ import type {
   AgentSubagentCancelState,
 } from "../agentChatTypes";
 
+
 type AgentSubagentProgressTarget = {
   agentName: string;
   agentId: string;
@@ -61,7 +62,7 @@ type AgentSessionData = {
   turnError: string | null;
 };
 
-type AgentChatStoreState = {
+export type AgentChatStoreState = {
   sessionsByTabId: Record<string, AgentSessionData>;
 
   // Actions
@@ -472,3 +473,4 @@ export const agentChatStore = create<AgentChatStoreState>()(
     },
   })),
 );
+

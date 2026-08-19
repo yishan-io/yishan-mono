@@ -1,11 +1,11 @@
 import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
-import { useWorkspaceAgentStatusByWorkspaceId, useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
-import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/domains/git";
+
+
 import { listOrgNodes } from "@renderer/domains/node";
 import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
 import type { WorkspaceItem } from "@renderer/domains/workspace";
-import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/domains/workspace";
+import {  setOrderedWorkspaceIds, workspaceStore } from "@renderer/domains/workspace";
 import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +14,8 @@ import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
 import { reconcileOrder } from "./workspaceNavigatorHelpers";
 import { sessionStore } from "@renderer/domains/session";
+import { gitProjectionStore } from "@renderer/domains/git";
+import { chatStore } from "@renderer/domains/agent";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;
@@ -58,11 +60,11 @@ export function useWorkspaceNavigatorTreeData(input: {
   } = input;
 
   const projects = projectStore((state) => state.projects);
-  const workspaces = useWorkspaces() ?? [];
+  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
-  const gitChangeTotalsByWorkspaceId = useWorkspaceGitChangeTotalsByWorkspaceId();
-  const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
-  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
+  const gitChangeTotalsByWorkspaceId = gitProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
+  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
+  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({

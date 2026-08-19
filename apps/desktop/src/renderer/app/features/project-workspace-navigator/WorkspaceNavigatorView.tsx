@@ -1,15 +1,12 @@
 import { Box } from "@mui/material";
-import {
-  markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead,
-  useWorkspaceUnreadToneByWorkspaceId,
-} from "@renderer/domains/agent";
+import {  markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead, chatStore } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
 import { deleteProject, projectStore, useProjectDeletionFlow } from "@renderer/domains/project";
 
-import { activateProject, activateWorkspace } from "@renderer/domains/workbench";
-import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
-import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
+import {  activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
+
+import {  WorkspaceDeleteDialogView, workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
 import { useWorkspaceDeletionFlow } from "@renderer/domains/workspace";
 import { useWorkspaceInfoHover } from "@renderer/domains/workspace";
@@ -52,11 +49,11 @@ import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderId
 export function WorkspaceNavigatorView() {
   const { t } = useTranslation();
   const projects = projectStore((state) => state.projects);
-  const workspaces = useWorkspaces() ?? [];
-  const selectedProjectId = useSelectedProjectId();
-  const selectedWorkspaceId = useSelectedWorkspaceId();
+  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
+  const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
-  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
+  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const markWorkspaceNotificationsRead = applyMarkWorkspaceNotificationsRead;
   const {
     menu: projectContextMenu,

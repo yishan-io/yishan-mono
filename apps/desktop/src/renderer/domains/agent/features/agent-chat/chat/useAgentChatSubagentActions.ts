@@ -1,7 +1,8 @@
+import { useShallow } from "zustand/react/shallow";
+import { agentChatStore } from "../../../state/agentChatStore";
 import { useCallback } from "react";
 import { fetchAgentMessages } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
-import { useAgentChatSubagentState } from "../../../hooks/useAgentChatReadHooks";
 import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../agentChatSubagents";
 import { selectAgentChatSession } from "../../../state/agentChatSelectors";
 
@@ -21,7 +22,16 @@ export function useAgentChatSubagentActions({
   paneId,
   sessionId,
 }: UseAgentChatSubagentActionsOptions) {
-  const { runningSubagents, subagentProgressTargets, subagentCancelStates } = useAgentChatSubagentState(tabId);
+  const { runningSubagents, subagentProgressTargets, subagentCancelStates } = agentChatStore(
+    useShallow((state) => {
+      const session = state.sessionsByTabId[tabId];
+      return {
+        runningSubagents: session?.runningSubagents ?? [],
+        subagentProgressTargets: session?.subagentProgressTargets ?? [],
+        subagentCancelStates: session?.subagentCancelStates ?? {},
+      };
+    }),
+  );
   const handleOpenSubagent = useCallback(
     async (subagent: RunningSubagentSummary) => {
       console.debug("[AgentChatView] subagent open requested", {

@@ -1,9 +1,12 @@
-import { useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
+
 import { useEffect, useRef, useState } from "react";
 import { listPullRequestHistory, refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
-import { useWorkspacePullRequestByWorkspaceId } from "../../hooks/useGitProjectionReadHooks";
+import { gitProjectionStore } from "../../state/gitProjectionStore";
 import type { WorkspacePullRequestRecord } from "../../api/workspacePullRequestApi";
 import type { GitPullRequest } from "../../gitPullRequestTypes";
+
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import { workspaceStore } from "@renderer/domains/workspace";
 
 export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;
@@ -16,9 +19,9 @@ export type WorkspacePullRequestState = {
 
 /** Returns live and historical pull request state for the currently selected workspace. */
 export function useWorkspacePullRequestState(enabled = true): WorkspacePullRequestState {
-  const selectedWorkspaceId = useSelectedWorkspaceId();
-  const pullRequest = useWorkspacePullRequestByWorkspaceId()[selectedWorkspaceId];
-  const workspace = useWorkspaces().find((w) => w.id === selectedWorkspaceId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
+  const pullRequest = gitProjectionStore((state) => state.pullRequestByWorkspaceId)[selectedWorkspaceId];
+  const workspace = workspaceStore((state) => state.workspaces).find((w) => w.id === selectedWorkspaceId);
 
   const [historicalPullRequests, setHistoricalPullRequests] = useState<WorkspacePullRequestRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);

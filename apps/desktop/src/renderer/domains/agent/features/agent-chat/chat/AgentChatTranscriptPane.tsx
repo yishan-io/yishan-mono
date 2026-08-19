@@ -2,7 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
-import { useAgentChatSession, useAgentChatSessions } from "../../../hooks/useAgentChatReadHooks";
+
 import type { AgentMessage, AgentModel, AgentQueueState } from "../../../agentChatTypes";
 import { formatSupportedThinkingLevels } from "../../../agentThinkingLevels";
 import { THINKING_LEVEL_LABELS } from "../session/ThinkingLevelControl";
@@ -76,8 +76,8 @@ function AgentChatTranscriptPane({
   emptyHelpPrefix,
 }: AgentChatTranscriptPaneProps) {
   const { t } = useTranslation();
-  const session = useAgentChatSession(tabId);
-  const sessions = useAgentChatSessions();
+  const session = agentChatStore((state) => state.sessionsByTabId[tabId]);
+  const sessions = agentChatStore((state) => state.sessionsByTabId);
   const messages = session?.messages ?? EMPTY_MESSAGES;
   const trailingMessage = session?.streamingMessage ?? null;
   const sessionState = session?.state ?? "starting";
@@ -146,3 +146,5 @@ function AgentChatTranscriptPane({
 /** Renders an agent session transcript and subagent-detail summary. */
 export const MemoizedAgentChatTranscriptPane = memo(AgentChatTranscriptPane);
 MemoizedAgentChatTranscriptPane.displayName = "AgentChatTranscriptPane";
+
+import { agentChatStore } from "../../../state/agentChatStore";

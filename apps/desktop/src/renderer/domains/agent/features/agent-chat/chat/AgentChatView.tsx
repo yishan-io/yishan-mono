@@ -6,7 +6,7 @@ import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
 import { setAgentChatStreamTabVisible } from "../../../events/agentChatPiEventShared";
-import { useAgentChatSession } from "../../../hooks/useAgentChatReadHooks";
+
 import { clearPendingUiAutoResponse, setPendingUiAutoResponse, setTurnError } from "../../../state/chatStateMutations";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
@@ -37,7 +37,7 @@ function AgentChatViewComponent({
   const isReadOnlySubagentDetail = sessionView === "subagent-detail";
   const foundTab = tabStore((state) => state.tabs.find((tab) => tab.id === tabId));
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
-  const session = useAgentChatSession(tabId);
+  const session = agentChatStore((state) => state.sessionsByTabId[tabId]);
   const hasSession = Boolean(session);
   const sessionState = session?.state ?? (hasSession ? "idle" : "starting");
   const messageCount = session?.messages.length ?? 0;
@@ -260,3 +260,5 @@ MemoizedAgentChatView.displayName = "AgentChatView";
 
 /** Full agent chat tab: transcript, composer, and model controls. */
 export const AgentChatView = MemoizedAgentChatView;
+
+import { agentChatStore } from "../../../state/agentChatStore";

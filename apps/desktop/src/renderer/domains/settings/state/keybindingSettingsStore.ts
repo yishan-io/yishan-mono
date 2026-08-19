@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
+
 export const KEYBINDING_SETTINGS_STORE_STORAGE_KEY = "yishan-keybinding-settings-store";
 
 export type KeybindingOverrideMap = Record<string, string>;
@@ -91,3 +92,4 @@ export const keybindingSettingsStore = create<KeybindingSettingsStoreState>()(
     },
   ),
 );
+

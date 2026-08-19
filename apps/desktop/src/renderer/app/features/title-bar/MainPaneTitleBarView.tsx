@@ -1,7 +1,7 @@
 import { Box, Button, Tooltip, Typography } from "@mui/material";
 import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
-import { useWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
-import { useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
+
+
 import { resolveWorkspaceNotificationColor } from "@renderer/domains/notification";
 
 import { projectStore, renderProjectIcon } from "@renderer/domains/project";
@@ -29,6 +29,7 @@ import {
   RepoSelectorMenu,
   WorkspaceSelectorMenu,
 } from "./mainPaneTitleBarMenus";
+import { chatStore } from "@renderer/domains/agent";
 
 /** Renders the main pane title bar with repo/workspace selectors and pane toggle controls. */
 export function MainPaneTitleBarView() {
@@ -39,8 +40,8 @@ export function MainPaneTitleBarView() {
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
-  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
+  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
+  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const { activateProject, activateWorkspace } = useWorkspaceCommands();
   const { openTab } = useWorkbenchCommands();
   const { updateProjectConfig } = useProjectCommands();

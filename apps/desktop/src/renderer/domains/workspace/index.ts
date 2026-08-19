@@ -15,64 +15,17 @@ export { selectWorkspaces } from "./state/workspaceSelectors";
 export type { RpcFrontendMessagePayload } from "@shared/contracts/rpcSchema";
 
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
-export {
-  activateWorkspacePane,
-  closeWorkspace,
-  createWorkspace,
-  deleteLocalFolder,
-  deleteSelectedFileTreeEntry,
-  focusWorkspaceFileTree,
-  openCreateWorkspaceDialog,
-  openWorkspaceFileSearch,
-  renameWorkspace,
-  renameWorkspaceBranch,
-  reorderWorkspace,
-  setDisplayRepoIds,
-  selectFolderInFileTree,
-  subscribeOpenCreateWorkspaceDialog,
-  toggleLeftPaneVisibility,
-  toggleRightPaneVisibility,
-  undoFileTreeOperation,
-  refreshWorkspacePullRequest,
-  resolveWorkspaceId,
-  syncWorkspaceContextLinks,
-} from "./commands/workspaceCommands";
-export {
-  createLocalFolderImport,
-  listLocalFolders,
-  openFoldersForSnapshot,
-  restoreFolderSelectionIfNeeded,
-} from "./commands/localFolderCommands";
-export {
-  buildWorkspaceOpenProjectEntries,
-  openWorkspaceEntries,
-  warmupWorkspacesForProjects,
-} from "./commands/workspaceWarmupCommand";
+export { activateWorkspacePane, closeWorkspace, createWorkspace, deleteLocalFolder, deleteSelectedFileTreeEntry, focusWorkspaceFileTree, openCreateWorkspaceDialog, openWorkspaceFileSearch, renameWorkspace, renameWorkspaceBranch, reorderWorkspace, setDisplayRepoIds, selectFolderInFileTree, subscribeOpenCreateWorkspaceDialog, toggleLeftPaneVisibility, toggleRightPaneVisibility, undoFileTreeOperation, refreshWorkspacePullRequest, resolveWorkspaceId, syncWorkspaceContextLinks } from "./commands/workspaceCommands";
+export { createLocalFolderImport, listLocalFolders, openFoldersForSnapshot, restoreFolderSelectionIfNeeded } from "./commands/localFolderCommands";
+export { buildWorkspaceOpenProjectEntries, openWorkspaceEntries, warmupWorkspacesForProjects } from "./commands/workspaceWarmupCommand";
 export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
 export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./workspaceTypes";
-export {
-  addWorkspace,
-  setOrderedWorkspaceIds,
-} from "./state/workspaceStateMutations";
-export {
-  workspaceCreateProgressStore,
-  type WorkspaceCreateProgressEntry,
-  type WorkspaceCreateProgressStep,
-  type WorkspaceCreateProgressStatus,
-} from "./state/workspaceCreateProgressStore";
-export {
-  useSelectedProjectId,
-  useSelectedWorkspaceId,
-  useSelectedWorkspaceWorktreePath,
-  useWorkspaces,
-} from "./hooks/useWorkspaceReadHooks";
+export { addWorkspace, setOrderedWorkspaceIds } from "./state/workspaceStateMutations";
+export { workspaceCreateProgressStore, type WorkspaceCreateProgressEntry, type WorkspaceCreateProgressStep, type WorkspaceCreateProgressStatus } from "./state/workspaceCreateProgressStore";
+
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export {
-  WORKSPACE_SETTINGS_STORE_STORAGE_KEY,
-  workspaceSettingsStore,
-  type WorkspaceSettingsStoreState,
-} from "./state/workspaceSettingsStore";
+export { WORKSPACE_SETTINGS_STORE_STORAGE_KEY, workspaceSettingsStore, type WorkspaceSettingsStoreState } from "./state/workspaceSettingsStore";
 export { selectIsDefaultContextEnabled } from "./state/workspaceSettingsSelectors";
 export { useWorkspaceBranchPrefixSettings } from "./hooks/useWorkspaceBranchPrefixSettings";
 export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./branchPrefix";
@@ -80,10 +33,7 @@ export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWor
 export { RenameWorkspaceDialogView } from "./features/rename-workspace/RenameWorkspaceDialogView";
 export { WorkspaceDeleteDialogView } from "./features/delete-workspace/WorkspaceDeleteDialogView";
 export { WorkspaceInfoPopperView } from "./features/workspace-status/WorkspaceInfoPopperView";
-export {
-  type PendingWorkspaceDeletion,
-  useWorkspaceDeletionFlow,
-} from "./features/delete-workspace/useWorkspaceDeletionFlow";
+export { type PendingWorkspaceDeletion, useWorkspaceDeletionFlow } from "./features/delete-workspace/useWorkspaceDeletionFlow";
 export { useWorkspaceInfoHover } from "./features/workspace-status/useWorkspaceInfoHover";
 export { enqueueWorkspaceErrorNotice } from "./state/workspaceLifecycleNoticeStore";
 export { WorkspaceErrorStateView } from "./features/workspace-status/WorkspaceErrorStateView";
@@ -92,12 +42,7 @@ export { createWorkspaceEventHandlers } from "./events/workspaceEventHandlers";
 // Workspace preferences + branch-naming settings (desktop7 Phase 23 — moved from Settings).
 export { WorkspaceSettingsView } from "./features/workspace-preferences/WorkspaceSettingsView";
 // Workspace display + local-folder model helpers (desktop7 Phase 24 — moved from root helpers).
-export {
-  LOCAL_WORKSPACE_DISPLAY_NAME,
-  resolveExplicitWorkspaceDisplayMetadata,
-  resolveHydratedWorkspaceDisplayMetadata,
-  resolveWorkspaceListDisplayName,
-} from "./workspaceDisplayNames";
+export { LOCAL_WORKSPACE_DISPLAY_NAME, resolveExplicitWorkspaceDisplayMetadata, resolveHydratedWorkspaceDisplayMetadata, resolveWorkspaceListDisplayName } from "./workspaceDisplayNames";
 export { isFolderWorkspace } from "./localFolder";
 
 export { BranchDropdown, type BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";

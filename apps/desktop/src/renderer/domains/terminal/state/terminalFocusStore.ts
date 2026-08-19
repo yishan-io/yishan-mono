@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+
 type TerminalFocusStoreState = {
   pendingTabIds: Set<string>;
   /** Records one new terminal tab that should receive focus after its view attaches. */
@@ -32,3 +33,4 @@ export const terminalFocusStore = create<TerminalFocusStoreState>((set, get) => 
     set((state) => ({ pendingTabIds: new Set([...state.pendingTabIds].filter((tabId) => openTabIds.has(tabId))) }));
   },
 }));
+

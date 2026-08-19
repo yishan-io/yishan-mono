@@ -1,6 +1,9 @@
+import { getCompactContextPercent } from "../../../agentChatUsageSummary";
+import { agentChatStore } from "../../../state/agentChatStore";
+import { useShallow } from "zustand/react/shallow";
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { searchFiles } from "@renderer/domains/files";
-import { useKeybindingOverrides } from "@renderer/domains/settings";
+
 import { tabStore } from "@renderer/domains/workbench";
 import { renameTab } from "@renderer/domains/workbench";
 import { TAB_FOCUS_REQUEST_EVENT, consumeTabFocus, getTabFocusRequest } from "@renderer/domains/workbench";
@@ -12,7 +15,6 @@ import { LuArrowUp, LuShrink } from "react-icons/lu";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
 import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";
-import { useAgentChatSessionMeta } from "../../../hooks/useAgentChatReadHooks";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../agentChatTypes";
 import { formatAgentSessionTitle } from "../../../agentSkillText";
 import { setTurnError } from "../../../state/chatStateMutations";
@@ -27,6 +29,7 @@ import { type DroppedFileEntry, RichComposer } from "./composer/RichComposer";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";
+import { keybindingSettingsStore } from "@renderer/domains/settings";
 
 const MAX_FILE_MENTION_RESULTS = 50;
 
@@ -62,10 +65,30 @@ function AgentChatComposerPaneComponent({
     messageCount,
     hasStreamingMessage,
     contextPercent,
-  } = useAgentChatSessionMeta(tabId);
+  } = agentChatStore(
+    useShallow((state) => {
+      const session = state.sessionsByTabId[tabId];
+      return {
+        sessionId: session?.sessionId ?? null,
+        sessionState: session?.state ?? "starting",
+        subagentSessionEndedAtMs: session?.subagentSessionEndedAtMs ?? null,
+        compactionReason: session?.compactionReason ?? null,
+        availableModels: session?.availableModels ?? [],
+        currentModel: session?.currentModel ?? null,
+        thinkingLevel: session?.thinkingLevel ?? "medium",
+        messageCount: session?.messages.length ?? 0,
+        hasStreamingMessage: Boolean(session?.streamingMessage),
+        contextPercent: getCompactContextPercent(
+          session?.messages ?? [],
+          session?.currentModel ?? null,
+          session?.sessionStats ?? null,
+        ),
+      };
+    }),
+  );
   const { runningSubagents, subagentProgressTargets, subagentCancelStates, handleOpenSubagent, handleCancelSubagent } =
     useAgentChatSubagentActions({ tabId, workspaceId, cwd, paneId, sessionId });
-  const shortcutOverrides = useKeybindingOverrides();
+  const shortcutOverrides = keybindingSettingsStore((state) => state.overridesById);
   const focusShortcutHint = useMemo(() => {
     const focusShortcutBinding = getSupportedKeyBindings(shortcutOverrides).find(
       (binding) => binding.id === "focus-agent-chat-composer",
