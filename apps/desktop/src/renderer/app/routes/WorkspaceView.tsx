@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
+import { AgentChatRecoveryCoordinator, listActivePiSessions } from "@renderer/domains/agent";
 import { SYSTEM_FILE_MANAGER_APP_ID, openEntryInExternalApp } from "@renderer/domains/files";
 import { gitProjectionStore, refreshWorkspaceGitChanges, useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { OverviewView } from "@renderer/domains/overview";
@@ -21,11 +21,9 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  type AgentCommandSurface,
   type AppCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
-  useAgentCommands,
   useAppCommands,
   useWorkbenchCommands,
   useWorkspaceCommands,
@@ -49,12 +47,12 @@ function clamp(value: number, min: number, max: number): number {
 
 type WorkspaceViewCommands = WorkspaceCommandSurface &
   WorkbenchCommandSurface &
-  AgentCommandSurface &
   AppCommandSurface & {
     listTerminalSessions: typeof listTerminalSessions;
     setActiveWorkspace: typeof setActiveWorkspace;
     openEntryInExternalApp: typeof openEntryInExternalApp;
     refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChanges;
+    listActivePiSessions: typeof listActivePiSessions;
   };
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
@@ -344,20 +342,19 @@ export function WorkspaceView() {
   // merge). Each per-feature hook already memoizes its surface.
   const workspaceCommands = useWorkspaceCommands();
   const workbenchCommands = useWorkbenchCommands();
-  const agentCommands = useAgentCommands();
   const appCommands = useAppCommands();
   const cmd: WorkspaceViewCommands = useMemo(
     () => ({
       ...workspaceCommands,
       ...workbenchCommands,
-      ...agentCommands,
       listTerminalSessions,
       setActiveWorkspace,
       openEntryInExternalApp,
       refreshWorkspaceGitChanges,
+      listActivePiSessions,
       ...appCommands,
     }),
-    [workspaceCommands, workbenchCommands, agentCommands, appCommands],
+    [workspaceCommands, workbenchCommands, appCommands],
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));

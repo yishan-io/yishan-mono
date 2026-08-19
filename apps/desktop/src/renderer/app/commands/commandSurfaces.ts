@@ -6,25 +6,6 @@ import type { ExternalAppId } from "@shared/contracts/externalApps";
  * `composition.ts` produce the concrete command objects.
  */
 
-import {
-  type appendChatMessages as appendChatMessagesCommand,
-  type closeAgentSession as closeAgentSessionCommand,
-  type createWorkspaceChatEventHandler as createWorkspaceChatEventHandlerCommand,
-  type ensureChatSession as ensureChatSessionCommand,
-  type getChatMessages as getChatMessagesCommand,
-  type listActivePiSessions as listActivePiSessionsCommand,
-  type listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
-  type listAgentModels as listAgentModelsCommand,
-  type listPiProviders as listPiProvidersCommand,
-  type openPiProviderLogin as openPiProviderLoginCommand,
-  type removePiProvider as removePiProviderCommand,
-  renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand,
-  type runChatPrompt as runChatPromptCommand,
-  type savePiProvider as savePiProviderCommand,
-  type setChatAvailableModels as setChatAvailableModelsCommand,
-  type setChatCurrentModel as setChatCurrentModelCommand,
-  type updateChatMessage as updateChatMessageCommand,
-} from "@renderer/domains/agent";
 import { tabStore } from "@renderer/domains/workbench";
 import {
   type activateProject as activateProjectCommand,
@@ -118,26 +99,6 @@ export type WorkspaceCommandSurface = {
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
   deleteLocalFolder: typeof deleteLocalFolderCommand;
-};
-
-/** Agent feature command surface. */
-export type AgentCommandSurface = {
-  listAgentDetectionStatuses: typeof listAgentDetectionStatusesCommand;
-  listAgentModels: typeof listAgentModelsCommand;
-  listPiProviders: typeof listPiProvidersCommand;
-  savePiProvider: typeof savePiProviderCommand;
-  removePiProvider: typeof removePiProviderCommand;
-  openPiProviderLogin: typeof openPiProviderLoginCommand;
-  ensureChatSession: typeof ensureChatSessionCommand;
-  runChatPrompt: typeof runChatPromptCommand;
-  closeAgentSession: typeof closeAgentSessionCommand;
-  getChatMessages: typeof getChatMessagesCommand;
-  appendChatMessages: typeof appendChatMessagesCommand;
-  updateChatMessage: typeof updateChatMessageCommand;
-  setChatAvailableModels: typeof setChatAvailableModelsCommand;
-  setChatCurrentModel: typeof setChatCurrentModelCommand;
-  createWorkspaceChatEventHandler: typeof createWorkspaceChatEventHandlerCommand;
-  listActivePiSessions: typeof listActivePiSessionsCommand;
 };
 
 /** Workbench feature command surface. */

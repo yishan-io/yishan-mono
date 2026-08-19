@@ -1,10 +1,8 @@
 import { useMemo } from "react";
 import {
-  type AgentCommandSurface,
   type AppCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
-  createAgentCommands,
   createAppCommands,
   createWorkbenchCommands,
   createWorkspaceCommands,
@@ -25,16 +23,11 @@ export function useWorkspaceCommands(): WorkspaceCommandSurface {
   return useMemo(() => createWorkspaceCommands(), []);
 }
 
-export function useAgentCommands(): AgentCommandSurface {
-  return useMemo(() => createAgentCommands(), []);
-}
-
 export function useWorkbenchCommands(): WorkbenchCommandSurface {
   return useMemo(() => createWorkbenchCommands(), []);
 }
 
 export type {
-  AgentCommandSurface,
   AppCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,

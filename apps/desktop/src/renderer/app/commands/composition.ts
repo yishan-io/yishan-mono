@@ -1,22 +1,4 @@
-import {
-  appendChatMessages as appendChatMessagesCommand,
-  closeAgentSession as closeAgentSessionCommand,
-  createWorkspaceChatEventHandler as createWorkspaceChatEventHandlerCommand,
-  ensureChatSession as ensureChatSessionCommand,
-  getChatMessages as getChatMessagesCommand,
-  listActivePiSessions as listActivePiSessionsCommand,
-  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
-  listAgentModels as listAgentModelsCommand,
-  listPiProviders as listPiProvidersCommand,
-  openPiProviderLogin as openPiProviderLoginCommand,
-  removePiProvider as removePiProviderCommand,
-  renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand,
-  runChatPrompt as runChatPromptCommand,
-  savePiProvider as savePiProviderCommand,
-  setChatAvailableModels as setChatAvailableModelsCommand,
-  setChatCurrentModel as setChatCurrentModelCommand,
-  updateChatMessage as updateChatMessageCommand,
-} from "@renderer/domains/agent";
+import { renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand } from "@renderer/domains/agent";
 import { createFileTabPlaceholder, seedFileTabContent as seedFileTabContentCommand } from "@renderer/domains/files";
 import { seedDiffTabContent as seedDiffTabContentCommand } from "@renderer/domains/git";
 import { projectStore } from "@renderer/domains/project";
@@ -76,7 +58,6 @@ import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspa
 
 /** App-level commands (Electron host, auth, app flows). */
 import type {
-  AgentCommandSurface,
   AppCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
@@ -112,27 +93,6 @@ export function createWorkspaceCommands(): WorkspaceCommandSurface {
     createWorkspace: createWorkspaceCommand,
     closeWorkspace: closeWorkspaceCommand,
     deleteLocalFolder: deleteLocalFolderCommand,
-  };
-}
-
-export function createAgentCommands(): AgentCommandSurface {
-  return {
-    listAgentDetectionStatuses: listAgentDetectionStatusesCommand,
-    listAgentModels: listAgentModelsCommand,
-    listPiProviders: listPiProvidersCommand,
-    savePiProvider: savePiProviderCommand,
-    removePiProvider: removePiProviderCommand,
-    openPiProviderLogin: openPiProviderLoginCommand,
-    ensureChatSession: ensureChatSessionCommand,
-    runChatPrompt: runChatPromptCommand,
-    closeAgentSession: closeAgentSessionCommand,
-    getChatMessages: getChatMessagesCommand,
-    appendChatMessages: appendChatMessagesCommand,
-    updateChatMessage: updateChatMessageCommand,
-    setChatAvailableModels: setChatAvailableModelsCommand,
-    setChatCurrentModel: setChatCurrentModelCommand,
-    createWorkspaceChatEventHandler: createWorkspaceChatEventHandlerCommand,
-    listActivePiSessions: listActivePiSessionsCommand,
   };
 }
 
@@ -187,7 +147,6 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
   };
 }
 export type {
-  AgentCommandSurface,
   AppCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
