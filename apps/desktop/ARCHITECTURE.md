@@ -220,14 +220,16 @@ normalize one Domain at a time.
 
 Execution moved to `refactor/desktop7.md` (Phases 21–27). D6–D16 are
 completed. Phase 22 closed the App→Domain R16 boundary (R16 = 0). Phase 23
-normalized Settings. Phase 24 is complete: workspace/workbench/project each
-pass the Domain Completion Method; the combined Project/Node/Workspace
-navigator moved to `app/features/project-workspace-navigator` (shell renamed
-`main-workspace-shell`); create/rename-workspace are split Features; the
-Project and Workspace RPC clients and DTOs moved to Domain Infrastructure
-over the root transport (`getDaemonTransport`), so root RPC no longer
-composes those clients. R1b is 19 (was 21; the navigator files left the UI
-scope). Root Helpers and root UI migration continues in Phases 25–26.
+normalized Settings. Phases 24–25 are complete: workspace/workbench/project and
+files/git/terminal/agent/browser each pass the Domain Completion Method; the
+combined Project/Node/Workspace navigator moved to
+`app/features/project-workspace-navigator`; create/rename-workspace are split
+Features; every Domain RPC client and DTO moved to Domain Infrastructure over
+the root transport (`getDaemonTransport`), so root RPC is now a pure transport
+core (connection, correlation, timeouts, raw subscriptions, binary frames) with
+zero domain clients or domain DTOs. Root helpers are down to 15 files. R1b is
+19 (was 21). Root helpers/UI/events/navigation/search/shortcuts/api residue
+closes in Phase 26.
 
 ## Root Migration Baselines (desktop7 Phase 21)
 
