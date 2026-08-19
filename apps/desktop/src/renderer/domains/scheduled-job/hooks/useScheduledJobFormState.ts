@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { listOrgNodes } from "../../../domains/node";
 import { type ScheduleType, toCronExpression } from "../scheduledJobScheduleRules";
-import { computeNextRunEstimate, describeCronExpression } from "../services/scheduledJobScheduleDisplay";
+import { computeNextRunEstimate, describeCronExpression } from "../scheduledJobScheduleDisplay";
 
 type ScheduledJobFormProject = {
   id: string;

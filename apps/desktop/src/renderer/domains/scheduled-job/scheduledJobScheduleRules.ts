@@ -5,7 +5,7 @@ import type { AgentKind } from "@yishan-io/core";
  *
  * Stable Domain semantics: the fixed agent kind for scheduled jobs and the
  * 5-field cron expression rules (parse / infer / to-cron). Next-run
- * estimates and human descriptions live in `../services/scheduledJobScheduleDisplay`
+ * estimates and human descriptions live in `./scheduledJobScheduleDisplay`
  * (desktop8 Phase 30).
  */
 
