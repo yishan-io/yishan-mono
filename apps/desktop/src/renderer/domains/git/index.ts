@@ -7,7 +7,7 @@ export type {
   GitPullRequestCheck,
   GitPullRequestDeployment,
   GitPullRequestSummary,
-} from "./gitPullRequestTypes";
+} from "./pull-request/gitPullRequestTypes";
 export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
 export { refreshDiffTabContent, removeDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
 export { commitGitChanges, getGitAuthorName, getGitBranchStatus, inspectGitRepository, inspectGitRepositoryPath, listGitBranches, listGitChanges, listGitCommitsToTarget, publishGitBranch, pushGitBranch, readBranchComparisonDiff, readCommitDiff, readDiff, renameGitBranch, revertGitChanges, trackGitChanges, unstageGitChanges } from "./commands/gitCommands";
@@ -28,6 +28,6 @@ export { BranchBadge } from "./ui/BranchBadge";
 export { PullRequestIcon } from "./ui/PullRequestIcon";
 export { ProjectCommitComparison } from "./features/project-git-changes/ProjectCommitComparison";
 
-export { livePrStatus } from "./gitPullRequestStatus";
+export { livePrStatus } from "./pull-request/gitPullRequestStatus";
 
 import { gitProjectionStore } from "./state/gitProjectionStore";

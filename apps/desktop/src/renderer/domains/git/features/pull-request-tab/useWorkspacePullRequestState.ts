@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { listPullRequestHistory, refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
 import { gitProjectionStore } from "../../state/gitProjectionStore";
 import type { WorkspacePullRequestRecord } from "../../api/workspacePullRequestApi";
-import type { GitPullRequest } from "../../gitPullRequestTypes";
+import type { GitPullRequest } from "../../pull-request/gitPullRequestTypes";
 
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";

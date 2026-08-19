@@ -9,7 +9,7 @@ import type { WorkspaceGitChangeTotals } from "@renderer/domains/workspace";
  */
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { GitPullRequest, GitPullRequestSummary } from "../gitPullRequestTypes";
+import type { GitPullRequest, GitPullRequestSummary } from "../pull-request/gitPullRequestTypes";
 
 
 export type GitProjectionStoreState = {

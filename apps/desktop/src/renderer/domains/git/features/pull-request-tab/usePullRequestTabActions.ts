@@ -2,7 +2,7 @@ import { closePullRequest, mergePullRequest } from "@renderer/domains/git/comman
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { type MouseEvent, useCallback, useState } from "react";
 import { setWorkspacePullRequest } from "../../commands/gitProjectionCommands";
-import type { GitPullRequest } from "../../gitPullRequestTypes";
+import type { GitPullRequest } from "../../pull-request/gitPullRequestTypes";
 import type { MergeMethod } from "./pullRequestTabHelpers";
 
 type PullRequestActionStatus = "closed" | "merged";
