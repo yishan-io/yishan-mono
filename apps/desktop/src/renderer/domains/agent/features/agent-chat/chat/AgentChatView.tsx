@@ -5,7 +5,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
-import { setAgentChatStreamTabVisible } from "../../../events/agentChatPiEventShared";
+import { setAgentChatStreamTabVisible } from "../../../subscriptions/agentChatPiEventShared";
 
 
 import { AgentChatComposerPane } from "./AgentChatComposerPane";

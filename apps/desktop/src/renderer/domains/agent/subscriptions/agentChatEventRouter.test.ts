@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   rawListeners: new Set<(envelope: { method: string; payload: unknown }) => void>(),
 }));
 
-vi.mock("../../../events/desktopRpcEventBus", () => ({
+vi.mock("@renderer/events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: mocks.subscribeDesktopRpcEvent,
 }));
 

@@ -3,7 +3,7 @@ import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
-import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
+import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 import { renamePiSession, sendPiCommand } from "../daemon/daemonAgentProcedures";
 import { isAgentSessionBusy } from "../agentChatTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";

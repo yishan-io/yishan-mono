@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
-import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";
+import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../agentChatTypes";
 import { formatAgentSessionTitle } from "../../../agentSkillText";
 

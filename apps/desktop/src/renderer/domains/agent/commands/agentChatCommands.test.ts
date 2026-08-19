@@ -35,7 +35,7 @@ vi.mock("@shared/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
 
-vi.mock("../events/agentChatEventRouter", () => ({
+vi.mock("../subscriptions/agentChatEventRouter", () => ({
   ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()),
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));

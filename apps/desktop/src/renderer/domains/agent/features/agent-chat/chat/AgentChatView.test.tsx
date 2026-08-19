@@ -210,7 +210,7 @@ vi.mock("../../../commands/agentChatCommands", () => ({
   restartAgentSessionForProvider: mocked.restartAgentSessionForProvider,
 }));
 
-vi.mock("../../../events/agentChatPiEventShared", () => ({
+vi.mock("../../../subscriptions/agentChatPiEventShared", () => ({
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
   setAgentModel: mocked.setAgentModel,
   setAgentThinkingLevel: mocked.setAgentThinkingLevel,

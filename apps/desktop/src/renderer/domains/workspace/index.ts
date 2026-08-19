@@ -36,7 +36,7 @@ export { useWorkspaceInfoHover } from "./features/workspace-status/useWorkspaceI
 export { enqueueWorkspaceErrorNotice } from "./state/workspaceLifecycleNoticeStore";
 export { WorkspaceErrorStateView } from "./features/workspace-status/WorkspaceErrorStateView";
 export { WorkspaceLifecycleNoticeView } from "./features/workspace-status/WorkspaceLifecycleNoticeView";
-export { createWorkspaceEventHandlers } from "./events/workspaceEventHandlers";
+export { createWorkspaceEventHandlers } from "./subscriptions/workspaceEventHandlers";
 // Workspace preferences + branch-naming settings (desktop7 Phase 23 — moved from Settings).
 export { WorkspaceSettingsView } from "./features/workspace-preferences/WorkspaceSettingsView";
 // Workspace display + local-folder model helpers (desktop7 Phase 24 — moved from root helpers).

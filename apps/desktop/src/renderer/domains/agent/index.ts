@@ -43,7 +43,7 @@ export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
 // Re-exported through the public API instead of the events module (Phase 17).
-export { setAgentChatStreamTabVisible, setAgentModel, setAgentThinkingLevel } from "./events/agentChatPiEventShared";
+export { setAgentChatStreamTabVisible, setAgentModel, setAgentThinkingLevel } from "./subscriptions/agentChatPiEventShared";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { AgentChatView } from "./features/agent-chat/chat/AgentChatView";

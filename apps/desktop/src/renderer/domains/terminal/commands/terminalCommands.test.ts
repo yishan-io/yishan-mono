@@ -45,7 +45,7 @@ vi.mock("../../../domains/terminal/daemon/daemonTerminalClient", () => ({
     }),
 }));
 
-vi.mock("../../../events/desktopRpcEventBus", () => ({
+vi.mock("@renderer/events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 

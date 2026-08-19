@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../commands/agentChatSubagentCommands";
-import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
+import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 import { agentChatStore } from "../state/agentChatStore";
 
 const initialAgentChatStoreState = agentChatStore.getState();
@@ -35,7 +35,7 @@ vi.mock("@shared/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
 
-vi.mock("../events/agentChatEventRouter", () => ({
+vi.mock("../subscriptions/agentChatEventRouter", () => ({
   ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()),
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));

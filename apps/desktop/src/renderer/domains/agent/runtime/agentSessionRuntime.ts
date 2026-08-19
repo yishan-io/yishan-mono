@@ -13,17 +13,17 @@ import { delay } from "@shared/async/delay";
  * React mounts attach UI to this Runtime; they do not own Pi process
  * lifecycle. UI-intent commands (`features/agent/commands/agentChatCommands.ts`)
  * delegate here; the Pi event decode adapter lives in
- * `features/agent/events/agentChatEventRouter.ts` and the reduction in
- * `features/agent/events/agentChatPiEventHandler.ts`.
+ * `features/agent/subscriptions/agentChatEventRouter.ts` and the reduction in
+ * `features/agent/subscriptions/agentChatPiEventHandler.ts`.
  *
  * Pi RPC sessions outlive React component mounts so that Strict Mode
  * double-mounts reuse the same Pi process instead of starting a second one.
  */
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
-import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
-import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
-import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../events/agentChatPiEventShared";
+import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
+import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
+import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 import {
   attachPiSession as attachPiSessionProcedure,
   sendPiCommand as sendPiCommandProcedure,

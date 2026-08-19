@@ -45,7 +45,7 @@ vi.mock("@renderer/rpc", () => ({
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../../events/desktopRpcEventBus", () => ({
+vi.mock("@renderer/events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 

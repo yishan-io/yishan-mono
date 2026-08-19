@@ -11,7 +11,7 @@ import {
   recordExplicitlyClosedTerminalTabId,
 } from "../../terminal/runtime/terminalCloseTombstones";
 
-import { createNotificationEventHandlers } from "../../notification/events/notificationEventHandlers";
+import { createNotificationEventHandlers } from "../../notification/subscriptions/notificationEventHandlers";
 import { clearTerminalAgentStatus } from "./agentSessionLifecycle";
 
 function createGitChangedHarness() {

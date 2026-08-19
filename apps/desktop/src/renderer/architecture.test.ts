@@ -253,7 +253,7 @@ function scanViolations(): Violation[] {
           relT.startsWith(`domains/${ownDomain}/features/`) ||
           relT.startsWith(`domains/${ownDomain}/hooks/`) ||
           relT.startsWith(`domains/${ownDomain}/commands/`) ||
-          relT.startsWith(`domains/${ownDomain}/events/`) ||
+          relT.startsWith(`domains/${ownDomain}/subscriptions/`) ||
           relT.startsWith(`domains/${ownDomain}/infrastructure/`) ||
           relT.startsWith(`domains/${ownDomain}/daemon/`) ||
           relT.startsWith(`domains/${ownDomain}/api/`) ||
@@ -329,7 +329,7 @@ function scanViolations(): Violation[] {
         const targetInternal =
           !isPublicStateSurface &&
           (relT.includes("/state/") ||
-            relT.includes("/events/") ||
+            relT.includes("/subscriptions/") ||
             relT.includes("/runtime/") ||
             /\/model\/[^/]*Store(\.ts)?$/.test(relT));
         if (targetInternal) {

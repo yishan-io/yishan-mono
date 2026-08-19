@@ -25,5 +25,5 @@ export { recordExplicitlyClosedTerminalTabId } from "./runtime/terminalCloseTomb
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { TerminalView } from "./features/terminal-tab/TerminalView";
-export { createTerminalEventHandlers } from "./events/terminalEventHandlers";
+export { createTerminalEventHandlers } from "./subscriptions/terminalEventHandlers";
 export { TerminalSettingsView } from "./features/manage-terminal-sessions/TerminalSettingsView";

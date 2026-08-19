@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { sendAgentPrompt } from "../commands/agentChatCommands";
-import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
-import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";
-import { registerAgentSession } from "../events/agentChatPiEventShared";
+import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
+import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
+import { registerAgentSession } from "../subscriptions/agentChatPiEventShared";
 import { agentChatStore } from "../state/agentChatStore";
 import { clearPiSessionHandle, ensurePiSession, stopPiSession } from "./agentSessionRuntime";
 
@@ -38,7 +38,7 @@ vi.mock("@shared/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
 
-vi.mock("../events/agentChatEventRouter", () => ({
+vi.mock("../subscriptions/agentChatEventRouter", () => ({
   ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()),
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));
