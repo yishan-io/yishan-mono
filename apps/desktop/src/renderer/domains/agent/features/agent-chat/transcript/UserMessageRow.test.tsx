@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage } from "../../../../../domains/agent/agentChatTypes";
+import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
 import { UserMessageRow } from "./UserMessageRow";
 
 vi.mock("react-i18next", () => ({

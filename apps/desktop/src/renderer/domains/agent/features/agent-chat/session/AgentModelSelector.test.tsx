@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentModel } from "../../../../../domains/agent/agentChatTypes";
+import type { AgentModel } from "../../../../../domains/agent/chat/agentChatTypes";
 import { AgentModelSelector } from "./AgentModelSelector";
 
 vi.mock("react-i18next", () => ({

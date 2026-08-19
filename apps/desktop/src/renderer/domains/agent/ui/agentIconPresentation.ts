@@ -1,4 +1,4 @@
-import type { DesktopAgentKind } from "../agentSettings";
+import type { DesktopAgentKind } from "../providers/agentSettings";
 
 /**
  * Agent icon and label presentation (desktop8 Phase 29).

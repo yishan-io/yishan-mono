@@ -2,7 +2,7 @@ import { Box, IconButton, Paper, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronUp } from "react-icons/lu";
-import type { AgentMessage } from "../../../../../domains/agent/agentChatTypes";
+import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
 import { UserMessageContent } from "./UserMessageContent";
 import { extractMessageText } from "./helpers";
 

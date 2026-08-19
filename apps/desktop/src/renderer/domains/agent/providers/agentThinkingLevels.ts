@@ -1,4 +1,4 @@
-import type { AgentModel } from "./agentChatTypes";
+import type { AgentModel } from "../chat/agentChatTypes";
 
 /**
  * Thinking levels in pi's canonical order (pi-ai EXTENDED_THINKING_LEVELS).

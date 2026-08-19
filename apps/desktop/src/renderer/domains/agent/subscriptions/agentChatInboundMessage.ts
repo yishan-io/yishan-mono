@@ -4,8 +4,8 @@ import {
   MAX_DETAILS_ITEMS,
   MAX_DETAILS_STRING_UTF8_BYTES,
   PER_MESSAGE_UTF8_BYTES,
-} from "../agentChatBudget";
-import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "../agentChatTypes";
+} from "../chat/agentChatBudget";
+import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "../chat/agentChatTypes";
 
 // Re-export for callers that import budget constants from this module.
 export {
@@ -13,7 +13,7 @@ export {
   MAX_DETAILS_ITEMS,
   MAX_DETAILS_STRING_UTF8_BYTES,
   PER_MESSAGE_UTF8_BYTES,
-} from "../agentChatBudget";
+} from "../chat/agentChatBudget";
 
 // ─── UTF-8 helpers ───────────────────────────────────────────────────────────
 

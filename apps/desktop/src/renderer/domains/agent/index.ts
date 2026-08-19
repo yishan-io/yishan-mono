@@ -13,16 +13,16 @@
  * the binding only after this statement executes; moving it later re-triggers
  * `createDefaultAgentInUseByKind is not a function`.
  */
-export { AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION, DEFAULT_AGENT_COMMANDS, SUPPORTED_DESKTOP_AGENT_KINDS, createDefaultAgentInUseByKind, isDesktopAgentKind, type DesktopAgentKind } from "./agentSettings";
+export { AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION, DEFAULT_AGENT_COMMANDS, SUPPORTED_DESKTOP_AGENT_KINDS, createDefaultAgentInUseByKind, isDesktopAgentKind, type DesktopAgentKind } from "./providers/agentSettings";
 export { AGENT_SETTINGS_LABEL_KEY_BY_KIND, AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND, getAgentIconPresentation, type AgentIconContext, type AgentIconPresentation, type AgentIconThemeMode } from "./ui/agentIconPresentation";
 
 export type { AgentModelInfo } from "./commands/agentCommands";
 export { listAgentDetectionStatuses, listAgentModels } from "./commands/agentCommands";
 export { listPiProviders, openPiProviderLogin, removePiProvider, savePiProvider, type PiProviderStatus } from "./commands/piProviderCommands";
 export { clearTerminalAgentStatus, parseObserverSessionKey, recordAgentObserverStatus, resetAgentLifecycleState } from "./commands/agentSessionLifecycle";
-export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./agentSkillText";
-export { THINKING_LEVELS, clampThinkingLevel, formatSupportedThinkingLevels, getSupportedThinkingLevels, isThinkingLevelSupported, type ThinkingLevel } from "./agentThinkingLevels";
-export { getPiProviderCatalogEntry, getPiProviderDisplayName, getPiProviderPinEnv, isKnownPiProviderId, isPiProviderApiKeyCapable, isPiProviderOAuthCapable, isPiProviderSubscriptionCapable, PI_PROVIDER_CATALOG, type PiProviderAuthMode, type PiProviderCatalogEntry } from "./piProviders";
+export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./skills/agentSkillText";
+export { THINKING_LEVELS, clampThinkingLevel, formatSupportedThinkingLevels, getSupportedThinkingLevels, isThinkingLevelSupported, type ThinkingLevel } from "./providers/agentThinkingLevels";
+export { getPiProviderCatalogEntry, getPiProviderDisplayName, getPiProviderPinEnv, isKnownPiProviderId, isPiProviderApiKeyCapable, isPiProviderOAuthCapable, isPiProviderSubscriptionCapable, PI_PROVIDER_CATALOG, type PiProviderAuthMode, type PiProviderCatalogEntry } from "./providers/piProviders";
 export { FALLBACK_PROVIDER_ICON, getPiProviderIcon, getPiProviderIconColor, getPiProviderVisual, type PiProviderVisual } from "./ui/piProviderVisuals";
 export { KimiIcon } from "./ui/piProviderIcons";
 export type {
@@ -37,8 +37,8 @@ export type {
   AgentSubagentCancelState,
   AgentThinkingSignature,
   AgentThinkingSignatureSummary,
-} from "./agentChatTypes";
-export { isAgentSessionBusy } from "./agentChatTypes";
+} from "./chat/agentChatTypes";
+export { isAgentSessionBusy } from "./chat/agentChatTypes";
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.

@@ -9,4 +9,4 @@ export {
   type ModelIdParts,
   type ModelPickerOption,
   type ModelPickerProviderGroup,
-} from "../../modelPicker";
+} from "../../providers/modelPicker";

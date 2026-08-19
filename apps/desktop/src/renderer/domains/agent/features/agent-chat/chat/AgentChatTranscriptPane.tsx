@@ -3,8 +3,8 @@ import { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
 
-import type { AgentMessage, AgentModel, AgentQueueState } from "../../../agentChatTypes";
-import { formatSupportedThinkingLevels } from "../../../agentThinkingLevels";
+import type { AgentMessage, AgentModel, AgentQueueState } from "../../../chat/agentChatTypes";
+import { formatSupportedThinkingLevels } from "../../../providers/agentThinkingLevels";
 import { THINKING_LEVEL_LABELS } from "../session/ThinkingLevelControl";
 import { AgentMessageList } from "../transcript/AgentMessageList";
 

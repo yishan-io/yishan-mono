@@ -2,7 +2,7 @@ import type {
   AgentContentBlock,
   AgentMessage,
   AgentThinkingSignature,
-} from "../../../../../domains/agent/agentChatTypes";
+} from "../../../../../domains/agent/chat/agentChatTypes";
 import { type AgentToolResultMap, extractMessageText } from "./helpers";
 
 /** One display message inside a turn (assistant messages with merged tool results). */

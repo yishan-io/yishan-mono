@@ -3,7 +3,7 @@ import { agentChatStore } from "../../../state/agentChatStore";
 import { useCallback } from "react";
 import { fetchAgentMessages } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
-import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../agentChatSubagents";
+import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../chat/agentChatSubagents";
 
 
 type UseAgentChatSubagentActionsOptions = {

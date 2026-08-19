@@ -1,4 +1,4 @@
-import { getCompactContextPercent } from "../../../agentChatUsageSummary";
+import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { useShallow } from "zustand/react/shallow";
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
@@ -15,8 +15,8 @@ import { LuArrowUp, LuShrink } from "react-icons/lu";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
 import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
-import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../agentChatTypes";
-import { formatAgentSessionTitle } from "../../../agentSkillText";
+import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../chat/agentChatTypes";
+import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 
 import { ProviderCredentialDialog } from "../../../ui/credentials/ProviderCredentialDialog";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";

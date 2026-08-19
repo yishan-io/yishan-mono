@@ -1,5 +1,5 @@
 import { Box, ButtonBase, Paper, Typography } from "@mui/material";
-import type { ChatMessage } from "../../../chatTypes";
+import type { ChatMessage } from "../../../chat/chatTypes";
 
 export type Message = ChatMessage;
 

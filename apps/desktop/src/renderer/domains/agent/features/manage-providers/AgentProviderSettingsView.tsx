@@ -11,7 +11,7 @@ import {
 } from "../../../../ui/components/SettingsPrimitives";
 import { listPiProviders } from "../../commands/piProviderCommands";
 import type { PiProviderStatus } from "../../commands/piProviderCommands";
-import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../piProviders";
+import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../providers/piProviders";
 import { ProviderMark } from "../../ui/ProviderMark";
 import { ProviderCredentialDialog } from "../../ui/credentials/ProviderCredentialDialog";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";

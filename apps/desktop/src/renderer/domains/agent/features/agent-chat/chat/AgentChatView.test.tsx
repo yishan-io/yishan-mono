@@ -3,7 +3,7 @@
 import { requestTabFocus } from "@renderer/domains/workbench";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage, AgentModel } from "../../../agentChatTypes";
+import type { AgentMessage, AgentModel } from "../../../chat/agentChatTypes";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { AgentChatView } from "./AgentChatView";
 

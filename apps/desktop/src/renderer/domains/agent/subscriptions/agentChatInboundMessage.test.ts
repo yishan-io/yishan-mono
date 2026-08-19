@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage } from "../agentChatTypes";
+import type { AgentMessage } from "../chat/agentChatTypes";
 import { flushAgentChatStreamBuffer, setAgentChatStreamTabVisible } from "../runtime/agentChatStreamBuffer";
 import { agentChatStore } from "../state/agentChatStore";
 import { MAX_DETAILS_ITEMS, MAX_DETAILS_STRING_UTF8_BYTES, PER_MESSAGE_UTF8_BYTES } from "./agentChatInboundMessage";

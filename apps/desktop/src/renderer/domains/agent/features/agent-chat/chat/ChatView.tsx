@@ -15,8 +15,8 @@ import {
   updateChatMessage,
 } from "../../../commands/chatCommands";
 import { chatStore } from "../../../state/chatStore";
-import type { DesktopAgentKind } from "../../../agentSettings";
-import type { AvailableModel, ChatMessage } from "../../../chatTypes";
+import type { DesktopAgentKind } from "../../../providers/agentSettings";
+import type { AvailableModel, ChatMessage } from "../../../chat/chatTypes";
 import { MessageList } from "./MessageList";
 import { RichComposer } from "./composer/RichComposer";
 

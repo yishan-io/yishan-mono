@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { AvailableCommand, AvailableModel, ChatMessage } from "../chatTypes";
+import type { AvailableCommand, AvailableModel, ChatMessage } from "../chat/chatTypes";
 
 
 export type WorkspaceAgentStatus = "running" | "waiting_input" | "idle";

@@ -1,6 +1,6 @@
 import { tabStore } from "@renderer/domains/workbench";
-import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../agentChatBudget";
-import type { AgentMessage, AgentModel } from "../agentChatTypes";
+import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../chat/agentChatBudget";
+import type { AgentMessage, AgentModel } from "../chat/agentChatTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import { isRecord, normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
 

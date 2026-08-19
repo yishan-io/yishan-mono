@@ -6,7 +6,7 @@ import { LuChevronDown } from "react-icons/lu";
 import type {
   AgentMessage as AgentMessageType,
   AgentQueueState,
-} from "../../../../../domains/agent/agentChatTypes";
+} from "../../../../../domains/agent/chat/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import { AgentChatEmptyState } from "./AgentChatEmptyState";
 import { AgentTurn } from "./AgentTurn";

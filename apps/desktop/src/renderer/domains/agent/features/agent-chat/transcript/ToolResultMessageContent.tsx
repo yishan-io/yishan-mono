@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import type { AgentMessage } from "../../../../../domains/agent/agentChatTypes";
+import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
 import { extractMessageText } from "./helpers";
 
 type ToolResultMessageContentProps = {
