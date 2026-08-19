@@ -1,7 +1,7 @@
 import { getFileName } from "@shared/path/pathHelpers";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 
-import type { DaemonLocalFolder } from "../../snapshotTypes";
+import type { DaemonLocalFolder } from "../../local-folder/snapshotTypes";
 import type { WorkspaceHealth, WorkspaceItem, WorkspaceLifecycleState } from "../../workspaceTypes";
 import type {
   WorkspaceStoreActions,

@@ -6,7 +6,7 @@ import {
   type GitBranchPrefixMode,
   normalizeGitBranchPrefixSegment,
   resolveGitBranchPrefix,
-} from "../branchPrefix";
+} from "../naming/branchPrefix";
 
 export const WORKSPACE_SETTINGS_STORE_STORAGE_KEY = "yishan-workspace-settings-store";
 const LEGACY_GIT_BRANCH_STORE_STORAGE_KEY = "yishan-git-branch-naming-store";
@@ -16,7 +16,7 @@ export {
   type GitBranchPrefixMode,
   normalizeGitBranchPrefixSegment,
   resolveGitBranchPrefix,
-} from "../branchPrefix";
+} from "../naming/branchPrefix";
 
 export type WorkspaceSettingsStoreState = {
   isDefaultContextEnabled: boolean;

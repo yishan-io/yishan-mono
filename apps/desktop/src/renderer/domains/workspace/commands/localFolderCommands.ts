@@ -6,8 +6,8 @@ import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId"
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
-import { isFolderWorkspace } from "../localFolder";
-import type { DaemonLocalFolder } from "../snapshotTypes";
+import { isFolderWorkspace } from "../local-folder/localFolder";
+import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
 /**

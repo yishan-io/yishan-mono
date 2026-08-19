@@ -19,7 +19,7 @@ import { workspaceCreateProgressStore } from "../../../domains/workspace/state/w
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { subscribeDaemonConnectionStatus } from "../daemon/daemonWorkspaceClient";
-import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
+import { buildWorkspaceCreatePlaceholder } from "../features/create-workspace/workspaceCreatePlaceholder";
 import { sessionStore } from "@renderer/domains/session";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;

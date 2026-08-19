@@ -2,7 +2,7 @@
 
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { describe, expect, it } from "vitest";
-import type { DaemonLocalFolder } from "../../snapshotTypes";
+import type { DaemonLocalFolder } from "../../local-folder/snapshotTypes";
 import { createLocalFolderActions } from "./actions.localFolders";
 
 type TestWorkspace = {

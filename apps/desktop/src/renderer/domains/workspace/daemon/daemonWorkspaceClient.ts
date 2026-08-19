@@ -5,7 +5,7 @@ import {
   readOptionalString,
   readOptionalStringArray,
 } from "@shared/validation/primitiveReaders";
-import type { DaemonLocalFolder } from "../snapshotTypes";
+import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
 import type {
   DaemonWorkspace,
   DaemonWorkspacePullRequest,

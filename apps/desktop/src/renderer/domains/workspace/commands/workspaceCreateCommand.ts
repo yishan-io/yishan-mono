@@ -4,7 +4,7 @@ import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { type WorkspaceLifecycleScriptWarning, enqueueWorkspaceErrorNotice, enqueueWorkspaceLifecycleWarnings } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
-import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
+import { buildWorkspaceCreatePlaceholder } from "../features/create-workspace/workspaceCreatePlaceholder";
 import { workspaceStore } from "../state/workspaceStore";
 import { workspaceSettingsStore } from "../state/workspaceSettingsStore";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";

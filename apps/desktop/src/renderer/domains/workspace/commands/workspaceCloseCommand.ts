@@ -6,7 +6,7 @@ import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/wo
 import type { WorkspaceLifecycleScriptWarning } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
-import { isFolderWorkspace } from "../localFolder";
+import { isFolderWorkspace } from "../local-folder/localFolder";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 import { sessionStore } from "@renderer/domains/session";

@@ -26,7 +26,7 @@ export { workspaceCreateProgressStore, type WorkspaceCreateProgressEntry, type W
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { WORKSPACE_SETTINGS_STORE_STORAGE_KEY, workspaceSettingsStore, type WorkspaceSettingsStoreState } from "./state/workspaceSettingsStore";
 export { useWorkspaceBranchPrefixSettings } from "./hooks/useWorkspaceBranchPrefixSettings";
-export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./branchPrefix";
+export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./naming/branchPrefix";
 export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWorkspaceDialogView";
 export { RenameWorkspaceDialogView } from "./features/rename-workspace/RenameWorkspaceDialogView";
 export { WorkspaceDeleteDialogView } from "./features/delete-workspace/WorkspaceDeleteDialogView";
@@ -40,7 +40,7 @@ export { createWorkspaceEventHandlers } from "./subscriptions/workspaceEventHand
 // Workspace preferences + branch-naming settings (desktop7 Phase 23 — moved from Settings).
 export { WorkspaceSettingsView } from "./features/workspace-preferences/WorkspaceSettingsView";
 // Workspace display + local-folder model helpers (desktop7 Phase 24 — moved from root helpers).
-export { LOCAL_WORKSPACE_DISPLAY_NAME, resolveExplicitWorkspaceDisplayMetadata, resolveHydratedWorkspaceDisplayMetadata, resolveWorkspaceListDisplayName } from "./workspaceDisplayNames";
-export { isFolderWorkspace } from "./localFolder";
+export { LOCAL_WORKSPACE_DISPLAY_NAME, resolveExplicitWorkspaceDisplayMetadata, resolveHydratedWorkspaceDisplayMetadata, resolveWorkspaceListDisplayName } from "./naming/workspaceDisplayNames";
+export { isFolderWorkspace } from "./local-folder/localFolder";
 
 export { BranchDropdown, type BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";

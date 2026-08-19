@@ -4,8 +4,8 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef, useState } from "react";
 import { listOrgNodes } from "../../../../domains/node";
 import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
-import { resolveGitBranchPrefix } from "../../branchPrefix";
-import type { GitBranchPrefixMode } from "../../branchPrefix";
+import { resolveGitBranchPrefix } from "../../naming/branchPrefix";
+import type { GitBranchPrefixMode } from "../../naming/branchPrefix";
 import type { BranchDropdownGroups } from "./BranchDropdown";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 import {

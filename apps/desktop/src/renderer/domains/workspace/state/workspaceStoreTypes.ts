@@ -11,7 +11,7 @@
  * baselined by the R6 allowlist.
  */
 import type { StateCreator } from "zustand";
-import type { DaemonLocalFolder } from "../snapshotTypes";
+import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
 import type { AddWorkspaceInput, WorkspaceItem } from "../workspaceTypes";
 
 export type WorkspaceStoreState = {
