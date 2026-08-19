@@ -7,11 +7,11 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
 } from "@renderer/domains/agent";
-import { agentSettingsStore } from "@renderer/domains/agent";
+import { setAgentInUse, useAgentKindsInUse } from "@renderer/domains/agent";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToolCommands";
-import {SettingsCard, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 
 type AgentCLISettingsCardProps = {
   statuses: CLIToolStatus[];
@@ -23,8 +23,7 @@ type AgentCLISettingsCardProps = {
 /** Renders the "other agents" section of the CLI page: detected agents with in-use toggles. */
 export function AgentCLISettingsCard({ statuses, isLoading, isRefreshing, hasLoadError }: AgentCLISettingsCardProps) {
   const { t } = useTranslation();
-  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
-  const setAgentInUse = agentSettingsStore((state) => state.setAgentInUse);
+  const inUseByAgentKind = useAgentKindsInUse();
 
   const statusByToolID = useMemo(() => {
     const nextMap = new Map<string, CLIToolStatus>();

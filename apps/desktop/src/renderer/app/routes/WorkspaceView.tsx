@@ -14,7 +14,7 @@ import { resizeLeftPane } from "@renderer/domains/workbench";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/domains/workbench";
 import { SplitPaneLayout } from "@renderer/domains/workbench";
 import { layoutStore } from "@renderer/domains/workbench";
-import { popupStore } from "@renderer/domains/workbench";
+import { selectIsPopupOpen } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { WorkspaceLifecycleNoticeView, resolveWorkspaceProjectId, workspaceStore } from "@renderer/domains/workspace";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -73,7 +73,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
   useEffect(() => {
     return subscribeAppActionEvent((payload) => {
-      if (payload.action !== ACTIONS.NAVIGATE && popupStore.getState().isPopupOpen) {
+      if (payload.action !== ACTIONS.NAVIGATE && selectIsPopupOpen()) {
         return;
       }
 

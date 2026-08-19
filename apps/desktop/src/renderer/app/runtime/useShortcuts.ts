@@ -1,12 +1,12 @@
+import { keybindingSettingsStore } from "@renderer/domains/settings";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { popupStore } from "@renderer/domains/workbench";
+import { useIsPopupOpen } from "@renderer/domains/workbench";
+import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCommands } from "../../app/commands/useCommands";
-import { keybindingSettingsStore } from "@renderer/domains/settings";
-import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
-import { workspaceStore } from "@renderer/domains/workspace";
 import { getShortcutDefinitions } from "../../shortcuts/keybindings";
 import { compileShortcutDefinitions } from "../../shortcuts/shortcutRunner";
 import { startShortcutRuntime } from "./shortcutRuntime";
@@ -22,7 +22,7 @@ export function useShortcuts(): void {
   const workspaceStoreState = workspaceStore((state) => state);
   const activeWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const splitPaneStoreState = splitPaneStore((state) => state);
-  const isPopupOpen = popupStore((state) => state.isPopupOpen);
+  const isPopupOpen = useIsPopupOpen();
   const commands = useCommands();
   const overridesById = keybindingSettingsStore((state) => state.overridesById);
   const isCaptureActive = keybindingSettingsStore((state) => state.isCaptureActive);

@@ -28,3 +28,8 @@ export const popupStore = create<PopupStoreState>()((set) => ({
     });
   },
 }));
+
+/** Reads whether one popup/dialog is currently open (Workbench public read model). */
+export function selectIsPopupOpen(): boolean {
+  return popupStore.getState().isPopupOpen;
+}

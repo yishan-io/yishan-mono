@@ -117,7 +117,9 @@ export {
 } from "./features/workspace-tabs/useWorkspaceTabPlacements";
 
 export { useDialogRegistration } from "./hooks/useDialogRegistration";
-export { popupStore, type PopupStoreState } from "./state/popupStore";
+export { selectIsPopupOpen } from "./state/popupStore";
+export type { PopupStoreState } from "./state/popupStore";
+export { useIsPopupOpen } from "./hooks/useIsPopupOpen";
 
 export { ConfirmationDialog } from "./ui/ConfirmationDialog";
 export { createWorkbenchEventHandlers } from "./events/workbenchEventHandlers";

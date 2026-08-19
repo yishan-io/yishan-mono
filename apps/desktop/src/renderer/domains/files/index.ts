@@ -28,7 +28,8 @@ export {
   setSelectedEntryPath,
 } from "./commands/fileTreeCommands";
 export { fileTreeStore, type FileTreeStoreState } from "./state/fileTreeStore";
-export { fileTabContentStore, type FileTabContentStoreState } from "./state/fileTabContentStore";
+export { useFileTabContents } from "./hooks/useFileTabContents";
+export type { FileTabContentStoreState } from "./state/fileTabContentStore";
 export { createNewWhiteboard, resolveNextWhiteboardPath } from "./commands/whiteboardCommands";
 export {
   markFileTabSaved,

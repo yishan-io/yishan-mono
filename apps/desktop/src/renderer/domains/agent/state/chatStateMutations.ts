@@ -48,3 +48,11 @@ export function setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId: Record
 export function recordWorkspaceUnreadNotification(workspaceId: string, tone: WorkspaceUnreadTone): void {
   chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
 }
+
+import type { DesktopAgentKind } from "../model/agentSettings";
+import { agentSettingsStore } from "./agentSettingsStore";
+
+/** Sets one desktop agent's in-use flag (Agent enablement State mutation). */
+export function setAgentInUse(agentKind: DesktopAgentKind, inUse: boolean): void {
+  agentSettingsStore.getState().setAgentInUse(agentKind, inUse);
+}

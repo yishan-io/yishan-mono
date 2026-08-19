@@ -2,7 +2,7 @@
 
 import "./CreateWorkspaceDialogView.testSetup";
 
-import { agentSettingsStore } from "@renderer/domains/agent";
+import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
 import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

@@ -7,7 +7,8 @@ export type {
   GitPullRequestDeployment,
   GitPullRequestSummary,
 } from "./model/gitPullRequestTypes";
-export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
+export { useDiffTabContents } from "./hooks/useDiffTabContents";
+export type { DiffTabContentStoreState } from "./state/diffTabContentStore";
 export { refreshDiffTabContent, removeDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
 export {
   commitGitChanges,

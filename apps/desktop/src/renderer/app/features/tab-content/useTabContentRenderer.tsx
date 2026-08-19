@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { AgentChatView } from "@renderer/domains/agent";
 import { BrowserView } from "@renderer/domains/browser";
-import { fileTabContentStore } from "@renderer/domains/files";
+import { useFileTabContents } from "@renderer/domains/files";
 import {
   AudioPreview,
   FileDiffViewer,
@@ -11,7 +11,7 @@ import {
   UnsupportedFileView,
   VideoPreview,
 } from "@renderer/domains/files";
-import { diffTabContentStore } from "@renderer/domains/git";
+import { useDiffTabContents } from "@renderer/domains/git";
 import { TerminalView } from "@renderer/domains/terminal";
 import { TabPanel } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
@@ -42,8 +42,8 @@ export function useTabContentRenderer({
   const { t } = useTranslation();
   // File/diff content lives in the owning module stores (W6 task 16); the
   // renderer subscribes here so content updates re-render the active tab.
-  const fileTabContents = fileTabContentStore((state) => state.byTabId);
-  const diffTabContents = diffTabContentStore((state) => state.byTabId);
+  const fileTabContents = useFileTabContents();
+  const diffTabContents = useDiffTabContents();
 
   return useCallback(
     (tab: WorkbenchTab, isSelected: boolean, isInActivePane: boolean) => {

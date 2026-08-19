@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { agentSettingsStore } from "@renderer/domains/agent";
+import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
 import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
