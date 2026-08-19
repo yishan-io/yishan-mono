@@ -21,9 +21,6 @@ import { delay } from "@shared/async/delay";
  */
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
-import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
-import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
-import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 import {
   attachPiSession as attachPiSessionProcedure,
   sendPiCommand as sendPiCommandProcedure,
@@ -31,6 +28,9 @@ import {
   stopPiSession as stopPiSessionProcedure,
 } from "../daemon/daemonAgentProcedures";
 import { agentChatStore } from "../state/agentChatStore";
+import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
+import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
+import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
 type PiSessionHandle = {

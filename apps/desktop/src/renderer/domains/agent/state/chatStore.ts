@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { AvailableCommand, AvailableModel, ChatMessage } from "../chat/chatTypes";
 
-
 export type WorkspaceAgentStatus = "running" | "waiting_input" | "idle";
 export type WorkspaceUnreadTone = "success" | "error";
 
@@ -231,4 +230,3 @@ export const chatStore = create<ChatStoreState>()(
     };
   }),
 );
-

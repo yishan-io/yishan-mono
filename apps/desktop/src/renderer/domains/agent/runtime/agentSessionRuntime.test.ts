@@ -4,10 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { sendAgentPrompt } from "../commands/agentChatCommands";
+import { agentChatStore } from "../state/agentChatStore";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 import { registerAgentSession } from "../subscriptions/agentChatPiEventShared";
-import { agentChatStore } from "../state/agentChatStore";
 import { clearPiSessionHandle, ensurePiSession, stopPiSession } from "./agentSessionRuntime";
 
 const initialAgentChatStoreState = agentChatStore.getState();

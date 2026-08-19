@@ -1,7 +1,6 @@
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 
-
 const MAX_TERMINAL_COMMAND_TITLE_LENGTH = 32;
 const ASCII_ESCAPE_CODE = 27;
 

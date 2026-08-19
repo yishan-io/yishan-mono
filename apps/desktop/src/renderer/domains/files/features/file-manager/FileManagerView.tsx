@@ -1,6 +1,6 @@
 import { Alert, Box } from "@mui/material";
-import {  listGitChanges, gitProjectionStore } from "@renderer/domains/git";
-import {  tabStore, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { gitProjectionStore, listGitChanges } from "@renderer/domains/git";
+import { tabStore, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
 import { getRendererPlatform } from "@renderer/platform/platform";
@@ -10,10 +10,9 @@ import { FileTree } from "./file-tree";
 import { FileTreeToolbar } from "./file-tree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "./file-tree/types";
 
-
-
 import { projectStore } from "@renderer/domains/project";
 
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { setExpandedFileTreeItems, setSelectedEntryPath } from "../../commands/fileTreeCommands";
@@ -33,7 +32,6 @@ import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
 import { useFileTreeGitChanges } from "./useFileTreeGitChanges";
 import { useFileTreeOperations } from "./useFileTreeOperations";
 import { useFileTreeSignalHandlers } from "./useFileTreeSignalHandlers";
-import { workspaceStore } from "@renderer/domains/workspace";
 type FileManagerViewProps = Record<string, never>;
 
 /** Renders file tree + quick-open and delegates file operations to useFileTreeOperations. */
@@ -44,8 +42,18 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
-  const selectedWorkspaceWorktreePath = workspaceStore((state) => state.workspaces.find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)?.worktreePath?.trim() ?? "");
-  const workspaceGitRefreshVersion = gitProjectionStore((state) => { if (!selectedWorkspaceWorktreePath) { return 0; } return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0; });
+  const selectedWorkspaceWorktreePath = workspaceStore(
+    (state) =>
+      state.workspaces
+        .find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)
+        ?.worktreePath?.trim() ?? "",
+  );
+  const workspaceGitRefreshVersion = gitProjectionStore((state) => {
+    if (!selectedWorkspaceWorktreePath) {
+      return 0;
+    }
+    return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
+  });
   const [fileManagerLastUsed, setFileManagerLastUsed] = useState(false);
   const detectedExternalAppIds = useDetectedExternalAppIds();
 

@@ -1,8 +1,7 @@
 import { readDiff as readWorkspaceFileDiff } from "@renderer/domains/files";
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
-
-import {  isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
+import { isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
 import type { GitChangesBySection } from "../daemon/daemonGitClient";
 import { getGitRpc } from "../daemon/daemonGitClient";
 
@@ -12,7 +11,9 @@ const gitAuthorNameByWorkspaceId = new Map<string, string | null>();
 
 /** Resolves a workspaceId from store when only a worktreePath is available (repo-root branch listing). */
 function resolveWorkspaceIdFromPath(workspaceWorktreePath: string): string {
-  const workspace = workspaceStore.getState().workspaces.find((item) => item.worktreePath?.trim() === workspaceWorktreePath);
+  const workspace = workspaceStore
+    .getState()
+    .workspaces.find((item) => item.worktreePath?.trim() === workspaceWorktreePath);
   if (!workspace?.id) {
     throw new Error(`workspaceId is required for worktree path: ${workspaceWorktreePath}`);
   }

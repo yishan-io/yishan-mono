@@ -18,7 +18,6 @@ import type {
   AgentSubagentCancelState,
 } from "../chat/agentChatTypes";
 
-
 type AgentSubagentProgressTarget = {
   agentName: string;
   agentId: string;
@@ -473,4 +472,3 @@ export const agentChatStore = create<AgentChatStoreState>()(
     },
   })),
 );
-

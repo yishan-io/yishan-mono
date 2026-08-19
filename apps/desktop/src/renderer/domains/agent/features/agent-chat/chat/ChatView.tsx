@@ -4,6 +4,7 @@ import { generateId } from "@shared/ids/generateId";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { subscribeWorkspaceChatEvent } from "../../../../../events";
+import type { AvailableModel, ChatMessage } from "../../../chat/chatTypes";
 import {
   appendChatMessages,
   createWorkspaceChatEventHandler,
@@ -14,12 +15,10 @@ import {
   setChatCurrentModel,
   updateChatMessage,
 } from "../../../commands/chatCommands";
-import { chatStore } from "../../../state/chatStore";
 import type { DesktopAgentKind } from "../../../providers/agentSettings";
-import type { AvailableModel, ChatMessage } from "../../../chat/chatTypes";
+import { chatStore } from "../../../state/chatStore";
 import { MessageList } from "./MessageList";
 import { RichComposer } from "./composer/RichComposer";
-
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({

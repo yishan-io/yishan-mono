@@ -3,7 +3,6 @@ import { generateId } from "@shared/ids/generateId";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { OpenTabInput, WorkbenchTab } from "../tabs";
-import { resolveSelectedTabIdForWorkspace } from "../tabs/selection";
 import {
   closeAllTabsState,
   closeAllTerminalTabsState,
@@ -17,6 +16,7 @@ import {
   setFileTabDirtyState,
   toggleTabPinnedState,
 } from "../tabs/index";
+import { resolveSelectedTabIdForWorkspace } from "../tabs/selection";
 
 export type CloseTabOptions = {
   /** Tab to select when the closed tab was the selected one (e.g. the remaining pane's selection). */

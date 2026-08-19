@@ -1,4 +1,4 @@
-import { clearTerminalAgentStatus, stopPiSession, chatStore } from "@renderer/domains/agent";
+import { chatStore, clearTerminalAgentStatus, stopPiSession } from "@renderer/domains/agent";
 import { removeFileTabContent } from "@renderer/domains/files";
 import { removeDiffTabContent } from "@renderer/domains/git";
 import { closeTerminalSession } from "@renderer/domains/terminal";

@@ -9,6 +9,7 @@ import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { sessionStore } from "@renderer/domains/session";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { createWorkspace } from "../../commands/workspaceCommands";
@@ -20,7 +21,6 @@ import { ProjectAndSourceBranchSection } from "./createWorkspaceDialog/ProjectAn
 import { TaskRunSection } from "./createWorkspaceDialog/TaskRunSection";
 import { useCreateWorkspaceDialogState } from "./useCreateWorkspaceDialogState";
 import { resolveTargetBranchForCreate } from "./workspaceBranchNaming";
-import { sessionStore } from "@renderer/domains/session";
 
 type CreateWorkspaceDialogViewProps = {
   open: boolean;

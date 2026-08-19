@@ -21,7 +21,6 @@ export {
   checkAuthStatus,
   getAccessToken,
   logoutFromDaemon,
-  persistAuthTokens,
   reloadAuthConfig,
   type CheckAuthStatusOutput,
   type GetAccessTokenOutput,
@@ -30,5 +29,3 @@ export {
   type ReloadAuthConfigOutput,
 } from "./daemon/daemonSessionProcedures";
 export { sessionStore } from "./state/sessionStore";
-
-export { useRemoteHealthQuery } from "./hooks/useRemoteHealthQuery";

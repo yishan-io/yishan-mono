@@ -2,11 +2,11 @@ import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useGitAuthorName } from "@renderer/domains/git";
 
 import { projectStore } from "@renderer/domains/project";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsCompactTextField } from "../../../../ui/components/SettingsCompactControls";
 import { SettingsCard, SettingsControlRow, SettingsRows } from "../../../../ui/components/SettingsPrimitives";
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import {
   type GitBranchPrefixMode,
   resolveGitBranchPrefix,

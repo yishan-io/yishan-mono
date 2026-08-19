@@ -1,6 +1,7 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
 
+import { sessionStore } from "@renderer/domains/session";
 import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";
 import {
   createScheduledJob as createScheduledJobFromApi,
@@ -12,7 +13,6 @@ import {
   runScheduledJobNow as runScheduledJobNowFromApi,
   updateScheduledJob as updateScheduledJobFromApi,
 } from "../api/scheduledJobApi";
-import { sessionStore } from "@renderer/domains/session";
 
 /**
  * Updates an existing scheduled job and refreshes the store entry on success.

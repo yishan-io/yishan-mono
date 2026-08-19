@@ -3,8 +3,8 @@ import type { ExternalAppId } from "@renderer/domains/files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/split-pane";
-import type { WorkbenchTab } from "../../../../domains/workbench/tabs";
 import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
+import type { WorkbenchTab } from "../../../../domains/workbench/tabs";
 import {
   closeAllTabs,
   closeOtherTabs,

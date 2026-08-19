@@ -3,9 +3,8 @@ import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
-import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
-import { renamePiSession, sendPiCommand } from "../daemon/daemonAgentProcedures";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
+import { renamePiSession, sendPiCommand } from "../daemon/daemonAgentProcedures";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import {
   clearPiSessionHandle,
@@ -19,6 +18,7 @@ import {
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
+import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the

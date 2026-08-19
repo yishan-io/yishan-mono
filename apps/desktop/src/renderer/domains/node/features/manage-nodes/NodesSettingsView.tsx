@@ -18,13 +18,13 @@ import type { OrganizationMemberRecord } from "@renderer/domains/organization";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { listOrganizationMembers } from "../../../../domains/organization";
 
+import { sessionStore } from "@renderer/domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
-import { listOrgNodes, unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
 import type { NodeRecord } from "../../api/nodeApi";
-import { sessionStore } from "@renderer/domains/session";
+import { listOrgNodes, unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
 
 function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {
   if (!node.ownerUserId) {

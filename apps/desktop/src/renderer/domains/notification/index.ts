@@ -9,7 +9,6 @@ export {
 } from "./ui/workspaceNotificationTone";
 
 export {
-  dispatchNotification,
   getNotificationPreferences,
   playNotificationSound,
   previewNotification,
@@ -20,7 +19,6 @@ export { createNotificationEventHandlers } from "./subscriptions/notificationEve
 // catalog (desktop7 Phase 23).
 export { NotificationSettingsView } from "./features/configure-notifications/NotificationSettingsView";
 export {
-  NOTIFICATION_SETTINGS_FOCUS_ITEM_IDS,
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
   isNotificationSettingsFocusItemId,
   type NotificationSettingsFocusItemId,

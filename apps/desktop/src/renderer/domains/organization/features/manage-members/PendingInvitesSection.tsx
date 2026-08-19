@@ -17,8 +17,8 @@ import { BiX } from "react-icons/bi";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
-import { cancelOrgInvite, listPendingInvites } from "../../commands/orgCommands";
 import type { OrganizationInviteRecord } from "../../api/orgApi";
+import { cancelOrgInvite, listPendingInvites } from "../../commands/orgCommands";
 
 interface PendingInvitesSectionProps {
   organizationId: string;

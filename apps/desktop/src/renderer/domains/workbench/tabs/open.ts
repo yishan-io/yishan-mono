@@ -1,5 +1,5 @@
-import type { OpenTabInput, WorkbenchTab, WorkbenchTabDataByKind } from "./types";
 import { findExistingTab } from "./shared";
+import type { OpenTabInput, WorkbenchTab, WorkbenchTabDataByKind } from "./types";
 import type { TabStoreStateSlice } from "./types";
 
 // ─── Tab-data builder (moved from features/workbench/tabs.ts) ──────────────────────────────

@@ -12,7 +12,7 @@ import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
  */
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 
-import {  isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
+import { isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
 import { refreshWorkspaceGitChanges } from "../commands/gitProjectionCommands";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 

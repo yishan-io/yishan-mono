@@ -1,5 +1,6 @@
 import { projectStore } from "@renderer/domains/project";
 
+import { sessionStore } from "@renderer/domains/session";
 import { useEffect, useState } from "react";
 import { useWorkspaceNavigatorPersistence } from "./useWorkspaceNavigatorPersistence";
 import {
@@ -9,7 +10,6 @@ import {
   type HierarchyMode,
   type OrderState,
 } from "./workspaceNavigatorPreferences";
-import { sessionStore } from "@renderer/domains/session";
 
 export type WorkspaceNavigatorFoldStateResult = {
   projectOrderIds: string[];

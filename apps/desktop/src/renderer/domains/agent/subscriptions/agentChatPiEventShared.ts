@@ -1,5 +1,4 @@
 import { generateId } from "@shared/ids/generateId";
-import { sendPiCommand } from "../daemon/daemonAgentProcedures";
 import type {
   AgentMessage,
   AgentModel,
@@ -7,6 +6,7 @@ import type {
   AgentSessionStats,
   AgentStreamEvent,
 } from "../chat/agentChatTypes";
+import { sendPiCommand } from "../daemon/daemonAgentProcedures";
 import {
   flushAgentChatStreamBuffer,
   peekAgentChatStreamMessage,

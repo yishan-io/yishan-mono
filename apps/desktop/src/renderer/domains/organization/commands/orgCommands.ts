@@ -1,9 +1,8 @@
 import { closeOverlayPanel } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
-
+import { sessionStore } from "@renderer/domains/session";
 import { rendererQueryClient } from "../../../queryClient";
-import { setCurrentOrganization } from "../daemon/daemonOrganizationProcedures";
 import {
   addOrganizationMember,
   cancelOrganizationInvite,
@@ -14,7 +13,7 @@ import {
   listOrganizations as listOrganizationsFromApi,
   removeOrganizationMember as removeOrganizationMemberFromApi,
 } from "../api/orgApi";
-import { sessionStore } from "@renderer/domains/session";
+import { setCurrentOrganization } from "../daemon/daemonOrganizationProcedures";
 
 const errNoOrgSelected = "No organization selected.";
 

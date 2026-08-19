@@ -1,10 +1,9 @@
-import { useShallow } from "zustand/react/shallow";
-import { agentChatStore } from "../../../state/agentChatStore";
 import { useCallback } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../chat/agentChatSubagents";
 import { fetchAgentMessages } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
-import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../chat/agentChatSubagents";
-
+import { agentChatStore } from "../../../state/agentChatStore";
 
 type UseAgentChatSubagentActionsOptions = {
   tabId: string;

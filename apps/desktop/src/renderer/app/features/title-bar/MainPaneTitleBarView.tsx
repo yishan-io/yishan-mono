@@ -1,9 +1,9 @@
 import { Box, Button, Tooltip, Typography } from "@mui/material";
 import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 
-
 import { resolveWorkspaceNotificationColor } from "@renderer/domains/notification";
 
+import { chatStore } from "@renderer/domains/agent";
 import { projectStore, renderProjectIcon } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -29,7 +29,6 @@ import {
   RepoSelectorMenu,
   WorkspaceSelectorMenu,
 } from "./mainPaneTitleBarMenus";
-import { chatStore } from "@renderer/domains/agent";
 
 /** Renders the main pane title bar with repo/workspace selectors and pane toggle controls. */
 export function MainPaneTitleBarView() {

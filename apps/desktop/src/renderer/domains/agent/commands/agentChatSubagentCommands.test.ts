@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../commands/agentChatSubagentCommands";
-import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 import { agentChatStore } from "../state/agentChatStore";
+import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();

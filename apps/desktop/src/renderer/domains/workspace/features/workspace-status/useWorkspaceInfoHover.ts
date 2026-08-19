@@ -2,8 +2,8 @@ import { setWorkspaceCurrentBranch } from "@renderer/domains/git";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { inspectGitRepository } from "@renderer/domains/git";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
+import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
 import { isFolderWorkspace } from "../../local-folder/localFolder";
 
 type UseWorkspaceInfoHoverInput = {

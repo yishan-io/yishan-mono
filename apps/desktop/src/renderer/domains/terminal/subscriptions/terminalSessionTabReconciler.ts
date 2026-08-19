@@ -8,6 +8,7 @@ import {
   setTerminalTabAgentKind,
 } from "@renderer/domains/workbench";
 
+import { workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import type { WorkbenchTab } from "../../../domains/workbench";
@@ -15,7 +16,6 @@ import {
   consumeExplicitlyClosedTerminalTabId,
   recordExplicitlyClosedTerminalTabId,
 } from "../runtime/terminalCloseTombstones";
-import { workspaceStore } from "@renderer/domains/workspace";
 
 type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;

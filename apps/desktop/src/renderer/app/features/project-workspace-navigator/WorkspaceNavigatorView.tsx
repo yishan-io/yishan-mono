@@ -4,7 +4,7 @@ import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
 import { deleteProject, projectStore, useProjectDeletionFlow } from "@renderer/domains/project";
 
-import {  activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
 
 import { WorkspaceDeleteDialogView, workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";

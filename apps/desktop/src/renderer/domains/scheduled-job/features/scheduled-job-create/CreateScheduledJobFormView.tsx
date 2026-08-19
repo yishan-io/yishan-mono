@@ -8,12 +8,12 @@ import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CreateScheduledJobInput } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 
+import { sessionStore } from "@renderer/domains/session";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { createScheduledJob } from "../../commands/scheduledJobCommands";
 import { DEFAULT_FORM_DRAFT, useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
 import { SCHEDULED_JOB_AGENT_KIND } from "../../scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
-import { sessionStore } from "@renderer/domains/session";
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
 
 type CreateScheduledJobFormViewProps = {
   onCreated: () => void;

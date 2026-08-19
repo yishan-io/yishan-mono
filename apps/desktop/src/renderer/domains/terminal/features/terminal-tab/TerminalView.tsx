@@ -4,7 +4,6 @@ import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { setSelectedTab as selectTab } from "@renderer/domains/workbench";
 import { memo, useEffect, useMemo, useRef } from "react";
-import { terminalFocusStore } from "../../state/terminalFocusStore";
 import { consumeTerminalTabFocus } from "../../commands/terminalCommands";
 import {
   attachTerminalRuntime,
@@ -14,11 +13,11 @@ import {
   requestTerminalRuntimeFocus,
 } from "../../runtime/terminalRuntimeRegistry";
 import { initTerminalSessionLifecycle } from "../../runtime/terminalSessionService";
+import { terminalFocusStore } from "../../state/terminalFocusStore";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { useTerminalWakeRecovery } from "./useTerminalWakeRecovery";
-
 
 type TerminalViewProps = {
   tabId: string;

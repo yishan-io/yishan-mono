@@ -1,3 +1,4 @@
+import { workspaceStore } from "@renderer/domains/workspace";
 /**
  * Project store — owns project records + project preferences.
  *
@@ -12,7 +13,6 @@ import { immer } from "zustand/middleware/immer";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../projectTypes";
 import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "../ui/projectIconPresets";
-import { workspaceStore } from "@renderer/domains/workspace";
 
 /**
  * Random default icon/color assignment for new project records.

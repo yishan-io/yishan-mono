@@ -9,13 +9,13 @@ import { LuArrowLeft, LuPanelLeft, LuPause, LuPencil, LuPlay, LuTrash2, LuZap } 
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../../domains/scheduled-job/state/scheduledJobStore";
 
+import { sessionStore } from "@renderer/domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { EditScheduledJobDialogView } from "../scheduled-job-update/EditScheduledJobDialogView";
 import { ScheduledJobDetailFields } from "./ScheduledJobDetailFields";
 import { ScheduledJobRunsSidebar } from "./ScheduledJobRunsSidebar";
 import { useScheduledJobDetailState } from "./useScheduledJobDetailState";
-import { sessionStore } from "@renderer/domains/session";
 
 type ScheduledJobDetailViewProps = {
   job: ScheduledJobRecord;

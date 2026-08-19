@@ -1,12 +1,12 @@
 import { readDiff } from "@renderer/domains/git";
 import { useEffect, useRef, useState } from "react";
-import { monaco } from "../../features/file-editor/monacoSetup";
 import {
   type GitLineChange,
   type GitLineChangeKind,
   computeGitLineChanges,
   getHunkForLine,
 } from "../../features/file-editor/git-gutter/gitGutterDiff";
+import { monaco } from "../../features/file-editor/monacoSetup";
 import {
   GIT_GUTTER_DIFF_DEBOUNCE_MS,
   MAX_LIVE_GUTTER_DIFF_LINES,

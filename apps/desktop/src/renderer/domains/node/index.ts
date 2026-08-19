@@ -5,5 +5,5 @@
  * selection data, and node administration. Cross-Domain code imports node
  * through this file only.
  */
-export { listOrgNodes, unregisterNode, updateNodeScope } from "./commands/nodeCommands";
+export { listOrgNodes } from "./commands/nodeCommands";
 export { NodesSettingsView } from "./features/manage-nodes/NodesSettingsView";

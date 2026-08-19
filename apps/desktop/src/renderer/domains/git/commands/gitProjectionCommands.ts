@@ -1,8 +1,17 @@
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
-
-import {  isFolderWorkspace, refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc, workspaceStore } from "@renderer/domains/workspace";
+import {
+  isFolderWorkspace,
+  refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc,
+  workspaceStore,
+} from "@renderer/domains/workspace";
 import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
+import { listWorkspacePullRequests } from "../api/workspacePullRequestApi";
+import {
+  computeUniqueGitChangeFileCount,
+  countWorkspaceGitChanges,
+  summarizeReconciledWorkspaceGitChangeTotals,
+} from "../changes/gitChangeSummary";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
  *
@@ -13,12 +22,6 @@ import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
  * projections to its own Store.
  */
 import { getGitRpc } from "../daemon/daemonGitClient";
-import { listWorkspacePullRequests } from "../api/workspacePullRequestApi";
-import {
-  computeUniqueGitChangeFileCount,
-  countWorkspaceGitChanges,
-  summarizeReconciledWorkspaceGitChangeTotals,
-} from "../changes/gitChangeSummary";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 
 /**

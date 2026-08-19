@@ -21,15 +21,14 @@ import { LuLogOut } from "react-icons/lu";
 
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
-
+import { sessionStore } from "@renderer/domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
-import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
 import type { OrganizationMemberRecord } from "../../api/orgApi";
+import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
-import { sessionStore } from "@renderer/domains/session";
 
 function getMemberInitials(member: OrganizationMemberRecord): string {
   const displayName = member.name?.trim() || member.email?.trim() || member.userId.trim();

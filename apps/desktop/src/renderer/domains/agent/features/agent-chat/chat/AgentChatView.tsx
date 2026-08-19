@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
 import { setAgentChatStreamTabVisible } from "../../../subscriptions/agentChatPiEventShared";
 
-
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";

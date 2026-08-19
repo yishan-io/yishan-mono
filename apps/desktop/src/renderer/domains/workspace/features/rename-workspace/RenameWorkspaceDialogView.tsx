@@ -4,11 +4,11 @@ import { getRendererPlatform } from "@renderer/platform/platform";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useTranslation } from "react-i18next";
 
+import { sessionStore } from "@renderer/domains/session";
 import { workspaceStore } from "../../state/workspaceStore";
 import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
 import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { useRenameWorkspaceDialogState } from "./useRenameWorkspaceDialogState";
-import { sessionStore } from "@renderer/domains/session";
 
 type RenameWorkspaceDialogViewProps = {
   open: boolean;

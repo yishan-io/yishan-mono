@@ -7,12 +7,12 @@ import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 
+import { sessionStore } from "@renderer/domains/session";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { updateScheduledJob } from "../../commands/scheduledJobCommands";
 import { useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
 import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "../../scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
-import { sessionStore } from "@renderer/domains/session";
 
 type EditScheduledJobDialogViewProps = {
   job: ScheduledJobRecord;

@@ -21,7 +21,6 @@ vi.mock("@renderer/domains/git", async () => {
   };
 });
 
-
 import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import type { GitPullRequest } from "@renderer/domains/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

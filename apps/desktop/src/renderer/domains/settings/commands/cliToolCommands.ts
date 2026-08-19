@@ -1,8 +1,4 @@
-import {
-  installDaemonCliTool,
-  listDaemonCliTools,
-  uninstallDaemonCliTool,
-} from "../daemon/daemonCliToolsProcedures";
+import { installDaemonCliTool, listDaemonCliTools, uninstallDaemonCliTool } from "../daemon/daemonCliToolsProcedures";
 
 export type CLIToolStatus = {
   toolId: string;

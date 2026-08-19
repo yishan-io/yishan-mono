@@ -1,14 +1,18 @@
 import { projectStore } from "@renderer/domains/project";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 
+import { sessionStore } from "@renderer/domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
-import { type WorkspaceLifecycleScriptWarning, enqueueWorkspaceErrorNotice, enqueueWorkspaceLifecycleWarnings } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
+import {
+  type WorkspaceLifecycleScriptWarning,
+  enqueueWorkspaceErrorNotice,
+  enqueueWorkspaceLifecycleWarnings,
+} from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../features/create-workspace/workspaceCreatePlaceholder";
-import { workspaceStore } from "../state/workspaceStore";
 import { workspaceSettingsStore } from "../state/workspaceSettingsStore";
+import { workspaceStore } from "../state/workspaceStore";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
-import { sessionStore } from "@renderer/domains/session";
 
 type CreateWorkspaceInput = {
   projectId: string;

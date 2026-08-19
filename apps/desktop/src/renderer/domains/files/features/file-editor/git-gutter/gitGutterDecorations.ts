@@ -1,6 +1,6 @@
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
-import { monaco } from "../../../features/file-editor/monacoSetup";
 import type { GitLineChange, GitLineChangeKind } from "../../../features/file-editor/git-gutter/gitGutterDiff";
+import { monaco } from "../../../features/file-editor/monacoSetup";
 
 // CSS class names injected for gutter decorations.
 // These are defined in style.css and matched by Monaco's margin decoration class mechanism.

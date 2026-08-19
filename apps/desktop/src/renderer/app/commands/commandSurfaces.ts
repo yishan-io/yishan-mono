@@ -147,7 +147,11 @@ import {
 } from "@renderer/domains/workspace";
 import type { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
 import type { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
-import type { getRemoteHealthStatus as getRemoteHealthStatusCommand, getSessionBootstrapData as getSessionBootstrapDataCommand, resetAuthExpiredState as resetAuthExpiredStateCommand } from "../../domains/session";
+import type {
+  getRemoteHealthStatus as getRemoteHealthStatusCommand,
+  getSessionBootstrapData as getSessionBootstrapDataCommand,
+  resetAuthExpiredState as resetAuthExpiredStateCommand,
+} from "../../domains/session";
 import type {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,

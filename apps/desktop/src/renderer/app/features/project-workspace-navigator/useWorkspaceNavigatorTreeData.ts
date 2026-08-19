@@ -1,9 +1,11 @@
 import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 
-
 import { listOrgNodes } from "@renderer/domains/node";
 import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
+import { chatStore } from "@renderer/domains/agent";
+import { gitProjectionStore } from "@renderer/domains/git";
+import { sessionStore } from "@renderer/domains/session";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
@@ -13,9 +15,6 @@ import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
 import { reconcileOrder } from "./workspaceNavigatorHelpers";
-import { sessionStore } from "@renderer/domains/session";
-import { gitProjectionStore } from "@renderer/domains/git";
-import { chatStore } from "@renderer/domains/agent";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;

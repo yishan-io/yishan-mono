@@ -9,14 +9,22 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import type { ProjectWithWorkspacesRecord } from "../../../api/types";
 
+import { sessionStore } from "@renderer/domains/session";
+import {
+  buildWorkspaceOpenProjectEntries,
+  createLocalFolderImport,
+  openWorkspaceEntries,
+  syncTabStoreWithWorkspace,
+  syncWorkspaceContextLinks,
+  workspaceSettingsStore,
+  workspaceStore,
+} from "@renderer/domains/workspace";
 import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
-import { buildWorkspaceOpenProjectEntries, createLocalFolderImport, openWorkspaceEntries, syncTabStoreWithWorkspace, syncWorkspaceContextLinks, workspaceSettingsStore, workspaceStore } from "@renderer/domains/workspace";
-import { sessionStore } from "@renderer/domains/session";
 
 async function inspectLocalRepository(path: string): Promise<{
   isGitRepository: boolean;
@@ -194,9 +202,9 @@ export async function createProject(input: {
       workspaces.filter((workspace) => workspace.kind === "primary").map((workspace) => workspace.id),
     );
     if (importedPrimaryWorkspaceIds.size > 0) {
-      const importedPrimaryWorkspaces = workspaceStore.getState().workspaces.filter((workspace) =>
-        importedPrimaryWorkspaceIds.has(workspace.id),
-      );
+      const importedPrimaryWorkspaces = workspaceStore
+        .getState()
+        .workspaces.filter((workspace) => importedPrimaryWorkspaceIds.has(workspace.id));
       const openEntries = buildWorkspaceOpenProjectEntries(importedPrimaryWorkspaces, selectedOrganizationId);
       await openWorkspaceEntries(openEntries);
       for (const entry of openEntries) {

@@ -1,8 +1,8 @@
-import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
-import { agentChatStore } from "../../../state/agentChatStore";
-import { useShallow } from "zustand/react/shallow";
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { searchFiles } from "@renderer/domains/files";
+import { useShallow } from "zustand/react/shallow";
+import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
+import { agentChatStore } from "../../../state/agentChatStore";
 
 import { tabStore } from "@renderer/domains/workbench";
 import { renameTab } from "@renderer/domains/workbench";
@@ -13,11 +13,12 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
-import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
-import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../chat/agentChatTypes";
+import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
 import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
+import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
 
+import { keybindingSettingsStore } from "@renderer/domains/settings";
 import { ProviderCredentialDialog } from "../../../ui/credentials/ProviderCredentialDialog";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
@@ -29,7 +30,6 @@ import { type DroppedFileEntry, RichComposer } from "./composer/RichComposer";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";
-import { keybindingSettingsStore } from "@renderer/domains/settings";
 
 const MAX_FILE_MENTION_RESULTS = 50;
 

@@ -24,8 +24,6 @@ export {
   requestFileSearch,
   requestSelectFolderInFileTree,
   requestUndo,
-  setExpandedFileTreeItems,
-  setSelectedEntryPath,
 } from "./commands/fileTreeCommands";
 export { fileTreeStore, type FileTreeStoreState } from "./state/fileTreeStore";
 export { fileTabContentStore, type FileTabContentStoreState } from "./state/fileTabContentStore";
@@ -39,14 +37,12 @@ export {
 } from "./commands/fileTabContentCommands";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
-export { useFileSearchController } from "./features/quick-open-file/useFileSearchController";
+
 export { FileSearchOverlay } from "./features/quick-open-file/FileSearchOverlay";
 export { FileManagerView } from "./features/file-manager/FileManagerView";
 export {
   FILETREE_DRAG_MIME,
-  extractInternalDragRelativePaths,
   extractSourcePathsFromDataTransfer,
-  extractSourcePathsFromDataTransferAsync,
   hasExternalFileDragIntent,
   hasInternalFileTreeDragIntent,
   resolveInternalFileTreeDragEntries,
@@ -63,20 +59,17 @@ export {
 } from "./ui/filePathDisplayHelpers";
 export {
   AudioPreview,
-  DiffSearchPanel,
   FileDiffViewer,
   FileEditor,
-  FileQuickOpenDialog,
   ImagePreview,
   MultiFileDiffViewer,
   UnsupportedFileView,
   VideoPreview,
 } from "./features/file-editor/editors";
-export { DiagramZoomOverlay } from "./ui/DiagramZoomOverlay";
+
 export { getDiffCssVariablesForPalette } from "./ui/diffTheme";
 
 export {
-  EXTERNAL_APP_MENU_ENTRIES,
   SYSTEM_FILE_MANAGER_APP_ID,
   findExternalAppPreset,
   getExternalAppMenuEntries,
@@ -95,22 +88,6 @@ export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
 
 export { MarkdownPreview } from "./ui/markdown/MarkdownPreview";
 export { createFileTabPlaceholder } from "./features/file-editor/fileTabPlaceholder";
-export {
-  getFileExtension,
-  getLanguageId,
-  getSupportedExtensions,
-  isAudioFile,
-  isExcalidrawFile,
-  isImageFile,
-  isLanguageSupported,
-  isMarkdownFile,
-  isUnsupportedFileTab,
-  isVideoFile,
-} from "./features/file-editor/editorLanguage";
-export {
-  computeGitLineChanges,
-  getHunkForLine,
-  type GitLineChange,
-  type GitLineChangeKind,
-} from "./features/file-editor/git-gutter/gitGutterDiff";
-export { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } from "./features/file-editor/monacoSetup";
+export { getFileExtension } from "./features/file-editor/editorLanguage";
+export type { GitLineChange, GitLineChangeKind } from "./features/file-editor/git-gutter/gitGutterDiff";
+export { monaco } from "./features/file-editor/monacoSetup";

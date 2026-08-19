@@ -15,12 +15,12 @@ import { incrementGitRefreshVersion, setWorkspaceCurrentBranch, setWorkspacePull
 import { inspectGitRepository } from "@renderer/domains/git";
 import { openTab } from "@renderer/domains/workbench";
 
+import { sessionStore } from "@renderer/domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { subscribeDaemonConnectionStatus } from "../daemon/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../features/create-workspace/workspaceCreatePlaceholder";
-import { sessionStore } from "@renderer/domains/session";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;
 const WORKSPACE_SNAPSHOT_REFRESH_DEBOUNCE_MS = 300;

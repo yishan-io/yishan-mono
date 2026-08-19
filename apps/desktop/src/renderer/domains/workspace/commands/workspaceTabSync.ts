@@ -1,7 +1,7 @@
-import { resolveTabForWorkspace, retainWorkspaceTabs, workbenchNavigationStore } from "@renderer/domains/workbench";
-import type { WorkspaceItem } from "../workspaceTypes";
-import { workspaceStore } from "../state/workspaceStore";
 import { chatStore } from "@renderer/domains/agent";
+import { resolveTabForWorkspace, retainWorkspaceTabs, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { workspaceStore } from "../state/workspaceStore";
+import type { WorkspaceItem } from "../workspaceTypes";
 
 /** Reconciles tab/chat state after workspace list changes in workspace store. */
 export async function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceItem[]): Promise<void> {

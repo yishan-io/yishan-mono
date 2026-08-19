@@ -6,7 +6,7 @@
  * subscribes with `projectStore(selector)`, and calls public actions with
  * `projectStore.getState().action()` — imported from this file only.
  */
-export { filterVisibleProjects, isGitProject, supportsGitFeatures } from "./projectRules";
+export { filterVisibleProjects, supportsGitFeatures } from "./projectRules";
 export type {
   WorkspaceProjectCommand,
   WorkspaceProjectRecord,
@@ -18,11 +18,7 @@ export {
   inspectLocalProjectSource,
   updateProjectConfig,
 } from "./commands/projectCommands";
-export {
-  getProjectListPreferences,
-  listProjectsByOrg,
-  setProjectListPreferences,
-} from "./daemon/projectDaemonClient";
+export { getProjectListPreferences, listProjectsByOrg, setProjectListPreferences } from "./daemon/projectDaemonClient";
 export { getDefaultWorktreeLocation } from "./daemon/projectDaemonClient";
 export { openLocalFolderDialog } from "./host/folderPicker";
 export type {
@@ -43,10 +39,3 @@ export { ProjectConfigDialogView } from "./features/project-config/ProjectConfig
 export { ProjectDeleteDialogView } from "./features/project-delete/ProjectDeleteDialogView";
 export { useProjectDeletionFlow } from "./features/project-delete/useProjectDeletionFlow";
 export { renderProjectIcon } from "./ui/projectIcons";
-export {
-  DEFAULT_PROJECT_ICON_ID,
-  PROJECT_COLOR_PRESETS,
-  PROJECT_ICON_OPTIONS,
-  REPO_ICON_OPTIONS,
-  findProjectIconOption,
-} from "./ui/projectIcons";

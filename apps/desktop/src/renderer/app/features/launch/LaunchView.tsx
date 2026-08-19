@@ -1,9 +1,14 @@
 import { Box, Typography } from "@mui/material";
 import { RecentAgentSessions } from "@renderer/domains/agent";
 import { AgentIcon } from "@renderer/domains/agent";
-import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND, DEFAULT_AGENT_COMMANDS, type DesktopAgentKind } from "@renderer/domains/agent";
+import {
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  DEFAULT_AGENT_COMMANDS,
+  type DesktopAgentKind,
+} from "@renderer/domains/agent";
 import { createNewWhiteboard } from "@renderer/domains/files";
-import {  workspaceCreateProgressStore, workspaceStore } from "@renderer/domains/workspace";
+import { workspaceCreateProgressStore, workspaceStore } from "@renderer/domains/workspace";
 
 import type { WorkspaceCreateProgressStep } from "@renderer/domains/workspace";
 import { getRendererPlatform } from "@renderer/platform/platform";

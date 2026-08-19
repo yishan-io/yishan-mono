@@ -2,12 +2,12 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../domains/agent/state/chatStore";
-import { createLeaf } from "../../../domains/workbench/split-pane";
 import {
   __resetTabFocusIntentForTests,
   consumeTabFocus,
   getTabFocusRequest,
 } from "../../../domains/workbench/runtime/tabFocusIntent";
+import { createLeaf } from "../../../domains/workbench/split-pane";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import {

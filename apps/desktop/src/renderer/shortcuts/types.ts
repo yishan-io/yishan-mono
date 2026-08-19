@@ -1,8 +1,8 @@
+import { workspaceStore } from "@renderer/domains/workspace";
 import type { Commands } from "../app/commands/useCommands";
 import type { SplitPaneStoreState } from "../domains/workbench/state/splitPaneStore";
 import type { TabStoreState } from "../domains/workbench/state/tabStore";
 import type { WorkspaceStoreState } from "../domains/workspace/state/workspaceStore";
-import { workspaceStore } from "@renderer/domains/workspace";
 
 export type KeyBindingScope = "global" | "workspace";
 

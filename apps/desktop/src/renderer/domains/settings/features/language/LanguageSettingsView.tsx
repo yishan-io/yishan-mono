@@ -2,12 +2,11 @@ import { Alert, Box, MenuItem } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-
+import { sessionStore } from "@renderer/domains/session";
 import { updateLanguagePreference } from "../../../../domains/settings/commands/settingsCommands";
 import { SUPPORTED_LANGUAGE_CODES, type SupportedLanguageCode, i18n, setAppLanguage } from "../../../../i18n";
 import { SettingsCompactSelect } from "../../../../ui/components/SettingsCompactControls";
 import { SettingsCard, SettingsControlRow, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
-import { sessionStore } from "@renderer/domains/session";
 
 /**
  * Renders language selection and persists profile preference.

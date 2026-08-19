@@ -5,12 +5,12 @@ import {
   removeTabFromPane,
   splitRootPane,
 } from "../../../domains/workbench/split-pane";
-import type { OpenTabInput } from "../../../domains/workbench/tabs";
 import { type WorkspaceRightPaneTab, layoutStore } from "../../../domains/workbench/state/layoutStore";
 import { createPaneId, splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../domains/workbench/state/tabStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workbenchNavigationStore } from "../../../domains/workbench/state/workbenchNavigationStore";
+import type { OpenTabInput } from "../../../domains/workbench/tabs";
 import { type TabFocusKind, type TabFocusTarget, requestTabFocus } from "../runtime/tabFocusIntent";
 
 type TabStoreFacade = typeof tabStore & {

@@ -11,11 +11,7 @@ import { projectStore } from "@renderer/domains/project";
 import type { OpenTabInput, WorkbenchTab } from "@renderer/domains/workbench";
 import { writeClipboardText } from "@renderer/platform/clipboard";
 import { useCallback, useRef } from "react";
-import {
-  type ExternalAppId,
-  SYSTEM_FILE_MANAGER_APP_ID,
-  type WorkspaceFileEntry,
-} from "../../externalApps";
+import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID, type WorkspaceFileEntry } from "../../externalApps";
 import {
   isAudioFile,
   isExcalidrawFile,

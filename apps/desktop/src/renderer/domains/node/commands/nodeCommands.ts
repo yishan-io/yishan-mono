@@ -1,11 +1,7 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
-import {
-  listOrganizationNodes,
-  unregisterOrganizationNode,
-  updateOrganizationNodeScope,
-} from "../api/nodeApi";
 import { sessionStore } from "@renderer/domains/session";
+import { listOrganizationNodes, unregisterOrganizationNode, updateOrganizationNodeScope } from "../api/nodeApi";
 
 const errNoOrgSelected = "No organization selected.";
 

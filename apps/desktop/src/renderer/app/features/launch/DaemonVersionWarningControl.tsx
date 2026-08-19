@@ -1,11 +1,10 @@
 import { IconButton, Tooltip } from "@mui/material";
+import { sessionStore } from "@renderer/domains/session";
 import { isDaemonVersionOutdated } from "@shared/version/version";
-import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
 import { LuTriangleAlert } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
-import { sessionStore } from "@renderer/domains/session";
-
+import { useShallow } from "zustand/react/shallow";
 
 /** Renders a warning icon button in the header bar when the daemon version is outdated. */
 export function DaemonVersionWarningControl() {

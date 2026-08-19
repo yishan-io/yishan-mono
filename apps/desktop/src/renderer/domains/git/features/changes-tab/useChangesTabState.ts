@@ -27,7 +27,6 @@ import {
   toCommitFile,
 } from "./changesTabHelpers";
 
-
 export { normalizeWorkspaceRelativePath } from "./changesTabHelpers";
 
 const GIT_CHANGES_REFRESH_RETRY_MS = 5_000;
@@ -69,7 +68,12 @@ export function useChangesTabState() {
     const raw = selectedWorkspace?.sourceBranch?.trim() || selectedProject?.defaultBranch?.trim() || "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
   }, [selectedWorkspace, selectedProject]);
-  const workspaceGitRefreshVersion = gitProjectionStore((state) => { if (!(selectedWorkspaceWorktreePath ?? "")) { return 0; } return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath ?? ""] ?? 0; });
+  const workspaceGitRefreshVersion = gitProjectionStore((state) => {
+    if (!(selectedWorkspaceWorktreePath ?? "")) {
+      return 0;
+    }
+    return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath ?? ""] ?? 0;
+  });
   const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}`;
   const selectedWorkspaceRequestKeyRef = useRef(selectedWorkspaceRequestKey);
   selectedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;

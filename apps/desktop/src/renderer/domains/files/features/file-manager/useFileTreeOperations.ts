@@ -1,12 +1,13 @@
 import { listFiles, listFilesBatch } from "@renderer/domains/files/commands/fileCommands";
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 
-import {  closeTab, openTab, renameTabsForEntryRename, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { closeTab, openTab, renameTabsForEntryRename, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
 import { projectStore } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExternalAppId, WorkspaceFileEntry } from "../../externalApps";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
@@ -23,7 +24,6 @@ import { type FileOperationState, useFileOperationState } from "./useFileOperati
 import { useFileTreeClipboard } from "./useFileTreeClipboard";
 import { useFileTreeCrud } from "./useFileTreeCrud";
 import { type FileTreeUndoAction, useFileTreeUndo } from "./useFileTreeUndo";
-import { workspaceStore } from "@renderer/domains/workspace";
 
 export type FileTreeSelectionRequest = {
   path: string;
@@ -84,7 +84,12 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces);
   const expandedFileTreeItemsByWorkspaceId = fileTreeStore((state) => state.expandedFileTreeItemsByWorkspaceId);
-  const selectedWorkspaceWorktreePath = workspaceStore((state) => state.workspaces.find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)?.worktreePath?.trim() ?? "");
+  const selectedWorkspaceWorktreePath = workspaceStore(
+    (state) =>
+      state.workspaces
+        .find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)
+        ?.worktreePath?.trim() ?? "",
+  );
   const changedRelativePathsForSelectedWorkspace = fileTreeStore((state) =>
     selectedWorkspaceWorktreePath
       ? (state.fileTreeChangedRelativePathsByWorktreePath?.[selectedWorkspaceWorktreePath] ??

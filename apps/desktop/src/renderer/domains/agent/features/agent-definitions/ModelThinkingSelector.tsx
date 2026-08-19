@@ -1,9 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { AgentModel } from "../../chat/agentChatTypes";
 import { listAgentModels } from "../../commands/agentCommands";
 import { AgentModelSelector } from "../../features/agent-chat/session/AgentModelSelector";
-import type { AgentModel } from "../../chat/agentChatTypes";
 import {
   clampThinkingLevel,
   formatSupportedThinkingLevels,

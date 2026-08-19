@@ -11,7 +11,6 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { GitPullRequest, GitPullRequestSummary } from "../pull-request/gitPullRequestTypes";
 
-
 export type GitProjectionStoreState = {
   pullRequestByWorkspaceId: Record<string, GitPullRequest | undefined>;
   latestPullRequestByWorkspaceId: Record<string, GitPullRequestSummary | undefined>;
@@ -107,4 +106,3 @@ export const gitProjectionStore = create<GitProjectionStoreState>()(
     },
   })),
 );
-

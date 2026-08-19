@@ -2,13 +2,8 @@
  * Workbench feature public API (Phase 12, desktop5.md).
  */
 export { createFixedRuntimeLayer } from "./runtime/runtimeSurfaceLayer";
-export { getOrCreateRuntimeRoot } from "./runtime/runtimeRoot";
-export {
-  activateProject,
-  activateWorkspace,
-  closeOverlayPanel,
-  openOverlayPanel,
-} from "./commands/navigationCommands";
+
+export { activateProject, activateWorkspace, closeOverlayPanel } from "./commands/navigationCommands";
 export {
   bindAgentChatTabSession,
   bindTerminalTabSession,
@@ -84,7 +79,7 @@ export {
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { WorkspaceSplitPane } from "./features/workspace-tabs/WorkspaceSplitPaneView";
-export { WorkspaceTabSurfaceLayer } from "./features/workspace-tabs/WorkspaceTabSurfaceLayer";
+
 export { RightPaneTabBar, type RightPaneTabDef } from "./features/workspace-tabs/RightPaneTabBar";
 export {
   ColumnSeparator,
@@ -97,24 +92,15 @@ export {
   SplitPaneLayout,
   TabPanel,
 } from "./features/workspace-tabs/pane";
-export {
-  TabBar,
-  type AgentCreateOptionDef,
-  type TabBarCreateOption,
-} from "./features/workspace-tabs/pane/TabBar";
-export { TabBarItem } from "./features/workspace-tabs/pane/TabBarItem";
-export { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./features/workspace-tabs/pane/TabBarMenus";
-export { TabRenameDialog } from "./features/workspace-tabs/pane/TabRenameDialog";
+export { TabBar, type AgentCreateOptionDef, type TabBarCreateOption } from "./features/workspace-tabs/pane/TabBar";
+
 export {
   WorkspacePaneVisibilityProvider,
   type WorkspacePaneVisibilityValue,
   useWorkspacePaneVisibility,
   useWorkspacePaneVisibilityContext,
 } from "./hooks/useWorkspacePaneVisibility";
-export {
-  type WorkspaceTabPlacement,
-  useWorkspaceTabPlacements,
-} from "./features/workspace-tabs/useWorkspaceTabPlacements";
+export type { WorkspaceTabPlacement } from "./features/workspace-tabs/useWorkspaceTabPlacements";
 
 export { useDialogRegistration } from "./hooks/useDialogRegistration";
 export { popupStore, type PopupStoreState } from "./state/popupStore";

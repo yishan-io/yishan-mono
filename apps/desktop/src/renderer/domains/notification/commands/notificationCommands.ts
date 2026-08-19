@@ -1,3 +1,4 @@
+import { sessionStore } from "@renderer/domains/session";
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import { NOTIFICATION_PREFERENCES_STORAGE_KEY } from "../../../../shared/notifications/notificationConstants";
 import type {
@@ -10,9 +11,6 @@ import {
   DEFAULT_NOTIFICATION_PREFERENCES,
 } from "../../../../shared/notifications/notificationPreferences";
 import { requestJson } from "../../../api/restClient";
-import { sessionStore } from "@renderer/domains/session";
-
-
 
 /** Loads notification preferences from current session user, then falls back to local cache. */
 export async function getNotificationPreferences() {
