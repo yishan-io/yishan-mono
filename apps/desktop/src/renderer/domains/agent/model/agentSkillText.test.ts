@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./agentSkillTextHelpers";
+import { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./agentSkillText";
 
 describe("parseSkillMessage", () => {
   it("extracts the skill name and trailing content from injected skill XML", () => {

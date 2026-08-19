@@ -3,8 +3,6 @@ import {
   PI_PROVIDER_CATALOG,
   getPiProviderCatalogEntry,
   getPiProviderDisplayName,
-  getPiProviderIcon,
-  getPiProviderIconColor,
   getPiProviderPinEnv,
   isKnownPiProviderId,
   isPiProviderApiKeyCapable,
@@ -99,70 +97,10 @@ describe("PI_PROVIDER_CATALOG", () => {
     expect(apiKey).toHaveLength(PINNED_PROVIDER_IDS.length - oauthOnly.length - both.length);
   });
 
-  it("gives every entry a resolvable icon", () => {
-    for (const entry of PI_PROVIDER_CATALOG) {
-      expect(typeof entry.icon).toBe("function");
-    }
-  });
-
-  it("provides a valid brand color for every react-icon mark", () => {
-    const withReactIcon = PI_PROVIDER_CATALOG.filter(
-      (entry) => !entry.assetIcon && entry.icon !== getPiProviderIcon("not-a-provider"),
-    );
-    expect(withReactIcon.length).toBeGreaterThan(0);
-    for (const entry of withReactIcon) {
-      expect(entry.brandColor).toMatch(/^[0-9a-fA-F]{6}$/);
-    }
-  });
-
-  it("pins the official SVG asset icons and their dark-mode handling", () => {
-    const withAsset = PI_PROVIDER_CATALOG.filter((entry) => entry.assetIcon).map((entry) => entry.id);
-    expect(withAsset).toEqual([
-      "ant-ling",
-      "cerebras",
-      "fireworks",
-      "groq",
-      "openai",
-      "openai-codex",
-      "openrouter",
-      "radius",
-      "together",
-      "xai",
-      "zai-coding-cn",
-      "zai",
-    ]);
-    for (const entry of PI_PROVIDER_CATALOG.filter((candidate) => candidate.assetIcon)) {
-      expect(entry.assetIcon).toMatch(/^app-icons\//);
-    }
-    // Monochrome assets need a white filter in dark mode; colored ones do not.
-    const monochromeAssetIds = PI_PROVIDER_CATALOG.filter((entry) => entry.assetIcon && entry.monochrome).map(
-      (entry) => entry.id,
-    );
-    expect(monochromeAssetIds).toEqual(["ant-ling", "groq", "openai", "openai-codex", "radius", "xai"]);
-    // The codex mark does not fill its viewBox; it needs a visual scale-up.
-    expect(getPiProviderCatalogEntry("openai-codex")?.iconScale).toBe(1.5);
-    // Fallback icons stay neutral (no brand color, no asset).
-    expect(getPiProviderCatalogEntry("not-a-real-provider")?.brandColor).toBeUndefined();
-    expect(getPiProviderCatalogEntry("not-a-real-provider")?.assetIcon).toBeUndefined();
-  });
-
-  it("resolves brand colors and switches dark brands to white in dark mode", () => {
-    expect(getPiProviderIconColor("deepseek", false)).toBe("#5786FE");
-    expect(getPiProviderIconColor("deepseek", true)).toBe("#5786FE");
-    // Black/dark brands render white in dark mode.
-    expect(getPiProviderIconColor("github-copilot", true)).toBe("#FFFFFF");
-    expect(getPiProviderIconColor("github-copilot", false)).toBe("#000000");
-    expect(getPiProviderIconColor("vercel-ai-gateway", true)).toBe("#FFFFFF");
-    // Fallback providers inherit the text color.
-    expect(getPiProviderIconColor("fireworks", false)).toBeUndefined();
-    expect(getPiProviderIconColor("not-a-provider", false)).toBeUndefined();
-  });
-
   it("resolves known ids and falls back for unknown ids", () => {
     expect(getPiProviderCatalogEntry("deepseek")?.name).toBe("DeepSeek");
     expect(isKnownPiProviderId("deepseek")).toBe(true);
     expect(getPiProviderDisplayName("not-a-provider")).toBe("not-a-provider");
-    expect(getPiProviderIcon("not-a-provider")).toBe(getPiProviderIcon("openai"));
     expect(isKnownPiProviderId("not-a-provider")).toBe(false);
   });
 

@@ -1,17 +1,9 @@
 import type { AgentContentBlock, AgentMessage, AgentModel, AgentSessionStats } from "./agentChatTypes";
 
 const CHARS_PER_TOKEN = 4;
-const tokenCountFormatter = new Intl.NumberFormat("en-US");
-const usdFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 /** Structured usage summary derived from one agent-chat session. */
 export type AgentChatUsageSummary = {
-  label: string;
   contextTokens: number;
   contextWindow: number;
   contextPercent: number;
@@ -41,7 +33,6 @@ export function buildAgentChatUsageSummary(
   const totalCostUsd = sumAgentChatCostUsd(messages);
 
   return {
-    label: `ctx: ${formatCompactTokenCount(contextTokens)}/${formatCompactTokenCount(contextWindow)} (${contextPercent}%), ${formatUsd(totalCostUsd)}`,
     contextTokens,
     contextWindow,
     contextPercent,
@@ -54,14 +45,6 @@ export function buildAgentChatUsageSummary(
     totalSessionTokens: usageTotals.totalSessionTokens,
     totalCostUsd,
   };
-}
-
-/** Builds the compact agent chat usage label shown beside model controls. */
-export function buildAgentChatUsageSummaryLabel(
-  messages: AgentMessage[],
-  currentModel: AgentModel | null,
-): string | null {
-  return buildAgentChatUsageSummary(messages, currentModel)?.label ?? null;
 }
 
 /**
@@ -226,37 +209,4 @@ function safeJsonStringify(value: unknown): string {
   } catch {
     return "[unserializable]";
   }
-}
-
-function formatCompactTokenCount(tokenCount: number): string {
-  const roundedTokenCount = Math.max(0, Math.round(tokenCount));
-  if (roundedTokenCount >= 1_000_000) {
-    return formatCompactTokenSuffix(roundedTokenCount / 1_000_000, "M");
-  }
-
-  if (roundedTokenCount >= 1_000) {
-    return formatCompactTokenSuffix(roundedTokenCount / 1_000, "K");
-  }
-
-  return String(roundedTokenCount);
-}
-
-function formatCompactTokenSuffix(value: number, suffix: "K" | "M"): string {
-  const roundedValue = value >= 100 ? Math.round(value) : Math.round(value * 10) / 10;
-  const compactValue = Number.isInteger(roundedValue) ? String(roundedValue) : roundedValue.toFixed(1);
-  return `${compactValue}${suffix}`;
-}
-
-/** Formats one token count for detailed tooltip display. */
-export function formatDetailedTokenCount(tokenCount: number): string {
-  const roundedTokenCount = Math.max(0, Math.round(tokenCount));
-  if (roundedTokenCount >= 1_000) {
-    return formatCompactTokenCount(roundedTokenCount);
-  }
-
-  return tokenCountFormatter.format(roundedTokenCount);
-}
-
-function formatUsd(value: number): string {
-  return usdFormatter.format(value);
 }

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { trimSessionMessages, trimSubagentLiveTranscripts } from "../model/agentChatStoreBudget";
+import { trimSessionMessages, trimSubagentLiveTranscripts } from "../model/agentChatRetention";
 import {
   type RunningSubagentSummary,
   deriveFinishedSubagents,

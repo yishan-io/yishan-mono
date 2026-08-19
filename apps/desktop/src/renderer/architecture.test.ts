@@ -32,7 +32,10 @@
  *         they may import Zustand and their own Domain's Model/State, but not
  *         transport, Electron, Commands, Runtime, or another Domain's State.
  *   - R7  Model files must not import React, Zustand, Electron, transport,
- *         Runtime, or State.
+ *         Runtime, or State. desktop8 Phase 29 additionally rejects the owning
+ *         Domain's UI/Features/Hooks/Commands/Events/Runtime/Infrastructure,
+ *         UI libraries (react-icons/@mui/monaco/design tokens), and root
+ *         ui/hooks/api/rpc/platform/events implementations.
  *   - R8  Infrastructure (api/, rpc/) must not import Domain UI, app routes,
  *         or shared ui.
  *   - R9  Shared ui/ and components/ must not import Domain or app code.
@@ -228,15 +231,44 @@ function scanViolations(): Violation[] {
         }
       }
       // ---- Rule 7: Model files are pure data and rules. They must not import
-      // React, Zustand, Electron, transport, Runtime, or State (Phase 15). ----
+      // React, Zustand, Electron, transport, Runtime, or State (Phase 15).
+      // desktop8 Phase 29: also reject the owning Domain's UI/Features/Hooks/
+      // Commands/Events/Runtime/Infrastructure, UI libraries and presentation
+      // modules (react-icons, @mui, monaco, design tokens), and root
+      // ui/hooks/api/rpc/platform/events implementations. ----
       if (/^domains\/[^/]+\/model\//.test(rel) && !rel.includes(".test.")) {
+        const ownDomain = /^domains\/([^/]+)\//.exec(rel)?.[1] ?? "";
         if (
           imp.spec === "react" ||
           imp.spec === "zustand" ||
           imp.spec === "electron" ||
           isTransport ||
           relT.includes("/runtime/") ||
-          relT.includes("/state/")
+          relT.includes("/state/") ||
+          relT.startsWith(`domains/${ownDomain}/ui/`) ||
+          relT.startsWith(`domains/${ownDomain}/features/`) ||
+          relT.startsWith(`domains/${ownDomain}/hooks/`) ||
+          relT.startsWith(`domains/${ownDomain}/commands/`) ||
+          relT.startsWith(`domains/${ownDomain}/events/`) ||
+          relT.startsWith(`domains/${ownDomain}/infrastructure/`) ||
+          imp.spec === "react-icons" ||
+          imp.spec.startsWith("react-icons/") ||
+          imp.spec.startsWith("@mui/") ||
+          imp.spec === "monaco-editor" ||
+          imp.spec.startsWith("monaco-editor/") ||
+          imp.spec.startsWith("@yishan-io/design-tokens") ||
+          relT === "ui" ||
+          relT.startsWith("ui/") ||
+          relT === "hooks" ||
+          relT.startsWith("hooks/") ||
+          relT === "api" ||
+          relT.startsWith("api/") ||
+          relT === "rpc" ||
+          relT.startsWith("rpc/") ||
+          relT === "platform" ||
+          relT.startsWith("platform/") ||
+          relT === "events" ||
+          relT.startsWith("events/")
         ) {
           violations.push({ rule: "R7-model-layer", file: rel, target: imp.spec });
         }

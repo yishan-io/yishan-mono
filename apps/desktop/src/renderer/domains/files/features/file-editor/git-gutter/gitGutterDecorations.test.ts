@@ -10,9 +10,9 @@ import {
   getGutterClassName,
   getRulerColor,
 } from "./gitGutterDecorations";
-import type { GitLineChange } from "./gitGutterDiff";
+import type { GitLineChange } from "../../../model/gitGutterDiff";
 
-vi.mock("../infrastructure/monacoSetup", () => ({
+vi.mock("../../../infrastructure/monacoSetup", () => ({
   monaco: {
     editor: {
       OverviewRulerLane: { Full: 7 },

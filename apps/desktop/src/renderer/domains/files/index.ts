@@ -87,15 +87,15 @@ export {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   type ExternalAppPreset,
-} from "./model/externalApps";
-export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./model/externalApps";
+} from "./infrastructure/externalApps";
+export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./infrastructure/externalApps";
 
 export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
 export { markdownService } from "./ui/markdown/markdownService";
 export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
 
 export { MarkdownPreview } from "./ui/markdown/MarkdownPreview";
-export { createFileTabPlaceholder } from "./model/fileTabPlaceholder";
+export { createFileTabPlaceholder } from "./features/file-editor/fileTabPlaceholder";
 export {
   getFileExtension,
   getLanguageId,

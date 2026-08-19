@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
 import { fetchSessionHistory } from "../../../commands/agentChatSessionHistory";
 import type * as Rpc from "../../../infrastructure/daemonAgentTypes";
-import { formatAgentSessionTitle } from "../../../model/agentSkillTextHelpers";
+import { formatAgentSessionTitle } from "../../../model/agentSkillText";
 
 const RECENT_SESSION_LIMIT = 5;
 

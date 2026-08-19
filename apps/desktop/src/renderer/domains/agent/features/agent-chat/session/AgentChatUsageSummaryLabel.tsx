@@ -6,10 +6,10 @@ import { useTranslation } from "react-i18next";
 import type { AgentMessage } from "../../../../../domains/agent/model/agentChatTypes";
 import {
   buildAgentChatUsageSummary,
-  formatDetailedTokenCount,
   roundContextPercent,
 } from "../../../../../domains/agent/model/agentChatUsageSummary";
 import { agentChatStore } from "../../../../../domains/agent/state/agentChatStore";
+import { formatDetailedTokenCount } from "./agentChatUsageFormatting";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const USAGE_SUMMARY_FONT_SIZE_PX = 12;

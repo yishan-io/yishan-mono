@@ -1,26 +1,26 @@
 import { Box, useTheme } from "@mui/material";
-import { getPiProviderCatalogEntry, getPiProviderIcon, getPiProviderIconColor } from "../model/piProviders";
+import { getPiProviderIcon, getPiProviderIconColor, getPiProviderVisual } from "./piProviderVisuals";
 
 const MONOCHROME_WHITE_FILTER = "brightness(0) saturate(100%) invert(1)";
 
 /**
  * Renders one provider mark: a brand-colored SVG asset when available,
  * otherwise the catalog react-icon with its brand color (fallback icons
- * inherit the surrounding text color). Applies the catalog `iconScale` for
+ * inherit the surrounding text color). Applies the visual `iconScale` for
  * assets whose mark does not fill the viewBox (e.g. the padded codex.svg).
  */
 export function ProviderMark({ providerId, size }: { providerId: string; size: number }) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
-  const entry = getPiProviderCatalogEntry(providerId);
-  const scale = entry?.iconScale ?? 1;
+  const visual = getPiProviderVisual(providerId);
+  const scale = visual?.iconScale ?? 1;
   const scaledTransform = scale !== 1 ? `scale(${scale})` : undefined;
 
-  if (entry?.assetIcon) {
+  if (visual?.assetIcon) {
     return (
       <Box
         component="img"
-        src={entry.assetIcon}
+        src={visual.assetIcon}
         alt=""
         aria-hidden
         sx={{
@@ -33,13 +33,13 @@ export function ProviderMark({ providerId, size }: { providerId: string; size: n
           flexShrink: 0,
           transform: scaledTransform,
           transformOrigin: "center",
-          filter: entry.monochrome && isDarkMode ? MONOCHROME_WHITE_FILTER : undefined,
+          filter: visual.monochrome && isDarkMode ? MONOCHROME_WHITE_FILTER : undefined,
         }}
       />
     );
   }
 
-  const Icon = getPiProviderIcon(providerId);
+  const Icon = visual?.icon ?? getPiProviderIcon(providerId);
   return (
     <Box
       sx={{

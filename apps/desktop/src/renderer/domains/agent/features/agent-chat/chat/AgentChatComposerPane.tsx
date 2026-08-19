@@ -18,7 +18,7 @@ import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/age
 import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";
 import { useAgentChatSessionMeta } from "../../../hooks/useAgentChatReadHooks";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../model/agentChatTypes";
-import { formatAgentSessionTitle } from "../../../model/agentSkillTextHelpers";
+import { formatAgentSessionTitle } from "../../../model/agentSkillText";
 import { setTurnError } from "../../../state/chatActions";
 import { ProviderCredentialDialog } from "../../../ui/credentials/ProviderCredentialDialog";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";

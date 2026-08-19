@@ -4,11 +4,10 @@ import {
   DEFAULT_AGENT_COMMANDS,
   SUPPORTED_DESKTOP_AGENT_KINDS,
   createDefaultAgentInUseByKind,
-  getAgentIconPresentation,
   isDesktopAgentKind,
 } from "./agentSettings";
 
-describe("agentSettings kind rules (stay in Model after P29)", () => {
+describe("agentSettings kind rules (desktop8 Phase 29: rules stay in Model)", () => {
   it("exposes the canonical agent kind list", () => {
     expect(SUPPORTED_DESKTOP_AGENT_KINDS).toEqual(["opencode", "codex", "claude", "gemini", "pi", "copilot", "cursor"]);
   });
@@ -44,30 +43,5 @@ describe("agentSettings kind rules (stay in Model after P29)", () => {
     expect(createDefaultAgentInUseByKind(false)).toEqual(
       Object.fromEntries(SUPPORTED_DESKTOP_AGENT_KINDS.map((kind) => [kind, false])),
     );
-  });
-});
-
-describe("agentSettings icon presentation (moves to ui/ after P29)", () => {
-  it("resolves one icon presentation per kind and context", () => {
-    for (const kind of SUPPORTED_DESKTOP_AGENT_KINDS) {
-      for (const context of ["tabMenu", "settingsRow", "launchGrid"] as const) {
-        const presentation = getAgentIconPresentation(kind, context);
-        expect(presentation?.src).toBeTruthy();
-        expect(presentation?.slotSize).toBeGreaterThan(0);
-        expect(presentation?.filterByTheme.dark).toBeTruthy();
-      }
-    }
-  });
-
-  it("applies a light-mode monochrome filter only for copilot", () => {
-    const copilot = getAgentIconPresentation("copilot", "tabMenu");
-    expect(copilot?.filterByTheme.light).toBe("brightness(0) saturate(100%)");
-
-    const pi = getAgentIconPresentation("pi", "tabMenu");
-    expect(pi?.filterByTheme.light).toBeUndefined();
-  });
-
-  it("returns null for an unknown agent kind", () => {
-    expect(getAgentIconPresentation("unknown" as never, "tabMenu")).toBeNull();
   });
 });

@@ -7,7 +7,7 @@ import { getErrorMessage } from "@shared/helpers/errorHelpers";
 import { tabStore } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath, useWorkspaces } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExternalAppId, WorkspaceFileEntry } from "../../model/externalApps";
+import type { ExternalAppId, WorkspaceFileEntry } from "../../infrastructure/externalApps";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
 import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeHelpers";
 import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentMessage, AgentModel, AgentSessionStats } from "../../../domains/agent/model/agentChatTypes";
-import { buildAgentChatUsageSummaryLabel, getCompactContextPercent } from "./agentChatUsageSummary";
+import type { AgentMessage, AgentModel, AgentSessionStats } from "./agentChatTypes";
+import { buildAgentChatUsageSummary, getCompactContextPercent } from "./agentChatUsageSummary";
 
 function buildModel(contextWindow?: number): AgentModel {
   return {
@@ -31,9 +31,12 @@ function buildAssistantMessage(input: { totalTokens: number; costTotal: number }
   } as AgentMessage;
 }
 
-describe("buildAgentChatUsageSummaryLabel", () => {
-  it("renders zero usage for a fresh session when the model exposes a context window", () => {
-    expect(buildAgentChatUsageSummaryLabel([], buildModel(128_000))).toBe("ctx: 0/128K (0%), $0.00");
+describe("buildAgentChatUsageSummary (desktop8 Phase 29: numeric calculation stays in Model)", () => {
+  it("reports zero usage for a fresh session when the model exposes a context window", () => {
+    const summary = buildAgentChatUsageSummary([], buildModel(128_000));
+    expect(summary?.contextTokens).toBe(0);
+    expect(summary?.contextPercent).toBe(0);
+    expect(summary?.totalCostUsd).toBe(0);
   });
 
   it("uses the latest assistant context tokens and sums session cost", () => {
@@ -42,20 +45,16 @@ describe("buildAgentChatUsageSummaryLabel", () => {
       buildAssistantMessage({ totalTokens: 90, costTotal: 0.2 }),
     ];
 
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(100))).toBe("ctx: 90/100 (90%), $0.30");
-  });
-
-  it("uses compact k/m units for large context values", () => {
-    const messages: AgentMessage[] = [buildAssistantMessage({ totalTokens: 2_206, costTotal: 0.25 })];
-
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(128_000))).toBe("ctx: 2.2K/128K (1.7%), $0.25");
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(1_500_000))).toBe("ctx: 2.2K/1.5M (0.1%), $0.25");
+    const summary = buildAgentChatUsageSummary(messages, buildModel(100));
+    expect(summary?.contextTokens).toBe(90);
+    expect(summary?.contextPercent).toBe(90);
+    expect(summary?.totalCostUsd).toBeCloseTo(0.3, 5);
   });
 
   it("keeps context percentages to at most one decimal place", () => {
     const messages: AgentMessage[] = [buildAssistantMessage({ totalTokens: 1, costTotal: 0.25 })];
 
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(64))).toBe("ctx: 1/64 (1.6%), $0.25");
+    expect(buildAgentChatUsageSummary(messages, buildModel(64))?.contextPercent).toBe(1.6);
   });
 
   it("adds an estimated token tail after the latest assistant usage snapshot", () => {
@@ -68,7 +67,7 @@ describe("buildAgentChatUsageSummaryLabel", () => {
       },
     ] as AgentMessage[];
 
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(100))).toBe("ctx: 82/100 (82%), $0.25");
+    expect(buildAgentChatUsageSummary(messages, buildModel(100))?.contextTokens).toBe(82);
   });
 
   it("ignores assistant thinking text in fallback estimation", () => {
@@ -81,7 +80,7 @@ describe("buildAgentChatUsageSummaryLabel", () => {
       } as AgentMessage,
     ];
 
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(100))).toBe("ctx: 0/100 (0%), $0.00");
+    expect(buildAgentChatUsageSummary(messages, buildModel(100))?.contextTokens).toBe(0);
   });
 
   it("falls back to legacy usage.total when totalTokens is unavailable", () => {
@@ -104,11 +103,11 @@ describe("buildAgentChatUsageSummaryLabel", () => {
       } as AgentMessage,
     ];
 
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(100))).toBe("ctx: 100/100 (100%), $0.25");
+    expect(buildAgentChatUsageSummary(messages, buildModel(100))?.contextPercent).toBe(100);
   });
 
   it("returns null when the current model does not expose a context window", () => {
-    expect(buildAgentChatUsageSummaryLabel([], buildModel())).toBeNull();
+    expect(buildAgentChatUsageSummary([], buildModel())).toBeNull();
   });
 
   it("grows the ctx estimate from a streaming assistant message on top of the last usage", () => {
@@ -127,9 +126,7 @@ describe("buildAgentChatUsageSummaryLabel", () => {
     } as AgentMessage;
 
     // 80 (last usage) + 2 (user tail) + 200 (800 chars / 4) = 282.
-    expect(buildAgentChatUsageSummaryLabel([...messages, streamingMessage], buildModel(128_000))).toBe(
-      "ctx: 282/128K (0.2%), $0.25",
-    );
+    expect(buildAgentChatUsageSummary([...messages, streamingMessage], buildModel(128_000))?.contextTokens).toBe(282);
 
     const longerStreamingMessage = {
       id: "assistant-streaming",
@@ -138,8 +135,8 @@ describe("buildAgentChatUsageSummaryLabel", () => {
     } as AgentMessage;
 
     // 80 + 2 + 400 = 482.
-    expect(buildAgentChatUsageSummaryLabel([...messages, longerStreamingMessage], buildModel(128_000))).toBe(
-      "ctx: 482/128K (0.4%), $0.25",
+    expect(buildAgentChatUsageSummary([...messages, longerStreamingMessage], buildModel(128_000))?.contextTokens).toBe(
+      482,
     );
   });
 
@@ -150,9 +147,28 @@ describe("buildAgentChatUsageSummaryLabel", () => {
       content: [{ type: "text", text: "a".repeat(800) }],
     } as AgentMessage;
 
-    expect(buildAgentChatUsageSummaryLabel([streamingMessage], buildModel(128_000))).toBe(
-      "ctx: 200/128K (0.2%), $0.00",
-    );
+    expect(buildAgentChatUsageSummary([streamingMessage], buildModel(128_000))?.contextTokens).toBe(200);
+  });
+
+  it("derives the cache rate percent from input + cache-read tokens", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "assistant-cache",
+        role: "assistant",
+        content: [{ type: "text", text: "done" }],
+        usage: {
+          input: 100,
+          output: 0,
+          cacheRead: 300,
+          cacheWrite: 0,
+          total: 400,
+          cost: { total: 0 },
+        },
+        stopReason: "stop",
+      } as AgentMessage,
+    ];
+
+    expect(buildAgentChatUsageSummary(messages, buildModel(128_000))?.cacheRatePercent).toBe(75);
   });
 });
 

@@ -14,18 +14,20 @@
  */
 export {
   AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   DEFAULT_AGENT_COMMANDS,
   SUPPORTED_DESKTOP_AGENT_KINDS,
   createDefaultAgentInUseByKind,
-  getAgentIconPresentation,
   isDesktopAgentKind,
+  type DesktopAgentKind,
+} from "./model/agentSettings";
+export {
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  getAgentIconPresentation,
   type AgentIconContext,
   type AgentIconPresentation,
   type AgentIconThemeMode,
-  type DesktopAgentKind,
-} from "./model/agentSettings";
+} from "./ui/agentIconPresentation";
 
 export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
@@ -43,7 +45,7 @@ export {
   recordAgentObserverStatus,
   resetAgentLifecycleState,
 } from "./commands/agentSessionLifecycle";
-export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./model/agentSkillTextHelpers";
+export { formatAgentSessionTitle, normalizeAgentSessionTitle, parseSkillMessage } from "./model/agentSkillText";
 export {
   THINKING_LEVELS,
   clampThinkingLevel,
@@ -55,8 +57,6 @@ export {
 export {
   getPiProviderCatalogEntry,
   getPiProviderDisplayName,
-  getPiProviderIcon,
-  getPiProviderIconColor,
   getPiProviderPinEnv,
   isKnownPiProviderId,
   isPiProviderApiKeyCapable,
@@ -66,6 +66,13 @@ export {
   type PiProviderAuthMode,
   type PiProviderCatalogEntry,
 } from "./model/piProviders";
+export {
+  FALLBACK_PROVIDER_ICON,
+  getPiProviderIcon,
+  getPiProviderIconColor,
+  getPiProviderVisual,
+  type PiProviderVisual,
+} from "./ui/piProviderVisuals";
 export { KimiIcon } from "./ui/piProviderIcons";
 export type {
   AgentCompactionReason,

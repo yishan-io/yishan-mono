@@ -1,10 +1,10 @@
 /**
  * External-apps + file-entry contracts exposed by the Files Domain
- * (desktop7 Phase 27).
+ * (desktop7 Phase 27; desktop8 Phase 29: moved from model/ to infrastructure/).
  *
  * The wire contracts stay in `@shared/contracts` (shared with the main
- * process); this module is the Files Domain's internal re-export so
- * same-domain UI never imports the root index or shared contracts directly.
+ * process); this module is the Files Domain's port so same-domain UI never
+ * imports shared contracts directly (R1b) or its own root index by value (R17).
  */
 export {
   EXTERNAL_APP_MENU_ENTRIES,
