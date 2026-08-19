@@ -1,11 +1,11 @@
 import { Box, Paper, Popper, Stack, Typography } from "@mui/material";
 import type { GitPullRequestSummary } from "@renderer/domains/git";
 import type { GitPullRequest } from "@renderer/domains/git";
-import { PullRequestIcon } from "@renderer/ui/components/PullRequestIcon";
+import { PullRequestIcon } from "@renderer/domains/git";
+import { livePrStatus } from "@renderer/domains/git";
 import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
-import { livePrStatus } from "../../../../helpers/pullRequestUtils";
 import { isFolderWorkspace } from "../../model/localFolder";
 
 type WorkspaceInfoPopperViewProps = {

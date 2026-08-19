@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 
-vi.mock("@renderer/domains/git", () => {
+vi.mock("@renderer/domains/git", async () => {
+  const { livePrStatus } = await import("../../model/pullRequestUtils");
+  const { BranchBadge } = await import("../../ui/BranchBadge");
+  const { PullRequestIcon } = await import("../../ui/PullRequestIcon");
   const projectionState: Record<string, unknown> = { pullRequestByWorkspaceId: {}, currentBranchByWorkspaceId: {} };
   const gitProjectionStore = Object.assign(vi.fn(), {
     getState: () => projectionState,
@@ -8,6 +11,9 @@ vi.mock("@renderer/domains/git", () => {
   });
   return {
     gitProjectionStore,
+    livePrStatus,
+    BranchBadge,
+    PullRequestIcon,
     setWorkspacePullRequest: (workspaceId: string, pullRequest: unknown) => {
       const state = gitProjectionStore.getState() as { pullRequestByWorkspaceId: Record<string, unknown> };
       state.pullRequestByWorkspaceId[workspaceId] = pullRequest;

@@ -26,7 +26,6 @@ export const ROOT_HELPERS_FILES = [
   "helpers/issueLinks.ts",
   "helpers/pathHelpers.ts",
   "helpers/platform.ts",
-  "helpers/pullRequestUtils.ts",
   "helpers/styles.ts",
   "helpers/tabHelpers.ts",
   "helpers/terminalCloseTombstones.ts",

@@ -1,4 +1,4 @@
-import type { GitPullRequest } from "@renderer/domains/git";
+import type { GitPullRequest } from "./gitPullRequestTypes";
 
 /**
  * Derives one canonical display status string from one live daemon pull-request
