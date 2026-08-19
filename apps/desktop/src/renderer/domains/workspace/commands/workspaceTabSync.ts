@@ -1,5 +1,5 @@
 import { resolveTabForWorkspace, retainWorkspaceTabs, workbenchNavigationStore } from "@renderer/domains/workbench";
-import type { WorkspaceItem } from "../model/workspaceTypes";
+import type { WorkspaceItem } from "../workspaceTypes";
 import { selectWorkspaces } from "../state/workspaceSelectors";
 
 /** Reconciles tab/chat state after workspace list changes in workspace store. */

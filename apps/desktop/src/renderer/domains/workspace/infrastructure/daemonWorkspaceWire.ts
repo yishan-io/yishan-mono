@@ -4,7 +4,7 @@ import {
   readOptionalString,
   readOptionalStringArray,
 } from "@shared/validation/primitiveReaders";
-import type { DaemonLocalFolder } from "../model/snapshotTypes";
+import type { DaemonLocalFolder } from "../snapshotTypes";
 
 /**
  * Workspace daemon wire DTOs + payload readers (desktop8 Phase 33: split

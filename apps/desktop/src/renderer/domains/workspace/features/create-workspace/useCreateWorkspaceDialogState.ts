@@ -3,9 +3,9 @@ import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef, useState } from "react";
 import { listOrgNodes } from "../../../../domains/node";
-import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
-import { resolveGitBranchPrefix } from "../../model/branchPrefix";
-import type { GitBranchPrefixMode } from "../../model/branchPrefix";
+import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
+import { resolveGitBranchPrefix } from "../../branchPrefix";
+import type { GitBranchPrefixMode } from "../../branchPrefix";
 import type { BranchDropdownGroups } from "./BranchDropdown";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 import {

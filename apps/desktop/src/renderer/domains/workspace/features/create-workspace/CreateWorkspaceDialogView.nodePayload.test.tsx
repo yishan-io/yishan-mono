@@ -32,7 +32,7 @@ vi.mock("../../commands/workspaceCommands", () => ({
 vi.mock("@renderer/domains/workspace", async () => {
   const { workspaceSettingsStore } = await import("../../state/workspaceSettingsStore");
   const { useWorkspaceBranchPrefixSettings } = await import("../../hooks/useWorkspaceBranchPrefixSettings");
-  const { resolveGitBranchPrefix } = await import("../../model/branchPrefix");
+  const { resolveGitBranchPrefix } = await import("../../branchPrefix");
   return {
     workspaceSettingsStore,
     useWorkspaceBranchPrefixSettings,

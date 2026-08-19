@@ -9,7 +9,7 @@ import {
 } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
-import { buildWorkspaceCreatePlaceholder } from "../services/workspaceCreatePlaceholder";
+import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
 import { selectIsDefaultContextEnabled } from "../state/workspaceSettingsSelectors";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 

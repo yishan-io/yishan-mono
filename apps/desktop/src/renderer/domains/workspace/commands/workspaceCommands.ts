@@ -19,7 +19,7 @@ import {
 } from "@renderer/domains/workbench";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
-import { isFolderWorkspace } from "../model/localFolder";
+import { isFolderWorkspace } from "../localFolder";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 

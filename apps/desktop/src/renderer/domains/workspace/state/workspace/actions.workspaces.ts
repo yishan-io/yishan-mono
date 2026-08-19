@@ -1,4 +1,4 @@
-import type { WorkspaceItem } from "../../model/workspaceTypes";
+import type { WorkspaceItem } from "../../workspaceTypes";
 import {
   applyCreatedWorkspaceState,
   applyDeletedWorkspaceState,

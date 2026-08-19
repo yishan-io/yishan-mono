@@ -10,7 +10,7 @@ export type {
   WorkspaceItem,
   WorkspaceLifecycleState,
   WorkspaceStatus,
-} from "./model/workspaceTypes";
+} from "./workspaceTypes";
 export { selectWorkspaces } from "./state/workspaceSelectors";
 export type { RpcFrontendMessagePayload } from "@shared/contracts/rpcSchema";
 
@@ -49,7 +49,7 @@ export {
   warmupWorkspacesForProjects,
 } from "./commands/workspaceWarmupCommand";
 export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
-export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./model/workspaceTypes";
+export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./workspaceTypes";
 export {
   addWorkspace,
   setOrderedWorkspaceIds,
@@ -75,7 +75,7 @@ export {
 } from "./state/workspaceSettingsStore";
 export { selectIsDefaultContextEnabled } from "./state/workspaceSettingsSelectors";
 export { useWorkspaceBranchPrefixSettings } from "./hooks/useWorkspaceBranchPrefixSettings";
-export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./model/branchPrefix";
+export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./branchPrefix";
 export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWorkspaceDialogView";
 export { RenameWorkspaceDialogView } from "./features/rename-workspace/RenameWorkspaceDialogView";
 export { WorkspaceDeleteDialogView } from "./features/delete-workspace/WorkspaceDeleteDialogView";
@@ -97,7 +97,7 @@ export {
   resolveExplicitWorkspaceDisplayMetadata,
   resolveHydratedWorkspaceDisplayMetadata,
   resolveWorkspaceListDisplayName,
-} from "./services/workspaceDisplayNames";
-export { isFolderWorkspace } from "./model/localFolder";
+} from "./workspaceDisplayNames";
+export { isFolderWorkspace } from "./localFolder";
 
 export { BranchDropdown, type BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";

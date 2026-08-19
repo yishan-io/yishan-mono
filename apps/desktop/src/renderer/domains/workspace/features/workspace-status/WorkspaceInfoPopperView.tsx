@@ -5,8 +5,8 @@ import { PullRequestIcon } from "@renderer/domains/git";
 import { livePrStatus } from "@renderer/domains/git";
 import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
-import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
-import { isFolderWorkspace } from "../../model/localFolder";
+import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
+import { isFolderWorkspace } from "../../localFolder";
 
 type WorkspaceInfoPopperViewProps = {
   open: boolean;

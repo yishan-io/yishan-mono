@@ -6,7 +6,7 @@
  * Removed in this wave (W1):
  *   - Workspace Store types (moved to features/workspace/state/workspaceStoreTypes.ts)
  *   - Project Store re-exports (import from features/project/model/projectTypes)
- *   - Workspace type re-exports (import from features/workspace/model/workspaceTypes)
+ *   - Workspace type re-exports (import from features/workspace/workspaceTypes)
  *   - API and RPC client types (no transport imports in Workbench Model)
  *   - Agent chat type re-exports (import from features/agent/model/chatTypes)
  *
