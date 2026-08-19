@@ -29,25 +29,24 @@ const mocks = vi.hoisted(() => ({
   writeInput: vi.fn(),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({
-    terminal: {
+vi.mock("../../../domains/terminal/infrastructure/daemonTerminalClient", () => ({
+  getTerminalRpc: () =>
+    Promise.resolve({
       closeSession: mocks.closeSession,
       killProcess: mocks.killProcess,
       createSession: mocks.createSession,
       listDetectedPorts: mocks.listDetectedPorts,
       listSessions: mocks.listSessions,
       readOutput: mocks.readOutput,
-      subscribeSessions: {
-        subscribe: mocks.subscribeSessions,
-      },
-      subscribeOutput: {
-        subscribe: mocks.subscribeOutput,
-      },
+      subscribeSessions: mocks.subscribeSessions,
+      subscribeOutput: mocks.subscribeOutput,
       resize: mocks.resize,
       writeInput: mocks.writeInput,
-    },
-  })),
+    }),
+}));
+
+vi.mock("../../../rpc/rpcTransport", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
 describe("terminalCommands", () => {

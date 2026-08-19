@@ -1,7 +1,7 @@
 import { type DesktopAgentKind, isDesktopAgentKind } from "@renderer/domains/agent";
 import type { TabStoreState } from "../../../domains/workbench";
 import { generateId } from "../../../helpers/generateId";
-import type { TerminalSessionSummary } from "../../../rpc/daemonTypes";
+import type { TerminalSessionSummary } from "../infrastructure/daemonTerminalClient";
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
 

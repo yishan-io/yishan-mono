@@ -12,7 +12,7 @@ import { closeAllTabsWithCleanup, closeOtherTabsWithCleanup, closeTabWithCleanup
 
 const rpcMocks = vi.hoisted(() => ({
   closeAgentSession: vi.fn(),
-  closeSession: vi.fn(),
+  closeSession: vi.fn(async () => undefined),
   enqueueWorkspaceErrorNotice: vi.fn(),
   stopPiSession: vi.fn(async () => {}),
   clearAgentChatComposerFocus: vi.fn(),
@@ -52,6 +52,10 @@ vi.mock("@renderer/domains/workspace", async (importOriginal) => {
   };
 });
 
+vi.mock("@renderer/domains/terminal", () => ({
+  closeTerminalSession: rpcMocks.closeSession,
+}));
+
 vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../rpc/rpcTransport")>();
   return {
@@ -59,9 +63,6 @@ vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
     getDaemonClient: vi.fn(async () => ({
       chat: {
         closeAgentSession: rpcMocks.closeAgentSession,
-      },
-      terminal: {
-        closeSession: rpcMocks.closeSession,
       },
     })),
   };

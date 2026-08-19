@@ -1,11 +1,9 @@
 import { generateId } from "../helpers/generateId";
-import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
 import {
   asRecord,
   buildRequest,
   buildUnsupportedMethodError,
-  normalizeWorktreePath,
   parseJsonRpcMessage,
   readOptionalString,
 } from "./helpers";
@@ -50,11 +48,11 @@ export class DaemonClient {
   private readonly pendingRequestsById = new Map<string, PendingRequest>();
   private readonly subscriptionsById = new Map<string, ActiveSubscription>();
   private readonly workspaceIdByWorktreePath = new Map<string, string>();
+  /** Shared terminal-output frame index bookkeeping (raw subscription delivery). */
+  private readonly terminalNextIndexBySessionId = new Map<string, number>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectPromise: Promise<void> | null = null;
   private disposed = false;
-
-  private readonly _terminalClient: DaemonTerminalClient;
 
   constructor(options: {
     openSocket: () => Promise<WebSocket>;
@@ -63,44 +61,28 @@ export class DaemonClient {
     this.openSocket = options.openSocket;
     this.onConnectionEvent = options.onConnectionEvent;
 
-    const invoke = this.invoke.bind(this);
-    const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
-
-    this._terminalClient = new DaemonTerminalClient({
-      invoke,
-      resolveWorkspaceId,
-      sendBinary: this.sendTerminalInputBinary.bind(this),
-      getSocketReadyState: () => this.socket?.readyState ?? null,
-      subscriptionsById: this.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
-    });
+    // No Domain clients are composed here (desktop7 Phase 25): project,
+    // workspace, file, git, and terminal RPC adapters live in their Domain
+    // Infrastructure over the transport core exposed below.
   }
 
   /**
-   * Transport core exposed to Domain RPC adapters (desktop7 Phase 24).
-   * resolveWorkspaceId is a Phase 25 residue: the root terminal client still
-   * needs worktree→id resolution until the terminal Domain migrates; the
-   * workspace Domain owns the canonical implementation.
+   * Transport core exposed to Domain RPC adapters (desktop7 Phase 24/25).
+   * Root RPC now owns only connection, correlation, timeouts, raw
+   * subscription delivery, and raw binary frames; every Domain client lives
+   * in its Domain Infrastructure.
    */
   readonly transport: DaemonTransport = {
     invoke: (method, params, timeoutMs) => this.invoke(method, params, timeoutMs),
     workspaceIdByWorktreePath: this.workspaceIdByWorktreePath,
-    resolveWorkspaceId: (input) => this.resolveWorkspaceId(input),
+    sendBinary: (sessionId, data) => this.sendTerminalInputBinary(sessionId, data),
+    getSocketReadyState: () => this.socket?.readyState ?? null,
+    subscriptionsById: this.subscriptionsById as unknown as Map<string, unknown>,
+    terminalNextIndexBySessionId: this.terminalNextIndexBySessionId,
+    startRawSubscription: (options) => this.startRawSubscription(options),
   };
 
   readonly tokenUsage = {};
-
-  readonly terminal = {
-    createSession: (input: Rpc.TerminalCreateSessionInput) => this._terminalClient.createSession(input),
-    writeInput: (input: Rpc.TerminalWriteInput) => this._terminalClient.writeInput(input),
-    resize: (input: Rpc.TerminalResizeInput) => this._terminalClient.resize(input),
-    closeSession: (input: Rpc.TerminalCloseInput) => this._terminalClient.closeSession(input),
-    killProcess: (input: Rpc.TerminalKillProcessInput) => this._terminalClient.killProcess(input),
-    readOutput: (input: Rpc.TerminalReadOutputInput) => this._terminalClient.readOutput(input),
-    listDetectedPorts: () => this._terminalClient.listDetectedPorts(),
-    setActiveWorkspace: (input: Rpc.SetActiveWorkspaceInput) => this._terminalClient.setActiveWorkspace(input),
-    getResourceUsage: () => this._terminalClient.getResourceUsage(),
-    listSessions: (input?: Rpc.TerminalListSessionsInput) => this._terminalClient.listSessions(input),
-  };
 
   readonly context = {
     getState: () => this.sendRequest("context.getState"),
@@ -426,85 +408,6 @@ export class DaemonClient {
    * Phase 25 residue: mirrors the workspace Domain's resolveId so the root
    * terminal client can map worktree paths while it still lives in root RPC.
    */
-  private async resolveWorkspaceId(input: unknown): Promise<string> {
-    const record = asRecord(input);
-    if (!record) {
-      throw new Error("workspace input is required");
-    }
-
-    const workspaceId = readOptionalString(record.workspaceId);
-    const workspaceWorktreePath = readOptionalString(record.workspaceWorktreePath);
-    if (workspaceWorktreePath) {
-      return await this.ensureWorkspaceIdByWorktreePath(workspaceWorktreePath, workspaceId);
-    }
-
-    const cwd = readOptionalString(record.cwd);
-    if (cwd) {
-      return await this.ensureWorkspaceIdByWorktreePath(cwd, workspaceId);
-    }
-
-    if (workspaceId) {
-      return workspaceId;
-    }
-
-    throw new Error("workspaceId or workspaceWorktreePath is required");
-  }
-
-  private async ensureWorkspaceIdByWorktreePath(worktreePath: string, preferredWorkspaceId?: string): Promise<string> {
-    const normalizedWorktreePath = normalizeWorktreePath(worktreePath);
-    const normalizedPreferredWorkspaceId = preferredWorkspaceId?.trim();
-    if (normalizedPreferredWorkspaceId) {
-      const workspaces = await this.listTransportWorkspaces();
-      for (const workspace of workspaces) {
-        this.workspaceIdByWorktreePath.set(workspace.path, workspace.id);
-      }
-
-      const existingPreferredWorkspace = workspaces.find(
-        (workspace) => workspace.id === normalizedPreferredWorkspaceId,
-      );
-      if (existingPreferredWorkspace) {
-        return existingPreferredWorkspace.id;
-      }
-
-      throw new Error(`daemon workspace not found for id: ${normalizedPreferredWorkspaceId}`);
-    }
-
-    const cachedWorkspaceId = this.workspaceIdByWorktreePath.get(normalizedWorktreePath);
-    if (cachedWorkspaceId) {
-      return cachedWorkspaceId;
-    }
-
-    const workspaces = await this.listTransportWorkspaces();
-    for (const workspace of workspaces) {
-      this.workspaceIdByWorktreePath.set(workspace.path, workspace.id);
-    }
-
-    const existingWorkspace = workspaces.find((workspace) => workspace.path === normalizedWorktreePath);
-    if (existingWorkspace) {
-      return existingWorkspace.id;
-    }
-
-    throw new Error(`daemon workspace is not open for path: ${normalizedWorktreePath}`);
-  }
-
-  private async listTransportWorkspaces(): Promise<Array<{ id: string; path: string }>> {
-    const result = await this.invoke("list");
-    if (!Array.isArray(result)) {
-      return [];
-    }
-
-    const workspaces: Array<{ id: string; path: string }> = [];
-    for (const candidate of result) {
-      const record = asRecord(candidate);
-      const id = readOptionalString(record?.id);
-      const path = readOptionalString(record?.path);
-      if (!id || !path) {
-        continue;
-      }
-      workspaces.push({ id, path: normalizeWorktreePath(path) });
-    }
-    return workspaces;
-  }
 
   private async startRawSubscription(options: Rpc.StartSubscriptionOptions): Promise<string> {
     await this.sendRequest(options.method, options.params);
@@ -538,58 +441,6 @@ export class DaemonClient {
     const path = `${options.namespace}.${options.method}`;
     const record = asRecord(options.input);
 
-    if (options.namespace === "terminal" && options.method === "subscribeOutput") {
-      const sessionId = readOptionalString(record?.sessionId) || "";
-      return await this.startRawSubscription({
-        method: "terminal.subscribe",
-        params: { sessionId },
-        onNotification: (event) => {
-          if (event.method === "terminal.output") {
-            const payload = asRecord(event.payload) ?? {};
-            const eventSessionId = readOptionalString(payload.sessionId) || sessionId;
-            // Accept both string (JSON-RPC) and Uint8Array (binary fast-path) chunks.
-            const rawChunk = payload.chunk;
-            const chunk = rawChunk instanceof Uint8Array ? rawChunk : typeof rawChunk === "string" ? rawChunk : "";
-            const terminalNextIndexBySessionId = this._terminalClient.terminalNextIndexBySessionId;
-            const nextIndex = (terminalNextIndexBySessionId.get(eventSessionId) ?? 0) + 1;
-            terminalNextIndexBySessionId.set(eventSessionId, nextIndex);
-            options.onNotification({
-              method: event.method,
-              payload: {
-                sessionId: eventSessionId,
-                chunk,
-                nextIndex,
-              },
-            });
-            return;
-          }
-
-          options.onNotification({
-            method: event.method,
-            payload: event.payload,
-          });
-        },
-      });
-    }
-
-    if (options.namespace === "terminal" && options.method === "subscribeSessions") {
-      const subscriptionId = generateId();
-      this.subscriptionsById.set(subscriptionId, {
-        method: "terminal.sessions",
-        onNotification: options.onNotification,
-        registeredWithDaemon: false,
-      });
-      return subscriptionId;
-    }
-
-    if (options.namespace === "terminal" || options.namespace === "git" || options.namespace === "file") {
-      return await this.startRawSubscription({
-        method: path,
-        params: options.input,
-        onNotification: options.onNotification,
-      });
-    }
-
     if (options.namespace === "events" && options.method === "frontendStream") {
       return await this.startRawSubscription({
         method: path,
@@ -614,22 +465,9 @@ export class DaemonClient {
       return;
     }
 
+    // Terminal subscription teardown (unsubscribe + frame-index cleanup) is
+    // owned by the Terminal Domain adapter over the shared registry.
     this.subscriptionsById.delete(subscriptionId);
-    if (subscription.method !== "terminal.subscribe") {
-      return;
-    }
-
-    const sessionId = readOptionalString(asRecord(subscription.params)?.sessionId);
-    if (!sessionId) {
-      return;
-    }
-
-    if (!this._terminalClient.hasSubscriptionForSession(sessionId)) {
-      this._terminalClient.terminalNextIndexBySessionId.delete(sessionId);
-    }
-    if (subscription.registeredWithDaemon) {
-      void this.sendRequest("terminal.unsubscribe", { sessionId }).catch(() => undefined);
-    }
   }
 
   dispose(): void {

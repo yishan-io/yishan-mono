@@ -1,5 +1,6 @@
 import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
 import type * as Rpc from "./daemonTypes";
+import type { StartSubscriptionOptions } from "./daemonTypes";
 
 export type ApiSubscriptionHandlers = {
   onData: (event: unknown) => void;
@@ -11,8 +12,16 @@ export type DaemonTransport = {
   invoke: (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
   /** Shared worktree-path → workspace-id cache (populated by workspace operations). */
   workspaceIdByWorktreePath: Map<string, string>;
-  /** Resolves a worktree path / cwd / workspaceId to one workspace id (Phase 24: terminal bridge). */
-  resolveWorkspaceId: (input: unknown) => Promise<string>;
+  /** Sends one binary terminal-input frame over the raw socket (terminal adapter). */
+  sendBinary: (sessionId: string, data: string | Uint8Array) => void;
+  /** Current WebSocket readyState for terminal binary-path decisions. */
+  getSocketReadyState: () => number | null;
+  /** Shared raw subscription registry (terminal subscriptions register here). */
+  subscriptionsById: Map<string, unknown>;
+  /** Shared terminal-output frame index bookkeeping (raw subscription delivery). */
+  terminalNextIndexBySessionId: Map<string, number>;
+  /** Registers one raw daemon subscription (terminal adapter uses this). */
+  startRawSubscription: (options: StartSubscriptionOptions) => Promise<string>;
 };
 
 type DaemonRpcSubscription = {
@@ -41,24 +50,6 @@ export type DaemonRpcClient = {
     setCurrentOrg: (orgId: string) => Promise<unknown>;
     setActiveProject: (projectId: string) => Promise<unknown>;
     setActiveFile: (filePath: string) => Promise<unknown>;
-  };
-  terminal: {
-    createSession: (input: Rpc.TerminalCreateSessionInput) => Promise<Rpc.TerminalCreateSessionResponse>;
-    writeInput: (input: Rpc.TerminalWriteInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    resize: (input: Rpc.TerminalResizeInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    readOutput: (input: Rpc.TerminalReadOutputInput) => Promise<Rpc.TerminalReadOutputResponse>;
-    closeSession: (input: Rpc.TerminalCloseInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    killProcess: (input: Rpc.TerminalKillProcessInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    listDetectedPorts: (input?: unknown) => Promise<Rpc.TerminalDetectedPort[]>;
-    setActiveWorkspace: (input: Rpc.SetActiveWorkspaceInput) => Promise<Rpc.SetActiveWorkspaceResponse>;
-    getResourceUsage: (input?: unknown) => Promise<Rpc.TerminalResourceUsageSnapshot>;
-    listSessions: (input?: Rpc.TerminalListSessionsInput) => Promise<Rpc.TerminalSessionSummary[]>;
-    subscribeOutput: {
-      subscribe: (input: { sessionId: string }, handlers: ApiSubscriptionHandlers) => DaemonRpcSubscription;
-    };
-    subscribeSessions: {
-      subscribe: (input: undefined, handlers: ApiSubscriptionHandlers) => DaemonRpcSubscription;
-    };
   };
   chat: {
     ensureWorkspaceChatSession: (input: unknown) => Promise<{ sessionId: string; capabilities?: unknown }>;

@@ -316,3 +316,9 @@ export async function syncWorkspaceContextLinks(input: {
   const workspaceRpc = await getWorkspaceRpc();
   return await workspaceRpc.syncContextLink(input);
 }
+
+/** Resolves one workspace id from a worktree path / cwd / id (terminal domain consumes this). */
+export async function resolveWorkspaceId(input: unknown): Promise<string> {
+  const workspaceRpc = await getWorkspaceRpc();
+  return workspaceRpc.resolveId(input);
+}

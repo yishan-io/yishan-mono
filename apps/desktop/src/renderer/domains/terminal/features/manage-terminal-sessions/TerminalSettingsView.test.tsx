@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
+import type { TerminalSessionLifecycleEvent } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
-import type { TerminalSessionLifecycleEvent } from "../../../../rpc/daemonTypes";
 import { TerminalSettingsView } from "./TerminalSettingsView";
 
 const mocked = vi.hoisted(() => {

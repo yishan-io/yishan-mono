@@ -1,6 +1,7 @@
 import { clearTerminalAgentStatus, removeTabData, stopPiSession } from "@renderer/domains/agent";
 import { removeFileTabContent } from "@renderer/domains/files";
 import { removeDiffTabContent } from "@renderer/domains/git";
+import { closeTerminalSession } from "@renderer/domains/terminal";
 import { closeAllTabs, closeOtherTabs, closeTab, tabStore } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import type { CloseTabOptions } from "@renderer/domains/workbench";
@@ -21,7 +22,6 @@ import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
 import { clearAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../../helpers/terminalCloseTombstones";
-import { getDaemonClient } from "../../rpc/rpcTransport";
 
 type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type AgentChatTab = Extract<WorkbenchTab, { kind: "agent-chat" }>;
@@ -43,10 +43,8 @@ function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
       continue;
     }
 
-    void getDaemonClient()
-      .then((client) => {
-        return client.terminal.closeSession({ sessionId });
-      })
+    void closeTerminalSession({ sessionId })
+      .then(() => undefined)
       .catch((error) => {
         const message = getErrorMessage(error);
         enqueueWorkspaceErrorNotice({

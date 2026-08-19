@@ -1,7 +1,7 @@
 import { tabStore } from "@renderer/domains/workbench";
+import { isTerminalTabWithSessionId } from "@renderer/domains/workbench";
 import { useMemo } from "react";
 import type { WorkbenchTab } from "../../../domains/workbench";
-import { isTerminalTabWithSessionId } from "@renderer/domains/workbench";
 
 type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type TerminalTabWithSessionId = TerminalTab & { data: TerminalTab["data"] & { sessionId: string } };

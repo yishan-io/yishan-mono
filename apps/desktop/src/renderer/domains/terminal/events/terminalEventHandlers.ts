@@ -10,7 +10,7 @@ import { setTerminalTabAgentKind } from "@renderer/domains/workbench";
  * default deps subscribe via the router selectors.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { getDaemonClient } from "../../../rpc/rpcTransport";
+import { getTerminalRpc } from "../infrastructure/daemonTerminalClient";
 import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 export type TerminalEventDependencies = {
@@ -23,8 +23,8 @@ export type TerminalEventDependencies = {
 
 export const DEFAULT_TERMINAL_EVENT_DEPENDENCIES: TerminalEventDependencies = {
   closeTerminalSession: async (sessionId) => {
-    const client = await getDaemonClient();
-    await client.terminal.closeSession({ sessionId });
+    const terminalRpc = await getTerminalRpc();
+    await terminalRpc.closeSession({ sessionId });
   },
 };
 

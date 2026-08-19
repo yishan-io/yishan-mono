@@ -6,14 +6,15 @@ import type {
   TerminalSessionLifecycleEvent,
   TerminalSessionSummary,
   TerminalStreamEvent,
-} from "../../../rpc/daemonTypes";
-import type { TerminalDetectedPort } from "../../../rpc/daemonTypes";
+} from "../infrastructure/daemonTerminalClient";
+import type { TerminalDetectedPort } from "../infrastructure/daemonTerminalClient";
 
-export type { TerminalSessionSummary } from "../../../rpc/daemonTypes";
-import { getDaemonClient, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
-import type { DaemonRpcClient } from "../../../rpc/types";
+export type { TerminalSessionSummary } from "../infrastructure/daemonTerminalClient";
+import { subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
+import { getTerminalRpc } from "../infrastructure/daemonTerminalClient";
+import type { DaemonTerminalClient } from "../infrastructure/daemonTerminalClient";
 
-export type { TerminalDetectedPort } from "../../../rpc/daemonTypes";
+export type { TerminalDetectedPort } from "../infrastructure/daemonTerminalClient";
 
 type TerminalCreateSessionParams = TerminalCreateSessionInput;
 
@@ -36,57 +37,57 @@ export function retainOpenTerminalTabFocus(openTabIds: ReadonlySet<string>): voi
 
 /**
  * Cached daemon client reference for the terminal input hot path.
- * Avoids awaiting the (already-resolved) `getDaemonClient()` promise
+ * Avoids awaiting the (already-resolved) `getTerminalRpc()` promise
  * on every keystroke, eliminating one microtask per input event.
  */
-let cachedDaemonClient: DaemonRpcClient | null = null;
+let cachedTerminalRpc: DaemonTerminalClient | null = null;
 
 /** Creates one PTY-backed terminal session and returns resolved dimensions. */
 export async function createTerminalSession(params: TerminalCreateSessionParams) {
-  const client = await getDaemonClient();
-  cachedDaemonClient = client;
-  return client.terminal.createSession(params);
+  const terminalRpc = await getTerminalRpc();
+  cachedTerminalRpc = terminalRpc;
+  return terminalRpc.createSession(params);
 }
 
 /** Writes one raw keystroke/input chunk to one terminal session. */
 export async function writeTerminalInput(params: { sessionId: string; data: string | Uint8Array }) {
   // Fast path: use cached client to avoid microtask overhead on every keystroke.
-  if (cachedDaemonClient) {
-    return cachedDaemonClient.terminal.writeInput(params);
+  if (cachedTerminalRpc) {
+    return cachedTerminalRpc.writeInput(params);
   }
-  const client = await getDaemonClient();
-  cachedDaemonClient = client;
-  return client.terminal.writeInput(params);
+  const terminalRpc = await getTerminalRpc();
+  cachedTerminalRpc = terminalRpc;
+  return terminalRpc.writeInput(params);
 }
 
 /** Resizes one terminal session viewport. */
 export async function resizeTerminal(params: { sessionId: string; cols: number; rows: number }) {
-  const client = await getDaemonClient();
-  return client.terminal.resize(params);
+  const terminalRpc = await getTerminalRpc();
+  return terminalRpc.resize(params);
 }
 
 /** Reads buffered output from one terminal session at one index cursor. */
 export async function readTerminalOutput(params: { sessionId: string; fromIndex: number }) {
-  const client = await getDaemonClient();
-  return client.terminal.readOutput(params);
+  const terminalRpc = await getTerminalRpc();
+  return terminalRpc.readOutput(params);
 }
 
 /** Closes one active terminal session and releases runtime resources. */
 export async function closeTerminalSession(params: { sessionId: string }) {
-  const client = await getDaemonClient();
-  return client.terminal.closeSession(params);
+  const terminalRpc = await getTerminalRpc();
+  return terminalRpc.closeSession(params);
 }
 
 /** Terminates one process id associated with terminal workloads. */
 export async function killTerminalProcess(params: { pid: number }) {
-  const client = await getDaemonClient();
-  return client.terminal.killProcess(params);
+  const terminalRpc = await getTerminalRpc();
+  return terminalRpc.killProcess(params);
 }
 
 /** Lists currently detected listening ports for active terminal sessions. */
 export async function listDetectedPorts(): Promise<TerminalDetectedPort[]> {
-  const client = await getDaemonClient();
-  return await client.terminal.listDetectedPorts();
+  const terminalRpc = await getTerminalRpc();
+  return await terminalRpc.listDetectedPorts();
 }
 
 /** Subscribes one listener to detected-port change events over websocket. */
@@ -108,20 +109,20 @@ export function subscribeDetectedPorts(
 
 /** Sets daemon active workspace context for background optimizations. */
 export async function setActiveWorkspace(params: { workspaceId?: string }): Promise<{ updated: boolean }> {
-  const client = await getDaemonClient();
-  return await client.terminal.setActiveWorkspace({ workspaceId: params.workspaceId });
+  const terminalRpc = await getTerminalRpc();
+  return await terminalRpc.setActiveWorkspace({ workspaceId: params.workspaceId });
 }
 
 /** Returns one snapshot of terminal CPU/memory usage and subprocess metrics. */
 export async function getTerminalResourceUsage(): Promise<TerminalResourceUsageSnapshot> {
-  const client = await getDaemonClient();
-  return await client.terminal.getResourceUsage();
+  const terminalRpc = await getTerminalRpc();
+  return await terminalRpc.getResourceUsage();
 }
 
 /** Lists current terminal sessions for global session management UI. */
 export async function listTerminalSessions(params?: TerminalListSessionsInput): Promise<TerminalSessionSummary[]> {
-  const client = await getDaemonClient();
-  return await client.terminal.listSessions(params ?? {});
+  const terminalRpc = await getTerminalRpc();
+  return await terminalRpc.listSessions(params ?? {});
 }
 
 /** Subscribes one listener to live terminal output and exit events over websocket. */
@@ -130,8 +131,8 @@ export async function subscribeTerminalOutput(params: {
   onData: (event: TerminalOutputEvent) => void;
   onError?: (error: unknown) => void;
 }) {
-  const client = await getDaemonClient();
-  return client.terminal.subscribeOutput.subscribe(
+  const terminalRpc = await getTerminalRpc();
+  return terminalRpc.subscribeOutput(
     { sessionId: params.sessionId },
     {
       onData: (event) => params.onData(event as TerminalOutputEvent),
@@ -145,11 +146,11 @@ export async function subscribeTerminalSessions(params: {
   onData: (event: TerminalSessionLifecycleEvent) => void;
   onError?: (error: unknown) => void;
 }) {
-  const client = await getDaemonClient();
-  return client.terminal.subscribeSessions.subscribe(undefined, {
+  const terminalRpc = await getTerminalRpc();
+  return terminalRpc.subscribeSessions(undefined, {
     onData: (event) => params.onData(event as TerminalSessionLifecycleEvent),
     onError: params.onError,
   });
 }
 
-export type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
+export type { TerminalResourceUsageSnapshot } from "../infrastructure/daemonTerminalClient";

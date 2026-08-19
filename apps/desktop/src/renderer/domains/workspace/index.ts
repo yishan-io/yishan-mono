@@ -34,6 +34,7 @@ export {
   toggleRightPaneVisibility,
   undoFileTreeOperation,
   refreshWorkspacePullRequest,
+  resolveWorkspaceId,
   syncWorkspaceContextLinks,
 } from "./commands/workspaceCommands";
 export {
