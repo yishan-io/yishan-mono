@@ -5,7 +5,7 @@ import { listOrgNodes } from "@renderer/domains/node";
 import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
 import type { WorkspaceItem } from "@renderer/domains/workspace";
-import {  setOrderedWorkspaceIds, workspaceStore } from "@renderer/domains/workspace";
+import { workspaceStore } from "@renderer/domains/workspace";
 import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useQuery } from "@tanstack/react-query";
@@ -235,7 +235,7 @@ export function useWorkspaceNavigatorTreeData(input: {
   ]);
 
   useEffect(() => {
-    setOrderedWorkspaceIds(treeWorkspaces.map((workspace) => workspace.id));
+    workspaceStore.getState().setOrderedWorkspaceIds(treeWorkspaces.map((workspace) => workspace.id));
   }, [treeWorkspaces]);
 
   const expandedTreeItems = useMemo(() => {

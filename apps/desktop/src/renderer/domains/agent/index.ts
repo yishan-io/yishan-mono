@@ -39,7 +39,6 @@ export type {
   AgentThinkingSignatureSummary,
 } from "./agentChatTypes";
 export { isAgentSessionBusy } from "./agentChatTypes";
-export { recordWorkspaceUnreadNotification, removeTabData, removeWorkspaceTaskCounts, setWorkspaceAgentStatusByWorkspaceId, markWorkspaceNotificationsRead } from "./state/chatStateMutations";
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
@@ -81,3 +80,4 @@ export { MemorySettingsView } from "./features/agent-memory/MemorySettingsView";
 export { ComputerUseSettingsView } from "./features/computer-use/ComputerUseSettingsView";
 
 import { chatStore } from "./state/chatStore";
+import { agentChatStore } from "./state/agentChatStore";

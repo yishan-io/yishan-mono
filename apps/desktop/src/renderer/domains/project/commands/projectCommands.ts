@@ -9,15 +9,14 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import type { ProjectWithWorkspacesRecord } from "../../../api/types";
 
-import { addWorkspace as applyAddWorkspace, buildWorkspaceOpenProjectEntries, createLocalFolderImport, openWorkspaceEntries, syncTabStoreWithWorkspace, syncWorkspaceContextLinks } from "../../../domains/workspace";
 import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
+import { buildWorkspaceOpenProjectEntries, createLocalFolderImport, openWorkspaceEntries, syncTabStoreWithWorkspace, syncWorkspaceContextLinks, workspaceSettingsStore, workspaceStore } from "@renderer/domains/workspace";
 import { sessionStore } from "@renderer/domains/session";
-import {  workspaceStore, workspaceSettingsStore } from "@renderer/domains/workspace";
 
 async function inspectLocalRepository(path: string): Promise<{
   isGitRepository: boolean;
@@ -179,7 +178,7 @@ export async function createProject(input: {
     // Non-git projects have no branches: store an empty branch instead of
     // fabricating "main" so nothing downstream mistakes the project for git.
     const isNonGitProject = project.sourceType === "unknown";
-    applyAddWorkspace({
+    workspaceStore.getState().addWorkspace({
       projectId: workspace.projectId ?? project.id,
       workspaceId: workspace.id,
       name: workspaceName,

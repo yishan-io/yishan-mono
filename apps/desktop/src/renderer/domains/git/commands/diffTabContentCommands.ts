@@ -1,5 +1,6 @@
 import type { FileDiffEntry } from "@renderer/domains/workbench";
 import { diffTabContentStore } from "../state/diffTabContentStore";
+import { chatStore } from "@renderer/domains/agent";
 
 /**
  * Git commands that own diff tab content (desktop6-adjust.md W6 task 16).

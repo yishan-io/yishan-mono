@@ -130,9 +130,7 @@ export function clearTerminalAgentStatus(tabId: string): void {
   }
 
   if (changed) {
-    chatStore
-      .getState()
-      .setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
+    chatStore.getState().setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
   }
 }
 

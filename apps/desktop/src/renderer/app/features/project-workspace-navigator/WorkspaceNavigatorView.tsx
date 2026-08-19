@@ -1,12 +1,12 @@
 import { Box } from "@mui/material";
-import {  markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead, chatStore } from "@renderer/domains/agent";
+import { chatStore } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
 import { deleteProject, projectStore, useProjectDeletionFlow } from "@renderer/domains/project";
 
 import {  activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
 
-import {  WorkspaceDeleteDialogView, workspaceStore } from "@renderer/domains/workspace";
+import { WorkspaceDeleteDialogView, workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
 import { useWorkspaceDeletionFlow } from "@renderer/domains/workspace";
 import { useWorkspaceInfoHover } from "@renderer/domains/workspace";
@@ -54,7 +54,6 @@ export function WorkspaceNavigatorView() {
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
-  const markWorkspaceNotificationsRead = applyMarkWorkspaceNotificationsRead;
   const {
     menu: projectContextMenu,
     openMenu: openProjectContextMenu,
@@ -219,8 +218,8 @@ export function WorkspaceNavigatorView() {
       return;
     }
 
-    markWorkspaceNotificationsRead(focusedWorkspaceId);
-  }, [isAppFocused, markWorkspaceNotificationsRead, selectedWorkspaceId, workspaceUnreadToneByWorkspaceId]);
+    chatStore.getState().markWorkspaceNotificationsRead(focusedWorkspaceId);
+  }, [isAppFocused, selectedWorkspaceId, workspaceUnreadToneByWorkspaceId]);
   /** Closes workspace context menu and nested submenu layers together. */
   const closeWorkspaceMenus = () => {
     closeWorkspaceContextMenu();

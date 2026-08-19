@@ -17,7 +17,7 @@ import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/age
 import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../agentChatTypes";
 import { formatAgentSessionTitle } from "../../../agentSkillText";
-import { setTurnError } from "../../../state/chatStateMutations";
+
 import { ProviderCredentialDialog } from "../../../ui/credentials/ProviderCredentialDialog";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
@@ -175,7 +175,7 @@ function AgentChatComposerPaneComponent({
       try {
         await sendAgentPrompt({ tabId, sessionId, message: finalMessage });
       } catch (error) {
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
         return false;
       }
       setAttachments([]);
@@ -230,7 +230,7 @@ function AgentChatComposerPaneComponent({
     try {
       await abortAgent({ tabId, sessionId });
     } catch (error) {
-      setTurnError(tabId, getErrorMessage(error));
+      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
     }
   }, [sessionId, tabId]);
 
@@ -241,7 +241,7 @@ function AgentChatComposerPaneComponent({
     try {
       await compactAgent({ sessionId });
     } catch (error) {
-      setTurnError(tabId, getErrorMessage(error));
+      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       setIsManualCompactPending(false);
     }
   }, [isManualCompactPending, sessionId, tabId]);
@@ -274,7 +274,7 @@ function AgentChatComposerPaneComponent({
       try {
         await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
       } catch (error) {
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     },
     [sessionId, tabId],
@@ -295,7 +295,7 @@ function AgentChatComposerPaneComponent({
       try {
         await setAgentThinkingLevel({ tabId, sessionId, level });
       } catch (error) {
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     },
     [sessionId, tabId],

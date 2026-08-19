@@ -1,4 +1,4 @@
-import { clearTerminalAgentStatus, removeTabData, stopPiSession } from "@renderer/domains/agent";
+import { clearTerminalAgentStatus, stopPiSession, chatStore } from "@renderer/domains/agent";
 import { removeFileTabContent } from "@renderer/domains/files";
 import { removeDiffTabContent } from "@renderer/domains/git";
 import { closeTerminalSession } from "@renderer/domains/terminal";
@@ -80,7 +80,7 @@ export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): v
     clearTerminalAgentStatus(tab.id);
     closeTerminalSessionsForTabs([tab]);
   }
-  removeTabData([tabId]);
+  chatStore.getState().removeTabData([tabId]);
   removeTabContentStores([tabId]);
   closeTab(tabId, options);
 }
@@ -105,7 +105,7 @@ export function closeOtherTabsWithCleanup(tabId: string): void {
   closeTerminalSessionsForTabs(removedTerminalTabs);
   stopAgentChatSessionsForTabs(removedAgentChatTabs);
   if (removedTabIds.length > 0) {
-    removeTabData(removedTabIds);
+    chatStore.getState().removeTabData(removedTabIds);
     removeTabContentStores(removedTabIds);
   }
   closeOtherTabs(tabId);
@@ -131,7 +131,7 @@ export function closeAllTabsWithCleanup(tabId: string): void {
   closeTerminalSessionsForTabs(removedTerminalTabs);
   stopAgentChatSessionsForTabs(removedAgentChatTabs);
   if (removedTabIds.length > 0) {
-    removeTabData(removedTabIds);
+    chatStore.getState().removeTabData(removedTabIds);
     removeTabContentStores(removedTabIds);
   }
   closeAllTabs(tabId);

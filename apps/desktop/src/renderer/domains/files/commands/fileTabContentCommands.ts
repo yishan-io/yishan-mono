@@ -1,5 +1,6 @@
 import { setFileTabDirty } from "@renderer/domains/workbench";
 import { type SeedFileTabContentInput, fileTabContentStore } from "../state/fileTabContentStore";
+import { chatStore } from "@renderer/domains/agent";
 
 /**
  * Files commands that own editable file tab content (desktop6-adjust.md W6

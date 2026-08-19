@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
 import { setAgentChatStreamTabVisible } from "../../../events/agentChatPiEventShared";
 
-import { clearPendingUiAutoResponse, setPendingUiAutoResponse, setTurnError } from "../../../state/chatStateMutations";
+
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
@@ -77,7 +77,7 @@ function AgentChatViewComponent({
       return;
     }
 
-    clearPendingUiAutoResponse(tabId);
+    agentChatStore.getState().clearPendingUiAutoResponse(tabId);
 
     await respondToAgentExtensionUiRequest({
       tabId,
@@ -110,7 +110,7 @@ function AgentChatViewComponent({
         return;
       }
 
-      setPendingUiAutoResponse(tabId, {
+      agentChatStore.getState().setPendingUiAutoResponse(tabId, {
         sourceRequestId: pendingUiRequest.id,
         targetMethod: "input",
         value,
@@ -136,7 +136,7 @@ function AgentChatViewComponent({
     }
 
     if (pendingUiRequest.method !== pendingUiAutoResponse.targetMethod) {
-      clearPendingUiAutoResponse(tabId);
+      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       return;
     }
 
@@ -148,10 +148,10 @@ function AgentChatViewComponent({
           requestId: pendingUiRequest.id,
           value: pendingUiAutoResponse.value,
         });
-        clearPendingUiAutoResponse(tabId);
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       } catch (error) {
-        clearPendingUiAutoResponse(tabId);
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     })();
   }, [liveSessionId, pendingUiAutoResponse, pendingUiRequest, tabId]);

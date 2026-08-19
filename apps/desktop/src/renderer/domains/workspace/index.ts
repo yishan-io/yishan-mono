@@ -1,3 +1,4 @@
+import { workspaceStore } from "./state/workspaceStore";
 /**
  * Workspace feature public API (Phase 12, desktop5.md).
  *
@@ -19,7 +20,6 @@ export { createLocalFolderImport, listLocalFolders, openFoldersForSnapshot, rest
 export { buildWorkspaceOpenProjectEntries, openWorkspaceEntries, warmupWorkspacesForProjects } from "./commands/workspaceWarmupCommand";
 export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
 export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./workspaceTypes";
-export { addWorkspace, setOrderedWorkspaceIds } from "./state/workspaceStateMutations";
 export { workspaceCreateProgressStore, type WorkspaceCreateProgressEntry, type WorkspaceCreateProgressStep, type WorkspaceCreateProgressStatus } from "./state/workspaceCreateProgressStore";
 
 
