@@ -1,4 +1,4 @@
-import type { RpcFrontendMessagePayload } from "../../../shared/contracts/rpcSchema";
+import type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
 import { subscribeBackendEvent } from "./backendEventRouter";
 
 export type AppActionEventPayload = RpcFrontendMessagePayload<"appAction">;

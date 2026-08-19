@@ -8,6 +8,7 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
 import type { CloseTabOptions } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { clearAgentChatComposerFocus } from "../../events";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
  *
@@ -21,7 +22,6 @@ import { getErrorMessage } from "@shared/helpers/errorHelpers";
  *         -> Agent, Terminal, Files, or Git cleanup Command
  *         -> Workbench remove-Tab Command
  */
-import { clearAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
 
 type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type AgentChatTab = Extract<WorkbenchTab, { kind: "agent-chat" }>;

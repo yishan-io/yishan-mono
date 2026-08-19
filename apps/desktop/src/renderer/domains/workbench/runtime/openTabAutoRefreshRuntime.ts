@@ -2,7 +2,7 @@ import type { readFile, refreshFileTabFromDisk } from "@renderer/domains/files";
 import type { readBranchComparisonDiff, readCommitDiff, readDiff, refreshDiffTabContent } from "@renderer/domains/git";
 import { isFileNotFoundError } from "@shared/helpers/errorHelpers";
 import type { DiffTabSource } from "../../../domains/workbench/model/types";
-import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events/backendEventPipeline";
+import { startBackendEventPipeline, subscribeBackendEvent } from "../../../events";
 import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 
 export type RefreshableOpenTab =

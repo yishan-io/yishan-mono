@@ -3,7 +3,7 @@ import {
   BACKEND_EVENT_NAME_BY_SOURCE,
   type NormalizedBackendEvent,
   normalizeBackendEvent,
-} from "./backendEventContracts";
+} from "./backendEventAdapter";
 
 /**
  * Builds one typed event envelope for normalization tests.

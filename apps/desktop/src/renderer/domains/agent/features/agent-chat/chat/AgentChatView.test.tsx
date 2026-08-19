@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   requestAgentChatComposerFocus,
   requestNewAgentChatComposerFocus,
-} from "../../../../../events/agentChatComposerFocus";
+} from "../../../../../events";
 import type { AgentMessage, AgentModel } from "../../../model/agentChatTypes";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { AgentChatView } from "./AgentChatView";

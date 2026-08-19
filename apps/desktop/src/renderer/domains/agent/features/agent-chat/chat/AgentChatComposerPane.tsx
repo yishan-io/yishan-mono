@@ -12,7 +12,7 @@ import {
   AGENT_CHAT_COMPOSER_FOCUS_EVENT,
   consumeAgentChatComposerFocus,
   getAgentChatComposerFocusRequest,
-} from "../../../../../events/agentChatComposerFocus";
+} from "../../../../../events";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
 import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";

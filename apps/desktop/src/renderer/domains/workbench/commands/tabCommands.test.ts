@@ -47,9 +47,6 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
 
-vi.mock("../../../events/backendEventStoreBindings", () => ({
-  clearTerminalAgentStatus: vi.fn(),
-}));
 
 vi.mock("../../../events/agentChatComposerFocus", () => ({
   clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
@@ -61,20 +58,25 @@ vi.mock("../../../views/workspace/terminal/terminalRuntimeRegistry", () => ({
   requestTerminalRuntimeFocus: rpcMocks.requestTerminalRuntimeFocus,
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({
-    chat: {
-      ensureWorkspaceChatSession: rpcMocks.ensureWorkspaceChatSession,
-      closeAgentSession: rpcMocks.closeAgentSession,
-    },
-    terminal: {
-      closeSession: rpcMocks.closeSession,
-    },
-    pi: {
-      rename: rpcMocks.piRename,
-    },
-  })),
-}));
+vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDaemonClient: vi.fn(async () => ({
+      chat: {
+        ensureWorkspaceChatSession: rpcMocks.ensureWorkspaceChatSession,
+        closeAgentSession: rpcMocks.closeAgentSession,
+      },
+      terminal: {
+        closeSession: rpcMocks.closeSession,
+      },
+      pi: {
+        rename: rpcMocks.piRename,
+      },
+    })),
+    subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+  };
+});
 
 const initialTabStoreState = tabStore.getState();
 const initialChatStoreState = chatStore.getState();

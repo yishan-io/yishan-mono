@@ -14,8 +14,8 @@ import { createNotificationEventHandlers } from "@renderer/domains/notification"
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
 import { createWorkbenchEventHandlers } from "@renderer/domains/workbench";
 import { createWorkspaceEventHandlers } from "@renderer/domains/workspace";
+import { subscribeBackendEvent } from "../../events/backendEventRouter";
 import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
-import { subscribeBackendEvent } from "./backendEventRouter";
 
 /**
  * Starts all feature event handlers and returns one teardown function.

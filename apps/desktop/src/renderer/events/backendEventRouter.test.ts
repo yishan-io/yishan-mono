@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createBackendEventPipeline } from "./backendEventPipeline";
+import { createBackendEventPipeline } from "./backendEventRouter";
 
 type RawEventListener = (envelope: { method: string; payload?: unknown }) => void;
 

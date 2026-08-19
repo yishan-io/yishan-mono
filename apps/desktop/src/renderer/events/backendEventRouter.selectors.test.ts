@@ -3,7 +3,7 @@ import {
   subscribeAppActionEvent,
   subscribeInAppNotificationEvent,
   subscribeWorkspaceChatEvent,
-} from "./backendEventSubscriptions";
+} from "./backendEventRouter.selectors";
 
 const mocked = vi.hoisted(() => {
   const callbacksByName: Record<string, (event: { source: string; payload: unknown }) => void> = {};
@@ -22,7 +22,7 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock("../app/events/backendEventRouter", () => ({
+vi.mock("./backendEventRouter", () => ({
   subscribeBackendEvent: mocked.subscribeBackendEvent,
 }));
 
