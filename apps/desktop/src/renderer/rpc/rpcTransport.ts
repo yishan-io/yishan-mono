@@ -370,7 +370,6 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
       const proxyClient = createRpcPathProxy([]) as DaemonRpcClient;
       return {
         app: proxyClient.app,
-        cliTools: proxyClient.cliTools,
         events: proxyClient.events,
         tokenUsage: transportClient.tokenUsage,
       };

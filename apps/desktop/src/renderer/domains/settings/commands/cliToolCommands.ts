@@ -1,4 +1,8 @@
-import { getDaemonClient, invokeDaemonProcedure } from "../../../rpc/rpcTransport";
+import {
+  installDaemonCliTool,
+  listDaemonCliTools,
+  uninstallDaemonCliTool,
+} from "../infrastructure/daemonCliToolsProcedures";
 
 export type CLIToolStatus = {
   toolId: string;
@@ -23,29 +27,18 @@ export const MANAGED_CLI_TOOL_IDS = {
 
 export type ManagedCliToolId = (typeof MANAGED_CLI_TOOL_IDS)[keyof typeof MANAGED_CLI_TOOL_IDS];
 
-/**
- * Install/uninstall run in the daemon and can take minutes (npm installs);
- * the default RPC timeout is 30s, so these calls get an explicit long budget.
- */
-const CLI_TOOL_INSTALL_RPC_TIMEOUT_MS = 6 * 60_000;
-
 export async function listCLIToolStatuses(forceRefresh = false): Promise<CLIToolStatus[]> {
-  const client = await getDaemonClient();
-  return await client.cliTools.listStatuses(forceRefresh ? { refresh: true } : undefined);
+  return await listDaemonCliTools(forceRefresh ? { refresh: true } : undefined);
 }
 
 /** Installs one managed CLI tool via the daemon and returns its fresh status. */
 export async function installCliTool(toolId: ManagedCliToolId): Promise<CLIToolStatus | undefined> {
-  const result = (await invokeDaemonProcedure("cliTools.install", { toolId }, CLI_TOOL_INSTALL_RPC_TIMEOUT_MS)) as {
-    status?: CLIToolStatus;
-  };
+  const result = await installDaemonCliTool({ toolId });
   return result.status;
 }
 
 /** Uninstalls one managed CLI tool via the daemon and returns its fresh status. */
 export async function uninstallCliTool(toolId: ManagedCliToolId): Promise<CLIToolStatus | undefined> {
-  const result = (await invokeDaemonProcedure("cliTools.uninstall", { toolId }, CLI_TOOL_INSTALL_RPC_TIMEOUT_MS)) as {
-    status?: CLIToolStatus;
-  };
+  const result = await uninstallDaemonCliTool({ toolId });
   return result.status;
 }

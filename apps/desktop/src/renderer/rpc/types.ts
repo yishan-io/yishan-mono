@@ -38,58 +38,6 @@ export type DaemonRpcClient = {
     logout: (input?: unknown) => Promise<Rpc.LogoutOutput>;
     reloadAuthConfig: (input?: unknown) => Promise<Rpc.ReloadAuthConfigOutput>;
   };
-  cliTools: {
-    listStatuses: (input?: { refresh?: boolean }) => Promise<
-      Array<{
-        toolId: string;
-        category: string;
-        label: string;
-        installed: boolean;
-        version?: string;
-        authenticated?: boolean;
-        account?: string;
-        statusDetail: string;
-        supportsToggle?: boolean;
-        resolvedPath?: string;
-        managedInstall?: boolean;
-        latestVersion?: string;
-      }>
-    >;
-    install: (input: { toolId: string }) => Promise<{
-      ok: true;
-      status?: {
-        toolId: string;
-        category: string;
-        label: string;
-        installed: boolean;
-        version?: string;
-        authenticated?: boolean;
-        account?: string;
-        statusDetail: string;
-        supportsToggle?: boolean;
-        resolvedPath?: string;
-        managedInstall?: boolean;
-        latestVersion?: string;
-      };
-    }>;
-    uninstall: (input: { toolId: string }) => Promise<{
-      ok: true;
-      status?: {
-        toolId: string;
-        category: string;
-        label: string;
-        installed: boolean;
-        version?: string;
-        authenticated?: boolean;
-        account?: string;
-        statusDetail: string;
-        supportsToggle?: boolean;
-        resolvedPath?: string;
-        managedInstall?: boolean;
-        latestVersion?: string;
-      };
-    }>;
-  };
   events: {
     frontendStream: {
       subscribe: (
