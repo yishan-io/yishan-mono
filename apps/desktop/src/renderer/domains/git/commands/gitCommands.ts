@@ -1,8 +1,8 @@
 import { readDiff as readWorkspaceFileDiff } from "@renderer/domains/files";
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
-import { selectWorkspaces } from "@renderer/domains/workspace";
-import { isFolderWorkspace } from "@renderer/domains/workspace";
+
+import {  isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
 import type { GitChangesBySection } from "../daemon/daemonGitClient";
 import { getGitRpc } from "../daemon/daemonGitClient";
 
@@ -12,7 +12,7 @@ const gitAuthorNameByWorkspaceId = new Map<string, string | null>();
 
 /** Resolves a workspaceId from store when only a worktreePath is available (repo-root branch listing). */
 function resolveWorkspaceIdFromPath(workspaceWorktreePath: string): string {
-  const workspace = selectWorkspaces().find((item) => item.worktreePath?.trim() === workspaceWorktreePath);
+  const workspace = workspaceStore.getState().workspaces.find((item) => item.worktreePath?.trim() === workspaceWorktreePath);
   if (!workspace?.id) {
     throw new Error(`workspaceId is required for worktree path: ${workspaceWorktreePath}`);
   }
@@ -59,7 +59,7 @@ export async function listGitChanges(params: { workspaceId: string }) {
   // Non-git projects have no git state: return empty sections instead of
   // hitting the daemon guard, which would surface a noisy RPC error from
   // mount-time consumers (file-tree badges, changes tab).
-  const workspace = selectWorkspaces().find((item) => item.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((item) => item.id === workspaceId);
   const project = projectStore
     .getState()
     .projects.find((item) => item.id === (workspace?.projectId ?? workspace?.repoId));
@@ -152,7 +152,7 @@ export async function inspectGitRepository(params: { workspaceId: string }): Pro
   remoteUrl?: string;
   currentBranch?: string;
 }> {
-  const workspace = selectWorkspaces().find((item) => item.id === params.workspaceId.trim());
+  const workspace = workspaceStore.getState().workspaces.find((item) => item.id === params.workspaceId.trim());
 
   // Folder workspaces have no git repository: never fire git.inspect for them.
   if (isFolderWorkspace(workspace)) {

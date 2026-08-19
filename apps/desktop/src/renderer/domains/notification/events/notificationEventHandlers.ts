@@ -2,7 +2,7 @@ import { recordWorkspaceUnreadNotification, setWorkspaceAgentStatusByWorkspaceId
 
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import {  selectWorkspaces, workspaceStore } from "@renderer/domains/workspace";
+import { workspaceStore } from "@renderer/domains/workspace";
 /**
  * Notification event handlers — owns notification.event effects: preference-
  * backed delivery, suppression policy, effect dedupe, system notification copy
@@ -277,7 +277,7 @@ export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependenc
   getNotificationPreferences,
   isRelevantTerminalFocused: isRelevantTerminalFocusedForNotification,
   resolveWorkspaceLabel: (workspaceId) => {
-    const workspace = selectWorkspaces().find((candidate) => candidate.id === workspaceId);
+    const workspace = workspaceStore.getState().workspaces.find((candidate) => candidate.id === workspaceId);
     const workspaceName = workspace?.name?.trim();
     if (!workspaceName) {
       return undefined;

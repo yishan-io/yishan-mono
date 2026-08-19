@@ -11,7 +11,6 @@ export type {
   WorkspaceLifecycleState,
   WorkspaceStatus,
 } from "./workspaceTypes";
-export { selectWorkspaces } from "./state/workspaceSelectors";
 export type { RpcFrontendMessagePayload } from "@shared/contracts/rpcSchema";
 
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
@@ -26,7 +25,6 @@ export { workspaceCreateProgressStore, type WorkspaceCreateProgressEntry, type W
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { WORKSPACE_SETTINGS_STORE_STORAGE_KEY, workspaceSettingsStore, type WorkspaceSettingsStoreState } from "./state/workspaceSettingsStore";
-export { selectIsDefaultContextEnabled } from "./state/workspaceSettingsSelectors";
 export { useWorkspaceBranchPrefixSettings } from "./hooks/useWorkspaceBranchPrefixSettings";
 export { resolveGitBranchPrefix, type GitBranchPrefixMode } from "./branchPrefix";
 export { CreateWorkspaceDialogView } from "./features/create-workspace/CreateWorkspaceDialogView";

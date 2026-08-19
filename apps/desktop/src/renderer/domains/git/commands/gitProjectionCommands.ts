@@ -1,10 +1,7 @@
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
-import { selectWorkspaces } from "@renderer/domains/workspace";
-import {
-  isFolderWorkspace,
-  refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc,
-} from "@renderer/domains/workspace";
+
+import {  isFolderWorkspace, refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc, workspaceStore } from "@renderer/domains/workspace";
 import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
@@ -29,7 +26,7 @@ import { gitProjectionStore } from "../state/gitProjectionStore";
  * matching the convention used by the Changes tab comparison.
  */
 function resolveWorkspaceTargetBranch(workspaceId: string): string | undefined {
-  const workspace = selectWorkspaces().find((ws) => ws.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((ws) => ws.id === workspaceId);
   const sourceBranch = workspace?.sourceBranch?.trim();
   if (!sourceBranch) {
     return undefined;
@@ -57,7 +54,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     return;
   }
 
-  const workspace = selectWorkspaces().find((workspace) => workspace.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((workspace) => workspace.id === workspaceId);
   if (!workspace) {
     return;
   }
@@ -127,7 +124,7 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
     return;
   }
 
-  const workspace = selectWorkspaces().find((candidate) => candidate.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((candidate) => candidate.id === workspaceId);
   if (!workspace) {
     return;
   }

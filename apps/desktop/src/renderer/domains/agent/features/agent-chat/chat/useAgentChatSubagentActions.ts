@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { fetchAgentMessages } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
 import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../agentChatSubagents";
-import { selectAgentChatSession } from "../../../state/agentChatSelectors";
+
 
 type UseAgentChatSubagentActionsOptions = {
   tabId: string;
@@ -45,7 +45,7 @@ export function useAgentChatSubagentActions({
       let title = subagent.title;
       if (!childSessionId && sessionId) {
         await fetchAgentMessages({ tabId, sessionId });
-        const refreshedRunningSubagents = selectAgentChatSession(tabId)?.runningSubagents ?? [];
+        const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
         const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
         childSessionId = refreshedSubagent?.childSessionId;
         title = refreshedSubagent?.title ?? title;

@@ -4,20 +4,12 @@ import { inspectGitRepositoryPath } from "@renderer/domains/git";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
-import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
+
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import type { ProjectWithWorkspacesRecord } from "../../../api/types";
 
-import {
-  addWorkspace as applyAddWorkspace,
-  buildWorkspaceOpenProjectEntries,
-  createLocalFolderImport,
-  openWorkspaceEntries,
-  selectWorkspaces,
-  syncTabStoreWithWorkspace,
-  syncWorkspaceContextLinks,
-} from "../../../domains/workspace";
+import { addWorkspace as applyAddWorkspace, buildWorkspaceOpenProjectEntries, createLocalFolderImport, openWorkspaceEntries, syncTabStoreWithWorkspace, syncWorkspaceContextLinks } from "../../../domains/workspace";
 import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
@@ -25,6 +17,7 @@ import {
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
 import { sessionStore } from "@renderer/domains/session";
+import {  workspaceStore, workspaceSettingsStore } from "@renderer/domains/workspace";
 
 async function inspectLocalRepository(path: string): Promise<{
   isGitRepository: boolean;
@@ -130,7 +123,7 @@ export async function createProject(input: {
       repoUrl: inferredRemoteUrl,
       nodeId: inferredNodeId,
       localPath: isLocalSource ? normalizedPath : undefined,
-      contextEnabled: selectIsDefaultContextEnabled(),
+      contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
     });
   } catch (error) {
     console.error("Failed to create backend project", error);
@@ -202,7 +195,7 @@ export async function createProject(input: {
       workspaces.filter((workspace) => workspace.kind === "primary").map((workspace) => workspace.id),
     );
     if (importedPrimaryWorkspaceIds.size > 0) {
-      const importedPrimaryWorkspaces = selectWorkspaces().filter((workspace) =>
+      const importedPrimaryWorkspaces = workspaceStore.getState().workspaces.filter((workspace) =>
         importedPrimaryWorkspaceIds.has(workspace.id),
       );
       const openEntries = buildWorkspaceOpenProjectEntries(importedPrimaryWorkspaces, selectedOrganizationId);
@@ -234,7 +227,7 @@ export async function deleteProject(projectId: string): Promise<void> {
     return;
   }
 
-  const previousWorkspaces = selectWorkspaces();
+  const previousWorkspaces = workspaceStore.getState().workspaces;
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
@@ -339,7 +332,7 @@ async function syncProjectContextLinks(input: {
   }
   const candidatePaths = new Set<string>();
 
-  for (const workspace of selectWorkspaces()) {
+  for (const workspace of workspaceStore.getState().workspaces) {
     const ownsProject = (workspace.projectId ?? workspace.repoId) === input.projectId;
     if (!ownsProject) {
       continue;

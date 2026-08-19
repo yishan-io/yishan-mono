@@ -1,13 +1,13 @@
 import { resolveTabForWorkspace, retainWorkspaceTabs, workbenchNavigationStore } from "@renderer/domains/workbench";
 import type { WorkspaceItem } from "../workspaceTypes";
-import { selectWorkspaces } from "../state/workspaceSelectors";
+import { workspaceStore } from "../state/workspaceStore";
 
 /** Reconciles tab/chat state after workspace list changes in workspace store. */
 export async function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceItem[]): Promise<void> {
   // Lazy import: the agent index pulls the chat UI graph; loading it eagerly
   // re-enters the workspace index mid-eval in vite-node test graphs.
   const { removeTabData, removeWorkspaceTaskCounts } = await import("@renderer/domains/agent");
-  const nextWorkspaceIds = selectWorkspaces().map((workspace) => workspace.id);
+  const nextWorkspaceIds = workspaceStore.getState().workspaces.map((workspace) => workspace.id);
   const removedWorkspaceIds = previousWorkspaces
     .filter((workspace) => !nextWorkspaceIds.includes(workspace.id))
     .map((workspace) => workspace.id);

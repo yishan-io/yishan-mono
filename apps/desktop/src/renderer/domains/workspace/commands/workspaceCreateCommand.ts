@@ -2,15 +2,11 @@ import { projectStore } from "@renderer/domains/project";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
-import {
-  type WorkspaceLifecycleScriptWarning,
-  enqueueWorkspaceErrorNotice,
-  enqueueWorkspaceLifecycleWarnings,
-} from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
+import { type WorkspaceLifecycleScriptWarning, enqueueWorkspaceErrorNotice, enqueueWorkspaceLifecycleWarnings } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { buildWorkspaceCreatePlaceholder } from "../workspaceCreatePlaceholder";
-import { selectIsDefaultContextEnabled } from "../state/workspaceSettingsSelectors";
+import { workspaceStore } from "../state/workspaceStore";
+import { workspaceSettingsStore } from "../state/workspaceSettingsStore";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 import { sessionStore } from "@renderer/domains/session";
 
@@ -142,7 +138,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       sourcePath,
       sourceBranch,
       targetBranch,
-      contextEnabled: project?.contextEnabled ?? selectIsDefaultContextEnabled(),
+      contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
       setupHook: project?.setupScript?.trim() || undefined,
       taskRun: input.taskRun,
     })) as Record<string, unknown>;

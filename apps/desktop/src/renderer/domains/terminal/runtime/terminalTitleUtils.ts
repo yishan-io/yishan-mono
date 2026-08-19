@@ -1,5 +1,6 @@
 import type { WorkbenchTab } from "@renderer/domains/workbench";
-import { selectWorkspaces } from "@renderer/domains/workspace";
+import { workspaceStore } from "@renderer/domains/workspace";
+
 
 const MAX_TERMINAL_COMMAND_TITLE_LENGTH = 32;
 const ASCII_ESCAPE_CODE = 27;
@@ -12,7 +13,7 @@ export function resolveTerminalWorkspacePath(
     return undefined;
   }
 
-  return selectWorkspaces().find((workspace) => workspace.id === tab.workspaceId)?.worktreePath;
+  return workspaceStore.getState().workspaces.find((workspace) => workspace.id === tab.workspaceId)?.worktreePath;
 }
 
 /** Builds one concise tab title from a current working directory. */

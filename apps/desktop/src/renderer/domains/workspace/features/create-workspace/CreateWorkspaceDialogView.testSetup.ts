@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { vi } from "vitest";
+import { workspaceSettingsStore } from "../../state/workspaceSettingsStore";
 
 type MockedCommands = {
   createWorkspace: ReturnType<typeof vi.fn>;
