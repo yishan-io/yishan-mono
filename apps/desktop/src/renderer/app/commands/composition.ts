@@ -57,14 +57,7 @@ import {
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
 } from "@renderer/domains/git";
-import {
-  type WorkspaceProjectRecord,
-  createProject as createProjectCommand,
-  deleteProject as deleteProjectCommand,
-  inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  projectStore,
-  updateProjectConfig as updateProjectConfigCommand,
-} from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -143,7 +136,6 @@ import type {
   Commands,
   FileCommandSurface,
   GitCommandSurface,
-  ProjectCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
@@ -246,15 +238,6 @@ export function createFileCommands(): FileCommandSurface {
   };
 }
 
-export function createProjectCommands(): ProjectCommandSurface {
-  return {
-    inspectLocalProjectSource: inspectLocalProjectSourceCommand,
-    createProject: createProjectCommand,
-    deleteProject: deleteProjectCommand,
-    updateProjectConfig: updateProjectConfigCommand,
-  };
-}
-
 export function createWorkbenchCommands(): WorkbenchCommandSurface {
   return {
     selectTab: setSelectedTabCommand,
@@ -334,7 +317,6 @@ export function createCommands(): Commands {
     ...createAgentCommands(),
     ...createGitCommands(),
     ...createFileCommands(),
-    ...createProjectCommands(),
     ...createWorkbenchCommands(),
     ...createTerminalCommands(),
   };
@@ -344,7 +326,6 @@ export type {
   AppCommandSurface,
   FileCommandSurface,
   GitCommandSurface,
-  ProjectCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,

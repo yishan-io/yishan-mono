@@ -5,7 +5,6 @@ import {
   type Commands,
   type FileCommandSurface,
   type GitCommandSurface,
-  type ProjectCommandSurface,
   type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
@@ -14,7 +13,6 @@ import {
   createCommands,
   createFileCommands,
   createGitCommands,
-  createProjectCommands,
   createTerminalCommands,
   createWorkbenchCommands,
   createWorkspaceCommands,
@@ -52,10 +50,6 @@ export function useFileCommands(): FileCommandSurface {
   return useMemo(() => createFileCommands(), []);
 }
 
-export function useProjectCommands(): ProjectCommandSurface {
-  return useMemo(() => createProjectCommands(), []);
-}
-
 export function useWorkbenchCommands(): WorkbenchCommandSurface {
   return useMemo(() => createWorkbenchCommands(), []);
 }
@@ -70,7 +64,6 @@ export type {
   Commands,
   FileCommandSurface,
   GitCommandSurface,
-  ProjectCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,

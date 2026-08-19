@@ -65,13 +65,6 @@ import {
   type trackGitChanges as trackGitChangesCommand,
   type unstageGitChanges as unstageGitChangesCommand,
 } from "@renderer/domains/git";
-import {
-  type WorkspaceProjectRecord,
-  createProject as createProjectCommand,
-  deleteProject as deleteProjectCommand,
-  type inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  type updateProjectConfig as updateProjectConfigCommand,
-} from "@renderer/domains/project";
 import type {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -247,19 +240,6 @@ export type FileCommandSurface = {
   refreshFileTabFromDisk: typeof refreshFileTabFromDiskCommand;
 };
 
-/** Project feature command surface. */
-export type ProjectCommandSurface = {
-  inspectLocalProjectSource: typeof inspectLocalProjectSourceCommand;
-  createProject: (input: {
-    name: string;
-    sourceTypeHint?: "unknown" | "git-local" | "git";
-    path?: string;
-    gitUrl?: string;
-  }) => Promise<void>;
-  deleteProject: (repoId: string) => Promise<void>;
-  updateProjectConfig: typeof updateProjectConfigCommand;
-};
-
 /** Workbench feature command surface. */
 export type WorkbenchCommandSurface = {
   selectTab: typeof setSelectedTabCommand;
@@ -302,6 +282,5 @@ export type Commands = AppCommandSurface &
   AgentCommandSurface &
   GitCommandSurface &
   FileCommandSurface &
-  ProjectCommandSurface &
   WorkbenchCommandSurface &
   TerminalCommandSurface;

@@ -25,7 +25,6 @@ import {
   type AppCommandSurface,
   type FileCommandSurface,
   type GitCommandSurface,
-  type ProjectCommandSurface,
   type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
@@ -33,7 +32,6 @@ import {
   useAppCommands,
   useFileCommands,
   useGitCommands,
-  useProjectCommands,
   useTerminalCommands,
   useWorkbenchCommands,
   useWorkspaceCommands,
@@ -59,7 +57,6 @@ type WorkspaceViewCommands = WorkspaceCommandSurface &
   WorkbenchCommandSurface &
   AgentCommandSurface &
   TerminalCommandSurface &
-  ProjectCommandSurface &
   FileCommandSurface &
   GitCommandSurface &
   AppCommandSurface;
@@ -353,7 +350,6 @@ export function WorkspaceView() {
   const workbenchCommands = useWorkbenchCommands();
   const agentCommands = useAgentCommands();
   const terminalCommands = useTerminalCommands();
-  const projectCommands = useProjectCommands();
   const fileCommands = useFileCommands();
   const gitCommands = useGitCommands();
   const appCommands = useAppCommands();
@@ -363,21 +359,11 @@ export function WorkspaceView() {
       ...workbenchCommands,
       ...agentCommands,
       ...terminalCommands,
-      ...projectCommands,
       ...fileCommands,
       ...gitCommands,
       ...appCommands,
     }),
-    [
-      workspaceCommands,
-      workbenchCommands,
-      agentCommands,
-      terminalCommands,
-      projectCommands,
-      fileCommands,
-      gitCommands,
-      appCommands,
-    ],
+    [workspaceCommands, workbenchCommands, agentCommands, terminalCommands, fileCommands, gitCommands, appCommands],
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));
