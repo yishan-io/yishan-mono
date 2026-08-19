@@ -22,8 +22,11 @@ const mocked = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: mocked.subscribeDaemonConnectionStatus,
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: mocked.subscribeDaemonConnectionStatus,
+}));
+
+vi.mock("../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: mocked.subscribeDesktopRpcEvent,
 }));
 

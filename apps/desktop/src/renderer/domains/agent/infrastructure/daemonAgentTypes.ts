@@ -1,7 +1,7 @@
 /**
  * Agent wire DTOs (desktop7 Phase 26). Owned by the Agent Domain
  * Infrastructure; the daemon payload shapes are the transport contract.
- * The root `rpc/daemonTypes` keeps only the wire protocol itself.
+ * The root `rpc/wire` keeps only the wire protocol itself.
  */
 
 export type SkillSourceKind = "official" | "url" | "global" | "project" | "package" | "settings";

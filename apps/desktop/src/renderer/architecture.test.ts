@@ -367,14 +367,21 @@ function scanViolations(): Violation[] {
           violations.push({ rule: "R17-domain-self-index", file: rel, target: imp.spec });
         }
       }
-      // ---- Rule 19 (desktop7 Phase 27): root RPC imports only from
-      // app/events, app/runtime, and Domain Infrastructure. Root RPC's own
-      // internal wiring is exempt. ----
+      // ---- Rule 19 (desktop7 Phase 27; desktop8 Phase 31): root RPC is
+      // imported only by app/events, app/runtime, Domain Infrastructure, and
+      // the root events capability (which owns backend-event composition).
+      // Consumers must use the RPC public API (rpc/index); importing RPC
+      // implementation files is a violation. Root RPC's own wiring is
+      // exempt. ----
       const isRpcImport = relT.startsWith("rpc/") || relT === "rpc";
       if (isRpcImport && !rel.startsWith("rpc/")) {
         const whitelisted =
-          rel.startsWith("app/events/") || rel.startsWith("app/runtime/") || rel.includes("/infrastructure/");
-        if (!whitelisted) {
+          rel.startsWith("app/events/") ||
+          rel.startsWith("app/runtime/") ||
+          rel.startsWith("events/") ||
+          rel.includes("/infrastructure/");
+        const publicApiOnly = relT === "rpc" || relT.startsWith("rpc/index");
+        if (!whitelisted || !publicApiOnly) {
           violations.push({ rule: "R19-rpc-whitelist", file: rel, target: imp.spec });
         }
       }

@@ -1,6 +1,11 @@
-import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../../../api/types";
-import { asRecord, readOptionalBoolean, readOptionalString } from "../../../rpc/helpers";
-import { getDaemonTransport } from "../../../rpc/rpcTransport";
+import { request } from "@renderer/rpc";
+import { asRecord, readOptionalBoolean, readOptionalString } from "@shared/validation/primitiveReaders";
+import type {
+  ProjectCommandRecord,
+  ProjectRecord,
+  ProjectWithWorkspacesRecord,
+  WorkspaceRecord,
+} from "../../../api/types";
 
 /** One hierarchy mode's left-pane order/fold state (order hints; missing ids are last). */
 export type ProjectListModePreference = {
@@ -181,7 +186,7 @@ let cachedProjectRpc: DaemonProjectClient | null = null;
  */
 export async function getProjectRpc(): Promise<DaemonProjectClient> {
   if (!cachedProjectRpc) {
-    cachedProjectRpc = new DaemonProjectClient((await getDaemonTransport()).invoke);
+    cachedProjectRpc = new DaemonProjectClient(request);
   }
   return cachedProjectRpc;
 }

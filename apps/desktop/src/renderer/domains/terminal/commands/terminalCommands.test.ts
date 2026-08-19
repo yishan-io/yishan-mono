@@ -45,7 +45,7 @@ vi.mock("../../../domains/terminal/infrastructure/daemonTerminalClient", () => (
     }),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
+vi.mock("../../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 

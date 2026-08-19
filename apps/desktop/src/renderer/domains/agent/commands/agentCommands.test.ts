@@ -13,8 +13,6 @@ vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
   listAgentModels: mocks.listModels,
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({}));
-
 describe("agentCommands", () => {
   it("normalizes detection statuses in supported-agent order", async () => {
     const consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});

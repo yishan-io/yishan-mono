@@ -1,4 +1,4 @@
-import { invokeDaemonProcedure } from "../../../rpc/rpcTransport";
+import { request } from "@renderer/rpc";
 
 /**
  * CLI-tools procedure adapters (desktop7 Phase 26). The settings Domain owns
@@ -25,21 +25,17 @@ export type DaemonCliToolStatus = {
 const CLI_TOOL_INSTALL_RPC_TIMEOUT_MS = 6 * 60_000;
 
 export async function listDaemonCliTools(input?: { refresh?: boolean }): Promise<DaemonCliToolStatus[]> {
-  return (await invokeDaemonProcedure("cliTools.listStatuses", input ?? {})) as DaemonCliToolStatus[];
+  return (await request("cliTools.listStatuses", input ?? {})) as DaemonCliToolStatus[];
 }
 
 export async function installDaemonCliTool(input: { toolId: string }): Promise<{ status?: DaemonCliToolStatus }> {
-  return (await invokeDaemonProcedure(
-    "cliTools.install",
-    input,
-    CLI_TOOL_INSTALL_RPC_TIMEOUT_MS,
-  )) as { status?: DaemonCliToolStatus };
+  return (await request("cliTools.install", input, CLI_TOOL_INSTALL_RPC_TIMEOUT_MS)) as {
+    status?: DaemonCliToolStatus;
+  };
 }
 
 export async function uninstallDaemonCliTool(input: { toolId: string }): Promise<{ status?: DaemonCliToolStatus }> {
-  return (await invokeDaemonProcedure(
-    "cliTools.uninstall",
-    input,
-    CLI_TOOL_INSTALL_RPC_TIMEOUT_MS,
-  )) as { status?: DaemonCliToolStatus };
+  return (await request("cliTools.uninstall", input, CLI_TOOL_INSTALL_RPC_TIMEOUT_MS)) as {
+    status?: DaemonCliToolStatus;
+  };
 }

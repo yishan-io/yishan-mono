@@ -61,11 +61,6 @@ vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
   stopPiSession: mocks.stop ?? vi.fn(),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-}));
-
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
   tabStore.setState(initialTabStoreState, true);

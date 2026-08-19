@@ -1,5 +1,5 @@
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
-import { invokeDaemonProcedure } from "@renderer/rpc/rpcTransport";
+import { request } from "@renderer/rpc";
 
 /**
  * Project host commands — external I/O for project worktree paths.
@@ -17,6 +17,6 @@ export async function openLocalFolderDialog(startingFolder?: string) {
 
 /** Reads default workspace worktree location from backend app settings. */
 export async function getDefaultWorktreeLocation() {
-  const response = (await invokeDaemonProcedure("app.getDefaultWorktreeLocation", {})) as { worktreePath: string };
+  const response = (await request("app.getDefaultWorktreeLocation", {})) as { worktreePath: string };
   return response.worktreePath;
 }

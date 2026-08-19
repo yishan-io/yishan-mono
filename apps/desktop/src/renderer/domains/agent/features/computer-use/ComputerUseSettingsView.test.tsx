@@ -28,11 +28,6 @@ vi.mock("../../../../domains/agent/infrastructure/daemonAgentProcedures", () => 
   openComputerUsePermissionSettings: mocked.openPermissionSettings,
 }));
 
-vi.mock("../../../../rpc/rpcTransport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../rpc/rpcTransport")>();
-  return actual;
-});
-
 describe("ComputerUseSettingsView", () => {
   beforeEach(() => {
     mocked.permissions.mockReset();

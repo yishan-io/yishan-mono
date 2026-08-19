@@ -20,28 +20,26 @@ const rpcMocks = vi.hoisted(() => ({
   listLocalFolders: vi.fn(async () => []),
 }));
 
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
+  request: async (method: string, params?: { organizationId?: string }) => {
+    if (method === "project.listWithWorkspaces") {
+      return rpcMocks.listProjects(params);
+    }
+    return undefined;
+  },
+}));
+
+vi.mock("../../../events/desktopRpcEventBus", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+}));
+
 vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
     Promise.resolve({
       listLocalFolders: rpcMocks.listLocalFolders,
     }),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
-  getDaemonTransport: vi.fn(async () => ({
-    invoke: async (method: string, params?: { organizationId?: string }) => {
-      if (method === "project.listWithWorkspaces") {
-        return rpcMocks.listProjects(params);
-      }
-      return undefined;
-    },
-    workspaceIdByWorktreePath: new Map(),
-    resolveWorkspaceId: async () => "",
-  })),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();

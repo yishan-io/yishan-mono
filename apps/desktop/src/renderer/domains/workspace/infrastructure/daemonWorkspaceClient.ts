@@ -1,15 +1,26 @@
+import { request, subscribeConnectionStatus as subscribeDaemonConnectionStatusFromTransport } from "@renderer/rpc";
 import {
   asRecord,
-  normalizeWorktreePath,
   readOptionalBoolean,
   readOptionalString,
   readOptionalStringArray,
-} from "../../../rpc/helpers";
-import {
-  getDaemonTransport,
-  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromTransport,
-} from "../../../rpc/rpcTransport";
+} from "@shared/validation/primitiveReaders";
 import type { DaemonLocalFolder } from "../model/snapshotTypes";
+
+/** Normalizes one worktree path for cache keys and comparisons. */
+export function normalizeWorktreePath(worktreePath: string): string {
+  const trimmedPath = worktreePath.trim();
+  if (!trimmedPath) {
+    return "";
+  }
+
+  const slashNormalizedPath = trimmedPath.replace(/\\/g, "/");
+  if (slashNormalizedPath === "/") {
+    return "/";
+  }
+
+  return slashNormalizedPath.replace(/\/+$/, "");
+}
 
 export function subscribeDaemonConnectionStatus(
   listener: (status: "connected" | "connecting" | "disconnected") => void,
@@ -596,8 +607,16 @@ let cachedWorkspaceRpc: DaemonWorkspaceClient | null = null;
  */
 export async function getWorkspaceRpc(): Promise<DaemonWorkspaceClient> {
   if (!cachedWorkspaceRpc) {
-    const transport = await getDaemonTransport();
-    cachedWorkspaceRpc = new DaemonWorkspaceClient(transport.invoke, transport.workspaceIdByWorktreePath);
+    const workspaceIdByWorktreePath = new Map<string, string>();
+    // The worktree-path cache is workspace Domain state (desktop8 Phase 31):
+    // the workspace adapter owns it and clears it when the daemon reconnects
+    // (matching the transport's previous reconnect behavior).
+    subscribeDaemonConnectionStatusFromTransport((status) => {
+      if (status === "connected") {
+        workspaceIdByWorktreePath.clear();
+      }
+    });
+    cachedWorkspaceRpc = new DaemonWorkspaceClient(request, workspaceIdByWorktreePath);
   }
   return cachedWorkspaceRpc;
 }

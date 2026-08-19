@@ -30,12 +30,6 @@ vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
     }),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
-}));
-
 const initialWorkspaceStoreState = workspaceStore.getState();
 const initialProjectionStoreState = gitProjectionStore.getState();
 const initialProjectStoreState = projectStore.getState();

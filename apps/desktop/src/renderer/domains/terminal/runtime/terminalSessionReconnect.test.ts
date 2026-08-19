@@ -17,9 +17,8 @@ import type { TerminalRuntimeEntry } from "./terminalRuntimeRegistry";
 // Capture the daemon connection status listener registered by terminalSessionService.
 let capturedConnectionStatusListener: ((status: string) => void) | null = null;
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDesktopRpcEvent: () => () => {},
-  subscribeDaemonConnectionStatus: (listener: (status: string) => void) => {
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: (listener: (status: string) => void) => {
     capturedConnectionStatusListener = listener;
     return () => {};
   },

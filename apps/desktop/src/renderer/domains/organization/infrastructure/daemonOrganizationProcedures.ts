@@ -1,4 +1,4 @@
-import { invokeDaemonProcedure } from "../../../rpc/rpcTransport";
+import { request } from "@renderer/rpc";
 
 /**
  * Organization procedure adapters (desktop7 Phase 26). The organization
@@ -9,5 +9,5 @@ import { invokeDaemonProcedure } from "../../../rpc/rpcTransport";
 
 /** Tells the daemon which organization is active (CLI + MCP context). */
 export async function setCurrentOrganization(orgId: string): Promise<unknown> {
-  return invokeDaemonProcedure("context.setCurrentOrg", { orgId });
+  return request("context.setCurrentOrg", { orgId });
 }

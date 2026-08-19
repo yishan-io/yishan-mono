@@ -65,23 +65,21 @@ vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   ),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
+  request: async (method: string, params?: { organizationId?: string; preferences?: unknown }) => {
+    if (method === "project.getListPreferences") {
+      return mocked.getListPreferences(params);
+    }
+    if (method === "project.setListPreferences") {
+      return mocked.setListPreferences(params);
+    }
+    return undefined;
+  },
+}));
+
+vi.mock("../../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
-  getDaemonTransport: vi.fn(async () => ({
-    invoke: async (method: string, params?: { organizationId?: string; preferences?: unknown }) => {
-      if (method === "project.getListPreferences") {
-        return mocked.getListPreferences(params);
-      }
-      if (method === "project.setListPreferences") {
-        return mocked.setListPreferences(params);
-      }
-      return undefined;
-    },
-    workspaceIdByWorktreePath: new Map(),
-    resolveWorkspaceId: async () => "",
-  })),
 }));
 
 describe("useWorkspaceNavigatorFoldState", () => {

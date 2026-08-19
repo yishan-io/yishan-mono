@@ -2,7 +2,7 @@
  * Workspace snapshot view-model types (D17).
  *
  * Structural mirrors of the transport DTOs in `api/types` and
- * `rpc/daemonTypes`. The Workspace Model and State layers use these types so
+ * `api/types`. The Workspace Model and State layers use these types so
  * they do not import transport implementations (R6/R7). Shapes are identical
  * to the DTOs, so no runtime conversion is required.
  */

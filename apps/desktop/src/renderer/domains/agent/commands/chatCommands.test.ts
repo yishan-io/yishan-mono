@@ -29,8 +29,6 @@ vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
   closeAgentSession: mocks.closeAgentSession,
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({}));
-
 afterEach(() => {
   chatStore.setState(initialChatStoreState, true);
   vi.clearAllMocks();

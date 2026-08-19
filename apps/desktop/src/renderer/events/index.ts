@@ -1,3 +1,8 @@
+export {
+  emitDesktopRpcEventToBus,
+  subscribeDesktopRpcEvent,
+  type DesktopRpcEventEnvelope,
+} from "./desktopRpcEventBus";
 /**
  * Root event capability (desktop7 Phase 26/27).
  *

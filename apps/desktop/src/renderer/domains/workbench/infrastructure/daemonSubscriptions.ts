@@ -1,4 +1,4 @@
-import { subscribeDaemonConnectionStatus as subscribeFromTransport } from "../../../rpc/rpcTransport";
+import { subscribeConnectionStatus as subscribeFromTransport } from "@renderer/rpc";
 
 /**
  * Workbench transport subscriptions (desktop7 Phase 27). Domain files must

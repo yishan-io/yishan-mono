@@ -1,21 +1,28 @@
 import { resolveWorkspaceId as resolveWorkspaceIdCommand } from "@renderer/domains/workspace";
-import { generateId } from "@renderer/ids/generateId";
-import type { DaemonNotification } from "../../../rpc/daemonTypes";
-import { asRecord, readOptionalNumber, readOptionalString, readOptionalStringArray } from "../../../rpc/helpers";
+import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromBus } from "@renderer/events/desktopRpcEventBus";
 import {
-  getDaemonTransport,
-  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromTransport,
-  subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport,
-} from "../../../rpc/rpcTransport";
+  type DaemonNotification,
+  request,
+  sendBinary as sendRawBinary,
+  subscribe as subscribeTransport,
+  subscribeBinary as subscribeTransportBinary,
+  subscribeConnectionStatus as subscribeTransportConnectionStatus,
+} from "@renderer/rpc";
+import {
+  asRecord,
+  readOptionalNumber,
+  readOptionalString,
+  readOptionalStringArray,
+} from "@shared/validation/primitiveReaders";
 
 export function subscribeDesktopRpcEvent(listener: (event: { method: string; payload?: unknown }) => void): () => void {
-  return subscribeDesktopRpcEventFromTransport(listener);
+  return subscribeDesktopRpcEventFromBus(listener);
 }
 
 export function subscribeDaemonConnectionStatus(
   listener: (status: "connected" | "connecting" | "disconnected") => void,
 ): () => void {
-  return subscribeDaemonConnectionStatusFromTransport(listener);
+  return subscribeTransportConnectionStatus(listener);
 }
 
 export type TerminalCreateSessionInput = {
@@ -127,60 +134,71 @@ export type TerminalSessionLifecycleEvent = {
 };
 
 /**
- * Terminal wire DTOs (desktop7 Phase 25). Owned by the Terminal Domain
- * Infrastructure; the daemon payload shapes are the transport contract.
+ * Terminal wire DTOs + frame codec (desktop8 Phase 31). Owned by the Terminal
+ * Domain Infrastructure: the binary frame codec, the subscription registry,
+ * and the frame indexes moved out of root RPC into this adapter.
  */
 
 type InvokeFn = (method: string, params?: unknown) => Promise<unknown>;
-type SendBinaryFn = (sessionId: string, data: string | Uint8Array) => void;
 type ResolveWorkspaceIdFn = (input: {
   workspaceId?: string;
   workspaceWorktreePath?: string;
   cwd?: string;
 }) => Promise<string>;
+type SubscribeFn = (
+  method: string,
+  params: unknown,
+  listener: (event: DaemonNotification) => void,
+  options?: { registerWithDaemon?: boolean },
+) => () => void;
 
+const terminalFrameTextEncoder = new TextEncoder();
 const terminalFrameTextDecoder = new TextDecoder();
+// Frame format: [opcode] [sessionId + '\0'] [bytes]
+const TERMINAL_INPUT_OPCODE = 0x01;
+const TERMINAL_OUTPUT_OPCODE = 0x02;
 
 /** Terminal namespace methods for the daemon RPC client. */
 export class DaemonTerminalClient {
   private readonly invoke: InvokeFn;
   private readonly resolveWorkspaceId: ResolveWorkspaceIdFn;
-  private readonly sendBinary: SendBinaryFn;
-  private readonly getSocketReadyState: () => number | null;
-  private readonly startRawSubscription: (options: {
-    method: string;
-    params?: unknown;
-    onNotification: (event: DaemonNotification) => void;
-  }) => Promise<string>;
+  private readonly subscribeTransport: SubscribeFn;
+  private socketOpen = false;
 
-  readonly subscriptionsById: Map<
+  private readonly subscriptionsById = new Map<
     string,
     {
       method: string;
       params?: unknown;
       onNotification: (event: DaemonNotification) => void;
-      registeredWithDaemon: boolean;
+      registerWithDaemon: boolean;
     }
-  >;
+  >();
 
-  readonly terminalNextIndexBySessionId: Map<string, number>;
+  readonly terminalNextIndexBySessionId = new Map<string, number>();
 
   constructor(options: {
     invoke: InvokeFn;
     resolveWorkspaceId: ResolveWorkspaceIdFn;
-    sendBinary: SendBinaryFn;
-    getSocketReadyState: () => number | null;
-    subscriptionsById: DaemonTerminalClient["subscriptionsById"];
-    terminalNextIndexBySessionId: Map<string, number>;
-    startRawSubscription: DaemonTerminalClient["startRawSubscription"];
+    subscribeTransport: SubscribeFn;
+    sendBinary: (frame: Uint8Array) => void;
+    subscribeBinary: (listener: (frame: ArrayBuffer) => void) => () => void;
+    subscribeConnectionStatus: (listener: (status: "connected" | "connecting" | "disconnected") => void) => () => void;
   }) {
     this.invoke = options.invoke;
     this.resolveWorkspaceId = options.resolveWorkspaceId;
-    this.sendBinary = options.sendBinary;
-    this.getSocketReadyState = options.getSocketReadyState;
-    this.subscriptionsById = options.subscriptionsById;
-    this.terminalNextIndexBySessionId = options.terminalNextIndexBySessionId;
-    this.startRawSubscription = options.startRawSubscription;
+    this.subscribeTransport = options.subscribeTransport;
+
+    options.subscribeConnectionStatus((status) => {
+      this.socketOpen = status === "connected";
+    });
+
+    // Root RPC delivers raw binary frames; this adapter owns the terminal
+    // frame codec and routes decoded output to its terminal.subscribe
+    // subscriptions.
+    options.subscribeBinary((frame) => {
+      this.handleBinaryFrame(frame);
+    });
   }
 
   async createSession(input: TerminalCreateSessionInput): Promise<TerminalCreateSessionResponse> {
@@ -203,9 +221,8 @@ export class DaemonTerminalClient {
     const sessionId = readOptionalString(record?.sessionId) || "";
 
     // Fast path: send as binary WebSocket frame — zero JSON overhead.
-    const readyState = this.getSocketReadyState();
-    if (readyState === WebSocket.OPEN) {
-      this.sendBinary(sessionId, data);
+    if (this.socketOpen) {
+      this.sendTerminalInputBinary(sessionId, data);
       return { ok: true };
     }
 
@@ -308,9 +325,10 @@ export class DaemonTerminalClient {
     handlers: { onData: (event: unknown) => void; onError?: (error: unknown) => void },
   ): Promise<{ unsubscribe: () => void }> {
     const sessionId = input.sessionId || "";
-    return this.startRawSubscription({
+    const unsubscribeTerminal = this.subscribeTerminal({
       method: "terminal.subscribe",
       params: { sessionId },
+      registerWithDaemon: true,
       onNotification: (event) => {
         if (event.method === "terminal.output") {
           const payload = asRecord(event.payload) ?? {};
@@ -324,9 +342,13 @@ export class DaemonTerminalClient {
         }
         handlers.onData(event);
       },
-    }).then((subscriptionId) => ({
-      unsubscribe: () => this.teardownTerminalSubscription(subscriptionId, sessionId),
-    }));
+    });
+    return Promise.resolve({
+      unsubscribe: () => {
+        unsubscribeTerminal();
+        this.teardownTerminalSubscription(sessionId);
+      },
+    });
   }
 
   /** Subscribes one listener to global terminal session lifecycle updates. */
@@ -334,25 +356,49 @@ export class DaemonTerminalClient {
     _input: undefined,
     handlers: { onData: (event: unknown) => void; onError?: (error: unknown) => void },
   ): Promise<{ unsubscribe: () => void }> {
-    const subscriptionId = this.startSubscription({
+    const unsubscribeTerminal = this.subscribeTerminal({
       method: "terminal.sessions",
+      params: undefined,
+      registerWithDaemon: false,
       onNotification: (event) => handlers.onData(event),
-      registeredWithDaemon: false,
     });
-    return Promise.resolve({
-      unsubscribe: () => {
-        this.subscriptionsById.delete(subscriptionId);
-      },
-    });
+    return Promise.resolve({ unsubscribe: unsubscribeTerminal });
   }
 
-  /** Tears down one terminal subscription: registry, frame index, daemon side. */
-  private teardownTerminalSubscription(subscriptionId: string, sessionId: string): void {
-    const subscription = this.subscriptionsById.get(subscriptionId);
-    if (!subscription) {
-      return;
-    }
-    this.subscriptionsById.delete(subscriptionId);
+  /** Registers one terminal subscription locally and with the transport. */
+  private subscribeTerminal(options: {
+    method: string;
+    params?: unknown;
+    onNotification: (event: DaemonNotification) => void;
+    registerWithDaemon: boolean;
+  }): () => void {
+    const subscriptionId = `terminal-sub-${Math.random().toString(36).slice(2)}`;
+    this.subscriptionsById.set(subscriptionId, {
+      method: options.method,
+      params: options.params,
+      onNotification: options.onNotification,
+      registerWithDaemon: options.registerWithDaemon,
+    });
+    const unsubscribeTransport = this.subscribeTransport(
+      options.method,
+      options.params,
+      (event) => {
+        const subscription = this.subscriptionsById.get(subscriptionId);
+        if (!subscription) {
+          return;
+        }
+        subscription.onNotification(event);
+      },
+      { registerWithDaemon: options.registerWithDaemon },
+    );
+    return () => {
+      this.subscriptionsById.delete(subscriptionId);
+      unsubscribeTransport();
+    };
+  }
+
+  /** Tears down terminal state for one session: registry, frame index, daemon side. */
+  private teardownTerminalSubscription(sessionId: string): void {
     let hasRemainingSubscriptionForSession = false;
     for (const candidate of this.subscriptionsById.values()) {
       if (candidate.method !== "terminal.subscribe") {
@@ -366,26 +412,7 @@ export class DaemonTerminalClient {
     if (!hasRemainingSubscriptionForSession) {
       this.terminalNextIndexBySessionId.delete(sessionId);
     }
-    if (subscription.registeredWithDaemon) {
-      void this.invoke("terminal.unsubscribe", { sessionId }).catch(() => undefined);
-    }
-  }
-
-  /** Registers a new subscription and returns its id. */
-  startSubscription(options: {
-    method: string;
-    params?: unknown;
-    onNotification: (event: DaemonNotification) => void;
-    registeredWithDaemon: boolean;
-  }): string {
-    const subscriptionId = generateId();
-    this.subscriptionsById.set(subscriptionId, {
-      method: options.method,
-      params: options.params,
-      onNotification: options.onNotification,
-      registeredWithDaemon: options.registeredWithDaemon,
-    });
-    return subscriptionId;
+    void this.invoke("terminal.unsubscribe", { sessionId }).catch(() => undefined);
   }
 
   hasSubscriptionForSession(sessionId: string): boolean {
@@ -410,26 +437,88 @@ export class DaemonTerminalClient {
       }
     }
   }
+
+  // ─── Binary frame codec (desktop8 Phase 31: owned by Terminal Infra) ───────
+
+  /** Sends terminal input as a binary WebSocket frame: [0x01] [sessionId + '\0'] [input bytes]. */
+  private sendTerminalInputBinary(sessionId: string, data: string | Uint8Array): void {
+    try {
+      const sessionIdBytes = terminalFrameTextEncoder.encode(sessionId);
+      const inputBytes = typeof data === "string" ? terminalFrameTextEncoder.encode(data) : data;
+      const frame = new Uint8Array(1 + sessionIdBytes.length + 1 + inputBytes.length);
+      frame[0] = TERMINAL_INPUT_OPCODE;
+      frame.set(sessionIdBytes, 1);
+      frame[1 + sessionIdBytes.length] = 0;
+      frame.set(inputBytes, 1 + sessionIdBytes.length + 1);
+      sendRawBinary(frame);
+    } catch {
+      // Best-effort: silently drop if the transport socket is in a bad state.
+    }
+  }
+
+  /** Decodes one incoming binary frame: [0x02] [sessionId + '\0'] [raw PTY bytes]. */
+  private handleBinaryFrame(buffer: ArrayBuffer): void {
+    const data = new Uint8Array(buffer);
+    if (data.length < 3) {
+      return;
+    }
+
+    const opcode = data[0];
+    if (opcode !== TERMINAL_OUTPUT_OPCODE) {
+      return; // Only terminal output is expected as binary.
+    }
+
+    let nullIdx = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i] === 0) {
+        nullIdx = i;
+        break;
+      }
+    }
+    if (nullIdx < 0) {
+      return;
+    }
+
+    const sessionId = terminalFrameTextDecoder.decode(data.subarray(1, nullIdx));
+    const chunk = data.subarray(nullIdx + 1);
+    if (chunk.length === 0) {
+      return;
+    }
+
+    // Dispatch as a terminal output event to matching terminal.subscribe
+    // subscriptions.
+    for (const subscription of this.subscriptionsById.values()) {
+      if (subscription.method !== "terminal.subscribe") {
+        continue;
+      }
+      const expectedSessionId = readOptionalString(asRecord(subscription.params)?.sessionId);
+      if (expectedSessionId && expectedSessionId !== sessionId) {
+        continue;
+      }
+      subscription.onNotification({
+        method: "terminal.output",
+        payload: { sessionId, chunk },
+      });
+    }
+  }
 }
 
 let cachedTerminalRpc: DaemonTerminalClient | null = null;
 
 /**
  * Lazily resolves the terminal Domain RPC adapter over the root transport
- * (dependency direction: Domain RPC adapter → root RPC transport).
+ * (dependency direction: Domain RPC adapter → root RPC public API).
  * Worktree→workspace-id resolution comes from the Workspace public API.
  */
 export async function getTerminalRpc(): Promise<DaemonTerminalClient> {
   if (!cachedTerminalRpc) {
-    const transport = await getDaemonTransport();
     cachedTerminalRpc = new DaemonTerminalClient({
-      invoke: transport.invoke,
+      invoke: request,
       resolveWorkspaceId: resolveWorkspaceIdCommand,
-      sendBinary: transport.sendBinary,
-      getSocketReadyState: transport.getSocketReadyState,
-      subscriptionsById: transport.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
-      terminalNextIndexBySessionId: transport.terminalNextIndexBySessionId,
-      startRawSubscription: (options) => transport.startRawSubscription(options),
+      subscribeTransport: subscribeTransport,
+      sendBinary: sendRawBinary,
+      subscribeBinary: subscribeTransportBinary,
+      subscribeConnectionStatus: subscribeTransportConnectionStatus,
     });
   }
   return cachedTerminalRpc;

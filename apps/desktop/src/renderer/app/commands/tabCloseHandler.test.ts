@@ -62,18 +62,6 @@ vi.mock("@renderer/domains/terminal", async () => {
   };
 });
 
-vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../rpc/rpcTransport")>();
-  return {
-    ...actual,
-    getDaemonClient: vi.fn(async () => ({
-      chat: {
-        closeAgentSession: rpcMocks.closeAgentSession,
-      },
-    })),
-  };
-});
-
 const initialChatStoreState = chatStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialSplitPaneStoreState = splitPaneStore.getState();

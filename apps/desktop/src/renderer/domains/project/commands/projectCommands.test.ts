@@ -24,6 +24,20 @@ vi.mock("../../../domains/organization/infrastructure/orgApi", () => ({
   listOrganizations: apiMocks.listOrganizations,
 }));
 
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
+  request: async (method: string, params?: { organizationId?: string }) => {
+    if (method === "project.listWithWorkspaces") {
+      return rpcMocks.listProjects(params);
+    }
+    return undefined;
+  },
+}));
+
+vi.mock("../../../events/desktopRpcEventBus", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+}));
+
 vi.mock("../../../domains/project/infrastructure/projectApi", () => ({
   createProject: apiMocks.createProject,
   deleteProject: apiMocks.deleteProject,
@@ -64,22 +78,6 @@ vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
     Promise.resolve({
       inspectPath: rpcMocks.gitInspect,
     }),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
-  getDaemonTransport: vi.fn(async () => ({
-    invoke: async (method: string, params?: { organizationId?: string }) => {
-      if (method === "project.listWithWorkspaces") {
-        return rpcMocks.listProjects(params);
-      }
-      return undefined;
-    },
-    workspaceIdByWorktreePath: new Map(),
-    resolveWorkspaceId: async () => "",
-  })),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();

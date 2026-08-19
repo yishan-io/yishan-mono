@@ -70,12 +70,6 @@ vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
     }),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
-}));
-
 describe("gitCommands", () => {
   beforeEach(() => {
     vi.clearAllMocks();

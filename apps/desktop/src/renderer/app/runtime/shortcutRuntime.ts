@@ -1,4 +1,4 @@
-import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
+import { subscribeDesktopRpcEvent } from "../../events/desktopRpcEventBus";
 import { type compileShortcutDefinitions, processShortcuts } from "../../shortcuts/shortcutRunner";
 import type { ShortContext } from "../../shortcuts/types";
 

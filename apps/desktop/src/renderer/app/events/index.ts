@@ -15,7 +15,7 @@ import { createNotificationEventHandlers } from "@renderer/domains/notification"
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
 import { createWorkbenchEventHandlers } from "@renderer/domains/workbench";
 import { createWorkspaceEventHandlers } from "@renderer/domains/workspace";
-import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
+import { subscribeDesktopRpcEvent } from "../../events/desktopRpcEventBus";
 import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
 import { subscribeBackendEvent } from "./backendEventRouter";
 

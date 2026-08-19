@@ -1,5 +1,10 @@
-import { asRecord, readOptionalBoolean, readOptionalString, readOptionalStringArray } from "../../../rpc/helpers";
-import { getDaemonTransport } from "../../../rpc/rpcTransport";
+import { request } from "@renderer/rpc";
+import {
+  asRecord,
+  readOptionalBoolean,
+  readOptionalString,
+  readOptionalStringArray,
+} from "@shared/validation/primitiveReaders";
 
 export type GitWorktreeInput = {
   workspaceId: string;
@@ -340,7 +345,7 @@ let cachedGitRpc: DaemonGitClient | null = null;
  */
 export async function getGitRpc(): Promise<DaemonGitClient> {
   if (!cachedGitRpc) {
-    cachedGitRpc = new DaemonGitClient((await getDaemonTransport()).invoke);
+    cachedGitRpc = new DaemonGitClient(request);
   }
   return cachedGitRpc;
 }

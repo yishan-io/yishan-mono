@@ -1,8 +1,5 @@
-import {
-  invokeDaemonProcedure,
-  subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromTransport,
-  subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport,
-} from "../../../rpc/rpcTransport";
+import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport } from "@renderer/events/desktopRpcEventBus";
+import { request, subscribeConnectionStatus as subscribeDaemonConnectionStatusFromTransport } from "@renderer/rpc";
 
 /**
  * Session procedure adapters (desktop7 Phase 26). The session Domain owns
@@ -47,21 +44,21 @@ export function subscribeDesktopRpcEvent(listener: (event: { method: string; pay
 }
 
 export async function persistAuthTokens(input: PersistAuthTokensInput): Promise<{ ok: boolean }> {
-  return (await invokeDaemonProcedure("app.persistAuthTokens", input)) as { ok: boolean };
+  return (await request("app.persistAuthTokens", input)) as { ok: boolean };
 }
 
 export async function getAccessToken(): Promise<GetAccessTokenOutput> {
-  return (await invokeDaemonProcedure("app.getAccessToken", {})) as GetAccessTokenOutput;
+  return (await request("app.getAccessToken", {})) as GetAccessTokenOutput;
 }
 
 export async function checkAuthStatus(): Promise<CheckAuthStatusOutput> {
-  return (await invokeDaemonProcedure("app.checkAuthStatus", {})) as CheckAuthStatusOutput;
+  return (await request("app.checkAuthStatus", {})) as CheckAuthStatusOutput;
 }
 
 export async function logoutFromDaemon(): Promise<LogoutOutput> {
-  return (await invokeDaemonProcedure("app.logout", {})) as LogoutOutput;
+  return (await request("app.logout", {})) as LogoutOutput;
 }
 
 export async function reloadAuthConfig(): Promise<ReloadAuthConfigOutput> {
-  return (await invokeDaemonProcedure("app.reloadAuthConfig", {})) as ReloadAuthConfigOutput;
+  return (await request("app.reloadAuthConfig", {})) as ReloadAuthConfigOutput;
 }

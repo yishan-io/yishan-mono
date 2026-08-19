@@ -42,6 +42,14 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceLifecycleWarnings: rpcMocks.enqueueWorkspaceLifecycleWarnings,
 }));
 
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
+}));
+
+vi.mock("../../../events/desktopRpcEventBus", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+}));
+
 vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
@@ -61,12 +69,6 @@ vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
     Promise.resolve({
       renameBranch: rpcMocks.renameGitBranch,
     }),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();

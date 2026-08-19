@@ -1,6 +1,6 @@
+import { request } from "@renderer/rpc";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { asRecord, readOptionalBoolean, readOptionalString } from "../../../rpc/helpers";
-import { getDaemonTransport } from "../../../rpc/rpcTransport";
+import { asRecord, readOptionalBoolean, readOptionalString } from "@shared/validation/primitiveReaders";
 
 /**
  * File wire DTOs (desktop7 Phase 25). Owned by the Files Domain
@@ -290,7 +290,7 @@ let cachedFileRpc: DaemonFileClient | null = null;
  */
 export async function getFileRpc(): Promise<DaemonFileClient> {
   if (!cachedFileRpc) {
-    cachedFileRpc = new DaemonFileClient((await getDaemonTransport()).invoke);
+    cachedFileRpc = new DaemonFileClient(request);
   }
   return cachedFileRpc;
 }
