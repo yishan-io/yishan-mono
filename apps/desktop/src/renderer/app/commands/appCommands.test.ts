@@ -17,22 +17,27 @@ const mocks = vi.hoisted(() => ({
   toggleMainWindowMaximized: vi.fn(),
   getMainWindowFullscreenState: vi.fn(),
   checkAuthStatus: vi.fn(),
+  logoutFromDaemon: vi.fn(),
+  reloadAuthConfig: vi.fn(),
   getDaemonInfo: vi.fn(),
   login: vi.fn(),
+}));
+
+vi.mock("@renderer/domains/agent", () => ({
+  checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
+  ensureAgentGlobalConfigExternalDirectoryPermission: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
+}));
+
+vi.mock("@renderer/domains/session", () => ({
+  checkAuthStatus: mocks.checkAuthStatus,
+  logoutFromDaemon: mocks.logoutFromDaemon,
+  reloadAuthConfig: mocks.reloadAuthConfig,
 }));
 
 vi.mock("../../rpc/rpcTransport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../rpc/rpcTransport")>();
   return {
     ...actual,
-    getDaemonClient: vi.fn(async () => ({
-      app: {
-        checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
-        ensureAgentGlobalConfigExternalDirectoryPermission: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
-        toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
-        checkAuthStatus: mocks.checkAuthStatus,
-      },
-    })),
     getDesktopHostBridge: vi.fn(() => ({
       toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
       getMainWindowFullscreenState: mocks.getMainWindowFullscreenState,

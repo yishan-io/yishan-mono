@@ -160,6 +160,8 @@ export {
   updateExtension,
 } from "./commands/agentDefinitionCommands";
 export {
+  checkAgentGlobalConfigExternalDirectoryPermission,
+  ensureAgentGlobalConfigExternalDirectoryPermission,
   getComputerUsePermissions,
   getMemoryConfig,
   listAgentModelsForMemorySettings,

@@ -69,33 +69,7 @@ export type ProcedureSubscriptionOptions = {
   onNotification: (event: ProcedureNotification) => void;
 };
 
-export type PersistAuthTokensInput = {
-  accessToken: string;
-  refreshToken?: string;
-  accessTokenExpiresAt?: string;
-  refreshTokenExpiresAt?: string;
-};
-
-export type GetAccessTokenOutput = {
-  accessToken: string;
-  accessTokenExpiresAt?: string;
-};
-
-export type CheckAuthStatusOutput = {
-  authenticated: boolean;
-  accessTokenExpiresAt?: string;
-};
-
-export type LogoutOutput = {
-  ok: boolean;
-};
-
-export type ReloadAuthConfigOutput = {
-  ok: boolean;
-};
-
 /**
- * Agent wire DTOs (skill/pi/agent-definition/memory/computer-use/session)
- * moved to `domains/agent/infrastructure/daemonAgentTypes` (desktop7
- * Phase 26). This module keeps only the wire protocol and app auth contract.
+ * Session auth DTOs moved to `domains/session/infrastructure/daemonSessionProcedures`
+ * (desktop7 Phase 26). This module keeps only the wire protocol.
  */

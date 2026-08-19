@@ -123,7 +123,6 @@ export async function removePiProvider(input: { provider: string }): Promise<{ o
 export async function listAgentDetectionStatuses(input?: unknown): Promise<unknown> {
   return invokeDaemonProcedure("agent.listDetectionStatuses", input ?? {});
 }
-
 export async function listAgentModels(input?: { agentKind?: string; forceRefresh?: boolean }): Promise<{
   agentKind: string;
   models: Array<{ id: string; name: string }>;
@@ -138,6 +137,20 @@ export async function listAgentModels(input?: { agentKind?: string; forceRefresh
     fetchedAt: number;
     cacheExpiry: number;
   };
+}
+
+// ─── agent global config (external directory permission) ────────────────────
+
+export async function checkAgentGlobalConfigExternalDirectoryPermission(input?: {
+  agentKind?: string;
+}): Promise<unknown> {
+  return invokeDaemonProcedure("app.checkAgentGlobalConfigExternalDirectoryPermission", input ?? {});
+}
+
+export async function ensureAgentGlobalConfigExternalDirectoryPermission(input?: {
+  agentKind?: string;
+}): Promise<unknown> {
+  return invokeDaemonProcedure("app.ensureAgentGlobalConfigExternalDirectoryPermission", input ?? {});
 }
 
 // ─── memory ──────────────────────────────────────────────────────────────────

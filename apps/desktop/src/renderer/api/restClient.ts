@@ -1,4 +1,4 @@
-import { getDaemonClient } from "../rpc/rpcTransport";
+import { checkAuthStatus, getAccessToken } from "@renderer/domains/session";
 
 export const DEFAULT_REMOTE_API_BASE_URL = "https://api.yishan.io";
 export const DEFAULT_DEV_REMOTE_API_BASE_URL = "http://localhost:8787";
@@ -44,8 +44,7 @@ export function resetAuthExpiredState(): void {
 
 async function resolveAccessToken(): Promise<string | undefined> {
   try {
-    const daemonClient = await getDaemonClient();
-    const result = await daemonClient.app.getAccessToken();
+    const result = await getAccessToken();
     return result?.accessToken || undefined;
   } catch {
     return undefined;
@@ -148,10 +147,9 @@ export async function requestJson<T>(
 
   if (response.status === 401) {
     try {
-      const daemonClient = await getDaemonClient();
-      const status = await daemonClient.app.checkAuthStatus();
+      const status = await checkAuthStatus();
       if (status.authenticated) {
-        const retryToken = await daemonClient.app.getAccessToken();
+        const retryToken = await getAccessToken();
         if (retryToken?.accessToken) {
           const retryHeaders = buildHeaders(retryToken.accessToken, hasBody);
           const retryResponse = await executeFetch(url, method, retryHeaders, input?.body);
@@ -193,10 +191,9 @@ export async function requestFormJson<T>(path: string, formData: FormData): Prom
 
   if (response.status === 401) {
     try {
-      const daemonClient = await getDaemonClient();
-      const status = await daemonClient.app.checkAuthStatus();
+      const status = await checkAuthStatus();
       if (status.authenticated) {
-        const retryToken = await daemonClient.app.getAccessToken();
+        const retryToken = await getAccessToken();
         if (retryToken?.accessToken) {
           const retryHeaders = buildHeaders(retryToken.accessToken, true, "form");
           const retryResponse = await executeFetch(url, "POST", retryHeaders, formData, "form");

@@ -1,5 +1,9 @@
-import type { DesktopAgentKind } from "@renderer/domains/agent";
+import {
+  checkAgentGlobalConfigExternalDirectoryPermission,
+  ensureAgentGlobalConfigExternalDirectoryPermission,
+} from "@renderer/domains/agent";
 import { openExternalUrl } from "@renderer/domains/browser";
+import { checkAuthStatus, logoutFromDaemon, reloadAuthConfig } from "@renderer/domains/session";
 import {
   getDaemonInfo,
   getDaemonLog,
@@ -13,19 +17,13 @@ import type { AuthStatusResult, DesktopUpdateEventPayload } from "../../../main/
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
 import { rendererQueryClient } from "../../queryClient";
-import { getDaemonClient, getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
+import { getDesktopBridge, getDesktopHostBridge } from "../../rpc/rpcTransport";
 
-/** Checks whether one agent global config grants external directory access. */
-export async function checkAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: DesktopAgentKind }) {
-  const client = await getDaemonClient();
-  return client.app.checkAgentGlobalConfigExternalDirectoryPermission(params ?? {});
-}
-
-/** Ensures one agent global config grants external directory access. */
-export async function ensureAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: DesktopAgentKind }) {
-  const client = await getDaemonClient();
-  return client.app.ensureAgentGlobalConfigExternalDirectoryPermission(params ?? {});
-}
+/**
+ * App command surface for desktop lifecycle: daemon control, auth, and
+ * window state. All daemon auth procedures come from the Session Domain
+ * public API; all agent-global-config procedures from the Agent Domain.
+ */
 
 /** Toggles the main desktop window maximized state. */
 export async function toggleMainWindowMaximized() {
@@ -40,8 +38,7 @@ export async function getMainWindowFullscreenState() {
 /** Clears renderer and daemon auth state for one desktop logout flow. */
 export async function logout(): Promise<void> {
   try {
-    const daemonClient = await getDaemonClient();
-    await daemonClient.app.logout();
+    await logoutFromDaemon();
   } catch (error) {
     console.warn("Failed to clear daemon auth state during logout", error);
   }
@@ -55,8 +52,7 @@ export async function logout(): Promise<void> {
 /** Reads current desktop authentication status from main-process IPC. */
 export async function getAuthStatus(): Promise<AuthStatusResult> {
   try {
-    const client = await getDaemonClient();
-    const result = await client.app.checkAuthStatus();
+    const result = await checkAuthStatus();
     return {
       authenticated: result.authenticated,
       expiresAt: result.accessTokenExpiresAt,
@@ -78,8 +74,7 @@ export async function login() {
   const result = await getDesktopHostBridge().login();
   if (result.authenticated) {
     try {
-      const daemonClient = await getDaemonClient();
-      await daemonClient.app.reloadAuthConfig();
+      await reloadAuthConfig();
     } catch {}
   }
   return result;
@@ -130,3 +125,5 @@ export type { DesktopUpdateEventPayload } from "../../../main/ipc";
 
 export { getDaemonLog };
 export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "@renderer/domains/settings";
+
+export { checkAgentGlobalConfigExternalDirectoryPermission, ensureAgentGlobalConfigExternalDirectoryPermission };

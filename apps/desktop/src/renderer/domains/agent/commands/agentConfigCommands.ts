@@ -1,4 +1,6 @@
 import {
+  checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionProcedure,
+  ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionProcedure,
   getComputerUsePermissions as getComputerUsePermissionsProcedure,
   getMemoryConfig as getMemoryConfigProcedure,
   listAgentModels,
@@ -29,6 +31,16 @@ export function updateMemoryConfig(config: MemoryConfig) {
 /** Lists agent models for the memory settings view. */
 export function listAgentModelsForMemorySettings(input?: { agentKind?: string; forceRefresh?: boolean }) {
   return listAgentModels(input);
+}
+
+/** Checks whether one agent global config grants external directory access. */
+export function checkAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: string }) {
+  return checkAgentGlobalConfigExternalDirectoryPermissionProcedure(params ?? {});
+}
+
+/** Ensures one agent global config grants external directory access. */
+export function ensureAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: string }) {
+  return ensureAgentGlobalConfigExternalDirectoryPermissionProcedure(params ?? {});
 }
 
 /** Reads computer-use permission state from the daemon. */

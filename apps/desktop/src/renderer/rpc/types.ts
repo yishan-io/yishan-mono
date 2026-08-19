@@ -1,4 +1,3 @@
-import type * as Rpc from "./daemonTypes";
 import type { StartSubscriptionOptions } from "./daemonTypes";
 
 export type ApiSubscriptionHandlers = {
@@ -28,16 +27,6 @@ type DaemonRpcSubscription = {
 };
 
 export type DaemonRpcClient = {
-  app: {
-    getDefaultWorktreeLocation: (input?: unknown) => Promise<{ worktreePath: string }>;
-    checkAgentGlobalConfigExternalDirectoryPermission: (input?: unknown) => Promise<unknown>;
-    ensureAgentGlobalConfigExternalDirectoryPermission: (input?: unknown) => Promise<unknown>;
-    persistAuthTokens: (input: Rpc.PersistAuthTokensInput) => Promise<{ ok: boolean }>;
-    getAccessToken: (input?: unknown) => Promise<Rpc.GetAccessTokenOutput>;
-    checkAuthStatus: (input?: unknown) => Promise<Rpc.CheckAuthStatusOutput>;
-    logout: (input?: unknown) => Promise<Rpc.LogoutOutput>;
-    reloadAuthConfig: (input?: unknown) => Promise<Rpc.ReloadAuthConfigOutput>;
-  };
   events: {
     frontendStream: {
       subscribe: (
@@ -49,4 +38,5 @@ export type DaemonRpcClient = {
       ) => DaemonRpcSubscription;
     };
   };
+  tokenUsage: Record<string, never>;
 };

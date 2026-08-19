@@ -17,6 +17,18 @@ export {
   subscribeDaemonInfoRefreshed,
 } from "./commands/sessionCommands";
 export {
+  checkAuthStatus,
+  getAccessToken,
+  logoutFromDaemon,
+  persistAuthTokens,
+  reloadAuthConfig,
+  type CheckAuthStatusOutput,
+  type GetAccessTokenOutput,
+  type LogoutOutput,
+  type PersistAuthTokensInput,
+  type ReloadAuthConfigOutput,
+} from "./infrastructure/daemonSessionProcedures";
+export {
   selectCurrentUser,
   selectCurrentUserNotificationPreferences,
   selectOrganizations,
