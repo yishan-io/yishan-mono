@@ -42,7 +42,6 @@ vi.mock("../../../commands/useCommands", () => {
     useWorkspaceCommands: commandSurface,
     useAgentCommands: commandSurface,
     useGitCommands: commandSurface,
-    useFileCommands: commandSurface,
     useWorkbenchCommands: commandSurface,
   };
 });

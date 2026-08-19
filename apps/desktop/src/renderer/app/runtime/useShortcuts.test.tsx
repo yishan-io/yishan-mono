@@ -95,19 +95,6 @@ vi.mock("../../domains/workbench/state/tabStore", () => ({
   tabStore: (selector: (state: typeof mocks.tabStoreState) => unknown) => selector(mocks.tabStoreState),
 }));
 
-vi.mock("../../app/commands/useCommands", () => {
-  const commandSurface = () => mocks.commandHandlers;
-  return {
-    useCommands: commandSurface,
-    useAppCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-  };
-});
-
 vi.mock("react-i18next", () => ({
   initReactI18next: {
     type: "3rdParty",

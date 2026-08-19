@@ -9,8 +9,17 @@ import {
 import { formatAgentSessionTitle } from "@renderer/domains/agent";
 import { agentSettingsStore } from "@renderer/domains/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
-import { FileSearchOverlay } from "@renderer/domains/files";
-import { getFileTreeIcon } from "@renderer/domains/files";
+import { FileSearchOverlay, getFileTreeIcon } from "@renderer/domains/files";
+import {
+  createNewWhiteboard,
+  markFileTabSaved,
+  openEntryInExternalApp,
+  readFile,
+  refreshFileTabFromDisk,
+  renameEntry,
+  updateFileTabContent,
+  writeFile,
+} from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
@@ -43,7 +52,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
-import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../commands/useCommands";
+import { useGitCommands, useWorkbenchCommands } from "../../commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../selectors";
 import { LaunchView } from "../launch/LaunchView";
 import { useTabContentRenderer } from "../tab-content/useTabContentRenderer";
@@ -60,7 +69,6 @@ function clamp(value: number, min: number, max: number): number {
 export function MainPaneView() {
   const { t } = useTranslation();
   const workbenchCommands = useWorkbenchCommands();
-  const fileCommands = useFileCommands();
   const gitCommands = useGitCommands();
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
@@ -70,8 +78,19 @@ export function MainPaneView() {
   const tabs = tabStore((state) => state.tabs);
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const mergedCmd = useMemo(
-    () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
-    [workbenchCommands, fileCommands, gitCommands],
+    () => ({
+      ...workbenchCommands,
+      ...gitCommands,
+      openEntryInExternalApp,
+      markFileTabSaved,
+      updateFileTabContent,
+      writeFile,
+      createNewWhiteboard,
+      renameEntry,
+      readFile,
+      refreshFileTabFromDisk,
+    }),
+    [workbenchCommands, gitCommands],
   );
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
@@ -292,12 +311,12 @@ export function MainPaneView() {
                     enabledAgentKinds={enabledAgentKinds}
                     agentPresetMeta={agentPresetMeta}
                     tabFileCommands={{
-                      createNewWhiteboard: fileCommands.createNewWhiteboard,
-                      renameEntry: fileCommands.renameEntry,
+                      createNewWhiteboard,
+                      renameEntry,
                     }}
                     openTabRefreshCommands={{
-                      readFile: fileCommands.readFile,
-                      refreshFileTabFromDisk: fileCommands.refreshFileTabFromDisk,
+                      readFile,
+                      refreshFileTabFromDisk,
                       readDiff: gitCommands.readDiff,
                       readCommitDiff: gitCommands.readCommitDiff,
                       readBranchComparisonDiff: gitCommands.readBranchComparisonDiff,

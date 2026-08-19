@@ -26,25 +26,6 @@ import {
   type updateChatMessage as updateChatMessageCommand,
 } from "@renderer/domains/agent";
 import {
-  type createFile as createFileCommand,
-  createFileTabPlaceholder,
-  type createFolder as createFolderCommand,
-  type createNewWhiteboard as createNewWhiteboardCommand,
-  type deleteEntry as deleteEntryCommand,
-  type listDetectedExternalAppIds as listDetectedExternalAppIdsCommand,
-  type listFiles as listFilesCommand,
-  type markFileTabSaved as markFileTabSavedCommand,
-  type openEntryInExternalApp as openEntryInExternalAppCommand,
-  type readExternalClipboardSourcePaths as readExternalClipboardSourcePathsCommand,
-  type readFile as readFileCommand,
-  type refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
-  type renameEntry as renameEntryCommand,
-  type resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
-  seedFileTabContent as seedFileTabContentCommand,
-  type updateFileTabContent as updateFileTabContentCommand,
-  type writeFile as writeFileCommand,
-} from "@renderer/domains/files";
-import {
   type commitGitChanges as commitGitChangesCommand,
   type getGitAuthorName as getGitAuthorNameCommand,
   type getGitBranchStatus as getGitBranchStatusCommand,
@@ -204,25 +185,6 @@ export type GitCommandSurface = {
   refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
-/** Files feature command surface. */
-export type FileCommandSurface = {
-  listFiles: typeof listFilesCommand;
-  readFile: typeof readFileCommand;
-  writeFile: typeof writeFileCommand;
-  createFile: typeof createFileCommand;
-  createFolder: typeof createFolderCommand;
-  renameEntry: typeof renameEntryCommand;
-  deleteEntry: typeof deleteEntryCommand;
-  openEntryInExternalApp: typeof openEntryInExternalAppCommand;
-  listDetectedExternalAppIds: typeof listDetectedExternalAppIdsCommand;
-  readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
-  createNewWhiteboard: typeof createNewWhiteboardCommand;
-  resolveNextWhiteboardPath: typeof resolveNextWhiteboardPathCommand;
-  updateFileTabContent: typeof updateFileTabContentCommand;
-  markFileTabSaved: typeof markFileTabSavedCommand;
-  refreshFileTabFromDisk: typeof refreshFileTabFromDiskCommand;
-};
-
 /** Workbench feature command surface. */
 export type WorkbenchCommandSurface = {
   selectTab: typeof setSelectedTabCommand;
@@ -239,11 +201,3 @@ export type WorkbenchCommandSurface = {
   setBrowserTabUrl: typeof setBrowserTabUrlCommand;
   renameTabsForEntryRename: typeof renameTabsForEntryRenameCommand;
 };
-
-/** The composed application command surface (all features). */
-export type Commands = AppCommandSurface &
-  WorkspaceCommandSurface &
-  AgentCommandSurface &
-  GitCommandSurface &
-  FileCommandSurface &
-  WorkbenchCommandSurface;

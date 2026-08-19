@@ -17,25 +17,7 @@ import {
   setChatCurrentModel as setChatCurrentModelCommand,
   updateChatMessage as updateChatMessageCommand,
 } from "@renderer/domains/agent";
-import {
-  createFile as createFileCommand,
-  createFileTabPlaceholder,
-  createFolder as createFolderCommand,
-  createNewWhiteboard as createNewWhiteboardCommand,
-  deleteEntry as deleteEntryCommand,
-  listDetectedExternalAppIds as listDetectedExternalAppIdsCommand,
-  listFiles as listFilesCommand,
-  markFileTabSaved as markFileTabSavedCommand,
-  openEntryInExternalApp as openEntryInExternalAppCommand,
-  readExternalClipboardSourcePaths as readExternalClipboardSourcePathsCommand,
-  readFile as readFileCommand,
-  refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
-  renameEntry as renameEntryCommand,
-  resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
-  seedFileTabContent as seedFileTabContentCommand,
-  updateFileTabContent as updateFileTabContentCommand,
-  writeFile as writeFileCommand,
-} from "@renderer/domains/files";
+import { createFileTabPlaceholder, seedFileTabContent as seedFileTabContentCommand } from "@renderer/domains/files";
 import {
   commitGitChanges as commitGitChangesCommand,
   getGitAuthorName as getGitAuthorNameCommand,
@@ -116,8 +98,6 @@ import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspa
 import type {
   AgentCommandSurface,
   AppCommandSurface,
-  Commands,
-  FileCommandSurface,
   GitCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
@@ -200,26 +180,6 @@ export function createGitCommands(): GitCommandSurface {
   };
 }
 
-export function createFileCommands(): FileCommandSurface {
-  return {
-    listFiles: listFilesCommand,
-    readFile: readFileCommand,
-    writeFile: writeFileCommand,
-    createFile: createFileCommand,
-    createFolder: createFolderCommand,
-    renameEntry: renameEntryCommand,
-    deleteEntry: deleteEntryCommand,
-    openEntryInExternalApp: openEntryInExternalAppCommand,
-    listDetectedExternalAppIds: listDetectedExternalAppIdsCommand,
-    readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
-    createNewWhiteboard: createNewWhiteboardCommand,
-    resolveNextWhiteboardPath: resolveNextWhiteboardPathCommand,
-    updateFileTabContent: updateFileTabContentCommand,
-    markFileTabSaved: markFileTabSavedCommand,
-    refreshFileTabFromDisk: refreshFileTabFromDiskCommand,
-  };
-}
-
 export function createWorkbenchCommands(): WorkbenchCommandSurface {
   return {
     selectTab: setSelectedTabCommand,
@@ -270,24 +230,10 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
     renameTabsForEntryRename: renameTabsForEntryRenameCommand,
   };
 }
-
-/** Returns the composed UI-facing command surface (all features). */
-export function createCommands(): Commands {
-  return {
-    ...createAppCommands(),
-    ...createWorkspaceCommands(),
-    ...createAgentCommands(),
-    ...createGitCommands(),
-    ...createFileCommands(),
-    ...createWorkbenchCommands(),
-  };
-}
 export type {
   AgentCommandSurface,
   AppCommandSurface,
-  FileCommandSurface,
   GitCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
-  Commands,
 } from "./commandSurfaces";

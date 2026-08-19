@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
-import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
+import { SYSTEM_FILE_MANAGER_APP_ID, openEntryInExternalApp } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { OverviewView } from "@renderer/domains/overview";
@@ -24,13 +24,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   type AgentCommandSurface,
   type AppCommandSurface,
-  type FileCommandSurface,
   type GitCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
   useAgentCommands,
   useAppCommands,
-  useFileCommands,
   useGitCommands,
   useWorkbenchCommands,
   useWorkspaceCommands,
@@ -55,11 +53,11 @@ function clamp(value: number, min: number, max: number): number {
 type WorkspaceViewCommands = WorkspaceCommandSurface &
   WorkbenchCommandSurface &
   AgentCommandSurface &
-  FileCommandSurface &
   GitCommandSurface &
   AppCommandSurface & {
     listTerminalSessions: typeof listTerminalSessions;
     setActiveWorkspace: typeof setActiveWorkspace;
+    openEntryInExternalApp: typeof openEntryInExternalApp;
   };
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
@@ -350,7 +348,6 @@ export function WorkspaceView() {
   const workspaceCommands = useWorkspaceCommands();
   const workbenchCommands = useWorkbenchCommands();
   const agentCommands = useAgentCommands();
-  const fileCommands = useFileCommands();
   const gitCommands = useGitCommands();
   const appCommands = useAppCommands();
   const cmd: WorkspaceViewCommands = useMemo(
@@ -360,11 +357,11 @@ export function WorkspaceView() {
       ...agentCommands,
       listTerminalSessions,
       setActiveWorkspace,
-      ...fileCommands,
+      openEntryInExternalApp,
       ...gitCommands,
       ...appCommands,
     }),
-    [workspaceCommands, workbenchCommands, agentCommands, fileCommands, gitCommands, appCommands],
+    [workspaceCommands, workbenchCommands, agentCommands, gitCommands, appCommands],
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));
