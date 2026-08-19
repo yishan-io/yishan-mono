@@ -5,18 +5,14 @@ import { getDefaultWorktreeLocation, openLocalFolderDialog } from "./projectHost
 
 const mocks = vi.hoisted(() => ({
   openLocalFolderDialog: vi.fn(),
-  getDefaultWorktreeLocation: vi.fn(),
+  invokeDaemonProcedure: vi.fn(),
 }));
 
 vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
   return {
     ...actual,
-    getDaemonClient: vi.fn(async () => ({
-      app: {
-        getDefaultWorktreeLocation: mocks.getDefaultWorktreeLocation,
-      },
-    })),
+    invokeDaemonProcedure: mocks.invokeDaemonProcedure,
     getDesktopHostBridge: vi.fn(() => ({
       openLocalFolderDialog: mocks.openLocalFolderDialog,
     })),
@@ -33,10 +29,10 @@ describe("projectHostCommands", () => {
   });
 
   it("reads the default worktree location from the daemon app settings", async () => {
-    mocks.getDefaultWorktreeLocation.mockResolvedValueOnce({ worktreePath: "/tmp/worktrees" });
+    mocks.invokeDaemonProcedure.mockResolvedValueOnce({ worktreePath: "/tmp/worktrees" });
     const result = await getDefaultWorktreeLocation();
 
-    expect(mocks.getDefaultWorktreeLocation).toHaveBeenCalledWith(undefined);
+    expect(mocks.invokeDaemonProcedure).toHaveBeenCalledWith("app.getDefaultWorktreeLocation", {});
     expect(result).toBe("/tmp/worktrees");
   });
 });
