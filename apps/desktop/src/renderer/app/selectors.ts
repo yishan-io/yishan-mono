@@ -11,10 +11,10 @@ import type { WorkspaceProjectRecord } from "@renderer/domains/project";
  * derived value; callers wrap in useMemo when subscribing.
  */
 import {
-  selectLastUsedExternalAppId,
-  selectProjectDisplayIds,
-  selectProjects,
-  selectWorkspaceListHierarchyMode,
+  getLastUsedExternalAppId,
+  getProjectDisplayIds,
+  getProjects,
+  getWorkspaceListHierarchyMode,
   useProjects,
 } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -33,7 +33,7 @@ export function selectProjectTree(): {
   workspaces: WorkspaceItem[];
 } {
   return {
-    projects: selectProjects(),
+    projects: getProjects(),
     workspaces: workspaceStore.getState().workspaces,
   };
 }
@@ -46,8 +46,8 @@ export function selectWorkspaceList(): {
 } {
   return {
     workspaces: workspaceStore.getState().workspaces,
-    displayProjectIds: selectProjectDisplayIds(),
-    workspaceListHierarchyMode: selectWorkspaceListHierarchyMode(),
+    displayProjectIds: getProjectDisplayIds(),
+    workspaceListHierarchyMode: getWorkspaceListHierarchyMode(),
   };
 }
 
@@ -63,7 +63,7 @@ export function selectSelectedWorkspaceWithProject(): {
     (w) => w.id === workbenchNavigationStore.getState().activeWorkspaceId,
   );
   const selectedProject = selectedWorkspace
-    ? selectProjects().find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
+    ? getProjects().find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
     : undefined;
   return {
     selectedWorkspace,

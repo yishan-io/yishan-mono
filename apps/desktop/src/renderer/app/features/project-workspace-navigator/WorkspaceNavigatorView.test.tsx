@@ -203,7 +203,7 @@ vi.mock("@renderer/domains/project", async () => {
   // paths (async factory avoids the project<->workspace index cycle).
   const sharedWorkspace = await import("@shared/workspace/localFolderProjectId");
   const projectRules = await import("../../../domains/project/projectRules");
-  const projectSelectors = await import("../../../domains/project/state/projectSelectors");
+  const projectStateReads = await import("../../../domains/project/state/projectStateReads");
   const projectReadHooks = await import("../../../domains/project/hooks/useProjectReadHooks");
   const projectActions = await import("../../../domains/project/state/projectStateMutations");
   const projectDeletionFlow = await import("../../../domains/project/features/project-delete/useProjectDeletionFlow");
@@ -213,9 +213,9 @@ vi.mock("@renderer/domains/project", async () => {
     LOCAL_FOLDER_PROJECT_ID: sharedWorkspace.LOCAL_FOLDER_PROJECT_ID,
     supportsGitFeatures: projectRules.supportsGitFeatures,
     filterVisibleProjects: projectRules.filterVisibleProjects,
-    selectProjectById: projectSelectors.selectProjectById,
-    selectProjectDisplayIds: projectSelectors.selectProjectDisplayIds,
-    selectProjects: projectSelectors.selectProjects,
+    getProjectById: projectStateReads.getProjectById,
+    getProjectDisplayIds: projectStateReads.getProjectDisplayIds,
+    getProjects: projectStateReads.getProjects,
     useProjects: projectReadHooks.useProjects,
     useDisplayProjectIds: projectReadHooks.useDisplayProjectIds,
     useWorkspaceListHierarchyMode: projectReadHooks.useWorkspaceListHierarchyMode,

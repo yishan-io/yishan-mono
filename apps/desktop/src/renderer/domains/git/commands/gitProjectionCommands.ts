@@ -1,5 +1,5 @@
 import { supportsGitFeatures } from "@renderer/domains/project";
-import { selectProjectById } from "@renderer/domains/project";
+import { getProjectById } from "@renderer/domains/project";
 import { selectWorkspaces } from "@renderer/domains/workspace";
 import {
   isFolderWorkspace,
@@ -67,7 +67,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
   if (isFolderWorkspace(workspace)) {
     return;
   }
-  const project = selectProjectById(workspace.projectId ?? workspace.repoId);
+  const project = getProjectById(workspace.projectId ?? workspace.repoId);
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }

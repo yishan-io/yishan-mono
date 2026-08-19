@@ -1,5 +1,4 @@
 import type { ExternalAppId } from "@renderer/domains/files";
-import { selectProjectLastUsedExternalAppIdFromState } from "../state/projectSelectors";
 import { projectStore } from "../state/projectStore";
 
 /**
@@ -9,5 +8,5 @@ import { projectStore } from "../state/projectStore";
  * importing the Project Store directly.
  */
 export function useProjectLastUsedExternalAppId(): ExternalAppId | undefined {
-  return projectStore(selectProjectLastUsedExternalAppIdFromState);
+  return projectStore((state) => state.lastUsedExternalAppId);
 }

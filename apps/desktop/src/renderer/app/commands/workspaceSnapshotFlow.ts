@@ -2,11 +2,11 @@ import type { ProjectRecord } from "@renderer/api/types";
 import { listOrganizations } from "@renderer/domains/organization";
 import { listProjectsByOrg } from "@renderer/domains/project";
 import {
+  getLastUsedExternalAppId,
+  getOrganizationPreferencesById,
+  getProjectDisplayIds,
+  getProjects,
   loadProjects,
-  selectLastUsedExternalAppId,
-  selectOrganizationPreferencesById,
-  selectProjectDisplayIds,
-  selectProjects,
 } from "@renderer/domains/project";
 import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -101,13 +101,13 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       workspacesFromApi: workspaces,
       organizationId: selectedOrganization.id,
       previousState: {
-        projects: selectProjects(),
+        projects: getProjects(),
         workspaces: workspaceStore.getState().workspaces,
         selectedProjectId: workbenchNavigationStore.getState().activeProjectId,
         selectedWorkspaceId: workbenchNavigationStore.getState().activeWorkspaceId,
-        displayProjectIds: selectProjectDisplayIds(),
-        lastUsedExternalAppId: selectLastUsedExternalAppId(),
-        organizationPreferencesById: selectOrganizationPreferencesById(),
+        displayProjectIds: getProjectDisplayIds(),
+        lastUsedExternalAppId: getLastUsedExternalAppId(),
+        organizationPreferencesById: getOrganizationPreferencesById(),
       },
     });
     loadProjects(
@@ -144,7 +144,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
     // Warm up workspaces for currently pinned projects so the daemon has them
     // open and indexed for restart recovery. Already-open workspaces are skipped.
-    const pinnedProjectIds = selectProjectDisplayIds();
+    const pinnedProjectIds = getProjectDisplayIds();
     if (pinnedProjectIds.length > 0) {
       void warmupWorkspacesForProjects(pinnedProjectIds);
     }

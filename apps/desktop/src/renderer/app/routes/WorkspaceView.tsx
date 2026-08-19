@@ -5,7 +5,7 @@ import { gitProjectionStore } from "@renderer/domains/git";
 import { useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { OverviewView } from "@renderer/domains/overview";
 import { CreateProjectDialogView, useIsProjectsLoaded, useProjects } from "@renderer/domains/project";
-import { selectLastUsedExternalAppId } from "@renderer/domains/project";
+import { getLastUsedExternalAppId } from "@renderer/domains/project";
 import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "@renderer/domains/session";
 import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
@@ -175,7 +175,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
         void cmd.openEntryInExternalApp({
           workspaceWorktreePath: selectedWorkspace.worktreePath,
-          appId: selectLastUsedExternalAppId() ?? SYSTEM_FILE_MANAGER_APP_ID,
+          appId: getLastUsedExternalAppId() ?? SYSTEM_FILE_MANAGER_APP_ID,
         });
         return;
       }

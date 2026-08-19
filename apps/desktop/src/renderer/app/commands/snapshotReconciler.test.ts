@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
-import { type SnapshotReconcilerInput, reconcileWorkspaceSnapshot } from "./snapshotReconciler";
 import type { ProjectRecord, WorkspaceRecord } from "@renderer/api/types";
 import type { WorkspaceItem, WorkspaceStatus } from "@renderer/domains/workspace";
+import { describe, expect, it } from "vitest";
+import { type SnapshotReconcilerInput, reconcileWorkspaceSnapshot } from "./snapshotReconciler";
 
 function buildProject(overrides: Partial<ProjectRecord> = {}): ProjectRecord {
   return {

@@ -1,5 +1,5 @@
 import { recordWorkspaceUnreadNotification, setWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
-import { selectProjectById } from "@renderer/domains/project";
+import { getProjectById } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { selectWorkspaces } from "@renderer/domains/workspace";
@@ -282,7 +282,7 @@ export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependenc
       return undefined;
     }
 
-    const projectName = selectProjectById(workspace?.projectId ?? "")?.name?.trim();
+    const projectName = getProjectById(workspace?.projectId ?? "")?.name?.trim();
     return projectName ? `${projectName} / ${workspaceName}` : workspaceName;
   },
 };

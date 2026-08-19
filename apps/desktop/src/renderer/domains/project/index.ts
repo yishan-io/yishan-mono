@@ -30,13 +30,13 @@ export type {
   ProjectListPreference,
 } from "./daemon/projectDaemonClient";
 export {
-  selectLastUsedExternalAppId,
-  selectOrganizationPreferencesById,
-  selectProjectById,
-  selectProjectDisplayIds,
-  selectProjects,
-  selectWorkspaceListHierarchyMode,
-} from "./state/projectSelectors";
+  getLastUsedExternalAppId,
+  getOrganizationPreferencesById,
+  getProjectById,
+  getProjectDisplayIds,
+  getProjects,
+  getWorkspaceListHierarchyMode,
+} from "./state/projectStateReads";
 export {
   loadProjects,
   setDisplayProjectIds,
