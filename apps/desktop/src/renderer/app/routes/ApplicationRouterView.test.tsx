@@ -4,14 +4,14 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../api";
+
 import { RestApiError } from "../../api/restClient";
-import { createOrganization } from "../../features/organization/commands/orgCommands";
-import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
-import { listOrgNodes } from "../../features/node/commands/nodeCommands";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
+import { listOrgNodes } from "../../domains/node/commands/nodeCommands";
+import { createOrganization } from "../../domains/organization/commands/orgCommands";
+import { getSessionBootstrapData } from "../../domains/session/commands/sessionCommands";
+import { sessionStore } from "../../domains/session/state/sessionStore";
 import { rendererQueryClient } from "../../queryClient";
-import { sessionStore } from "../../features/session/state/sessionStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
 vi.mock("react-i18next", () => ({
@@ -32,10 +32,11 @@ vi.mock("../../app/commands/appCommands", () => ({
 
 vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({})),
+  subscribeDaemonConnectionStatus: vi.fn(() => () => {}),
   subscribeDesktopRpcEvent: vi.fn(() => () => {}),
 }));
 
-vi.mock("../../features/session/commands/sessionCommands", () => ({
+vi.mock("../../domains/session/commands/sessionCommands", () => ({
   isAuthExpiredError: (error: unknown) => error instanceof RestApiError && error.status === 401,
   getSessionBootstrapData: vi.fn(async () => ({
     currentUser: {
@@ -67,11 +68,11 @@ vi.mock("../../features/session/commands/sessionCommands", () => ({
   })),
 }));
 
-vi.mock("../../features/node/commands/nodeCommands", () => ({
+vi.mock("../../domains/node/commands/nodeCommands", () => ({
   listOrgNodes: vi.fn(async () => []),
 }));
 
-vi.mock("../../features/organization/commands/orgCommands", () => ({
+vi.mock("../../domains/organization/commands/orgCommands", () => ({
   createOrganization: vi.fn(async () => ({ id: "org-2", name: "New Organization" })),
 }));
 
@@ -107,7 +108,7 @@ vi.mock("../../ui/layout/AppBootstrapLoadingView", () => ({
   AppBootstrapLoadingView: () => <div data-testid="bootstrap-loading-view">bootstrap-loading</div>,
 }));
 
-vi.mock("../../ui/layout/AppMenuView", () => ({
+vi.mock("../features/app-menu/AppMenuView", () => ({
   AppMenuView: () => <div data-testid="app-menu-view" />,
 }));
 
@@ -432,5 +433,4 @@ describe("ApplicationRouterView", () => {
     expect(await screen.findByTestId("workspace-input")).toBeTruthy();
     expect(screen.queryByText("routing.notFound.title")).toBeNull();
   });
-
 });

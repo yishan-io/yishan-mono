@@ -1,114 +1,81 @@
-import { listActivePiSessions as listActivePiSessionsCommand } from "../../features/agent/commands/agentChatSessionHistory";
-import {
-  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
-  listAgentModels as listAgentModelsCommand,
-} from "../../features/agent/commands/agentCommands";
 import {
   appendChatMessages as appendChatMessagesCommand,
   closeAgentSession as closeAgentSessionCommand,
   createWorkspaceChatEventHandler as createWorkspaceChatEventHandlerCommand,
   ensureChatSession as ensureChatSessionCommand,
   getChatMessages as getChatMessagesCommand,
+  listActivePiSessions as listActivePiSessionsCommand,
+  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
+  listAgentModels as listAgentModelsCommand,
+  listPiProviders as listPiProvidersCommand,
+  openPiProviderLogin as openPiProviderLoginCommand,
+  removePiProvider as removePiProviderCommand,
+  renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand,
   runChatPrompt as runChatPromptCommand,
+  savePiProvider as savePiProviderCommand,
   setChatAvailableModels as setChatAvailableModelsCommand,
   setChatCurrentModel as setChatCurrentModelCommand,
   updateChatMessage as updateChatMessageCommand,
-} from "../../features/agent/commands/chatCommands";
-import {
-  createProject as createProjectCommand,
-  deleteProject as deleteProjectCommand,
-  inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
-  updateProjectConfig as updateProjectConfigCommand,
-} from "../../features/project/commands/projectCommands";
-import { setSelectedRepo, setSelectedWorkspace } from "../../features/workspace/commands/selectionCommands";
-import {
-  activateWorkspacePane as activateWorkspacePaneCommand,
-  closeWorkspace as closeWorkspaceCommand,
-  createWorkspace as createWorkspaceCommand,
-  deleteLocalFolder as deleteLocalFolderCommand,
-  deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
-  focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
-  openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
-  openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
-  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
-  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
-  renameWorkspaceBranch as renameWorkspaceBranchCommand,
-  renameWorkspace as renameWorkspaceCommand,
-  reorderWorkspace as reorderWorkspaceCommand,
-  setDisplayRepoIds as setDisplayRepoIdsCommand,
-  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
-  setLeftPaneWidth as setLeftPaneWidthCommand,
-  setRightPaneWidth as setRightPaneWidthCommand,
-  toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
-  toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
-  undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "../../features/workspace/commands/workspaceCommands";
-import type { WorkspaceProjectRecord } from "../../features/workbench/model/types";
-import {
-  appendBrowserHistory as appendBrowserHistoryCommand,
-  checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
-  ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
-  getDefaultWorktreeLocation as getDefaultWorktreeLocationCommand,
-  loadBrowserHistory as loadBrowserHistoryCommand,
-  logout as logoutCommand,
-  openExternalUrl as openExternalUrlCommand,
-  openLocalFolderDialog as openLocalFolderDialogCommand,
-  toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
-} from "./appCommands";
-import { listCLIToolStatuses as listCLIToolStatusesCommand } from "../../features/settings/commands/cliToolCommands";
+} from "@renderer/domains/agent";
 import {
   createFile as createFileCommand,
+  createFileTabPlaceholder,
   createFolder as createFolderCommand,
+  createNewWhiteboard as createNewWhiteboardCommand,
   deleteEntry as deleteEntryCommand,
   listDetectedExternalAppIds as listDetectedExternalAppIdsCommand,
   listFiles as listFilesCommand,
+  markFileTabSaved as markFileTabSavedCommand,
   openEntryInExternalApp as openEntryInExternalAppCommand,
   readExternalClipboardSourcePaths as readExternalClipboardSourcePathsCommand,
   readFile as readFileCommand,
+  refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
   renameEntry as renameEntryCommand,
+  resolveNextWhiteboardPath as resolveNextWhiteboardPathCommand,
+  seedFileTabContent as seedFileTabContentCommand,
+  updateFileTabContent as updateFileTabContentCommand,
   writeFile as writeFileCommand,
-} from "../../features/files/commands/fileCommands";
+} from "@renderer/domains/files";
 import {
   commitGitChanges as commitGitChangesCommand,
+  createDiffTabPlaceholder,
   getGitAuthorName as getGitAuthorNameCommand,
   getGitBranchStatus as getGitBranchStatusCommand,
   listGitBranches as listGitBranchesCommand,
   listGitChanges as listGitChangesCommand,
   listGitCommitsToTarget as listGitCommitsToTargetCommand,
+  listPullRequestHistory as listPullRequestHistoryCommand,
   publishGitBranch as publishGitBranchCommand,
   pushGitBranch as pushGitBranchCommand,
   readBranchComparisonDiff as readBranchComparisonDiffCommand,
   readCommitDiff as readCommitDiffCommand,
   readDiff as readDiffCommand,
+  refreshDiffTabContent as refreshDiffTabContentCommand,
+  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
+  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
   revertGitChanges as revertGitChangesCommand,
+  seedDiffTabContent as seedDiffTabContentCommand,
   trackGitChanges as trackGitChangesCommand,
   unstageGitChanges as unstageGitChangesCommand,
-} from "../../features/git/commands/gitCommands";
-import { listOrgNodes as listOrgNodesCommand } from "../../features/node/commands/nodeCommands";
-import {
-  getRemoteHealthStatus as getRemoteHealthStatusCommand,
-  getSessionBootstrapData as getSessionBootstrapDataCommand,
-  resetAuthExpiredState as resetAuthExpiredStateCommand,
-} from "../../features/session/commands/sessionCommands";
+} from "@renderer/domains/git";
 import {
   getNotificationPreferences as getNotificationPreferencesCommand,
   playNotificationSound as playNotificationSoundCommand,
   previewNotification as previewNotificationCommand,
   updateNotificationPreferences as updateNotificationPreferencesCommand,
-} from "../../features/notification/commands/notificationCommands";
-import { switchOrganization as switchOrganizationCommand } from "../../features/organization/commands/orgCommands";
+} from "@renderer/domains/notification";
 import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,
   setOverviewTimeRange as setOverviewTimeRangeCommand,
-} from "../../features/overview/commands/overviewCommands";
+} from "@renderer/domains/overview";
 import {
-  listPiProviders as listPiProvidersCommand,
-  openPiProviderLogin as openPiProviderLoginCommand,
-  removePiProvider as removePiProviderCommand,
-  savePiProvider as savePiProviderCommand,
-} from "../../features/agent/commands/piProviderCommands";
+  type WorkspaceProjectRecord,
+  createProject as createProjectCommand,
+  deleteProject as deleteProjectCommand,
+  inspectLocalProjectSource as inspectLocalProjectSourceCommand,
+  updateProjectConfig as updateProjectConfigCommand,
+} from "@renderer/domains/project";
 import {
   createScheduledJob as createScheduledJobCommand,
   deleteScheduledJob as deleteScheduledJobCommand,
@@ -117,27 +84,8 @@ import {
   resumeScheduledJob as resumeScheduledJobCommand,
   runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
-} from "../../features/scheduled-job/commands/scheduledJobCommands";
-import {
-  closeAllTabs as closeAllTabsCommand,
-  closeOtherTabs as closeOtherTabsCommand,
-  closeTab as closeTabCommand,
-  createTab as createTabCommand,
-  markFileTabSaved as markFileTabSavedCommand,
-  openTab as openTabCommand,
-  openTabInOppositePane as openTabInOppositePaneCommand,
-  promoteTemporaryTab as promoteTemporaryTabCommand,
-  refreshDiffTabContent as refreshDiffTabContentCommand,
-  refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
-  renameTab as renameTabCommand,
-  renameTabsForEntryRename as renameTabsForEntryRenameCommand,
-  reorderTab as reorderTabCommand,
-  setBrowserTabFaviconUrl as setBrowserTabFaviconUrlCommand,
-  setBrowserTabUrl as setBrowserTabUrlCommand,
-  setSelectedTab as setSelectedTabCommand,
-  toggleTabPinned as toggleTabPinnedCommand,
-  updateFileTabContent as updateFileTabContentCommand,
-} from "../../features/workbench/commands/tabCommands";
+} from "@renderer/domains/scheduled-job";
+import { listCLIToolStatuses as listCLIToolStatusesCommand } from "@renderer/domains/settings";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
   consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
@@ -154,7 +102,58 @@ import {
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
-} from "../../features/terminal/commands/terminalCommands";
+} from "@renderer/domains/terminal";
+import { tabStore } from "@renderer/domains/workbench";
+import {
+  activateProject as activateProjectCommand,
+  activateWorkspace as activateWorkspaceCommand,
+  closeAllTabs as closeAllTabsCommand,
+  closeOtherTabs as closeOtherTabsCommand,
+  closeTab as closeTabCommand,
+  openTab as openTabCommand,
+  openTabInOppositePane as openTabInOppositePaneCommand,
+  promoteTemporaryTab as promoteTemporaryTabCommand,
+  renameTab as renameTabCommand,
+  renameTabsForEntryRename as renameTabsForEntryRenameCommand,
+  reorderTab as reorderTabCommand,
+  setBrowserTabFaviconUrl as setBrowserTabFaviconUrlCommand,
+  setBrowserTabUrl as setBrowserTabUrlCommand,
+  setSelectedTab as setSelectedTabCommand,
+  toggleTabPinned as toggleTabPinnedCommand,
+} from "@renderer/domains/workbench";
+import {
+  activateWorkspacePane as activateWorkspacePaneCommand,
+  closeWorkspace as closeWorkspaceCommand,
+  createWorkspace as createWorkspaceCommand,
+  deleteLocalFolder as deleteLocalFolderCommand,
+  deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
+  focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
+  openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
+  openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
+  renameWorkspaceBranch as renameWorkspaceBranchCommand,
+  renameWorkspace as renameWorkspaceCommand,
+  reorderWorkspace as reorderWorkspaceCommand,
+  setDisplayRepoIds as setDisplayRepoIdsCommand,
+  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
+  toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
+  toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
+  undoFileTreeOperation as undoFileTreeOperationCommand,
+} from "@renderer/domains/workspace";
+import { listOrgNodes as listOrgNodesCommand } from "../../domains/node";
+import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
+import {
+  getRemoteHealthStatus as getRemoteHealthStatusCommand,
+  getSessionBootstrapData as getSessionBootstrapDataCommand,
+  resetAuthExpiredState as resetAuthExpiredStateCommand,
+} from "../../domains/session";
+import {
+  checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
+  ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
+  logout as logoutCommand,
+  toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
+} from "./appCommands";
+
+import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspaceSnapshotFlow";
 
 /**
  * Application command composition (Phase 12, desktop5.md).
@@ -165,17 +164,13 @@ import {
  * compatibility entry for app-level consumers (e.g. the shortcut runtime).
  */
 
-/** App-level commands (Electron host, auth, browser history). */
+/** App-level commands (Electron host, auth, app flows). */
 export type AppCommandSurface = {
   logout: typeof logoutCommand;
-  openExternalUrl: typeof openExternalUrlCommand;
-  openLocalFolderDialog: typeof openLocalFolderDialogCommand;
-  getDefaultWorktreeLocation: typeof getDefaultWorktreeLocationCommand;
   checkAgentGlobalConfigExternalDirectoryPermission: typeof checkAgentGlobalConfigExternalDirectoryPermissionCommand;
   ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
   toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
-  loadBrowserHistory: typeof loadBrowserHistoryCommand;
-  appendBrowserHistory: typeof appendBrowserHistoryCommand;
+  loadWorkspaceSnapshot: () => Promise<void>;
 };
 
 /** Session feature command surface. */
@@ -187,12 +182,10 @@ export type SessionCommandSurface = {
 
 /** Workspace feature command surface. */
 export type WorkspaceCommandSurface = {
-  setSelectedRepoId: (repoId: string) => void;
-  setSelectedWorkspaceId: (workspaceId: string) => void;
+  activateProject: typeof activateProjectCommand;
+  activateWorkspace: typeof activateWorkspaceCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
-  setLeftPaneWidth: typeof setLeftPaneWidthCommand;
-  setRightPaneWidth: typeof setRightPaneWidthCommand;
   toggleLeftPaneVisibility: typeof toggleLeftPaneVisibilityCommand;
   toggleRightPaneVisibility: typeof toggleRightPaneVisibilityCommand;
   activateWorkspacePane: typeof activateWorkspacePaneCommand;
@@ -218,8 +211,6 @@ export type WorkspaceCommandSurface = {
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
   deleteLocalFolder: typeof deleteLocalFolderCommand;
-  refreshWorkspacePullRequest: (workspaceId: string) => Promise<void>;
-  refreshWorkspaceGitChanges: (workspaceId: string) => Promise<void>;
 };
 
 /** Agent feature command surface. */
@@ -258,6 +249,10 @@ export type GitCommandSurface = {
   getGitAuthorName: typeof getGitAuthorNameCommand;
   pushGitBranch: typeof pushGitBranchCommand;
   publishGitBranch: typeof publishGitBranchCommand;
+  refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChangesCommand;
+  refreshWorkspacePullRequest: typeof refreshWorkspacePullRequestCommand;
+  listPullRequestHistory: typeof listPullRequestHistoryCommand;
+  refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
 /** Node feature command surface. */
@@ -308,11 +303,15 @@ export type FileCommandSurface = {
   openEntryInExternalApp: typeof openEntryInExternalAppCommand;
   listDetectedExternalAppIds: typeof listDetectedExternalAppIdsCommand;
   readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
+  createNewWhiteboard: typeof createNewWhiteboardCommand;
+  resolveNextWhiteboardPath: typeof resolveNextWhiteboardPathCommand;
+  updateFileTabContent: typeof updateFileTabContentCommand;
+  markFileTabSaved: typeof markFileTabSavedCommand;
+  refreshFileTabFromDisk: typeof refreshFileTabFromDiskCommand;
 };
 
 /** Project feature command surface. */
 export type ProjectCommandSurface = {
-  loadWorkspaceSnapshot: () => Promise<void>;
   inspectLocalProjectSource: typeof inspectLocalProjectSourceCommand;
   createProject: (input: {
     name: string;
@@ -327,7 +326,6 @@ export type ProjectCommandSurface = {
 /** Workbench feature command surface. */
 export type WorkbenchCommandSurface = {
   selectTab: typeof setSelectedTabCommand;
-  createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;
   openTabInOppositePane: typeof openTabInOppositePaneCommand;
   closeTab: typeof closeTabCommand;
@@ -340,10 +338,6 @@ export type WorkbenchCommandSurface = {
   setBrowserTabFaviconUrl: typeof setBrowserTabFaviconUrlCommand;
   setBrowserTabUrl: typeof setBrowserTabUrlCommand;
   renameTabsForEntryRename: typeof renameTabsForEntryRenameCommand;
-  updateFileTabContent: typeof updateFileTabContentCommand;
-  markFileTabSaved: typeof markFileTabSavedCommand;
-  refreshFileTabFromDisk: typeof refreshFileTabFromDiskCommand;
-  refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
 /** Terminal feature command surface. */
@@ -390,14 +384,10 @@ export type Commands = AppCommandSurface &
 export function createAppCommands(): AppCommandSurface {
   return {
     logout: logoutCommand,
-    openExternalUrl: openExternalUrlCommand,
-    openLocalFolderDialog: openLocalFolderDialogCommand,
-    getDefaultWorktreeLocation: getDefaultWorktreeLocationCommand,
     checkAgentGlobalConfigExternalDirectoryPermission: checkAgentGlobalConfigExternalDirectoryPermissionCommand,
     ensureAgentGlobalConfigExternalDirectoryPermission: ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
     toggleMainWindowMaximized: toggleMainWindowMaximizedCommand,
-    loadBrowserHistory: loadBrowserHistoryCommand,
-    appendBrowserHistory: appendBrowserHistoryCommand,
+    loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
   };
 }
 
@@ -411,12 +401,10 @@ export function createSessionCommands(): SessionCommandSurface {
 
 export function createWorkspaceCommands(): WorkspaceCommandSurface {
   return {
-    setSelectedRepoId: setSelectedRepo,
-    setSelectedWorkspaceId: setSelectedWorkspace,
+    activateProject: activateProjectCommand,
+    activateWorkspace: activateWorkspaceCommand,
     setDisplayRepoIds: setDisplayRepoIdsCommand,
     setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
-    setLeftPaneWidth: setLeftPaneWidthCommand,
-    setRightPaneWidth: setRightPaneWidthCommand,
     toggleLeftPaneVisibility: toggleLeftPaneVisibilityCommand,
     toggleRightPaneVisibility: toggleRightPaneVisibilityCommand,
     activateWorkspacePane: activateWorkspacePaneCommand,
@@ -431,8 +419,6 @@ export function createWorkspaceCommands(): WorkspaceCommandSurface {
     createWorkspace: createWorkspaceCommand,
     closeWorkspace: closeWorkspaceCommand,
     deleteLocalFolder: deleteLocalFolderCommand,
-    refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
-    refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
   };
 }
 
@@ -473,6 +459,10 @@ export function createGitCommands(): GitCommandSurface {
     getGitAuthorName: getGitAuthorNameCommand,
     pushGitBranch: pushGitBranchCommand,
     publishGitBranch: publishGitBranchCommand,
+    refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
+    refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
+    listPullRequestHistory: listPullRequestHistoryCommand,
+    refreshDiffTabContent: refreshDiffTabContentCommand,
   };
 }
 
@@ -529,12 +519,16 @@ export function createFileCommands(): FileCommandSurface {
     openEntryInExternalApp: openEntryInExternalAppCommand,
     listDetectedExternalAppIds: listDetectedExternalAppIdsCommand,
     readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
+    createNewWhiteboard: createNewWhiteboardCommand,
+    resolveNextWhiteboardPath: resolveNextWhiteboardPathCommand,
+    updateFileTabContent: updateFileTabContentCommand,
+    markFileTabSaved: markFileTabSavedCommand,
+    refreshFileTabFromDisk: refreshFileTabFromDiskCommand,
   };
 }
 
 export function createProjectCommands(): ProjectCommandSurface {
   return {
-    loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
     inspectLocalProjectSource: inspectLocalProjectSourceCommand,
     createProject: createProjectCommand,
     deleteProject: deleteProjectCommand,
@@ -545,8 +539,34 @@ export function createProjectCommands(): ProjectCommandSurface {
 export function createWorkbenchCommands(): WorkbenchCommandSurface {
   return {
     selectTab: setSelectedTabCommand,
-    createTab: createTabCommand,
-    openTab: openTabCommand,
+    openTab: (input, options) => {
+      openTabCommand(input, options);
+      const openedTabId = tabStore.getState().selectedTabId;
+      if (input.kind === "file") {
+        seedFileTabContentCommand({
+          tabId: openedTabId,
+          path: input.path,
+          content: input.content ?? createFileTabPlaceholder(input.path),
+          isUnsupported: input.isUnsupported,
+          unsupportedReason: input.unsupportedReason,
+          isIgnored: input.isIgnored,
+        });
+      } else if (input.kind === "diff") {
+        const placeholder = createDiffTabPlaceholder({
+          path: input.path,
+          kind: input.changeKind,
+          additions: input.additions,
+          deletions: input.deletions,
+        });
+        seedDiffTabContentCommand({
+          tabId: openedTabId,
+          path: input.path,
+          oldContent: input.oldContent ?? placeholder.oldContent,
+          newContent: input.newContent ?? placeholder.newContent,
+          files: input.files,
+        });
+      }
+    },
     openTabInOppositePane: openTabInOppositePaneCommand,
     closeTab: closeTabCommand,
     closeOtherTabs: closeOtherTabsCommand,
@@ -554,14 +574,16 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
     toggleTabPinned: toggleTabPinnedCommand,
     promoteTemporaryTab: promoteTemporaryTabCommand,
     reorderTab: reorderTabCommand,
-    renameTab: renameTabCommand,
+    renameTab: (tabId, title, options) => {
+      renameTabCommand(tabId, title, options);
+      // The pi-session rename side effect belongs to Agent (desktop6-adjust.md W6).
+      void renameAgentChatSessionByTabCommand(tabId, title).catch((error) => {
+        console.error("Failed to rename pi session", error);
+      });
+    },
     setBrowserTabFaviconUrl: setBrowserTabFaviconUrlCommand,
     setBrowserTabUrl: setBrowserTabUrlCommand,
     renameTabsForEntryRename: renameTabsForEntryRenameCommand,
-    updateFileTabContent: updateFileTabContentCommand,
-    markFileTabSaved: markFileTabSavedCommand,
-    refreshFileTabFromDisk: refreshFileTabFromDiskCommand,
-    refreshDiffTabContent: refreshDiffTabContentCommand,
   };
 }
 

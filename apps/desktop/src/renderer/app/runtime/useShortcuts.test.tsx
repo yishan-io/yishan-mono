@@ -86,12 +86,12 @@ vi.mock("../../shortcuts/keybindings", () => ({
   getShortcutDefinitions: mocks.getShortcutDefinitions,
 }));
 
-vi.mock("../../features/workspace/state/workspaceStore", () => ({
+vi.mock("../../domains/workspace/state/workspaceStore", () => ({
   workspaceStore: (selector: (state: typeof mocks.workspaceStoreState) => unknown) =>
     selector(mocks.workspaceStoreState),
 }));
 
-vi.mock("../../features/workbench/state/tabStore", () => ({
+vi.mock("../../domains/workbench/state/tabStore", () => ({
   tabStore: (selector: (state: typeof mocks.tabStoreState) => unknown) => selector(mocks.tabStoreState),
 }));
 
@@ -117,8 +117,11 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

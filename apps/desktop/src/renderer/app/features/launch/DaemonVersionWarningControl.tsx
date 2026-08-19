@@ -1,0 +1,31 @@
+import { IconButton, Tooltip } from "@mui/material";
+import { isDaemonVersionOutdated } from "@renderer/version/version";
+import { useTranslation } from "react-i18next";
+import { LuTriangleAlert } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
+import { useSessionVersions } from "../../../domains/session";
+
+/** Renders a warning icon button in the header bar when the daemon version is outdated. */
+export function DaemonVersionWarningControl() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { daemonVersion, appVersion } = useSessionVersions();
+  const isDaemonOutdated = isDaemonVersionOutdated({ daemonVersion, appVersion });
+
+  if (!isDaemonOutdated) {
+    return null;
+  }
+
+  const tooltipTitle = t("daemon.version.outdatedMessage", {
+    daemonVersion: daemonVersion ?? t("settings.daemon.values.unknown"),
+    appVersion: appVersion ?? t("settings.daemon.values.unknown"),
+  });
+
+  return (
+    <Tooltip placement="bottom" title={tooltipTitle}>
+      <IconButton color="warning" aria-label={tooltipTitle} onClick={() => navigate("/settings?tab=daemon")}>
+        <LuTriangleAlert size={14} />
+      </IconButton>
+    </Tooltip>
+  );
+}

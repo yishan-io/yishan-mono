@@ -5,7 +5,7 @@ import enNativeMenu from "../../renderer/locales/en/nativeMenu.json";
 import zhKeybindings from "../../renderer/locales/zh/keybindings.json";
 import zhLayout from "../../renderer/locales/zh/layout.json";
 import zhNativeMenu from "../../renderer/locales/zh/nativeMenu.json";
-import { getShortcutKeysById } from "../../renderer/shortcuts/keybindings";
+import { getShortcutKeysById } from "../../shared/shortcuts/shortcutKeyCatalog";
 import { ACTIONS, type AppActionPayload } from "../../shared/contracts/actions";
 
 type DispatchAppActionOptions = {

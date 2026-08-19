@@ -1,9 +1,25 @@
-import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
-import type * as Rpc from "./daemonTypes";
+import type { StartSubscriptionOptions } from "./daemonTypes";
 
 export type ApiSubscriptionHandlers = {
   onData: (event: unknown) => void;
   onError?: (error: unknown) => void;
+};
+
+export type DaemonTransport = {
+  /** Sends one raw JSON-RPC method over the wire (transport-level, no namespace parsing). */
+  invoke: (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
+  /** Shared worktree-path → workspace-id cache (populated by workspace operations). */
+  workspaceIdByWorktreePath: Map<string, string>;
+  /** Sends one binary terminal-input frame over the raw socket (terminal adapter). */
+  sendBinary: (sessionId: string, data: string | Uint8Array) => void;
+  /** Current WebSocket readyState for terminal binary-path decisions. */
+  getSocketReadyState: () => number | null;
+  /** Shared raw subscription registry (terminal subscriptions register here). */
+  subscriptionsById: Map<string, unknown>;
+  /** Shared terminal-output frame index bookkeeping (raw subscription delivery). */
+  terminalNextIndexBySessionId: Map<string, number>;
+  /** Registers one raw daemon subscription (terminal adapter uses this). */
+  startRawSubscription: (options: StartSubscriptionOptions) => Promise<string>;
 };
 
 type DaemonRpcSubscription = {
@@ -11,195 +27,6 @@ type DaemonRpcSubscription = {
 };
 
 export type DaemonRpcClient = {
-  app: {
-    getDefaultWorktreeLocation: (input?: unknown) => Promise<{ worktreePath: string }>;
-    checkAgentGlobalConfigExternalDirectoryPermission: (input?: unknown) => Promise<unknown>;
-    ensureAgentGlobalConfigExternalDirectoryPermission: (input?: unknown) => Promise<unknown>;
-    persistAuthTokens: (input: Rpc.PersistAuthTokensInput) => Promise<{ ok: boolean }>;
-    getAccessToken: (input?: unknown) => Promise<Rpc.GetAccessTokenOutput>;
-    checkAuthStatus: (input?: unknown) => Promise<Rpc.CheckAuthStatusOutput>;
-    logout: (input?: unknown) => Promise<Rpc.LogoutOutput>;
-    reloadAuthConfig: (input?: unknown) => Promise<Rpc.ReloadAuthConfigOutput>;
-  };
-  computer: {
-    permissions: (input?: unknown) => Promise<Rpc.ComputerPermissionStatus>;
-    openPermissionSettings: (input: { permission: string }) => Promise<{ ok: boolean }>;
-    getConfig: (input?: unknown) => Promise<Rpc.ComputerUseFeatureConfig>;
-    updateConfig: (input: Rpc.ComputerUseFeatureConfig) => Promise<{ ok: boolean }>;
-  };
-  context: {
-    getState: () => Promise<unknown>;
-    setCurrentOrg: (orgId: string) => Promise<unknown>;
-    setActiveProject: (projectId: string) => Promise<unknown>;
-    setActiveFile: (filePath: string) => Promise<unknown>;
-  };
-  workspace: {
-    list: (input?: unknown) => Promise<Rpc.DaemonWorkspace[]>;
-    refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) => Promise<Rpc.DaemonWorkspace>;
-    createWorkspace: (input: Rpc.WorkspaceCreateInput) => Promise<Rpc.WorkspaceCreateResponse>;
-    close: (input: Rpc.WorkspaceCloseExecutionInput) => Promise<Rpc.WorkspaceCloseExecutionResponse | undefined>;
-    syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => Promise<Rpc.WorkspaceSyncContextLinkResponse>;
-    health: (input: Rpc.WorkspaceHealthInput) => Promise<Rpc.WorkspaceHealthOutput>;
-    openProject: (input: Rpc.WorkspaceOpenProjectInput) => Promise<Rpc.WorkspaceOpenProjectOutput>;
-    closeProject: (input: Rpc.WorkspaceCloseProjectInput) => Promise<Rpc.WorkspaceCloseProjectOutput>;
-    createLocalFolder: (input: { path: string; name?: string }) => Promise<Rpc.DaemonLocalFolder>;
-    listLocalFolders: () => Promise<Rpc.DaemonLocalFolder[]>;
-    deleteLocalFolder: (input: { id: string }) => Promise<void>;
-  };
-  file: {
-    listFiles: (input: Rpc.FileListInput) => Promise<Rpc.FileListResponse>;
-    listFilesBatch: (input: Rpc.FileListBatchInput) => Promise<Rpc.FileListBatchResponse>;
-    searchFiles: (input: Rpc.FileSearchInput) => Promise<Rpc.FileSearchResult[]>;
-    readFile: (input: Rpc.FileReadInput) => Promise<Rpc.FileReadResponse>;
-    writeFile: (input: Rpc.FileWriteInput) => Promise<Rpc.FileWriteResponse>;
-    createFile: (input: Rpc.FileWriteInput) => Promise<Rpc.FileMutationOkResponse>;
-    createFolder: (input: Rpc.FileCreateFolderInput) => Promise<Rpc.FileMutationOkResponse>;
-    renameEntry: (input: Rpc.FileRenameInput) => Promise<Rpc.FileMutationOkResponse>;
-    deleteEntry: (input: Rpc.FileDeleteInput) => Promise<Rpc.FileMutationOkResponse>;
-    readDiff: (input: Rpc.FileReadInput) => Promise<Rpc.FileDiffResponse>;
-  };
-  git: {
-    inspect: (input: Rpc.GitInspectInput) => Promise<Rpc.GitInspectResponse>;
-    inspectPath: (input: Rpc.GitInspectPathInput) => Promise<Rpc.GitInspectResponse>;
-    listChanges: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitChangesBySection>;
-    trackChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
-    unstageChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
-    revertChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
-    commitChanges: (input: Rpc.GitCommitInput) => Promise<string>;
-    getBranchStatus: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitBranchStatusResponse>;
-    listCommitsToTarget: (input: Rpc.GitTargetBranchInput) => Promise<Rpc.GitCommitComparisonResponse>;
-    getBranchDiffSummary: (input: Rpc.GitTargetBranchInput) => Promise<Rpc.GitBranchDiffSummaryResponse>;
-    listBranches: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitBranchListResponse>;
-    pushBranch: (input: Rpc.GitWorktreeInput) => Promise<string>;
-    publishBranch: (input: Rpc.GitWorktreeInput) => Promise<string>;
-    getAuthorName: (input: Rpc.GitWorktreeInput) => Promise<string | null>;
-    readCommitDiff: (input: Rpc.GitCommitDiffInput) => Promise<Rpc.GitDiffContentResponse>;
-    readBranchComparisonDiff: (input: Rpc.GitBranchDiffInput) => Promise<Rpc.GitDiffContentResponse>;
-    renameBranch: (input: Rpc.GitRenameBranchInput) => Promise<Rpc.GitStatusOperationResponse>;
-    mergePullRequest: (input: Rpc.GitPrMergeInput) => Promise<{ output: string }>;
-    closePullRequest: (input: Rpc.GitPrCloseInput) => Promise<{ output: string }>;
-  };
-  terminal: {
-    createSession: (input: Rpc.TerminalCreateSessionInput) => Promise<Rpc.TerminalCreateSessionResponse>;
-    writeInput: (input: Rpc.TerminalWriteInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    resize: (input: Rpc.TerminalResizeInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    readOutput: (input: Rpc.TerminalReadOutputInput) => Promise<Rpc.TerminalReadOutputResponse>;
-    closeSession: (input: Rpc.TerminalCloseInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    killProcess: (input: Rpc.TerminalKillProcessInput) => Promise<Rpc.TerminalMutationOkResponse>;
-    listDetectedPorts: (input?: unknown) => Promise<Rpc.TerminalDetectedPort[]>;
-    setActiveWorkspace: (input: Rpc.SetActiveWorkspaceInput) => Promise<Rpc.SetActiveWorkspaceResponse>;
-    getResourceUsage: (input?: unknown) => Promise<Rpc.TerminalResourceUsageSnapshot>;
-    listSessions: (input?: Rpc.TerminalListSessionsInput) => Promise<Rpc.TerminalSessionSummary[]>;
-    subscribeOutput: {
-      subscribe: (input: { sessionId: string }, handlers: ApiSubscriptionHandlers) => DaemonRpcSubscription;
-    };
-    subscribeSessions: {
-      subscribe: (input: undefined, handlers: ApiSubscriptionHandlers) => DaemonRpcSubscription;
-    };
-  };
-  chat: {
-    ensureWorkspaceChatSession: (input: unknown) => Promise<{ sessionId: string; capabilities?: unknown }>;
-    runWorkspaceChatPrompt: (input: unknown) => Promise<unknown>;
-    closeAgentSession: (input: { sessionId: string; deleteRecord?: boolean }) => Promise<unknown>;
-  };
-  pi: {
-    start: (input: {
-      sessionId: string;
-      tabId: string;
-      paneId?: string;
-      workspaceId: string;
-      cwd: string;
-      resume?: boolean;
-    }) => Promise<{ sessionId: string }>;
-    attach: (input: { sessionId: string; tabId?: string; workspaceId?: string; cwd?: string }) => Promise<{
-      ok: boolean;
-    }>;
-    stop: (input: { sessionId: string }) => Promise<{ ok: boolean }>;
-    send: (input: { sessionId: string; command: unknown }) => Promise<unknown>;
-    rename: (input: { sessionId: string; title: string }) => Promise<{ ok: boolean }>;
-    listSessions: (input: Rpc.PiListSessionsInput) => Promise<Rpc.PiSessionSummary[]>;
-    getSessionFile: (input: Rpc.PiGetSessionFileInput) => Promise<Rpc.PiGetSessionFileResult>;
-    listActiveSessions: (input?: Rpc.PiListActiveSessionsInput) => Promise<Rpc.PiActiveSessionSummary[]>;
-    listProviders: (input?: unknown) => Promise<{
-      providers: Array<{ provider: string; type: string; source?: string; envVars?: string[] }>;
-    }>;
-    saveProvider: (input: { provider: string; key: string; env?: Record<string, string> }) => Promise<{ ok: boolean }>;
-    removeProvider: (input: { provider: string }) => Promise<{ ok: boolean }>;
-  };
-  agent: {
-    listDetectionStatuses: (input?: unknown) => Promise<unknown>;
-    listModels: (input?: { agentKind?: string; forceRefresh?: boolean }) => Promise<{
-      agentKind: string;
-      models: Array<{ id: string; name: string }>;
-      source: string;
-      fetchedAt: number;
-      cacheExpiry: number;
-    }>;
-  };
-  cliTools: {
-    listStatuses: (input?: { refresh?: boolean }) => Promise<
-      Array<{
-        toolId: string;
-        category: string;
-        label: string;
-        installed: boolean;
-        version?: string;
-        authenticated?: boolean;
-        account?: string;
-        statusDetail: string;
-        supportsToggle?: boolean;
-        resolvedPath?: string;
-        managedInstall?: boolean;
-        latestVersion?: string;
-      }>
-    >;
-    install: (input: { toolId: string }) => Promise<{
-      ok: true;
-      status?: {
-        toolId: string;
-        category: string;
-        label: string;
-        installed: boolean;
-        version?: string;
-        authenticated?: boolean;
-        account?: string;
-        statusDetail: string;
-        supportsToggle?: boolean;
-        resolvedPath?: string;
-        managedInstall?: boolean;
-        latestVersion?: string;
-      };
-    }>;
-    uninstall: (input: { toolId: string }) => Promise<{
-      ok: true;
-      status?: {
-        toolId: string;
-        category: string;
-        label: string;
-        installed: boolean;
-        version?: string;
-        authenticated?: boolean;
-        account?: string;
-        statusDetail: string;
-        supportsToggle?: boolean;
-        resolvedPath?: string;
-        managedInstall?: boolean;
-        latestVersion?: string;
-      };
-    }>;
-  };
-  integration: {
-    githubStatus: (input?: { refresh?: boolean }) => Promise<{
-      installed: boolean;
-      loggedIn: boolean;
-      username?: string;
-      statusDetail: string;
-    }>;
-  };
-  notification: {
-    getNotificationPreferences: (input?: unknown) => Promise<NotificationPreferences>;
-    updateNotificationPreferences: (input: unknown) => Promise<NotificationPreferences>;
-  };
   events: {
     frontendStream: {
       subscribe: (
@@ -211,42 +38,5 @@ export type DaemonRpcClient = {
       ) => DaemonRpcSubscription;
     };
   };
-  skill: {
-    list: (input?: undefined) => Promise<Rpc.SkillListResponse>;
-    info: (input: { name: string }) => Promise<Rpc.SkillInfo>;
-    detail: (input: { name: string }) => Promise<Rpc.SkillDetail>;
-    add: (input: { source: string }) => Promise<{ added: boolean }>;
-    remove: (input: { name: string }) => Promise<{ removed: boolean }>;
-    update: (input: { name: string }) => Promise<{ updated: boolean }>;
-    updateAll: (input?: undefined) => Promise<{ updated: boolean }>;
-  };
-  customize: {
-    extensions: {
-      list: (input?: undefined) => Promise<Rpc.PiExtensionListResponse>;
-      install: (input: Rpc.PiExtensionMutationInput) => Promise<{ installed: boolean }>;
-      remove: (input: Rpc.PiExtensionMutationInput) => Promise<{ removed: boolean }>;
-      update: (input: Rpc.PiExtensionMutationInput) => Promise<{ updated: boolean }>;
-    };
-    agents: {
-      list: (input?: undefined) => Promise<Rpc.AgentDefinitionListResponse>;
-      detail: (input: Rpc.AgentDefinitionNameInput) => Promise<Rpc.AgentDefinitionDetail>;
-      create: (input: Rpc.AgentDefinitionCreateInput) => Promise<{ created: boolean }>;
-      update: (input: Rpc.AgentDefinitionUpdateInput) => Promise<{ updated: boolean }>;
-      remove: (input: Rpc.AgentDefinitionNameInput) => Promise<{ removed: boolean }>;
-      restore: (input: Rpc.AgentDefinitionNameInput) => Promise<{ restored: boolean }>;
-    };
-  };
-  memory: {
-    search: (input: Rpc.MemorySearchInput) => Promise<Rpc.MemorySearchResult[]>;
-    reconcile: (input?: unknown) => Promise<Rpc.MemoryReconcileResult>;
-    status: (input?: unknown) => Promise<{ enabled: boolean }>;
-    updateConfig: (input: Rpc.MemoryUpdateConfigInput) => Promise<{ ok: boolean }>;
-    getConfig: (input?: unknown) => Promise<Rpc.MemoryConfig>;
-  };
-  project: {
-    listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) => Promise<unknown>;
-    getListPreferences: (orgId: string) => Promise<Rpc.ProjectListPreference>;
-    setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) => Promise<{ ok: boolean }>;
-  };
-  tokenUsage: {};
+  tokenUsage: Record<string, never>;
 };

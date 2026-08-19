@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { switchOrganization } from "../../features/organization/commands/orgCommands";
-import { projectStore } from "../../features/project/state/projectStore";
-import { sessionStore } from "../../features/session/state/sessionStore";
-import { layoutStore } from "../../features/workbench/state/layoutStore";
-import { tabStore } from "../../features/workbench/state/tabStore";
-import { workspaceStore } from "../../features/workspace/state/workspaceStore";
-import { workspaceUiStore } from "../../features/workspace/state/workspaceUiStore";
+import { switchOrganization } from "../../domains/organization/commands/orgCommands";
+import { projectStore } from "../../domains/project/state/projectStore";
+import { sessionStore } from "../../domains/session/state/sessionStore";
+import { layoutStore } from "../../domains/workbench/state/layoutStore";
+import { tabStore } from "../../domains/workbench/state/tabStore";
+import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { WorkspaceView } from "./WorkspaceView";
 
 const commandMocks = {
@@ -24,8 +24,8 @@ const commandMocks = {
   selectTab: vi.fn(),
   setActiveWorkspace: vi.fn(async () => undefined),
   setLeftPaneWidth: vi.fn(),
-  setSelectedRepoId: vi.fn(),
-  setSelectedWorkspaceId: vi.fn(),
+  activateProject: vi.fn(),
+  activateWorkspace: vi.fn(),
   toggleLeftPaneVisibility: vi.fn(),
   toggleRightPaneVisibility: vi.fn(),
   undoFileTreeOperation: vi.fn(),
@@ -41,6 +41,10 @@ const rpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty",
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string) => key,
   }),
@@ -64,9 +68,13 @@ vi.mock("../../rpc/rpcTransport", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../features/workspace/ui/hooks/useAllWorkspacesGitSync", () => ({
-  useAllWorkspacesGitSync: vi.fn(),
-}));
+vi.mock("@renderer/domains/git", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/git")>();
+  return {
+    ...actual,
+    useAllWorkspacesGitSync: vi.fn(),
+  };
+});
 
 vi.mock("../../app/commands/useCommands", () => {
   const commandSurface = () => commandMocks;
@@ -89,40 +97,44 @@ vi.mock("../../app/commands/useCommands", () => {
   };
 });
 
-vi.mock("../../features/workspace/ui/hooks/useWorkspacePaneVisibility", () => ({
-  WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
-  useWorkspacePaneVisibility: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
-}));
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
+  return {
+    ...actual,
+    WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+    useWorkspacePaneVisibility: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
+  };
+});
 
-vi.mock("../../features/overview/ui/OverviewView", () => ({
+vi.mock("@renderer/domains/overview", () => ({
   OverviewView: () => <div data-testid="overview-view" />,
 }));
 
-vi.mock("../../features/scheduled-job/ui/ScheduledJobView", () => ({
+vi.mock("@renderer/domains/scheduled-job", () => ({
   ScheduledJobView: () => <div data-testid="scheduled-job-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/LeftPane/CreateProjectDialogView", () => ({
+vi.mock("../../domains/workspace/ui/LeftPane/CreateProjectDialogView", () => ({
   CreateProjectDialogView: () => null,
 }));
 
-vi.mock("../../features/workspace/ui/LeftPane/LeftPaneView", () => ({
+vi.mock("../features/main-workspace-shell/LeftPaneView", () => ({
   LeftPaneView: () => <div data-testid="left-pane-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/MainPaneView", () => ({
+vi.mock("../features/main-workspace-shell/MainPaneView", () => ({
   MainPaneView: () => <div data-testid="main-pane-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/OnboardingView", () => ({
+vi.mock("./OnboardingView", () => ({
   OnboardingView: () => <div data-testid="onboarding-view" />,
 }));
 
-vi.mock("../../features/workspace/ui/WorkspaceLifecycleNoticeView", () => ({
+vi.mock("../../domains/workspace/ui/WorkspaceLifecycleNoticeView", () => ({
   WorkspaceLifecycleNoticeView: () => null,
 }));
 
-vi.mock("../../features/terminal/runtime/terminalRecovery", () => ({
+vi.mock("../../domains/terminal/runtime/terminalRecovery", () => ({
   TerminalRecoveryCoordinator: vi.fn(
     class {
       restoreTerminalTabsFromDaemon = terminalRecoveryMocks.restoreTerminalTabsFromDaemon;
@@ -156,15 +168,11 @@ describe("WorkspaceView", () => {
     workspaceStore.setState({
       displayProjectIds: [],
       gitRefreshVersionByWorktreePath: {},
-      isProjectsLoaded: false,
       lastUsedExternalAppId: null,
-      projects: [],
-      selectedRepoId: "",
-      selectedWorkspaceId: "",
       workspaces: [],
     });
-    projectStore.setState({ projects: [] });
-    workspaceUiStore.setState({ overlayPanel: null });
+    projectStore.setState({ isProjectsLoaded: false, projects: [] });
+    workbenchNavigationStore.getState().closeOverlayPanel();
   });
 
   afterEach(() => {
@@ -173,11 +181,10 @@ describe("WorkspaceView", () => {
   });
 
   function setWorkspaceProjectsLoaded() {
-    workspaceStore.setState({
+    projectStore.setState({
       isProjectsLoaded: true,
       projects: [{ id: "project-1", name: "Project 1" }],
     });
-    projectStore.setState({ projects: [{ id: "project-1", name: "Project 1" }] });
   }
 
   it("loads the workspace snapshot on mount and again when selected organization changes", async () => {
@@ -214,7 +221,7 @@ describe("WorkspaceView", () => {
     await waitFor(() => {
       expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
       expect(terminalRecoveryMocks.restoreTerminalTabsFromDaemon).toHaveBeenCalledTimes(1);
-      expect(commandMocks.setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
+      expect(commandMocks.activateWorkspace).toHaveBeenCalledWith({ workspaceId: "workspace-2" });
     });
   });
 
@@ -245,7 +252,7 @@ describe("WorkspaceView", () => {
 
   it("returns from the overview overlay to the workspace pane on organization switch", async () => {
     setWorkspaceProjectsLoaded();
-    workspaceUiStore.setState({ overlayPanel: "overview" });
+    workbenchNavigationStore.getState().setOverlayPanel("overview");
 
     render(
       <MemoryRouter>
@@ -272,7 +279,7 @@ describe("WorkspaceView", () => {
 
   it("returns from the scheduled job overlay to the workspace pane on organization switch", async () => {
     setWorkspaceProjectsLoaded();
-    workspaceUiStore.setState({ overlayPanel: "scheduledJob" });
+    workbenchNavigationStore.getState().setOverlayPanel("scheduledJob");
 
     render(
       <MemoryRouter>
@@ -311,7 +318,7 @@ describe("WorkspaceView", () => {
   });
 
   it("renders onboarding view when projects are loaded but empty", () => {
-    workspaceStore.setState({ isProjectsLoaded: true, projects: [] });
+    projectStore.setState({ isProjectsLoaded: true, projects: [] });
     projectStore.setState({ projects: [] });
 
     render(

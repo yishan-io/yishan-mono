@@ -1,5 +1,5 @@
 import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
-import { compileShortcutDefinitions, processShortcuts } from "../../shortcuts/shortcutRunner";
+import { type compileShortcutDefinitions, processShortcuts } from "../../shortcuts/shortcutRunner";
 import type { ShortContext } from "../../shortcuts/types";
 
 export type ShortcutRuntimeInput = {

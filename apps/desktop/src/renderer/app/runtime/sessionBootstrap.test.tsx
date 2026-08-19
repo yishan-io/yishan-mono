@@ -4,9 +4,9 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RestApiError } from "../../api/restClient";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
-import { listOrgNodes } from "../../features/node/commands/nodeCommands";
-import { getSessionBootstrapData } from "../../features/session/commands/sessionCommands";
-import { sessionStore } from "../../features/session/state/sessionStore";
+import { listOrgNodes } from "../../domains/node/commands/nodeCommands";
+import { getSessionBootstrapData } from "../../domains/session/commands/sessionCommands";
+import { sessionStore } from "../../domains/session/state/sessionStore";
 import { rendererQueryClient } from "../../queryClient";
 import { useSessionBootstrap } from "./sessionBootstrap";
 
@@ -18,10 +18,11 @@ vi.mock("../../app/commands/appCommands", () => ({
 
 vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({})),
+  subscribeDaemonConnectionStatus: vi.fn(() => () => {}),
   subscribeDesktopRpcEvent: vi.fn(() => () => {}),
 }));
 
-vi.mock("../../features/session/commands/sessionCommands", () => ({
+vi.mock("../../domains/session/commands/sessionCommands", () => ({
   isAuthExpiredError: (error: unknown) => error instanceof RestApiError && error.status === 401,
   getSessionBootstrapData: vi.fn(async () => ({
     currentUser: {
@@ -53,7 +54,7 @@ vi.mock("../../features/session/commands/sessionCommands", () => ({
   })),
 }));
 
-vi.mock("../../features/node/commands/nodeCommands", () => ({
+vi.mock("../../domains/node/commands/nodeCommands", () => ({
   listOrgNodes: vi.fn(async () => []),
 }));
 

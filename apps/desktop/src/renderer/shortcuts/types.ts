@@ -1,7 +1,7 @@
 import type { Commands } from "../app/commands/useCommands";
-import type { SplitPaneStoreState } from "../features/workbench/state/splitPaneStore";
-import type { TabStoreState } from "../features/workbench/state/tabStore";
-import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStore";
+import type { SplitPaneStoreState } from "../domains/workbench/state/splitPaneStore";
+import type { TabStoreState } from "../domains/workbench/state/tabStore";
+import type { WorkspaceStoreState } from "../domains/workspace/state/workspaceStore";
 
 export type KeyBindingScope = "global" | "workspace";
 
@@ -19,6 +19,7 @@ export type ShortContext = {
   isPopupOpen: boolean;
   tabStoreState: TabStoreState;
   workspaceStoreState: WorkspaceStoreState;
+  activeWorkspaceId: string;
   splitPaneStoreState: SplitPaneStoreState;
   terminalTabTitle: string;
   commands: Commands;

@@ -1,10 +1,11 @@
+import { reloadWebview } from "@renderer/domains/browser";
+import { activateWorkspace } from "@renderer/domains/workbench";
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
-import { createNewWhiteboard } from "../features/workbench/commands/whiteboardCommands";
-import { requestAgentChatComposerFocus } from "../events/agentChatComposerFocus";
-import { projectStore } from "../features/project/state/projectStore";
-import { setSelectedWorkspace } from "../features/workspace/commands/selectionCommands";
-import { reloadWebview } from "@renderer/features/workbench";
+import { createNewWhiteboard } from "../domains/files/commands/whiteboardCommands";
+import { projectStore } from "../domains/project/state/projectStore";
+import { requestAgentChatComposerFocus } from "../events";
+import { SHORTCUT_KEYS } from "@shared/shortcuts/shortcutKeyCatalog";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
 import { toSupportedKeyBinding } from "./shortcutMetadata";
@@ -104,7 +105,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "tabs.create") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspaceId = context.activeWorkspaceId;
     if (!workspaceId) {
       return false;
     }
@@ -131,7 +132,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "tabs.openTerminal") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspaceId = context.activeWorkspaceId;
     if (!workspaceId) {
       return false;
     }
@@ -147,7 +148,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "tabs.openAgentChat") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspaceId = context.activeWorkspaceId;
     const workspace = context.workspaceStoreState.workspaces.find((item) => item.id === workspaceId);
     if (!workspaceId || !workspace?.worktreePath) {
       return false;
@@ -170,7 +171,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "tabs.openBrowser") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspaceId = context.activeWorkspaceId;
     if (!workspaceId) {
       return false;
     }
@@ -186,7 +187,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "tabs.openWhiteboard") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspaceId = context.activeWorkspaceId;
     if (!workspaceId) {
       return false;
     }
@@ -215,7 +216,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "workspace.closeSelected") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspaceId = context.activeWorkspaceId;
     if (!workspaceId) {
       return false;
     }
@@ -250,7 +251,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
       return false;
     }
 
-    const currentId = context.workspaceStoreState.selectedWorkspaceId;
+    const currentId = context.activeWorkspaceId;
     const currentIndex = orderedIds.findIndex((id) => id === currentId);
     const nextIndex = (currentIndex + direction + orderedIds.length) % orderedIds.length;
     const nextId = orderedIds[nextIndex];
@@ -258,7 +259,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
       return false;
     }
 
-    setSelectedWorkspace(nextId);
+    activateWorkspace({ workspaceId: nextId });
     event.preventDefault();
     return true;
   }
@@ -274,7 +275,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "workspace.openSelectedWorkspaceInExternalApp") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspaceId = context.activeWorkspaceId;
     if (!workspaceId) {
       return false;
     }
@@ -298,7 +299,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
     return false;
   }
 
-  const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+  const workspaceId = context.activeWorkspaceId;
   if (!workspaceId) {
     return false;
   }
@@ -336,7 +337,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     id: "open-keybindings",
     descriptionKey: "keybindings.actions.openKeybindings",
     scope: "global",
-    keys: "ctrl+/,command+/",
+    keys: SHORTCUT_KEYS["open-keybindings"],
     target: { command: ACTIONS.NAVIGATE, payload: { path: SETTINGS_KEYBINDINGS_ROUTE } },
     shouldRun: (context) => context.pathname !== SETTINGS_ROUTE,
   },
@@ -344,7 +345,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     id: "close-keybindings",
     descriptionKey: "keybindings.actions.backToWorkspace",
     scope: "global",
-    keys: "esc",
+    keys: SHORTCUT_KEYS["close-keybindings"],
     target: { command: ACTIONS.NAVIGATE, payload: { path: WORKSPACE_ROUTE } },
     shouldRun: (context) => context.pathname === SETTINGS_ROUTE && document.querySelector(".MuiDialog-root") === null,
   },
@@ -352,15 +353,15 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     id: "new-tab",
     descriptionKey: "keybindings.actions.newTab",
     scope: "workspace",
-    keys: "ctrl+y,command+y",
+    keys: SHORTCUT_KEYS["new-tab"],
     target: { command: "tabs.create" },
-    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.activeWorkspaceId),
   },
   {
     id: "close-tab",
     descriptionKey: "keybindings.actions.closeTab",
     scope: "workspace",
-    keys: "ctrl+w,command+w",
+    keys: SHORTCUT_KEYS["close-tab"],
     target: { command: "tabs.closeSelected" },
     shouldRun: (context, event) => {
       if (!context.tabStoreState.selectedTabId) {
@@ -378,64 +379,62 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     id: "close-selected-workspace",
     descriptionKey: "keybindings.actions.closeWorkspace",
     scope: "workspace",
-    keys: "ctrl+shift+w,command+shift+w",
+    keys: SHORTCUT_KEYS["close-selected-workspace"],
     target: { command: "workspace.closeSelected" },
     shouldRun: (context, event) =>
-      Boolean(context.workspaceStoreState.selectedWorkspaceId) &&
-      !isEditableTarget(event.target) &&
-      isWithinRepoWorkspaceList(event.target),
+      Boolean(context.activeWorkspaceId) && !isEditableTarget(event.target) && isWithinRepoWorkspaceList(event.target),
   },
   {
     id: "create-workspace",
     descriptionKey: "keybindings.actions.createWorkspace",
     scope: "workspace",
-    keys: "ctrl+n,command+n",
+    keys: SHORTCUT_KEYS["create-workspace"],
     target: { command: "workspace.openCreateWorkspaceDialog" },
   },
   {
     id: "open-terminal",
     descriptionKey: "keybindings.actions.openTerminal",
     scope: "workspace",
-    keys: "ctrl+t,command+t",
+    keys: SHORTCUT_KEYS["open-terminal"],
     target: { command: "tabs.openTerminal" },
-    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.activeWorkspaceId),
   },
   {
     id: "open-agent-chat",
     descriptionKey: "keybindings.actions.openAgentChat",
     scope: "workspace",
-    keys: "ctrl+shift+a,command+shift+a",
+    keys: SHORTCUT_KEYS["open-agent-chat"],
     target: { command: "tabs.openAgentChat" },
-    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.activeWorkspaceId),
   },
   {
     id: "open-browser",
     descriptionKey: "keybindings.actions.openBrowser",
     scope: "workspace",
-    keys: "ctrl+shift+b,command+shift+b",
+    keys: SHORTCUT_KEYS["open-browser"],
     target: { command: "tabs.openBrowser" },
-    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.activeWorkspaceId),
   },
   {
     id: "open-whiteboard",
     descriptionKey: "keybindings.actions.openWhiteboard",
     scope: "workspace",
-    keys: "ctrl+shift+t,command+shift+t",
+    keys: SHORTCUT_KEYS["open-whiteboard"],
     target: { command: "tabs.openWhiteboard" },
-    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.activeWorkspaceId),
   },
   {
     id: "focus-agent-chat-composer",
     descriptionKey: "keybindings.actions.focusAgentChatComposer",
     scope: "workspace",
-    keys: "ctrl+l,command+l",
+    keys: SHORTCUT_KEYS["focus-agent-chat-composer"],
     target: { command: "agentChat.focusComposer" },
   },
   {
     id: "reload-browser-tab",
     descriptionKey: "keybindings.actions.reloadBrowserTab",
     scope: "workspace",
-    keys: "ctrl+r,command+r",
+    keys: SHORTCUT_KEYS["reload-browser-tab"],
     target: { command: "browser.reload" },
     shouldRun: (context) => {
       const selectedTabId = context.tabStoreState.selectedTabId;
@@ -446,84 +445,83 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     id: "activate-repo-pane",
     descriptionKey: "keybindings.actions.activateRepoPane",
     scope: "workspace",
-    keys: "ctrl+shift+r,command+shift+r",
+    keys: SHORTCUT_KEYS["activate-repo-pane"],
     target: { command: "workspace.activatePane", payload: { pane: "repo" } },
   },
   {
     id: "activate-files-pane",
     descriptionKey: "keybindings.actions.activateFilesPane",
     scope: "workspace",
-    keys: "ctrl+shift+f,command+shift+f",
+    keys: SHORTCUT_KEYS["activate-files-pane"],
     target: { command: "workspace.focusFileTree" },
   },
   {
     id: "activate-changes-pane",
     descriptionKey: "keybindings.actions.activateChangesPane",
     scope: "workspace",
-    keys: "ctrl+shift+g,command+shift+g",
+    keys: SHORTCUT_KEYS["activate-changes-pane"],
     target: { command: "workspace.activatePane", payload: { pane: "changes" } },
   },
   {
     id: "activate-pr-pane",
     descriptionKey: "keybindings.actions.activatePrPane",
     scope: "workspace",
-    keys: "ctrl+shift+p,command+shift+p",
+    keys: SHORTCUT_KEYS["activate-pr-pane"],
     target: { command: "workspace.activatePane", payload: { pane: "pr" } },
   },
   {
     id: "toggle-left-pane",
     descriptionKey: "keybindings.actions.toggleLeftPane",
     scope: "workspace",
-    keys: "ctrl+b,command+b",
+    keys: SHORTCUT_KEYS["toggle-left-pane"],
     target: { command: "workspace.toggleLeftPane" },
   },
   {
     id: "select-previous-workspace",
     descriptionKey: "keybindings.actions.selectPreviousWorkspace",
     scope: "workspace",
-    keys: "ctrl+command+k",
+    keys: SHORTCUT_KEYS["select-previous-workspace"],
     target: { command: "workspace.selectPreviousWorkspace" },
   },
   {
     id: "select-next-workspace",
     descriptionKey: "keybindings.actions.selectNextWorkspace",
     scope: "workspace",
-    keys: "ctrl+command+j",
+    keys: SHORTCUT_KEYS["select-next-workspace"],
     target: { command: "workspace.selectNextWorkspace" },
   },
   {
     id: "open-file-search",
     descriptionKey: "keybindings.actions.openFileSearch",
     scope: "workspace",
-    keys: "ctrl+p,command+p",
+    keys: SHORTCUT_KEYS["open-file-search"],
     target: { command: "workspace.openFileSearch" },
-    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.activeWorkspaceId),
   },
   {
     id: ACTIONS.WORKSPACE_OPEN_SELECTED_IN_EXTERNAL_APP,
     descriptionKey: "keybindings.actions.openSelectedFileInExternalApp",
     scope: "workspace",
-    keys: "ctrl+o,command+o",
+    keys: SHORTCUT_KEYS[ACTIONS.WORKSPACE_OPEN_SELECTED_IN_EXTERNAL_APP],
     target: { command: "workspace.openSelectedWorkspaceInExternalApp" },
-    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.activeWorkspaceId),
   },
   {
     id: ACTIONS.FILE_DELETE,
     descriptionKey: "keybindings.actions.deleteSelectedFileTreeEntry",
     scope: "workspace",
-    keys: "ctrl+backspace,ctrl+delete,command+backspace,command+delete",
+    keys: SHORTCUT_KEYS[ACTIONS.FILE_DELETE],
     target: { command: ACTIONS.FILE_DELETE },
-    shouldRun: (context, event) =>
-      Boolean(context.workspaceStoreState.selectedWorkspaceId) && shouldRunFileTreeShortcut(event),
+    shouldRun: (context, event) => Boolean(context.activeWorkspaceId) && shouldRunFileTreeShortcut(event),
   },
   {
     id: ACTIONS.FILE_UNDO,
     descriptionKey: "keybindings.actions.undoFileTreeOperation",
     scope: "workspace",
-    keys: "ctrl+z,command+z",
+    keys: SHORTCUT_KEYS[ACTIONS.FILE_UNDO],
     target: { command: ACTIONS.FILE_UNDO },
     shouldRun: (context, event) =>
-      Boolean(context.workspaceStoreState.selectedWorkspaceId) && !event.shiftKey && shouldRunFileTreeShortcut(event),
+      Boolean(context.activeWorkspaceId) && !event.shiftKey && shouldRunFileTreeShortcut(event),
   },
   {
     id: "select-tab-by-index",

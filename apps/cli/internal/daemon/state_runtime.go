@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/platform/config"
+
+	"github.com/rs/zerolog/log"
 )
 
 const StateFileName = "daemon.state.json"
@@ -86,4 +88,38 @@ func RemoveState(path string) error {
 	}
 
 	return nil
+}
+
+// removeOwnedState removes the daemon state file only when it still records
+// pid as the owner. A dying daemon must never delete the state of a
+// replacement daemon that started on the same profile before this one fully
+// exited: unconditional removal orphans the survivor (state missing while the
+// daemon is alive), which makes the next start/restart unable to find it and
+// — once the lock file is also gone — spawn a twin that fights it over the
+// relay nodeId.
+func removeOwnedState(path string, pid int) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Warn().Err(err).Str("state_path", path).Msg("failed to read daemon state file on exit")
+		}
+		return
+	}
+
+	var state RuntimeState
+	if err := json.Unmarshal(raw, &state); err != nil {
+		return
+	}
+	if state.PID != pid {
+		log.Debug().
+			Int("state_pid", state.PID).
+			Int("pid", pid).
+			Str("state_path", path).
+			Msg("daemon state file belongs to another daemon; leaving it in place")
+		return
+	}
+
+	if err := RemoveState(path); err != nil {
+		log.Warn().Err(err).Str("state_path", path).Msg("failed to remove daemon state file")
+	}
 }

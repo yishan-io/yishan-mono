@@ -1,10 +1,5 @@
-import { generateId } from "../helpers/generateId";
-import { DaemonFileClient } from "./daemonFileClient";
-import { DaemonGitClient } from "./daemonGitClient";
-import { DaemonProjectClient } from "./daemonProjectClient";
-import { DaemonTerminalClient } from "./daemonTerminalClient";
+import { generateId } from "@renderer/ids/generateId";
 import type * as Rpc from "./daemonTypes";
-import { DaemonWorkspaceClient } from "./daemonWorkspaceClient";
 import {
   asRecord,
   buildRequest,
@@ -12,6 +7,7 @@ import {
   parseJsonRpcMessage,
   readOptionalString,
 } from "./helpers";
+import type { DaemonTransport } from "./types";
 
 const RPC_REQUEST_TIMEOUT_MS = 30_000;
 // workspace.create can take a very long time for large repos (shallow fetch +
@@ -52,15 +48,11 @@ export class DaemonClient {
   private readonly pendingRequestsById = new Map<string, PendingRequest>();
   private readonly subscriptionsById = new Map<string, ActiveSubscription>();
   private readonly workspaceIdByWorktreePath = new Map<string, string>();
+  /** Shared terminal-output frame index bookkeeping (raw subscription delivery). */
+  private readonly terminalNextIndexBySessionId = new Map<string, number>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectPromise: Promise<void> | null = null;
   private disposed = false;
-
-  private readonly _workspaceClient: DaemonWorkspaceClient;
-  private readonly _fileClient: DaemonFileClient;
-  private readonly _gitClient: DaemonGitClient;
-  private readonly _terminalClient: DaemonTerminalClient;
-  private readonly _projectClient: DaemonProjectClient;
 
   constructor(options: {
     openSocket: () => Promise<WebSocket>;
@@ -69,100 +61,28 @@ export class DaemonClient {
     this.openSocket = options.openSocket;
     this.onConnectionEvent = options.onConnectionEvent;
 
-    const invoke = this.invoke.bind(this);
-    const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
-
-    this._workspaceClient = new DaemonWorkspaceClient(invoke, this.workspaceIdByWorktreePath);
-    this._fileClient = new DaemonFileClient(invoke);
-    this._gitClient = new DaemonGitClient(invoke);
-    this._terminalClient = new DaemonTerminalClient({
-      invoke,
-      resolveWorkspaceId,
-      sendBinary: this.sendTerminalInputBinary.bind(this),
-      getSocketReadyState: () => this.socket?.readyState ?? null,
-      subscriptionsById: this.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
-    });
-    this._projectClient = new DaemonProjectClient(invoke);
+    // No Domain clients are composed here (desktop7 Phase 25): project,
+    // workspace, file, git, and terminal RPC adapters live in their Domain
+    // Infrastructure over the transport core exposed below.
   }
 
-  readonly project = {
-    listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) => this._projectClient.listByOrg(orgId, opts),
-    getListPreferences: (orgId: string) => this._projectClient.getListPreferences(orgId),
-    setListPreferences: (orgId: string, preferences: Rpc.ProjectListPreference) =>
-      this._projectClient.setListPreferences(orgId, preferences),
+  /**
+   * Transport core exposed to Domain RPC adapters (desktop7 Phase 24/25).
+   * Root RPC now owns only connection, correlation, timeouts, raw
+   * subscription delivery, and raw binary frames; every Domain client lives
+   * in its Domain Infrastructure.
+   */
+  readonly transport: DaemonTransport = {
+    invoke: (method, params, timeoutMs) => this.invoke(method, params, timeoutMs),
+    workspaceIdByWorktreePath: this.workspaceIdByWorktreePath,
+    sendBinary: (sessionId, data) => this.sendTerminalInputBinary(sessionId, data),
+    getSocketReadyState: () => this.socket?.readyState ?? null,
+    subscriptionsById: this.subscriptionsById as unknown as Map<string, unknown>,
+    terminalNextIndexBySessionId: this.terminalNextIndexBySessionId,
+    startRawSubscription: (options) => this.startRawSubscription(options),
   };
 
   readonly tokenUsage = {};
-
-  readonly workspace = {
-    list: () => this._workspaceClient.list(),
-    refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) =>
-      this._workspaceClient.refreshPullRequest(input),
-    createWorkspace: (input: Rpc.WorkspaceCreateInput) => this._workspaceClient.createWorkspace(input),
-    close: (input: Rpc.WorkspaceCloseExecutionInput) => this._workspaceClient.close(input),
-    syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => this._workspaceClient.syncContextLink(input),
-    health: (input: Rpc.WorkspaceHealthInput) => this._workspaceClient.health(input),
-    openProject: (input: Rpc.WorkspaceOpenProjectInput) => this._workspaceClient.openProject(input),
-    closeProject: (input: Rpc.WorkspaceCloseProjectInput) => this._workspaceClient.closeProject(input),
-    createLocalFolder: (input: { path: string; name?: string }) => this._workspaceClient.createLocalFolder(input),
-    listLocalFolders: () => this._workspaceClient.listLocalFolders(),
-    deleteLocalFolder: (input: { id: string }) => this._workspaceClient.deleteLocalFolder(input),
-  };
-
-  readonly file = {
-    listFiles: (input: Rpc.FileListInput) => this._fileClient.listFiles(input),
-    listFilesBatch: (input: Rpc.FileListBatchInput) => this._fileClient.listFilesBatch(input),
-    searchFiles: (input: Rpc.FileSearchInput) => this._fileClient.searchFiles(input),
-    readFile: (input: Rpc.FileReadInput) => this._fileClient.readFile(input),
-    writeFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
-    createFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
-    createFolder: (input: Rpc.FileCreateFolderInput) => this._fileClient.createFolder(input),
-    renameEntry: (input: Rpc.FileRenameInput) => this._fileClient.renameEntry(input),
-    deleteEntry: (input: Rpc.FileDeleteInput) => this._fileClient.deleteEntry(input),
-    readDiff: (input: Rpc.FileReadInput) => this._fileClient.readDiff(input),
-  };
-
-  readonly git = {
-    inspect: (input: Rpc.GitInspectInput) => this._gitClient.inspect(input),
-    inspectPath: (input: Rpc.GitInspectPathInput) => this._gitClient.inspectPath(input),
-    listChanges: (input: Rpc.GitWorktreeInput) => this._gitClient.listChanges(input),
-    trackChanges: (input: Rpc.GitPathsInput) => this._gitClient.trackChanges(input),
-    unstageChanges: (input: Rpc.GitPathsInput) => this._gitClient.unstageChanges(input),
-    revertChanges: (input: Rpc.GitPathsInput) => this._gitClient.revertChanges(input),
-    commitChanges: (input: Rpc.GitCommitInput) => this._gitClient.commitChanges(input),
-    getBranchStatus: (input: Rpc.GitWorktreeInput) => this._gitClient.getBranchStatus(input),
-    listCommitsToTarget: (input: Rpc.GitTargetBranchInput) => this._gitClient.listCommitsToTarget(input),
-    getBranchDiffSummary: (input: Rpc.GitTargetBranchInput) => this._gitClient.getBranchDiffSummary(input),
-    readCommitDiff: (input: Rpc.GitCommitDiffInput) => this._gitClient.readCommitDiff(input),
-    readBranchComparisonDiff: (input: Rpc.GitBranchDiffInput) => this._gitClient.readBranchComparisonDiff(input),
-    listBranches: (input: Rpc.GitWorktreeInput) => this._gitClient.listBranches(input),
-    pushBranch: (input: Rpc.GitWorktreeInput) => this._gitClient.pushBranch(input),
-    publishBranch: (input: Rpc.GitWorktreeInput) => this._gitClient.publishBranch(input),
-    renameBranch: (input: Rpc.GitRenameBranchInput) => this._gitClient.renameBranch(input),
-    getAuthorName: (input: Rpc.GitWorktreeInput) => this._gitClient.getAuthorName(input),
-    mergePullRequest: (input: Rpc.GitPrMergeInput) => this._gitClient.mergePullRequest(input),
-    closePullRequest: (input: Rpc.GitPrCloseInput) => this._gitClient.closePullRequest(input),
-  };
-
-  readonly terminal = {
-    createSession: (input: Rpc.TerminalCreateSessionInput) => this._terminalClient.createSession(input),
-    writeInput: (input: Rpc.TerminalWriteInput) => this._terminalClient.writeInput(input),
-    resize: (input: Rpc.TerminalResizeInput) => this._terminalClient.resize(input),
-    closeSession: (input: Rpc.TerminalCloseInput) => this._terminalClient.closeSession(input),
-    killProcess: (input: Rpc.TerminalKillProcessInput) => this._terminalClient.killProcess(input),
-    readOutput: (input: Rpc.TerminalReadOutputInput) => this._terminalClient.readOutput(input),
-    listDetectedPorts: () => this._terminalClient.listDetectedPorts(),
-    setActiveWorkspace: (input: Rpc.SetActiveWorkspaceInput) => this._terminalClient.setActiveWorkspace(input),
-    getResourceUsage: () => this._terminalClient.getResourceUsage(),
-    listSessions: (input?: Rpc.TerminalListSessionsInput) => this._terminalClient.listSessions(input),
-  };
-
-  readonly context = {
-    getState: () => this.sendRequest("context.getState"),
-    setCurrentOrg: (orgId: string) => this.sendRequest("context.setCurrentOrg", { orgId }),
-    setActiveProject: (projectId: string) => this.sendRequest("context.setActiveProject", { projectId }),
-    setActiveFile: (filePath: string) => this.sendRequest("context.setActiveFile", { filePath }),
-  };
 
   // ─── Connection Lifecycle ───────────────────────────────────────────────────
 
@@ -476,9 +396,11 @@ export class DaemonClient {
     return await this.sendRequest(method, params, timeoutMs);
   }
 
-  private resolveWorkspaceId(input: unknown): Promise<string> {
-    return this._workspaceClient.resolveId(input);
-  }
+  /**
+   * Resolves a worktree path / cwd / workspaceId to one workspace id.
+   * Phase 25 residue: mirrors the workspace Domain's resolveId so the root
+   * terminal client can map worktree paths while it still lives in root RPC.
+   */
 
   private async startRawSubscription(options: Rpc.StartSubscriptionOptions): Promise<string> {
     await this.sendRequest(options.method, options.params);
@@ -512,58 +434,6 @@ export class DaemonClient {
     const path = `${options.namespace}.${options.method}`;
     const record = asRecord(options.input);
 
-    if (options.namespace === "terminal" && options.method === "subscribeOutput") {
-      const sessionId = readOptionalString(record?.sessionId) || "";
-      return await this.startRawSubscription({
-        method: "terminal.subscribe",
-        params: { sessionId },
-        onNotification: (event) => {
-          if (event.method === "terminal.output") {
-            const payload = asRecord(event.payload) ?? {};
-            const eventSessionId = readOptionalString(payload.sessionId) || sessionId;
-            // Accept both string (JSON-RPC) and Uint8Array (binary fast-path) chunks.
-            const rawChunk = payload.chunk;
-            const chunk = rawChunk instanceof Uint8Array ? rawChunk : typeof rawChunk === "string" ? rawChunk : "";
-            const terminalNextIndexBySessionId = this._terminalClient.terminalNextIndexBySessionId;
-            const nextIndex = (terminalNextIndexBySessionId.get(eventSessionId) ?? 0) + 1;
-            terminalNextIndexBySessionId.set(eventSessionId, nextIndex);
-            options.onNotification({
-              method: event.method,
-              payload: {
-                sessionId: eventSessionId,
-                chunk,
-                nextIndex,
-              },
-            });
-            return;
-          }
-
-          options.onNotification({
-            method: event.method,
-            payload: event.payload,
-          });
-        },
-      });
-    }
-
-    if (options.namespace === "terminal" && options.method === "subscribeSessions") {
-      const subscriptionId = generateId();
-      this.subscriptionsById.set(subscriptionId, {
-        method: "terminal.sessions",
-        onNotification: options.onNotification,
-        registeredWithDaemon: false,
-      });
-      return subscriptionId;
-    }
-
-    if (options.namespace === "terminal" || options.namespace === "git" || options.namespace === "file") {
-      return await this.startRawSubscription({
-        method: path,
-        params: options.input,
-        onNotification: options.onNotification,
-      });
-    }
-
     if (options.namespace === "events" && options.method === "frontendStream") {
       return await this.startRawSubscription({
         method: path,
@@ -588,22 +458,9 @@ export class DaemonClient {
       return;
     }
 
+    // Terminal subscription teardown (unsubscribe + frame-index cleanup) is
+    // owned by the Terminal Domain adapter over the shared registry.
     this.subscriptionsById.delete(subscriptionId);
-    if (subscription.method !== "terminal.subscribe") {
-      return;
-    }
-
-    const sessionId = readOptionalString(asRecord(subscription.params)?.sessionId);
-    if (!sessionId) {
-      return;
-    }
-
-    if (!this._terminalClient.hasSubscriptionForSession(sessionId)) {
-      this._terminalClient.terminalNextIndexBySessionId.delete(sessionId);
-    }
-    if (subscription.registeredWithDaemon) {
-      void this.sendRequest("terminal.unsubscribe", { sessionId }).catch(() => undefined);
-    }
   }
 
   dispose(): void {

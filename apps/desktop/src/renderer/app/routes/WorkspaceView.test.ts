@@ -1,19 +1,20 @@
 import { describe, expect, it } from "vitest";
-import type { WorkspaceTab } from "../../features/workspace/state/workspaceStore";
-import type { InAppWorkspaceNotificationPayload } from "../../features/workspace/ui/workspaceNotificationUtils";
+import type { WorkbenchTab } from "../../domains/workbench/model/tabTypes";
+import type { InAppWorkspaceNotificationPayload } from "../../domains/workspace/features/workspace-status/workspaceNotificationUtils";
 import {
   isNotificationForFocusedSession,
   resolveFocusedWorkspaceSession,
-} from "../../features/workspace/ui/workspaceNotificationUtils";
+} from "../../domains/workspace/features/workspace-status/workspaceNotificationUtils";
 
-function createSessionTab(input: { id: string; workspaceId: string; sessionId: string }): WorkspaceTab {
+function createAgentChatTab(input: { id: string; workspaceId: string; sessionId: string }): WorkbenchTab {
   return {
     id: input.id,
     workspaceId: input.workspaceId,
-    title: "Session",
+    title: "Agent Chat",
     pinned: false,
-    kind: "session",
+    kind: "agent-chat",
     data: {
+      cwd: "/tmp/project",
       sessionId: input.sessionId,
     },
   };
@@ -35,7 +36,7 @@ describe("isNotificationForFocusedSession", () => {
       notification,
       selectedWorkspaceId: "workspace-1",
       selectedTabId: "tab-1",
-      tabs: [createSessionTab({ id: "tab-1", workspaceId: "workspace-1", sessionId: "session-1" })],
+      tabs: [createAgentChatTab({ id: "tab-1", workspaceId: "workspace-1", sessionId: "session-1" })],
     });
 
     expect(result).toBe(true);
@@ -56,7 +57,7 @@ describe("isNotificationForFocusedSession", () => {
       notification,
       selectedWorkspaceId: "workspace-1",
       selectedTabId: "tab-1",
-      tabs: [createSessionTab({ id: "tab-1", workspaceId: "workspace-1", sessionId: "session-1" })],
+      tabs: [createAgentChatTab({ id: "tab-1", workspaceId: "workspace-1", sessionId: "session-1" })],
     });
 
     expect(result).toBe(false);
@@ -68,7 +69,7 @@ describe("resolveFocusedWorkspaceSession", () => {
     const result = resolveFocusedWorkspaceSession({
       selectedWorkspaceId: "workspace-1",
       selectedTabId: "tab-1",
-      tabs: [createSessionTab({ id: "tab-1", workspaceId: "workspace-1", sessionId: "session-1" })],
+      tabs: [createAgentChatTab({ id: "tab-1", workspaceId: "workspace-1", sessionId: "session-1" })],
     });
 
     expect(result).toEqual({

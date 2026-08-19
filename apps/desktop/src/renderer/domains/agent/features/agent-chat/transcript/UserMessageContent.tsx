@@ -1,0 +1,31 @@
+import { Box, Typography } from "@mui/material";
+import { parseSkillMessage } from "../../../model/agentSkillTextHelpers";
+import { SkillUsageMarker } from "../../../ui/SkillUsageMarker";
+
+type UserMessageContentProps = {
+  messageText: string;
+};
+
+/** Renders one user message, including compact skill-injection markers. */
+export function UserMessageContent({ messageText }: UserMessageContentProps) {
+  const skillMessage = parseSkillMessage(messageText);
+
+  if (!skillMessage) {
+    return (
+      <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>
+        {messageText}
+      </Typography>
+    );
+  }
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+      <SkillUsageMarker skillName={skillMessage.skillName} />
+      {skillMessage.trailingContent ? (
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>
+          {skillMessage.trailingContent}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}

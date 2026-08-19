@@ -2,10 +2,10 @@ import { Box, Button, Paper, Stack, TextField, Typography } from "@mui/material"
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBuilding2 } from "react-icons/lu";
-import { createOrganization } from "../../features/organization/commands/orgCommands";
+import { createOrganization } from "../../domains/organization";
+import { sessionStore } from "../../domains/session";
 import { rendererQueryClient } from "../../queryClient";
-import { sessionStore } from "../../features/session/state/sessionStore";
-import { AppMenuView } from "../../ui/layout/AppMenuView";
+import { AppMenuView } from "../features/app-menu/AppMenuView";
 
 /** Renders the required first-organization setup for signed-in users without organizations. */
 export function OnboardOrgView() {

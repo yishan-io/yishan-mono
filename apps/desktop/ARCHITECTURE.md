@@ -8,39 +8,59 @@ in the Renderer.
 The Electron main process (`src/main`) is outside this document. Change it only
 when a Renderer boundary requires a host contract change.
 
+Use `refactor/desktop7.md` for the current Domain normalization order and
+completion criteria. Use
+`refactor/desktop-ownership-first-normalization.md` for ownership selection.
+
 ## Top-Level Owners
 
 | Path | Owner | Examples |
 |---|---|---|
-| `app/` | Renderer composition root | `RendererApplication.tsx`, `routes/`, `commands/`, `flows/`, `events/`, `runtime/`, `selectors.ts` |
-| `features/` | Product behavior, split by Feature | `workspace/`, `agent/`, `settings/`, `terminal/`, `workbench/`, … |
+| `app/` | Renderer composition root | `RendererApplication.tsx`, `routes/`, `commands/`, `events/`, `runtime/`, `selectors.ts` |
+| `domains/` | Product behavior, split by Domain | `workspace/`, `agent/`, `settings/`, `terminal/`, `workbench/`, … |
 | `api/`, `rpc/` | Infrastructure (transport) | REST clients, daemon JSON-RPC clients, DTO types |
-| `ui/` | Shared UI (components, hooks, layout) | `ui/components`, `ui/hooks`, `ui/layout` |
-| `components/`, `helpers/` | Migration buckets, being retired | Product behavior here is being moved to Feature owners (Phase 19) |
+| `hooks/` | Domain-free React behavior | request guards, refresh behavior, context-menu behavior |
+| `ui/` | Domain-free stateless presentation | primitive controls, layout, generic visual feedback |
+| `helpers/` | Migration bucket, being retired | Each file moves to its Feature, Domain, App, or a named global owner. |
 
-The Renderer has 14 Features: `agent`, `files`, `git`, `node`, `notification`,
-`organization`, `overview`, `project`, `scheduled-job`, `session`, `settings`,
-`terminal`, `workbench`, `workspace`.
+The Renderer has 15 Domains: `agent`, `browser`, `files`, `git`, `node`,
+`notification`, `organization`, `overview`, `project`, `scheduled-job`,
+`session`, `settings`, `terminal`, `workbench`, `workspace`.
 
-## Feature Layers
+## Domain Layers
 
-Each Feature may contain these layers. A layer is a directory, not a class.
+Each Domain may contain these layers. A layer is a directory, not a class.
 
-| Layer | Owns | May import | Must not import |
+| Layer | Owns | Can import | Must not import |
 |---|---|---|---|
-| `model/` | Pure data types and rules | own Model, own State types | React, Zustand, Electron, `api/`, `rpc/`, Runtime, State implementations |
-| `state/` | Zustand State, Selectors, synchronous mutations | own Model, own State, Zustand | `api/`, `rpc/`, Electron, Commands, Runtime, another Feature's State |
-| `commands/` | Command surfaces that mutate State and call Ports | own Model, own State, own Runtime, Ports | Views, Components, transport implementations |
-| `runtime/` | Timers, subscriptions, registries, queues, external instances | own Model, own State, Ports | UI, transport implementations |
-| `events/` | Feature event handlers subscribed to application events | own State, Commands, Ports | another Feature's State, Runtime, or Event handlers |
-| `ui/` | Feature presentation | own Commands, own Selectors, public read surfaces of other Features | `api/`, `rpc/`, Electron, main-process code, another Feature's internal State/Runtime/Events |
+| `features/<use-case>/` | One use case or smart UI grouping | own UI, Hooks, Commands, Selectors, Model, another Domain's public API | raw transport, Infrastructure implementations, Runtime implementations, another Domain's internals |
+| `ui/` | Stateless presentation shared by multiple Features | React, own Model types, root UI | State, Hooks, Commands, Runtime, Infrastructure, transport |
+| `hooks/` | React behavior shared by multiple Features | own Model, State, Selectors, Commands, Runtime entry points | direct transport, persistence, long-lived resource ownership, cross-Domain transactions |
+| `model/` | Stable Domain concepts, value objects, invariants, and pure rules | own Model | React, Zustand, transport, persistence, Runtime, State implementations |
+| `state/` | Domain-shared State, Stores, Selectors, and synchronous mutations | own Model, own State, Zustand | React, Hooks, Commands, Runtime, Infrastructure, transport |
+| `commands/` | Domain application actions and use cases | own Model, State, Services, Domain ports, other Domain public APIs | Features, UI, Hooks, transport implementations |
+| `services/` | Stateless operations across Domain Model concepts | own Model | React, State, Commands, Runtime, Infrastructure, transport |
+| `runtime/` | Timers, subscriptions, registries, queues, processes, and external instances | own Model, State actions, Runtime ports | Features, UI, Hooks, raw transport outside an adapter |
+| `events/` | Domain handlers for events that already occurred | own Commands, State actions, other Domain public APIs | another Domain's State, Runtime, Events, or Infrastructure |
+| `infrastructure/` | API, RPC, IPC, daemon, filesystem, persistence, and DTO mapping | own Model and port contracts, root transport clients, host contracts | Features, UI, Hooks, another Domain's internals |
 
-`flows/` exists at the application level only (`app/flows`) and owns
-multi-Feature workflows.
+Feature-local UI, Hooks, State, helpers, and tests stay inside their Feature.
+Do not promote them because of their file type.
 
-## Feature Public API
+Domain `ui` contains only shared presentational UI. It has no State
+subscriptions, Commands, React State, lifecycle behavior, or external I/O.
 
-A Feature's `index.ts` is its public API. It may export:
+Domain `hooks` is parallel to `features`, `ui`, and `state`. It is not inside
+`ui` or `state`.
+
+`app/flows` is a migration source. Move cross-Domain orchestration to
+`app/commands`, and move Domain rules to their owning Domain. Do not add a
+new `flows` directory.
+
+## Domain Public API
+
+A Domain's `index.ts` is its public API. Use explicit named exports. Do not
+use `export *` in this file. It can export:
 
 - Command contract types.
 - Command entry functions when composition requires them.
@@ -49,75 +69,91 @@ A Feature's `index.ts` is its public API. It may export:
 - Read-only hooks with a stable contract.
 - Stable UI entry points.
 
-A Feature must not export:
+A Domain must not export:
 
-- A Store instance for another Feature to mutate.
+- A Store instance for another Domain to mutate.
 - A Runtime implementation.
 - An Event Handler implementation.
 - Internal State mutations with business meaning.
 - Transport DTOs as domain Models.
 
-State Selectors and Actions files (`*Selectors.ts`, `*Actions.ts`) are the
-public State surface and are importable across Features. Stores themselves are
-internal to the owning Feature.
+The public State surface (`*Selectors.ts`, `*Actions.ts`) and Model types are
+importable across Domains, but the Domains plan (D2) requires cross-Domain
+imports to go through the Domain's public `index.ts`. Prefer exporting these
+items from `index.ts` over deep-importing them.
 
 ## Route and Page Ownership
 
 `app/routes/` owns the route table and page composition (`AppRoutes.tsx`).
-Route pages compose Feature UI entry points. They may import Feature public
-APIs but not Feature internals.
+Route pages compose Domain UI entry points. They may import Domain public
+APIs but not Domain internals.
 
 ## Store and Selector Placement
 
-- Each Feature owns its Zustand stores in `features/<feature>/state/`.
-- A Selector reads its own Feature's State only.
-- Cross-Feature reads use the other Feature's public Selectors, or an
+- Each Domain owns its Zustand stores in `domains/<domain>/state/`.
+- A Selector reads its own Domain's State only.
+- Cross-Domain reads use the other Domain's public Selectors, or an
   application read model in `app/selectors.ts` when the read combines data
-  from several Features.
+  from several Domains.
 - Do not create a combined Store for screen data. Derive screen data from
-  Feature Selectors.
+  Domain Selectors.
 
 ## Hook Classification
 
-- Hooks that read State, Selectors, or Commands live in the owning Feature's
-  `ui/hooks` (or `ui/`).
+- A Hook used by one Feature stays in that Feature.
+- A Hook shared by multiple Features in one Domain lives in that Domain's
+  `hooks/` directory.
+- A domain-free Hook lives in the root `renderer/hooks/` directory.
 - Hooks that own timers, subscriptions, or other runtime resources move to an
-  application or Feature Runtime and receive explicit start/stop behavior.
+  application or Domain Runtime and receive explicit start/stop behavior.
 - Pure transforms are Model functions, not hooks.
 
-## Cross-Feature Composition
+## Cross-Domain Composition
 
-Cross-Feature workflows belong to `app/commands` or `app/flows`. Application
-code composes Feature public APIs; Features never compose one another's
-internals.
+Cross-Domain workflows belong to `app/commands` or `app/events`. Application
+code composes Domain public APIs; Domains never compose one another's
+internals, and Domains never import `app`.
 
 ## Required Dependency Direction
 
 ```text
 main
   -> app
-      -> feature public APIs
+      -> Domain public APIs
       -> infrastructure
 
-feature UI
+Domain UI
+  -> own Model types
+  -> root UI
+
+Domain Feature
+  -> own UI
+  -> own Hooks
   -> own Commands
   -> own State Selectors
-  -> public read surfaces from other Features
+  -> public APIs from other Domains
 
-feature Commands
+Domain Hooks
+  -> own Commands
+  -> own State Selectors
+  -> Runtime entry points
+
+Domain Commands
   -> own Model
   -> own State
-  -> own Runtime
-  -> Ports
+  -> own Services
+  -> Runtime and Infrastructure ports
+  -> public APIs from other Domains
 
 infrastructure
-  -> Ports
+  -> Domain ports
   -> transport DTOs
+  -> API, RPC, IPC, daemon, filesystem, and persistence implementations
 ```
 
 ## Architecture Test and Exception Policy
 
-`src/renderer/architecture.test.ts` enforces the rules above (R1, R1b, R3–R9).
+`src/renderer/architecture.test.ts` enforces the rules above (R1, R1b, R3–R16).
 It has one focused test group per rule and fails on:
 
 - a new boundary violation (with file and import target);
@@ -125,18 +161,150 @@ It has one focused test group per rule and fails on:
 - an allowlist row tagged with a completed phase.
 
 `src/renderer/architecture.knownViolations.ts` is the allowlist. Rows record
-pre-existing violations that later phases remove. Every row carries the tag of
-the phase that currently owns the baseline (`CURRENT_PHASE`); rows for
-completed phases are rejected. A phase that fixes a violation removes its row
-in the same pull request.
+pre-existing violations that later Domain phases remove. Every row carries the
+tag of the Domain phase that owns its removal (`D3`–`D17`); rows tagged with a
+completed phase (`COMPLETED_PHASES`) are rejected. A phase that fixes a
+violation removes its row in the same pull request.
 
 The violation count must not increase during a phase. Record the count in each
 refactor pull request.
 
+## Domain Normalization Progress
+
+Status values: `planned` (not started), `active` (one Domain at a time), or
+`completed` (per-Domain exit criteria met). The order follows dependency
+evidence: small foundation Domains first, Settings last because it currently
+displays and imports behavior from many Domains.
+
+| Phase | Domain | Status | Primary purpose |
+|---|---|---|---|
+| D3 | `session` | `completed` | Establish authentication, bootstrap State, and public identity reads. |
+| D4 | `organization` | `completed` | Separate organization administration from Session and shared UI. |
+| D5 | `node` | `completed` | Establish node discovery, selection data, and administration ownership. |
+| D6 | `project` | `completed` | Establish project identity, configuration, grouping, and list behavior. |
+| D7 | `workbench` | `completed` | Establish active context, tabs, panes, layout, and presentation Commands. |
+| D8 | `workspace` | `completed` | Establish Workspace lifecycle, creation, health, and Workspace-specific UI. |
+| D9 | `files` | `completed` | Establish file browsing, editing, search, and editor behavior. |
+| D10 | `git` | `completed` | Establish Git, diff, branch, commit, and pull-request ownership. |
+| D11 | `terminal` | `completed` | Establish terminal sessions, instances, transport, focus, and recovery. |
+| D12 | `agent` | `completed` | Establish Agent sessions, providers, messages, streams, and Agent UI. |
+| D13 | `notification` | `completed` | Establish notification decisions, delivery, sound, and preferences. |
+| D14 | `overview` | `completed` | Establish usage data, filters, charts, and overview loading. |
+| D15 | `scheduled-job` | `completed` | Establish job definitions, execution controls, and run history. |
+| D16 | `settings` | `completed` | Keep only the settings shell and preferences without a stronger Domain owner. |
+| D17 | (Final Closure) | `superseded` | R6/R7/R9 and the app/ui split closed; the R16 App audit is deferred to desktop7 Phase 22. |
+
+Settings (desktop7 Phase 23): owns the settings shell (navigation, search,
+composition), appearance (theme/language/editor/markdown), keybindings, CLI
+install, daemon preferences, and account (profile + account-scoped service
+tokens). Agent, Node, Organization-member, Notification, Terminal-session, and
+Workspace behavior moved to their owning Domains. Domain-free settings layout
+primitives moved to root `ui/components`.
+
+A Domain is complete when its per-Domain exit criteria pass: one-sentence
+owner, explicit responsibility list, Feature-local code in use-case Features,
+Domain UI only Domain-shared presentation, Model only stable concepts, external
+I/O in Infrastructure, other Domains use only the public `index.ts`, no
+cross-Domain deep import, no allowlist row assigned to its phase, and the
+full test suite passes.
+
 ## Current Status
 
-The Renderer ownership refactor runs in Phases 0–20. Phases 11–15 completed
-the file migration (`app` root, Feature ownership, command surfaces). Phases
-16–20 close the remaining dependency boundaries. Phase 16 made the
-architecture test accurate (per-rule tests, no State/Zustand false positive,
-strict allowlist lifecycle) and this document mandatory.
+The Renderer ownership refactor runs under the Desktop Domains plan. Phase D1
+renamed `features/` to `domains/` (mechanical, no behavior change). Phase D2
+prepared Domain-by-Domain enforcement: the architecture test now enforces
+cross-Domain imports through public `index.ts` (R14), forbids Domain imports
+of `app` (R15), forbids App deep imports into a Domain (R16), and tags every
+allowlist row with the Domain phase that removes it. The Domain phases D3–D17
+normalize one Domain at a time.
+
+Execution moved to `refactor/desktop7.md` (Phases 21–27). D6–D16 are
+completed. Phase 22 closed the App→Domain R16 boundary (R16 = 0). Phase 23
+normalized Settings. Phases 24–25 are complete: workspace/workbench/project and
+files/git/terminal/agent/browser each pass the Domain Completion Method; the
+combined Project/Node/Workspace navigator moved to
+`app/features/project-workspace-navigator`; create/rename-workspace are split
+Features; every Domain RPC client and DTO moved to Domain Infrastructure over
+the root transport (`getDaemonTransport`), so root RPC is now a pure transport
+core (connection, correlation, timeouts, raw subscriptions, binary frames) with
+zero domain clients or domain DTOs.
+
+Phases 26–27 (complete): see the per-phase records below. Phase 26 normalized the six remaining Domains and closed root residue; Phase 27 enforced the final architecture (see below). Phase 26 (complete): session/node/organization/notification/overview/
+scheduled-job each pass the Domain Completion Method; scheduled-job form split
+(create/update/detail/list Features, shared fields in `ui`, form behavior in
+`hooks`, cron/schedule rules in `model`). Root residue closed:
+- Root `helpers/` removed. Capabilities: `platform/` (clipboard, platform),
+  `async/` (delay, withTimeout), `ids/` (generateId), `path/` (pathHelpers),
+  `version/` (version compare), `ui/typography` (MONOSPACE_SX),
+  `ui/codeThemes`. `errorHelpers` facade removed (importers use
+  `@shared/helpers/errorHelpers`); `issueLinks`/`tabHelpers` removed (zero
+  consumers); formatters split to the resource-usage and overview Features;
+  `terminalCloseTombstones` moved to Terminal Model (app consumes via the
+  Terminal public API).
+- Root `ui/hooks` removed → `renderer/hooks`.
+- Root `events/` is now the named backend-event + focus-intent capability
+  (adapter/router/selectors implementation moved from `app/events`, which
+  keeps only the handler composition).
+- Root `navigation/` removed (zero consumers); root `search/` removed
+  (provider functions had zero consumers; the quick-open type comes from the
+  Files Domain).
+- Root `api/` keeps only the REST transport (`restClient`) and shared record
+  types (`types`); every per-resource REST client moved to its Domain
+  Infrastructure.
+- Root `shortcuts/` stays the named keybinding framework capability.
+
+Phase 27 (complete): final architecture enforcement.
+- New enforced rules (archtest now 29): R17 Domain must not VALUE-import its
+  own root index (type-only allowed), R18 no wildcard exports in Domain root
+  indexes, R19 root RPC imports only from `app/events`, `app/runtime`, and
+  Domain Infrastructure, R20 Model/State/Hooks/UI/Features do not import root
+  transport; the root UI rejection list adds IPC/Stores/Commands/Runtime.
+- R1b (@shared/contracts UI imports) is now enforced at 0.
+- The desktop host bridge (`getDesktopBridge`/`getDesktopHostBridge`) moved
+  out of root RPC into `platform/hostBridge`; root RPC keeps only connection,
+  wire protocol, correlation, timeouts, and raw subscription code.
+- The backend-event pipeline implementation lives in `app/events` (the
+  whitelisted home for transport access); root `events/` re-exports it for
+  Domains (R15-safe) and keeps the composer/terminal focus-intent bridges.
+- Domain transport subscriptions route through Domain Infrastructure
+  (session/agent/terminal/workbench/workspace wrappers).
+- `ModelAutocomplete` removed (test-only, no production consumer).
+- Allowlist rows: none (empty); `COMPLETED_PHASES` includes P21–P27.
+
+## Root Capabilities (desktop7 Phase 26)
+
+Root `helpers` and root `ui/hooks` no longer exist (desktop7 Phase 26).
+The migration baselines in `architecture.migrationBaselines.ts` are empty but
+the guard tests remain: the architecture test rejects re-creating root
+`helpers` files/importers, new `ui/hooks` files, and new root UI dependency
+violations.
+
+Named root capabilities (business-neutral, with written dependency rules):
+
+| Capability | Contents | Dependency rule |
+|---|---|---|
+| `rpc/` | Transport core: connection, correlation, timeouts, raw subscriptions, binary frames, wire types | Domain access only through Domain Infrastructure adapters; root RPC imports only from `app/events`, `app/runtime`, and Domain Infrastructure (Phase 27) |
+| `events/` | Backend-event adapter/router/selectors + composer/terminal focus-intent bridges | May import root `rpc` and `shared` only; must not import App, Domains, API, or UI |
+| `api/` | REST transport (`restClient`) + shared REST record types (`types`) | Per-resource clients live in Domain Infrastructure; UI may type-import `api/types` only |
+| `shortcuts/` | Keybinding framework (metadata, runner, display, overrides) | Framework capability; Domains/App consume via named exports only |
+| `platform/` | clipboard, platform detection | May import root `rpc` (host bridge) only |
+| `async/` | delay, withTimeout | No product imports |
+| `ids/` | generateId (re-export of `@shared/helpers/generateId`) | No product imports |
+| `path/` | getFileName | No product imports |
+| `version/` | isNewerVersion, isDaemonVersionOutdated | No product imports |
+| `hooks/` | Domain-free React behavior (RouteCloseWatcher, context-menu state, request guard, refreshable loader) | No App/Domains/API/RPC imports |
+| `ui/` | Domain-free stateless presentation (components, typography, codeThemes) | No App/Domains/API/RPC/Stores/Commands/Runtime imports |
+
+Phase 26 resolutions of the Phase 21 provisional owners: workspace helpers →
+Workspace (Phase 24); files/git/terminal/agent helpers → their Domains
+(Phase 25); `terminalCloseTombstones` → Terminal Model; `clipboard`/`platform`
+→ `platform/`; `delay`/`withTimeout` → `async/`; `generateId` → `ids/`;
+`pathHelpers` → `path/`; `styles` → `ui/typography`; `codeThemes` →
+`ui/codeThemes`; `version`/`versionHelpers` → `version/`; `errorHelpers`
+facade removed (canonical `@shared/helpers/errorHelpers`); `formatters` split
+to owning Features; `issueLinks`/`tabHelpers`/`syntaxThemeComparison` removed
+after consumer search. `ui/hooks/*` → `renderer/hooks`; `RouteCloseWatcher`
+already at `renderer/hooks`; root UI components stayed domain-free.
+
+Root UI dependency violations (final rule: no App/Domains/API/RPC/Helpers
+imports): `ui/hooks/useRefreshableLoader.ts`. It is baselined; Phase 26 moves it.

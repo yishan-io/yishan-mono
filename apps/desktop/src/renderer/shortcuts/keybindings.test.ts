@@ -2,10 +2,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIONS } from "../../shared/contracts/actions";
-import { projectStore } from "../features/project/state/projectStore";
-import type { SplitPaneStoreState } from "../features/workbench/state/splitPaneStore";
-import type { TabStoreState } from "../features/workbench/state/tabStore";
-import type { WorkspaceStoreState } from "../features/workspace/state/workspaceStore";
+import { projectStore } from "../domains/project/state/projectStore";
+import type { SplitPaneStoreState } from "../domains/workbench/state/splitPaneStore";
+import type { TabStoreState } from "../domains/workbench/state/tabStore";
+import type { WorkspaceStoreState } from "../domains/workspace/state/workspaceStore";
 
 const initialProjectStoreState = projectStore.getState();
 
@@ -14,7 +14,7 @@ afterEach(() => {
 });
 import { SUPPORTED_KEY_BINDINGS, type ShortContext, getShortcutDefinitions } from "./keybindings";
 
-vi.mock("@renderer/features/workbench", () => ({
+vi.mock("@renderer/domains/browser", () => ({
   reloadWebview: vi.fn(),
 }));
 
@@ -25,18 +25,31 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
     isWorkspaceRoute: true,
     isPopupOpen: false,
     tabStoreState: {
-      tabs: [{ id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} }],
+      tabs: [
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Tab 1",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal" },
+        },
+      ],
       selectedTabId: "tab-1",
       selectedTabIdByWorkspaceId: {},
       getWorkspaceTabs: vi.fn(() => [
-        { id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} },
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Tab 1",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal" },
+        },
       ]),
       resolveTabForWorkspace: vi.fn(),
       selectTab: vi.fn(),
       retainWorkspaceTabs: vi.fn(() => []),
-      createTab: vi.fn(async () => undefined),
-      resolveSessionTab: vi.fn(),
-      failSessionTabInit: vi.fn(),
       openTab: vi.fn(),
       closeTab: vi.fn(),
       closeOtherTabs: vi.fn(),
@@ -53,11 +66,10 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       reorderTab: vi.fn(),
       renameTab: vi.fn(),
       renameTabsForEntryRename: vi.fn(),
-      updateFileTabContent: vi.fn(),
-      markFileTabSaved: vi.fn(),
+      setFileTabDirty: vi.fn(),
       refreshFileTabFromDisk: vi.fn(),
-      refreshDiffTabContent: vi.fn(),
     } as TabStoreState,
+    activeWorkspaceId: "workspace-1",
     workspaceStoreState: {
       projects: [],
       workspaces: [],
@@ -68,8 +80,6 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       gitChangeTotalsByWorkspaceId: {},
       gitRefreshVersionByWorktreePath: {},
       fileTreeChangedRelativePathsByWorktreePath: {},
-      selectedProjectId: "",
-      selectedWorkspaceId: "workspace-1",
       displayProjectIds: [],
       isProjectsLoaded: true,
       lastUsedExternalAppId: undefined,
@@ -77,8 +87,6 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       fileTreeRefreshVersion: 0,
       workspaceListHierarchyMode: "by_project",
       orderedWorkspaceIds: [],
-      setSelectedProjectId: vi.fn(),
-      setSelectedWorkspaceId: vi.fn(),
       setDisplayProjectIds: vi.fn(),
       setLastUsedExternalAppId: vi.fn(),
       setWorkspaceListHierarchyMode: vi.fn(),
@@ -141,10 +149,9 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       promoteTemporaryTab: vi.fn(),
       reorderTab: vi.fn(),
       renameTab: vi.fn(),
-      updateFileTabContent: vi.fn(),
-      markFileTabSaved: vi.fn(),
+      setFileTabDirty: vi.fn(),
       refreshFileTabFromDisk: vi.fn(),
-      refreshDiffTabContent: vi.fn(),
+
       setDisplayRepoIds: vi.fn(),
       setLeftPaneWidth: vi.fn(),
       setRightPaneWidth: vi.fn(),
@@ -342,7 +349,7 @@ describe("getShortcutDefinitions", () => {
   });
 
   it("reloads the active browser tab from Cmd+R shortcut", async () => {
-    const { reloadWebview } = await import("@renderer/features/workbench");
+    const { reloadWebview } = await import("@renderer/domains/browser");
     const reloadWebviewMock = vi.mocked(reloadWebview);
     reloadWebviewMock.mockClear();
 
@@ -373,7 +380,7 @@ describe("getShortcutDefinitions", () => {
   });
 
   it("does not reload browser tab when selected tab is not a browser tab", async () => {
-    const { reloadWebview } = await import("@renderer/features/workbench");
+    const { reloadWebview } = await import("@renderer/domains/browser");
     const reloadWebviewMock = vi.mocked(reloadWebview);
     reloadWebviewMock.mockClear();
 
@@ -432,8 +439,6 @@ describe("getShortcutDefinitions", () => {
             kind: "file",
             data: {
               path: "src/App.tsx",
-              content: "",
-              savedContent: "",
               isDirty: false,
               isTemporary: false,
             },
@@ -488,8 +493,6 @@ describe("getShortcutDefinitions", () => {
             kind: "file",
             data: {
               path: "src/App.tsx",
-              content: "",
-              savedContent: "",
               isDirty: false,
               isTemporary: false,
             },
@@ -801,8 +804,22 @@ describe("getShortcutDefinitions", () => {
       tabStoreState: {
         ...createShortcutContext().tabStoreState,
         getWorkspaceTabs: vi.fn<(workspaceId: string) => TabStoreState["tabs"]>(() => [
-          { id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} },
-          { id: "tab-2", workspaceId: "workspace-1", title: "Tab 2", pinned: false, kind: "session", data: {} },
+          {
+            id: "tab-1",
+            workspaceId: "workspace-1",
+            title: "Tab 1",
+            pinned: false,
+            kind: "browser",
+            data: { url: "" },
+          },
+          {
+            id: "tab-2",
+            workspaceId: "workspace-1",
+            title: "Tab 2",
+            pinned: false,
+            kind: "browser",
+            data: { url: "" },
+          },
         ]),
       },
       splitPaneStoreState: {
@@ -845,8 +862,22 @@ describe("getShortcutDefinitions", () => {
       tabStoreState: {
         ...createShortcutContext().tabStoreState,
         getWorkspaceTabs: vi.fn<(workspaceId: string) => TabStoreState["tabs"]>(() => [
-          { id: "tab-1", workspaceId: "workspace-1", title: "Pinned", pinned: true, kind: "session", data: {} },
-          { id: "tab-2", workspaceId: "workspace-1", title: "Regular", pinned: false, kind: "session", data: {} },
+          {
+            id: "tab-1",
+            workspaceId: "workspace-1",
+            title: "Pinned",
+            pinned: true,
+            kind: "browser",
+            data: { url: "" },
+          },
+          {
+            id: "tab-2",
+            workspaceId: "workspace-1",
+            title: "Regular",
+            pinned: false,
+            kind: "browser",
+            data: { url: "" },
+          },
         ]),
       },
       splitPaneStoreState: {

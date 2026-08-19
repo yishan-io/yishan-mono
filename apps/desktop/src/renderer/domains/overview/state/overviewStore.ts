@@ -1,0 +1,148 @@
+import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
+import type {
+  AgentKindBreakdownItem,
+  ModelBreakdownItem,
+  OverviewTimeRange,
+  TokenUsageSeriesItem,
+  WorkspaceInsightsResult,
+} from "../model/overviewTypes";
+
+type LoadState = "idle" | "loading" | "loaded" | "error";
+
+type OverviewStoreState = {
+  timeRange: OverviewTimeRange;
+  selectedProjectId: string | undefined;
+  granularity: "hour" | "day";
+
+  tokenUsageSeries: TokenUsageSeriesItem[];
+  grandTotal: number;
+  cachedTotal: number;
+  cachedWriteTotal: number;
+  uncachedTotal: number;
+  turnTotal: number;
+  toolCallTotal: number;
+  totalCostUsd: number;
+  tokenUsageLoadState: LoadState;
+  tokenUsageLoadError: string | null;
+
+  modelBreakdown: ModelBreakdownItem[];
+  modelBreakdownLoadState: LoadState;
+  modelBreakdownLoadError: string | null;
+
+  agentKindBreakdown: AgentKindBreakdownItem[];
+  agentKindBreakdownLoadState: LoadState;
+  agentKindBreakdownLoadError: string | null;
+
+  workspaceInsights: WorkspaceInsightsResult | null;
+  workspaceInsightsLoadState: LoadState;
+  workspaceInsightsLoadError: string | null;
+
+  setTimeRange: (range: OverviewTimeRange) => void;
+  setSelectedProjectId: (projectId: string | undefined) => void;
+  setGranularity: (granularity: "hour" | "day") => void;
+
+  setTokenUsageData: (
+    series: TokenUsageSeriesItem[],
+    grandTotal: number,
+    cachedTotal: number,
+    cachedWriteTotal: number,
+    uncachedTotal: number,
+    turnTotal: number,
+    toolCallTotal: number,
+    totalCostUsd: number,
+  ) => void;
+  setTokenUsageLoadState: (state: LoadState, error?: string | null) => void;
+
+  setModelBreakdown: (models: ModelBreakdownItem[]) => void;
+  setModelBreakdownLoadState: (state: LoadState, error?: string | null) => void;
+
+  setAgentKindBreakdown: (agentKinds: AgentKindBreakdownItem[]) => void;
+  setAgentKindBreakdownLoadState: (state: LoadState, error?: string | null) => void;
+
+  setWorkspaceInsights: (insights: WorkspaceInsightsResult) => void;
+  setWorkspaceInsightsLoadState: (state: LoadState, error?: string | null) => void;
+};
+
+export const overviewStore = create<OverviewStoreState>()(
+  immer((set) => ({
+    timeRange: "7d",
+    selectedProjectId: undefined,
+    granularity: "day",
+
+    tokenUsageSeries: [],
+    grandTotal: 0,
+    cachedTotal: 0,
+    cachedWriteTotal: 0,
+    uncachedTotal: 0,
+    turnTotal: 0,
+    toolCallTotal: 0,
+    totalCostUsd: 0,
+    tokenUsageLoadState: "idle",
+    tokenUsageLoadError: null,
+
+    modelBreakdown: [],
+    modelBreakdownLoadState: "idle",
+    modelBreakdownLoadError: null,
+
+    agentKindBreakdown: [],
+    agentKindBreakdownLoadState: "idle",
+    agentKindBreakdownLoadError: null,
+
+    workspaceInsights: null,
+    workspaceInsightsLoadState: "idle",
+    workspaceInsightsLoadError: null,
+
+    setTimeRange: (timeRange) => {
+      set({ timeRange });
+    },
+    setSelectedProjectId: (selectedProjectId) => {
+      set({ selectedProjectId });
+    },
+    setGranularity: (granularity) => {
+      set({ granularity });
+    },
+    setTokenUsageData: (
+      tokenUsageSeries,
+      grandTotal,
+      cachedTotal,
+      cachedWriteTotal,
+      uncachedTotal,
+      turnTotal,
+      toolCallTotal,
+      totalCostUsd,
+    ) => {
+      set({
+        tokenUsageSeries,
+        grandTotal,
+        cachedTotal,
+        cachedWriteTotal,
+        uncachedTotal,
+        turnTotal,
+        toolCallTotal,
+        totalCostUsd,
+      });
+    },
+    setTokenUsageLoadState: (tokenUsageLoadState, tokenUsageLoadError = null) => {
+      set({ tokenUsageLoadState, tokenUsageLoadError });
+    },
+    setModelBreakdown: (modelBreakdown) => {
+      set({ modelBreakdown });
+    },
+    setModelBreakdownLoadState: (modelBreakdownLoadState, modelBreakdownLoadError = null) => {
+      set({ modelBreakdownLoadState, modelBreakdownLoadError });
+    },
+    setAgentKindBreakdown: (agentKindBreakdown) => {
+      set({ agentKindBreakdown });
+    },
+    setAgentKindBreakdownLoadState: (agentKindBreakdownLoadState, agentKindBreakdownLoadError = null) => {
+      set({ agentKindBreakdownLoadState, agentKindBreakdownLoadError });
+    },
+    setWorkspaceInsights: (workspaceInsights) => {
+      set({ workspaceInsights });
+    },
+    setWorkspaceInsightsLoadState: (workspaceInsightsLoadState, workspaceInsightsLoadError = null) => {
+      set({ workspaceInsightsLoadState, workspaceInsightsLoadError });
+    },
+  })),
+);

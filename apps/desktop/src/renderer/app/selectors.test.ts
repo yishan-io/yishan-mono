@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 
+import { gitProjectionStore } from "@renderer/domains/git";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { describe, expect, it } from "vitest";
-import { projectStore } from "../features/project/state/projectStore";
-import { workspaceProjectionStore } from "../features/workspace/state/workspaceProjectionStore";
+import { projectStore } from "../domains/project/state/projectStore";
+import { workspaceStore } from "../domains/workspace/state/workspaceStore";
 import {
-  selectWorkspacePaneVisibility,
   selectLastUsedExternalAppId,
   selectProjectTree,
   selectSelectedWorkspaceWithProject,
   selectWorkspaceProjection,
 } from "./selectors";
-import { workspaceStore } from "../features/workspace/state/workspaceStore";
 
 describe("composed selectors", () => {
   it("joins projects + workspaces", () => {
@@ -28,6 +28,9 @@ describe("composed selectors", () => {
 
   it("resolves the selected workspace with its project", () => {
     projectStore.setState({ projects: [{ id: "repo-1", name: "Repo 1" }] });
+    workbenchNavigationStore.setState({
+      activeWorkspaceId: "ws-1",
+    });
     workspaceStore.setState({
       workspaces: [
         {
@@ -41,7 +44,6 @@ describe("composed selectors", () => {
           summaryId: "ws-1",
         },
       ],
-      selectedWorkspaceId: "ws-1",
     });
 
     const model = selectSelectedWorkspaceWithProject();
@@ -50,7 +52,7 @@ describe("composed selectors", () => {
   });
 
   it("returns the projection slice for one workspace", () => {
-    workspaceProjectionStore.setState({
+    gitProjectionStore.setState({
       pullRequestByWorkspaceId: { "ws-1": { number: 42 } },
       currentBranchByWorkspaceId: { "ws-1": "feature/a" },
       gitChangeTotalsByWorkspaceId: { "ws-1": { additions: 1, deletions: 2 } },
@@ -66,24 +68,5 @@ describe("composed selectors", () => {
   it("reads the last-used external app id from the project store", () => {
     projectStore.setState({ lastUsedExternalAppId: "cursor" });
     expect(selectLastUsedExternalAppId()).toBe("cursor");
-  });
-
-  it("composes workspace pane collapsed flags from the three store slices", () => {
-    expect(
-      selectWorkspacePaneVisibility({
-        leftHidden: true,
-        selectedWorkspaceId: "ws-1",
-        rightHiddenByWorkspaceId: { "ws-1": false },
-      }),
-    ).toEqual({ leftCollapsed: true, rightCollapsed: false });
-
-    // Unknown workspace defaults to collapsed right pane.
-    expect(
-      selectWorkspacePaneVisibility({
-        leftHidden: false,
-        selectedWorkspaceId: "ws-missing",
-        rightHiddenByWorkspaceId: {},
-      }),
-    ).toEqual({ leftCollapsed: false, rightCollapsed: true });
   });
 });

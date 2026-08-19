@@ -1,8 +1,9 @@
-import type { DesktopBridge, DesktopHostBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
+import { delay } from "@renderer/async/delay";
+import type { DesktopRpcEventEnvelope } from "../../main/ipc";
+import { getDesktopBridge, getDesktopHostBridge } from "../platform/hostBridge";
 import { DaemonClient } from "./daemonClient";
 import type { ApiNamespace } from "./daemonTypes";
-import { delay } from "./helpers";
-import type { ApiSubscriptionHandlers, DaemonRpcClient } from "./types";
+import type { ApiSubscriptionHandlers, DaemonRpcClient, DaemonTransport } from "./types";
 
 type DesktopRpcEventListener = (envelope: DesktopRpcEventEnvelope) => void;
 type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
@@ -214,25 +215,6 @@ function formatSubscriptionEventData(method: string, payload: unknown): unknown 
   return payload;
 }
 
-/** Returns one preload-provided desktop bridge object when available. */
-export function getDesktopBridge(): DesktopBridge | undefined {
-  if (typeof window === "undefined") {
-    return undefined;
-  }
-
-  return (window as typeof window & { __YISHAN__?: DesktopBridge }).__YISHAN__;
-}
-
-/** Returns one preload-provided desktop host bridge for shell-only capabilities. */
-export function getDesktopHostBridge(): DesktopHostBridge {
-  const host = getDesktopBridge()?.host;
-  if (!host) {
-    throw new Error("Desktop host bridge is unavailable.");
-  }
-
-  return host;
-}
-
 /** Invokes one daemon procedure directly over websocket. */
 export async function invokeDaemonProcedure(path: string, input?: unknown, timeoutMs?: number): Promise<unknown> {
   const parsed = parseProcedurePath(path);
@@ -348,48 +330,29 @@ function createRpcPathProxy(pathSegments: string[]): unknown {
 }
 
 /** Returns one cached dynamic API client for renderer commands. */
+/**
+ * Returns the raw transport core for Domain RPC adapters (desktop7 Phase 24).
+ * Domain Infrastructure is the only layer that may import this alongside
+ * app/events and app/runtime (Phase 27 rule); Domain commands use their own
+ * adapter over this transport.
+ */
+export async function getDaemonTransport(): Promise<DaemonTransport> {
+  const transportClient = await getDaemonTransportClient();
+  return transportClient.transport;
+}
+
+/**
+ * Returns the legacy composed client surface. Domain clients migrate to
+ * Domain Infrastructure one phase at a time (Phase 24: project/workspace,
+ * Phase 25: file/git/terminal); this facade shrinks with each migration.
+ */
 export async function getDaemonClient(): Promise<DaemonRpcClient> {
   if (!daemonRpcClientPromise) {
     daemonRpcClientPromise = getDaemonTransportClient().then<DaemonRpcClient>((transportClient) => {
       const proxyClient = createRpcPathProxy([]) as DaemonRpcClient;
       return {
-        app: proxyClient.app,
-        computer: proxyClient.computer,
-        workspace: transportClient.workspace,
-        file: transportClient.file,
-        git: transportClient.git,
-        terminal: {
-          createSession: (input) => transportClient.terminal.createSession(input),
-          writeInput: transportClient.terminal.writeInput,
-          resize: transportClient.terminal.resize,
-          readOutput: transportClient.terminal.readOutput,
-          closeSession: transportClient.terminal.closeSession,
-          killProcess: transportClient.terminal.killProcess,
-          listDetectedPorts: transportClient.terminal.listDetectedPorts,
-          setActiveWorkspace: transportClient.terminal.setActiveWorkspace,
-          getResourceUsage: transportClient.terminal.getResourceUsage,
-          listSessions: transportClient.terminal.listSessions,
-          subscribeOutput: proxyClient.terminal.subscribeOutput,
-          subscribeSessions: proxyClient.terminal.subscribeSessions,
-        },
-        chat: proxyClient.chat,
-        agent: proxyClient.agent,
-        cliTools: proxyClient.cliTools,
-        integration: proxyClient.integration,
-        notification: proxyClient.notification,
         events: proxyClient.events,
-        skill: proxyClient.skill,
-        customize: proxyClient.customize,
-        memory: proxyClient.memory,
-        pi: proxyClient.pi,
-        project: transportClient.project,
         tokenUsage: transportClient.tokenUsage,
-        context: {
-          getState: () => transportClient.context.getState(),
-          setCurrentOrg: (orgId: string) => transportClient.context.setCurrentOrg(orgId),
-          setActiveProject: (projectId: string) => transportClient.context.setActiveProject(projectId),
-          setActiveFile: (filePath: string) => transportClient.context.setActiveFile(filePath),
-        },
       };
     });
     void daemonRpcClientPromise.then(() => {

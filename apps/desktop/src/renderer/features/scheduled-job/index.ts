@@ -1,4 +1,0 @@
-/**
- * ScheduledJob feature public API (Phase 12, desktop5.md).
- */
-export type { ScheduledJobCommands } from "./commands/contract";

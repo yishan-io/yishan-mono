@@ -1,8 +1,8 @@
+import { SettingsView } from "@renderer/domains/settings";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { WorkspaceOverlay } from "../../components/WorkspaceOverlay";
-import { SettingsView } from "../../features/settings/ui/SettingsView";
-import { AppShell } from "../../ui/layout/AppShell";
+import { AppShell } from "../features/app-menu/AppShell";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
+import { RouteOverlay } from "./RouteOverlay";
 
 /**
  * Application route tree — the single owner of route composition (Phase 11,
@@ -20,9 +20,9 @@ export function AppRoutes() {
             <Route
               path="settings"
               element={
-                <WorkspaceOverlay>
+                <RouteOverlay>
                   <SettingsView />
-                </WorkspaceOverlay>
+                </RouteOverlay>
               }
             />
           </Route>
