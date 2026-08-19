@@ -11,8 +11,8 @@
  * lands in the lazy chunk alongside the factory.
  */
 
+import { DiagramZoomOverlay } from "@renderer/domains/files";
 import { displaySettingsStore } from "@renderer/domains/settings";
-import { DiagramZoomOverlay } from "@renderer/ui/components/DiagramZoomOverlay";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type Vditor from "vditor";

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
+import { editorSettingsStore } from "@renderer/domains/settings";
 import type { FileDiffEntry } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { useImperativeHandle, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { editorSettingsStore } from "../../../../../domains/settings/state/editorSettingsStore";
-import { renderWithAppTheme } from "../../../../../testUtils/renderWithAppTheme";
+import { renderWithAppTheme } from "../../../../testUtils/renderWithAppTheme";
 import { MultiFileDiffViewer } from "./MultiFileDiffViewer";
 
 /** Captured options from the last CodeView render. */

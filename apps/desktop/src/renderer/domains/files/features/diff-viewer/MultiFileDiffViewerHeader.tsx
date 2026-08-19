@@ -1,6 +1,6 @@
 import { Box, IconButton, Typography } from "@mui/material";
 import { LuChevronDown, LuChevronRight, LuExternalLink } from "react-icons/lu";
-import { getFileTreeIcon } from "../../../ui/fileTreeIcons";
+import { getFileTreeIcon } from "../../ui/fileTreeIcons";
 import { getChangeKindLabel } from "./multiFileDiffViewerHelpers";
 
 type MultiFileDiffViewerHeaderProps = {

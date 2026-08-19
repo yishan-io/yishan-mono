@@ -1,9 +1,9 @@
 export { AudioPreview } from "./AudioPreview";
-export { DiffSearchPanel } from "../file-manager/DiffSearchPanel";
-export { FileDiffViewer } from "../diff-viewer/diff/FileDiffViewer";
+export { DiffSearchPanel } from "../diff-viewer/DiffSearchPanel";
+export { FileDiffViewer } from "../diff-viewer/FileDiffViewer";
 export { FileEditor } from "./FileEditor";
 export { FileQuickOpenDialog } from "../file-manager/FileQuickOpenDialog";
 export { ImagePreview } from "./ImagePreview";
-export { MultiFileDiffViewer } from "../diff-viewer/diff/MultiFileDiffViewer";
+export { MultiFileDiffViewer } from "../diff-viewer/MultiFileDiffViewer";
 export { UnsupportedFileView } from "./UnsupportedFileView";
 export { VideoPreview } from "./VideoPreview";

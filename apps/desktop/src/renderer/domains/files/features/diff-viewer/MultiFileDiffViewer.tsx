@@ -2,17 +2,17 @@ import { Box } from "@mui/material";
 import type { CodeViewDiffItem } from "@pierre/diffs";
 import { CodeView } from "@pierre/diffs/react";
 import type { CodeViewHandle } from "@pierre/diffs/react";
+import { getDiffCssVariablesForPalette } from "@renderer/domains/files";
 import { editorSettingsStore } from "@renderer/domains/settings";
+import { useCodeTheme } from "@renderer/domains/settings";
 import type { FileDiffEntry } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useCodeTheme } from "../../../../../domains/settings";
-import { MONO_FONT_FAMILY } from "../../../../../helpers/codeThemes";
-import { findDiffMatches } from "../../../../../helpers/diffSearch";
-import type { DiffMatch } from "../../../../../helpers/diffSearch";
-import { getDiffCssVariablesForPalette } from "../../../../../helpers/diffTheme";
-import { DiffSearchPanel } from "../../file-manager/DiffSearchPanel";
+import { MONO_FONT_FAMILY } from "../../../../helpers/codeThemes";
+import { DiffSearchPanel } from "./DiffSearchPanel";
 import { MultiFileDiffViewerHeader } from "./MultiFileDiffViewerHeader";
 import { MultiFileDiffViewerToolbar } from "./MultiFileDiffViewerToolbar";
+import { findDiffMatches } from "./diffSearch";
+import type { DiffMatch } from "./diffSearch";
 import {
   createCodeViewItems,
   createFileMetaByPath,

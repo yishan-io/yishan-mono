@@ -17,12 +17,9 @@
 
 /** Production root Helpers files at Phase 21 (25; 44 including tests). */
 export const ROOT_HELPERS_FILES = [
-  "helpers/binaryExtensions.ts",
   "helpers/clipboard.ts",
   "helpers/codeThemes.ts",
   "helpers/delay.ts",
-  "helpers/diffSearch.ts",
-  "helpers/diffTheme.ts",
   "helpers/editorLanguage.ts",
   "helpers/errorHelpers.ts",
   "helpers/excalidrawScene.ts",
@@ -77,8 +74,9 @@ export const ROOT_HELPERS_IMPORTERS = [
   "domains/browser/features/browse/hooks/useElementInspector.ts",
   "domains/files/commands/fileCommands.ts",
   "domains/files/infrastructure/daemonFileClient.ts",
-  "domains/files/features/diff-viewer/diff/FileDiffViewer.tsx",
-  "domains/files/features/diff-viewer/diff/MultiFileDiffViewer.tsx",
+  "domains/files/features/diff-viewer/FileDiffViewer.tsx",
+  "domains/files/ui/diffTheme.ts",
+  "domains/files/features/diff-viewer/MultiFileDiffViewer.tsx",
   "domains/files/features/file-editor/AudioPreview.tsx",
   "domains/files/features/file-editor/ExcalidrawFilePane.tsx",
   "domains/files/features/file-editor/FileEditor.tsx",

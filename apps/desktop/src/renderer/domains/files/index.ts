@@ -73,6 +73,8 @@ export {
   UnsupportedFileView,
   VideoPreview,
 } from "./features/file-editor/editors";
+export { DiagramZoomOverlay } from "./ui/DiagramZoomOverlay";
+export { getDiffCssVariablesForPalette } from "./ui/diffTheme";
 
 export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
 export { markdownService } from "./ui/markdown/markdownService";

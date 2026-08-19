@@ -1,11 +1,11 @@
 import { Box, Collapse } from "@mui/material";
 import { FileDiff } from "@pierre/diffs/react";
+import { getDiffCssVariablesForPalette } from "@renderer/domains/files";
 import { editorSettingsStore } from "@renderer/domains/settings";
 import { useMemo, useState } from "react";
 import { LuFilePlus2, LuPencil } from "react-icons/lu";
-import { MONO_FONT_FAMILY } from "../../../../../helpers/codeThemes";
-import { getDiffCssVariablesForPalette } from "../../../../../helpers/diffTheme";
 import { useCodeTheme } from "../../../../../domains/settings";
+import { MONO_FONT_FAMILY } from "../../../../../helpers/codeThemes";
 import { ToolDiffStats } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
