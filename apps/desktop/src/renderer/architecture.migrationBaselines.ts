@@ -116,7 +116,7 @@ export const ROOT_HELPERS_IMPORTERS = [
   "domains/scheduled-job/features/scheduled-job-create/CreateScheduledJobFormView.tsx",
   "domains/scheduled-job/features/scheduled-job-detail/ScheduledJobDetailView.tsx",
   "domains/scheduled-job/features/scheduled-job-detail/ScheduledJobRunsSidebar.tsx",
-  "domains/scheduled-job/features/scheduled-job-form/form/useScheduledJobFormState.ts",
+  "domains/scheduled-job/hooks/useScheduledJobFormState.ts",
   "domains/scheduled-job/features/scheduled-job-list/ScheduledJobView.tsx",
   "domains/scheduled-job/features/scheduled-job-update/EditScheduledJobDialogView.tsx",
   "domains/organization/features/manage-members/MemberSettingsView.tsx",

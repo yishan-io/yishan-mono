@@ -8,9 +8,9 @@ import type { CreateScheduledJobInput } from "../../../../domains/scheduled-job/
 import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
 import { useSelectedProjectId } from "@renderer/domains/workspace";
 import { getErrorMessage } from "../../../../helpers/errorHelpers";
-import { ScheduledJobFormFields } from "../scheduled-job-form/form/ScheduledJobFormFields";
-import { useScheduledJobFormState } from "../scheduled-job-form/form/useScheduledJobFormState";
-import { DEFAULT_FORM_DRAFT, SCHEDULED_JOB_AGENT_KIND } from "../scheduled-job-form/scheduledJobFormHelpers";
+import { useScheduledJobFormState, DEFAULT_FORM_DRAFT } from "../../hooks/useScheduledJobFormState";
+import { SCHEDULED_JOB_AGENT_KIND } from "../../model/scheduledJobScheduleRules";
+import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
 
 type CreateScheduledJobFormViewProps = {
   onCreated: () => void;

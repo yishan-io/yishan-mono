@@ -1,15 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { listOrgNodes } from "../../../../../domains/node";
-import { getErrorMessage } from "../../../../../helpers/errorHelpers";
+import { listOrgNodes } from "../../../domains/node";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   type ScheduleType,
-  type ScheduledJobFormDraft,
   computeNextRunEstimate,
   describeCronExpression,
   toCronExpression,
-} from "../scheduledJobFormHelpers";
+} from "../model/scheduledJobScheduleRules";
 
 type ScheduledJobFormProject = {
   id: string;
@@ -20,6 +19,25 @@ type ScheduledJobFormNode = {
   name: string;
   scope: "private" | "shared";
   canUse: boolean;
+};
+
+/** Composed scheduled-job input draft shared by create/edit wrappers. */
+export type ScheduledJobFormDraft = {
+  name: string;
+  projectId: string;
+  nodeId: string;
+  cronExpression: string;
+  prompt: string;
+  timezone: string;
+};
+
+export const DEFAULT_FORM_DRAFT: ScheduledJobFormDraft = {
+  name: "",
+  projectId: "",
+  nodeId: "",
+  cronExpression: "0 9 * * 1-5",
+  prompt: "",
+  timezone: "UTC",
 };
 
 /** Shared scheduled-job form state that can be restored or reused by wrapper views. */

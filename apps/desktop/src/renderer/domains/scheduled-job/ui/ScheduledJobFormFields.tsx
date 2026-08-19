@@ -15,14 +15,31 @@ import { renderProjectIcon } from "@renderer/domains/project";
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock3, LuCloud, LuGlobe, LuServer } from "react-icons/lu";
-import { VirtualizedListbox } from "../../../../../ui/components/VirtualizedListbox";
-import {
-  SCHEDULE_TYPE_OPTIONS,
-  type ScheduleType,
-  type ScheduledJobFormDraft,
-  TIMEZONE_OPTIONS,
-  WEEKDAY_OPTIONS,
-} from "../scheduledJobFormHelpers";
+import { VirtualizedListbox } from "../../../ui/components/VirtualizedListbox";
+import type { ScheduleType } from "../model/scheduledJobScheduleRules";
+import type { ScheduledJobFormDraft } from "../hooks/useScheduledJobFormState";
+
+/** IANA timezone names supported by the current JS runtime. */
+export const TIMEZONE_OPTIONS: string[] =
+  typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"];
+
+export const SCHEDULE_TYPE_OPTIONS: { value: ScheduleType; labelKey: string }[] = [
+  { value: "daily", labelKey: "scheduledJob.form.scheduleTypes.daily" },
+  { value: "weekly", labelKey: "scheduledJob.form.scheduleTypes.weekly" },
+  { value: "weekday", labelKey: "scheduledJob.form.scheduleTypes.weekday" },
+  { value: "hourly", labelKey: "scheduledJob.form.scheduleTypes.hourly" },
+  { value: "custom", labelKey: "scheduledJob.form.scheduleTypes.custom" },
+];
+
+export const WEEKDAY_OPTIONS = [
+  { value: "1", labelKey: "scheduledJob.form.weekdays.monday" },
+  { value: "2", labelKey: "scheduledJob.form.weekdays.tuesday" },
+  { value: "3", labelKey: "scheduledJob.form.weekdays.wednesday" },
+  { value: "4", labelKey: "scheduledJob.form.weekdays.thursday" },
+  { value: "5", labelKey: "scheduledJob.form.weekdays.friday" },
+  { value: "6", labelKey: "scheduledJob.form.weekdays.saturday" },
+  { value: "0", labelKey: "scheduledJob.form.weekdays.sunday" },
+];
 
 type ScheduledJobProjectOption = { id: string; name: string; icon?: string | null; color?: string | null };
 type ScheduledJobNodeOption = { id: string; name: string; scope: "private" | "shared" };

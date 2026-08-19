@@ -1,61 +1,17 @@
 import type { AgentKind } from "@yishan-io/core";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+/**
+ * Scheduled-job schedule rules (desktop7 Phase 26).
+ *
+ * Stable Domain semantics: the fixed agent kind for scheduled jobs and the
+ * 5-field cron expression rules (parse / infer / describe / next-run).
+ * Form presentation constants live with the form UI/hook, not here.
+ */
 
 /** Only Pi is supported for scheduled jobs — the agent list is intentionally removed. */
 export const SCHEDULED_JOB_AGENT_KIND: AgentKind = "pi";
 
-export type ScheduledJobFormDraft = {
-  name: string;
-  projectId: string;
-  nodeId: string;
-  cronExpression: string;
-  prompt: string;
-  timezone: string;
-};
-
 export type ScheduleType = "daily" | "weekly" | "weekday" | "hourly" | "custom";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** IANA timezone names supported by the current JS runtime. */
-export const TIMEZONE_OPTIONS: string[] =
-  typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"];
-
-export const SCHEDULE_TYPE_OPTIONS: { value: ScheduleType; labelKey: string }[] = [
-  { value: "daily", labelKey: "scheduledJob.form.scheduleTypes.daily" },
-  { value: "weekly", labelKey: "scheduledJob.form.scheduleTypes.weekly" },
-  { value: "weekday", labelKey: "scheduledJob.form.scheduleTypes.weekday" },
-  { value: "hourly", labelKey: "scheduledJob.form.scheduleTypes.hourly" },
-  { value: "custom", labelKey: "scheduledJob.form.scheduleTypes.custom" },
-];
-
-export const WEEKDAY_OPTIONS = [
-  { value: "1", labelKey: "scheduledJob.form.weekdays.monday" },
-  { value: "2", labelKey: "scheduledJob.form.weekdays.tuesday" },
-  { value: "3", labelKey: "scheduledJob.form.weekdays.wednesday" },
-  { value: "4", labelKey: "scheduledJob.form.weekdays.thursday" },
-  { value: "5", labelKey: "scheduledJob.form.weekdays.friday" },
-  { value: "6", labelKey: "scheduledJob.form.weekdays.saturday" },
-  { value: "0", labelKey: "scheduledJob.form.weekdays.sunday" },
-];
-
-export const DEFAULT_FORM_DRAFT: ScheduledJobFormDraft = {
-  name: "",
-  projectId: "",
-  nodeId: "",
-  cronExpression: "0 9 * * 1-5",
-  prompt: "",
-  timezone: "UTC",
-};
-
-// ---------------------------------------------------------------------------
-// Cron helpers
-// ---------------------------------------------------------------------------
 
 /** Converts schedule UI state to a 5-field cron expression. */
 export function toCronExpression(scheduleType: ScheduleType, scheduleTime: string, weeklyDay: string): string {
