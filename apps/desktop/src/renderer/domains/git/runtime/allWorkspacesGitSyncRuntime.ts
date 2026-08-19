@@ -1,5 +1,5 @@
-import { supportsGitFeatures } from "@renderer/domains/project";
-import { getProjects } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
+
 /**
  * All-workspaces git sync runtime (desktop6-adjust.md W4).
  *
@@ -102,7 +102,7 @@ export function createAllWorkspacesGitSyncRuntime() {
     const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
     const lastSeen = lastSeenVersionByWorktreePath;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
-    const projectByProjectId = new Map(getProjects().map((project) => [project.id, project]));
+    const projectByProjectId = new Map(projectStore.getState().projects.map((project) => [project.id, project]));
 
     for (const workspaceId of refreshStateByWorkspaceId.keys()) {
       if (!activeWorkspaceIds.has(workspaceId)) {

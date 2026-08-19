@@ -21,18 +21,36 @@ function overviewQueryString(input: OverviewQueryInput & { granularity?: string 
 }
 
 /** Fetches the org's token-usage series from the api-service (remote aggregate). */
-export async function getOverviewTokenUsage(orgId: string, input: TokenUsageQueryInput): Promise<OverviewTokenUsageResponse> {
+export async function getOverviewTokenUsage(
+  orgId: string,
+  input: TokenUsageQueryInput,
+): Promise<OverviewTokenUsageResponse> {
   return requestJson<OverviewTokenUsageResponse>(`/orgs/${orgId}/overview/token-usage?${overviewQueryString(input)}`);
 }
 
-export async function getOverviewModelBreakdown(orgId: string, input: OverviewQueryInput): Promise<{ models: ModelBreakdownItem[] }> {
-  return requestJson<{ models: ModelBreakdownItem[] }>(`/orgs/${orgId}/overview/model-breakdown?${overviewQueryString(input)}`);
+export async function getOverviewModelBreakdown(
+  orgId: string,
+  input: OverviewQueryInput,
+): Promise<{ models: ModelBreakdownItem[] }> {
+  return requestJson<{ models: ModelBreakdownItem[] }>(
+    `/orgs/${orgId}/overview/model-breakdown?${overviewQueryString(input)}`,
+  );
 }
 
-export async function getOverviewAgentKindBreakdown(orgId: string, input: OverviewQueryInput): Promise<{ agentKinds: AgentKindBreakdownItem[] }> {
-  return requestJson<{ agentKinds: AgentKindBreakdownItem[] }>(`/orgs/${orgId}/overview/agent-kind-breakdown?${overviewQueryString(input)}`);
+export async function getOverviewAgentKindBreakdown(
+  orgId: string,
+  input: OverviewQueryInput,
+): Promise<{ agentKinds: AgentKindBreakdownItem[] }> {
+  return requestJson<{ agentKinds: AgentKindBreakdownItem[] }>(
+    `/orgs/${orgId}/overview/agent-kind-breakdown?${overviewQueryString(input)}`,
+  );
 }
 
-export async function getOverviewWorkspaceInsights(orgId: string, input: OverviewQueryInput): Promise<WorkspaceInsightsResult> {
-  return requestJson<WorkspaceInsightsResult>(`/orgs/${orgId}/overview/workspace-insights?${overviewQueryString(input)}`);
+export async function getOverviewWorkspaceInsights(
+  orgId: string,
+  input: OverviewQueryInput,
+): Promise<WorkspaceInsightsResult> {
+  return requestJson<WorkspaceInsightsResult>(
+    `/orgs/${orgId}/overview/workspace-insights?${overviewQueryString(input)}`,
+  );
 }

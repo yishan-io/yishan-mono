@@ -1,4 +1,4 @@
-import { getProjectById } from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import { removeRightPaneStateForWorkspace } from "@renderer/domains/workbench";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
@@ -94,7 +94,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   }
 
   const projectId = workspace.projectId ?? workspace.repoId;
-  const project = getProjectById(projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
 
   store.removeWorkspace({
     repoId: projectId,

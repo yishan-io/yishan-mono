@@ -203,25 +203,41 @@ vi.mock("@renderer/domains/project", async () => {
   // paths (async factory avoids the project<->workspace index cycle).
   const sharedWorkspace = await import("@shared/workspace/localFolderProjectId");
   const projectRules = await import("../../../domains/project/projectRules");
-  const projectStateReads = await import("../../../domains/project/state/projectStateReads");
-  const projectReadHooks = await import("../../../domains/project/hooks/useProjectReadHooks");
-  const projectActions = await import("../../../domains/project/state/projectStateMutations");
   const projectDeletionFlow = await import("../../../domains/project/features/project-delete/useProjectDeletionFlow");
   const projectDeleteDialog = await import("../../../domains/project/features/project-delete/ProjectDeleteDialogView");
+  const projectStore = (
+    selector: (state: {
+      projects: unknown[];
+      displayProjectIds: string[];
+      lastUsedExternalAppId?: string;
+    }) => unknown,
+  ) =>
+    selector({
+      projects: mocked.stateRef.current.projects ?? [],
+      displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+      lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
+    });
+  (
+    projectStore as unknown as {
+      getState: () => {
+        projects: unknown[];
+        displayProjectIds: string[];
+        lastUsedExternalAppId?: string;
+        setLastUsedExternalAppId: (appId: string) => void;
+      };
+    }
+  ).getState = () => ({
+    projects: mocked.stateRef.current.projects ?? [],
+    displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+    lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
+    setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
+  });
   return {
     deleteProject: mocked.deleteProject,
     LOCAL_FOLDER_PROJECT_ID: sharedWorkspace.LOCAL_FOLDER_PROJECT_ID,
+    projectStore,
     supportsGitFeatures: projectRules.supportsGitFeatures,
     filterVisibleProjects: projectRules.filterVisibleProjects,
-    getProjectById: projectStateReads.getProjectById,
-    getProjectDisplayIds: projectStateReads.getProjectDisplayIds,
-    getProjects: projectStateReads.getProjects,
-    useProjects: projectReadHooks.useProjects,
-    useDisplayProjectIds: projectReadHooks.useDisplayProjectIds,
-    useWorkspaceListHierarchyMode: projectReadHooks.useWorkspaceListHierarchyMode,
-    useLastUsedExternalAppId: projectReadHooks.useLastUsedExternalAppId,
-    setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
-    setWorkspaceListHierarchyMode: projectActions.setWorkspaceListHierarchyMode,
     renderProjectIcon: () => "R",
     ProjectDeleteDialogView: projectDeleteDialog.ProjectDeleteDialogView,
     useProjectDeletionFlow: projectDeletionFlow.useProjectDeletionFlow,

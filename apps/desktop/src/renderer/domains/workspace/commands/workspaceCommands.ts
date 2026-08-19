@@ -5,10 +5,9 @@ import {
   requestUndo,
 } from "@renderer/domains/files";
 import { renameGitBranch } from "@renderer/domains/git";
-import { supportsGitFeatures } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
-import { setDisplayProjectIds as applyDisplayProjectIds } from "@renderer/domains/project";
-import { getProjectById, getProjectDisplayIds, getProjects } from "@renderer/domains/project";
+
 import {
   DEFAULT_RIGHT_PANE_TAB,
   type WorkspaceRightPaneTab,
@@ -62,8 +61,8 @@ export function subscribeOpenCreateWorkspaceDialog(
 
 /** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */
 export function setDisplayRepoIds(repoIds: string[]) {
-  const previousDisplayIds = getProjectDisplayIds();
-  applyDisplayProjectIds(repoIds);
+  const previousDisplayIds = projectStore.getState().displayProjectIds;
+  projectStore.getState().setDisplayProjectIds(repoIds);
 
   const repoIdSet = new Set(repoIds);
   const prevSet = new Set(previousDisplayIds);
@@ -133,7 +132,10 @@ export function openCreateWorkspaceDialog() {
   const selectedProjectId = workbenchNavigationStore.getState().activeProjectId.trim();
   const selectedWorkspaceProjectId = selectedWorkspace?.projectId;
   const selectedWorkspaceRepoId = selectedWorkspace?.repoId;
-  const fallbackProjectId = filterVisibleProjects(getProjects(), getProjectDisplayIds())[0]?.id;
+  const fallbackProjectId = filterVisibleProjects(
+    projectStore.getState().projects,
+    projectStore.getState().displayProjectIds,
+  )[0]?.id;
   const projectId = selectedProjectId || selectedWorkspaceProjectId || selectedWorkspaceRepoId || fallbackProjectId;
 
   if (!projectId) {
@@ -141,7 +143,7 @@ export function openCreateWorkspaceDialog() {
   }
 
   // Non-git projects have no worktrees: never surface the create dialog.
-  const project = getProjectById(projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }

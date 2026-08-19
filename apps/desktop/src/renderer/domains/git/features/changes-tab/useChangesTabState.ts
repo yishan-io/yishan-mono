@@ -1,4 +1,4 @@
-import { supportsGitFeatures, useProjects } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
@@ -53,7 +53,7 @@ export function useChangesTabState() {
   // (replaces the former app/selectors hook; Domains plan D10).
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const selectedWorkspace = workspaceStore((state) => state.workspaces.find((w) => w.id === selectedWorkspaceId));
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const selectedProject = selectedWorkspace
     ? projects.find((p) => p.id === (selectedWorkspace.projectId ?? selectedWorkspace.repoId))
     : undefined;

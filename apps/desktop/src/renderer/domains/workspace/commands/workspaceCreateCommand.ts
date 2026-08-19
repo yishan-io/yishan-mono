@@ -1,4 +1,4 @@
-import { getProjectById } from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
@@ -108,7 +108,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  const project = getProjectById(projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
   const organizationId = selectSelectedOrganizationId()?.trim() || "";
 
   const repoKey = project?.repoKey?.trim() || project?.key?.trim() || project?.id || "";

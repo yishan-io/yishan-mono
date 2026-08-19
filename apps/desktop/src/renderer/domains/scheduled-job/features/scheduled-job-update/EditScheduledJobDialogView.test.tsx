@@ -25,7 +25,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("../../commands/scheduledJobCommands", () => ({
-    updateScheduledJob: mocked.updateScheduledJob,
+  updateScheduledJob: mocked.updateScheduledJob,
 }));
 
 vi.mock("../../../domains/workbench", () => ({

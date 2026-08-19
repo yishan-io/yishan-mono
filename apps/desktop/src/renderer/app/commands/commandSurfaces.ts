@@ -1,3 +1,4 @@
+import type { ExternalAppId } from "@shared/contracts/externalApps";
 /**
  * App command surfaces (desktop8 Phase 33: split from composition.ts).
  *
@@ -80,7 +81,6 @@ import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   type inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  type setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
   type updateProjectConfig as updateProjectConfigCommand,
 } from "@renderer/domains/project";
 import type {
@@ -193,7 +193,7 @@ export type WorkspaceCommandSurface = {
   activateProject: typeof activateProjectCommand;
   activateWorkspace: typeof activateWorkspaceCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
-  setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
+  setLastUsedExternalAppId: (appId: ExternalAppId) => void;
   toggleLeftPaneVisibility: typeof toggleLeftPaneVisibilityCommand;
   toggleRightPaneVisibility: typeof toggleRightPaneVisibilityCommand;
   activateWorkspacePane: typeof activateWorkspacePaneCommand;

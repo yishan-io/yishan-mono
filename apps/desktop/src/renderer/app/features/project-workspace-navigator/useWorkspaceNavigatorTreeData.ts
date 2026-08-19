@@ -2,12 +2,7 @@ import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 import { useWorkspaceAgentStatusByWorkspaceId, useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
 import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/domains/git";
 import { listOrgNodes } from "@renderer/domains/node";
-import {
-  filterVisibleProjects,
-  supportsGitFeatures,
-  useDisplayProjectIds,
-  useProjects,
-} from "@renderer/domains/project";
+import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { useSelectedOrganizationId } from "@renderer/domains/session";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/domains/workspace";
@@ -61,9 +56,9 @@ export function useWorkspaceNavigatorTreeData(input: {
     workspaceListHierarchyMode,
   } = input;
 
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const workspaces = useWorkspaces() ?? [];
-  const displayProjectIds = useDisplayProjectIds();
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const gitChangeTotalsByWorkspaceId = useWorkspaceGitChangeTotalsByWorkspaceId();
   const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
   const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();

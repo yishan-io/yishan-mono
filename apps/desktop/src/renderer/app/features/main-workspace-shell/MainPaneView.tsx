@@ -12,8 +12,8 @@ import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
 import { FileSearchOverlay } from "@renderer/domains/files";
 import { getFileTreeIcon } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
-import { useLastUsedExternalAppId } from "@renderer/domains/project";
-import { supportsGitFeatures } from "@renderer/domains/project";
+
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/domains/terminal";
 import {
   DEFAULT_RIGHT_PANE_TAB,
@@ -70,7 +70,7 @@ export function MainPaneView() {
     () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
     [workbenchCommands, fileCommands, gitCommands],
   );
-  const lastUsedExternalAppId = useLastUsedExternalAppId();
+  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
   const externalAppLabel = lastUsedExternalAppPreset
     ? `Open in ${lastUsedExternalAppPreset.label}`

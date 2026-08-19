@@ -1,5 +1,5 @@
 import { recordWorkspaceUnreadNotification, setWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
-import { getProjectById } from "@renderer/domains/project";
+
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { selectWorkspaces } from "@renderer/domains/workspace";
@@ -26,6 +26,7 @@ import {
 } from "../../../domains/notification/commands/notificationCommands";
 
 import { parseObserverSessionKey, recordAgentObserverStatus } from "@renderer/domains/agent";
+import { projectStore } from "@renderer/domains/project";
 
 const NOTIFICATION_EFFECT_DEDUPE_WINDOW_MS = 1_500;
 
@@ -282,7 +283,10 @@ export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependenc
       return undefined;
     }
 
-    const projectName = getProjectById(workspace?.projectId ?? "")?.name?.trim();
+    const projectName = projectStore
+      .getState()
+      .projects.find((item) => item.id === (workspace?.projectId ?? ""))
+      ?.name?.trim();
     return projectName ? `${projectName} / ${workspaceName}` : workspaceName;
   },
 };

@@ -1,6 +1,7 @@
 import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useGitAuthorName } from "@renderer/domains/git";
-import { useProjects } from "@renderer/domains/project";
+
+import { projectStore } from "@renderer/domains/project";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsCompactTextField } from "../../../../ui/components/SettingsCompactControls";
@@ -21,7 +22,7 @@ const PREVIEW_BRANCH_SUFFIX = "dev-123-settings-polish";
  */
 export function GitWorkspaceSettingsView() {
   const { t } = useTranslation();
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const selectedProjectId = useSelectedProjectId();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);

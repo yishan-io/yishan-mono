@@ -1,5 +1,5 @@
-import type { VoiceTranscriptionResponse, VoiceTranscriptionUsageRecord } from "@renderer/api/types";
 import { requestJson } from "@renderer/api/restClient";
+import type { VoiceTranscriptionResponse, VoiceTranscriptionUsageRecord } from "@renderer/api/types";
 
 function getAudioFormat(audio: Blob): "webm" | "wav" | "mp4" | "ogg" | "m4a" {
   if (audio.type.includes("wav")) {

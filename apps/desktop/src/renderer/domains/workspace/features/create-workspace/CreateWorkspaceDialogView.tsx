@@ -1,9 +1,9 @@
 import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
 import { listAgentModels } from "@renderer/domains/agent";
 import { listGitBranches } from "@renderer/domains/git";
-import { supportsGitFeatures } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
-import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
+
 import { getRendererPlatform } from "@renderer/platform/platform";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,8 +33,8 @@ export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWo
   const navigate = useNavigate();
   const organizationId = useSelectedOrganizationId();
   const daemonId = useDaemonId();
-  const projects = useProjects();
-  const displayProjectIds = useDisplayProjectIds();
+  const projects = projectStore((state) => state.projects);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);
   const { prefixMode, customPrefix } = useWorkspaceBranchPrefixSettings();
 

@@ -1,5 +1,6 @@
 import { reloadWebview } from "@renderer/domains/browser";
-import { getLastUsedExternalAppId } from "@renderer/domains/project";
+
+import { projectStore } from "@renderer/domains/project";
 import { activateWorkspace } from "@renderer/domains/workbench";
 import { requestTabFocus } from "@renderer/domains/workbench";
 import { ACTIONS } from "../../shared/contracts/actions";
@@ -284,7 +285,7 @@ export function executeShortcutTarget(context: ShortContext, event: KeyboardEven
 
     void context.commands.openEntryInExternalApp({
       workspaceWorktreePath,
-      appId: getLastUsedExternalAppId() ?? SYSTEM_FILE_MANAGER_APP_ID,
+      appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
     });
     event.preventDefault();
     return true;

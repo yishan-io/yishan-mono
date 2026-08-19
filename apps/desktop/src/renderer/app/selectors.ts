@@ -10,13 +10,8 @@ import type { WorkspaceProjectRecord } from "@renderer/domains/project";
  * Each selector reads current state via Domain public getters and returns a
  * derived value; callers wrap in useMemo when subscribing.
  */
-import {
-  getLastUsedExternalAppId,
-  getProjectDisplayIds,
-  getProjects,
-  getWorkspaceListHierarchyMode,
-  useProjects,
-} from "@renderer/domains/project";
+
+import { projectStore } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { layoutStore } from "@renderer/domains/workbench";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
@@ -33,7 +28,7 @@ export function selectProjectTree(): {
   workspaces: WorkspaceItem[];
 } {
   return {
-    projects: getProjects(),
+    projects: projectStore.getState().projects,
     workspaces: workspaceStore.getState().workspaces,
   };
 }
@@ -46,8 +41,8 @@ export function selectWorkspaceList(): {
 } {
   return {
     workspaces: workspaceStore.getState().workspaces,
-    displayProjectIds: getProjectDisplayIds(),
-    workspaceListHierarchyMode: getWorkspaceListHierarchyMode(),
+    displayProjectIds: projectStore.getState().displayProjectIds,
+    workspaceListHierarchyMode: projectStore.getState().workspaceListHierarchyMode,
   };
 }
 
@@ -63,7 +58,7 @@ export function selectSelectedWorkspaceWithProject(): {
     (w) => w.id === workbenchNavigationStore.getState().activeWorkspaceId,
   );
   const selectedProject = selectedWorkspace
-    ? getProjects().find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
+    ? projectStore.getState().projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
     : undefined;
   return {
     selectedWorkspace,
@@ -94,7 +89,7 @@ export function useSelectedWorkspaceWithProject(): ReturnType<typeof selectSelec
   const selectedWorkspaceId = useWorkspaceSelectedId();
   const selectedProjectId = useProjectStoreSelectedProjectId();
   const selectedWorkspace = workspaceStore((s) => s.workspaces.find((w) => w.id === selectedWorkspaceId));
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const selectedProject = selectedWorkspace
     ? projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
     : undefined;

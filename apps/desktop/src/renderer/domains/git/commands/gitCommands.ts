@@ -1,6 +1,6 @@
 import { readDiff as readWorkspaceFileDiff } from "@renderer/domains/files";
-import { supportsGitFeatures } from "@renderer/domains/project";
-import { getProjectById } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
+
 import { selectWorkspaces } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
 import type { GitChangesBySection } from "../infrastructure/daemonGitClient";
@@ -60,7 +60,9 @@ export async function listGitChanges(params: { workspaceId: string }) {
   // hitting the daemon guard, which would surface a noisy RPC error from
   // mount-time consumers (file-tree badges, changes tab).
   const workspace = selectWorkspaces().find((item) => item.id === workspaceId);
-  const project = getProjectById(workspace?.projectId ?? workspace?.repoId);
+  const project = projectStore
+    .getState()
+    .projects.find((item) => item.id === (workspace?.projectId ?? workspace?.repoId));
   if (isFolderWorkspace(workspace) || !supportsGitFeatures(project?.sourceType)) {
     return { staged: [], unstaged: [], untracked: [] };
   }

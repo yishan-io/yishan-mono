@@ -1,5 +1,6 @@
 import { Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { useProjects } from "@renderer/domains/project";
+
+import { projectStore } from "@renderer/domains/project";
 import { useSelectedProjectId } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMutation } from "@tanstack/react-query";
@@ -27,7 +28,7 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
   const orgId = useSelectedOrganizationId();
   const daemonId = useDaemonId();
   const selectedProjectId = useSelectedProjectId();
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const initialState = useMemo(
     () => ({ draft: { ...DEFAULT_FORM_DRAFT, projectId: selectedProjectId ?? "" }, ...createScheduleState }),
     [selectedProjectId],

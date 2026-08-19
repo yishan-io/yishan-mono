@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { NotificationSettingsView as NotificationSettingsPanel } from "./NotificationSettingsView";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NotificationSettingsView as NotificationSettingsPanel } from "./NotificationSettingsView";
 
 const mocked = vi.hoisted(() => ({
   getNotificationPreferencesMock: vi.fn(),

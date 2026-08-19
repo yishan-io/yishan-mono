@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } from "../../commands/terminalCommands";
 
-import { useProjects } from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import { useWorkspaces } from "@renderer/domains/workspace";
 import { MONOSPACE_SX } from "@renderer/ui/typography";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
@@ -84,7 +84,7 @@ function resolveSessionLocationLabel(input: {
 /** Renders one settings panel for globally listing and managing terminal sessions. */
 export function TerminalSettingsView() {
   const { t } = useTranslation();
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const workspaces = useWorkspaces();
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);

@@ -1,10 +1,10 @@
 /**
  * Project Domain public API (Domains plan D6).
  *
- * Exports the stable command surface, project models, the public State
- * surface (selectors + mutations), and the read-only React hooks. The raw
- * project Store stays internal; cross-Domain code imports project through
- * this file only.
+ * Exports the stable command surface, project models, and the project Store
+ * as the public State API. External code reads with `projectStore.getState()`,
+ * subscribes with `projectStore(selector)`, and calls public actions with
+ * `projectStore.getState().action()` — imported from this file only.
  */
 export { filterVisibleProjects, isGitProject, supportsGitFeatures } from "./projectRules";
 export type {
@@ -29,28 +29,7 @@ export type {
   ProjectListModePreference,
   ProjectListPreference,
 } from "./daemon/projectDaemonClient";
-export {
-  getLastUsedExternalAppId,
-  getOrganizationPreferencesById,
-  getProjectById,
-  getProjectDisplayIds,
-  getProjects,
-  getWorkspaceListHierarchyMode,
-} from "./state/projectStateReads";
-export {
-  loadProjects,
-  setDisplayProjectIds,
-  setLastUsedExternalAppId,
-  setWorkspaceListHierarchyMode,
-} from "./state/projectStateMutations";
-export { useProjectLastUsedExternalAppId } from "./hooks/useProjectLastUsedExternalAppId";
-export {
-  useDisplayProjectIds,
-  useIsProjectsLoaded,
-  useLastUsedExternalAppId,
-  useProjects,
-  useWorkspaceListHierarchyMode,
-} from "./hooks/useProjectReadHooks";
+export { projectStore, type ProjectStoreState } from "./state/projectStore";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 // The combined Project/Node/Workspace navigator moved to

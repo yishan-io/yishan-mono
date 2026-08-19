@@ -1,6 +1,6 @@
 import { keybindingSettingsStore } from "@renderer/domains/settings";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { useIsPopupOpen } from "@renderer/domains/workbench";
+import { popupStore } from "@renderer/domains/workbench";
 import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { useEffect, useMemo, useRef } from "react";
@@ -22,7 +22,7 @@ export function useShortcuts(): void {
   const workspaceStoreState = workspaceStore((state) => state);
   const activeWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const splitPaneStoreState = splitPaneStore((state) => state);
-  const isPopupOpen = useIsPopupOpen();
+  const isPopupOpen = popupStore((state) => state.isPopupOpen);
   const commands = useCommands();
   const overridesById = keybindingSettingsStore((state) => state.overridesById);
   const isCaptureActive = keybindingSettingsStore((state) => state.isCaptureActive);

@@ -1,5 +1,6 @@
 import { Alert, Box, Button, CircularProgress, Paper, Typography } from "@mui/material";
-import { useProjects } from "@renderer/domains/project";
+
+import { projectStore } from "@renderer/domains/project";
 import { PaneHeader } from "@renderer/domains/workbench";
 import { PaneToggleButton } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
@@ -43,7 +44,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const agentKindBreakdownLoadError = overviewStore((state) => state.agentKindBreakdownLoadError);
   const workspaceInsightsLoadState = overviewStore((state) => state.workspaceInsightsLoadState);
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
 
   useEffect(() => {
     void loadAllOverviewData();

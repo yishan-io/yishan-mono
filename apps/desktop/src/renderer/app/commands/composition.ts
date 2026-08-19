@@ -73,7 +73,7 @@ import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
+  projectStore,
   updateProjectConfig as updateProjectConfigCommand,
 } from "@renderer/domains/project";
 import {
@@ -207,7 +207,7 @@ export function createWorkspaceCommands(): WorkspaceCommandSurface {
     activateProject: activateProjectCommand,
     activateWorkspace: activateWorkspaceCommand,
     setDisplayRepoIds: setDisplayRepoIdsCommand,
-    setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
+    setLastUsedExternalAppId: projectStore.getState().setLastUsedExternalAppId,
     toggleLeftPaneVisibility: toggleLeftPaneVisibilityCommand,
     toggleRightPaneVisibility: toggleRightPaneVisibilityCommand,
     activateWorkspacePane: activateWorkspacePaneCommand,

@@ -2,6 +2,7 @@
 
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { describe, expect, it, vi } from "vitest";
+import type { GitLineChange } from "../../../model/gitGutterDiff";
 import {
   GUTTER_ADDED_CLASS,
   GUTTER_DELETED_CLASS,
@@ -10,7 +11,6 @@ import {
   getGutterClassName,
   getRulerColor,
 } from "./gitGutterDecorations";
-import type { GitLineChange } from "../../../model/gitGutterDiff";
 
 vi.mock("../../../infrastructure/monacoSetup", () => ({
   monaco: {

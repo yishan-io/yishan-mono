@@ -1,9 +1,10 @@
 import { listFiles, listFilesBatch } from "@renderer/domains/files/commands/fileCommands";
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
-import { setLastUsedExternalAppId } from "@renderer/domains/project";
+
 import { closeTab, openTab, renameTabsForEntryRename } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
+import { projectStore } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath, useWorkspaces } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -296,7 +297,6 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     closeTab,
     renameTabsForEntryRename,
     openTab,
-    setLastUsedExternalAppId,
     loadAllRepoFiles,
     pushUndoAction,
     requestFileTreeSelection,

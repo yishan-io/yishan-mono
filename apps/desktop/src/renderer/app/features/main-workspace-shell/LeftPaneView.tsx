@@ -1,5 +1,6 @@
 import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { useDisplayProjectIds, useIsProjectsLoaded, useProjects } from "@renderer/domains/project";
+
+import { projectStore } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { PaneHeader } from "@renderer/domains/workbench";
 import { PaneToggleButton } from "@renderer/domains/workbench";
@@ -22,9 +23,9 @@ type LeftPaneViewProps = {
 /** Renders repo/workspace navigation and top-level left pane chrome. */
 export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneViewProps = {}) {
   const { t } = useTranslation();
-  const repos = useProjects();
-  const displayRepoIds = useDisplayProjectIds();
-  const isProjectsLoaded = useIsProjectsLoaded();
+  const repos = projectStore((state) => state.projects);
+  const displayRepoIds = projectStore((state) => state.displayProjectIds) ?? [];
+  const isProjectsLoaded = projectStore((state) => state.isProjectsLoaded);
   const filteredRepos = repos.filter((repo) => displayRepoIds.includes(repo.id));
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());
   const toggleLeftTooltipLabel = toggleLeftShortcutLabel

@@ -1,13 +1,7 @@
 import type { ProjectRecord } from "@renderer/api/types";
 import { listOrganizations } from "@renderer/domains/organization";
-import { listProjectsByOrg } from "@renderer/domains/project";
-import {
-  getLastUsedExternalAppId,
-  getOrganizationPreferencesById,
-  getProjectDisplayIds,
-  getProjects,
-  loadProjects,
-} from "@renderer/domains/project";
+import { listProjectsByOrg, projectStore } from "@renderer/domains/project";
+
 import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import {
@@ -101,22 +95,24 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       workspacesFromApi: workspaces,
       organizationId: selectedOrganization.id,
       previousState: {
-        projects: getProjects(),
+        projects: projectStore.getState().projects,
         workspaces: workspaceStore.getState().workspaces,
         selectedProjectId: workbenchNavigationStore.getState().activeProjectId,
         selectedWorkspaceId: workbenchNavigationStore.getState().activeWorkspaceId,
-        displayProjectIds: getProjectDisplayIds(),
-        lastUsedExternalAppId: getLastUsedExternalAppId(),
-        organizationPreferencesById: getOrganizationPreferencesById(),
+        displayProjectIds: projectStore.getState().displayProjectIds,
+        lastUsedExternalAppId: projectStore.getState().lastUsedExternalAppId,
+        organizationPreferencesById: projectStore.getState().organizationPreferencesById,
       },
     });
-    loadProjects(
-      selectedOrganization.id,
-      reconciled.projects,
-      reconciled.displayProjectIds,
-      reconciled.organizationPreferencesById,
-      reconciled.lastUsedExternalAppId,
-    );
+    projectStore
+      .getState()
+      .loadProjects(
+        selectedOrganization.id,
+        reconciled.projects,
+        reconciled.displayProjectIds,
+        reconciled.organizationPreferencesById,
+        reconciled.lastUsedExternalAppId,
+      );
     workspaceStore.getState().load(selectedOrganization.id, reconciled.workspaces);
 
     // Active Workspace/Project context lives in the Workbench navigation
@@ -144,7 +140,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
     // Warm up workspaces for currently pinned projects so the daemon has them
     // open and indexed for restart recovery. Already-open workspaces are skipped.
-    const pinnedProjectIds = getProjectDisplayIds();
+    const pinnedProjectIds = projectStore.getState().displayProjectIds;
     if (pinnedProjectIds.length > 0) {
       void warmupWorkspacesForProjects(pinnedProjectIds);
     }

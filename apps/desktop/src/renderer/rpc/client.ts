@@ -1,5 +1,5 @@
 import { SocketSession, type SocketSessionEvents } from "./socketSession";
-import { buildRequest, parseJsonRpcMessage, type DaemonNotification } from "./wire";
+import { type DaemonNotification, buildRequest, parseJsonRpcMessage } from "./wire";
 
 const RPC_REQUEST_TIMEOUT_MS = 30_000;
 

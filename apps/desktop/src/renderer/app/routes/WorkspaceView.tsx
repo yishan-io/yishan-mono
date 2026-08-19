@@ -4,8 +4,8 @@ import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { OverviewView } from "@renderer/domains/overview";
-import { CreateProjectDialogView, useIsProjectsLoaded, useProjects } from "@renderer/domains/project";
-import { getLastUsedExternalAppId } from "@renderer/domains/project";
+import { CreateProjectDialogView, projectStore } from "@renderer/domains/project";
+
 import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "@renderer/domains/session";
 import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
@@ -14,7 +14,7 @@ import { resizeLeftPane } from "@renderer/domains/workbench";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/domains/workbench";
 import { SplitPaneLayout } from "@renderer/domains/workbench";
 import { layoutStore } from "@renderer/domains/workbench";
-import { selectIsPopupOpen } from "@renderer/domains/workbench";
+import { popupStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { WorkspaceLifecycleNoticeView, resolveWorkspaceProjectId, workspaceStore } from "@renderer/domains/workspace";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -73,7 +73,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
   useEffect(() => {
     return subscribeAppActionEvent((payload) => {
-      if (payload.action !== ACTIONS.NAVIGATE && selectIsPopupOpen()) {
+      if (payload.action !== ACTIONS.NAVIGATE && popupStore.getState().isPopupOpen) {
         return;
       }
 
@@ -175,7 +175,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
         void cmd.openEntryInExternalApp({
           workspaceWorktreePath: selectedWorkspace.worktreePath,
-          appId: getLastUsedExternalAppId() ?? SYSTEM_FILE_MANAGER_APP_ID,
+          appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
         });
         return;
       }
@@ -335,8 +335,8 @@ export function WorkspaceView() {
   const [isCreateRepoOpen, setIsCreateRepoOpen] = useState(false);
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
-  const projects = useProjects();
-  const isProjectsLoaded = useIsProjectsLoaded();
+  const projects = projectStore((state) => state.projects);
+  const isProjectsLoaded = projectStore((state) => state.isProjectsLoaded);
   const { selectedWorkspaceId, selectedWorkspace } = useSelectedWorkspaceWithProject();
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const workspaceGitRefreshVersion = gitProjectionStore((state) =>

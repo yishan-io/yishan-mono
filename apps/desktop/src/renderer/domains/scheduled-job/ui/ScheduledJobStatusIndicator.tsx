@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import type { ScheduledJobStatus } from "../commands/scheduledJobCommands";
 import { StatusIndicator, type StatusIndicatorColor } from "../../../ui/components/StatusIndicator";
+import type { ScheduledJobStatus } from "../commands/scheduledJobCommands";
 
 type ScheduledJobStatusIndicatorVariant = "detail" | "compact";
 

@@ -5,13 +5,8 @@ import {
 } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
-import {
-  deleteProject,
-  useLastUsedExternalAppId,
-  useProjectDeletionFlow,
-  useProjects,
-} from "@renderer/domains/project";
-import { setLastUsedExternalAppId } from "@renderer/domains/project";
+import { deleteProject, projectStore, useProjectDeletionFlow } from "@renderer/domains/project";
+
 import { activateProject, activateWorkspace } from "@renderer/domains/workbench";
 import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
 import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
@@ -56,11 +51,11 @@ import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderId
  */
 export function WorkspaceNavigatorView() {
   const { t } = useTranslation();
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const workspaces = useWorkspaces() ?? [];
   const selectedProjectId = useSelectedProjectId();
   const selectedWorkspaceId = useSelectedWorkspaceId();
-  const lastUsedExternalAppId = useLastUsedExternalAppId();
+  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
   const markWorkspaceNotificationsRead = applyMarkWorkspaceNotificationsRead;
   const {
@@ -286,7 +281,7 @@ export function WorkspaceNavigatorView() {
         workspaceWorktreePath: targetWorktreePath,
         appId,
       });
-      setLastUsedExternalAppId(appId);
+      projectStore.getState().setLastUsedExternalAppId(appId);
     } catch (error) {
       console.error("Failed to open workspace root in external app", error);
     } finally {

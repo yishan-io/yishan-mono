@@ -1,6 +1,6 @@
 import { Box, Divider, Stack, Typography } from "@mui/material";
-import { renderProjectIcon } from "@renderer/domains/project";
-import { useProjects } from "@renderer/domains/project";
+import { projectStore, renderProjectIcon } from "@renderer/domains/project";
+
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { listOrgNodes } from "../../../../domains/node";
@@ -52,7 +52,9 @@ function FieldRow({ label, children }: FieldRowProps) {
 /** Renders the read-only detail fields for one scheduled job. */
 export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailFieldsProps) {
   const { t } = useTranslation();
-  const project = useProjects().find((workspaceProject) => workspaceProject.id === job.projectId);
+  const project = projectStore((state) => state.projects).find(
+    (workspaceProject) => workspaceProject.id === job.projectId,
+  );
   const nodeQuery = useQuery({
     queryKey: ["org-nodes", orgId],
     queryFn: () => listOrgNodes(orgId),

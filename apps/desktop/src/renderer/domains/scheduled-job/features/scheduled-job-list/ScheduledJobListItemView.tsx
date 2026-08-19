@@ -1,10 +1,10 @@
 import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
-import { renderProjectIcon } from "@renderer/domains/project";
+import { projectStore, renderProjectIcon } from "@renderer/domains/project";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPause, LuPlay } from "react-icons/lu";
 import { pauseScheduledJob, resumeScheduledJob } from "../../commands/scheduledJobCommands";
-import { useProjects } from "@renderer/domains/project";
+
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { scheduledJobStore } from "../../../../domains/scheduled-job/state/scheduledJobStore";
 import { ScheduledJobRunStatusIcon } from "../../ui/ScheduledJobRunStatusIcon";
@@ -41,7 +41,7 @@ const tdSx = {
 export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobListItemViewProps) {
   const { t } = useTranslation();
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
-  const project = useProjects().find((p) => p.id === job.projectId);
+  const project = projectStore((state) => state.projects).find((p) => p.id === job.projectId);
 
   const handlePause = useCallback(() => {
     void pauseScheduledJob(job.id);

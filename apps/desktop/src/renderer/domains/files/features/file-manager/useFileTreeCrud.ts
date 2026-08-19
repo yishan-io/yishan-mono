@@ -7,6 +7,7 @@ import {
   readFile,
   renameEntry,
 } from "@renderer/domains/files/commands/fileCommands";
+import { projectStore } from "@renderer/domains/project";
 import type { OpenTabInput, WorkbenchTab } from "@renderer/domains/workbench";
 import { writeClipboardText } from "@renderer/platform/clipboard";
 import { useCallback, useRef } from "react";
@@ -36,7 +37,6 @@ type UseFileTreeCrudInput = {
   closeTab: (tabId: string) => void;
   renameTabsForEntryRename: (workspaceId: string, fromPath: string, toPath: string) => void;
   openTab: (tab: OpenTabInput) => void;
-  setLastUsedExternalAppId: (id: ExternalAppId) => void;
   loadAllRepoFiles: () => Promise<string[]>;
   pushUndoAction: (action: FileTreeUndoAction) => void;
   requestFileTreeSelection: (path: string | null, focus?: boolean) => void;
@@ -51,7 +51,6 @@ export function useFileTreeCrud({
   closeTab,
   renameTabsForEntryRename,
   openTab,
-  setLastUsedExternalAppId,
   loadAllRepoFiles,
   pushUndoAction,
   requestFileTreeSelection,
@@ -363,12 +362,12 @@ export function useFileTreeCrud({
           appId: input.appId,
           relativePath: input.path?.trim() || undefined,
         });
-        setLastUsedExternalAppId(input.appId as ExternalAppId);
+        projectStore.getState().setLastUsedExternalAppId(input.appId as ExternalAppId);
       } catch (error) {
         console.error("Failed to open workspace entry in external app", error);
       }
     },
-    [selectedWorkspaceWorktreePath, setLastUsedExternalAppId],
+    [selectedWorkspaceWorktreePath],
   );
 
   return {

@@ -1,5 +1,6 @@
 import { Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
-import { useProjects } from "@renderer/domains/project";
+
+import { projectStore } from "@renderer/domains/project";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -24,7 +25,7 @@ const editCustomCronDescriptionSx = { mt: -0.5 };
 export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduledJobDialogViewProps) {
   const { t } = useTranslation();
   const orgId = useSelectedOrganizationId();
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   useDialogRegistration(open);
 
   const initialState = useMemo(() => {

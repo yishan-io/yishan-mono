@@ -3,8 +3,8 @@ import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 import { useWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
 import { useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
 import { resolveWorkspaceNotificationColor } from "@renderer/domains/notification";
-import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
-import { renderProjectIcon } from "@renderer/domains/project";
+
+import { projectStore, renderProjectIcon } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
@@ -34,8 +34,8 @@ import {
 export function MainPaneTitleBarView() {
   const { t } = useTranslation();
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
-  const projects = useProjects();
-  const displayProjectIds = useDisplayProjectIds();
+  const projects = projectStore((state) => state.projects);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
