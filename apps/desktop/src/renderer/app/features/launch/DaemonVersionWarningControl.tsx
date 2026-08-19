@@ -1,5 +1,6 @@
 import { IconButton, Tooltip } from "@mui/material";
 import { isDaemonVersionOutdated } from "@shared/version/version";
+import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
 import { LuTriangleAlert } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +11,9 @@ import { sessionStore } from "@renderer/domains/session";
 export function DaemonVersionWarningControl() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { daemonVersion, appVersion } = sessionStore((state) => ({ daemonVersion: state.daemonVersion, appVersion: state.appVersion }));
+  const { daemonVersion, appVersion } = sessionStore(
+    useShallow((state) => ({ daemonVersion: state.daemonVersion, appVersion: state.appVersion })),
+  );
   const isDaemonOutdated = isDaemonVersionOutdated({ daemonVersion, appVersion });
 
   if (!isDaemonOutdated) {
