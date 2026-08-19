@@ -39,7 +39,6 @@ import {
   LuUser,
   LuWrench,
 } from "react-icons/lu";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../projectIconSelection";
 import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "./projectIconPresets";
 
 const PROJECT_ICON_BY_ID: Record<string, IconType> = {
@@ -92,7 +91,7 @@ export const PROJECT_ICON_OPTIONS: ProjectIconOption[] = PROJECT_ICON_IDS.map((i
   return { id, Icon: Icon ?? LuFolder };
 });
 
-export { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, pickRandomProjectColor, pickRandomProjectIcon };
+export { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS };
 
 /** Finds a configured icon option by its persisted id. */
 export function findProjectIconOption(iconId?: string): ProjectIconOption | undefined {

@@ -10,8 +10,26 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../projectIconSelection";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../projectTypes";
+import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "../ui/projectIconPresets";
+
+/**
+ * Random default icon/color assignment for new project records.
+ *
+ * State-transition machinery: `applyCreatedProjectState` must assign non-empty
+ * avatar defaults, and `projectCommands.createProject` pre-assigns random ones
+ * (new projects get random avatars). Both callers live in this Domain; the
+ * policy sits beside the store transition that consumes it.
+ */
+export function pickRandomProjectIcon(): string {
+  const iconId = PROJECT_ICON_IDS[Math.floor(Math.random() * PROJECT_ICON_IDS.length)];
+  return iconId ?? DEFAULT_PROJECT_ICON_ID;
+}
+
+export function pickRandomProjectColor(): string {
+  const preset = PROJECT_COLOR_PRESETS[Math.floor(Math.random() * PROJECT_COLOR_PRESETS.length)];
+  return preset ?? "#1E66F5";
+}
 
 export type ProjectStoreState = {
   projects: WorkspaceProjectRecord[];

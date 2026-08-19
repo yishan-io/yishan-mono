@@ -23,8 +23,7 @@ import {
   deleteProject as deleteProjectFromApi,
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../projectIconSelection";
-import { projectStore } from "../state/projectStore";
+import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
 
 async function inspectLocalRepository(path: string): Promise<{
   isGitRepository: boolean;

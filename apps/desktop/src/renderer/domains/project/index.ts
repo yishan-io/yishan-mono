@@ -6,8 +6,7 @@
  * project Store stays internal; cross-Domain code imports project through
  * this file only.
  */
-export { isGitProject, supportsGitFeatures } from "./projectGitCapability";
-export { filterVisibleProjects } from "./projectListRules";
+export { filterVisibleProjects, isGitProject, supportsGitFeatures } from "./projectRules";
 export type {
   WorkspaceProjectCommand,
   WorkspaceProjectRecord,
@@ -71,6 +70,4 @@ export {
   PROJECT_ICON_OPTIONS,
   REPO_ICON_OPTIONS,
   findProjectIconOption,
-  pickRandomProjectColor,
-  pickRandomProjectIcon,
 } from "./ui/projectIcons";
