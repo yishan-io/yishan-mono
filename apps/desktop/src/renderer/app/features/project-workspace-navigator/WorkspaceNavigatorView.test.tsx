@@ -206,7 +206,7 @@ vi.mock("@renderer/domains/project", async () => {
   const projectListRules = await import("../../../domains/project/model/projectListRules");
   const projectSelectors = await import("../../../domains/project/state/projectSelectors");
   const projectReadHooks = await import("../../../domains/project/hooks/useProjectReadHooks");
-  const projectActions = await import("../../../domains/project/state/projectActions");
+  const projectActions = await import("../../../domains/project/state/projectStateMutations");
   const projectDeletionFlow = await import("../../../domains/project/features/project-delete/useProjectDeletionFlow");
   const projectDeleteDialog = await import("../../../domains/project/features/project-delete/ProjectDeleteDialogView");
   return {

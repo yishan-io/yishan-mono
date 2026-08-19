@@ -7,7 +7,7 @@ import {
   removeWorkspaceTaskCounts,
   setPendingUiAutoResponse,
   setTurnError,
-} from "./chatActions";
+} from "./chatStateMutations";
 import { chatStore } from "./chatStore";
 
 const initialChatStoreState = chatStore.getState();

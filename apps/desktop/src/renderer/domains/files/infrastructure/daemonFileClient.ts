@@ -1,5 +1,5 @@
 import { request } from "@renderer/rpc";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { asRecord, readOptionalBoolean, readOptionalString } from "@shared/validation/primitiveReaders";
 
 /**

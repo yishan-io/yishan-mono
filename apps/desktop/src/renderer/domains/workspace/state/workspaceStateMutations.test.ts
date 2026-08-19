@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addWorkspace, setOrderedWorkspaceIds } from "./workspaceActions";
+import { addWorkspace, setOrderedWorkspaceIds } from "./workspaceStateMutations";
 import { workspaceStore } from "./workspaceStore";
 
 const initialWorkspaceState = workspaceStore.getState();

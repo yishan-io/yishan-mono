@@ -1,5 +1,5 @@
 import { getDaemonLog } from "@renderer/domains/settings/commands/settingsCommands";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DaemonLogResult } from "../../../infrastructure/daemonHostCommands";
 

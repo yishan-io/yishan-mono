@@ -2,9 +2,9 @@ import type { SessionOrganization, SessionUser } from "../model/sessionTypes";
 import { sessionStore } from "./sessionStore";
 
 /**
- * Session feature state actions — the public state-change surface for session
- * State (Phase 12, desktop5.md). Cross-feature commands apply session state
- * changes through these functions instead of importing the session Store.
+ * Session semantic State mutations (desktop8 Phase 33). Each function is the
+ * authoritative public State operation for Session data; the raw session Store
+ * stays internal to the Domain.
  */
 export function setSelectedOrganizationId(organizationId: string): void {
   sessionStore.getState().setSelectedOrganizationId(organizationId);

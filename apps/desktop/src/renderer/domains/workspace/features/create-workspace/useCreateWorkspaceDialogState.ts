@@ -1,6 +1,6 @@
 import { useGitAuthorName } from "@renderer/domains/git";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef, useState } from "react";
 import { listOrgNodes } from "../../../../domains/node";
 import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";

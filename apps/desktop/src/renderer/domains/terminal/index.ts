@@ -1,7 +1,6 @@
 /**
  * Terminal feature public API (Phase 12, desktop5.md).
  */
-export type { TerminalCommands } from "./commands/contract";
 // Leaf command + read-surface exports first: cross-domain imports (e.g. the
 // agent pi provider commands) re-enter this index while the Runtime section
 // below is still evaluating, so the leaf bindings must already be available.

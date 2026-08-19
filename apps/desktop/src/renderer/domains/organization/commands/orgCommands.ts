@@ -1,5 +1,5 @@
 import { closeOverlayPanel } from "@renderer/domains/workbench";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { setSelectedOrganizationId } from "../../../domains/session";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { rendererQueryClient } from "../../../queryClient";

@@ -5,7 +5,7 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import type { ProjectWithWorkspacesRecord } from "../../../api/types";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";

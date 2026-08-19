@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { setWorkspaceListHierarchyMode } from "./projectActions";
 import { selectLastUsedExternalAppId, selectWorkspaceListHierarchyMode } from "./projectSelectors";
+import { setWorkspaceListHierarchyMode } from "./projectStateMutations";
 import { projectStore } from "./projectStore";
 
 const initialProjectStoreState = projectStore.getState();

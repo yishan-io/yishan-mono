@@ -2,9 +2,9 @@ import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { projectStore } from "./projectStore";
 
 /**
- * Project feature state actions — the public state-change surface for Project
- * State (Phase 12, desktop5.md). Cross-feature commands apply project state
- * changes through these functions instead of importing the project Store.
+ * Project semantic State mutations (desktop8 Phase 33). Each function is the
+ * authoritative public State operation for Project data; the raw project Store
+ * stays internal to the Domain.
  */
 export function setDisplayProjectIds(projectIds: string[]): void {
   projectStore.getState().setDisplayProjectIds(projectIds);

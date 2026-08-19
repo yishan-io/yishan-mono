@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 
 import type { OrganizationMemberRecord } from "@renderer/domains/organization";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { listOrganizationMembers } from "../../../../domains/organization";
 import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../../domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";

@@ -1,7 +1,7 @@
 import { tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
 import { renamePiSession, sendPiCommand } from "../infrastructure/daemonAgentProcedures";

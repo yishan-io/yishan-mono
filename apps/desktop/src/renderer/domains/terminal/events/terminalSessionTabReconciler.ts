@@ -8,7 +8,7 @@ import {
   setTerminalTabAgentKind,
 } from "@renderer/domains/workbench";
 import { selectWorkspaces } from "@renderer/domains/workspace";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
 import type { WorkbenchTab } from "../../../domains/workbench";
 import {

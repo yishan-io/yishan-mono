@@ -1,7 +1,7 @@
 import { Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useProjects } from "@renderer/domains/project";
 import { useSelectedProjectId } from "@renderer/domains/workspace";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";

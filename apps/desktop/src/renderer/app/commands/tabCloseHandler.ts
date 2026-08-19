@@ -8,7 +8,7 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
 import type { CloseTabOptions } from "@renderer/domains/workbench";
 import { clearTabFocus } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 /**
  * App Tab-close handler (desktop6-adjust.md W5 task 10-11).
  *

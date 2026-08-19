@@ -19,7 +19,7 @@ import { delay } from "@shared/async/delay";
  * Pi RPC sessions outlive React component mounts so that Strict Mode
  * double-mounts reuse the same Pi process instead of starting a second one.
  */
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../events/agentChatEventRouter";
 import { handleAgentPiEvent } from "../events/agentChatPiEventHandler";

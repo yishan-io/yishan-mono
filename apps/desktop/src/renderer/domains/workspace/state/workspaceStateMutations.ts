@@ -2,10 +2,9 @@ import { workspaceStore } from "./workspaceStore";
 import type { WorkspaceStoreState } from "./workspaceStoreTypes";
 
 /**
- * Workspace feature state actions — the public state-change surface for
- * Workspace State (Phase 12, desktop5.md). Cross-feature commands apply
- * workspace state changes through these functions instead of importing the
- * Workspace Store directly.
+ * Workspace semantic State mutations (desktop8 Phase 33). Each function is
+ * the authoritative public State operation for Workspace data; the raw
+ * Workspace Store stays internal to the Domain.
  */
 type AddWorkspaceInput = Parameters<WorkspaceStoreState["addWorkspace"]>[0];
 

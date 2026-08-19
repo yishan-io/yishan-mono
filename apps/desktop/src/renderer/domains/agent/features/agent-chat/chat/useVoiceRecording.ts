@@ -1,4 +1,4 @@
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import recordStartSound from "../../../../../../assets/record-start.mp3";
 import { transcribeVoiceForOrganization } from "../../../../../domains/agent/commands/voiceTranscriptionCommands";

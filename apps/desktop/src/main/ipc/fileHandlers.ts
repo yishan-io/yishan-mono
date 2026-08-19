@@ -9,7 +9,7 @@ import {
 } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { clipboard, ipcMain } from "electron";
-import { getErrorMessage } from "../../shared/helpers/errorHelpers";
+import { getErrorMessage } from "../../shared/errors/getErrorMessage";
 import { launchPath, listDetectedExternalAppIds, openExternalUrl } from "../integrations/externalAppLauncher";
 import { readExternalClipboardSourcePathsFromSystem } from "../integrations/externalClipboardPipeline";
 import { HOST_IPC_CHANNELS } from "../ipc";

@@ -1,6 +1,6 @@
 import { Box, Divider, Menu, MenuItem, Typography } from "@mui/material";
 import { copyToClipboard } from "@renderer/platform/clipboard";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { type ReactNode, useEffect, useState } from "react";
 import { LuColumns2, LuRows2 } from "react-icons/lu";
 import type { TabBarCreateOption } from "./TabBar";

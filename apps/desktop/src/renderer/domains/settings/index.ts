@@ -1,7 +1,6 @@
 /**
  * Settings feature public API (Phase 12, desktop5.md).
  */
-export type { SettingsCommands } from "./commands/contract";
 export { useKeybindingOverrides } from "./hooks/useSettingsReadHooks";
 export { useCodeTheme } from "./hooks/useCodeTheme";
 export { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
@@ -18,7 +17,6 @@ export {
 } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
 export { keybindingSettingsStore, type KeybindingOverrideMap } from "./state/keybindingSettingsStore";
-
 
 export {
   getDaemonInfo,

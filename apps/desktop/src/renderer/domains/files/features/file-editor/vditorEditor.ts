@@ -8,7 +8,7 @@
  * Imported lazily — no bundler overhead for non-WYSIWYG code paths.
  */
 
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import Vditor from "vditor";
 import luteUrl from "vditor/dist/js/lute/lute.min.js?url";
 

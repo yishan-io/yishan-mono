@@ -4,7 +4,7 @@ import { useKeybindingOverrides } from "@renderer/domains/settings";
 import { tabStore } from "@renderer/domains/workbench";
 import { renameTab } from "@renderer/domains/workbench";
 import { TAB_FOCUS_REQUEST_EVENT, consumeTabFocus, getTabFocusRequest } from "@renderer/domains/workbench";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,7 @@ import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatP
 import { useAgentChatSessionMeta } from "../../../hooks/useAgentChatReadHooks";
 import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../model/agentChatTypes";
 import { formatAgentSessionTitle } from "../../../model/agentSkillText";
-import { setTurnError } from "../../../state/chatActions";
+import { setTurnError } from "../../../state/chatStateMutations";
 import { ProviderCredentialDialog } from "../../../ui/credentials/ProviderCredentialDialog";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";

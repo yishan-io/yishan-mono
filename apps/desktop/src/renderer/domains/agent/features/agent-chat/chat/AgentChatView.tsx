@@ -1,13 +1,13 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import { tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
 import { setAgentChatStreamTabVisible } from "../../../events/agentChatPiEventShared";
 import { useAgentChatSession } from "../../../hooks/useAgentChatReadHooks";
-import { clearPendingUiAutoResponse, setPendingUiAutoResponse, setTurnError } from "../../../state/chatActions";
+import { clearPendingUiAutoResponse, setPendingUiAutoResponse, setTurnError } from "../../../state/chatStateMutations";
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";

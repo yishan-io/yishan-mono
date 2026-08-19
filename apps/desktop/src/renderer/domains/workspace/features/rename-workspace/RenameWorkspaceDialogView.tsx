@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
 import { useDialogRegistration } from "@renderer/domains/workbench";
 import { getRendererPlatform } from "@renderer/platform/platform";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useTranslation } from "react-i18next";
 import { useSelectedOrganizationId } from "../../../../domains/session";
 import { workspaceStore } from "../../state/workspaceStore";

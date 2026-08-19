@@ -1,4 +1,6 @@
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
+import { selectSelectedOrganizationId } from "../../../domains/session";
 import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../infrastructure/scheduledJobApi";
 import {
   createScheduledJob as createScheduledJobFromApi,
@@ -10,8 +12,6 @@ import {
   runScheduledJobNow as runScheduledJobNowFromApi,
   updateScheduledJob as updateScheduledJobFromApi,
 } from "../infrastructure/scheduledJobApi";
-import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
-import { selectSelectedOrganizationId } from "../../../domains/session";
 
 /**
  * Updates an existing scheduled job and refreshes the store entry on success.

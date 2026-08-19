@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getPiProviderDisplayName } from "../../model/piProviders";
 
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { removePiProvider } from "../../commands/piProviderCommands";
 import type { PiProviderStatus } from "../../commands/piProviderCommands";
 

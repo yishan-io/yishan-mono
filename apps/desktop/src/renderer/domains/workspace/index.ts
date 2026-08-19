@@ -4,7 +4,6 @@
  * Exports the stable command surface, workspace models, and the public State
  * surfaces (selectors + actions). The Workspace Stores are internal.
  */
-export type { WorkspaceCommands } from "./commands/contract";
 export type {
   WorkspaceGitChangeTotals,
   WorkspaceHealth,
@@ -55,7 +54,7 @@ export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./model
 export {
   addWorkspace,
   setOrderedWorkspaceIds,
-} from "./state/workspaceActions";
+} from "./state/workspaceStateMutations";
 export {
   workspaceCreateProgressStore,
   type WorkspaceCreateProgressEntry,

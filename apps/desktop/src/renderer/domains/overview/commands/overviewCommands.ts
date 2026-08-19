@@ -1,4 +1,4 @@
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import {

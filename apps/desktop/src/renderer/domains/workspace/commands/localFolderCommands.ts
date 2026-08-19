@@ -1,7 +1,7 @@
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateWorkspace } from "@renderer/domains/workbench";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";

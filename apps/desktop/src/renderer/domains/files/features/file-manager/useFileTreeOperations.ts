@@ -2,7 +2,7 @@ import { listFiles, listFilesBatch } from "@renderer/domains/files/commands/file
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 import { closeTab, openTab, renameTabsForEntryRename } from "@renderer/domains/workbench";
 import { setLastUsedExternalAppId } from "@renderer/domains/workspace";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
 import { tabStore } from "@renderer/domains/workbench";
 import { useSelectedWorkspaceId, useSelectedWorkspaceWorktreePath, useWorkspaces } from "@renderer/domains/workspace";

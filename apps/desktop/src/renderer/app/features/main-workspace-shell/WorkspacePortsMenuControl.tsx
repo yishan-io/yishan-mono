@@ -3,7 +3,7 @@ import type { TerminalDetectedPort } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice, workspaceStore } from "@renderer/domains/workspace";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";

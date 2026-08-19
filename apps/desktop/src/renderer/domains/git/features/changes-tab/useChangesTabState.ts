@@ -3,7 +3,7 @@ import { projectStore } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
-import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
+import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listGitChanges, listGitCommitsToTarget } from "../../commands/gitCommands";

@@ -5,7 +5,7 @@ import {
   isFolderWorkspace,
   refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc,
 } from "@renderer/domains/workspace";
-import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
+import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
  *

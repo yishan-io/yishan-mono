@@ -1,5 +1,5 @@
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
-import { isFileNotFoundError } from "@shared/helpers/errorHelpers";
+import { isFileNotFoundError } from "@shared/errors/getErrorMessage";
 import type { ExternalAppId, WorkspaceEntryAppId } from "../../../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../../../shared/contracts/rpcRequestTypes";
 import type { FileSearchResult } from "../infrastructure/daemonFileClient";

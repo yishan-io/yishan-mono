@@ -4,10 +4,8 @@ import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./chatStore";
 import { chatStore } from "./chatStore";
 
 /**
- * Agent feature state actions — the public state-change surface for Agent
- * State (Phase 17, desktop6.md). Cross-feature code applies agent chat state
- * changes through these functions instead of importing the Agent Stores
- * directly. These are display-state cleanup actions without business effect;
+ * Agent chat semantic State mutations (desktop8 Phase 33). Each function is
+ * the authoritative public State operation for Agent chat display state;
  * business-level agent operations live in Agent Commands.
  */
 

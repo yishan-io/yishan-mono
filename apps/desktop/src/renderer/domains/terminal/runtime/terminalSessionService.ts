@@ -1,7 +1,7 @@
 import { bindTerminalTabSession, closeTab, renameTab } from "@renderer/domains/workbench";
 import { TAB_FOCUS_REQUEST_EVENT } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import {
   closeTerminalSession,
   createTerminalSession,

@@ -1,5 +1,5 @@
 import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";

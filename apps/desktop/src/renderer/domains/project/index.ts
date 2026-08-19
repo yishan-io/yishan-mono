@@ -38,7 +38,7 @@ export {
   setDisplayProjectIds,
   setLastUsedExternalAppId,
   setWorkspaceListHierarchyMode,
-} from "./state/projectActions";
+} from "./state/projectStateMutations";
 export { projectStore } from "./state/projectStore";
 export { useProjectLastUsedExternalAppId } from "./hooks/useProjectLastUsedExternalAppId";
 export {

@@ -11,7 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import { MarkdownPreview } from "@renderer/domains/files";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";

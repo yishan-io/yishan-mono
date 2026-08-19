@@ -41,7 +41,7 @@ export {
   setSelectedOrganizationId,
   setSessionData,
   updateCurrentUserNotificationPreferences,
-} from "./state/sessionActions";
+} from "./state/sessionStateMutations";
 export { sessionStore } from "./state/sessionStore";
 export {
   useCurrentUser,

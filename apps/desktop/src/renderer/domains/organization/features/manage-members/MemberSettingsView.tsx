@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { setSessionData as applySetSessionData } from "../../../../domains/session";
 import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../../domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";

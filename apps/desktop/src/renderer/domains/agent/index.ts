@@ -29,7 +29,6 @@ export {
   type AgentIconThemeMode,
 } from "./ui/agentIconPresentation";
 
-export type { AgentCommands } from "./commands/contract";
 export type { AgentModelInfo } from "./commands/agentCommands";
 export { listAgentDetectionStatuses, listAgentModels } from "./commands/agentCommands";
 export {
@@ -94,7 +93,7 @@ export {
   removeWorkspaceTaskCounts,
   setWorkspaceAgentStatusByWorkspaceId,
   markWorkspaceNotificationsRead,
-} from "./state/chatActions";
+} from "./state/chatStateMutations";
 export type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
 // Re-exported through the public API instead of the events module (Phase 17).

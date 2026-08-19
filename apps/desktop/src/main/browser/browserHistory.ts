@@ -3,7 +3,7 @@ import { appendFile, copyFile, mkdir, readFile, unlink, writeFile } from "node:f
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { app } from "electron";
-import { getErrorMessage } from "../../shared/helpers/errorHelpers";
+import { getErrorMessage } from "../../shared/errors/getErrorMessage";
 import { resolveCliProfileName } from "../daemon/daemonHealthCheck";
 import type { BrowserHistoryEntry, BrowserHistoryGroup } from "../ipc";
 import { isDevMode } from "../runtime/environment";
