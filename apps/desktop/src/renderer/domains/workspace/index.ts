@@ -28,7 +28,6 @@ export {
   renameWorkspaceBranch,
   reorderWorkspace,
   setDisplayRepoIds,
-  setLastUsedExternalAppId,
   selectFolderInFileTree,
   subscribeOpenCreateWorkspaceDialog,
   toggleLeftPaneVisibility,

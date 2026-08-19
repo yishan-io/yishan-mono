@@ -12,6 +12,11 @@ export function useProjects(): WorkspaceProjectRecord[] {
   return projectStore((state) => state.projects);
 }
 
+/** Subscribes to the projects-loaded flag. */
+export function useIsProjectsLoaded(): boolean {
+  return projectStore((state) => state.isProjectsLoaded);
+}
+
 /** Subscribes to the visible project id list. */
 export function useDisplayProjectIds(): string[] {
   return projectStore((state) => state.displayProjectIds) ?? [];

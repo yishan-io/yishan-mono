@@ -7,7 +7,6 @@ import { projectStore } from "../domains/project/state/projectStore";
 import { workspaceStore } from "../domains/workspace/state/workspaceStore";
 import {
   resolveWorkspaceNotificationTone,
-  selectLastUsedExternalAppId,
   selectProjectTree,
   selectSelectedWorkspaceWithProject,
   selectWorkspaceProjection,
@@ -64,11 +63,6 @@ describe("composed selectors", () => {
     expect(projection.pullRequest).toEqual({ number: 42 });
     expect(projection.currentBranch).toBe("feature/a");
     expect(projection.gitChangeTotals).toEqual({ additions: 1, deletions: 2 });
-  });
-
-  it("reads the last-used external app id from the project store", () => {
-    projectStore.setState({ lastUsedExternalAppId: "cursor" });
-    expect(selectLastUsedExternalAppId()).toBe("cursor");
   });
 });
 

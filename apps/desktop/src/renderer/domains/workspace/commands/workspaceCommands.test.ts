@@ -21,7 +21,6 @@ import {
   renameWorkspace,
   renameWorkspaceBranch,
   setDisplayRepoIds,
-  setLastUsedExternalAppId,
 } from "./workspaceCommands";
 
 const rpcMocks = vi.hoisted(() => ({
@@ -623,22 +622,18 @@ describe("workspaceCommands", () => {
 
   it("delegates workspace view-state updates to workspace and project stores", () => {
     const setDisplayProjectIdsState = vi.fn();
-    const setLastUsedExternalAppIdState = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
       renameWorkspace: renameWorkspaceState,
     });
     projectStore.setState({
       setDisplayProjectIds: setDisplayProjectIdsState,
-      setLastUsedExternalAppId: setLastUsedExternalAppIdState,
     });
 
     setDisplayRepoIds(["repo-1"]);
-    setLastUsedExternalAppId("vscode");
     renameWorkspace({ repoId: "repo-1", workspaceId: "workspace-1", name: "next-name" });
 
     expect(setDisplayProjectIdsState).toHaveBeenCalledWith(["repo-1"]);
-    expect(setLastUsedExternalAppIdState).toHaveBeenCalledWith("vscode");
     expect(renameWorkspaceState).toHaveBeenCalledWith({
       repoId: "repo-1",
       workspaceId: "workspace-1",

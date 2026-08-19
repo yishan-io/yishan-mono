@@ -73,6 +73,7 @@ import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
+  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
   updateProjectConfig as updateProjectConfigCommand,
 } from "@renderer/domains/project";
 import {
@@ -133,7 +134,6 @@ import {
   renameWorkspace as renameWorkspaceCommand,
   reorderWorkspace as reorderWorkspaceCommand,
   setDisplayRepoIds as setDisplayRepoIdsCommand,
-  setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
   toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "../ui/projectIconPresets";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "./projectIconSelection";
+import { PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "./ui/projectIconPresets";
 
-describe("projectIconSelection random policy (desktop8 Phase 30: project/services)", () => {
+describe("projectIconSelection random policy (desktop8 Phase 30: project concept)", () => {
   it("picks an icon id from the available presets", () => {
     expect(PROJECT_ICON_IDS).toContain(pickRandomProjectIcon());
   });

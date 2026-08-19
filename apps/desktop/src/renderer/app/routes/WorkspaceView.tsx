@@ -4,8 +4,8 @@ import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { OverviewView } from "@renderer/domains/overview";
-import { CreateProjectDialogView } from "@renderer/domains/project";
-import { projectStore } from "@renderer/domains/project";
+import { CreateProjectDialogView, useIsProjectsLoaded, useProjects } from "@renderer/domains/project";
+import { selectLastUsedExternalAppId } from "@renderer/domains/project";
 import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "@renderer/domains/session";
 import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
@@ -175,7 +175,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
         void cmd.openEntryInExternalApp({
           workspaceWorktreePath: selectedWorkspace.worktreePath,
-          appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
+          appId: selectLastUsedExternalAppId() ?? SYSTEM_FILE_MANAGER_APP_ID,
         });
         return;
       }
@@ -335,8 +335,8 @@ export function WorkspaceView() {
   const [isCreateRepoOpen, setIsCreateRepoOpen] = useState(false);
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
-  const projects = projectStore((state) => state.projects);
-  const isProjectsLoaded = projectStore((state) => state.isProjectsLoaded);
+  const projects = useProjects();
+  const isProjectsLoaded = useIsProjectsLoaded();
   const { selectedWorkspaceId, selectedWorkspace } = useSelectedWorkspaceWithProject();
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const workspaceGitRefreshVersion = gitProjectionStore((state) =>

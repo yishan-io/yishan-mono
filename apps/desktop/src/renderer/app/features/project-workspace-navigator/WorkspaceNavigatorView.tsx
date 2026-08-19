@@ -11,18 +11,14 @@ import {
   useProjectDeletionFlow,
   useProjects,
 } from "@renderer/domains/project";
+import { setLastUsedExternalAppId } from "@renderer/domains/project";
 import { activateProject, activateWorkspace } from "@renderer/domains/workbench";
 import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
 import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
 import { useWorkspaceDeletionFlow } from "@renderer/domains/workspace";
 import { useWorkspaceInfoHover } from "@renderer/domains/workspace";
-import {
-  closeWorkspace,
-  deleteLocalFolder,
-  reorderWorkspace,
-  setLastUsedExternalAppId,
-} from "@renderer/domains/workspace";
+import { closeWorkspace, deleteLocalFolder, reorderWorkspace } from "@renderer/domains/workspace";
 import { subscribeOpenCreateWorkspaceDialog } from "@renderer/domains/workspace";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";

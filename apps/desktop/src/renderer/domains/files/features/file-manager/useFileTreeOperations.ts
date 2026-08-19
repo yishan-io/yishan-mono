@@ -1,7 +1,7 @@
 import { listFiles, listFilesBatch } from "@renderer/domains/files/commands/fileCommands";
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
+import { setLastUsedExternalAppId } from "@renderer/domains/project";
 import { closeTab, openTab, renameTabsForEntryRename } from "@renderer/domains/workbench";
-import { setLastUsedExternalAppId } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
 import { tabStore } from "@renderer/domains/workbench";

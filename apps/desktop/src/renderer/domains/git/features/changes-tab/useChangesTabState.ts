@@ -1,5 +1,4 @@
-import { supportsGitFeatures } from "@renderer/domains/project";
-import { projectStore } from "@renderer/domains/project";
+import { supportsGitFeatures, useProjects } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
@@ -54,11 +53,10 @@ export function useChangesTabState() {
   // (replaces the former app/selectors hook; Domains plan D10).
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const selectedWorkspace = workspaceStore((state) => state.workspaces.find((w) => w.id === selectedWorkspaceId));
-  const selectedProject = projectStore((state) =>
-    selectedWorkspace
-      ? state.projects.find((p) => p.id === (selectedWorkspace.projectId ?? selectedWorkspace.repoId))
-      : undefined,
-  );
+  const projects = useProjects();
+  const selectedProject = selectedWorkspace
+    ? projects.find((p) => p.id === (selectedWorkspace.projectId ?? selectedWorkspace.repoId))
+    : undefined;
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const selectedWorkspaceSourceBranch = useMemo(() => {
     // Folder workspaces and non-git projects have no branches: no source

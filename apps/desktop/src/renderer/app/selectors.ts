@@ -7,10 +7,16 @@ import type { WorkspaceProjectRecord } from "@renderer/domains/project";
  *
  * Phase 3: cross-store joins live here as pure selector functions (no side
  * effects). UI subscribes through these instead of joining stores inline.
- * Each selector reads current state via store.getState() and returns a derived
- * value; callers wrap in useMemo when subscribing.
+ * Each selector reads current state via Domain public getters and returns a
+ * derived value; callers wrap in useMemo when subscribing.
  */
-import { projectStore } from "@renderer/domains/project";
+import {
+  selectLastUsedExternalAppId,
+  selectProjectDisplayIds,
+  selectProjects,
+  selectWorkspaceListHierarchyMode,
+  useProjects,
+} from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { layoutStore } from "@renderer/domains/workbench";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
@@ -27,7 +33,7 @@ export function selectProjectTree(): {
   workspaces: WorkspaceItem[];
 } {
   return {
-    projects: projectStore.getState().projects,
+    projects: selectProjects(),
     workspaces: workspaceStore.getState().workspaces,
   };
 }
@@ -40,8 +46,8 @@ export function selectWorkspaceList(): {
 } {
   return {
     workspaces: workspaceStore.getState().workspaces,
-    displayProjectIds: projectStore.getState().displayProjectIds,
-    workspaceListHierarchyMode: projectStore.getState().workspaceListHierarchyMode,
+    displayProjectIds: selectProjectDisplayIds(),
+    workspaceListHierarchyMode: selectWorkspaceListHierarchyMode(),
   };
 }
 
@@ -53,12 +59,11 @@ export function selectSelectedWorkspaceWithProject(): {
   selectedWorkspaceId: string;
 } {
   const workspaceState = workspaceStore.getState();
-  const projectState = projectStore.getState();
   const selectedWorkspace = workspaceState.workspaces.find(
     (w) => w.id === workbenchNavigationStore.getState().activeWorkspaceId,
   );
   const selectedProject = selectedWorkspace
-    ? projectState.projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
+    ? selectProjects().find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
     : undefined;
   return {
     selectedWorkspace,
@@ -84,19 +89,15 @@ export function selectWorkspaceProjection(workspaceId: string): {
   };
 }
 
-/** Last-used external app id (project preference) for quick-open presets. */
-export function selectLastUsedExternalAppId(): string | undefined {
-  return projectStore.getState().lastUsedExternalAppId;
-}
-
 /** React subscription hook: selected workspace + owning project, re-renders on either store change. */
 export function useSelectedWorkspaceWithProject(): ReturnType<typeof selectSelectedWorkspaceWithProject> {
   const selectedWorkspaceId = useWorkspaceSelectedId();
   const selectedProjectId = useProjectStoreSelectedProjectId();
   const selectedWorkspace = workspaceStore((s) => s.workspaces.find((w) => w.id === selectedWorkspaceId));
-  const selectedProject = projectStore((s) =>
-    selectedWorkspace ? s.projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace)) : undefined,
-  );
+  const projects = useProjects();
+  const selectedProject = selectedWorkspace
+    ? projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
+    : undefined;
   return { selectedWorkspace, selectedProject, selectedProjectId, selectedWorkspaceId };
 }
 

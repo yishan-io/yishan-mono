@@ -1,5 +1,8 @@
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { WorkspaceProjectRecord } from "../../../domains/project/model/projectTypes";
+import type {
+  WorkspaceProjectRecord,
+  WorkspaceStoreOrganizationPreference,
+} from "../../../domains/project/model/projectTypes";
 import type { ProjectStoreState } from "./projectStore";
 import { projectStore } from "./projectStore";
 
@@ -31,6 +34,11 @@ export function selectProjectLastUsedExternalAppIdFromState(state: ProjectStoreS
 /** Reads the last-used external app id. */
 export function selectLastUsedExternalAppId(): ExternalAppId | undefined {
   return projectStore.getState().lastUsedExternalAppId;
+}
+
+/** Reads the organization-scoped project preferences (display/known ids, last app). */
+export function selectOrganizationPreferencesById(): Record<string, WorkspaceStoreOrganizationPreference> | undefined {
+  return projectStore.getState().organizationPreferencesById;
 }
 
 /** Reads the workspace list hierarchy mode. */

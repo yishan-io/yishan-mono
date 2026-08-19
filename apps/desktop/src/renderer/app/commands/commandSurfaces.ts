@@ -80,6 +80,7 @@ import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   type inspectLocalProjectSource as inspectLocalProjectSourceCommand,
+  type setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
   type updateProjectConfig as updateProjectConfigCommand,
 } from "@renderer/domains/project";
 import type {
@@ -140,7 +141,6 @@ import {
   type renameWorkspace as renameWorkspaceCommand,
   type reorderWorkspace as reorderWorkspaceCommand,
   type setDisplayRepoIds as setDisplayRepoIdsCommand,
-  type setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
   type toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
   type toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   type undoFileTreeOperation as undoFileTreeOperationCommand,

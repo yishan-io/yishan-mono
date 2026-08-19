@@ -10,14 +10,8 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { WorkspaceProjectRecord } from "../model/projectTypes";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../services/projectIconSelection";
-
-export type WorkspaceStoreOrganizationPreference = {
-  displayProjectIds?: string[];
-  knownProjectIds?: string[];
-  lastUsedExternalAppId?: ExternalAppId;
-};
+import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../model/projectTypes";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../projectIconSelection";
 
 export type ProjectStoreState = {
   projects: WorkspaceProjectRecord[];
@@ -46,7 +40,6 @@ export type ProjectStoreState = {
   setDisplayProjectIds: (projectIds: string[]) => void;
   setLastUsedExternalAppId: (appId: ExternalAppId) => void;
   setWorkspaceListHierarchyMode: (mode: "by_project" | "by_node") => void;
-  setOrderedWorkspaceIds: (workspaceIds: string[]) => void;
 };
 
 /**
@@ -262,9 +255,6 @@ export const projectStore = create<ProjectStoreState>()(
       },
       setWorkspaceListHierarchyMode: (workspaceListHierarchyMode) => {
         set({ workspaceListHierarchyMode });
-      },
-      setOrderedWorkspaceIds: () => {
-        // Ordering is workspace-list UI state; kept on workspaceStore.
       },
     })),
     {

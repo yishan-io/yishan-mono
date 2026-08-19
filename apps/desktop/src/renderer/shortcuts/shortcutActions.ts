@@ -1,10 +1,10 @@
 import { reloadWebview } from "@renderer/domains/browser";
+import { selectLastUsedExternalAppId } from "@renderer/domains/project";
 import { activateWorkspace } from "@renderer/domains/workbench";
 import { requestTabFocus } from "@renderer/domains/workbench";
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
 import { createNewWhiteboard } from "../domains/files/commands/whiteboardCommands";
-import { projectStore } from "../domains/project/state/projectStore";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
 import type { KeyBindingScope, ShortContext, ShortcutDefinition, SupportedKeyBinding } from "./types";
@@ -284,7 +284,7 @@ export function executeShortcutTarget(context: ShortContext, event: KeyboardEven
 
     void context.commands.openEntryInExternalApp({
       workspaceWorktreePath,
-      appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_FILE_MANAGER_APP_ID,
+      appId: selectLastUsedExternalAppId() ?? SYSTEM_FILE_MANAGER_APP_ID,
     });
     event.preventDefault();
     return true;

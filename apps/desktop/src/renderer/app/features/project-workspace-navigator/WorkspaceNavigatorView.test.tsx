@@ -221,6 +221,7 @@ vi.mock("@renderer/domains/project", async () => {
     useDisplayProjectIds: projectReadHooks.useDisplayProjectIds,
     useWorkspaceListHierarchyMode: projectReadHooks.useWorkspaceListHierarchyMode,
     useLastUsedExternalAppId: projectReadHooks.useLastUsedExternalAppId,
+    setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
     setWorkspaceListHierarchyMode: projectActions.setWorkspaceListHierarchyMode,
     renderProjectIcon: () => "R",
     ProjectDeleteDialogView: projectDeleteDialog.ProjectDeleteDialogView,

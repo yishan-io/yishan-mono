@@ -18,13 +18,12 @@ import {
   syncTabStoreWithWorkspace,
   syncWorkspaceContextLinks,
 } from "../../../domains/workspace";
-import { type ProjectListPreference, getProjectRpc } from "../infrastructure/daemonProjectClient";
 import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
   updateProject as updateProjectFromApi,
 } from "../infrastructure/projectApi";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../services/projectIconSelection";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../projectIconSelection";
 import { projectStore } from "../state/projectStore";
 
 async function inspectLocalRepository(path: string): Promise<{
@@ -63,30 +62,6 @@ export async function inspectLocalProjectSource(path: string): Promise<{
     sourceTypeHint: remoteUrl ? "git" : metadata.isGitRepository ? "git-local" : "unknown",
     remoteUrl,
   };
-}
-
-/** Loads one organization's projects with their workspaces from the daemon. */
-export async function listProjectsByOrg(
-  organizationId: string,
-  opts?: { withWorkspaces?: boolean },
-): Promise<ProjectWithWorkspacesRecord[]> {
-  const projectRpc = await getProjectRpc();
-  return await projectRpc.listByOrg(organizationId, opts);
-}
-
-/** Loads one organization's project-list order/fold preferences from the daemon. */
-export async function getProjectListPreferences(organizationId: string) {
-  const projectRpc = await getProjectRpc();
-  return projectRpc.getListPreferences(organizationId);
-}
-
-/** Persists one organization's project-list order/fold preferences to the daemon. */
-export async function setProjectListPreferences(
-  organizationId: string,
-  preferences: ProjectListPreference,
-): Promise<void> {
-  const projectRpc = await getProjectRpc();
-  await projectRpc.setListPreferences(organizationId, preferences);
 }
 
 /** Creates one project in backend, then applies it into the local legacy store shape. */

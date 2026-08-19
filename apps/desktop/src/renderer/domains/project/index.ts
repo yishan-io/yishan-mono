@@ -2,8 +2,9 @@
  * Project Domain public API (Domains plan D6).
  *
  * Exports the stable command surface, project models, the public State
- * surfaces (selectors + actions), the read Store, and the read-only React
- * hooks. Cross-Domain code imports project through this file only.
+ * surface (selectors + mutations), and the read-only React hooks. The raw
+ * project Store stays internal; cross-Domain code imports project through
+ * this file only.
  */
 export { isGitProject, supportsGitFeatures } from "./model/projectGitCapability";
 export { filterVisibleProjects } from "./model/projectListRules";
@@ -15,12 +16,14 @@ export type {
 export {
   createProject,
   deleteProject,
-  getProjectListPreferences,
   inspectLocalProjectSource,
-  listProjectsByOrg,
-  setProjectListPreferences,
   updateProjectConfig,
 } from "./commands/projectCommands";
+export {
+  getProjectListPreferences,
+  listProjectsByOrg,
+  setProjectListPreferences,
+} from "./infrastructure/daemonProjectClient";
 export { getDefaultWorktreeLocation, openLocalFolderDialog } from "./infrastructure/projectHostCommands";
 export type {
   ProjectListModePreference,
@@ -28,21 +31,22 @@ export type {
 } from "./infrastructure/daemonProjectClient";
 export {
   selectLastUsedExternalAppId,
+  selectOrganizationPreferencesById,
   selectProjectById,
   selectProjectDisplayIds,
-  selectProjectLastUsedExternalAppIdFromState,
   selectProjects,
   selectWorkspaceListHierarchyMode,
 } from "./state/projectSelectors";
 export {
+  loadProjects,
   setDisplayProjectIds,
   setLastUsedExternalAppId,
   setWorkspaceListHierarchyMode,
 } from "./state/projectStateMutations";
-export { projectStore } from "./state/projectStore";
 export { useProjectLastUsedExternalAppId } from "./hooks/useProjectLastUsedExternalAppId";
 export {
   useDisplayProjectIds,
+  useIsProjectsLoaded,
   useLastUsedExternalAppId,
   useProjects,
   useWorkspaceListHierarchyMode,

@@ -1,11 +1,12 @@
-import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "../ui/projectIconPresets";
+import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "./ui/projectIconPresets";
 
 /**
  * Project icon default-selection policy (desktop8 Phase 30).
  *
  * Random pick helpers moved out of Model (Model must not read a random
- * source); they live in Services so Commands and State can both import them
- * (a Feature-only home would break the command/state callers).
+ * source); they live as a named project concept so Commands, State, and UI
+ * can all import them (a Feature-only home would break the command/state
+ * callers).
  */
 
 /** Picks a random icon id from the available project icon options. */

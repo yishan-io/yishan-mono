@@ -7,10 +7,7 @@ import {
 import { renameGitBranch } from "@renderer/domains/git";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
-import {
-  setDisplayProjectIds as applyDisplayProjectIds,
-  setLastUsedExternalAppId as applyLastUsedExternalAppId,
-} from "@renderer/domains/project";
+import { setDisplayProjectIds as applyDisplayProjectIds } from "@renderer/domains/project";
 import { selectProjectById, selectProjectDisplayIds, selectProjects } from "@renderer/domains/project";
 import {
   DEFAULT_RIGHT_PANE_TAB,
@@ -21,7 +18,6 @@ import {
   setRightPaneTab,
   workbenchNavigationStore,
 } from "@renderer/domains/workbench";
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../model/localFolder";
@@ -81,11 +77,6 @@ export function setDisplayRepoIds(repoIds: string[]) {
   if (removedIds.length > 0) {
     void closeWorkspacesForProjects(removedIds);
   }
-}
-
-/** Stores last used external app id for quick-open actions. */
-export function setLastUsedExternalAppId(appId: ExternalAppId) {
-  applyLastUsedExternalAppId(appId);
 }
 
 /** Toggles left workspace pane manual visibility state. */

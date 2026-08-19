@@ -4,7 +4,7 @@
  *
  * The component file (`components/projectIcons.tsx`) derives its icon options
  * from `PROJECT_ICON_IDS`; the default-selection policy (random pick) lives in
- * `../services/projectIconSelection`.
+ * `../projectIconSelection`.
  */
 
 /** Available project icon ids, in display order. */

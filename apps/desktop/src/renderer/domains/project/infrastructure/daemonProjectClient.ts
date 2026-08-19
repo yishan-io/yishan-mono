@@ -190,3 +190,27 @@ export async function getProjectRpc(): Promise<DaemonProjectClient> {
   }
   return cachedProjectRpc;
 }
+
+/** Loads one organization's projects with their workspaces from the daemon. */
+export async function listProjectsByOrg(
+  organizationId: string,
+  opts?: { withWorkspaces?: boolean },
+): Promise<ProjectWithWorkspacesRecord[]> {
+  const projectRpc = await getProjectRpc();
+  return await projectRpc.listByOrg(organizationId, opts);
+}
+
+/** Loads one organization's project-list order/fold preferences from the daemon. */
+export async function getProjectListPreferences(organizationId: string): Promise<ProjectListPreference> {
+  const projectRpc = await getProjectRpc();
+  return projectRpc.getListPreferences(organizationId);
+}
+
+/** Persists one organization's project-list order/fold preferences to the daemon. */
+export async function setProjectListPreferences(
+  organizationId: string,
+  preferences: ProjectListPreference,
+): Promise<{ ok: boolean }> {
+  const projectRpc = await getProjectRpc();
+  return projectRpc.setListPreferences(organizationId, preferences);
+}
