@@ -1,6 +1,5 @@
-import { workspaceStore } from "./state/workspaceStore";
 /**
- * Workspace feature public API (Phase 12, desktop5.md).
+ * Workspace feature public API.
  *
  * Exports the stable command surface, workspace models, and the public State
  * surfaces (selectors + actions). The Workspace Stores are internal.
@@ -57,7 +56,7 @@ export {
   type WorkspaceCreateProgressStatus,
 } from "./state/workspaceCreateProgressStore";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 export { workspaceSettingsStore, type WorkspaceSettingsStoreState } from "./state/workspaceSettingsStore";
 
 export type { GitBranchPrefixMode } from "./naming/branchPrefix";

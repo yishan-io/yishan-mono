@@ -27,9 +27,9 @@ export type {
 } from "./daemon/projectDaemonClient";
 export { projectStore, type ProjectStoreState } from "./state/projectStore";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 // The combined Project/Node/Workspace navigator moved to
-// `app/features/project-workspace-navigator` (desktop7 Phase 24); Project keeps its
+// `app/features/project-workspace-navigator`; Project keeps its
 // list rules, read surface, and the project-config/delete dialogs.
 export { CreateProjectDialogView } from "./features/create-project/CreateProjectDialogView";
 export { CreateProjectFormView } from "./features/create-project/CreateProjectFormView";

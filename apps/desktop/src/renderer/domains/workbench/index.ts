@@ -1,5 +1,5 @@
 /**
- * Workbench feature public API (Phase 12, desktop5.md).
+ * Workbench feature public API.
  */
 export { createFixedRuntimeLayer } from "./runtime/runtimeSurfaceLayer";
 
@@ -77,7 +77,7 @@ export {
   type LayoutStoreState,
 } from "./state/layoutStore";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 export { WorkspaceSplitPane } from "./features/workspace-tabs/WorkspaceSplitPaneView";
 
 export { RightPaneTabBar, type RightPaneTabDef } from "./features/workspace-tabs/RightPaneTabBar";

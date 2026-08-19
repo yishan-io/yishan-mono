@@ -1,5 +1,5 @@
 /**
- * Notification feature public API (Phase 12, desktop5.md).
+ * Notification feature public API.
  */
 
 export {
@@ -16,7 +16,7 @@ export {
 } from "./commands/notificationCommands";
 export { createNotificationEventHandlers } from "./subscriptions/notificationEventHandlers";
 // Notification configuration UI composed by the Settings shell + search
-// catalog (desktop7 Phase 23).
+// catalog.
 export { NotificationSettingsView } from "./features/configure-notifications/NotificationSettingsView";
 export {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,

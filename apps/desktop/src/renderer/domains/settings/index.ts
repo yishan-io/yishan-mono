@@ -1,11 +1,12 @@
 /**
- * Settings feature public API (Phase 12, desktop5.md).
+ * Settings feature public API.
  */
 
 export { useCodeTheme } from "./hooks/useCodeTheme";
 export { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
 
-export type { SettingsErrorBoundaryProps, SettingsPageLayoutProps } from "./ui/controls";
+export type { SettingsErrorBoundaryProps } from "./ui/controls/SettingsErrorBoundary";
+export type { SettingsPageLayoutProps } from "./ui/controls/SettingsPageLayout";
 export { editorSettingsStore, type EditorSettingsStoreState } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
 export { keybindingSettingsStore, type KeybindingOverrideMap } from "./state/keybindingSettingsStore";
@@ -24,5 +25,3 @@ export { listCLIToolStatuses } from "./commands/cliToolCommands";
 
 export { SettingsView } from "./features/settings-shell/SettingsView";
 export type { CustomizeFocusItemId } from "./features/settings-shell/settingsSearchCatalog";
-
-import { keybindingSettingsStore } from "./state/keybindingSettingsStore";

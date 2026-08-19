@@ -98,6 +98,8 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R22-shared-renderer-import": 0,
   "R23-removed-root-capabilities": 0,
   "R24-platform-app-domain": 0,
+  "R25-forbidden-domain-bucket": 0,
+  "R26-technical-nested-index": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -424,6 +426,18 @@ function scanViolations(): Violation[] {
       if (rel.startsWith("platform/") && (relT.startsWith("app/") || relT.startsWith("domains/"))) {
         violations.push({ rule: "R24-platform-app-domain", file: rel, target: imp.spec });
       }
+    }
+    // ---- Rule 25 (desktop9 Phase 39): generic Domain buckets are rejected.
+    // Ownership determines location; model/services/rules/infrastructure are
+    // file-type buckets that must not return. ----
+    if (/^domains\/[^/]+\/(model|services|rules|infrastructure)\//.test(rel) && !rel.includes(".test.")) {
+      violations.push({ rule: "R25-forbidden-domain-bucket", file: rel, target: "generic bucket" });
+    }
+    // ---- Rule 26 (desktop9 Phase 39): a nested index.ts is an internal-module
+    // API. It is allowed only under features/<use-case>/ or a named business
+    // module directory, never under technical directories. ----
+    if (/^domains\/[^/]+\/(state|commands|hooks|ui|daemon|api|host|subscriptions|runtime)\/(?:[^/]+\/)*index\.ts$/.test(rel)) {
+      violations.push({ rule: "R26-technical-nested-index", file: rel, target: "technical nested index" });
     }
     // ---- Rule 12 (desktop6-adjust.md W8): Store Actions must stay
     // synchronous. A Store Action changes one owning Store synchronously; it

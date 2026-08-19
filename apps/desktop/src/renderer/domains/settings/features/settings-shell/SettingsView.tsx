@@ -32,7 +32,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { SearchInput } from "../../../../ui/components/SearchInput";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { useThemePreference } from "../../hooks/useThemePreference";
-import { SettingsErrorBoundary, SettingsPageLayout } from "../../ui/controls";
+import { SettingsErrorBoundary } from "../../ui/controls/SettingsErrorBoundary";
+import { SettingsPageLayout } from "../../ui/controls/SettingsPageLayout";
 import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
 import {
   AccountSettingsView,

@@ -1,5 +1,5 @@
 /**
- * Overview feature public API (Phase 12, desktop5.md).
+ * Overview feature public API.
  */
 
 export { OverviewView } from "./features/overview-dashboard/OverviewView";

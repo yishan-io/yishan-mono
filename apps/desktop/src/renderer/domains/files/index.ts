@@ -1,5 +1,5 @@
 /**
- * Files feature public API (Phase 12, desktop5.md).
+ * Files feature public API.
  */
 export {
   createFile,
@@ -36,7 +36,7 @@ export {
   updateFileTabContent,
 } from "./commands/fileTabContentCommands";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 
 export { FileSearchOverlay } from "./features/quick-open-file/FileSearchOverlay";
 export { FileManagerView } from "./features/file-manager/FileManagerView";

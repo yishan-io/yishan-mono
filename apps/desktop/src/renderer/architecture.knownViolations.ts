@@ -48,7 +48,9 @@ export type RuleName =
   | "R21-events-app-domain"
   | "R22-shared-renderer-import"
   | "R23-removed-root-capabilities"
-  | "R24-platform-app-domain";
+  | "R24-platform-app-domain"
+  | "R25-forbidden-domain-bucket"
+  | "R26-technical-nested-index";
 
 export type KnownViolation = { rule: RuleName; file: string; phase: string };
 

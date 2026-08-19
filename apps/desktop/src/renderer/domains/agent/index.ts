@@ -1,10 +1,10 @@
 /**
- * Agent feature public API (Phase 12, desktop5.md).
+ * Agent feature public API.
  *
  * Exports the stable command surface, agent chat models, and public state
  * surfaces. Internal Stores and Runtime implementations are not exported.
  *
- * Ordering constraint (desktop7 Phase 21): the leaf `model/agentSettings`
+ * Ordering constraint: the leaf `model/agentSettings`
  * re-export must stay FIRST. The Agent enablement store
  * (`state/agentSettingsStore`) imports this module and calls
  * `createDefaultAgentInUseByKind` at evaluation time, and Agent features
@@ -64,9 +64,9 @@ export type {
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
-// Re-exported through the public API instead of the events module (Phase 17).
+// Re-exported through the public API instead of the events module.
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 export { AgentChatView } from "./features/agent-chat/chat/AgentChatView";
 export { RecentAgentSessions } from "./features/agent-chat/chat/RecentAgentSessions";
 export { WorkspaceAgentChatSurface } from "./features/agent-chat/chat/WorkspaceAgentChatSurface";
@@ -111,12 +111,9 @@ export {
   ensureAgentGlobalConfigExternalDirectoryPermission,
 } from "./commands/agentConfigCommands";
 
-// Agent administration UI composed by the Settings shell (desktop7 Phase 23).
+// Agent administration UI composed by the Settings shell.
 export { AgentProviderSettingsView } from "./features/manage-providers/AgentProviderSettingsView";
 export { SkillsSettingsView } from "./features/manage-skills/SkillsSettingsView";
 export { CustomizeSettingsView } from "./features/agent-definitions/CustomizeSettingsView";
 export { MemorySettingsView } from "./features/agent-memory/MemorySettingsView";
 export { ComputerUseSettingsView } from "./features/computer-use/ComputerUseSettingsView";
-
-import { agentChatStore } from "./state/agentChatStore";
-import { chatStore } from "./state/chatStore";

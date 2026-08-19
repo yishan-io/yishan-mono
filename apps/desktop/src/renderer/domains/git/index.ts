@@ -1,5 +1,5 @@
 /**
- * Git feature public API (Phase 12, desktop5.md).
+ * Git feature public API.
  */
 export type {
   GitPullRequest,
@@ -43,7 +43,7 @@ export type { AllWorkspacesGitSyncRuntime, WorkspaceRefreshState } from "./runti
 
 export { useAllWorkspacesGitSync } from "./hooks/useAllWorkspacesGitSync";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 export { ChangesTabView } from "./features/changes-tab/ChangesTabView";
 export { PullRequestTabView } from "./features/pull-request-tab/PullRequestTabView";
 export { useWorkspacePullRequestState } from "./features/pull-request-tab/useWorkspacePullRequestState";
@@ -52,5 +52,3 @@ export { GitChangeTotals } from "./ui/GitChangeTotals";
 export { PullRequestIcon } from "./ui/PullRequestIcon";
 
 export { livePrStatus } from "./pull-request/gitPullRequestStatus";
-
-import { gitProjectionStore } from "./state/gitProjectionStore";

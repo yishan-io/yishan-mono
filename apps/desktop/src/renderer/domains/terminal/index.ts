@@ -1,5 +1,5 @@
 /**
- * Terminal feature public API (Phase 12, desktop5.md).
+ * Terminal feature public API.
  */
 // Leaf command + read-surface exports first: cross-domain imports (e.g. the
 // agent pi provider commands) re-enter this index while the Runtime section
@@ -28,7 +28,7 @@ export { useSharedTerminalResourceUsageSnapshot } from "./hooks/useSharedTermina
 export { useTerminalTabLookups } from "./hooks/useTerminalTabLookups";
 // Terminal Runtime entry points required by cross-feature composition. These
 // are function entry points into the Terminal Runtime; the Runtime instance
-// itself stays internal (Phase 17, desktop6.md).
+// itself stays internal.
 export {
   disposeTerminalRuntimesForClosedTabs,
   forceFitTerminalRuntimes,
@@ -37,12 +37,12 @@ export {
 
 export { TerminalRecoveryCoordinator } from "./runtime/terminalRecovery";
 
-// Explicit tab-close tombstones (desktop7 Phase 26): app tabCloseHandler
+// Explicit tab-close tombstones: app tabCloseHandler
 // records tombstones through the terminal public API; the terminal reconciler
 // consumes them via the domain model module.
 export { recordExplicitlyClosedTerminalTabId } from "./runtime/terminalCloseTombstones";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 export { TerminalView } from "./features/terminal-tab/TerminalView";
 export { createTerminalEventHandlers } from "./subscriptions/terminalEventHandlers";
 export { TerminalSettingsView } from "./features/manage-terminal-sessions/TerminalSettingsView";
