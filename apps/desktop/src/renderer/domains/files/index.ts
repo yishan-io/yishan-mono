@@ -57,15 +57,14 @@ export {
   type FilePathDisplayParts,
   type HighlightedPathSegment,
 } from "./ui/filePathDisplay";
-export {
-  AudioPreview,
-  FileDiffViewer,
-  FileEditor,
-  ImagePreview,
-  MultiFileDiffViewer,
-  UnsupportedFileView,
-  VideoPreview,
-} from "./features/file-editor/editors";
+export { FileEditor } from "./features/file-editor/FileEditor";
+export { AudioPreview } from "./features/file-editor/AudioPreview";
+export { ImagePreview } from "./features/file-editor/ImagePreview";
+export { UnsupportedFileView } from "./features/file-editor/UnsupportedFileView";
+export { VideoPreview } from "./features/file-editor/VideoPreview";
+
+export { FileDiffViewer } from "./features/diff-viewer/FileDiffViewer";
+export { MultiFileDiffViewer } from "./features/diff-viewer/MultiFileDiffViewer";
 
 export { getDiffCssVariablesForPalette } from "./ui/diffTheme";
 

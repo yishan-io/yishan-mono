@@ -14,7 +14,7 @@ import {
   isVideoFile,
 } from "../../features/file-editor/editorLanguage";
 import { fileTreeStore } from "../../state/fileTreeStore";
-import { FileQuickOpenDialog } from "../file-editor/editors";
+import { FileQuickOpenDialog } from "./FileQuickOpenDialog";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../file-manager/fileTreeEntries";
 import { useFileSearchController } from "./useFileSearchController";
 
