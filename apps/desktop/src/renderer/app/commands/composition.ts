@@ -18,27 +18,7 @@ import {
   updateChatMessage as updateChatMessageCommand,
 } from "@renderer/domains/agent";
 import { createFileTabPlaceholder, seedFileTabContent as seedFileTabContentCommand } from "@renderer/domains/files";
-import {
-  commitGitChanges as commitGitChangesCommand,
-  getGitAuthorName as getGitAuthorNameCommand,
-  getGitBranchStatus as getGitBranchStatusCommand,
-  listGitBranches as listGitBranchesCommand,
-  listGitChanges as listGitChangesCommand,
-  listGitCommitsToTarget as listGitCommitsToTargetCommand,
-  listPullRequestHistory as listPullRequestHistoryCommand,
-  publishGitBranch as publishGitBranchCommand,
-  pushGitBranch as pushGitBranchCommand,
-  readBranchComparisonDiff as readBranchComparisonDiffCommand,
-  readCommitDiff as readCommitDiffCommand,
-  readDiff as readDiffCommand,
-  refreshDiffTabContent as refreshDiffTabContentCommand,
-  refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
-  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
-  revertGitChanges as revertGitChangesCommand,
-  seedDiffTabContent as seedDiffTabContentCommand,
-  trackGitChanges as trackGitChangesCommand,
-  unstageGitChanges as unstageGitChangesCommand,
-} from "@renderer/domains/git";
+import { seedDiffTabContent as seedDiffTabContentCommand } from "@renderer/domains/git";
 import { projectStore } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 import {
@@ -98,7 +78,6 @@ import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspa
 import type {
   AgentCommandSurface,
   AppCommandSurface,
-  GitCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
 } from "./commandSurfaces";
@@ -157,29 +136,6 @@ export function createAgentCommands(): AgentCommandSurface {
   };
 }
 
-export function createGitCommands(): GitCommandSurface {
-  return {
-    readDiff: readDiffCommand,
-    readCommitDiff: readCommitDiffCommand,
-    readBranchComparisonDiff: readBranchComparisonDiffCommand,
-    listGitChanges: listGitChangesCommand,
-    trackGitChanges: trackGitChangesCommand,
-    unstageGitChanges: unstageGitChangesCommand,
-    revertGitChanges: revertGitChangesCommand,
-    commitGitChanges: commitGitChangesCommand,
-    getGitBranchStatus: getGitBranchStatusCommand,
-    listGitCommitsToTarget: listGitCommitsToTargetCommand,
-    listGitBranches: listGitBranchesCommand,
-    getGitAuthorName: getGitAuthorNameCommand,
-    pushGitBranch: pushGitBranchCommand,
-    publishGitBranch: publishGitBranchCommand,
-    refreshWorkspaceGitChanges: refreshWorkspaceGitChangesCommand,
-    refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
-    listPullRequestHistory: listPullRequestHistoryCommand,
-    refreshDiffTabContent: refreshDiffTabContentCommand,
-  };
-}
-
 export function createWorkbenchCommands(): WorkbenchCommandSurface {
   return {
     selectTab: setSelectedTabCommand,
@@ -233,7 +189,6 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
 export type {
   AgentCommandSurface,
   AppCommandSurface,
-  GitCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
 } from "./commandSurfaces";

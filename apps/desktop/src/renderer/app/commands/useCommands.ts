@@ -2,12 +2,10 @@ import { useMemo } from "react";
 import {
   type AgentCommandSurface,
   type AppCommandSurface,
-  type GitCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
   createAgentCommands,
   createAppCommands,
-  createGitCommands,
   createWorkbenchCommands,
   createWorkspaceCommands,
 } from "./composition";
@@ -31,10 +29,6 @@ export function useAgentCommands(): AgentCommandSurface {
   return useMemo(() => createAgentCommands(), []);
 }
 
-export function useGitCommands(): GitCommandSurface {
-  return useMemo(() => createGitCommands(), []);
-}
-
 export function useWorkbenchCommands(): WorkbenchCommandSurface {
   return useMemo(() => createWorkbenchCommands(), []);
 }
@@ -42,7 +36,6 @@ export function useWorkbenchCommands(): WorkbenchCommandSurface {
 export type {
   AgentCommandSurface,
   AppCommandSurface,
-  GitCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
 } from "./composition";

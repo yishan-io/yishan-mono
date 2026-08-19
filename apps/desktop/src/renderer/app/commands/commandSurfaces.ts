@@ -25,27 +25,6 @@ import {
   type setChatCurrentModel as setChatCurrentModelCommand,
   type updateChatMessage as updateChatMessageCommand,
 } from "@renderer/domains/agent";
-import {
-  type commitGitChanges as commitGitChangesCommand,
-  type getGitAuthorName as getGitAuthorNameCommand,
-  type getGitBranchStatus as getGitBranchStatusCommand,
-  type listGitBranches as listGitBranchesCommand,
-  type listGitChanges as listGitChangesCommand,
-  type listGitCommitsToTarget as listGitCommitsToTargetCommand,
-  type listPullRequestHistory as listPullRequestHistoryCommand,
-  type publishGitBranch as publishGitBranchCommand,
-  type pushGitBranch as pushGitBranchCommand,
-  type readBranchComparisonDiff as readBranchComparisonDiffCommand,
-  type readCommitDiff as readCommitDiffCommand,
-  type readDiff as readDiffCommand,
-  type refreshDiffTabContent as refreshDiffTabContentCommand,
-  type refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
-  type refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
-  type revertGitChanges as revertGitChangesCommand,
-  seedDiffTabContent as seedDiffTabContentCommand,
-  type trackGitChanges as trackGitChangesCommand,
-  type unstageGitChanges as unstageGitChangesCommand,
-} from "@renderer/domains/git";
 import { tabStore } from "@renderer/domains/workbench";
 import {
   type activateProject as activateProjectCommand,
@@ -87,8 +66,6 @@ import type {
   logout as logoutCommand,
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "./appCommands";
-import { createDiffTabPlaceholder } from "./diffTabPlaceholder";
-
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspaceSnapshotFlow";
 
 /**
@@ -161,28 +138,6 @@ export type AgentCommandSurface = {
   setChatCurrentModel: typeof setChatCurrentModelCommand;
   createWorkspaceChatEventHandler: typeof createWorkspaceChatEventHandlerCommand;
   listActivePiSessions: typeof listActivePiSessionsCommand;
-};
-
-/** Git feature command surface. */
-export type GitCommandSurface = {
-  readDiff: typeof readDiffCommand;
-  readCommitDiff: typeof readCommitDiffCommand;
-  readBranchComparisonDiff: typeof readBranchComparisonDiffCommand;
-  listGitChanges: typeof listGitChangesCommand;
-  trackGitChanges: typeof trackGitChangesCommand;
-  unstageGitChanges: typeof unstageGitChangesCommand;
-  revertGitChanges: typeof revertGitChangesCommand;
-  commitGitChanges: typeof commitGitChangesCommand;
-  getGitBranchStatus: typeof getGitBranchStatusCommand;
-  listGitCommitsToTarget: typeof listGitCommitsToTargetCommand;
-  listGitBranches: typeof listGitBranchesCommand;
-  getGitAuthorName: typeof getGitAuthorNameCommand;
-  pushGitBranch: typeof pushGitBranchCommand;
-  publishGitBranch: typeof publishGitBranchCommand;
-  refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChangesCommand;
-  refreshWorkspacePullRequest: typeof refreshWorkspacePullRequestCommand;
-  listPullRequestHistory: typeof listPullRequestHistoryCommand;
-  refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
 /** Workbench feature command surface. */
