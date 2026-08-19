@@ -1,7 +1,7 @@
 import { getDaemonLog } from "@renderer/domains/settings/commands/settingsCommands";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { DaemonLogResult } from "../../../daemon/daemonHostCommands";
+import type { DaemonLogResult } from "../../../host/daemonHost";
 
 const INITIAL_VISIBLE_ENTRY_COUNT = 100;
 const ENTRY_COUNT_INCREMENT = 100;

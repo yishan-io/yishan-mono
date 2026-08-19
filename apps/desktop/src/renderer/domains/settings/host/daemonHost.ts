@@ -1,10 +1,10 @@
 /**
- * Daemon host commands (D16).
+ * Daemon host boundary — daemon process lifecycle via the Electron main process.
  *
- * Daemon process management capabilities hosted by the Electron main process.
- * The Settings Domain owns the daemon settings surface, so these commands live
- * in the Settings Domain's infrastructure layer; `app/commands/appCommands`
- * re-exports them for app-level callers (e.g. session bootstrap).
+ * A host adapter, not a Command: each function forwards one host-bridge call
+ * (desktop-domain-rules). The Settings Domain owns the daemon settings
+ * surface; `app/commands/appCommands` re-exports these for app-level callers
+ * (e.g. session bootstrap).
  */
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 

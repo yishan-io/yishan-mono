@@ -11,7 +11,7 @@ export { editorSettingsStore, type EditorSettingsStoreState } from "./state/edit
 export { displaySettingsStore } from "./state/displaySettingsStore";
 export { keybindingSettingsStore, type KeybindingOverrideMap } from "./state/keybindingSettingsStore";
 
-export { getDaemonInfo, getDaemonLog, getDaemonQuitOnExit, restartDaemon, setDaemonQuitOnExit, type DaemonInfoResult, type DaemonLogResult, type DaemonRestartResult } from "./daemon/daemonHostCommands";
+export { getDaemonInfo, getDaemonLog, getDaemonQuitOnExit, restartDaemon, setDaemonQuitOnExit, type DaemonInfoResult, type DaemonLogResult, type DaemonRestartResult } from "./host/daemonHost";
 export { listCLIToolStatuses } from "./commands/cliToolCommands";
 
 export { SettingsView } from "./features/settings-shell/SettingsView";

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { appendBrowserHistory, loadBrowserHistory, openExternalUrl } from "./browserHostCommands";
+import { appendBrowserHistory, loadBrowserHistory, openExternalUrl } from "./browserHost";
 
 const mocks = vi.hoisted(() => ({
   openExternalUrl: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("@renderer/platform/hostBridge", async (importOriginal) => {
   };
 });
 
-describe("browserHostCommands", () => {
+describe("browserHost", () => {
   it("opens an external URL through the host bridge", async () => {
     mocks.openExternalUrl.mockResolvedValueOnce({ opened: true });
     const result = await openExternalUrl("https://yishan.io/docs");

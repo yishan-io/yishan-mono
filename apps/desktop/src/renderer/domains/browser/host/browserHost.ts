@@ -2,12 +2,12 @@ import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 import type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "../../../../main/ipc";
 
 /**
- * Browser host commands — external I/O for the Workbench browser surface.
+ * Browser host boundary — Electron-host I/O for the browser tab surface.
  *
- * Owned by the Workbench Domain (Domains plan D7). These are Electron-host
- * interactions (open external URL, persist browser history) that serve the
- * Workbench browser tab surface. They were previously App commands; the
- * browser surface belongs to Workbench, so its host I/O lives here.
+ * A host adapter, not a Command: each function forwards one call to the
+ * Electron host bridge so Features never touch the raw transport
+ * (desktop-domain-rules). They were previously App commands; the browser
+ * surface owns its host I/O here.
  */
 
 /** Opens one URL through the Electron main-process host bridge. */
