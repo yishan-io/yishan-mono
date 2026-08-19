@@ -1,12 +1,6 @@
-import { generateId } from "@renderer/ids/generateId";
 import type { PaneBranch, PaneLeaf, SplitDirection, SplitPaneNode, SplitPaneStateSlice } from "./types";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Creates a new unique pane id. */
-export function createPaneId(): string {
-  return `pane-${generateId()}`;
-}
 
 /** Creates a leaf node with given tab ids. */
 export function createLeaf(id: string, tabIds: string[], selectedTabId?: string): PaneLeaf {
@@ -126,13 +120,13 @@ export function splitPaneWithTab(
     direction: SplitDirection;
     /** Whether the new pane should be placed first (left/top) or second (right/bottom). */
     placement: "first" | "second";
-    newPaneId?: string;
-    newBranchId?: string;
+    /** External pane id (desktop8 Phase 30: allocated by the caller, not the Model). */
+    newPaneId: string;
+    /** External branch id (desktop8 Phase 30: allocated by the caller, not the Model). */
+    newBranchId: string;
   },
 ): SplitPaneStateSlice | null {
-  const { tabId, targetPaneId, direction, placement } = input;
-  const newPaneId = input.newPaneId ?? createPaneId();
-  const newBranchId = input.newBranchId ?? createPaneId();
+  const { tabId, targetPaneId, direction, placement, newPaneId, newBranchId } = input;
 
   // Find the source leaf containing the tab
   const sourceLeaf = findLeafByTabId(state.root, tabId);

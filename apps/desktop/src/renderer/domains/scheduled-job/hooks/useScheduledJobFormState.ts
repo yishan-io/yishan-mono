@@ -3,12 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { listOrgNodes } from "../../../domains/node";
-import {
-  type ScheduleType,
-  computeNextRunEstimate,
-  describeCronExpression,
-  toCronExpression,
-} from "../model/scheduledJobScheduleRules";
+import { type ScheduleType, toCronExpression } from "../model/scheduledJobScheduleRules";
+import { computeNextRunEstimate, describeCronExpression } from "../services/scheduledJobScheduleDisplay";
 
 type ScheduledJobFormProject = {
   id: string;

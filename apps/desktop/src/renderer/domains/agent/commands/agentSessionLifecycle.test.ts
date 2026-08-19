@@ -9,7 +9,7 @@ import { workspaceStore } from "../../../domains/workspace/state/workspaceStore"
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
-} from "../../terminal/model/terminalCloseTombstones";
+} from "../../terminal/runtime/terminalCloseTombstones";
 
 import { createNotificationEventHandlers } from "../../notification/events/notificationEventHandlers";
 import { clearTerminalAgentStatus } from "./agentSessionLifecycle";

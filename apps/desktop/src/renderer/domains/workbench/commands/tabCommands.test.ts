@@ -13,7 +13,7 @@ import {
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
-} from "../../terminal/model/terminalCloseTombstones";
+} from "../../terminal/runtime/terminalCloseTombstones";
 import {
   closeAllTabs,
   closeOtherTabs,
@@ -46,7 +46,6 @@ vi.mock("../../../domains/agent/commands/agentChatCommands", () => ({
 vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
-
 
 vi.mock("../../../events/agentChatComposerFocus", () => ({
   clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,

@@ -46,7 +46,7 @@ export { TerminalRecoveryCoordinator } from "./runtime/terminalRecovery";
 // Explicit tab-close tombstones (desktop7 Phase 26): app tabCloseHandler
 // records tombstones through the terminal public API; the terminal reconciler
 // consumes them via the domain model module.
-export { recordExplicitlyClosedTerminalTabId } from "./model/terminalCloseTombstones";
+export { recordExplicitlyClosedTerminalTabId } from "./runtime/terminalCloseTombstones";
 
 // Stable UI entry points for cross-feature composition (Phase 18).
 export { TerminalView } from "./features/terminal-tab/TerminalView";

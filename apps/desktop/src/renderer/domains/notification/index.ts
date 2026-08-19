@@ -5,10 +5,9 @@ export type { NotificationCommands } from "./commands/contract";
 
 export {
   resolveWorkspaceNotificationColor,
-  resolveWorkspaceNotificationTone,
   type WorkspaceNotificationColor,
   type WorkspaceNotificationTone,
-} from "./model/workspaceNotification";
+} from "./ui/workspaceNotificationTone";
 
 export {
   dispatchNotification,

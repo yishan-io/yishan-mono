@@ -1,22 +1,17 @@
 import { getFileName } from "@renderer/path/pathHelpers";
 /**
- * Pure workspace snapshot reconciler.
+ * Pure workspace snapshot reconciler (desktop8 Phase 30: moved beside its App
+ * workflow in app/commands; the Project+Workspace projection is app-owned).
  *
- * Phase 3: single owner of snapshot reconciliation. Takes backend records +
- * previous store state, returns a pure result (no store mutation). The
- * coordinator (`applySnapshot.ts`) applies the result to the feature stores
- * synchronously in one call stack.
- *
- * Transport DTOs (ProjectRecord, WorkspaceRecord) enter this module only; the
- * stores receive view models.
+ * Takes backend records + previous store state, returns a pure result (no
+ * store mutation). The coordinator (`workspaceSnapshotFlow.ts`) applies the
+ * result to the feature stores synchronously in one call stack.
  */
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../../../domains/project";
-import { resolveHydratedWorkspaceDisplayMetadata } from "../services/workspaceDisplayNames";
-import type { ProjectRecord, WorkspaceRecord } from "./snapshotTypes";
-import type { WorkspaceItem } from "./workspaceTypes";
-import type { WorkspaceGitChangeTotals } from "./workspaceTypes";
-import type { WorkspaceStatus } from "./workspaceTypes";
+import type { ProjectRecord, WorkspaceRecord } from "@renderer/api/types";
+import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "@renderer/domains/project";
+import { resolveHydratedWorkspaceDisplayMetadata } from "@renderer/domains/workspace";
+import type { ExternalAppId } from "../../../shared/contracts/externalApps";
+import type { WorkspaceItem, WorkspaceStatus } from "@renderer/domains/workspace";
 
 type ProjectStoreSlice = {
   projects: WorkspaceProjectRecord[];

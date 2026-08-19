@@ -1,9 +1,8 @@
+import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 import { useWorkspaceAgentStatusByWorkspaceId, useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
 import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/domains/git";
 import { listOrgNodes } from "@renderer/domains/node";
-import { resolveWorkspaceNotificationTone } from "@renderer/domains/notification";
 import {
-  LOCAL_FOLDER_PROJECT_ID,
   filterVisibleProjects,
   supportsGitFeatures,
   useDisplayProjectIds,
@@ -13,6 +12,7 @@ import { useSelectedOrganizationId } from "@renderer/domains/session";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/domains/workspace";
 import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";

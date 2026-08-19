@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GitPullRequest } from "./gitPullRequestTypes";
-import { livePrStatus } from "./pullRequestUtils";
+import { livePrStatus } from "./gitPullRequestStatus";
 
 function buildPr(overrides: Partial<GitPullRequest> = {}): GitPullRequest {
   return {

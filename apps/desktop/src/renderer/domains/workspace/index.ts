@@ -53,11 +53,6 @@ export {
 export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
 export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./model/workspaceTypes";
 export {
-  reconcileWorkspaceSnapshot,
-  type SnapshotReconcilerInput,
-  type SnapshotReconcilerResult,
-} from "./model/snapshotReconciler";
-export {
   addWorkspace,
   setOrderedWorkspaceIds,
 } from "./state/workspaceActions";
@@ -106,11 +101,5 @@ export {
   resolveWorkspaceListDisplayName,
 } from "./services/workspaceDisplayNames";
 export { isFolderWorkspace } from "./model/localFolder";
-export {
-  buildWorkspaceNavigationPath,
-  buildWorkspaceSessionNavigationPath,
-  buildWorkspaceTabNavigationPath,
-  parseWorkspaceSessionNavigationPath,
-} from "./model/workspaceNavigation";
 
 export { BranchDropdown, type BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";

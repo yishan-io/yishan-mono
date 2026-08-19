@@ -1,12 +1,12 @@
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { renderProjectIcon } from "@renderer/domains/project";
+import { useProjects } from "@renderer/domains/project";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { listOrgNodes } from "../../../../domains/node";
-import { useProjects } from "@renderer/domains/project";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
+import { describeCronExpression } from "../../services/scheduledJobScheduleDisplay";
 import { ScheduledJobStatusIndicator } from "../../ui/ScheduledJobStatusIndicator";
-import { describeCronExpression } from "./scheduledJobDetailHelpers";
 
 type ScheduledJobDetailFieldsProps = {
   job: ScheduledJobRecord;

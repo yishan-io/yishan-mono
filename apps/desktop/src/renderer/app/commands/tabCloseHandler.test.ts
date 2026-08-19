@@ -3,7 +3,7 @@
 import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
-} from "@renderer/domains/terminal/model/terminalCloseTombstones";
+} from "@renderer/domains/terminal/runtime/terminalCloseTombstones";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../domains/agent/state/chatStore";
 import { splitPaneStore } from "../../domains/workbench/state/splitPaneStore";
@@ -53,7 +53,9 @@ vi.mock("@renderer/domains/workspace", async (importOriginal) => {
 });
 
 vi.mock("@renderer/domains/terminal", async () => {
-  const { recordExplicitlyClosedTerminalTabId } = await import("@renderer/domains/terminal/model/terminalCloseTombstones");
+  const { recordExplicitlyClosedTerminalTabId } = await import(
+    "@renderer/domains/terminal/runtime/terminalCloseTombstones"
+  );
   return {
     closeTerminalSession: rpcMocks.closeSession,
     recordExplicitlyClosedTerminalTabId,

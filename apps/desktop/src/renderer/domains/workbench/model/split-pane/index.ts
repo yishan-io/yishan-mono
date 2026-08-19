@@ -2,7 +2,6 @@ export {
   addTabToPane,
   collectLeaves,
   createLeaf,
-  createPaneId,
   findLeaf,
   findLeafByTabId,
   moveTabToPane,

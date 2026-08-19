@@ -6,13 +6,8 @@ import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import type { ProjectWithWorkspacesRecord } from "../../../api/types";
-import {
-  createProject as createProjectFromApi,
-  deleteProject as deleteProjectFromApi,
-  updateProject as updateProjectFromApi,
-} from "../infrastructure/projectApi";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
 import {
   addWorkspace as applyAddWorkspace,
@@ -24,7 +19,12 @@ import {
   syncWorkspaceContextLinks,
 } from "../../../domains/workspace";
 import { type ProjectListPreference, getProjectRpc } from "../infrastructure/daemonProjectClient";
-import { pickRandomProjectColor, pickRandomProjectIcon } from "../model/projectIconPresets";
+import {
+  createProject as createProjectFromApi,
+  deleteProject as deleteProjectFromApi,
+  updateProject as updateProjectFromApi,
+} from "../infrastructure/projectApi";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../services/projectIconSelection";
 import { projectStore } from "../state/projectStore";
 
 async function inspectLocalRepository(path: string): Promise<{

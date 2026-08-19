@@ -63,5 +63,5 @@ export { GitChangeTotals } from "./ui/GitChangeTotals";
 export { BranchBadge } from "./ui/BranchBadge";
 export { PullRequestIcon } from "./ui/PullRequestIcon";
 export { ProjectCommitComparison } from "./features/project-git-changes/ProjectCommitComparison";
-export { createDiffTabPlaceholder } from "./model/diffTabPlaceholder";
-export { livePrStatus } from "./model/pullRequestUtils";
+
+export { livePrStatus } from "./model/gitPullRequestStatus";

@@ -14,7 +14,7 @@ import type { WorkbenchTab } from "../../../domains/workbench";
 import {
   consumeExplicitlyClosedTerminalTabId,
   recordExplicitlyClosedTerminalTabId,
-} from "../model/terminalCloseTombstones";
+} from "../runtime/terminalCloseTombstones";
 
 type TerminalTab = Extract<WorkbenchTab, { kind: "terminal" }>;
 type TerminalSessionChangedPayload = RpcFrontendMessagePayload<"terminalSessionChanged">;

@@ -39,13 +39,8 @@ import {
   LuUser,
   LuWrench,
 } from "react-icons/lu";
-import {
-  DEFAULT_PROJECT_ICON_ID,
-  PROJECT_COLOR_PRESETS,
-  PROJECT_ICON_IDS,
-  pickRandomProjectColor,
-  pickRandomProjectIcon,
-} from "../model/projectIconPresets";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../services/projectIconSelection";
+import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "./projectIconPresets";
 
 const PROJECT_ICON_BY_ID: Record<string, IconType> = {
   folder: LuFolder,

@@ -142,6 +142,8 @@ describe("createAdjacentPaneWithTab", () => {
         targetPaneId: "missing-pane",
         direction: "horizontal",
         placement: "second",
+        newPaneId: "pane-x",
+        newBranchId: "branch-x",
       }),
     ).toBeNull();
     expect(
@@ -150,6 +152,8 @@ describe("createAdjacentPaneWithTab", () => {
         targetPaneId: "pane-root",
         direction: "horizontal",
         placement: "second",
+        newPaneId: "pane-y",
+        newBranchId: "branch-y",
       }),
     ).toBeNull();
   });
@@ -227,6 +231,8 @@ describe("splitPaneWithTab", () => {
       targetPaneId: "pane-root",
       direction: "horizontal",
       placement: "second",
+      newPaneId: "pane-z",
+      newBranchId: "branch-z",
     });
     expect(next).toBeNull();
   });

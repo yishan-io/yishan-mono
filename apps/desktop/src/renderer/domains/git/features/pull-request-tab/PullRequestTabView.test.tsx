@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 vi.mock("@renderer/domains/git", async () => {
-  const { livePrStatus } = await import("../../model/pullRequestUtils");
+  const { livePrStatus } = await import("../../model/gitPullRequestStatus");
   const { BranchBadge } = await import("../../ui/BranchBadge");
   const { PullRequestIcon } = await import("../../ui/PullRequestIcon");
   const projectionState: Record<string, unknown> = { pullRequestByWorkspaceId: {}, currentBranchByWorkspaceId: {} };

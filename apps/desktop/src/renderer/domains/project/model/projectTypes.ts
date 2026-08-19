@@ -43,5 +43,3 @@ export type WorkspaceStoreOrganizationPreference = {
   knownProjectIds?: string[];
   lastUsedExternalAppId?: ExternalAppId;
 };
-
-export const LOCAL_FOLDER_PROJECT_ID = "local-folder";

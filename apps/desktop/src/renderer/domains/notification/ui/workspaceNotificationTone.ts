@@ -1,30 +1,14 @@
-import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "@renderer/domains/agent";
+/**
+ * Workspace notification tone + color mapping (desktop8 Phase 30: moved to
+ * the Notification UI layer). The cross-Domain tone DECISION lives in
+ * `app/selectors.ts`; this module owns the tone/color vocabulary.
+ */
 
 /** The display state selected from a workspace's runtime and unread notification state. */
 export type WorkspaceNotificationTone = "none" | "waiting_input" | "done" | "failed";
 
 /** The theme color token used to render a workspace notification tone. */
 export type WorkspaceNotificationColor = "warning.main" | "error.main" | "success.main" | "text.secondary";
-
-/** Resolves the notification tone with waiting-for-input taking precedence over unread activity. */
-export function resolveWorkspaceNotificationTone(input: {
-  runtimeStatus: WorkspaceAgentStatus;
-  unreadTone?: WorkspaceUnreadTone;
-}): WorkspaceNotificationTone {
-  if (input.runtimeStatus === "waiting_input") {
-    return "waiting_input";
-  }
-
-  if (input.unreadTone === "error") {
-    return "failed";
-  }
-
-  if (input.unreadTone === "success") {
-    return "done";
-  }
-
-  return "none";
-}
 
 /** Maps a workspace notification tone to its theme color token. */
 export function resolveWorkspaceNotificationColor(tone: WorkspaceNotificationTone): WorkspaceNotificationColor {

@@ -7,7 +7,7 @@ import {
 } from "../../../domains/workbench/model/split-pane";
 import type { OpenTabInput } from "../../../domains/workbench/model/types";
 import { type WorkspaceRightPaneTab, layoutStore } from "../../../domains/workbench/state/layoutStore";
-import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
+import { createPaneId, splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../domains/workbench/state/tabStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workbenchNavigationStore } from "../../../domains/workbench/state/workbenchNavigationStore";
@@ -172,7 +172,7 @@ export function openTabInOppositePane(input: OpenTabInput): void {
       splitPaneStore.getState().setActivePane(workspaceId, oppositeId);
     } else if (layout.root.kind === "leaf") {
       // No split yet — create one with the new pane as second (right/bottom)
-      const next = splitRootPane(layout, "horizontal");
+      const next = splitRootPane(layout, "horizontal", createPaneId(), createPaneId());
       if (!next) {
         // Fallback to normal open
         openTab(input);

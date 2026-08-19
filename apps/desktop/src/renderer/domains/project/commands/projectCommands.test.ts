@@ -3,10 +3,10 @@
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceSettingsStore } from "@renderer/domains/workspace";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFlow";
 import { chatStore } from "../../../domains/agent/state/chatStore";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";

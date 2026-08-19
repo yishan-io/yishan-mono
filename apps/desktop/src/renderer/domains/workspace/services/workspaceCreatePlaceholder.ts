@@ -5,7 +5,7 @@
  * Lives in the Workspace model so both Commands and Events can import it
  * without depending on a command module.
  */
-import type { AddWorkspaceInput } from "./workspaceTypes";
+import type { AddWorkspaceInput } from "../model/workspaceTypes";
 
 export type WorkspaceCreatePlaceholderInput = AddWorkspaceInput;
 

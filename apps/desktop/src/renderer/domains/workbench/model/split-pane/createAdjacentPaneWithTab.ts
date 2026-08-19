@@ -1,4 +1,4 @@
-import { createLeaf, createPaneId, findLeaf, findLeafByTabId, replaceNode } from "./operations";
+import { createLeaf, findLeaf, findLeafByTabId, replaceNode } from "./operations";
 import type { PaneBranch, SplitDirection, SplitPaneStateSlice } from "./types";
 
 /** Creates a sibling pane containing an unplaced tab without mutating the target pane. */
@@ -9,8 +9,10 @@ export function createAdjacentPaneWithTab(
     targetPaneId: string;
     direction: SplitDirection;
     placement: "first" | "second";
-    newPaneId?: string;
-    newBranchId?: string;
+    /** External pane id (desktop8 Phase 30: allocated by the caller, not the Model). */
+    newPaneId: string;
+    /** External branch id (desktop8 Phase 30: allocated by the caller, not the Model). */
+    newBranchId: string;
   },
 ): SplitPaneStateSlice | null {
   const targetLeaf = findLeaf(state.root, input.targetPaneId);
@@ -18,8 +20,8 @@ export function createAdjacentPaneWithTab(
     return null;
   }
 
-  const newPaneId = input.newPaneId ?? createPaneId();
-  const newBranchId = input.newBranchId ?? createPaneId();
+  const newPaneId = input.newPaneId;
+  const newBranchId = input.newBranchId;
   const newLeaf = createLeaf(newPaneId, [input.tabId], input.tabId);
   const branch: PaneBranch = {
     kind: "branch",

@@ -1,5 +1,6 @@
 import { Box } from "@mui/material";
 import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
+import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { OverviewView } from "@renderer/domains/overview";
@@ -19,8 +20,6 @@ import { WorkspaceLifecycleNoticeView, resolveWorkspaceProjectId, workspaceStore
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ACTIONS } from "../../events";
-import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
 import {
   type AgentCommandSurface,
   type AppCommandSurface,
@@ -40,12 +39,13 @@ import {
   useWorkspaceCommands,
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
+import { ACTIONS } from "../../events";
 import { subscribeAppActionEvent } from "../../events";
-import { parseWorkspaceSessionNavigationPath } from "@renderer/domains/workspace";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";
 import { LeftPaneView } from "../features/main-workspace-shell/LeftPaneView";
 import { MainPaneView } from "../features/main-workspace-shell/MainPaneView";
 import { OnboardingView } from "./OnboardingView";
+import { parseWorkspaceSessionNavigationPath } from "./workspaceNavigation";
 
 const LEFT_MIN_WIDTH = 240;
 const MAIN_MIN_WIDTH = 520;

@@ -38,7 +38,6 @@ import {
 } from "@renderer/domains/files";
 import {
   commitGitChanges as commitGitChangesCommand,
-  createDiffTabPlaceholder,
   getGitAuthorName as getGitAuthorNameCommand,
   getGitBranchStatus as getGitBranchStatusCommand,
   listGitBranches as listGitBranchesCommand,
@@ -152,6 +151,7 @@ import {
   logout as logoutCommand,
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "./appCommands";
+import { createDiffTabPlaceholder } from "./diffTabPlaceholder";
 
 import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspaceSnapshotFlow";
 

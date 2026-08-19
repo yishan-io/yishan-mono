@@ -201,7 +201,7 @@ vi.mock("@renderer/domains/project", async () => {
   // The workspace feature graph (reached through @renderer/domains/workspace)
   // imports project public-API members; load the stateless ones from deep
   // paths (async factory avoids the project<->workspace index cycle).
-  const projectTypes = await import("../../../domains/project/model/projectTypes");
+  const sharedWorkspace = await import("@shared/workspace/localFolderProjectId");
   const projectCapability = await import("../../../domains/project/model/projectGitCapability");
   const projectListRules = await import("../../../domains/project/model/projectListRules");
   const projectSelectors = await import("../../../domains/project/state/projectSelectors");
@@ -211,7 +211,7 @@ vi.mock("@renderer/domains/project", async () => {
   const projectDeleteDialog = await import("../../../domains/project/features/project-delete/ProjectDeleteDialogView");
   return {
     deleteProject: mocked.deleteProject,
-    LOCAL_FOLDER_PROJECT_ID: projectTypes.LOCAL_FOLDER_PROJECT_ID,
+    LOCAL_FOLDER_PROJECT_ID: sharedWorkspace.LOCAL_FOLDER_PROJECT_ID,
     supportsGitFeatures: projectCapability.supportsGitFeatures,
     filterVisibleProjects: projectListRules.filterVisibleProjects,
     selectProjectById: projectSelectors.selectProjectById,

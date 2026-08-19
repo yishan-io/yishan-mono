@@ -1,7 +1,6 @@
 import { selectProjectById } from "@renderer/domains/project";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectSelectedOrganizationId } from "../../../domains/session";
-import { buildWorkspaceCreatePlaceholder } from "../../../domains/workspace/model/workspaceCreatePlaceholder";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import {
   type WorkspaceLifecycleScriptWarning,
@@ -10,6 +9,7 @@ import {
 } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
+import { buildWorkspaceCreatePlaceholder } from "../services/workspaceCreatePlaceholder";
 import { selectIsDefaultContextEnabled } from "../state/workspaceSettingsSelectors";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 

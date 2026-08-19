@@ -1,4 +1,4 @@
-import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useCallback } from "react";
 import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorHelpers";
 

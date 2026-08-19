@@ -1,5 +1,6 @@
+import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "@renderer/domains/agent";
 import { gitProjectionStore } from "@renderer/domains/git";
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import type { WorkspaceNotificationTone } from "@renderer/domains/notification";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 /**
  * Composed screen read models.
@@ -10,6 +11,7 @@ import type { WorkspaceProjectRecord } from "@renderer/domains/project";
  * value; callers wrap in useMemo when subscribing.
  */
 import { projectStore } from "@renderer/domains/project";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { layoutStore } from "@renderer/domains/workbench";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { workspaceStore } from "@renderer/domains/workspace";
@@ -104,4 +106,29 @@ function useWorkspaceSelectedId(): string {
 
 function useProjectStoreSelectedProjectId(): string {
   return workbenchNavigationStore((s) => s.activeProjectId);
+}
+
+/**
+ * Resolves the workspace notification tone with waiting-for-input taking
+ * precedence over unread activity (desktop8 Phase 30: cross-Domain decision
+ * moved out of the Notification Model; tone/color vocabulary stays in
+ * `domains/notification/ui/workspaceNotificationTone`).
+ */
+export function resolveWorkspaceNotificationTone(input: {
+  runtimeStatus: WorkspaceAgentStatus;
+  unreadTone?: WorkspaceUnreadTone;
+}): WorkspaceNotificationTone {
+  if (input.runtimeStatus === "waiting_input") {
+    return "waiting_input";
+  }
+
+  if (input.unreadTone === "error") {
+    return "failed";
+  }
+
+  if (input.unreadTone === "success") {
+    return "done";
+  }
+
+  return "none";
 }
