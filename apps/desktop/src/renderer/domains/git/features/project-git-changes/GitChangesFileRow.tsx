@@ -6,7 +6,7 @@ import type {
   ProjectGitChangeItem,
   ProjectGitChangeKind,
   ProjectGitChangesSection,
-} from "../project-git-changes/ProjectGitChangesList.types";
+} from "./ProjectGitChangesList.types";
 
 type GitChangesFileRowProps = {
   file: ProjectGitChangeItem;

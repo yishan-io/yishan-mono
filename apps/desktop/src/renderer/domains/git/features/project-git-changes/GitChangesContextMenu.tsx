@@ -3,7 +3,7 @@ import { LuCopy, LuCornerUpLeft, LuMinus, LuPlus } from "react-icons/lu";
 import type {
   ProjectGitChangeItem,
   ProjectGitChangesSection,
-} from "../project-git-changes/ProjectGitChangesList.types";
+} from "./ProjectGitChangesList.types";
 
 type GitChangesContextMenuState = {
   file: ProjectGitChangeItem;
