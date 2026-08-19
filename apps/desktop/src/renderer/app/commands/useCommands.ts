@@ -5,7 +5,6 @@ import {
   type Commands,
   type FileCommandSurface,
   type GitCommandSurface,
-  type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
   createAgentCommands,
@@ -13,7 +12,6 @@ import {
   createCommands,
   createFileCommands,
   createGitCommands,
-  createTerminalCommands,
   createWorkbenchCommands,
   createWorkspaceCommands,
 } from "./composition";
@@ -54,17 +52,12 @@ export function useWorkbenchCommands(): WorkbenchCommandSurface {
   return useMemo(() => createWorkbenchCommands(), []);
 }
 
-export function useTerminalCommands(): TerminalCommandSurface {
-  return useMemo(() => createTerminalCommands(), []);
-}
-
 export type {
   AgentCommandSurface,
   AppCommandSurface,
   Commands,
   FileCommandSurface,
   GitCommandSurface,
-  TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
 } from "./composition";

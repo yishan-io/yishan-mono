@@ -187,7 +187,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useGitCommands: commandSurface,
     useFileCommands: commandSurface,
     useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
   };
 });
 
@@ -377,6 +376,16 @@ vi.mock("@renderer/domains/terminal", async (importOriginal) => {
       <div data-testid="terminal-view" data-tab-id={tabId} data-focus-request-key={focusRequestKey} />
     ),
     disposeTerminalRuntimesForClosedTabs: vi.fn(),
+    listDetectedPorts: (...args: unknown[]) => {
+      const stateFn = mocked.stateRef.current.listDetectedPorts as ((...a: unknown[]) => unknown) | undefined;
+      return stateFn ? stateFn.apply(null, args) : Promise.resolve([]);
+    },
+    subscribeDetectedPorts: (...args: unknown[]) => {
+      const stateFn = mocked.stateRef.current.subscribeDetectedPorts as ((...a: unknown[]) => unknown) | undefined;
+      return stateFn
+        ? stateFn.apply(null, args)
+        : (mocked.subscribeDetectedPorts as (...a: unknown[]) => unknown).apply(null, args);
+    },
   };
 });
 

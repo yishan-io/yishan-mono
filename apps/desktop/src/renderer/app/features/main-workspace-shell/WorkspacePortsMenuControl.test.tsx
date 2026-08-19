@@ -26,13 +26,20 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
+vi.mock("@renderer/domains/terminal", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/terminal")>();
+  return {
+    ...actual,
     killTerminalProcess: mocked.killTerminalProcess,
     listDetectedPorts: mocked.listDetectedPorts,
+    subscribeDetectedPorts: mocked.subscribeDetectedPorts,
+  };
+});
+
+vi.mock("../../../app/commands/useCommands", () => {
+  const commandSurface = () => ({
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
     selectTab: mocked.selectTab,
-    subscribeDetectedPorts: mocked.subscribeDetectedPorts,
   });
   return {
     useAppCommands: commandSurface,
@@ -41,7 +48,6 @@ vi.mock("../../../app/commands/useCommands", () => {
     useGitCommands: commandSurface,
     useFileCommands: commandSurface,
     useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
   };
 });
 

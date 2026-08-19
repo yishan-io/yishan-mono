@@ -58,23 +58,6 @@ import {
   unstageGitChanges as unstageGitChangesCommand,
 } from "@renderer/domains/git";
 import { projectStore } from "@renderer/domains/project";
-import {
-  closeTerminalSession as closeTerminalSessionCommand,
-  consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
-  createTerminalSession as createTerminalSessionCommand,
-  getTerminalResourceUsage as getTerminalResourceUsageCommand,
-  killTerminalProcess as killTerminalProcessCommand,
-  listDetectedPorts as listDetectedPortsCommand,
-  listTerminalSessions as listTerminalSessionsCommand,
-  readTerminalOutput as readTerminalOutputCommand,
-  resizeTerminal as resizeTerminalCommand,
-  retainOpenTerminalTabFocus as retainOpenTerminalTabFocusCommand,
-  setActiveWorkspace as setActiveWorkspaceCommand,
-  subscribeDetectedPorts as subscribeDetectedPortsCommand,
-  subscribeTerminalOutput as subscribeTerminalOutputCommand,
-  subscribeTerminalSessions as subscribeTerminalSessionsCommand,
-  writeTerminalInput as writeTerminalInputCommand,
-} from "@renderer/domains/terminal";
 import { tabStore } from "@renderer/domains/workbench";
 import {
   activateProject as activateProjectCommand,
@@ -136,7 +119,6 @@ import type {
   Commands,
   FileCommandSurface,
   GitCommandSurface,
-  TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
 } from "./commandSurfaces";
@@ -289,26 +271,6 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
   };
 }
 
-export function createTerminalCommands(): TerminalCommandSurface {
-  return {
-    createTerminalSession: createTerminalSessionCommand,
-    writeTerminalInput: writeTerminalInputCommand,
-    resizeTerminal: resizeTerminalCommand,
-    readTerminalOutput: readTerminalOutputCommand,
-    listDetectedPorts: listDetectedPortsCommand,
-    subscribeDetectedPorts: subscribeDetectedPortsCommand,
-    setActiveWorkspace: setActiveWorkspaceCommand,
-    getTerminalResourceUsage: getTerminalResourceUsageCommand,
-    listTerminalSessions: listTerminalSessionsCommand,
-    subscribeTerminalOutput: subscribeTerminalOutputCommand,
-    subscribeTerminalSessions: subscribeTerminalSessionsCommand,
-    closeTerminalSession: closeTerminalSessionCommand,
-    consumeTerminalTabFocus: consumeTerminalTabFocusCommand,
-    retainOpenTerminalTabFocus: retainOpenTerminalTabFocusCommand,
-    killTerminalProcess: killTerminalProcessCommand,
-  };
-}
-
 /** Returns the composed UI-facing command surface (all features). */
 export function createCommands(): Commands {
   return {
@@ -318,7 +280,6 @@ export function createCommands(): Commands {
     ...createGitCommands(),
     ...createFileCommands(),
     ...createWorkbenchCommands(),
-    ...createTerminalCommands(),
   };
 }
 export type {
@@ -326,7 +287,6 @@ export type {
   AppCommandSurface,
   FileCommandSurface,
   GitCommandSurface,
-  TerminalCommandSurface,
   WorkbenchCommandSurface,
   WorkspaceCommandSurface,
   Commands,

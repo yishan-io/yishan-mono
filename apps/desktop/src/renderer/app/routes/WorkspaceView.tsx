@@ -9,6 +9,7 @@ import { CreateProjectDialogView, projectStore } from "@renderer/domains/project
 import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "@renderer/domains/session";
 import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
+import { listTerminalSessions, setActiveWorkspace } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { resizeLeftPane } from "@renderer/domains/workbench";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/domains/workbench";
@@ -25,14 +26,12 @@ import {
   type AppCommandSurface,
   type FileCommandSurface,
   type GitCommandSurface,
-  type TerminalCommandSurface,
   type WorkbenchCommandSurface,
   type WorkspaceCommandSurface,
   useAgentCommands,
   useAppCommands,
   useFileCommands,
   useGitCommands,
-  useTerminalCommands,
   useWorkbenchCommands,
   useWorkspaceCommands,
 } from "../../app/commands/useCommands";
@@ -56,10 +55,12 @@ function clamp(value: number, min: number, max: number): number {
 type WorkspaceViewCommands = WorkspaceCommandSurface &
   WorkbenchCommandSurface &
   AgentCommandSurface &
-  TerminalCommandSurface &
   FileCommandSurface &
   GitCommandSurface &
-  AppCommandSurface;
+  AppCommandSurface & {
+    listTerminalSessions: typeof listTerminalSessions;
+    setActiveWorkspace: typeof setActiveWorkspace;
+  };
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
 function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: ReturnType<typeof useNavigate> }) {
@@ -349,7 +350,6 @@ export function WorkspaceView() {
   const workspaceCommands = useWorkspaceCommands();
   const workbenchCommands = useWorkbenchCommands();
   const agentCommands = useAgentCommands();
-  const terminalCommands = useTerminalCommands();
   const fileCommands = useFileCommands();
   const gitCommands = useGitCommands();
   const appCommands = useAppCommands();
@@ -358,12 +358,13 @@ export function WorkspaceView() {
       ...workspaceCommands,
       ...workbenchCommands,
       ...agentCommands,
-      ...terminalCommands,
+      listTerminalSessions,
+      setActiveWorkspace,
       ...fileCommands,
       ...gitCommands,
       ...appCommands,
     }),
-    [workspaceCommands, workbenchCommands, agentCommands, terminalCommands, fileCommands, gitCommands, appCommands],
+    [workspaceCommands, workbenchCommands, agentCommands, fileCommands, gitCommands, appCommands],
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));

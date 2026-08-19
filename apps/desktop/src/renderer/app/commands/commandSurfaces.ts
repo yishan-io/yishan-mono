@@ -65,23 +65,6 @@ import {
   type trackGitChanges as trackGitChangesCommand,
   type unstageGitChanges as unstageGitChangesCommand,
 } from "@renderer/domains/git";
-import type {
-  closeTerminalSession as closeTerminalSessionCommand,
-  consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
-  createTerminalSession as createTerminalSessionCommand,
-  getTerminalResourceUsage as getTerminalResourceUsageCommand,
-  killTerminalProcess as killTerminalProcessCommand,
-  listDetectedPorts as listDetectedPortsCommand,
-  listTerminalSessions as listTerminalSessionsCommand,
-  readTerminalOutput as readTerminalOutputCommand,
-  resizeTerminal as resizeTerminalCommand,
-  retainOpenTerminalTabFocus as retainOpenTerminalTabFocusCommand,
-  setActiveWorkspace as setActiveWorkspaceCommand,
-  subscribeDetectedPorts as subscribeDetectedPortsCommand,
-  subscribeTerminalOutput as subscribeTerminalOutputCommand,
-  subscribeTerminalSessions as subscribeTerminalSessionsCommand,
-  writeTerminalInput as writeTerminalInputCommand,
-} from "@renderer/domains/terminal";
 import { tabStore } from "@renderer/domains/workbench";
 import {
   type activateProject as activateProjectCommand,
@@ -257,30 +240,10 @@ export type WorkbenchCommandSurface = {
   renameTabsForEntryRename: typeof renameTabsForEntryRenameCommand;
 };
 
-/** Terminal feature command surface. */
-export type TerminalCommandSurface = {
-  createTerminalSession: typeof createTerminalSessionCommand;
-  writeTerminalInput: typeof writeTerminalInputCommand;
-  resizeTerminal: typeof resizeTerminalCommand;
-  readTerminalOutput: typeof readTerminalOutputCommand;
-  listDetectedPorts: typeof listDetectedPortsCommand;
-  subscribeDetectedPorts: typeof subscribeDetectedPortsCommand;
-  setActiveWorkspace: typeof setActiveWorkspaceCommand;
-  getTerminalResourceUsage: typeof getTerminalResourceUsageCommand;
-  listTerminalSessions: typeof listTerminalSessionsCommand;
-  subscribeTerminalOutput: typeof subscribeTerminalOutputCommand;
-  subscribeTerminalSessions: typeof subscribeTerminalSessionsCommand;
-  closeTerminalSession: typeof closeTerminalSessionCommand;
-  consumeTerminalTabFocus: typeof consumeTerminalTabFocusCommand;
-  retainOpenTerminalTabFocus: typeof retainOpenTerminalTabFocusCommand;
-  killTerminalProcess: typeof killTerminalProcessCommand;
-};
-
 /** The composed application command surface (all features). */
 export type Commands = AppCommandSurface &
   WorkspaceCommandSurface &
   AgentCommandSurface &
   GitCommandSurface &
   FileCommandSurface &
-  WorkbenchCommandSurface &
-  TerminalCommandSurface;
+  WorkbenchCommandSurface;

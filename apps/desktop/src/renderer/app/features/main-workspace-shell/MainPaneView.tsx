@@ -14,7 +14,11 @@ import { getFileTreeIcon } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
 
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
-import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/domains/terminal";
+import {
+  disposeTerminalRuntimesForClosedTabs,
+  forceFitTerminalRuntimes,
+  retainOpenTerminalTabFocus,
+} from "@renderer/domains/terminal";
 import {
   DEFAULT_RIGHT_PANE_TAB,
   RightPaneTabBar,
@@ -39,7 +43,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
-import { useFileCommands, useGitCommands, useTerminalCommands, useWorkbenchCommands } from "../../commands/useCommands";
+import { useFileCommands, useGitCommands, useWorkbenchCommands } from "../../commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../selectors";
 import { LaunchView } from "../launch/LaunchView";
 import { useTabContentRenderer } from "../tab-content/useTabContentRenderer";
@@ -55,7 +59,6 @@ function clamp(value: number, min: number, max: number): number {
 /** Renders the primary workspace pane with split-pane tabbed content, per-tab views, and pane visibility controls. */
 export function MainPaneView() {
   const { t } = useTranslation();
-  const cmd = useTerminalCommands();
   const workbenchCommands = useWorkbenchCommands();
   const fileCommands = useFileCommands();
   const gitCommands = useGitCommands();
@@ -204,10 +207,10 @@ export function MainPaneView() {
 
     const terminalTabIds = new Set(tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
     const agentChatTabIds = new Set(tabs.filter((tab) => tab.kind === "agent-chat").map((tab) => tab.id));
-    cmd.retainOpenTerminalTabFocus(terminalTabIds);
+    retainOpenTerminalTabFocus(terminalTabIds);
     retainOpenTabFocus(agentChatTabIds);
     disposeTerminalRuntimesForClosedTabs(terminalTabIds);
-  }, [cmd, tabs]);
+  }, [tabs]);
 
   // Force-fit terminal runtimes when a terminal tab becomes the selected one so
   // the PTY surface fills the pane placeholder (Workbench presents, Terminal fits).
