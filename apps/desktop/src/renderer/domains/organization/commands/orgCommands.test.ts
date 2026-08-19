@@ -20,7 +20,7 @@ vi.mock("../../../api", () => ({
   },
 }));
 
-vi.mock("../../../domains/organization/infrastructure/daemonOrganizationProcedures", () => ({
+vi.mock("../../../domains/organization/daemon/daemonOrganizationProcedures", () => ({
   setCurrentOrganization: rpcMocks.setCurrentOrganization,
 }));
 

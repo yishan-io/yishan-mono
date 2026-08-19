@@ -3,7 +3,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
 
 import { rendererQueryClient } from "../../../queryClient";
-import { setCurrentOrganization } from "../infrastructure/daemonOrganizationProcedures";
+import { setCurrentOrganization } from "../daemon/daemonOrganizationProcedures";
 import {
   addOrganizationMember,
   cancelOrganizationInvite,
@@ -13,7 +13,7 @@ import {
   listOrganizationMembers as listOrganizationMembersFromApi,
   listOrganizations as listOrganizationsFromApi,
   removeOrganizationMember as removeOrganizationMemberFromApi,
-} from "../infrastructure/orgApi";
+} from "../api/orgApi";
 import { sessionStore } from "@renderer/domains/session";
 
 const errNoOrgSelected = "No organization selected.";

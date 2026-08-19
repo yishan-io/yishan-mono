@@ -26,7 +26,7 @@ import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
-import type { OrganizationMemberRecord } from "../../infrastructure/orgApi";
+import type { OrganizationMemberRecord } from "../../api/orgApi";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
 import { sessionStore } from "@renderer/domains/session";

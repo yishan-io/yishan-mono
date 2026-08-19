@@ -20,7 +20,7 @@ const apiMocks = vi.hoisted(() => ({
   updateProject: vi.fn(),
 }));
 
-vi.mock("../../../domains/organization/infrastructure/orgApi", () => ({
+vi.mock("../../../domains/organization/api/orgApi", () => ({
   listOrganizations: apiMocks.listOrganizations,
 }));
 
