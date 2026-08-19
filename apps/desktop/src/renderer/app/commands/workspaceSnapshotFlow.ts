@@ -1,11 +1,11 @@
-import { listOrganizations } from "@renderer/domains/organization";
 import type { ProjectRecord } from "@renderer/api/types";
+import { listOrganizations } from "@renderer/domains/organization";
 import { listProjectsByOrg, projectStore } from "@renderer/domains/project";
+
 import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import {
   openFoldersForSnapshot,
-  reconcileWorkspaceSnapshot,
   restoreFolderSelectionIfNeeded,
   syncTabStoreWithWorkspace,
   warmupWorkspacesForProjects,
@@ -13,6 +13,7 @@ import {
   workspaceStore,
 } from "@renderer/domains/workspace";
 import { listLocalFolders } from "@renderer/domains/workspace";
+import { reconcileWorkspaceSnapshot } from "./snapshotReconciler";
 /**
  * WorkspaceSnapshotFlow — the shared workspace-snapshot load.
  *
@@ -46,7 +47,8 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
   try {
     const sessionState = sessionStore.getState();
-    const organizations = sessionState.organizations.length > 0 ? sessionState.organizations : await listOrganizations();
+    const organizations =
+      sessionState.organizations.length > 0 ? sessionState.organizations : await listOrganizations();
     const selectedOrganization =
       sessionState.selectedOrganizationId &&
       organizations.some((organization) => organization.id === sessionState.selectedOrganizationId)

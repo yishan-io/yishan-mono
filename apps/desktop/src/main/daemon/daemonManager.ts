@@ -1,7 +1,7 @@
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
-import { getErrorMessage } from "../../shared/helpers/errorHelpers";
+import { getErrorMessage } from "../../shared/errors/getErrorMessage";
 import { isDevMode } from "../runtime/environment";
 import {
   DAEMON_HEALTH_RETRY_COUNT,

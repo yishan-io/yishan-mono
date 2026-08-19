@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { FileTreeRows } from "./FileTreeRows";
 import { ROW_HEIGHT } from "./FlatTreeRow";
-import { collectAncestorDirectoryPaths } from "./treeUtils";
+import { collectAncestorDirectoryPaths } from "./treeRows";
 import type { FileTreeGitChangeKind, FileTreeProps, VisibleRow } from "./types";
 import { useFileTreeDragDrop } from "./useFileTreeDragDrop";
 import { useFileTreeEditing } from "./useFileTreeEditing";

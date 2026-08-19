@@ -1,11 +1,10 @@
-import { delay } from "@renderer/async/delay";
 import { tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
-import { generateId } from "@renderer/ids/generateId";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { refreshAgentSessionStats } from "../events/agentChatPiEventShared";
-import { renamePiSession, sendPiCommand } from "../infrastructure/daemonAgentProcedures";
-import { isAgentSessionBusy } from "../model/agentChatTypes";
+import { delay } from "@shared/async/delay";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { generateId } from "@shared/ids/generateId";
+import { isAgentSessionBusy } from "../chat/agentChatTypes";
+import { renamePiSession, sendPiCommand } from "../daemon/daemonAgentProcedures";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import {
   clearPiSessionHandle,
@@ -19,6 +18,7 @@ import {
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
+import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the

@@ -1,13 +1,13 @@
 import { useGitAuthorName } from "@renderer/domains/git";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef, useState } from "react";
 import { listOrgNodes } from "../../../../domains/node";
-import type { WorkspaceItem } from "../../../../domains/workspace/model/workspaceTypes";
-import { resolveGitBranchPrefix } from "../../model/branchPrefix";
-import type { GitBranchPrefixMode } from "../../model/branchPrefix";
+import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
+import { resolveGitBranchPrefix } from "../../naming/branchPrefix";
+import type { GitBranchPrefixMode } from "../../naming/branchPrefix";
 import type { BranchDropdownGroups } from "./BranchDropdown";
-import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
+import { resolveSourceBranchGroups } from "./createWorkspaceForm";
 import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,

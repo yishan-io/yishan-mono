@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { describe, expect, it } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../../domains/project/model/projectTypes";
-import type { DaemonLocalFolder } from "../../model/snapshotTypes";
+import type { DaemonLocalFolder } from "../../local-folder/snapshotTypes";
 import { createLocalFolderActions } from "./actions.localFolders";
 
 type TestWorkspace = {

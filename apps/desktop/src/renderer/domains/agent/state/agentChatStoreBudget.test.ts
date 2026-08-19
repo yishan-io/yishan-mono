@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import type { AgentMessage } from "../model/agentChatTypes";
+import type { AgentMessage } from "../chat/agentChatTypes";
 import { agentChatStore } from "./agentChatStore";
 
 const initialAgentChatStoreState = agentChatStore.getState();

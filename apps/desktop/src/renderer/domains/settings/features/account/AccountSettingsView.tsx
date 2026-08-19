@@ -2,15 +2,15 @@ import { Avatar, Box, LinearProgress, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionUser } from "../../../../domains/session";
-import {
-  setOrganizationVoiceUsage as applySetOrganizationVoiceUsage,
-  useCurrentUser,
-  useOrganizations,
-  useSelectedOrganizationId,
-  useSessionLoaded,
-} from "../../../../domains/session";
+
+import { sessionStore } from "@renderer/domains/session";
 import { getVoiceUsage } from "../../../../domains/settings/commands/settingsCommands";
-import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+} from "../../../../ui/components/SettingsPrimitives";
 
 const PLAN_LABELS = {
   free: "Free",
@@ -53,11 +53,10 @@ function formatVoiceUsageSeconds(seconds: number): string {
 /** Shows the current authenticated user's profile details in settings. */
 export function AccountSettingsView() {
   const { t } = useTranslation();
-  const currentUser = useCurrentUser();
-  const organizations = useOrganizations();
-  const selectedOrganizationId = useSelectedOrganizationId();
-  const loaded = useSessionLoaded();
-  const setOrganizationVoiceUsage = applySetOrganizationVoiceUsage;
+  const currentUser = sessionStore((state) => state.currentUser);
+  const organizations = sessionStore((state) => state.organizations);
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
+  const loaded = sessionStore((state) => state.loaded);
   const [usageError, setUsageError] = useState<string | null>(null);
   const missingValue = t("settings.account.values.notAvailable");
   const loadUsageErrorText = t("settings.account.usage.loadError");
@@ -83,7 +82,7 @@ export function AccountSettingsView() {
     getVoiceUsage(selectedOrganization.id)
       .then((usage) => {
         if (isActive) {
-          setOrganizationVoiceUsage(selectedOrganization.id, usage);
+          sessionStore.getState().setOrganizationVoiceUsage(selectedOrganization.id, usage);
           setUsageError(null);
         }
       })
@@ -96,7 +95,7 @@ export function AccountSettingsView() {
     return () => {
       isActive = false;
     };
-  }, [currentUser, loaded, loadUsageErrorText, selectedOrganization, setOrganizationVoiceUsage]);
+  }, [currentUser, loaded, loadUsageErrorText, selectedOrganization]);
 
   if (!loaded) {
     return (

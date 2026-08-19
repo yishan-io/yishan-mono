@@ -18,9 +18,8 @@ vi.mock("../../../commands/agentChatCommands", () => ({
   recoverAgentSessionAfterReconnect: mocks.recoverAgentSessionAfterReconnect,
 }));
 
-vi.mock("../../../../../rpc/rpcTransport", () => ({
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  subscribeDaemonConnectionStatus: (listener: (status: ConnectionStatus) => void) => {
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: (listener: (status: ConnectionStatus) => void) => {
     mocks.statusListener = listener;
     return () => {
       if (mocks.statusListener === listener) {
@@ -28,6 +27,10 @@ vi.mock("../../../../../rpc/rpcTransport", () => ({
       }
     };
   },
+}));
+
+vi.mock("@renderer/events/desktopRpcEventBus", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
 const initialAgentChatStoreState = agentChatStore.getState();

@@ -1,6 +1,6 @@
-import { selectSelectedOrganizationId } from "../../../domains/session";
+import { sessionStore } from "@renderer/domains/session";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
+import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 
 type WorkspaceOpenProjectEntry = {
   workspaceId: string;
@@ -61,7 +61,7 @@ export async function warmupWorkspacesForProjects(projectIds: string[]): Promise
   }
   const projectIdSet = new Set(projectIds);
   const { workspaces } = workspaceStore.getState();
-  const orgId = selectSelectedOrganizationId() ?? "";
+  const orgId = sessionStore.getState().selectedOrganizationId ?? "";
 
   const entries = buildWorkspaceOpenProjectEntries(
     workspaces.filter((workspace) => {

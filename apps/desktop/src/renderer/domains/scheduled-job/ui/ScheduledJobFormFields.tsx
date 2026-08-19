@@ -16,8 +16,8 @@ import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock3, LuCloud, LuGlobe, LuServer } from "react-icons/lu";
 import { VirtualizedListbox } from "../../../ui/components/VirtualizedListbox";
-import type { ScheduleType } from "../model/scheduledJobScheduleRules";
 import type { ScheduledJobFormDraft } from "../hooks/useScheduledJobFormState";
+import type { ScheduleType } from "../schedule/scheduledJobScheduleRules";
 
 /** IANA timezone names supported by the current JS runtime. */
 export const TIMEZONE_OPTIONS: string[] =

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { WorkbenchTab } from "../../domains/workbench/model/tabTypes";
-import type { InAppWorkspaceNotificationPayload } from "../../domains/workspace/features/workspace-status/workspaceNotificationUtils";
+import type { WorkbenchTab } from "../../domains/workbench/tabs";
+import type { InAppWorkspaceNotificationPayload } from "../../domains/workspace/features/workspace-status/workspaceNotifications";
 import {
   isNotificationForFocusedSession,
   resolveFocusedWorkspaceSession,
-} from "../../domains/workspace/features/workspace-status/workspaceNotificationUtils";
+} from "../../domains/workspace/features/workspace-status/workspaceNotifications";
 
 function createAgentChatTab(input: { id: string; workspaceId: string; sessionId: string }): WorkbenchTab {
   return {

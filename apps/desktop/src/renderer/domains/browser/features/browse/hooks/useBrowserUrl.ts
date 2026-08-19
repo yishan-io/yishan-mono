@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { normalizeUrl } from "../../../model/normalizeUrl";
+import { normalizeUrl } from "../../../normalizeUrl";
 
 export function useBrowserUrl(initialUrl: string) {
   const [urlInput, setUrlInput] = useState(initialUrl);

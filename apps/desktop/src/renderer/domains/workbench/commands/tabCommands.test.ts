@@ -2,18 +2,18 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../../../domains/agent/state/chatStore";
-import { createLeaf } from "../../../domains/workbench/model/split-pane";
+import {
+  __resetTabFocusIntentForTests,
+  consumeTabFocus,
+  getTabFocusRequest,
+} from "../../../domains/workbench/runtime/tabFocusIntent";
+import { createLeaf } from "../../../domains/workbench/split-pane";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import {
-  __resetPendingTerminalTabFocusForTests,
-  consumeTerminalTabFocus,
-  hasPendingTerminalTabFocus,
-} from "../../../events/terminalTabFocus";
-import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   consumeExplicitlyClosedTerminalTabId,
-} from "../../terminal/model/terminalCloseTombstones";
+} from "../../terminal/runtime/terminalCloseTombstones";
 import {
   closeAllTabs,
   closeOtherTabs,
@@ -47,36 +47,10 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
 
-
-vi.mock("../../../events/agentChatComposerFocus", () => ({
-  clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
-  requestNewAgentChatComposerFocus: rpcMocks.requestNewAgentChatComposerFocus,
-}));
-
 vi.mock("../../../views/workspace/terminal/terminalRuntimeRegistry", () => ({
   clearTerminalRuntimeFocus: rpcMocks.clearTerminalRuntimeFocus,
   requestTerminalRuntimeFocus: rpcMocks.requestTerminalRuntimeFocus,
 }));
-
-vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
-  return {
-    ...actual,
-    getDaemonClient: vi.fn(async () => ({
-      chat: {
-        ensureWorkspaceChatSession: rpcMocks.ensureWorkspaceChatSession,
-        closeAgentSession: rpcMocks.closeAgentSession,
-      },
-      terminal: {
-        closeSession: rpcMocks.closeSession,
-      },
-      pi: {
-        rename: rpcMocks.piRename,
-      },
-    })),
-    subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  };
-});
 
 const initialTabStoreState = tabStore.getState();
 const initialChatStoreState = chatStore.getState();
@@ -88,7 +62,7 @@ afterEach(() => {
   splitPaneStore.setState(initialSplitPaneStoreState, true);
   vi.clearAllMocks();
   __resetExplicitlyClosedTerminalTabIdsForTests();
-  __resetPendingTerminalTabFocusForTests();
+  __resetTabFocusIntentForTests();
 });
 
 describe("tabCommands", () => {
@@ -108,11 +82,11 @@ describe("tabCommands", () => {
 
     const createdTabId = tabStore.getState().selectedTabId;
     expect(createdTabId).not.toBe("");
-    expect(hasPendingTerminalTabFocus(createdTabId)).toBe(false);
+    expect(getTabFocusRequest(createdTabId)).toBeUndefined();
     focusFrame?.(0);
-    expect(hasPendingTerminalTabFocus(createdTabId)).toBe(true);
+    expect(getTabFocusRequest(createdTabId)).toEqual({ target: "terminal", kind: "auto" });
 
-    consumeTerminalTabFocus(createdTabId);
+    consumeTabFocus(createdTabId);
     openTab({ workspaceId: "workspace-1", kind: "terminal", title: "Terminal" });
 
     expect(rpcMocks.requestTerminalRuntimeFocus).not.toHaveBeenCalled();
@@ -132,11 +106,14 @@ describe("tabCommands", () => {
 
     openTab({ workspaceId: "workspace-1", kind: "agent-chat", cwd: "/tmp/project" });
 
-    expect(rpcMocks.requestNewAgentChatComposerFocus).not.toHaveBeenCalled();
+    expect(getTabFocusRequest(tabStore.getState().selectedTabId)).toBeUndefined();
     focusFrame?.(0);
-    expect(rpcMocks.requestNewAgentChatComposerFocus).toHaveBeenCalledWith(tabStore.getState().selectedTabId);
+    expect(getTabFocusRequest(tabStore.getState().selectedTabId)).toEqual({
+      target: "agent-composer",
+      kind: "auto",
+    });
 
-    rpcMocks.requestNewAgentChatComposerFocus.mockClear();
+    consumeTabFocus(tabStore.getState().selectedTabId);
     openTab({
       workspaceId: "workspace-1",
       kind: "agent-chat",

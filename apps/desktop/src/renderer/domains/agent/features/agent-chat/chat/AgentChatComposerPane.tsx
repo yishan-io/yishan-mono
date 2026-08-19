@@ -1,25 +1,24 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { searchFiles } from "@renderer/domains/files";
-import { useKeybindingOverrides } from "@renderer/domains/settings";
+import { useShallow } from "zustand/react/shallow";
+import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
+import { agentChatStore } from "../../../state/agentChatStore";
+
 import { tabStore } from "@renderer/domains/workbench";
 import { renameTab } from "@renderer/domains/workbench";
-import { generateId } from "@renderer/ids/generateId";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { TAB_FOCUS_REQUEST_EVENT, consumeTabFocus, getTabFocusRequest } from "@renderer/domains/workbench";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { generateId } from "@shared/ids/generateId";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
-import {
-  AGENT_CHAT_COMPOSER_FOCUS_EVENT,
-  consumeAgentChatComposerFocus,
-  getAgentChatComposerFocusRequest,
-} from "../../../../../events";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
+import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../chat/agentChatTypes";
 import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
-import { setAgentModel, setAgentThinkingLevel } from "../../../events/agentChatPiEventShared";
-import { useAgentChatSessionMeta } from "../../../hooks/useAgentChatReadHooks";
-import { type AgentMessage, type AgentModel, isAgentSessionBusy } from "../../../model/agentChatTypes";
-import { formatAgentSessionTitle } from "../../../model/agentSkillTextHelpers";
-import { setTurnError } from "../../../state/chatActions";
+import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
+import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
+
+import { keybindingSettingsStore } from "@renderer/domains/settings";
 import { ProviderCredentialDialog } from "../../../ui/credentials/ProviderCredentialDialog";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
@@ -66,10 +65,30 @@ function AgentChatComposerPaneComponent({
     messageCount,
     hasStreamingMessage,
     contextPercent,
-  } = useAgentChatSessionMeta(tabId);
+  } = agentChatStore(
+    useShallow((state) => {
+      const session = state.sessionsByTabId[tabId];
+      return {
+        sessionId: session?.sessionId ?? null,
+        sessionState: session?.state ?? "starting",
+        subagentSessionEndedAtMs: session?.subagentSessionEndedAtMs ?? null,
+        compactionReason: session?.compactionReason ?? null,
+        availableModels: session?.availableModels ?? [],
+        currentModel: session?.currentModel ?? null,
+        thinkingLevel: session?.thinkingLevel ?? "medium",
+        messageCount: session?.messages.length ?? 0,
+        hasStreamingMessage: Boolean(session?.streamingMessage),
+        contextPercent: getCompactContextPercent(
+          session?.messages ?? [],
+          session?.currentModel ?? null,
+          session?.sessionStats ?? null,
+        ),
+      };
+    }),
+  );
   const { runningSubagents, subagentProgressTargets, subagentCancelStates, handleOpenSubagent, handleCancelSubagent } =
     useAgentChatSubagentActions({ tabId, workspaceId, cwd, paneId, sessionId });
-  const shortcutOverrides = useKeybindingOverrides();
+  const shortcutOverrides = keybindingSettingsStore((state) => state.overridesById);
   const focusShortcutHint = useMemo(() => {
     const focusShortcutBinding = getSupportedKeyBindings(shortcutOverrides).find(
       (binding) => binding.id === "focus-agent-chat-composer",
@@ -98,36 +117,40 @@ function AgentChatComposerPaneComponent({
 
   useEffect(() => {
     const handleFocusRequest = (event: Event) => {
-      const request = event as CustomEvent<{ tabId: string }>;
-      if (request.detail.tabId !== tabId || sessionState === "starting" || !isActive) {
+      const request = event as CustomEvent<{ tabId: string; target?: string }>;
+      if (request.detail.target !== "agent-composer" || request.detail.tabId !== tabId) {
+        return;
+      }
+      if (sessionState === "starting" || !isActive) {
         return;
       }
 
-      const requestKind = getAgentChatComposerFocusRequest(tabId);
+      const requestKind = getTabFocusRequest(tabId)?.kind;
       if (requestKind === "auto" && !isReadyForAutoFocus) {
         return;
       }
 
       focusComposer();
       if (requestKind) {
-        consumeAgentChatComposerFocus(tabId);
+        consumeTabFocus(tabId);
       }
     };
 
-    window.addEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
+    window.addEventListener(TAB_FOCUS_REQUEST_EVENT, handleFocusRequest);
     return () => {
-      window.removeEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
+      window.removeEventListener(TAB_FOCUS_REQUEST_EVENT, handleFocusRequest);
     };
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
   useEffect(() => {
-    const requestKind = getAgentChatComposerFocusRequest(tabId);
+    const request = getTabFocusRequest(tabId);
+    const requestKind = request?.target === "agent-composer" ? request.kind : undefined;
     if (!requestKind || sessionState === "starting" || !isActive || (requestKind === "auto" && !isReadyForAutoFocus)) {
       return;
     }
 
     focusComposer();
-    consumeAgentChatComposerFocus(tabId);
+    consumeTabFocus(tabId);
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
   const handleSubmit = useCallback(
@@ -152,7 +175,7 @@ function AgentChatComposerPaneComponent({
       try {
         await sendAgentPrompt({ tabId, sessionId, message: finalMessage });
       } catch (error) {
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
         return false;
       }
       setAttachments([]);
@@ -207,7 +230,7 @@ function AgentChatComposerPaneComponent({
     try {
       await abortAgent({ tabId, sessionId });
     } catch (error) {
-      setTurnError(tabId, getErrorMessage(error));
+      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
     }
   }, [sessionId, tabId]);
 
@@ -218,7 +241,7 @@ function AgentChatComposerPaneComponent({
     try {
       await compactAgent({ sessionId });
     } catch (error) {
-      setTurnError(tabId, getErrorMessage(error));
+      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       setIsManualCompactPending(false);
     }
   }, [isManualCompactPending, sessionId, tabId]);
@@ -251,7 +274,7 @@ function AgentChatComposerPaneComponent({
       try {
         await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
       } catch (error) {
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     },
     [sessionId, tabId],
@@ -272,7 +295,7 @@ function AgentChatComposerPaneComponent({
       try {
         await setAgentThinkingLevel({ tabId, sessionId, level });
       } catch (error) {
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     },
     [sessionId, tabId],

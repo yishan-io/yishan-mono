@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
 import { startBackendEventHandlers } from "../app/events";
+import { startDaemonIdentityRuntime } from "../app/runtime/daemonIdentity";
 import { AppThemePreferenceProvider, useThemePreference } from "../domains/settings";
 import { startBackendEventPipeline } from "../events";
 import { i18n } from "../i18n";
@@ -46,12 +47,14 @@ function AppRoot() {
   const appTheme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 
   useEffect(() => {
+    const stopIdentityRuntime = startDaemonIdentityRuntime();
     const stopPipeline = startBackendEventPipeline();
     const stopStoreBindings = startBackendEventHandlers();
 
     return () => {
       stopStoreBindings();
       stopPipeline();
+      stopIdentityRuntime();
     };
   }, []);
 

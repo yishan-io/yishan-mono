@@ -1,8 +1,4 @@
 import { Alert, Box, Button, CircularProgress, MenuItem, Stack, Typography } from "@mui/material";
-import {SettingsCard, SettingsCheckboxRow, SettingsRows, SettingsSectionHeader, SettingsToggleRow} from "../../../../ui/components/SettingsPrimitives";
-import {SettingsCompactSelect} from "../../../../ui/components/SettingsCompactControls";
-import { SettingsSoundSelectRow } from "../../../../ui/components/SettingsSoundSelectRow";
-import { SettingsVolumeRow } from "../../../../ui/components/SettingsVolumeRow";
 import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
 import {
   type NotificationEventType,
@@ -12,6 +8,16 @@ import {
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiCheckCircle, BiLoaderAlt, BiXCircle } from "react-icons/bi";
+import { SettingsCompactSelect } from "../../../../ui/components/SettingsCompactControls";
+import {
+  SettingsCard,
+  SettingsCheckboxRow,
+  SettingsRows,
+  SettingsSectionHeader,
+  SettingsToggleRow,
+} from "../../../../ui/components/SettingsPrimitives";
+import { SettingsSoundSelectRow } from "../../../../ui/components/SettingsSoundSelectRow";
+import { SettingsVolumeRow } from "../../../../ui/components/SettingsVolumeRow";
 import {
   type NotificationSettingsFocusItemId,
   getNotificationSettingsAnchorId,

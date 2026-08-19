@@ -41,14 +41,14 @@ const mocks = vi.hoisted(() => ({
   unstageGitChanges: vi.fn(),
 }));
 
-vi.mock("../../../domains/files/infrastructure/daemonFileClient", () => ({
+vi.mock("../../../domains/files/daemon/daemonFileClient", () => ({
   getFileRpc: () =>
     Promise.resolve({
       readDiff: mocks.readDiff,
     }),
 }));
 
-vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
+vi.mock("../../../domains/git/daemon/daemonGitClient", () => ({
   getGitRpc: () =>
     Promise.resolve({
       commitChanges: mocks.commitGitChanges,
@@ -68,12 +68,6 @@ vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
       trackChanges: mocks.trackGitChanges,
       unstageChanges: mocks.unstageGitChanges,
     }),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
 }));
 
 describe("gitCommands", () => {

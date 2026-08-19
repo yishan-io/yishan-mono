@@ -18,7 +18,7 @@ import {
   createFileMetaByPath,
   createInitialCollapsedKeys,
   getDiffTotals,
-} from "./multiFileDiffViewerHelpers";
+} from "./multiFileDiffState";
 
 type MultiFileDiffViewerProps = {
   files: FileDiffEntry[];

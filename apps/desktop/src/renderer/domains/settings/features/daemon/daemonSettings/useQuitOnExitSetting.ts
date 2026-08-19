@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../infrastructure/daemonHostCommands";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../../../host/daemonHost";
 
 /** Manages loading and saving the daemon quit-on-exit setting. */
 export function useQuitOnExitSetting() {

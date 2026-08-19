@@ -1,13 +1,12 @@
 /**
- * Git feature public API (Phase 12, desktop5.md).
+ * Git feature public API.
  */
-export type { GitCommands } from "./commands/contract";
 export type {
   GitPullRequest,
   GitPullRequestCheck,
   GitPullRequestDeployment,
   GitPullRequestSummary,
-} from "./model/gitPullRequestTypes";
+} from "./pull-request";
 export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
 export { refreshDiffTabContent, removeDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
 export {
@@ -38,30 +37,18 @@ export {
   setWorkspaceCurrentBranch,
   setWorkspacePullRequest,
 } from "./commands/gitProjectionCommands";
-export {
-  gitProjectionStore,
-  type GitProjectionStoreState,
-} from "./state/gitProjectionStore";
-export {
-  useWorkspaceGitChangeTotalsByWorkspaceId,
-  useWorkspaceGitRefreshVersion,
-  useWorkspacePullRequestByWorkspaceId,
-} from "./hooks/useGitProjectionReadHooks";
-export {
-  createAllWorkspacesGitSyncRuntime,
-  type AllWorkspacesGitSyncRuntime,
-  type WorkspaceRefreshState,
-} from "./runtime/allWorkspacesGitSyncRuntime";
+export { gitProjectionStore, type GitProjectionStoreState } from "./state/gitProjectionStore";
+
+export type { AllWorkspacesGitSyncRuntime, WorkspaceRefreshState } from "./runtime/allWorkspacesGitSyncRuntime";
 
 export { useAllWorkspacesGitSync } from "./hooks/useAllWorkspacesGitSync";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
+// Stable UI entry points for cross-feature composition.
 export { ChangesTabView } from "./features/changes-tab/ChangesTabView";
 export { PullRequestTabView } from "./features/pull-request-tab/PullRequestTabView";
 export { useWorkspacePullRequestState } from "./features/pull-request-tab/useWorkspacePullRequestState";
 export { GitChangeTotals } from "./ui/GitChangeTotals";
-export { BranchBadge } from "./ui/BranchBadge";
+
 export { PullRequestIcon } from "./ui/PullRequestIcon";
-export { ProjectCommitComparison } from "./features/project-git-changes/ProjectCommitComparison";
-export { createDiffTabPlaceholder } from "./model/diffTabPlaceholder";
-export { livePrStatus } from "./model/pullRequestUtils";
+
+export { livePrStatus } from "./pull-request";

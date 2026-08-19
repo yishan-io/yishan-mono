@@ -1,12 +1,12 @@
+import { keybindingSettingsStore } from "@renderer/domains/settings";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { popupStore } from "@renderer/domains/workbench";
+import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCommands } from "../../app/commands/useCommands";
-import { keybindingSettingsStore } from "@renderer/domains/settings";
-import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
-import { workspaceStore } from "@renderer/domains/workspace";
 import { getShortcutDefinitions } from "../../shortcuts/keybindings";
 import { compileShortcutDefinitions } from "../../shortcuts/shortcutRunner";
 import { startShortcutRuntime } from "./shortcutRuntime";

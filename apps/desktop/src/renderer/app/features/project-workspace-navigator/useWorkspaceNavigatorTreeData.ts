@@ -1,23 +1,20 @@
-import { useWorkspaceAgentStatusByWorkspaceId, useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
-import { useWorkspaceGitChangeTotalsByWorkspaceId } from "@renderer/domains/git";
+import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
+
 import { listOrgNodes } from "@renderer/domains/node";
-import { resolveWorkspaceNotificationTone } from "@renderer/domains/notification";
-import {
-  LOCAL_FOLDER_PROJECT_ID,
-  filterVisibleProjects,
-  supportsGitFeatures,
-  useDisplayProjectIds,
-  useProjects,
-} from "@renderer/domains/project";
-import { useSelectedOrganizationId } from "@renderer/domains/session";
+import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
+
+import { chatStore } from "@renderer/domains/agent";
+import { gitProjectionStore } from "@renderer/domains/git";
+import { sessionStore } from "@renderer/domains/session";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
-import { setOrderedWorkspaceIds, useWorkspaces } from "@renderer/domains/workspace";
+import { workspaceStore } from "@renderer/domains/workspace";
 import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
-import { reconcileOrder } from "./workspaceNavigatorHelpers";
+import { reconcileOrder } from "./workspaceNavigatorOrder";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;
@@ -61,13 +58,13 @@ export function useWorkspaceNavigatorTreeData(input: {
     workspaceListHierarchyMode,
   } = input;
 
-  const projects = useProjects();
-  const workspaces = useWorkspaces() ?? [];
-  const displayProjectIds = useDisplayProjectIds();
-  const gitChangeTotalsByWorkspaceId = useWorkspaceGitChangeTotalsByWorkspaceId();
-  const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
-  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
-  const selectedOrganizationId = useSelectedOrganizationId();
+  const projects = projectStore((state) => state.projects);
+  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
+  const gitChangeTotalsByWorkspaceId = gitProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
+  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
+  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({
     queryKey: ["org-nodes", selectedOrganizationId],
@@ -237,7 +234,7 @@ export function useWorkspaceNavigatorTreeData(input: {
   ]);
 
   useEffect(() => {
-    setOrderedWorkspaceIds(treeWorkspaces.map((workspace) => workspace.id));
+    workspaceStore.getState().setOrderedWorkspaceIds(treeWorkspaces.map((workspace) => workspace.id));
   }, [treeWorkspaces]);
 
   const expandedTreeItems = useMemo(() => {

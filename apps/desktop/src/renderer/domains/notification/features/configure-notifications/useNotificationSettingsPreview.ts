@@ -1,4 +1,3 @@
-import type { NotificationCommands } from "../../commands/contract";
 import { NOTIFICATION_PREVIEW_STATUS_AUTO_HIDE_MS } from "@shared/notifications/notificationConstants";
 import type {
   NotificationEventType,
@@ -14,8 +13,8 @@ import type {
 
 type UseNotificationSettingsPreviewInput = {
   draft: NotificationPreferences | null;
-  playNotificationSound: NotificationCommands["playNotificationSound"];
-  previewNotification: NotificationCommands["previewNotification"];
+  playNotificationSound: (input: { soundId: NotificationSoundId; volume: number }) => Promise<{ played: boolean }>;
+  previewNotification: (input: { eventType: NotificationEventType }) => Promise<{ sent: boolean }>;
   previewStatus: NotificationPreviewStatus;
   setErrorKey: (errorKey: NotificationSettingsErrorKey) => void;
   setPreviewStatus: (previewStatus: NotificationPreviewStatus) => void;

@@ -4,26 +4,28 @@
 
 ## Mandatory Rules
 
-1. Do not skip the Renderer layer contract. UI → Commands → State → Domain services.
-   Handlers → Services → DB. Command handlers stay thin.
-2. Do not import another Feature's internal State, Runtime, Event handler, or
-   Store. Use its public API (`index.ts`), Selectors, or Commands.
-3. Feature UI must not import `api/`, `rpc/`, `electron`, or main-process code.
-   Feature Commands call Ports; transport stays behind `api/` and `rpc/`.
-4. `model/` files contain pure data and rules only. No React, Zustand, Electron,
-   transport, Runtime, or State imports.
-5. `state/` files own Zustand State, Selectors, and synchronous mutations. They
-   may import Zustand and their own Feature's Model. Do not add business logic
-   or side effects to State actions.
-6. Keep component files under 300 lines and other files under 500 lines.
-7. Do not create `utils`, `common`, or `shared` buckets in the Renderer. Shared
-   UI lives in `ui/`; shared technical functions stay domain-free. A Domain may
-   use a `services/` layer for stateless operations across its own Model concepts.
-8. Cross-Feature workflows belong in `app/commands` or `app/events`, not in a
-   Feature. `app/flows` is migration residue and must not be extended.
-9. Do not add allowlist rows to `architecture.knownViolations.ts` for completed
-   phases. Remove a row in the same change that fixes its violation.
-10. Preserve visible behavior unless a task explicitly changes it. Add
+1. Determine ownership before directory or file type.
+2. Keep single-Feature UI, Hooks, State, types, and helpers in that Feature.
+3. Domain `ui/` is stateless presentation shared by several Features.
+4. A Domain can expose an intentional Store. External Consumers can read its
+   public State and call public actions, but must not call `setState()` or
+   import the Domain's internal `state/` path.
+5. Keep Hooks for real React behavior or lifecycle. Do not wrap one Store field
+   or action only to create a Hook.
+6. Keep Commands only for real business operations. Do not preserve thin
+   adapter forwarding or mirror Command contracts.
+7. Use `subscriptions/` for asynchronous facts and `runtime/` only for
+   long-lived resources with explicit cleanup.
+8. Keep transport and DTO mapping in the concrete `daemon/`, `api/`, `host/`,
+   or `persistence/` boundary.
+9. Other Domains and App import only a Domain's root `index.ts`. Domain code
+   must not import its own root index.
+10. Use explicit exports. Add a Feature or internal-module `index.ts` only for
+    a real cohesive API. Do not add indexes to every directory.
+11. Do not create generic `utils`, `helpers`, `common`, `concepts`, `services`,
+    or `shared` buckets.
+12. Keep component files under 300 lines and other files under 500 lines.
+13. Preserve visible behavior unless a task explicitly changes it. Add
     characterization tests before behavior moves.
 
 ## Verify

@@ -1,14 +1,14 @@
-import { delay } from "@renderer/async/delay";
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
+import { delay } from "@shared/async/delay";
 import type { WorkbenchTab } from "../../../domains/workbench";
 import {
   listPiProviders as listPiProvidersProcedure,
   removePiProvider as removePiProviderProcedure,
   savePiProvider as savePiProviderProcedure,
-} from "../infrastructure/daemonAgentProcedures";
-import { DEFAULT_AGENT_COMMANDS } from "../model/agentSettings";
+} from "../daemon/daemonAgentProcedures";
+import { DEFAULT_AGENT_COMMANDS } from "../providers/agentSettings";
 
 /** How long to wait after the Pi TUI boots before typing /login. */
 const PI_LOGIN_INPUT_DELAY_MS = 2_000;

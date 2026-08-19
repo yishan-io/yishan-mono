@@ -201,27 +201,43 @@ vi.mock("@renderer/domains/project", async () => {
   // The workspace feature graph (reached through @renderer/domains/workspace)
   // imports project public-API members; load the stateless ones from deep
   // paths (async factory avoids the project<->workspace index cycle).
-  const projectTypes = await import("../../../domains/project/model/projectTypes");
-  const projectCapability = await import("../../../domains/project/model/projectGitCapability");
-  const projectListRules = await import("../../../domains/project/model/projectListRules");
-  const projectSelectors = await import("../../../domains/project/state/projectSelectors");
-  const projectReadHooks = await import("../../../domains/project/hooks/useProjectReadHooks");
-  const projectActions = await import("../../../domains/project/state/projectActions");
+  const sharedWorkspace = await import("@shared/workspace/localFolderProjectId");
+  const projectRules = await import("../../../domains/project/projectRules");
   const projectDeletionFlow = await import("../../../domains/project/features/project-delete/useProjectDeletionFlow");
   const projectDeleteDialog = await import("../../../domains/project/features/project-delete/ProjectDeleteDialogView");
+  const projectStore = (
+    selector: (state: {
+      projects: unknown[];
+      displayProjectIds: string[];
+      lastUsedExternalAppId?: string;
+    }) => unknown,
+  ) =>
+    selector({
+      projects: mocked.stateRef.current.projects ?? [],
+      displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+      lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
+    });
+  (
+    projectStore as unknown as {
+      getState: () => {
+        projects: unknown[];
+        displayProjectIds: string[];
+        lastUsedExternalAppId?: string;
+        setLastUsedExternalAppId: (appId: string) => void;
+      };
+    }
+  ).getState = () => ({
+    projects: mocked.stateRef.current.projects ?? [],
+    displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
+    lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
+    setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
+  });
   return {
     deleteProject: mocked.deleteProject,
-    LOCAL_FOLDER_PROJECT_ID: projectTypes.LOCAL_FOLDER_PROJECT_ID,
-    supportsGitFeatures: projectCapability.supportsGitFeatures,
-    filterVisibleProjects: projectListRules.filterVisibleProjects,
-    selectProjectById: projectSelectors.selectProjectById,
-    selectProjectDisplayIds: projectSelectors.selectProjectDisplayIds,
-    selectProjects: projectSelectors.selectProjects,
-    useProjects: projectReadHooks.useProjects,
-    useDisplayProjectIds: projectReadHooks.useDisplayProjectIds,
-    useWorkspaceListHierarchyMode: projectReadHooks.useWorkspaceListHierarchyMode,
-    useLastUsedExternalAppId: projectReadHooks.useLastUsedExternalAppId,
-    setWorkspaceListHierarchyMode: projectActions.setWorkspaceListHierarchyMode,
+    LOCAL_FOLDER_PROJECT_ID: sharedWorkspace.LOCAL_FOLDER_PROJECT_ID,
+    projectStore,
+    supportsGitFeatures: projectRules.supportsGitFeatures,
+    filterVisibleProjects: projectRules.filterVisibleProjects,
     renderProjectIcon: () => "R",
     ProjectDeleteDialogView: projectDeleteDialog.ProjectDeleteDialogView,
     useProjectDeletionFlow: projectDeletionFlow.useProjectDeletionFlow,
@@ -321,22 +337,6 @@ vi.mock("../../../domains/session/state/sessionStore", () => ({
   sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
     selector({ selectedOrganizationId: "" }),
   ),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({
-    project: {
-      getListPreferences: vi.fn(async () => ({
-        version: 1,
-        by_project: { projectOrderIds: [], nodeOrderByParentId: {}, foldedProjectIds: [], foldedNodeKeys: [] },
-        by_node: { projectOrderIds: [], nodeOrderByParentId: {}, foldedProjectIds: [], foldedNodeKeys: [] },
-        workspaceOrderByParentId: {},
-      })),
-      setListPreferences: vi.fn(async () => ({ ok: true })),
-    },
-  })),
 }));
 
 vi.mock("../../../domains/agent/state/chatStore", () => ({

@@ -12,7 +12,7 @@ import {
   getTrackActionMeta,
   groupByFolder,
   shouldShowRevertAction,
-} from "./projectGitChangesListHelpers";
+} from "./projectGitChangesSections";
 import { useProjectGitChangesListInteractions } from "./useProjectGitChangesListInteractions";
 
 export type {

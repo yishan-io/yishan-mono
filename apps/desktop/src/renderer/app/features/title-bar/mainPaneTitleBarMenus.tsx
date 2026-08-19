@@ -13,11 +13,12 @@ import {
 } from "@mui/material";
 import type { WorkspaceNotificationColor } from "@renderer/domains/notification";
 import { renderProjectIcon } from "@renderer/domains/project";
+import type { WorkspaceProjectRecord } from "@renderer/domains/project";
+import type { WorkspaceItem } from "@renderer/domains/workspace";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuPlay } from "react-icons/lu";
-import { LOCAL_FOLDER_PROJECT_ID, type WorkspaceProjectRecord } from "@renderer/domains/project";
-import type { WorkspaceItem } from "@renderer/domains/workspace";
-import { MenuSearchField, renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
+import { MenuSearchField, renderWorkspaceKindIcon } from "./mainPaneTitleBar";
 
 type RepoSelectorMenuProps = {
   open: boolean;

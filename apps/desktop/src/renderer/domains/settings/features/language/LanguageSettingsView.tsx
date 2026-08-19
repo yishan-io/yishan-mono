@@ -1,24 +1,19 @@
 import { Alert, Box, MenuItem } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  selectCurrentUser,
-  selectOrganizations,
-  selectSelectedOrganizationId,
-  setSessionData,
-} from "../../../../domains/session";
-import { useCurrentUser } from "../../../../domains/session";
+
+import { sessionStore } from "@renderer/domains/session";
 import { updateLanguagePreference } from "../../../../domains/settings/commands/settingsCommands";
 import { SUPPORTED_LANGUAGE_CODES, type SupportedLanguageCode, i18n, setAppLanguage } from "../../../../i18n";
-import {SettingsCard, SettingsControlRow, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
-import {SettingsCompactSelect} from "../../../../ui/components/SettingsCompactControls";
+import { SettingsCompactSelect } from "../../../../ui/components/SettingsCompactControls";
+import { SettingsCard, SettingsControlRow, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 
 /**
  * Renders language selection and persists profile preference.
  */
 export function LanguageSettingsView() {
   const { t } = useTranslation();
-  const currentUser = useCurrentUser();
+  const currentUser = sessionStore((state) => state.currentUser);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -57,15 +52,15 @@ export function LanguageSettingsView() {
                 try {
                   await setAppLanguage(nextLanguage);
                   const normalized = await updateLanguagePreference(nextLanguage);
-                  const currentUser = selectCurrentUser();
+                  const currentUser = sessionStore.getState().currentUser;
                   if (currentUser) {
-                    setSessionData({
+                    sessionStore.getState().setSessionData({
                       currentUser: {
                         ...currentUser,
                         languagePreference: normalized,
                       },
-                      organizations: selectOrganizations(),
-                      selectedOrganizationId: selectSelectedOrganizationId(),
+                      organizations: sessionStore.getState().organizations,
+                      selectedOrganizationId: sessionStore.getState().selectedOrganizationId,
                     });
                   }
                 } catch {

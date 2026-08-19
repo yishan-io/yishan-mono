@@ -3,7 +3,7 @@ import { type KeyboardEvent as ReactKeyboardEvent, useRef } from "react";
 import { BiSearch } from "react-icons/bi";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import type { FileSearchResult } from "../../commands/fileCommands";
-import { buildHighlightedPathSegments, splitFilePathForDisplay } from "../../ui/filePathDisplayHelpers";
+import { buildHighlightedPathSegments, splitFilePathForDisplay } from "../../ui/filePathDisplay";
 import { getFileTreeIcon } from "../../ui/fileTreeIcons";
 
 type FileQuickOpenDialogProps = {

@@ -1,28 +1,16 @@
 import { Box } from "@mui/material";
-import {
-  markWorkspaceNotificationsRead as applyMarkWorkspaceNotificationsRead,
-  useWorkspaceUnreadToneByWorkspaceId,
-} from "@renderer/domains/agent";
+import { chatStore } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
-import {
-  deleteProject,
-  useLastUsedExternalAppId,
-  useProjectDeletionFlow,
-  useProjects,
-} from "@renderer/domains/project";
-import { activateProject, activateWorkspace } from "@renderer/domains/workbench";
-import { useSelectedProjectId, useSelectedWorkspaceId, useWorkspaces } from "@renderer/domains/workspace";
-import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
+import { deleteProject, projectStore, useProjectDeletionFlow } from "@renderer/domains/project";
+
+import { activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
+
+import { WorkspaceDeleteDialogView, workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
 import { useWorkspaceDeletionFlow } from "@renderer/domains/workspace";
 import { useWorkspaceInfoHover } from "@renderer/domains/workspace";
-import {
-  closeWorkspace,
-  deleteLocalFolder,
-  reorderWorkspace,
-  setLastUsedExternalAppId,
-} from "@renderer/domains/workspace";
+import { closeWorkspace, deleteLocalFolder, reorderWorkspace } from "@renderer/domains/workspace";
 import { subscribeOpenCreateWorkspaceDialog } from "@renderer/domains/workspace";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
@@ -49,7 +37,7 @@ import { useWorkspaceNavigatorTreeHandlers } from "./useWorkspaceNavigatorTreeHa
 import { WorkspaceTree } from "./workspace-tree";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeRow } from "./workspace-tree/types";
-import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorHelpers";
+import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorOrder";
 
 /**
  * Cross-Domain workspace navigator: renders project rows and nested workspace
@@ -60,13 +48,12 @@ import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderId
  */
 export function WorkspaceNavigatorView() {
   const { t } = useTranslation();
-  const projects = useProjects();
-  const workspaces = useWorkspaces() ?? [];
-  const selectedProjectId = useSelectedProjectId();
-  const selectedWorkspaceId = useSelectedWorkspaceId();
-  const lastUsedExternalAppId = useLastUsedExternalAppId();
-  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
-  const markWorkspaceNotificationsRead = applyMarkWorkspaceNotificationsRead;
+  const projects = projectStore((state) => state.projects);
+  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
+  const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
+  const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
+  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
+  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const {
     menu: projectContextMenu,
     openMenu: openProjectContextMenu,
@@ -231,8 +218,8 @@ export function WorkspaceNavigatorView() {
       return;
     }
 
-    markWorkspaceNotificationsRead(focusedWorkspaceId);
-  }, [isAppFocused, markWorkspaceNotificationsRead, selectedWorkspaceId, workspaceUnreadToneByWorkspaceId]);
+    chatStore.getState().markWorkspaceNotificationsRead(focusedWorkspaceId);
+  }, [isAppFocused, selectedWorkspaceId, workspaceUnreadToneByWorkspaceId]);
   /** Closes workspace context menu and nested submenu layers together. */
   const closeWorkspaceMenus = () => {
     closeWorkspaceContextMenu();
@@ -290,7 +277,7 @@ export function WorkspaceNavigatorView() {
         workspaceWorktreePath: targetWorktreePath,
         appId,
       });
-      setLastUsedExternalAppId(appId);
+      projectStore.getState().setLastUsedExternalAppId(appId);
     } catch (error) {
       console.error("Failed to open workspace root in external app", error);
     } finally {

@@ -2,7 +2,8 @@ import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { useEffect, useRef } from "react";
 import { subscribeDaemonConnectionStatus } from "../../../../../domains/session";
 import { recoverAgentSessionAfterReconnect, startAgentChatSession } from "../../../commands/agentChatCommands";
-import { selectAgentChatSession } from "../../../state/agentChatSelectors";
+
+import { agentChatStore } from "../../../state/agentChatStore";
 
 type UseAgentChatSessionLifecycleOptions = {
   tabId: string;
@@ -66,7 +67,7 @@ export function useAgentChatSessionLifecycle({
           hasObservedConnectedState = true;
         } else if (shouldReattach) {
           shouldReattach = false;
-          const liveSessionId = selectAgentChatSession(tabId)?.sessionId;
+          const liveSessionId = agentChatStore.getState().sessionsByTabId[tabId]?.sessionId;
           if (!liveSessionId) return;
 
           // Subagent-detail tabs are read-only: they never own a daemon session

@@ -1,6 +1,6 @@
 import type { KeyboardEvent, RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { findMentionRange, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerHelpers";
+import { findMentionRange, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerText";
 import type { ComposerTokenRange, FileMentionResult, RichComposerSlashCommand } from "./richComposerTypes";
 import { useComposerFileMentionKeyDown } from "./useComposerFileMentionKeyDown";
 import { useFileMentionSearchResults } from "./useFileMentionSearchResults";

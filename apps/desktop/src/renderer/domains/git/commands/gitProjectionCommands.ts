@@ -1,11 +1,17 @@
-import { supportsGitFeatures } from "@renderer/domains/project";
-import { selectProjectById } from "@renderer/domains/project";
-import { selectWorkspaces } from "@renderer/domains/workspace";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
+
 import {
   isFolderWorkspace,
   refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc,
+  workspaceStore,
 } from "@renderer/domains/workspace";
-import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
+import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
+import { listWorkspacePullRequests } from "../api/workspacePullRequestApi";
+import {
+  computeUniqueGitChangeFileCount,
+  countWorkspaceGitChanges,
+  summarizeReconciledWorkspaceGitChangeTotals,
+} from "../changes/gitChangeSummary";
 /**
  * Git feature projection Commands (desktop6-adjust.md W4).
  *
@@ -15,13 +21,7 @@ import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
  * through the Workspace public API (`workspaceStore`) and writes the
  * projections to its own Store.
  */
-import { getGitRpc } from "../infrastructure/daemonGitClient";
-import { listWorkspacePullRequests } from "../infrastructure/workspacePullRequestApi";
-import {
-  computeUniqueGitChangeFileCount,
-  countWorkspaceGitChanges,
-  summarizeReconciledWorkspaceGitChangeTotals,
-} from "../model/gitChangeSummary";
+import { getGitRpc } from "../daemon/daemonGitClient";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 
 /**
@@ -29,7 +29,7 @@ import { gitProjectionStore } from "../state/gitProjectionStore";
  * matching the convention used by the Changes tab comparison.
  */
 function resolveWorkspaceTargetBranch(workspaceId: string): string | undefined {
-  const workspace = selectWorkspaces().find((ws) => ws.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((ws) => ws.id === workspaceId);
   const sourceBranch = workspace?.sourceBranch?.trim();
   if (!sourceBranch) {
     return undefined;
@@ -57,7 +57,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     return;
   }
 
-  const workspace = selectWorkspaces().find((workspace) => workspace.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((workspace) => workspace.id === workspaceId);
   if (!workspace) {
     return;
   }
@@ -67,7 +67,9 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
   if (isFolderWorkspace(workspace)) {
     return;
   }
-  const project = selectProjectById(workspace.projectId ?? workspace.repoId);
+  const project = projectStore
+    .getState()
+    .projects.find((item) => item.id === (workspace.projectId ?? workspace.repoId));
   if (!supportsGitFeatures(project?.sourceType)) {
     return;
   }
@@ -125,7 +127,7 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
     return;
   }
 
-  const workspace = selectWorkspaces().find((candidate) => candidate.id === workspaceId);
+  const workspace = workspaceStore.getState().workspaces.find((candidate) => candidate.id === workspaceId);
   if (!workspace) {
     return;
   }

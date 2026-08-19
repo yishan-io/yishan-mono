@@ -119,9 +119,9 @@ bun run lint
 
 ### Utility functions
 - `getErrorMessage(error: unknown): string` — use this everywhere an error needs to be
-  converted to a string. Located at `apps/desktop/src/renderer/helpers/errorHelpers.ts`.
+  converted to a string. Located at `apps/desktop/src/renderer/errors/getErrorMessage.ts`.
 - `generateId(): string` — use this for all UUID/random-ID generation. Located at
-  `apps/desktop/src/renderer/helpers/generateId.ts`.
+  `apps/desktop/src/shared/ids/generateId.ts`.
 - Do not inline `error instanceof Error ? error.message : String(error)` — that is what
   `getErrorMessage` is for.
 - Do not inline `crypto.randomUUID()` — use `generateId()`.
@@ -410,7 +410,7 @@ These concepts have one canonical name in this codebase. Use only the listed nam
 - `catch` blocks must not be empty. At minimum, log the error with context.
 - `Promise` rejections must be handled. Do not leave `.catch()` off a `void` promise
   unless you have explicitly added a `// fire-and-forget` comment.
-- Use `getErrorMessage(error)` from `helpers/errorHelpers.ts` to extract the message from
+- Use `getErrorMessage(error)` from `errors/getErrorMessage.ts` to extract the message from
   an `unknown` catch value. Never write `error instanceof Error ? error.message : String(error)`.
 
 ### Go
@@ -654,8 +654,8 @@ These rules exist to prevent common AI-assisted mistakes.
 ### TypeScript shared utilities
 | Utility | Location | Use for |
 |---|---|---|
-| `generateId()` | `desktop/src/renderer/helpers/generateId.ts` | All UUID/random ID generation |
-| `getErrorMessage(e)` | `desktop/src/renderer/helpers/errorHelpers.ts` | Extracting message from `unknown` catch value |
+| `generateId()` | `src/shared/ids/generateId.ts` | All UUID/random ID generation |
+| `getErrorMessage(e)` | `desktop/src/renderer/errors/getErrorMessage.ts` | Extracting message from `unknown` catch value |
 
 ### api-service shared helpers
 | Helper | Location | Use for |

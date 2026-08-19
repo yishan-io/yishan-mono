@@ -1,11 +1,11 @@
 import { Box, Button, Tooltip, Typography } from "@mui/material";
-import { useWorkspaceAgentStatusByWorkspaceId } from "@renderer/domains/agent";
-import { useWorkspaceUnreadToneByWorkspaceId } from "@renderer/domains/agent";
-import { resolveWorkspaceNotificationColor, resolveWorkspaceNotificationTone } from "@renderer/domains/notification";
-import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
-import { renderProjectIcon } from "@renderer/domains/project";
+import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
+
+import { resolveWorkspaceNotificationColor } from "@renderer/domains/notification";
+
+import { chatStore } from "@renderer/domains/agent";
+import { projectStore, renderProjectIcon } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
-import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { PaneHeader } from "@renderer/domains/workbench";
@@ -13,6 +13,7 @@ import { PaneToggleButton } from "@renderer/domains/workbench";
 import { resolveWorkspaceIdForProject, resolveWorkspaceProjectId, workspaceStore } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { getRendererPlatform } from "@renderer/platform/platform";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
@@ -21,7 +22,7 @@ import { useProjectCommands, useWorkbenchCommands, useWorkspaceCommands } from "
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { DaemonVersionWarningControl } from "../launch/DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "../main-workspace-shell/WorkspacePortsMenuControl";
-import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
+import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBar";
 import {
   AddProjectCommandDialog,
   ProjectCommandsMenu,
@@ -33,13 +34,13 @@ import {
 export function MainPaneTitleBarView() {
   const { t } = useTranslation();
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
-  const projects = useProjects();
-  const displayProjectIds = useDisplayProjectIds();
+  const projects = projectStore((state) => state.projects);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = useWorkspaceAgentStatusByWorkspaceId();
-  const workspaceUnreadToneByWorkspaceId = useWorkspaceUnreadToneByWorkspaceId();
+  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
+  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const { activateProject, activateWorkspace } = useWorkspaceCommands();
   const { openTab } = useWorkbenchCommands();
   const { updateProjectConfig } = useProjectCommands();

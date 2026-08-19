@@ -1,13 +1,12 @@
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import { tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
-import { setAgentChatStreamTabVisible } from "../../../events/agentChatPiEventShared";
-import { useAgentChatSession } from "../../../hooks/useAgentChatReadHooks";
-import { clearPendingUiAutoResponse, setPendingUiAutoResponse, setTurnError } from "../../../state/chatActions";
+import { setAgentChatStreamTabVisible } from "../../../subscriptions/agentChatPiEventShared";
+
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
@@ -37,7 +36,7 @@ function AgentChatViewComponent({
   const isReadOnlySubagentDetail = sessionView === "subagent-detail";
   const foundTab = tabStore((state) => state.tabs.find((tab) => tab.id === tabId));
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
-  const session = useAgentChatSession(tabId);
+  const session = agentChatStore((state) => state.sessionsByTabId[tabId]);
   const hasSession = Boolean(session);
   const sessionState = session?.state ?? (hasSession ? "idle" : "starting");
   const messageCount = session?.messages.length ?? 0;
@@ -77,7 +76,7 @@ function AgentChatViewComponent({
       return;
     }
 
-    clearPendingUiAutoResponse(tabId);
+    agentChatStore.getState().clearPendingUiAutoResponse(tabId);
 
     await respondToAgentExtensionUiRequest({
       tabId,
@@ -110,7 +109,7 @@ function AgentChatViewComponent({
         return;
       }
 
-      setPendingUiAutoResponse(tabId, {
+      agentChatStore.getState().setPendingUiAutoResponse(tabId, {
         sourceRequestId: pendingUiRequest.id,
         targetMethod: "input",
         value,
@@ -136,7 +135,7 @@ function AgentChatViewComponent({
     }
 
     if (pendingUiRequest.method !== pendingUiAutoResponse.targetMethod) {
-      clearPendingUiAutoResponse(tabId);
+      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       return;
     }
 
@@ -148,10 +147,10 @@ function AgentChatViewComponent({
           requestId: pendingUiRequest.id,
           value: pendingUiAutoResponse.value,
         });
-        clearPendingUiAutoResponse(tabId);
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       } catch (error) {
-        clearPendingUiAutoResponse(tabId);
-        setTurnError(tabId, getErrorMessage(error));
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     })();
   }, [liveSessionId, pendingUiAutoResponse, pendingUiRequest, tabId]);
@@ -260,3 +259,5 @@ MemoizedAgentChatView.displayName = "AgentChatView";
 
 /** Full agent chat tab: transcript, composer, and model controls. */
 export const AgentChatView = MemoizedAgentChatView;
+
+import { agentChatStore } from "../../../state/agentChatStore";

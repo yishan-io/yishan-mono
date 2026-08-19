@@ -13,7 +13,7 @@ import {
   getMockedCommands,
   renderDialog,
   setupCreateWorkspaceDialogViewTests,
-} from "./CreateWorkspaceDialogView.testUtils";
+} from "./CreateWorkspaceDialogView.testRender";
 
 describe("CreateWorkspaceDialogView branch behavior", () => {
   setupCreateWorkspaceDialogViewTests();

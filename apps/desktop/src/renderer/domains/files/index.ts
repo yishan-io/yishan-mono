@@ -1,7 +1,6 @@
 /**
- * Files feature public API (Phase 12, desktop5.md).
+ * Files feature public API.
  */
-export type { FileCommands } from "./commands/contract";
 export {
   createFile,
   createFolder,
@@ -17,7 +16,7 @@ export {
   searchFiles,
   writeFile,
 } from "./commands/fileCommands";
-export { resolveWorkspaceAbsolutePath } from "./features/file-manager/fileTreeHelpers";
+export { resolveWorkspaceAbsolutePath } from "./features/file-manager/fileTreeEntries";
 export { useDetectedExternalAppIds } from "./hooks/useDetectedExternalAppIds";
 export {
   incrementFileTreeRefreshVersion,
@@ -25,8 +24,6 @@ export {
   requestFileSearch,
   requestSelectFolderInFileTree,
   requestUndo,
-  setExpandedFileTreeItems,
-  setSelectedEntryPath,
 } from "./commands/fileTreeCommands";
 export { fileTreeStore, type FileTreeStoreState } from "./state/fileTreeStore";
 export { fileTabContentStore, type FileTabContentStoreState } from "./state/fileTabContentStore";
@@ -39,15 +36,13 @@ export {
   updateFileTabContent,
 } from "./commands/fileTabContentCommands";
 
-// Stable UI entry points for cross-feature composition (Phase 18).
-export { useFileSearchController } from "./features/quick-open-file/useFileSearchController";
+// Stable UI entry points for cross-feature composition.
+
 export { FileSearchOverlay } from "./features/quick-open-file/FileSearchOverlay";
 export { FileManagerView } from "./features/file-manager/FileManagerView";
 export {
   FILETREE_DRAG_MIME,
-  extractInternalDragRelativePaths,
   extractSourcePathsFromDataTransfer,
-  extractSourcePathsFromDataTransferAsync,
   hasExternalFileDragIntent,
   hasInternalFileTreeDragIntent,
   resolveInternalFileTreeDragEntries,
@@ -61,23 +56,20 @@ export {
   splitFilePathForDisplay,
   type FilePathDisplayParts,
   type HighlightedPathSegment,
-} from "./ui/filePathDisplayHelpers";
+} from "./ui/filePathDisplay";
 export {
   AudioPreview,
-  DiffSearchPanel,
   FileDiffViewer,
   FileEditor,
-  FileQuickOpenDialog,
   ImagePreview,
   MultiFileDiffViewer,
   UnsupportedFileView,
   VideoPreview,
 } from "./features/file-editor/editors";
-export { DiagramZoomOverlay } from "./ui/DiagramZoomOverlay";
+
 export { getDiffCssVariablesForPalette } from "./ui/diffTheme";
 
 export {
-  EXTERNAL_APP_MENU_ENTRIES,
   SYSTEM_FILE_MANAGER_APP_ID,
   findExternalAppPreset,
   getExternalAppMenuEntries,
@@ -87,31 +79,15 @@ export {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   type ExternalAppPreset,
-} from "./model/externalApps";
-export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./model/externalApps";
+} from "./externalApps";
+export type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "./externalApps";
 
-export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownHelpers";
+export { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "./ui/markdown/markdownTransform";
 export { markdownService } from "./ui/markdown/markdownService";
 export { useMarkdownStyles } from "./ui/markdown/markdownStyles";
 
 export { MarkdownPreview } from "./ui/markdown/MarkdownPreview";
-export { createFileTabPlaceholder } from "./model/fileTabPlaceholder";
-export {
-  getFileExtension,
-  getLanguageId,
-  getSupportedExtensions,
-  isAudioFile,
-  isExcalidrawFile,
-  isImageFile,
-  isLanguageSupported,
-  isMarkdownFile,
-  isUnsupportedFileTab,
-  isVideoFile,
-} from "./model/editorLanguage";
-export {
-  computeGitLineChanges,
-  getHunkForLine,
-  type GitLineChange,
-  type GitLineChangeKind,
-} from "./model/gitGutterDiff";
-export { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } from "./infrastructure/monacoSetup";
+export { createFileTabPlaceholder } from "./features/file-editor/fileTabPlaceholder";
+export { getFileExtension } from "./features/file-editor/editorLanguage";
+export type { GitLineChange, GitLineChangeKind } from "./features/file-editor/git-gutter/gitGutterDiff";
+export { monaco } from "./features/file-editor/monacoSetup";

@@ -29,7 +29,7 @@ const mocks = vi.hoisted(() => ({
   writeInput: vi.fn(),
 }));
 
-vi.mock("../../../domains/terminal/infrastructure/daemonTerminalClient", () => ({
+vi.mock("../../../domains/terminal/daemon/daemonTerminalClient", () => ({
   getTerminalRpc: () =>
     Promise.resolve({
       closeSession: mocks.closeSession,
@@ -45,7 +45,7 @@ vi.mock("../../../domains/terminal/infrastructure/daemonTerminalClient", () => (
     }),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
+vi.mock("@renderer/events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 

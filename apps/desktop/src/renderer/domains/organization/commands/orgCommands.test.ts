@@ -20,14 +20,9 @@ vi.mock("../../../api", () => ({
   },
 }));
 
-vi.mock("../../../domains/organization/infrastructure/daemonOrganizationProcedures", () => ({
+vi.mock("../../../domains/organization/daemon/daemonOrganizationProcedures", () => ({
   setCurrentOrganization: rpcMocks.setCurrentOrganization,
 }));
-
-vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
-  return actual;
-});
 
 const initialSessionStoreState = sessionStore.getState();
 

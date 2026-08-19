@@ -1,5 +1,5 @@
-import { supportsGitFeatures } from "@renderer/domains/project";
-import { selectProjects } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
+
 /**
  * All-workspaces git sync runtime (desktop6-adjust.md W4).
  *
@@ -11,8 +11,8 @@ import { selectProjects } from "@renderer/domains/project";
  * because it is already handled by WorkspaceView's own effect.
  */
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { selectWorkspaces } from "@renderer/domains/workspace";
-import { isFolderWorkspace } from "@renderer/domains/workspace";
+
+import { isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
 import { refreshWorkspaceGitChanges } from "../commands/gitProjectionCommands";
 import { gitProjectionStore } from "../state/gitProjectionStore";
 
@@ -98,11 +98,11 @@ export function createAllWorkspacesGitSyncRuntime() {
     }
     lastVersionMap = versionByWorktreePath;
 
-    const workspaces = selectWorkspaces();
+    const workspaces = workspaceStore.getState().workspaces;
     const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
     const lastSeen = lastSeenVersionByWorktreePath;
     const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
-    const projectByProjectId = new Map(selectProjects().map((project) => [project.id, project]));
+    const projectByProjectId = new Map(projectStore.getState().projects.map((project) => [project.id, project]));
 
     for (const workspaceId of refreshStateByWorkspaceId.keys()) {
       if (!activeWorkspaceIds.has(workspaceId)) {

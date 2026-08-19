@@ -16,7 +16,7 @@ import { TerminalView } from "@renderer/domains/terminal";
 import { TabPanel } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { copyToClipboard } from "@renderer/platform/clipboard";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileCommandSurface, WorkbenchCommandSurface } from "../../commands/useCommands";

@@ -2,9 +2,9 @@ import { Box } from "@mui/material";
 import type { ExternalAppId } from "@renderer/domains/files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
-import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/model/split-pane";
-import type { WorkbenchTab } from "../../../../domains/workbench/model/types";
+import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/split-pane";
 import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
+import type { WorkbenchTab } from "../../../../domains/workbench/tabs";
 import {
   closeAllTabs,
   closeOtherTabs,
@@ -29,7 +29,7 @@ import {
 } from "./useOpenTabAutoRefresh";
 import { type AgentPresetMeta, usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
-import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";
+import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPane";
 
 // ─── Per-workspace split pane ─────────────────────────────────────────────────
 

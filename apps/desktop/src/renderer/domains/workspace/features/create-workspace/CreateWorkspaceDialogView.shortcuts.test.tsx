@@ -12,7 +12,7 @@ import {
   renderDialogWithLocation,
   seedRenameWorkspace,
   setupCreateWorkspaceDialogViewTests,
-} from "./CreateWorkspaceDialogView.testUtils";
+} from "./CreateWorkspaceDialogView.testRender";
 
 describe("CreateWorkspaceDialogView keyboard shortcuts", () => {
   setupCreateWorkspaceDialogViewTests();

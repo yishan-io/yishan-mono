@@ -1,12 +1,6 @@
 /**
- * Overview feature public API (Phase 12, desktop5.md).
+ * Overview feature public API.
  */
-export type { OverviewCommands } from "./commands/contract";
 
 export { OverviewView } from "./features/overview-dashboard/OverviewView";
-export {
-  loadAllOverviewData,
-  setOverviewGranularity,
-  setOverviewProjectId,
-  setOverviewTimeRange,
-} from "./commands/overviewCommands";
+export { loadAllOverviewData, setOverviewProjectId, setOverviewTimeRange } from "./commands/overviewCommands";

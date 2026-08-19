@@ -1,10 +1,10 @@
+import { useState } from "react";
 import {
   getNotificationPreferences,
   playNotificationSound,
   previewNotification,
   updateNotificationPreferences,
 } from "../../commands/notificationCommands";
-import { useState } from "react";
 import type { NotificationPreviewStatus, NotificationSettingsErrorKey } from "./notificationSettingsState.types";
 import { useNotificationSettingsMutations } from "./useNotificationSettingsMutations";
 import { useNotificationSettingsPersistence } from "./useNotificationSettingsPersistence";

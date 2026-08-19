@@ -1,6 +1,6 @@
 import { getProjectListPreferences, setProjectListPreferences } from "@renderer/domains/project";
 import type { ProjectListPreference } from "@renderer/domains/project";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef } from "react";
 import {
   EMPTY_FOLD_STATE,

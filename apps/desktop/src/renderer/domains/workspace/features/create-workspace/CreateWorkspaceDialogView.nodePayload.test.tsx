@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { agentSettingsStore } from "@renderer/domains/agent";
+import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
 import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -32,7 +32,7 @@ vi.mock("../../commands/workspaceCommands", () => ({
 vi.mock("@renderer/domains/workspace", async () => {
   const { workspaceSettingsStore } = await import("../../state/workspaceSettingsStore");
   const { useWorkspaceBranchPrefixSettings } = await import("../../hooks/useWorkspaceBranchPrefixSettings");
-  const { resolveGitBranchPrefix } = await import("../../model/branchPrefix");
+  const { resolveGitBranchPrefix } = await import("../../naming/branchPrefix");
   return {
     workspaceSettingsStore,
     useWorkspaceBranchPrefixSettings,

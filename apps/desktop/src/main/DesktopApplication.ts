@@ -1,16 +1,16 @@
 import { readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { wireAppLifecycle } from "./lifecycle/appLifecycle";
 import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
 import { registerPermissionPolicy } from "./security/permissionPolicy";
-import { wireAppLifecycle } from "./lifecycle/appLifecycle";
 import { UpdateRuntime } from "./updates/updateRuntime";
 import { MainWindow } from "./window/mainWindow";
 export { isPermissionAllowed } from "./security/permissionPolicy";
 import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
-import { getErrorMessage } from "../shared/helpers/errorHelpers";
+import { getErrorMessage } from "../shared/errors/getErrorMessage";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, login } from "./auth/cliAuth";
 import { flushBrowserHistoryPruneCheck } from "./browser/browserHistory";
@@ -82,7 +82,10 @@ export class DesktopApplication {
   private async start(): Promise<void> {
     await app.whenReady();
     registerWorkspaceFileProtocol();
-    registerPermissionPolicy(session.defaultSession, (webContentsId) => webContentsId === this.mainWindow.webContentsId);
+    registerPermissionPolicy(
+      session.defaultSession,
+      (webContentsId) => webContentsId === this.mainWindow.webContentsId,
+    );
 
     const defaultAppEntry = process.argv[1];
     if (process.defaultApp && defaultAppEntry) {
@@ -271,9 +274,7 @@ export class DesktopApplication {
         defaultPath: input?.startingFolder?.trim() || undefined,
       };
       const window = this.mainWindow.browserWindow;
-      const result = window
-        ? await dialog.showOpenDialog(window, options)
-        : await dialog.showOpenDialog(options);
+      const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
 
       if (result.canceled) {
         return null;
@@ -375,9 +376,4 @@ export class DesktopApplication {
       this.focusMainWindow();
     }
   }
-
-
-
-
-
 }

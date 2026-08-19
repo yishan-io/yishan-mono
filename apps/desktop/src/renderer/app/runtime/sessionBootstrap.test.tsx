@@ -16,12 +16,6 @@ vi.mock("../../app/commands/appCommands", () => ({
   getDesktopAppVersion: vi.fn(async () => "0.0.0"),
 }));
 
-vi.mock("../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({})),
-  subscribeDaemonConnectionStatus: vi.fn(() => () => {}),
-  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
-}));
-
 vi.mock("../../domains/session/commands/sessionCommands", () => ({
   isAuthExpiredError: (error: unknown) => error instanceof RestApiError && error.status === 401,
   getSessionBootstrapData: vi.fn(async () => ({

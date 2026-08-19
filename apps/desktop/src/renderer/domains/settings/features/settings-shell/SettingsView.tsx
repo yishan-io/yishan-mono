@@ -32,8 +32,36 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { SearchInput } from "../../../../ui/components/SearchInput";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { useThemePreference } from "../../hooks/useThemePreference";
-import { SettingsErrorBoundary, SettingsPageLayout } from "../../ui/controls";
+import { SettingsErrorBoundary } from "../../ui/controls/SettingsErrorBoundary";
+import { SettingsPageLayout } from "../../ui/controls/SettingsPageLayout";
 import { ThemePreferencePicker } from "../../ui/controls/ThemePreferencePicker";
+import {
+  AccountSettingsView,
+  AgentProviderSettingsView,
+  CLISettingsView,
+  ComputerUseSettingsView,
+  CustomizeSettingsView,
+  DaemonSettingsView,
+  EditorSettingsView,
+  KeybindingsSettingsView,
+  LanguageSettingsView,
+  LinkSettingsView,
+  MarkdownSettingsView,
+  MemberSettingsView,
+  MemorySettingsView,
+  NodesSettingsView,
+  NotificationSettingsView,
+  ServiceTokenSettingsView,
+  TerminalSettingsView,
+  WorkspaceSettingsView,
+} from "./settingsLazyPages";
+import {
+  type SettingsSearchResult,
+  normalizeSettingsSearchQuery,
+  rankSettingsSearchResult,
+  renderExperimentalSidebarLabel,
+  renderSidebarLabel,
+} from "./settingsSearch";
 import {
   type CustomizeFocusItemId,
   SETTINGS_NAV_SECTIONS,
@@ -43,113 +71,6 @@ import {
   isCustomizeFocusItemId,
 } from "./settingsSearchCatalog";
 
-const AccountSettingsView = lazy(() =>
-  import("../account/AccountSettingsView").then((m) => ({ default: m.AccountSettingsView })),
-);
-const MemberSettingsView = lazy(() =>
-  import("@renderer/domains/organization").then((m) => ({ default: m.MemberSettingsView })),
-);
-const ServiceTokenSettingsView = lazy(() =>
-  import("../account/ServiceTokenSettingsView").then((m) => ({ default: m.ServiceTokenSettingsView })),
-);
-const ComputerUseSettingsView = lazy(() =>
-  import("@renderer/domains/agent").then((m) => ({ default: m.ComputerUseSettingsView })),
-);
-const DaemonSettingsView = lazy(() =>
-  import("../daemon/DaemonSettingsView").then((m) => ({ default: m.DaemonSettingsView })),
-);
-const EditorSettingsView = lazy(() =>
-  import("../editor/EditorSettingsView").then((m) => ({ default: m.EditorSettingsView })),
-);
-const KeybindingsSettingsView = lazy(() =>
-  import("../keybindings/KeybindingsSettingsView").then((m) => ({ default: m.KeybindingsSettingsView })),
-);
-const LanguageSettingsView = lazy(() =>
-  import("../language/LanguageSettingsView").then((m) => ({ default: m.LanguageSettingsView })),
-);
-const LinkSettingsView = lazy(() => import("../link/LinkSettingsView").then((m) => ({ default: m.LinkSettingsView })));
-const MarkdownSettingsView = lazy(() =>
-  import("../markdown/MarkdownSettingsView").then((m) => ({ default: m.MarkdownSettingsView })),
-);
-const NodesSettingsView = lazy(() => import("@renderer/domains/node").then((m) => ({ default: m.NodesSettingsView })));
-const NotificationSettingsView = lazy(() =>
-  import("@renderer/domains/notification").then((m) => ({ default: m.NotificationSettingsView })),
-);
-const TerminalSettingsView = lazy(() =>
-  import("@renderer/domains/terminal").then((m) => ({ default: m.TerminalSettingsView })),
-);
-const WorkspaceSettingsView = lazy(() =>
-  import("@renderer/domains/workspace").then((m) => ({ default: m.WorkspaceSettingsView })),
-);
-
-const AgentProviderSettingsView = lazy(() =>
-  import("@renderer/domains/agent").then((m) => ({ default: m.AgentProviderSettingsView })),
-);
-const CLISettingsView = lazy(() => import("../cli/CLISettingsView").then((m) => ({ default: m.CLISettingsView })));
-const CustomizeSettingsView = lazy(() =>
-  import("@renderer/domains/agent").then((m) => ({ default: m.CustomizeSettingsView })),
-);
-const MemorySettingsView = lazy(() =>
-  import("@renderer/domains/agent").then((m) => ({ default: m.MemorySettingsView })),
-);
-
-type SettingsSearchResult = {
-  id: string;
-  tab: SettingsTab;
-  icon: typeof BiCog;
-  label: string;
-  sectionLabel: string;
-  focusItemId?: NotificationSettingsFocusItemId | CustomizeFocusItemId;
-  rank: number;
-};
-
-/**
- * Wraps one menu label in standardized body2 typography used across workspace sidebars.
- */
-function renderSidebarLabel(label: ReactNode) {
-  return (
-    <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
-      {label}
-    </Typography>
-  );
-}
-
-function renderExperimentalSidebarLabel(label: string, chipLabel: string) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-      <Typography variant="body2" sx={{ lineHeight: 1.35 }} noWrap>
-        {label}
-      </Typography>
-      <Chip size="small" label={chipLabel} variant="outlined" sx={{ height: 18, flexShrink: 0 }} />
-    </Box>
-  );
-}
-
-/**
- * Normalizes one settings-search query for case-insensitive matching.
- */
-function normalizeSettingsSearchQuery(query: string): string {
-  return query.trim().toLowerCase();
-}
-
-/**
- * Scores one result string by prefix-first matching and then by text position.
- */
-function rankSettingsSearchResult(label: string, query: string): number {
-  const normalizedLabel = normalizeSettingsSearchQuery(label);
-  if (normalizedLabel.startsWith(query)) {
-    return 0;
-  }
-  const firstMatchIndex = normalizedLabel.indexOf(query);
-  if (firstMatchIndex >= 0) {
-    return 100 + firstMatchIndex;
-  }
-  return Number.POSITIVE_INFINITY;
-}
-
-/**
- * Renders the settings workspace with one dedicated left navigation and a center content area.
- */
 export function SettingsView() {
   const { themePreference, setThemePreference } = useThemePreference();
   const { t } = useTranslation();

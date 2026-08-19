@@ -3,7 +3,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { COLOR_PRIMITIVES } from "@yishan-io/design-tokens/v1";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage } from "../../../../../domains/agent/model/agentChatTypes";
+import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
 import { agentChatStore } from "../../../../../domains/agent/state/agentChatStore";
 import { AgentChatUsageSummaryLabel, getUsageSummaryColor } from "./AgentChatUsageSummaryLabel";
 

@@ -1,3 +1,4 @@
+import { generateId } from "@shared/ids/generateId";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import {
@@ -9,7 +10,6 @@ import {
   collectLeaves,
   createAdjacentPaneWithTab,
   createLeaf,
-  createPaneId,
   findLeaf,
   findLeafByTabId,
   moveTabToPane,
@@ -19,9 +19,14 @@ import {
   setActivePaneState,
   setSplitRatio,
   splitPaneWithTab,
-} from "../model/split-pane";
+} from "../split-pane";
 
 const ROOT_PANE_ID = "root-pane";
+
+/** Creates a new unique pane id (desktop8 Phase 30: allocation moved from Model to State). */
+export function createPaneId(): string {
+  return `pane-${generateId()}`;
+}
 
 function createEmptyLayout(): SplitPaneStateSlice {
   return { root: createLeaf(ROOT_PANE_ID, [], ""), activePaneId: ROOT_PANE_ID };

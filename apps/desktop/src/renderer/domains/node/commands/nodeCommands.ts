@@ -1,15 +1,12 @@
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { selectSelectedOrganizationId } from "../../../domains/session";
-import {
-  listOrganizationNodes,
-  unregisterOrganizationNode,
-  updateOrganizationNodeScope,
-} from "../infrastructure/nodeApi";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
+
+import { sessionStore } from "@renderer/domains/session";
+import { listOrganizationNodes, unregisterOrganizationNode, updateOrganizationNodeScope } from "../api/nodeApi";
 
 const errNoOrgSelected = "No organization selected.";
 
 function resolveOrgId(): string {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     throw new Error(errNoOrgSelected);
   }

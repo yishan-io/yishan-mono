@@ -8,7 +8,7 @@ import {
   hasInternalFileTreeDragIntent,
 } from "./dataTransfer";
 import type { FileTreeDragEntry } from "./dataTransfer";
-import { resolveDestinationDirectoryPath } from "./treeUtils";
+import { resolveDestinationDirectoryPath } from "./treeRows";
 import type { VisibleRow } from "./types";
 
 type UseFileTreeDragDropInput = {

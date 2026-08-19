@@ -3,7 +3,7 @@ import { setBrowserTabFaviconUrl } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { type FormEvent, useCallback, useMemo, useRef } from "react";
 import { LuWrench } from "react-icons/lu";
-import { normalizeUrl } from "../../model/normalizeUrl";
+import { normalizeUrl } from "../../normalizeUrl";
 import { BlankView } from "./BlankView";
 import { ToolsMenu } from "./ToolsMenu";
 import { UrlBar } from "./UrlBar";

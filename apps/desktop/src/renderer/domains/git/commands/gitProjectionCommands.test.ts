@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { gitProjectionStore } from "@renderer/domains/git";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../project/state/projectStore";
 import { workspaceStore } from "../../workspace/state/workspaceStore";
@@ -13,7 +12,7 @@ const rpcMocks = vi.hoisted(() => ({
   gitInspect: vi.fn(async () => ({ isGitRepository: true })),
 }));
 
-vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
     Promise.resolve({
@@ -21,19 +20,13 @@ vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () =>
     }),
 }));
 
-vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
+vi.mock("../../../domains/git/daemon/daemonGitClient", () => ({
   getGitRpc: () =>
     Promise.resolve({
       inspectPath: rpcMocks.gitInspect,
       listChanges: rpcMocks.listGitChanges,
       getBranchDiffSummary: rpcMocks.getBranchDiffSummary,
     }),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();
@@ -372,3 +365,5 @@ describe("gitProjectionCommands", () => {
     consoleErrorSpy.mockRestore();
   });
 });
+
+import { gitProjectionStore } from "../state/gitProjectionStore";

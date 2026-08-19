@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
-import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "@renderer/domains/agent";
+import { AGENT_SETTINGS_STORE_STORAGE_KEY } from "@renderer/domains/agent";
+import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
 import { WorkspacePaneVisibilityProvider } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileTabContentStore } from "../../../domains/files/state/fileTabContentStore";
-import type { SplitPaneNode } from "../../../domains/workbench/model/split-pane";
+import type { SplitPaneNode } from "../../../domains/workbench/split-pane";
 import { MainPaneView } from "./MainPaneView";
 
 type MockLeafPane = {

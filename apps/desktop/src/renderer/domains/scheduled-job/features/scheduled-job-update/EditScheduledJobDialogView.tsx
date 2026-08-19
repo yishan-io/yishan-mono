@@ -1,15 +1,17 @@
 import { Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
-import { useProjects } from "@renderer/domains/project";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+
+import { projectStore } from "@renderer/domains/project";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
-import { useSelectedOrganizationId } from "../../../../domains/session";
+
+import { sessionStore } from "@renderer/domains/session";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { updateScheduledJob } from "../../commands/scheduledJobCommands";
 import { useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
-import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "../../model/scheduledJobScheduleRules";
+import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "../../schedule/scheduledJobScheduleRules";
 import { ScheduledJobFormFields } from "../../ui/ScheduledJobFormFields";
 
 type EditScheduledJobDialogViewProps = {
@@ -23,8 +25,8 @@ const editCustomCronDescriptionSx = { mt: -0.5 };
 /** Dialog for editing an existing scheduled job's mutable fields. */
 export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduledJobDialogViewProps) {
   const { t } = useTranslation();
-  const orgId = useSelectedOrganizationId();
-  const projects = useProjects();
+  const orgId = sessionStore((state) => state.selectedOrganizationId);
+  const projects = projectStore((state) => state.projects);
   useDialogRegistration(open);
 
   const initialState = useMemo(() => {

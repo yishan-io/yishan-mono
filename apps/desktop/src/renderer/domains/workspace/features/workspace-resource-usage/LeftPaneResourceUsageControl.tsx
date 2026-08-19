@@ -1,4 +1,4 @@
-import { useProjects } from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import type { TerminalResourceUsageSnapshot } from "@renderer/domains/terminal";
 import { getTerminalResourceUsage, useSharedTerminalResourceUsageSnapshot } from "@renderer/domains/terminal";
 import { activateWorkspace, tabStore } from "@renderer/domains/workbench";
@@ -74,7 +74,7 @@ function buildWorkspaceRows(
 export function LeftPaneResourceUsageControl() {
   const { t } = useTranslation();
   const isInRouterContext = useInRouterContext();
-  const projects = useProjects();
+  const projects = projectStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
   const tabs = tabStore((state) => state.tabs);
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);

@@ -9,7 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
@@ -19,7 +19,7 @@ import {
   getAgentDefinitionDetail,
   updateAgentDefinition,
 } from "../../commands/agentDefinitionCommands";
-import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../infrastructure/daemonAgentTypes";
+import type { AgentDefinitionDetail, AgentDefinitionInfo } from "../../daemon/daemonAgentTypes";
 import { FieldLabel } from "./AgentDefinitionFieldLabel";
 import { AgentToolsEditor, sameToolList } from "./AgentToolsEditor";
 import { ModelThinkingSelector } from "./ModelThinkingSelector";

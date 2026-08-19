@@ -5,7 +5,7 @@ import { act, cleanup, createEvent, fireEvent, render, screen, waitFor } from "@
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RichComposer, type RichComposerSlashCommand } from "./RichComposer";
-import { getCaretOffset, renderComposerHtml, setCaretOffset } from "./richComposerHelpers";
+import { getCaretOffset, renderComposerHtml, setCaretOffset } from "./richComposerText";
 import type { FileMentionResult } from "./richComposerTypes";
 
 const SLASH_COMMANDS: RichComposerSlashCommand[] = [

@@ -1,16 +1,17 @@
-import { selectProjectById } from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
-import { selectSelectedOrganizationId } from "../../../domains/session";
-import { buildWorkspaceCreatePlaceholder } from "../../../domains/workspace/model/workspaceCreatePlaceholder";
+
+import { sessionStore } from "@renderer/domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import {
   type WorkspaceLifecycleScriptWarning,
   enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
-import { selectIsDefaultContextEnabled } from "../state/workspaceSettingsSelectors";
+import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
+import { buildWorkspaceCreatePlaceholder } from "../features/create-workspace/workspaceCreatePlaceholder";
+import { workspaceSettingsStore } from "../state/workspaceSettingsStore";
+import { workspaceStore } from "../state/workspaceStore";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 
 type CreateWorkspaceInput = {
@@ -108,8 +109,8 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  const project = selectProjectById(projectId);
-  const organizationId = selectSelectedOrganizationId()?.trim() || "";
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
+  const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
 
   const repoKey = project?.repoKey?.trim() || project?.key?.trim() || project?.id || "";
   const sourcePath = project?.localPath?.trim() || project?.path?.trim() || "";
@@ -141,7 +142,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       sourcePath,
       sourceBranch,
       targetBranch,
-      contextEnabled: project?.contextEnabled ?? selectIsDefaultContextEnabled(),
+      contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
       setupHook: project?.setupScript?.trim() || undefined,
       taskRun: input.taskRun,
     })) as Record<string, unknown>;

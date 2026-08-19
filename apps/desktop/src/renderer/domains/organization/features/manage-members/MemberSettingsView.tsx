@@ -19,14 +19,14 @@ import { useTranslation } from "react-i18next";
 import { BiTrash, BiUserPlus } from "react-icons/bi";
 import { LuLogOut } from "react-icons/lu";
 
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { setSessionData as applySetSessionData } from "../../../../domains/session";
-import { useCurrentUser, useOrganizations, useSelectedOrganizationId } from "../../../../domains/session";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
+
+import { sessionStore } from "@renderer/domains/session";
 import { ConfirmationDialog } from "../../../../domains/workbench";
 import { CenteredSpinner } from "../../../../ui/components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
+import type { OrganizationMemberRecord } from "../../api/orgApi";
 import { leaveOrg, listOrganizationMembers, removeOrgMember } from "../../commands/orgCommands";
-import type { OrganizationMemberRecord } from "../../infrastructure/orgApi";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
 
@@ -58,10 +58,9 @@ function resolveOrganizationId(
 
 export function MemberSettingsView() {
   const { t } = useTranslation();
-  const selectedOrganizationId = useSelectedOrganizationId();
-  const organizations = useOrganizations();
-  const currentUser = useCurrentUser();
-  const setSessionData = applySetSessionData;
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
+  const organizations = sessionStore((state) => state.organizations);
+  const currentUser = sessionStore((state) => state.currentUser);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [members, setMembers] = useState<OrganizationMemberRecord[]>([]);
@@ -185,7 +184,7 @@ export function MemberSettingsView() {
     try {
       await leaveOrg();
       const nextOrganizations = organizations.filter((org) => org.id !== organizationId);
-      setSessionData({
+      sessionStore.getState().setSessionData({
         currentUser,
         organizations: nextOrganizations,
         selectedOrganizationId: nextOrganizations[0]?.id,
@@ -194,7 +193,7 @@ export function MemberSettingsView() {
       setLeaveErrorMessage(getErrorMessage(error));
       setIsLeavingOrg(false);
     }
-  }, [organizationId, currentUser, organizations, setSessionData]);
+  }, [organizationId, currentUser, organizations]);
 
   return (
     <Box>

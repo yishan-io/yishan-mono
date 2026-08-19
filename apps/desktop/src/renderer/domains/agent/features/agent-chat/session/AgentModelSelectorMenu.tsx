@@ -1,6 +1,6 @@
 import type { MutableRefObject } from "react";
-import type { AgentModel } from "../../../../../domains/agent/model/agentChatTypes";
-import { buildModelPickerOption } from "../../../model/modelPicker";
+import type { AgentModel } from "../../../../../domains/agent/chat/agentChatTypes";
+import { buildModelPickerOption } from "../../../providers/modelPicker";
 import { ModelPickerMenu } from "../../select-model/ModelPickerMenu";
 
 type AgentModelSelectorMenuProps = {

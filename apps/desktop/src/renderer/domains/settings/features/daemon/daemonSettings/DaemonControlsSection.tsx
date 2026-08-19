@@ -1,7 +1,13 @@
 import { Alert, Box, Button, CircularProgress } from "@mui/material";
-import {SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader, SettingsToggleRow} from "../../../../../ui/components/SettingsPrimitives";
 import { useTranslation } from "react-i18next";
 import { LuPower } from "react-icons/lu";
+import {
+  SettingsCard,
+  SettingsControlRow,
+  SettingsRows,
+  SettingsSectionHeader,
+  SettingsToggleRow,
+} from "../../../../../ui/components/SettingsPrimitives";
 
 type DaemonControlsSectionProps = {
   isLoading: boolean;

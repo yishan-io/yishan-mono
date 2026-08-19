@@ -1,13 +1,12 @@
-import { supportsGitFeatures } from "@renderer/domains/project";
-import { projectStore } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
-import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
+import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listGitChanges, listGitCommitsToTarget } from "../../commands/gitCommands";
-import { useWorkspaceGitRefreshVersion } from "../../hooks/useGitProjectionReadHooks";
+import { gitProjectionStore } from "../../state/gitProjectionStore";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
@@ -26,9 +25,9 @@ import {
   normalizeWorkspaceRelativePath,
   reconcileRenameLikePairs,
   toCommitFile,
-} from "./changesTabHelpers";
+} from "./changesTabPaths";
 
-export { normalizeWorkspaceRelativePath } from "./changesTabHelpers";
+export { normalizeWorkspaceRelativePath } from "./changesTabPaths";
 
 const GIT_CHANGES_REFRESH_RETRY_MS = 5_000;
 const MAX_GIT_CHANGES_REFRESH_RETRIES = 3;
@@ -54,11 +53,10 @@ export function useChangesTabState() {
   // (replaces the former app/selectors hook; Domains plan D10).
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const selectedWorkspace = workspaceStore((state) => state.workspaces.find((w) => w.id === selectedWorkspaceId));
-  const selectedProject = projectStore((state) =>
-    selectedWorkspace
-      ? state.projects.find((p) => p.id === (selectedWorkspace.projectId ?? selectedWorkspace.repoId))
-      : undefined,
-  );
+  const projects = projectStore((state) => state.projects);
+  const selectedProject = selectedWorkspace
+    ? projects.find((p) => p.id === (selectedWorkspace.projectId ?? selectedWorkspace.repoId))
+    : undefined;
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const selectedWorkspaceSourceBranch = useMemo(() => {
     // Folder workspaces and non-git projects have no branches: no source
@@ -70,7 +68,12 @@ export function useChangesTabState() {
     const raw = selectedWorkspace?.sourceBranch?.trim() || selectedProject?.defaultBranch?.trim() || "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
   }, [selectedWorkspace, selectedProject]);
-  const workspaceGitRefreshVersion = useWorkspaceGitRefreshVersion(selectedWorkspaceWorktreePath ?? "");
+  const workspaceGitRefreshVersion = gitProjectionStore((state) => {
+    if (!(selectedWorkspaceWorktreePath ?? "")) {
+      return 0;
+    }
+    return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath ?? ""] ?? 0;
+  });
   const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}`;
   const selectedWorkspaceRequestKeyRef = useRef(selectedWorkspaceRequestKey);
   selectedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;

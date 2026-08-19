@@ -1,12 +1,12 @@
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { openTab } from "@renderer/domains/workbench";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
 import { fetchSessionHistory } from "../../../commands/agentChatSessionHistory";
-import type * as Rpc from "../../../infrastructure/daemonAgentTypes";
-import { formatAgentSessionTitle } from "../../../model/agentSkillTextHelpers";
+import type * as Rpc from "../../../daemon/daemonAgentTypes";
+import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 
 const RECENT_SESSION_LIMIT = 5;
 

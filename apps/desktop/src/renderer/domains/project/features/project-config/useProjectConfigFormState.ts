@@ -1,4 +1,4 @@
-import { generateId } from "@renderer/ids/generateId";
+import { generateId } from "@shared/ids/generateId";
 import { useEffect, useState } from "react";
 import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../ui/projectIcons";
 

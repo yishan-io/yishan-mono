@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { vi } from "vitest";
+import { workspaceSettingsStore } from "../../state/workspaceSettingsStore";
 
 type MockedCommands = {
   createWorkspace: ReturnType<typeof vi.fn>;
@@ -67,7 +68,7 @@ vi.mock("../../commands/workspaceCommands", () => ({
 vi.mock("@renderer/domains/workspace", async () => {
   const { workspaceSettingsStore } = await import("../../state/workspaceSettingsStore");
   const { useWorkspaceBranchPrefixSettings } = await import("../../hooks/useWorkspaceBranchPrefixSettings");
-  const { resolveGitBranchPrefix } = await import("../../model/branchPrefix");
+  const { resolveGitBranchPrefix } = await import("../../naming/branchPrefix");
   return {
     workspaceSettingsStore,
     useWorkspaceBranchPrefixSettings,

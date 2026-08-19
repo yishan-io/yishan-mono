@@ -14,12 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import {
-  setWorkspaceListHierarchyMode as applyWorkspaceListHierarchyMode,
-  useDisplayProjectIds,
-  useProjects,
-  useWorkspaceListHierarchyMode,
-} from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import { setDisplayRepoIds } from "@renderer/domains/workspace";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,12 +33,11 @@ function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: str
 /** Renders the repo filter trigger and popover with select-all control and quick search. */
 export function ProjectFilterPopoverView() {
   const { t } = useTranslation();
-  const repos = useProjects();
-  const displayRepoIds = useDisplayProjectIds();
+  const repos = projectStore((state) => state.projects);
+  const displayRepoIds = projectStore((state) => state.displayProjectIds) ?? [];
   const [repoFilterAnchor, setRepoFilterAnchor] = useState<HTMLElement | null>(null);
   const [repoQuickSearch, setRepoQuickSearch] = useState("");
-  const workspaceListHierarchyMode = useWorkspaceListHierarchyMode();
-  const setWorkspaceListHierarchyMode = applyWorkspaceListHierarchyMode;
+  const workspaceListHierarchyMode = projectStore((state) => state.workspaceListHierarchyMode);
 
   const handleSelectAll = () => {
     setDisplayRepoIds(repos.map((repo) => repo.id));
@@ -106,14 +100,14 @@ export function ProjectFilterPopoverView() {
             <Button
               variant={workspaceListHierarchyMode === "by_project" ? "contained" : "outlined"}
               sx={{ fontSize: 11 }}
-              onClick={() => setWorkspaceListHierarchyMode("by_project")}
+              onClick={() => projectStore.getState().setWorkspaceListHierarchyMode("by_project")}
             >
               {t("project.pin.hierarchy.byProject")}
             </Button>
             <Button
               variant={workspaceListHierarchyMode === "by_node" ? "contained" : "outlined"}
               sx={{ fontSize: 11 }}
-              onClick={() => setWorkspaceListHierarchyMode("by_node")}
+              onClick={() => projectStore.getState().setWorkspaceListHierarchyMode("by_node")}
             >
               {t("project.pin.hierarchy.byNode")}
             </Button>

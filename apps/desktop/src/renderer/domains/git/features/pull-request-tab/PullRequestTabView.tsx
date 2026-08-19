@@ -1,6 +1,7 @@
 import { Box, Stack } from "@mui/material";
-import { PaneLoadingBar } from "@renderer/domains/workbench";
-import { useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
+import { PaneLoadingBar, workbenchNavigationStore } from "@renderer/domains/workbench";
+
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useMemo, useState } from "react";
 import { refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
 import PullRequestChecksSection from "./PullRequestChecksSection";
@@ -8,14 +9,20 @@ import PullRequestDeploymentsSection from "./PullRequestDeploymentsSection";
 import PullRequestEmptyState from "./PullRequestEmptyState";
 import PullRequestHeaderSection from "./PullRequestHeaderSection";
 import PullRequestHistorySection from "./PullRequestHistorySection";
-import { type MergeMethod, derivePullRequestTabState } from "./pullRequestTabHelpers";
+import { type MergeMethod, derivePullRequestTabState } from "./pullRequestTabState";
 import { usePullRequestTabActions } from "./usePullRequestTabActions";
 import { useWorkspacePullRequestState } from "./useWorkspacePullRequestState";
 
 /** Renders pull request, checks, and deployment details for the selected workspace. */
 export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const { selectedWorkspaceId, pullRequest, historicalPullRequests, isLoading } = useWorkspacePullRequestState(active);
-  const worktreePath = useSelectedWorkspaceWorktreePath() || undefined;
+  const worktreePath =
+    workspaceStore(
+      (state) =>
+        state.workspaces
+          .find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)
+          ?.worktreePath?.trim() ?? "",
+    ) || undefined;
 
   const [mergeMethod, setMergeMethod] = useState<MergeMethod>("merge");
   const derivedState = useMemo(

@@ -7,13 +7,13 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "@renderer/domains/agent";
 import { formatAgentSessionTitle } from "@renderer/domains/agent";
-import { useAgentKindsInUse } from "@renderer/domains/agent";
+import { agentSettingsStore } from "@renderer/domains/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
 import { FileSearchOverlay } from "@renderer/domains/files";
 import { getFileTreeIcon } from "@renderer/domains/files";
 import { gitProjectionStore } from "@renderer/domains/git";
-import { useLastUsedExternalAppId } from "@renderer/domains/project";
-import { supportsGitFeatures } from "@renderer/domains/project";
+
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/domains/terminal";
 import {
   DEFAULT_RIGHT_PANE_TAB,
@@ -30,6 +30,7 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { ColumnSeparator } from "@renderer/domains/workbench";
 import { TabPanel } from "@renderer/domains/workbench";
+import { retainOpenTabFocus } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
@@ -37,7 +38,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
-import { retainOpenAgentChatComposerFocus } from "../../../events";
 import { DARK_SURFACE_COLORS } from "../../../theme";
 import { useFileCommands, useGitCommands, useTerminalCommands, useWorkbenchCommands } from "../../commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../selectors";
@@ -70,7 +70,7 @@ export function MainPaneView() {
     () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
     [workbenchCommands, fileCommands, gitCommands],
   );
-  const lastUsedExternalAppId = useLastUsedExternalAppId();
+  const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
   const externalAppLabel = lastUsedExternalAppPreset
     ? `Open in ${lastUsedExternalAppPreset.label}`
@@ -113,7 +113,7 @@ export function MainPaneView() {
     },
     [],
   );
-  const inUseByAgentKind = useAgentKindsInUse();
+  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
   const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
   const rightWidth = layoutStore((state) => state.rightWidth);
   const enabledAgentKinds = useMemo(
@@ -205,7 +205,7 @@ export function MainPaneView() {
     const terminalTabIds = new Set(tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
     const agentChatTabIds = new Set(tabs.filter((tab) => tab.kind === "agent-chat").map((tab) => tab.id));
     cmd.retainOpenTerminalTabFocus(terminalTabIds);
-    retainOpenAgentChatComposerFocus(agentChatTabIds);
+    retainOpenTabFocus(agentChatTabIds);
     disposeTerminalRuntimesForClosedTabs(terminalTabIds);
   }, [cmd, tabs]);
 

@@ -1,5 +1,8 @@
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../infrastructure/scheduledJobApi";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
+
+import { sessionStore } from "@renderer/domains/session";
+import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";
 import {
   createScheduledJob as createScheduledJobFromApi,
   deleteScheduledJob as deleteScheduledJobFromApi,
@@ -9,15 +12,13 @@ import {
   resumeScheduledJob as resumeScheduledJobFromApi,
   runScheduledJobNow as runScheduledJobNowFromApi,
   updateScheduledJob as updateScheduledJobFromApi,
-} from "../infrastructure/scheduledJobApi";
-import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+} from "../api/scheduledJobApi";
 
 /**
  * Updates an existing scheduled job and refreshes the store entry on success.
  */
 export async function updateScheduledJob(jobId: string, input: UpdateScheduledJobInput): Promise<void> {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return;
   }
@@ -30,7 +31,7 @@ export async function updateScheduledJob(jobId: string, input: UpdateScheduledJo
  * Soft-deletes one scheduled job by ID and removes it from the store on success.
  */
 export async function deleteScheduledJob(jobId: string): Promise<void> {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return;
   }
@@ -49,7 +50,7 @@ export async function deleteScheduledJob(jobId: string): Promise<void> {
  * Creates a new scheduled job and adds it to the scheduled job store.
  */
 export async function createScheduledJob(input: CreateScheduledJobInput): Promise<void> {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return;
   }
@@ -63,7 +64,7 @@ export async function createScheduledJob(input: CreateScheduledJobInput): Promis
  * the store. Manages load state transitions around the request.
  */
 export async function loadScheduledJobs(): Promise<void> {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return;
   }
@@ -84,7 +85,7 @@ export async function loadScheduledJobs(): Promise<void> {
  * request and updates the store entry on success.
  */
 export async function pauseScheduledJob(jobId: string): Promise<void> {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return;
   }
@@ -104,7 +105,7 @@ export async function pauseScheduledJob(jobId: string): Promise<void> {
  * the request and updates the store entry on success.
  */
 export async function resumeScheduledJob(jobId: string): Promise<void> {
-  const orgId = selectSelectedOrganizationId();
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return;
   }
@@ -122,8 +123,8 @@ export async function resumeScheduledJob(jobId: string): Promise<void> {
 /** Triggers one scheduled job immediately. */
 export async function runScheduledJobNow(
   jobId: string,
-): Promise<import("../model/scheduledJobTypes").ScheduledJobRunRecord | null> {
-  const orgId = selectSelectedOrganizationId();
+): Promise<import("../schedule/scheduledJobTypes").ScheduledJobRunRecord | null> {
+  const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return null;
   }
@@ -142,7 +143,7 @@ export async function listScheduledJobRuns(
   orgId: string,
   jobId: string,
   limit = 20,
-): Promise<import("../model/scheduledJobTypes").ScheduledJobRunRecord[]> {
+): Promise<import("../schedule/scheduledJobTypes").ScheduledJobRunRecord[]> {
   return listScheduledJobRunsFromApi(orgId, jobId, limit);
 }
 
@@ -152,5 +153,5 @@ export type {
   ScheduledJobStatus,
   ScheduledJobLastRunStatus,
   ScheduledJobRunStatus,
-} from "../model/scheduledJobTypes";
-export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../infrastructure/scheduledJobApi";
+} from "../schedule/scheduledJobTypes";
+export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";

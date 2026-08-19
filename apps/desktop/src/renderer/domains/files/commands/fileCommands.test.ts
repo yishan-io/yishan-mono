@@ -31,7 +31,7 @@ const mocks = vi.hoisted(() => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock("../../../domains/files/infrastructure/daemonFileClient", () => ({
+vi.mock("../../../domains/files/daemon/daemonFileClient", () => ({
   getFileRpc: () =>
     Promise.resolve({
       createFile: mocks.createFile,

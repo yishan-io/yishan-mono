@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type React from "react";
 import { isEditableTarget } from "../../../../../shortcuts/editableTarget";
 import { extractSourcePathsFromDataTransferAsync } from "./dataTransfer";
-import { resolveDestinationDirectoryPath } from "./treeUtils";
+import { resolveDestinationDirectoryPath } from "./treeRows";
 import type { EditingEntry, FileTreeProps } from "./types";
 
 type UseFileTreeExternalPasteInput = {

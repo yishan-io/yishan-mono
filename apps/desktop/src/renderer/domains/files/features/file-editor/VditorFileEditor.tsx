@@ -12,7 +12,7 @@
  */
 
 import { displaySettingsStore } from "@renderer/domains/settings";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type Vditor from "vditor";

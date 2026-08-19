@@ -1,9 +1,9 @@
 import { MenuItem } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { SettingsCompactSelect } from "../../../../ui/components/SettingsCompactControls";
+import { SettingsCard, SettingsControlRow, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import type { LinkTarget } from "../../state/displaySettingsStore";
 import { displaySettingsStore } from "../../state/displaySettingsStore";
-import {SettingsCard, SettingsControlRow, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
-import {SettingsCompactSelect} from "../../../../ui/components/SettingsCompactControls";
 
 const LINK_TARGET_OPTIONS: LinkTarget[] = ["built-in", "external"];
 

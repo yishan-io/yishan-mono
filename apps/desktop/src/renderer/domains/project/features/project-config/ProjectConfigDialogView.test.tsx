@@ -26,8 +26,6 @@ vi.mock("@renderer/domains/project", async () => {
     PROJECT_ICON_OPTIONS: projectIcons.PROJECT_ICON_OPTIONS,
     REPO_ICON_OPTIONS: projectIcons.REPO_ICON_OPTIONS,
     findProjectIconOption: projectIcons.findProjectIconOption,
-    pickRandomProjectColor: projectIcons.pickRandomProjectColor,
-    pickRandomProjectIcon: projectIcons.pickRandomProjectIcon,
     renderProjectIcon: projectIcons.renderProjectIcon,
     updateProjectConfig: mocked.updateProjectConfig,
     getDefaultWorktreeLocation: mocked.getDefaultWorktreeLocation,

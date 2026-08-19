@@ -8,8 +8,8 @@ import {
   type DesktopAgentKind,
 } from "@renderer/domains/agent";
 import { createNewWhiteboard } from "@renderer/domains/files";
-import { workspaceCreateProgressStore } from "@renderer/domains/workspace";
-import { useWorkspaces } from "@renderer/domains/workspace";
+import { workspaceCreateProgressStore, workspaceStore } from "@renderer/domains/workspace";
+
 import type { WorkspaceCreateProgressStep } from "@renderer/domains/workspace";
 import { getRendererPlatform } from "@renderer/platform/platform";
 import { useTranslation } from "react-i18next";
@@ -72,7 +72,7 @@ export type LaunchViewProps = {
 /** Renders quick actions when no tab is open in the selected workspace. */
 export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) {
   const { t } = useTranslation();
-  const workspaces = useWorkspaces();
+  const workspaces = workspaceStore((state) => state.workspaces);
   const workspace = workspaces.find((item) => item.id === workspaceId);
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab } = useWorkbenchCommands();

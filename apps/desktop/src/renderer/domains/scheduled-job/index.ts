@@ -1,7 +1,6 @@
 /**
- * ScheduledJob feature public API (Phase 12, desktop5.md).
+ * ScheduledJob feature public API.
  */
-export type { ScheduledJobCommands } from "./commands/contract";
 
 export { ScheduledJobView } from "./features/scheduled-job-list/ScheduledJobView";
 export {

@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { LuArrowRight, LuChevronDown, LuRefreshCw } from "react-icons/lu";
 import { BranchBadge } from "../../ui/BranchBadge";
 import { PullRequestIcon } from "../../ui/PullRequestIcon";
-import type { MergeMethod } from "./pullRequestTabHelpers";
+import type { MergeMethod } from "./pullRequestTabState";
 import type { PullRequestTabActionsState } from "./usePullRequestTabActions";
 
 const refreshIconSx = {

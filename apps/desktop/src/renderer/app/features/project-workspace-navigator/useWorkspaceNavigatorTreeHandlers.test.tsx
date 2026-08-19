@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { useWorkspaceNavigatorTreeHandlers } from "./useWorkspaceNavigatorTreeHandlers";
 
 function makeSetters() {

@@ -2,7 +2,7 @@
  * Workspace Store State types (desktop6-adjust.md W1).
  *
  * Owned by the Workspace feature State. Previously defined under
- * `features/workbench/model/types.ts`; that file must not define Workspace
+ * `features/workbench/types.ts`; that file must not define Workspace
  * Store types.
  *
  * Transport DTO references (ProjectRecord, WorkspaceRecord, DaemonLocalFolder)
@@ -11,8 +11,8 @@
  * baselined by the R6 allowlist.
  */
 import type { StateCreator } from "zustand";
-import type { DaemonLocalFolder } from "../model/snapshotTypes";
-import type { AddWorkspaceInput, WorkspaceItem } from "../model/workspaceTypes";
+import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
+import type { AddWorkspaceInput, WorkspaceItem } from "../workspaceTypes";
 
 export type WorkspaceStoreState = {
   workspaces: WorkspaceItem[];

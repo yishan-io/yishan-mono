@@ -11,7 +11,7 @@ import { agentSettingsStore } from "@renderer/domains/agent";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToolCommands";
-import {SettingsCard, SettingsRows, SettingsSectionHeader} from "../../../../ui/components/SettingsPrimitives";
+import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 
 type AgentCLISettingsCardProps = {
   statuses: CLIToolStatus[];
@@ -24,7 +24,6 @@ type AgentCLISettingsCardProps = {
 export function AgentCLISettingsCard({ statuses, isLoading, isRefreshing, hasLoadError }: AgentCLISettingsCardProps) {
   const { t } = useTranslation();
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
-  const setAgentInUse = agentSettingsStore((state) => state.setAgentInUse);
 
   const statusByToolID = useMemo(() => {
     const nextMap = new Map<string, CLIToolStatus>();
@@ -92,7 +91,7 @@ export function AgentCLISettingsCard({ statuses, isLoading, isRefreshing, hasLoa
                           if (!isDesktopAgentKind(agentKind)) {
                             return;
                           }
-                          setAgentInUse(agentKind, event.target.checked);
+                          agentSettingsStore.getState().setAgentInUse(agentKind, event.target.checked);
                         }}
                         slotProps={{
                           input: {

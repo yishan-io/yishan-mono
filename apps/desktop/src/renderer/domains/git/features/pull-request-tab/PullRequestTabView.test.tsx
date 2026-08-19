@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 vi.mock("@renderer/domains/git", async () => {
-  const { livePrStatus } = await import("../../model/pullRequestUtils");
+  const { livePrStatus } = await import("../../pull-request/gitPullRequestStatus");
   const { BranchBadge } = await import("../../ui/BranchBadge");
   const { PullRequestIcon } = await import("../../ui/PullRequestIcon");
   const projectionState: Record<string, unknown> = { pullRequestByWorkspaceId: {}, currentBranchByWorkspaceId: {} };
@@ -21,7 +21,6 @@ vi.mock("@renderer/domains/git", async () => {
   };
 });
 
-import { gitProjectionStore } from "@renderer/domains/git";
 import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import type { GitPullRequest } from "@renderer/domains/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -330,3 +329,5 @@ describe("PullRequestTabView", () => {
     expect(screen.getByText("#41 Older merged PR")).toBeTruthy();
   });
 });
+
+import { gitProjectionStore } from "../../state/gitProjectionStore";

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renamePiSession } from "../../../domains/agent/infrastructure/daemonAgentProcedures";
+import { renamePiSession } from "../../../domains/agent/daemon/daemonAgentProcedures";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
@@ -31,16 +31,16 @@ const mocks = vi.hoisted(() => ({
   listDetectionStatuses: vi.fn(),
 }));
 
-vi.mock("@renderer/ids/generateId", () => ({
+vi.mock("@shared/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
 
-vi.mock("../events/agentChatEventRouter", () => ({
+vi.mock("../subscriptions/agentChatEventRouter", () => ({
   ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()),
   registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));
 
-vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   attachPiSession: mocks.attach,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
@@ -57,11 +57,6 @@ vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
   sendPiCommand: mocks.send ?? vi.fn(),
   startPiSession: mocks.start ?? vi.fn(),
   stopPiSession: mocks.stop ?? vi.fn(),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
 afterEach(() => {

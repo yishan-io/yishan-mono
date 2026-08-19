@@ -1,9 +1,9 @@
 import { Box, Menu, MenuItem, Typography } from "@mui/material";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchSessionHistory } from "../../../../../domains/agent/commands/agentChatSessionHistory";
-import type * as Rpc from "../../../infrastructure/daemonAgentTypes";
-import { formatAgentSessionTitle } from "../../../model/agentSkillTextHelpers";
+import type * as Rpc from "../../../daemon/daemonAgentTypes";
+import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 
 type SessionHistoryMenuProps = {
   cwd: string;

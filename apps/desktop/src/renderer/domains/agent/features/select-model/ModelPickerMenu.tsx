@@ -18,7 +18,7 @@ import {
   type ModelPickerOption,
   type ModelPickerProviderGroup,
   groupModelPickerOptionsByProvider,
-} from "../../model/modelPicker";
+} from "../../providers/modelPicker";
 import { ProviderMark } from "../../ui/ProviderMark";
 
 type ModelPickerMenuProps = {

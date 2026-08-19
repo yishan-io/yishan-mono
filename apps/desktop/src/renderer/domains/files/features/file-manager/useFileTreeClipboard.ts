@@ -1,7 +1,7 @@
 import { copyFiles, renameEntry, writeFileBase64 } from "@renderer/domains/files/commands/fileCommands";
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkspaceFileEntry } from "../../model/externalApps";
+import type { WorkspaceFileEntry } from "../../externalApps";
 import {
   DEFAULT_CLIPBOARD_SOURCE_RESOLVERS,
   type FileTreeClipboardState,
@@ -11,8 +11,8 @@ import {
   captureNativeExternalClipboardSourcePathsSnapshot,
   resolveExternalClipboardSourcePaths,
 } from "./fileTreeClipboardResolvers";
-import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeHelpers";
-import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePathHelpers";
+import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeEntries";
+import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePaths";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 
 type UseFileTreeClipboardInput = {

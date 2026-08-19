@@ -1,9 +1,8 @@
 import type { DesktopAgentKind } from "@renderer/domains/agent";
-import { generateId } from "@renderer/ids/generateId";
+import { generateId } from "@shared/ids/generateId";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { OpenTabInput, WorkbenchTab } from "../../../domains/workbench/model/types";
-import { resolveSelectedTabIdForWorkspace } from "../model/tabs";
+import type { OpenTabInput, WorkbenchTab } from "../tabs";
 import {
   closeAllTabsState,
   closeAllTerminalTabsState,
@@ -16,7 +15,8 @@ import {
   reorderTabState,
   setFileTabDirtyState,
   toggleTabPinnedState,
-} from "../model/tabs/index";
+} from "../tabs/index";
+import { resolveSelectedTabIdForWorkspace } from "../tabs/selection";
 
 export type CloseTabOptions = {
   /** Tab to select when the closed tab was the selected one (e.g. the remaining pane's selection). */

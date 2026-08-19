@@ -8,7 +8,7 @@ import {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   findExternalAppPreset,
-} from "../../../model/externalApps";
+} from "../../../../files/externalApps";
 
 type FileTreeToolbarProps = {
   createFileActionLabel: string;

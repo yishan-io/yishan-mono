@@ -1,5 +1,5 @@
+import { withTimeout } from "@shared/async/withTimeout";
 import { useCallback, useEffect, useState } from "react";
-import { withTimeout } from "../async/withTimeout";
 import { useLatestRequestGuard } from "./useLatestRequestGuard";
 
 type UseRefreshableLoaderOptions<T> = {

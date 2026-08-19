@@ -1,5 +1,6 @@
-import { useDisplayProjectIds, useWorkspaceListHierarchyMode } from "@renderer/domains/project";
-import { useSelectedOrganizationId } from "@renderer/domains/session";
+import { projectStore } from "@renderer/domains/project";
+
+import { sessionStore } from "@renderer/domains/session";
 import { useEffect, useState } from "react";
 import { useWorkspaceNavigatorPersistence } from "./useWorkspaceNavigatorPersistence";
 import {
@@ -36,10 +37,10 @@ export type WorkspaceNavigatorFoldStateResult = {
  * so reordering workspaces in one mode must apply to the other.
  */
 export function useWorkspaceNavigatorFoldState(): WorkspaceNavigatorFoldStateResult {
-  const displayProjectIds = useDisplayProjectIds();
-  const workspaceListHierarchyMode = useWorkspaceListHierarchyMode();
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
+  const workspaceListHierarchyMode = projectStore((state) => state.workspaceListHierarchyMode);
   const activeHierarchyMode: HierarchyMode = workspaceListHierarchyMode === "by_node" ? "by_node" : "by_project";
-  const selectedOrganizationId = useSelectedOrganizationId() ?? "";
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId) ?? "";
 
   const [foldStateByMode, setFoldStateByMode] = useState<Record<HierarchyMode, FoldState>>({
     by_project: EMPTY_FOLD_STATE,

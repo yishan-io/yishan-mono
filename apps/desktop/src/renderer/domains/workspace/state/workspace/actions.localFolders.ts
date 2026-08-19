@@ -1,8 +1,9 @@
-import { LOCAL_FOLDER_PROJECT_ID } from "@renderer/domains/project";
-import { getFileName } from "@renderer/path/pathHelpers";
-import { selectSessionDaemonId } from "../../../../domains/session";
-import type { DaemonLocalFolder } from "../../model/snapshotTypes";
-import type { WorkspaceHealth, WorkspaceItem, WorkspaceLifecycleState } from "../../model/workspaceTypes";
+import { getFileName } from "@shared/path/paths";
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
+
+import { sessionStore } from "@renderer/domains/session";
+import type { DaemonLocalFolder } from "../../local-folder/snapshotTypes";
+import type { WorkspaceHealth, WorkspaceItem, WorkspaceLifecycleState } from "../../workspaceTypes";
 import type {
   WorkspaceStoreActions,
   WorkspaceStoreGetState,
@@ -43,7 +44,7 @@ function toFolderWorkspaceItem(folder: DaemonLocalFolder): WorkspaceItem {
     branch: "",
     summaryId: folder.id,
     worktreePath: path,
-    nodeId: selectSessionDaemonId()?.trim() || undefined,
+    nodeId: sessionStore.getState().daemonId?.trim() || undefined,
     kind: "folder",
     status: "active",
     state: normalizeFolderState(folder.state),

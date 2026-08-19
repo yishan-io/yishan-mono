@@ -1,4 +1,3 @@
-import type { NotificationCommands } from "../../commands/contract";
 import {
   NOTIFICATION_PREFERENCES_LOAD_RETRY_ATTEMPTS,
   NOTIFICATION_PREFERENCES_LOAD_RETRY_BASE_DELAY_MS,
@@ -12,8 +11,10 @@ import { normalizeNotificationPreferencesSnapshot } from "./notificationSettings
 import type { NotificationSettingsErrorKey } from "./notificationSettingsState.types";
 
 type UseNotificationSettingsPersistenceInput = {
-  getNotificationPreferences: NotificationCommands["getNotificationPreferences"];
-  updateNotificationPreferences: NotificationCommands["updateNotificationPreferences"];
+  /** Loads notification preferences (session user first, then local cache). */
+  getNotificationPreferences: () => Promise<NotificationPreferences>;
+  /** Persists one normalized preferences snapshot through the api-service. */
+  updateNotificationPreferences: (patch: NotificationPreferences) => Promise<NotificationPreferences>;
   clearPreviewStatus: () => void;
   setErrorKey: (errorKey: NotificationSettingsErrorKey) => void;
 };

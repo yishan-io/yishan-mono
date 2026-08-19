@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { collectAncestorDirectoryPaths } from "./treeUtils";
+import { collectAncestorDirectoryPaths } from "./treeRows";
 import type { FileTreeProps, VisibleRow } from "./types";
 
 type RowByPath = Map<string, { row: VisibleRow; index: number }>;

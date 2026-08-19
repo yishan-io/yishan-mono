@@ -1,15 +1,18 @@
+import type { WorkspaceAgentStatus, WorkspaceUnreadTone } from "@renderer/domains/agent";
 import { gitProjectionStore } from "@renderer/domains/git";
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import type { WorkspaceNotificationTone } from "@renderer/domains/notification";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 /**
  * Composed screen read models.
  *
  * Phase 3: cross-store joins live here as pure selector functions (no side
  * effects). UI subscribes through these instead of joining stores inline.
- * Each selector reads current state via store.getState() and returns a derived
- * value; callers wrap in useMemo when subscribing.
+ * Each selector reads current state via Domain public getters and returns a
+ * derived value; callers wrap in useMemo when subscribing.
  */
+
 import { projectStore } from "@renderer/domains/project";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { layoutStore } from "@renderer/domains/workbench";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { workspaceStore } from "@renderer/domains/workspace";
@@ -51,12 +54,11 @@ export function selectSelectedWorkspaceWithProject(): {
   selectedWorkspaceId: string;
 } {
   const workspaceState = workspaceStore.getState();
-  const projectState = projectStore.getState();
   const selectedWorkspace = workspaceState.workspaces.find(
     (w) => w.id === workbenchNavigationStore.getState().activeWorkspaceId,
   );
   const selectedProject = selectedWorkspace
-    ? projectState.projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
+    ? projectStore.getState().projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
     : undefined;
   return {
     selectedWorkspace,
@@ -82,19 +84,15 @@ export function selectWorkspaceProjection(workspaceId: string): {
   };
 }
 
-/** Last-used external app id (project preference) for quick-open presets. */
-export function selectLastUsedExternalAppId(): string | undefined {
-  return projectStore.getState().lastUsedExternalAppId;
-}
-
 /** React subscription hook: selected workspace + owning project, re-renders on either store change. */
 export function useSelectedWorkspaceWithProject(): ReturnType<typeof selectSelectedWorkspaceWithProject> {
   const selectedWorkspaceId = useWorkspaceSelectedId();
   const selectedProjectId = useProjectStoreSelectedProjectId();
   const selectedWorkspace = workspaceStore((s) => s.workspaces.find((w) => w.id === selectedWorkspaceId));
-  const selectedProject = projectStore((s) =>
-    selectedWorkspace ? s.projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace)) : undefined,
-  );
+  const projects = projectStore((state) => state.projects);
+  const selectedProject = selectedWorkspace
+    ? projects.find((p) => p.id === resolveWorkspaceProjectId(selectedWorkspace))
+    : undefined;
   return { selectedWorkspace, selectedProject, selectedProjectId, selectedWorkspaceId };
 }
 
@@ -104,4 +102,29 @@ function useWorkspaceSelectedId(): string {
 
 function useProjectStoreSelectedProjectId(): string {
   return workbenchNavigationStore((s) => s.activeProjectId);
+}
+
+/**
+ * Resolves the workspace notification tone with waiting-for-input taking
+ * precedence over unread activity (desktop8 Phase 30: cross-Domain decision
+ * moved out of the Notification Model; tone/color vocabulary stays in
+ * `domains/notification/ui/workspaceNotificationTone`).
+ */
+export function resolveWorkspaceNotificationTone(input: {
+  runtimeStatus: WorkspaceAgentStatus;
+  unreadTone?: WorkspaceUnreadTone;
+}): WorkspaceNotificationTone {
+  if (input.runtimeStatus === "waiting_input") {
+    return "waiting_input";
+  }
+
+  if (input.unreadTone === "error") {
+    return "failed";
+  }
+
+  if (input.unreadTone === "success") {
+    return "done";
+  }
+
+  return "none";
 }

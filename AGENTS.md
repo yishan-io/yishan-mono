@@ -20,9 +20,9 @@ Key rules that agents break most often:
 
 1. Do not skip the layer contract. Views → commands → store actions → domain helpers.
    Handlers → services → db. CLI cmd → internal packages.
-2. Use `getErrorMessage(error)` from `helpers/errorHelpers.ts`. Never inline
+2. Use `getErrorMessage(error)` from `src/shared/errors/getErrorMessage.ts`. Never inline
    `error instanceof Error ? error.message : String(error)`.
-3. Use `generateId()` from `helpers/generateId.ts`. Never inline `crypto.randomUUID()`.
+3. Use `generateId()` from `@shared/ids/generateId`. Never inline `crypto.randomUUID()`.
 4. Use `nonEmptyStringSchema` from `validation/common.ts`. Never copy
    `z.object({ orgId: nonEmptyStringSchema })` — compose with `.extend()`.
 5. Use `assertOrganizationMember` from `services/shared/`. Never copy the

@@ -54,18 +54,16 @@ vi.mock("../../components/SplitPaneLayout", () => ({
   SplitPaneLayout: ({ children }: { children: ReactNode }) => <div data-testid="split-pane-layout">{children}</div>,
 }));
 
-vi.mock("../../events", () => ({
-  subscribeAppActionEvent: vi.fn(() => () => undefined),
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../rpc/rpcTransport", () => ({
-  getDaemonClient: vi.fn(async () => ({
-    context: {
-      setCurrentOrg: rpcMocks.setCurrentOrg,
-    },
-  })),
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+vi.mock("../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+}));
+
+vi.mock("../../events", () => ({
+  subscribeAppActionEvent: vi.fn(() => () => undefined),
 }));
 
 vi.mock("@renderer/domains/git", async (importOriginal) => {

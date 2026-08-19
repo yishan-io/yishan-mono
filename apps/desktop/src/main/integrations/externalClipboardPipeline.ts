@@ -1,7 +1,7 @@
 import { clipboard } from "electron";
 import type { ExternalClipboardReadOutcome } from "../../shared/contracts/rpcRequestTypes";
+import { getErrorMessage } from "../../shared/errors/getErrorMessage";
 import { extractPathsFromClipboardText } from "../../shared/fileClipboardPaths";
-import { getErrorMessage } from "../../shared/helpers/errorHelpers";
 import { runCommandForStdout } from "./process";
 
 type ClipboardReadAttemptKind = "success" | "supported" | "empty" | "permission-denied" | "parse-failed";

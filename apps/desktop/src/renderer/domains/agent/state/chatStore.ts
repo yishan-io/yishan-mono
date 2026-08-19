@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { AvailableCommand, AvailableModel, ChatMessage } from "../model/chatTypes";
+import type { AvailableCommand, AvailableModel, ChatMessage } from "../chat/chatTypes";
 
 export type WorkspaceAgentStatus = "running" | "waiting_input" | "idle";
 export type WorkspaceUnreadTone = "success" | "error";
 
-type ChatStoreState = {
+export type ChatStoreState = {
   messagesByTabId: Record<string, ChatMessage[]>;
   availableCommandsByTabId: Record<string, AvailableCommand[]>;
   availableModelsByTabId: Record<string, AvailableModel[]>;

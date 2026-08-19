@@ -1,4 +1,4 @@
-import type { WorkspaceItem } from "../../model/workspaceTypes";
+import type { WorkspaceItem } from "../../workspaceTypes";
 import type { WorkspaceStorePersistedState, WorkspaceStoreState } from "../workspaceStoreTypes";
 
 export const initialWorkspaceState: Pick<WorkspaceStoreState, "workspaces" | "orderedWorkspaceIds"> = {

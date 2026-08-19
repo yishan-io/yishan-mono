@@ -1,12 +1,13 @@
-import { selectProjectById } from "@renderer/domains/project";
+import { projectStore } from "@renderer/domains/project";
 import { removeRightPaneStateForWorkspace } from "@renderer/domains/workbench";
-import { selectSelectedOrganizationId } from "../../../domains/session";
+
+import { sessionStore } from "@renderer/domains/session";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import type { WorkspaceLifecycleScriptWarning } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
-import { getWorkspaceRpc } from "../infrastructure/daemonWorkspaceClient";
-import { isFolderWorkspace } from "../model/localFolder";
+import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
+import { isFolderWorkspace } from "../local-folder/localFolder";
 import { deleteLocalFolder } from "./localFolderCommands";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 
@@ -94,7 +95,7 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   }
 
   const projectId = workspace.projectId ?? workspace.repoId;
-  const project = selectProjectById(projectId);
+  const project = projectStore.getState().projects.find((item) => item.id === projectId);
 
   store.removeWorkspace({
     repoId: projectId,
@@ -109,7 +110,8 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   void removeWorkspaceInBackground({
     workspaceId,
     workspaceName: workspace.name,
-    organizationId: workspace.organizationId?.trim() || selectSelectedOrganizationId()?.trim() || undefined,
+    organizationId:
+      workspace.organizationId?.trim() || sessionStore.getState().selectedOrganizationId?.trim() || undefined,
     projectId,
     branch: workspace.branch,
     removeBranch: options?.removeBranch,

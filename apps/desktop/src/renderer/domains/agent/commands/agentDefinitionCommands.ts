@@ -9,8 +9,8 @@ import {
   restoreAgentDefinition as restoreAgentDefinitionProcedure,
   updateAgentDefinition as updateAgentDefinitionProcedure,
   updatePiExtension as updatePiExtensionProcedure,
-} from "../infrastructure/daemonAgentProcedures";
-import type { AgentDefinitionDetail, AgentDefinitionInfo, PiExtensionInfo } from "../infrastructure/daemonAgentTypes";
+} from "../daemon/daemonAgentProcedures";
+import type { AgentDefinitionDetail, AgentDefinitionInfo, PiExtensionInfo } from "../daemon/daemonAgentTypes";
 
 function parsePiExtension(entry: Record<string, unknown>): PiExtensionInfo {
   return {

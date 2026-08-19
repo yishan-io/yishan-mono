@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { projectStore, readLegacyWorkspacePrefs } from "./projectStore";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "../ui/projectIconPresets";
+import { pickRandomProjectColor, pickRandomProjectIcon, projectStore, readLegacyWorkspacePrefs } from "./projectStore";
 
 const initialProjectStoreState = projectStore.getState();
 
@@ -86,5 +87,30 @@ describe("projectStore storage migration", () => {
     const state = projectStore.getState();
     expect(state.projects.map((p) => p.id)).toEqual(["repo-1"]);
     expect(state.displayProjectIds).toContain("repo-1");
+  });
+});
+
+describe("project icon/color default policy", () => {
+  it("picks an icon id from the available presets", () => {
+    expect(PROJECT_ICON_IDS).toContain(projectStore.getState().projects[0]?.icon ?? pickRandomProjectIcon());
+    expect(PROJECT_ICON_IDS).toContain(pickRandomProjectIcon());
+  });
+
+  it("picks a color from the curated palette", () => {
+    expect(PROJECT_COLOR_PRESETS).toContain(pickRandomProjectColor());
+  });
+
+  it("defaults to the first preset when Math.random returns 0", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    expect(pickRandomProjectIcon()).toBe(PROJECT_ICON_IDS[0]);
+    expect(pickRandomProjectColor()).toBe(PROJECT_COLOR_PRESETS[0]);
+    vi.restoreAllMocks();
+  });
+
+  it("defaults to the last preset when Math.random is near 1", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.999999);
+    expect(pickRandomProjectIcon()).toBe(PROJECT_ICON_IDS[PROJECT_ICON_IDS.length - 1]);
+    expect(pickRandomProjectColor()).toBe(PROJECT_COLOR_PRESETS[PROJECT_COLOR_PRESETS.length - 1]);
+    vi.restoreAllMocks();
   });
 });

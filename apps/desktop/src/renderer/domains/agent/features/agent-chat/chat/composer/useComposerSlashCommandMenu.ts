@@ -7,7 +7,7 @@ import {
   normalizeComposerText,
   renderComposerHtml,
   setCaretOffset,
-} from "./richComposerHelpers";
+} from "./richComposerText";
 import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
 type UseComposerSlashCommandMenuOptions = {

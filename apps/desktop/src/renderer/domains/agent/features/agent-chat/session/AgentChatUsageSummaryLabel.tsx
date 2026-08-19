@@ -3,13 +3,13 @@ import { useTheme } from "@mui/material/styles";
 import { COLOR_PRIMITIVES, type DesignTokenThemeMode } from "@yishan-io/design-tokens/v1";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { AgentMessage } from "../../../../../domains/agent/model/agentChatTypes";
+import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
 import {
   buildAgentChatUsageSummary,
-  formatDetailedTokenCount,
   roundContextPercent,
-} from "../../../../../domains/agent/model/agentChatUsageSummary";
+} from "../../../../../domains/agent/chat/agentChatUsageSummary";
 import { agentChatStore } from "../../../../../domains/agent/state/agentChatStore";
+import { formatDetailedTokenCount } from "./agentChatUsageFormatting";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const USAGE_SUMMARY_FONT_SIZE_PX = 12;

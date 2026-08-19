@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Chip, CircularProgress, Typography } from "@mui/material";
 import { useRefreshableLoader } from "@renderer/hooks/useRefreshableLoader";
 import { MONOSPACE_SX } from "@renderer/ui/typography";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiLogoGithub } from "react-icons/bi";

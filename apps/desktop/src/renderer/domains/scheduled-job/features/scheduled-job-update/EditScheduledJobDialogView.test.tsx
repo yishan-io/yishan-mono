@@ -25,14 +25,14 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("../../commands/scheduledJobCommands", () => ({
-    updateScheduledJob: mocked.updateScheduledJob,
+  updateScheduledJob: mocked.updateScheduledJob,
 }));
 
 vi.mock("../../../domains/workbench", () => ({
   useDialogRegistration: () => {},
 }));
 
-vi.mock("../../../../domains/node/infrastructure/nodeApi", () => ({
+vi.mock("../../../../domains/node/api/nodeApi", () => ({
   listOrganizationNodes: mocked.listNodesByOrg,
 }));
 

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { getEntryName, joinChildPath, resolveUniqueChildName } from "./treeUtils";
+import { getEntryName, joinChildPath, resolveUniqueChildName } from "./treeRows";
 import type { EditingEntry } from "./types";
 
 /** Manages inline rename/create editing state for the file tree. */

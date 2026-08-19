@@ -1,3 +1,4 @@
+import { chatStore } from "@renderer/domains/agent";
 import { setFileTabDirty } from "@renderer/domains/workbench";
 import { type SeedFileTabContentInput, fileTabContentStore } from "../state/fileTabContentStore";
 

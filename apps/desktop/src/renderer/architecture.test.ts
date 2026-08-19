@@ -32,7 +32,10 @@
  *         they may import Zustand and their own Domain's Model/State, but not
  *         transport, Electron, Commands, Runtime, or another Domain's State.
  *   - R7  Model files must not import React, Zustand, Electron, transport,
- *         Runtime, or State.
+ *         Runtime, or State. desktop8 Phase 29 additionally rejects the owning
+ *         Domain's UI/Features/Hooks/Commands/Events/Runtime/Infrastructure,
+ *         UI libraries (react-icons/@mui/monaco/design tokens), and root
+ *         ui/hooks/api/rpc/platform/events implementations.
  *   - R8  Infrastructure (api/, rpc/) must not import Domain UI, app routes,
  *         or shared ui.
  *   - R9  Shared ui/ and components/ must not import Domain or app code.
@@ -91,6 +94,13 @@ const BASELINE_COUNTS: Record<RuleName, number> = {
   "R18-wildcard-domain-index": 0,
   "R19-rpc-whitelist": 0,
   "R20-layer-transport": 0,
+  "R21-events-app-domain": 0,
+  "R22-shared-renderer-import": 0,
+  "R23-removed-root-capabilities": 0,
+  "R24-platform-app-domain": 0,
+  "R25-forbidden-domain-bucket": 0,
+  "R26-technical-nested-index": 0,
+  "R27-utils-helpers-suffix": 0,
 };
 
 function walkFiles(dir: string, out: string[] = []): string[] {
@@ -102,7 +112,7 @@ function walkFiles(dir: string, out: string[] = []): string[] {
     if (entry.isDirectory()) {
       if (entry.name === "node_modules" || entry.name === "public" || entry.name === "generated") continue;
       walkFiles(path, out);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|testUtils)\./.test(entry.name)) {
+    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|testSetup|testRender|testUtils)\./.test(entry.name)) {
       out.push(path);
     }
   }
@@ -151,7 +161,7 @@ type Violation = { rule: RuleName; file: string; target: string };
 
 function scanViolations(): Violation[] {
   const violations: Violation[] = [];
-  const files = walkFiles(RENDERER_ROOT);
+  const files = [...walkFiles(RENDERER_ROOT), ...walkFiles(SHARED_ROOT)];
 
   for (const file of files) {
     const rel = relative(RENDERER_ROOT, file).replace(/\\/g, "/");
@@ -228,15 +238,48 @@ function scanViolations(): Violation[] {
         }
       }
       // ---- Rule 7: Model files are pure data and rules. They must not import
-      // React, Zustand, Electron, transport, Runtime, or State (Phase 15). ----
+      // React, Zustand, Electron, transport, Runtime, or State (Phase 15).
+      // desktop8 Phase 29: also reject the owning Domain's UI/Features/Hooks/
+      // Commands/Events/Runtime/Infrastructure, UI libraries and presentation
+      // modules (react-icons, @mui, monaco, design tokens), and root
+      // ui/hooks/api/rpc/platform/events implementations. ----
       if (/^domains\/[^/]+\/model\//.test(rel) && !rel.includes(".test.")) {
+        const ownDomain = /^domains\/([^/]+)\//.exec(rel)?.[1] ?? "";
         if (
           imp.spec === "react" ||
           imp.spec === "zustand" ||
           imp.spec === "electron" ||
           isTransport ||
           relT.includes("/runtime/") ||
-          relT.includes("/state/")
+          relT.includes("/state/") ||
+          relT.startsWith(`domains/${ownDomain}/ui/`) ||
+          relT.startsWith(`domains/${ownDomain}/features/`) ||
+          relT.startsWith(`domains/${ownDomain}/hooks/`) ||
+          relT.startsWith(`domains/${ownDomain}/commands/`) ||
+          relT.startsWith(`domains/${ownDomain}/subscriptions/`) ||
+          relT.startsWith(`domains/${ownDomain}/infrastructure/`) ||
+          relT.startsWith(`domains/${ownDomain}/daemon/`) ||
+          relT.startsWith(`domains/${ownDomain}/api/`) ||
+          relT.startsWith(`domains/${ownDomain}/host/`) ||
+          relT.startsWith(`domains/${ownDomain}/persistence/`) ||
+          imp.spec === "react-icons" ||
+          imp.spec.startsWith("react-icons/") ||
+          imp.spec.startsWith("@mui/") ||
+          imp.spec === "monaco-editor" ||
+          imp.spec.startsWith("monaco-editor/") ||
+          imp.spec.startsWith("@yishan-io/design-tokens") ||
+          relT === "ui" ||
+          relT.startsWith("ui/") ||
+          relT === "hooks" ||
+          relT.startsWith("hooks/") ||
+          relT === "api" ||
+          relT.startsWith("api/") ||
+          relT === "rpc" ||
+          relT.startsWith("rpc/") ||
+          relT === "platform" ||
+          relT.startsWith("platform/") ||
+          relT === "events" ||
+          relT.startsWith("events/")
         ) {
           violations.push({ rule: "R7-model-layer", file: rel, target: imp.spec });
         }
@@ -289,7 +332,7 @@ function scanViolations(): Violation[] {
         const targetInternal =
           !isPublicStateSurface &&
           (relT.includes("/state/") ||
-            relT.includes("/events/") ||
+            relT.includes("/subscriptions/") ||
             relT.includes("/runtime/") ||
             /\/model\/[^/]*Store(\.ts)?$/.test(relT));
         if (targetInternal) {
@@ -335,14 +378,23 @@ function scanViolations(): Violation[] {
           violations.push({ rule: "R17-domain-self-index", file: rel, target: imp.spec });
         }
       }
-      // ---- Rule 19 (desktop7 Phase 27): root RPC imports only from
-      // app/events, app/runtime, and Domain Infrastructure. Root RPC's own
-      // internal wiring is exempt. ----
+      // ---- Rule 19 (desktop7 Phase 27; desktop8 Phase 31): root RPC is
+      // imported only by app/events, app/runtime, Domain boundary
+      // directories (infrastructure/, daemon/, api/, host/, persistence/),
+      // and the root events capability (which owns backend-event
+      // composition). Consumers must use the RPC public API (rpc/index);
+      // importing RPC implementation files is a violation. Root RPC's own
+      // wiring is exempt. ----
       const isRpcImport = relT.startsWith("rpc/") || relT === "rpc";
       if (isRpcImport && !rel.startsWith("rpc/")) {
         const whitelisted =
-          rel.startsWith("app/events/") || rel.startsWith("app/runtime/") || rel.includes("/infrastructure/");
-        if (!whitelisted) {
+          rel.startsWith("app/events/") ||
+          rel.startsWith("app/runtime/") ||
+          rel.startsWith("events/") ||
+          rel.includes("/infrastructure/") ||
+          /^domains\/[^/]+\/(daemon|api|host|persistence)\//.test(rel);
+        const publicApiOnly = relT === "rpc" || relT.startsWith("rpc/index");
+        if (!whitelisted || !publicApiOnly) {
           violations.push({ rule: "R19-rpc-whitelist", file: rel, target: imp.spec });
         }
       }
@@ -351,6 +403,52 @@ function scanViolations(): Violation[] {
       if (isTransport && /^domains\/[^/]+\/(model|state|hooks|ui|features)\//.test(rel)) {
         violations.push({ rule: "R20-layer-transport", file: rel, target: imp.spec });
       }
+      // ---- Rule 21 (desktop8 Phase 32): root events capability must not
+      // import App or Domains. App composes events; Domains consume the
+      // root events facade. ----
+      if (rel.startsWith("events/") && (relT.startsWith("app/") || relT.startsWith("domains/"))) {
+        violations.push({ rule: "R21-events-app-domain", file: rel, target: imp.spec });
+      }
+      // ---- Rule 22 (desktop8 Phase 32): src/shared technical modules must
+      // not import Renderer, Main, or product Domains. Shared capabilities
+      // are business-neutral and process-agnostic; external packages stay
+      // allowed (unresolved specifiers resolve to an empty relT). ----
+      if (rel.startsWith("../shared/") && relT !== "" && !relT.startsWith("../shared/")) {
+        violations.push({ rule: "R22-shared-renderer-import", file: rel, target: imp.spec });
+      }
+      // ---- Rule 23 (desktop8 Phase 32): the root async/ids/path/version
+      // capabilities moved to src/shared; the root directories must not
+      // return. ----
+      if (/^async\//.test(relT) || /^ids\//.test(relT) || /^path\//.test(relT) || /^version\//.test(relT)) {
+        violations.push({ rule: "R23-removed-root-capabilities", file: rel, target: imp.spec });
+      }
+      // ---- Rule 24 (desktop8 Phase 32): root platform capability must not
+      // import App or Domains (host bridge + platform detection only). ----
+      if (rel.startsWith("platform/") && (relT.startsWith("app/") || relT.startsWith("domains/"))) {
+        violations.push({ rule: "R24-platform-app-domain", file: rel, target: imp.spec });
+      }
+    }
+    // ---- Rule 25 (desktop9 Phase 39): generic Domain buckets are rejected.
+    // Ownership determines location; model/services/rules/infrastructure are
+    // file-type buckets that must not return. ----
+    if (/^domains\/[^/]+\/(model|services|rules|infrastructure)\//.test(rel) && !rel.includes(".test.")) {
+      violations.push({ rule: "R25-forbidden-domain-bucket", file: rel, target: "generic bucket" });
+    }
+    // ---- Rule 26 (desktop9 Phase 39): a nested index.ts is an internal-module
+    // API. It is allowed only under features/<use-case>/ or a named business
+    // module directory, never under technical directories. ----
+    if (
+      /^domains\/[^/]+\/(state|commands|hooks|ui|daemon|api|host|subscriptions|runtime)\/(?:[^/]+\/)*index\.ts$/.test(
+        rel,
+      )
+    ) {
+      violations.push({ rule: "R26-technical-nested-index", file: rel, target: "technical nested index" });
+    }
+    // ---- Rule 27 (desktop9 Phase 39): new filenames must not end in
+    // Utils/Helpers. Ownership and responsibility belong in the name, not a
+    // technical suffix. ----
+    if (/\/[^/]+(?:Utils|Helpers)\.tsx?$/.test(rel) && !rel.includes(".test.")) {
+      violations.push({ rule: "R27-utils-helpers-suffix", file: rel, target: "Utils/Helpers suffix" });
     }
     // ---- Rule 12 (desktop6-adjust.md W8): Store Actions must stay
     // synchronous. A Store Action changes one owning Store synchronously; it
@@ -450,6 +548,40 @@ describe("renderer architecture dependency rules", () => {
   describe("R20: Model, State, Hooks, UI, and Features do not import root transport (desktop7 Phase 27)", () => {
     it("reports no unbaselined violations", () => {
       const messages = failureMessages(unbaselined(violations, "R20-layer-transport"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R21: root events must not import App or Domains (desktop8 Phase 32)", () => {
+    it("reports no violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R21-events-app-domain"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R22: src/shared technical modules must not import Renderer, Main, or Domains (desktop8 Phase 32)", () => {
+    it("reports no violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R22-shared-renderer-import"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("R23: removed root async/ids/path/version capabilities must not return (desktop8 Phase 32)", () => {
+    it("rejects imports of the removed root capability paths", () => {
+      const messages = failureMessages(unbaselined(violations, "R23-removed-root-capabilities"));
+      expect(messages, messages.join("\n")).toEqual([]);
+    });
+
+    it("keeps the root capability directories deleted", () => {
+      for (const capability of ["async", "ids", "path", "version"]) {
+        expect(existsSync(join(RENDERER_ROOT, capability)), `root ${capability}/ must not return`).toBe(false);
+      }
+    });
+  });
+
+  describe("R24: root platform must not import App or Domains (desktop8 Phase 32)", () => {
+    it("reports no violations", () => {
+      const messages = failureMessages(unbaselined(violations, "R24-platform-app-domain"));
       expect(messages, messages.join("\n")).toEqual([]);
     });
   });

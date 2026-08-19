@@ -1,7 +1,7 @@
 import type { DragEvent } from "react";
 import { useMemo, useRef, useState } from "react";
 import type { WorkspaceTreeProps, WorkspaceTreeRow } from "./types";
-import { findValidDropTarget, getDropIndicatorTop } from "./workspaceTreeDragAndDropHelpers";
+import { findValidDropTarget, getDropIndicatorTop } from "./workspaceTreeDragAndDrop";
 
 type UseWorkspaceTreeDragAndDropInput = {
   visibleRows: WorkspaceTreeRow[];

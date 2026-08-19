@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { renameWorkspace, renameWorkspaceBranch } from "../../commands/workspaceCommands";
-import type { WorkspaceItem } from "../../model/workspaceTypes";
+import type { WorkspaceItem } from "../../workspaceTypes";
 
 /**
  * Rename workspace dialog draft state (desktop7 Phase 24).

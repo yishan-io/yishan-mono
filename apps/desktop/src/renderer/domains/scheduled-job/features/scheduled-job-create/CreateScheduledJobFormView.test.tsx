@@ -25,10 +25,10 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("../../commands/scheduledJobCommands", () => ({
-    createScheduledJob: mocked.createScheduledJob,
+  createScheduledJob: mocked.createScheduledJob,
 }));
 
-vi.mock("../../../../domains/node/infrastructure/nodeApi", () => ({
+vi.mock("../../../../domains/node/api/nodeApi", () => ({
   listOrganizationNodes: mocked.listNodesByOrg,
 }));
 

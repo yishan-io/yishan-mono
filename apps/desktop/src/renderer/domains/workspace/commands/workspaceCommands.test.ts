@@ -21,7 +21,6 @@ import {
   renameWorkspace,
   renameWorkspaceBranch,
   setDisplayRepoIds,
-  setLastUsedExternalAppId,
 } from "./workspaceCommands";
 
 const rpcMocks = vi.hoisted(() => ({
@@ -42,7 +41,15 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceLifecycleWarnings: rpcMocks.enqueueWorkspaceLifecycleWarnings,
 }));
 
-vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () => ({
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
+}));
+
+vi.mock("@renderer/events/desktopRpcEventBus", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+}));
+
+vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
   getWorkspaceRpc: () =>
     Promise.resolve({
@@ -56,17 +63,11 @@ vi.mock("../../../domains/workspace/infrastructure/daemonWorkspaceClient", () =>
     }),
 }));
 
-vi.mock("../../../domains/git/infrastructure/daemonGitClient", () => ({
+vi.mock("../../../domains/git/daemon/daemonGitClient", () => ({
   getGitRpc: () =>
     Promise.resolve({
       renameBranch: rpcMocks.renameGitBranch,
     }),
-}));
-
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
-  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
-  getDaemonClient: vi.fn(async () => ({})),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();
@@ -621,22 +622,18 @@ describe("workspaceCommands", () => {
 
   it("delegates workspace view-state updates to workspace and project stores", () => {
     const setDisplayProjectIdsState = vi.fn();
-    const setLastUsedExternalAppIdState = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
       renameWorkspace: renameWorkspaceState,
     });
     projectStore.setState({
       setDisplayProjectIds: setDisplayProjectIdsState,
-      setLastUsedExternalAppId: setLastUsedExternalAppIdState,
     });
 
     setDisplayRepoIds(["repo-1"]);
-    setLastUsedExternalAppId("vscode");
     renameWorkspace({ repoId: "repo-1", workspaceId: "workspace-1", name: "next-name" });
 
     expect(setDisplayProjectIdsState).toHaveBeenCalledWith(["repo-1"]);
-    expect(setLastUsedExternalAppIdState).toHaveBeenCalledWith("vscode");
     expect(renameWorkspaceState).toHaveBeenCalledWith({
       repoId: "repo-1",
       workspaceId: "workspace-1",

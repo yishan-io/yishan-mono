@@ -12,7 +12,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
@@ -23,7 +23,7 @@ import {
   removeAgentDefinition,
   restoreAgentDefinition,
 } from "../../commands/agentDefinitionCommands";
-import type { AgentDefinitionInfo } from "../../infrastructure/daemonAgentTypes";
+import type { AgentDefinitionInfo } from "../../daemon/daemonAgentTypes";
 import { AgentDetailDialog, ConfirmDialog, CreateAgentDialog } from "./AgentDefinitionDialogs";
 
 const AGENT_TABLE_SX = {

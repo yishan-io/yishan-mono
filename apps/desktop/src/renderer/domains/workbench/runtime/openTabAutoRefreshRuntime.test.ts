@@ -45,10 +45,6 @@ vi.mock("../../../events", () => ({
   subscribeBackendEvent: mocked.subscribeBackendEvent,
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  subscribeDaemonConnectionStatus: vi.fn(() => () => {}),
-}));
-
 function emitBackendEvent(name: BackendEventName, event: BackendEvent) {
   for (const listener of mocked.listenersByName.get(name) ?? []) {
     listener(event);

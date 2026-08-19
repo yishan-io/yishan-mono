@@ -1,6 +1,7 @@
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { openTab } from "@renderer/domains/workbench";
-import { useSelectedWorkspaceWorktreePath } from "@renderer/domains/workspace";
+
+import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { buildWorkspaceFileUrl, readFile } from "../../commands/fileCommands";
@@ -11,15 +12,20 @@ import {
   isImageFile,
   isUnsupportedFileTab,
   isVideoFile,
-} from "../../model/editorLanguage";
+} from "../../features/file-editor/editorLanguage";
 import { fileTreeStore } from "../../state/fileTreeStore";
 import { FileQuickOpenDialog } from "../file-editor/editors";
-import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../file-manager/fileTreeHelpers";
+import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../file-manager/fileTreeEntries";
 import { useFileSearchController } from "./useFileSearchController";
 
 export function FileSearchOverlay() {
   const { t } = useTranslation();
-  const selectedWorkspaceWorktreePath = useSelectedWorkspaceWorktreePath();
+  const selectedWorkspaceWorktreePath = workspaceStore(
+    (state) =>
+      state.workspaces
+        .find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)
+        ?.worktreePath?.trim() ?? "",
+  );
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const openFileSearchRequestKey = fileTreeStore((state) => state.fileSearchRequestKey);
   const expandedItemsByWorkspaceId = fileTreeStore((state) => state.expandedFileTreeItemsByWorkspaceId);

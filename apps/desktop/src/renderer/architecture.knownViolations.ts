@@ -44,7 +44,14 @@ export type RuleName =
   | "R17-domain-self-index"
   | "R18-wildcard-domain-index"
   | "R19-rpc-whitelist"
-  | "R20-layer-transport";
+  | "R20-layer-transport"
+  | "R21-events-app-domain"
+  | "R22-shared-renderer-import"
+  | "R23-removed-root-capabilities"
+  | "R24-platform-app-domain"
+  | "R25-forbidden-domain-bucket"
+  | "R26-technical-nested-index"
+  | "R27-utils-helpers-suffix";
 
 export type KnownViolation = { rule: RuleName; file: string; phase: string };
 

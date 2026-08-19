@@ -8,11 +8,7 @@
  * through this file only.
  */
 export { BrowserView } from "./features/browse/BrowserView";
-export { reloadWebview, removeWebviewsForClosedTabs, syncWebviewUrl } from "./runtime/webviewRegistry";
-export {
-  appendBrowserHistory,
-  loadBrowserHistory,
-  openExternalUrl,
-} from "./infrastructure/browserHostCommands";
-export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "./infrastructure/browserHostCommands";
+export { reloadWebview, removeWebviewsForClosedTabs } from "./runtime/webviewRegistry";
+export { openExternalUrl } from "./host/browserHost";
+export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "./host/browserHost";
 export { openLink, type OpenLinkOptions, type OpenLinkResult } from "./commands/browserLinkCommands";

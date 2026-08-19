@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
-import type { WorkspaceProjectRecord } from "../../../domains/project/model/projectTypes";
-import type { WorkspaceItem } from "../../../domains/workspace/model/workspaceTypes";
+import type { WorkspaceProjectRecord } from "../../../domains/project/projectTypes";
+import type { WorkspaceItem } from "../../../domains/workspace/workspaceTypes";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
-import { renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
+import { renderWorkspaceKindIcon } from "./mainPaneTitleBar";
 import { RepoSelectorMenu } from "./mainPaneTitleBarMenus";
 
 const t = (key: string) => key;

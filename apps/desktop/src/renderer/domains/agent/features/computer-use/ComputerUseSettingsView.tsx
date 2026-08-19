@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Chip, Stack } from "@mui/material";
 import { getRendererPlatform } from "@renderer/platform/platform";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiBluetooth, BiCamera, BiChip, BiHdd, BiShield, BiSolidKeyboard, BiUsb, BiWindow } from "react-icons/bi";
@@ -12,7 +12,7 @@ import {
   SettingsSectionHeader,
 } from "../../../../ui/components/SettingsPrimitives";
 import { getComputerUsePermissions, openComputerUsePermissionSettings } from "../../commands/agentConfigCommands";
-import type { ComputerPermissionState, ComputerPermissionStatus } from "../../infrastructure/daemonAgentTypes";
+import type { ComputerPermissionState, ComputerPermissionStatus } from "../../daemon/daemonAgentTypes";
 
 type PermissionRowKey = "accessibility" | "screenRecording" | "inputMonitoring" | "automation";
 

@@ -25,7 +25,7 @@ vi.mock("../../shortcuts/shortcutRunner", () => ({
   processShortcuts: mocked.processShortcuts,
 }));
 
-vi.mock("../../rpc/rpcTransport", () => ({
+vi.mock("../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: mocked.subscribeDesktopRpcEvent,
 }));
 

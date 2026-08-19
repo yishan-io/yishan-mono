@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { SessionOrganization, SessionUser } from "../model/sessionTypes";
+import type { SessionOrganization, SessionUser } from "../sessionTypes";
 
 type SessionStoreState = {
   currentUser: SessionUser | null;

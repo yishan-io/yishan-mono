@@ -1,19 +1,19 @@
 import { Dialog, DialogContent, DialogTitle, Stack } from "@mui/material";
 import { listAgentModels } from "@renderer/domains/agent";
 import { listGitBranches } from "@renderer/domains/git";
-import { supportsGitFeatures } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
-import { useDisplayProjectIds, useProjects } from "@renderer/domains/project";
+
 import { getRendererPlatform } from "@renderer/platform/platform";
 import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
+
+import { sessionStore } from "@renderer/domains/session";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
 import { createWorkspace } from "../../commands/workspaceCommands";
 import { useWorkspaceBranchPrefixSettings } from "../../hooks/useWorkspaceBranchPrefixSettings";
-import { buildWorkspaceNavigationPath } from "../../model/workspaceNavigation";
 import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
 import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";
@@ -32,10 +32,10 @@ type CreateWorkspaceDialogViewProps = {
 export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWorkspaceDialogViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const organizationId = useSelectedOrganizationId();
-  const daemonId = useDaemonId();
-  const projects = useProjects();
-  const displayProjectIds = useDisplayProjectIds();
+  const organizationId = sessionStore((state) => state.selectedOrganizationId);
+  const daemonId = sessionStore((state) => state.daemonId);
+  const projects = projectStore((state) => state.projects);
+  const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);
   const { prefixMode, customPrefix } = useWorkspaceBranchPrefixSettings();
 
@@ -137,7 +137,9 @@ export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWo
       resetDraftInputs();
       onClose();
       if (createdWorkspaceId) {
-        navigate(buildWorkspaceNavigationPath(createdWorkspaceId));
+        // Workspace route paths are owned by app/routes/workspaceNavigation
+        // (desktop8 Phase 30); the create flow navigates with the same shape.
+        navigate(`/?workspaceId=${createdWorkspaceId}`);
       }
     } finally {
       setIsCreatingWorkspace(false);

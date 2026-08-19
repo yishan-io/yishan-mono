@@ -17,7 +17,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { getErrorMessage } from "@shared/helpers/errorHelpers";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuUser } from "react-icons/lu";
@@ -29,7 +29,7 @@ import {
   removeExtension,
   updateExtension,
 } from "../../commands/agentDefinitionCommands";
-import type { PiExtensionInfo } from "../../infrastructure/daemonAgentTypes";
+import type { PiExtensionInfo } from "../../daemon/daemonAgentTypes";
 
 const LOCAL_FILE_SOURCE = "local file";
 

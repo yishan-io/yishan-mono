@@ -23,13 +23,11 @@ const mocks = vi.hoisted(() => ({
   runChatPrompt: vi.fn(),
 }));
 
-vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   ensureWorkspaceChatSession: mocks.ensureChatSession,
   runWorkspaceChatPrompt: mocks.runChatPrompt,
   closeAgentSession: mocks.closeAgentSession,
 }));
-
-vi.mock("../../../rpc/rpcTransport", () => ({}));
 
 afterEach(() => {
   chatStore.setState(initialChatStoreState, true);

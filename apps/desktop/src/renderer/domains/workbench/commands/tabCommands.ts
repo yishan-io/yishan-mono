@@ -4,15 +4,14 @@ import {
   findOppositePaneId,
   removeTabFromPane,
   splitRootPane,
-} from "../../../domains/workbench/model/split-pane";
-import type { OpenTabInput } from "../../../domains/workbench/model/types";
+} from "../../../domains/workbench/split-pane";
 import { type WorkspaceRightPaneTab, layoutStore } from "../../../domains/workbench/state/layoutStore";
-import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
+import { createPaneId, splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import type { CloseTabOptions, TabStoreState } from "../../../domains/workbench/state/tabStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workbenchNavigationStore } from "../../../domains/workbench/state/workbenchNavigationStore";
-import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../../events";
-import { requestTerminalTabFocus } from "../../../events";
+import type { OpenTabInput } from "../../../domains/workbench/tabs";
+import { type TabFocusKind, type TabFocusTarget, requestTabFocus } from "../runtime/tabFocusIntent";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;
@@ -113,13 +112,13 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
     return;
   }
 
-  const requestFocus =
+  const focusRequest: { target: TabFocusTarget; kind: TabFocusKind } | undefined =
     selectedTab.kind === "terminal"
-      ? () => requestTerminalTabFocus(selectedTab.id)
+      ? { target: "terminal", kind: "auto" }
       : selectedTab.kind === "agent-chat" && selectedTab.data.sessionView !== "subagent-detail"
-        ? () => requestNewAgentChatComposerFocus(selectedTab.id)
+        ? { target: "agent-composer", kind: "auto" }
         : undefined;
-  if (!requestFocus) {
+  if (!focusRequest) {
     return;
   }
 
@@ -129,7 +128,7 @@ function requestFocusForNewTab(previousTabIds: Set<string>): void {
       return;
     }
 
-    requestFocus();
+    requestTabFocus(selectedTab.id, focusRequest.target, focusRequest.kind);
   });
 }
 
@@ -172,7 +171,7 @@ export function openTabInOppositePane(input: OpenTabInput): void {
       splitPaneStore.getState().setActivePane(workspaceId, oppositeId);
     } else if (layout.root.kind === "leaf") {
       // No split yet — create one with the new pane as second (right/bottom)
-      const next = splitRootPane(layout, "horizontal");
+      const next = splitRootPane(layout, "horizontal", createPaneId(), createPaneId());
       if (!next) {
         // Fallback to normal open
         openTab(input);

@@ -8,12 +8,10 @@ const mocks = vi.hoisted(() => ({
   listModels: vi.fn(),
 }));
 
-vi.mock("../../../domains/agent/infrastructure/daemonAgentProcedures", () => ({
+vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   listAgentDetectionStatuses: mocks.listDetectionStatuses,
   listAgentModels: mocks.listModels,
 }));
-
-vi.mock("../../../rpc/rpcTransport", () => ({}));
 
 describe("agentCommands", () => {
   it("normalizes detection statuses in supported-agent order", async () => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { TerminalResourceUsageSnapshot } from "../infrastructure/daemonTerminalClient";
+import type { TerminalResourceUsageSnapshot } from "../daemon/terminalWireTypes";
 import { sharedTerminalResourceUsagePoller } from "../runtime/sharedTerminalResourceUsage";
 
 /**
