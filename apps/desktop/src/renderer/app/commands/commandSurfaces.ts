@@ -124,7 +124,6 @@ import {
   type toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   type undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "@renderer/domains/workspace";
-import type { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
 import type {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -229,11 +228,6 @@ export type GitCommandSurface = {
   refreshDiffTabContent: typeof refreshDiffTabContentCommand;
 };
 
-/** Organization feature command surface. */
-export type OrganizationCommandSurface = {
-  switchOrganization: typeof switchOrganizationCommand;
-};
-
 /** Files feature command surface. */
 export type FileCommandSurface = {
   listFiles: typeof listFilesCommand;
@@ -307,7 +301,6 @@ export type Commands = AppCommandSurface &
   WorkspaceCommandSurface &
   AgentCommandSurface &
   GitCommandSurface &
-  OrganizationCommandSurface &
   FileCommandSurface &
   ProjectCommandSurface &
   WorkbenchCommandSurface &

@@ -1,14 +1,14 @@
 import { openExternalUrl } from "@renderer/domains/browser";
+import { switchOrganization } from "@renderer/domains/organization";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAppCommands, useOrganizationCommands } from "../../commands/useCommands";
+import { useAppCommands } from "../../commands/useCommands";
 
 /** Owns local app menu state and behavior while preserving the public AppMenuView API. */
 export function useAppMenuViewState() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAppCommands();
-  const { switchOrganization } = useOrganizationCommands();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [organizationMenuAnchor, setOrganizationMenuAnchor] = useState<HTMLElement | null>(null);
   const [isCreateOrganizationDialogOpen, setIsCreateOrganizationDialogOpen] = useState(false);

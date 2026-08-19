@@ -117,7 +117,6 @@ import {
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "@renderer/domains/workspace";
-import { switchOrganization as switchOrganizationCommand } from "../../domains/organization";
 import {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -144,7 +143,6 @@ import type {
   Commands,
   FileCommandSurface,
   GitCommandSurface,
-  OrganizationCommandSurface,
   ProjectCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
@@ -225,12 +223,6 @@ export function createGitCommands(): GitCommandSurface {
     refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
     listPullRequestHistory: listPullRequestHistoryCommand,
     refreshDiffTabContent: refreshDiffTabContentCommand,
-  };
-}
-
-export function createOrganizationCommands(): OrganizationCommandSurface {
-  return {
-    switchOrganization: switchOrganizationCommand,
   };
 }
 
@@ -341,7 +333,6 @@ export function createCommands(): Commands {
     ...createWorkspaceCommands(),
     ...createAgentCommands(),
     ...createGitCommands(),
-    ...createOrganizationCommands(),
     ...createFileCommands(),
     ...createProjectCommands(),
     ...createWorkbenchCommands(),
@@ -353,7 +344,6 @@ export type {
   AppCommandSurface,
   FileCommandSurface,
   GitCommandSurface,
-  OrganizationCommandSurface,
   ProjectCommandSurface,
   TerminalCommandSurface,
   WorkbenchCommandSurface,
