@@ -1,10 +1,10 @@
-import { requestJson } from "./restClient";
 import type {
   AddOrganizationMemberResponse,
   OrganizationInviteRecord,
   OrganizationMemberRecord,
   OrganizationRecord,
-} from "./types";
+} from "@renderer/api/types";
+import { requestJson } from "@renderer/api/restClient";
 
 /** Lists organizations visible to the signed-in user. */
 export async function listOrganizations(): Promise<OrganizationRecord[]> {

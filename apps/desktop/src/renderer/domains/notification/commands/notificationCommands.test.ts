@@ -45,12 +45,18 @@ vi.mock("../../../api/restClient", () => ({
   requestJson: (...args: unknown[]) => mocks.requestJson(...args),
 }));
 
-vi.mock("../../../rpc/rpcTransport", () => ({
-  getDesktopHostBridge: vi.fn(() => ({
-    dispatchNotification: mocks.dispatchNotification,
-    playNotificationSound: mocks.playNotificationSoundBridge,
-  })),
-}));
+vi.mock("../../../rpc/rpcTransport", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../rpc/rpcTransport")>();
+  return {
+    ...actual,
+    getDesktopHostBridge: vi.fn(() => ({
+      dispatchNotification: mocks.dispatchNotification,
+      playNotificationSound: mocks.playNotificationSoundBridge,
+    })),
+    subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
+    subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
+  };
+});
 
 vi.mock("../../../domains/session/state/sessionStore", () => ({
   sessionStore: {

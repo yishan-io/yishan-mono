@@ -30,12 +30,8 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../../../api", () => ({
-  api: {
-    scheduledJob: {
-      listRuns: mocked.listRuns,
-    },
-  },
+vi.mock("../../../../domains/scheduled-job/infrastructure/scheduledJobApi", () => ({
+  listScheduledJobRuns: mocked.listRuns,
 }));
 
 vi.mock("../../ui/ScheduledJobRunStatusIcon", () => ({

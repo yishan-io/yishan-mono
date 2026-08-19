@@ -41,7 +41,7 @@ import {
 } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
 import { subscribeAppActionEvent } from "../../events";
-import { parseWorkspaceSessionNavigationPath } from "../../navigation/workspaceNavigation";
+import { parseWorkspaceSessionNavigationPath } from "@renderer/domains/workspace";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";
 import { LeftPaneView } from "../features/main-workspace-shell/LeftPaneView";
 import { MainPaneView } from "../features/main-workspace-shell/MainPaneView";

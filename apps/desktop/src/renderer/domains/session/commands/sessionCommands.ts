@@ -11,8 +11,9 @@ import {
   onAuthExpired,
   resetAuthExpiredState as resetAuthExpiredStateFromApi,
 } from "../../../api/restClient";
-import { getSessionBootstrapData as getSessionBootstrapDataFromApi } from "../../../api/sessionApi";
-import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../../../api/systemApi";
+import { getCurrentUser } from "../infrastructure/sessionApi";
+import { getRemoteHealthStatus as getRemoteHealthStatusFromApi } from "../infrastructure/systemApi";
+import { listOrganizations } from "@renderer/domains/organization";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import {
   subscribeDaemonConnectionStatus as subscribeDaemonConnectionStatusFromRpc,
@@ -20,8 +21,9 @@ import {
 } from "../../../rpc/rpcTransport";
 
 /** Loads the session bootstrap payload (user, orgs, preferences). */
-export function getSessionBootstrapData() {
-  return getSessionBootstrapDataFromApi();
+export async function getSessionBootstrapData() {
+  const [currentUser, organizations] = await Promise.all([getCurrentUser(), listOrganizations()]);
+  return { currentUser, organizations };
 }
 
 /** Tracks remote api-service reachability for login-screen diagnostics. */

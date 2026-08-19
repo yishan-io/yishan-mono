@@ -2,7 +2,6 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../../../api/client";
 import { listOrganizationMembers, removeOrgMember } from "../../../../domains/organization/commands/orgCommands";
 import { sessionStore } from "../../../../domains/session/state/sessionStore";
 import { MemberSettingsView } from "./MemberSettingsView";
@@ -17,15 +16,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../api/client", () => ({
-  api: {
-    org: {
-      listMembers: vi.fn(),
-      addMember: vi.fn(),
-      leave: vi.fn(),
-    },
-  },
-}));
+
 
 vi.mock("../../../../domains/organization/commands/orgCommands", () => ({
   addOrgMember: vi.fn(),

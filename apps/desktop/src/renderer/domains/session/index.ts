@@ -16,6 +16,7 @@ export {
   subscribeDaemonInfoRefresh,
   subscribeDaemonInfoRefreshed,
 } from "./commands/sessionCommands";
+export { updateLanguagePreference } from "./infrastructure/sessionApi";
 export {
   checkAuthStatus,
   getAccessToken,

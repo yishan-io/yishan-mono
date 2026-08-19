@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../api";
+
 import { RestApiError } from "../../api/restClient";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
 import { listOrgNodes } from "../../domains/node/commands/nodeCommands";

@@ -19,6 +19,7 @@ vi.mock("../../../commands/agentChatCommands", () => ({
 }));
 
 vi.mock("../../../../../rpc/rpcTransport", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
   subscribeDaemonConnectionStatus: (listener: (status: ConnectionStatus) => void) => {
     mocks.statusListener = listener;
     return () => {

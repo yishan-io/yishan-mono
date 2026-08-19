@@ -1,4 +1,4 @@
-import { requestJson } from "./restClient";
+import { requestJson } from "@renderer/api/restClient";
 
 export type RemoteHealthResponse = {
   ok: boolean;

@@ -20,17 +20,14 @@ const apiMocks = vi.hoisted(() => ({
   updateProject: vi.fn(),
 }));
 
-vi.mock("../../../api", () => ({
-  api: {
-    org: {
-      list: apiMocks.listOrganizations,
-    },
-    project: {
-      create: apiMocks.createProject,
-      delete: apiMocks.deleteProject,
-      update: apiMocks.updateProject,
-    },
-  },
+vi.mock("../../../domains/organization/infrastructure/orgApi", () => ({
+  listOrganizations: apiMocks.listOrganizations,
+}));
+
+vi.mock("../../../domains/project/infrastructure/projectApi", () => ({
+  createProject: apiMocks.createProject,
+  deleteProject: apiMocks.deleteProject,
+  updateProject: apiMocks.updateProject,
 }));
 
 const rpcMocks = vi.hoisted(() => ({

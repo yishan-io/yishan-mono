@@ -1,8 +1,7 @@
-import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
-import type { SupportedLanguageCode } from "../i18n";
-import { api } from "./client";
-import { requestJson } from "./restClient";
-import type { OrganizationRecord } from "./types";
+import type { NotificationPreferences } from "@shared/notifications/notificationPreferences";
+import type { SupportedLanguageCode } from "@renderer/i18n";
+import type { OrganizationRecord } from "@renderer/api/types";
+import { requestJson } from "@renderer/api/restClient";
 
 export type CurrentUserRecord = {
   id: string;
@@ -29,11 +28,4 @@ export async function getCurrentUser(): Promise<CurrentUserRecord> {
   return response.user;
 }
 
-/** Loads session bootstrap data required by renderer app state. */
-export async function getSessionBootstrapData(): Promise<{
-  currentUser: CurrentUserRecord;
-  organizations: OrganizationRecord[];
-}> {
-  const [currentUser, organizations] = await Promise.all([getCurrentUser(), api.org.list()]);
-  return { currentUser, organizations };
-}
+

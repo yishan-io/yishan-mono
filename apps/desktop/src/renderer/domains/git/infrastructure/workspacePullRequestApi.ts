@@ -1,5 +1,5 @@
-import { requestJson } from "./restClient";
-import type { WorkspacePullRequestRecord } from "./types";
+import type { WorkspacePullRequestRecord } from "@renderer/api/types";
+import { requestJson } from "@renderer/api/restClient";
 
 /** Lists all pull requests recorded for one workspace, ordered by detected_at desc. */
 export async function listWorkspacePullRequests(

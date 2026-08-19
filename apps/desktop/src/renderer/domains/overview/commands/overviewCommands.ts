@@ -1,7 +1,12 @@
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { api } from "../../../api";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
 import { selectSelectedOrganizationId } from "../../../domains/session";
+import {
+  getOverviewAgentKindBreakdown,
+  getOverviewModelBreakdown,
+  getOverviewTokenUsage,
+  getOverviewWorkspaceInsights,
+} from "../infrastructure/overviewApi";
 import type { OverviewTimeRange } from "../model/overviewTypes";
 
 function selectedOrganizationId(): string {
@@ -17,7 +22,7 @@ export async function refreshOverviewTokenUsage(): Promise<void> {
   overviewStore.getState().setTokenUsageLoadState("loading");
 
   try {
-    const result = await api.overview.getTokenUsage(selectedOrganizationId(), {
+    const result = await getOverviewTokenUsage(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
       granularity,
@@ -45,7 +50,7 @@ export async function refreshOverviewModelBreakdown(): Promise<void> {
   overviewStore.getState().setModelBreakdownLoadState("loading");
 
   try {
-    const result = await api.overview.getModelBreakdown(selectedOrganizationId(), {
+    const result = await getOverviewModelBreakdown(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
     });
@@ -61,7 +66,7 @@ export async function refreshOverviewAgentKindBreakdown(): Promise<void> {
   overviewStore.getState().setAgentKindBreakdownLoadState("loading");
 
   try {
-    const result = await api.overview.getAgentKindBreakdown(selectedOrganizationId(), {
+    const result = await getOverviewAgentKindBreakdown(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
     });
@@ -77,7 +82,7 @@ export async function refreshOverviewWorkspaceInsights(): Promise<void> {
   overviewStore.getState().setWorkspaceInsightsLoadState("loading");
 
   try {
-    const result = await api.overview.getWorkspaceInsights(selectedOrganizationId(), {
+    const result = await getOverviewWorkspaceInsights(selectedOrganizationId(), {
       range: timeRange,
       projectId: selectedProjectId || undefined,
     });
@@ -112,4 +117,4 @@ export function setOverviewGranularity(granularity: "hour" | "day"): void {
   void refreshOverviewTokenUsage();
 }
 
-export type { OverviewTimeRange } from "../../../api/overviewApi.types";
+export type { OverviewTimeRange } from "../infrastructure/overviewApi.types";

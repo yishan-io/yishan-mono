@@ -1,4 +1,4 @@
-import { requestJson } from "./restClient";
+import { requestJson } from "@renderer/api/restClient";
 import type {
   AgentKindBreakdownItem,
   ModelBreakdownItem,

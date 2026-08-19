@@ -1,5 +1,5 @@
-import { requestJson } from "./restClient";
-import type { NodeRecord } from "./types";
+import type { NodeRecord } from "@renderer/api/types";
+import { requestJson } from "@renderer/api/restClient";
 
 /** Lists nodes available to one organization member. */
 export async function listOrganizationNodes(orgId: string): Promise<NodeRecord[]> {

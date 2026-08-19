@@ -15,8 +15,8 @@ import { isWorkspaceNotFoundError } from "@shared/helpers/errorHelpers";
  * through the Workspace public API (`workspaceStore`) and writes the
  * projections to its own Store.
  */
-import { api } from "../../../api";
 import { getGitRpc } from "../infrastructure/daemonGitClient";
+import { listWorkspacePullRequests } from "../infrastructure/workspacePullRequestApi";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
@@ -149,7 +149,7 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
 
 /** Lists historical pull request records for one workspace from the API service. */
 export async function listPullRequestHistory(orgId: string, projectId: string, workspaceId: string) {
-  return api.workspacePullRequest.list(orgId, projectId, workspaceId);
+  return listWorkspacePullRequests(orgId, projectId, workspaceId);
 }
 
 /** Stores one workspace pull request in the git projection store. */

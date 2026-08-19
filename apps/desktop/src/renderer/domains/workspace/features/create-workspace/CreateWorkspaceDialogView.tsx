@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useDaemonId, useSelectedOrganizationId } from "../../../../domains/session";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
-import { buildWorkspaceNavigationPath } from "../../../../navigation/workspaceNavigation";
+import { buildWorkspaceNavigationPath } from "../../model/workspaceNavigation";
 import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
 import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";

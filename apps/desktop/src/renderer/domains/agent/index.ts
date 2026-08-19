@@ -159,6 +159,7 @@ export {
   updateAgentDefinition,
   updateExtension,
 } from "./commands/agentDefinitionCommands";
+export { getVoiceTranscriptionUsage } from "./infrastructure/voiceTranscriptionApi";
 export {
   checkAgentGlobalConfigExternalDirectoryPermission,
   ensureAgentGlobalConfigExternalDirectoryPermission,

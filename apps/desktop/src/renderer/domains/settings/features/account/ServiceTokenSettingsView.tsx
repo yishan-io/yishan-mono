@@ -21,7 +21,7 @@ import { copyToClipboard } from "@renderer/platform/clipboard";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiCopy, BiTrash } from "react-icons/bi";
-import type { ServiceTokenRecord } from "../../../../api/serviceTokenTypes";
+import type { ServiceTokenRecord } from "../../infrastructure/serviceTokenTypes";
 import {
   createServiceToken,
   listServiceTokens,

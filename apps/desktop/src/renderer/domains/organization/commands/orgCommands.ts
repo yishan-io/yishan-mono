@@ -1,10 +1,19 @@
 import { closeOverlayPanel } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { api } from "../../../api";
 import { setSelectedOrganizationId } from "../../../domains/session";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 import { rendererQueryClient } from "../../../queryClient";
 import { setCurrentOrganization } from "../infrastructure/daemonOrganizationProcedures";
+import {
+  addOrganizationMember,
+  cancelOrganizationInvite,
+  createOrganization as createOrganizationFromApi,
+  leaveOrganization as leaveOrganizationFromApi,
+  listOrganizationInvites as listOrganizationInvitesFromApi,
+  listOrganizationMembers as listOrganizationMembersFromApi,
+  listOrganizations as listOrganizationsFromApi,
+  removeOrganizationMember as removeOrganizationMemberFromApi,
+} from "../infrastructure/orgApi";
 
 const errNoOrgSelected = "No organization selected.";
 
@@ -49,7 +58,7 @@ export async function switchOrganization(orgId: string): Promise<void> {
  */
 export async function addOrgMember(email: string, role: "member" | "admin" = "member"): Promise<{ invited: boolean }> {
   return wrapOrgCommand(async (orgId) => {
-    const result = await api.org.addMember(orgId, email, role);
+    const result = await addOrganizationMember(orgId, email, role);
     return { invited: result.invited };
   });
 }
@@ -60,7 +69,7 @@ export async function addOrgMember(email: string, role: "member" | "admin" = "me
  */
 export async function cancelOrgInvite(inviteId: string): Promise<void> {
   return wrapOrgCommand(async (orgId) => {
-    await api.org.cancelInvite(orgId, inviteId);
+    await cancelOrganizationInvite(orgId, inviteId);
   });
 }
 
@@ -70,7 +79,7 @@ export async function cancelOrgInvite(inviteId: string): Promise<void> {
  */
 export async function removeOrgMember(memberUserId: string): Promise<void> {
   return wrapOrgCommand(async (orgId) => {
-    await api.org.removeMember(orgId, memberUserId);
+    await removeOrganizationMemberFromApi(orgId, memberUserId);
   });
 }
 
@@ -81,26 +90,26 @@ export async function removeOrgMember(memberUserId: string): Promise<void> {
  */
 export async function leaveOrg(): Promise<void> {
   return wrapOrgCommand(async (orgId) => {
-    await api.org.leave(orgId);
+    await leaveOrganizationFromApi(orgId);
   });
 }
 
 /** Creates one organization. */
 export async function createOrganization(name: string) {
-  return api.org.create(name);
+  return createOrganizationFromApi(name);
 }
 
 /** Lists all organizations for the current user. */
 export async function listOrganizations() {
-  return api.org.list();
+  return listOrganizationsFromApi();
 }
 
 /** Lists members for one organization. */
 export async function listOrganizationMembers(orgId: string) {
-  return api.org.listMembers(orgId);
+  return listOrganizationMembersFromApi(orgId);
 }
 
 /** Lists pending invites for one organization. */
 export async function listPendingInvites(orgId: string) {
-  return api.org.listInvites(orgId);
+  return listOrganizationInvitesFromApi(orgId);
 }

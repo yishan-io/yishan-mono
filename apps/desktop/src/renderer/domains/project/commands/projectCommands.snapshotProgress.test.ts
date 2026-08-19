@@ -11,12 +11,8 @@ const apiMocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),
 }));
 
-vi.mock("../../../api", () => ({
-  api: {
-    org: {
-      list: apiMocks.listOrganizations,
-    },
-  },
+vi.mock("../../../domains/organization/infrastructure/orgApi", () => ({
+  listOrganizations: apiMocks.listOrganizations,
 }));
 
 const rpcMocks = vi.hoisted(() => ({

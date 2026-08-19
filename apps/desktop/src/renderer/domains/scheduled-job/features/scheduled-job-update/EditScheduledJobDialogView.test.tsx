@@ -32,12 +32,8 @@ vi.mock("../../../domains/workbench", () => ({
   useDialogRegistration: () => {},
 }));
 
-vi.mock("../../../../api", () => ({
-  api: {
-    node: {
-      listByOrg: mocked.listNodesByOrg,
-    },
-  },
+vi.mock("../../../../domains/node/infrastructure/nodeApi", () => ({
+  listOrganizationNodes: mocked.listNodesByOrg,
 }));
 
 const initialSessionState = sessionStore.getState();

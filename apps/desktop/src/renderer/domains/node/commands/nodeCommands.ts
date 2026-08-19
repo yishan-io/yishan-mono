@@ -1,6 +1,10 @@
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { api } from "../../../api";
 import { selectSelectedOrganizationId } from "../../../domains/session";
+import {
+  listOrganizationNodes,
+  unregisterOrganizationNode,
+  updateOrganizationNodeScope,
+} from "../infrastructure/nodeApi";
 
 const errNoOrgSelected = "No organization selected.";
 
@@ -20,15 +24,15 @@ function wrapNodeCommand<T>(fn: (orgId: string) => Promise<T>): Promise<T> {
 
 /** Updates one organization node scope in the selected organization. */
 export function updateNodeScope(nodeId: string, scope: "private" | "shared") {
-  return wrapNodeCommand((orgId) => api.node.updateScope(orgId, nodeId, scope));
+  return wrapNodeCommand((orgId) => updateOrganizationNodeScope(orgId, nodeId, scope));
 }
 
 /** Unregisters one organization node in the selected organization. */
 export function unregisterNode(nodeId: string): Promise<void> {
-  return wrapNodeCommand((orgId) => api.node.unregister(orgId, nodeId));
+  return wrapNodeCommand((orgId) => unregisterOrganizationNode(orgId, nodeId));
 }
 
 /** Lists all nodes for the given organization (project-tree node hierarchy). */
 export async function listOrgNodes(organizationId: string) {
-  return api.node.listByOrg(organizationId);
+  return listOrganizationNodes(organizationId);
 }

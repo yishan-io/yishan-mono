@@ -1,6 +1,15 @@
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { api } from "../../../api";
-import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../../../api/scheduledJobApi";
+import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../infrastructure/scheduledJobApi";
+import {
+  createScheduledJob as createScheduledJobFromApi,
+  deleteScheduledJob as deleteScheduledJobFromApi,
+  listScheduledJobRuns as listScheduledJobRunsFromApi,
+  listScheduledJobs as listScheduledJobsFromApi,
+  pauseScheduledJob as pauseScheduledJobFromApi,
+  resumeScheduledJob as resumeScheduledJobFromApi,
+  runScheduledJobNow as runScheduledJobNowFromApi,
+  updateScheduledJob as updateScheduledJobFromApi,
+} from "../infrastructure/scheduledJobApi";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
 import { selectSelectedOrganizationId } from "../../../domains/session";
 
@@ -13,7 +22,7 @@ export async function updateScheduledJob(jobId: string, input: UpdateScheduledJo
     return;
   }
 
-  const updated = await api.scheduledJob.update(orgId, jobId, input);
+  const updated = await updateScheduledJobFromApi(orgId, jobId, input);
   scheduledJobStore.getState().upsertScheduledJob(updated);
 }
 
@@ -29,7 +38,7 @@ export async function deleteScheduledJob(jobId: string): Promise<void> {
   scheduledJobStore.getState().addPendingActionId(jobId);
 
   try {
-    await api.scheduledJob.delete(orgId, jobId);
+    await deleteScheduledJobFromApi(orgId, jobId);
     scheduledJobStore.getState().removeScheduledJob(jobId);
   } finally {
     scheduledJobStore.getState().removePendingActionId(jobId);
@@ -45,7 +54,7 @@ export async function createScheduledJob(input: CreateScheduledJobInput): Promis
     return;
   }
 
-  const created = await api.scheduledJob.create(orgId, input);
+  const created = await createScheduledJobFromApi(orgId, input);
   scheduledJobStore.getState().upsertScheduledJob(created);
 }
 
@@ -62,7 +71,7 @@ export async function loadScheduledJobs(): Promise<void> {
   scheduledJobStore.getState().setLoadState("loading");
 
   try {
-    const jobs = await api.scheduledJob.listByOrg(orgId);
+    const jobs = await listScheduledJobsFromApi(orgId);
     scheduledJobStore.getState().setScheduledJobs(jobs);
     scheduledJobStore.getState().setLoadState("loaded");
   } catch (error) {
@@ -83,7 +92,7 @@ export async function pauseScheduledJob(jobId: string): Promise<void> {
   scheduledJobStore.getState().addPendingActionId(jobId);
 
   try {
-    const updated = await api.scheduledJob.pause(orgId, jobId);
+    const updated = await pauseScheduledJobFromApi(orgId, jobId);
     scheduledJobStore.getState().upsertScheduledJob(updated);
   } finally {
     scheduledJobStore.getState().removePendingActionId(jobId);
@@ -103,7 +112,7 @@ export async function resumeScheduledJob(jobId: string): Promise<void> {
   scheduledJobStore.getState().addPendingActionId(jobId);
 
   try {
-    const updated = await api.scheduledJob.resume(orgId, jobId);
+    const updated = await resumeScheduledJobFromApi(orgId, jobId);
     scheduledJobStore.getState().upsertScheduledJob(updated);
   } finally {
     scheduledJobStore.getState().removePendingActionId(jobId);
@@ -122,7 +131,7 @@ export async function runScheduledJobNow(
   scheduledJobStore.getState().addPendingActionId(jobId);
 
   try {
-    return await api.scheduledJob.runNow(orgId, jobId);
+    return await runScheduledJobNowFromApi(orgId, jobId);
   } finally {
     scheduledJobStore.getState().removePendingActionId(jobId);
   }
@@ -134,7 +143,7 @@ export async function listScheduledJobRuns(
   jobId: string,
   limit = 20,
 ): Promise<import("../model/scheduledJobTypes").ScheduledJobRunRecord[]> {
-  return api.scheduledJob.listRuns(orgId, jobId, limit);
+  return listScheduledJobRunsFromApi(orgId, jobId, limit);
 }
 
 export type {
@@ -144,4 +153,4 @@ export type {
   ScheduledJobLastRunStatus,
   ScheduledJobRunStatus,
 } from "../model/scheduledJobTypes";
-export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../../../api/scheduledJobApi";
+export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../infrastructure/scheduledJobApi";

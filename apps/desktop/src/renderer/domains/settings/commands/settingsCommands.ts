@@ -4,9 +4,9 @@ import {
   createServiceToken as createServiceTokenFromApi,
   listServiceTokens as listServiceTokensFromApi,
   revokeServiceToken as revokeServiceTokenFromApi,
-} from "../../../api/serviceTokenApi";
-import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "../../../api/sessionApi";
-import { getVoiceTranscriptionUsage } from "../../../api/voiceTranscriptionApi";
+} from "../infrastructure/serviceTokenApi";
+import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "@renderer/domains/session";
+import { getVoiceTranscriptionUsage } from "@renderer/domains/agent";
 import { getDesktopHostBridge } from "../../../rpc/rpcTransport";
 
 /**

@@ -104,4 +104,11 @@ export {
   resolveWorkspaceListDisplayName,
 } from "./services/workspaceDisplayNames";
 export { isFolderWorkspace } from "./model/localFolder";
+export {
+  buildWorkspaceNavigationPath,
+  buildWorkspaceSessionNavigationPath,
+  buildWorkspaceTabNavigationPath,
+  parseWorkspaceSessionNavigationPath,
+} from "./model/workspaceNavigation";
+
 export { BranchDropdown, type BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";

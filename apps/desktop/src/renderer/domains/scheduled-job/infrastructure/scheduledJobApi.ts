@@ -1,4 +1,4 @@
-import { requestJson } from "./restClient";
+import { requestJson } from "@renderer/api/restClient";
 
 /** Matches ScheduledJobView.status from the api-service. */
 export type ScheduledJobStatus = "active" | "paused" | "disabled";

@@ -2,7 +2,7 @@ import { Box, Dialog, DialogContent, InputAdornment, TextField, Typography } fro
 import { type KeyboardEvent as ReactKeyboardEvent, useRef } from "react";
 import { BiSearch } from "react-icons/bi";
 import { useDialogRegistration } from "../../../../domains/workbench";
-import type { FileSearchResult } from "../../../../search/fileSearch";
+import type { FileSearchResult } from "../../commands/fileCommands";
 import { buildHighlightedPathSegments, splitFilePathForDisplay } from "../../ui/filePathDisplayHelpers";
 import { getFileTreeIcon } from "../../ui/fileTreeIcons";
 

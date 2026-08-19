@@ -6,8 +6,12 @@ import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 import { selectIsDefaultContextEnabled } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/helpers/errorHelpers";
-import { api } from "../../../api";
-import type { ProjectWithWorkspacesRecord } from "../../../api";
+import type { ProjectWithWorkspacesRecord } from "../../../api/types";
+import {
+  createProject as createProjectFromApi,
+  deleteProject as deleteProjectFromApi,
+  updateProject as updateProjectFromApi,
+} from "../infrastructure/projectApi";
 import { LOCAL_FOLDER_PROJECT_ID } from "../../../domains/project/model/projectTypes";
 import { selectSelectedOrganizationId, selectSessionDaemonId } from "../../../domains/session";
 import {
@@ -145,7 +149,7 @@ export async function createProject(input: {
   const randomColor = pickRandomProjectColor();
 
   try {
-    project = await api.project.create(selectedOrganizationId, {
+    project = await createProjectFromApi(selectedOrganizationId, {
       name: normalizedName,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
@@ -259,7 +263,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
   if (selectedOrganizationId) {
     try {
-      await api.project.delete(selectedOrganizationId, projectId);
+      await deleteProjectFromApi(selectedOrganizationId, projectId);
     } catch (error) {
       console.error("Failed to delete backend project", error);
       throw new Error(getErrorMessage(error));
@@ -294,7 +298,7 @@ export async function updateProjectConfig(
   const selectedOrganizationId = selectSelectedOrganizationId()?.trim();
   if (selectedOrganizationId) {
     try {
-      const updatedProject = await api.project.update(selectedOrganizationId, projectId, {
+      const updatedProject = await updateProjectFromApi(selectedOrganizationId, projectId, {
         name: config.name,
         icon: config.icon,
         color: config.color,

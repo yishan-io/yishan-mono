@@ -1,4 +1,4 @@
-import { api } from "../../../api";
+import { getVoiceTranscriptionUsage, transcribeVoice } from "../infrastructure/voiceTranscriptionApi";
 import { setOrganizationVoiceUsage } from "../../../domains/session";
 
 export async function transcribeVoiceForOrganization(input: {
@@ -6,12 +6,12 @@ export async function transcribeVoiceForOrganization(input: {
   audio: Blob;
   durationSeconds: number;
 }) {
-  const result = await api.voiceTranscription.transcribe({
+  const result = await transcribeVoice({
     orgId: input.organizationId,
     audio: input.audio,
     durationSeconds: input.durationSeconds,
   });
-  const usage = await api.voiceTranscription.getUsage(input.organizationId);
+  const usage = await getVoiceTranscriptionUsage(input.organizationId);
   setOrganizationVoiceUsage(input.organizationId, usage);
 
   return result;

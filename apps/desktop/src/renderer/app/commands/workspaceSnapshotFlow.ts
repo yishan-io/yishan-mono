@@ -1,3 +1,5 @@
+import { listOrganizations } from "@renderer/domains/organization";
+import type { ProjectRecord } from "@renderer/api/types";
 import { listProjectsByOrg, projectStore } from "@renderer/domains/project";
 import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -29,8 +31,6 @@ import { listLocalFolders } from "@renderer/domains/workspace";
  * `workspaceWarmupCommand`, `localFolderCommands`) for shared coordination;
  * the heavy coordination itself is pure (`snapshotReconciler`/`applySnapshot`).
  */
-import { api } from "../../api";
-import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../../api";
 
 let latestWorkspaceSnapshotRequestId = 0;
 
@@ -46,7 +46,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
   try {
     const sessionState = sessionStore.getState();
-    const organizations = sessionState.organizations.length > 0 ? sessionState.organizations : await api.org.list();
+    const organizations = sessionState.organizations.length > 0 ? sessionState.organizations : await listOrganizations();
     const selectedOrganization =
       sessionState.selectedOrganizationId &&
       organizations.some((organization) => organization.id === sessionState.selectedOrganizationId)

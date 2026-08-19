@@ -1,4 +1,4 @@
-import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../../../api";
+import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../../../api/types";
 import { asRecord, readOptionalBoolean, readOptionalString } from "../../../rpc/helpers";
 import { getDaemonTransport } from "../../../rpc/rpcTransport";
 
