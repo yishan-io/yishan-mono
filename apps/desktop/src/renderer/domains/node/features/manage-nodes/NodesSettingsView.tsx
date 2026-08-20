@@ -17,6 +17,12 @@ import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 import type { OrganizationMemberRecord } from "@renderer/domains/organization";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { listOrganizationMembers } from "../../../../domains/organization";
+import {
+  resolveNodeKindLabel,
+  resolveNodeTypeLabel,
+  resolveNodeVersion,
+  resolveOwnerLabel,
+} from "./nodeLabelResolvers";
 
 import { sessionStore } from "@renderer/domains/session";
 import { useDialogRegistration } from "@renderer/domains/workbench";
@@ -26,32 +32,6 @@ import { SettingsCard, SettingsSectionHeader } from "../../../../ui/components/S
 import { StatusIndicator } from "../../../../ui/components/StatusIndicator";
 import type { NodeRecord } from "../../api/nodeApi";
 import { listOrgNodes, unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
-
-function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {
-  if (!node.ownerUserId) {
-    return fallbackLabel;
-  }
-
-  const member = members.find((entry) => entry.userId === node.ownerUserId);
-  if (!member) {
-    return fallbackLabel;
-  }
-
-  return member.name?.trim() || member.email;
-}
-
-function resolveNodeVersion(node: NodeRecord, fallbackLabel: string): string {
-  const version = node.metadata?.version;
-  return typeof version === "string" && version.trim() ? version : fallbackLabel;
-}
-
-function resolveNodeTypeLabel(node: NodeRecord, privateLabel: string, sharedLabel: string): string {
-  return node.scope === "shared" ? sharedLabel : privateLabel;
-}
-
-function resolveNodeKindLabel(node: NodeRecord, managedLabel: string, externalLabel: string): string {
-  return node.kind === "external" ? externalLabel : managedLabel;
-}
 
 type ScopeChangeTarget = {
   node: NodeRecord;
