@@ -32,6 +32,8 @@ export function pickRandomProjectColor(): string {
   return preset ?? "#1E66F5";
 }
 
+const LEGACY_WORKSPACE_STORE_KEY = "yishan-workspace-store";
+
 export type ProjectStoreState = {
   projects: WorkspaceProjectRecord[];
   isProjectsLoaded: boolean;
@@ -57,6 +59,7 @@ export type ProjectStoreState = {
   deleteProject: (projectId: string) => void;
   updateProjectConfig: (projectId: string, config: RepoConfigUpdate) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
+  setOrganizationDisplayProjectIds: (organizationId: string, projectIds: string[]) => void;
   setLastUsedExternalAppId: (appId: ExternalAppId) => void;
   setWorkspaceListHierarchyMode: (mode: "by_project" | "by_node") => void;
 };
@@ -69,7 +72,7 @@ export type ProjectStoreState = {
  */
 export function readLegacyWorkspacePrefs(): Partial<ProjectStoreState> | undefined {
   try {
-    const raw = localStorage.getItem("yishan-workspace-store");
+    const raw = localStorage.getItem(LEGACY_WORKSPACE_STORE_KEY);
     if (!raw) {
       return undefined;
     }
@@ -94,6 +97,27 @@ export function readLegacyWorkspacePrefs(): Partial<ProjectStoreState> | undefin
   } catch {
     return undefined;
   }
+}
+
+/** Writes the migrated project preferences before removing their legacy source. */
+export function finalizeLegacyWorkspaceMigration(
+  state: Pick<ProjectStoreState, "workspaceListHierarchyMode" | "setWorkspaceListHierarchyMode">,
+): void {
+  if (!localStorage.getItem(LEGACY_WORKSPACE_STORE_KEY)) {
+    return;
+  }
+  state.setWorkspaceListHierarchyMode(state.workspaceListHierarchyMode);
+  localStorage.removeItem(LEGACY_WORKSPACE_STORE_KEY);
+}
+
+/** Merges legacy workspace preferences as a fallback without overriding project-store state. */
+export function mergeProjectStorePersistence(persisted: unknown, current: ProjectStoreState): ProjectStoreState {
+  const legacy = readLegacyWorkspacePrefs();
+  return {
+    ...current,
+    ...legacy,
+    ...(persisted as Partial<ProjectStoreState>),
+  };
 }
 
 const initialProjectState = {
@@ -269,6 +293,22 @@ export const projectStore = create<ProjectStoreState>()(
       setDisplayProjectIds: (displayProjectIds) => {
         set({ displayProjectIds });
       },
+      setOrganizationDisplayProjectIds: (organizationId, displayProjectIds) => {
+        set((state) => {
+          state.displayProjectIds = displayProjectIds;
+
+          const normalizedOrganizationId = organizationId.trim();
+          if (!normalizedOrganizationId) {
+            return;
+          }
+
+          state.organizationPreferencesById ??= {};
+          state.organizationPreferencesById[normalizedOrganizationId] ??= {};
+          const organizationPreferences = state.organizationPreferencesById[normalizedOrganizationId];
+          organizationPreferences.displayProjectIds = displayProjectIds;
+          organizationPreferences.knownProjectIds = state.projects.map((project) => project.id);
+        });
+      },
       setLastUsedExternalAppId: (lastUsedExternalAppId) => {
         set({ lastUsedExternalAppId });
       },
@@ -285,13 +325,12 @@ export const projectStore = create<ProjectStoreState>()(
         organizationPreferencesById: state.organizationPreferencesById,
         workspaceListHierarchyMode: state.workspaceListHierarchyMode,
       }),
-      merge: (persisted, current) => {
-        const legacy = readLegacyWorkspacePrefs();
-        return {
-          ...current,
-          ...(persisted as Partial<ProjectStoreState>),
-          ...legacy,
-        };
+      merge: mergeProjectStorePersistence,
+      onRehydrateStorage: () => (state, error) => {
+        if (!state || error) {
+          return;
+        }
+        finalizeLegacyWorkspaceMigration(state);
       },
     },
   ),

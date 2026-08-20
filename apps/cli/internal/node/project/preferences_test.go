@@ -7,7 +7,6 @@ import (
 
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/workspace"
 )
 
 func newPreferencesHandler(t *testing.T) *Service {
@@ -54,6 +53,9 @@ func TestGetSetListPreferences_RoundTrip(t *testing.T) {
 		ByProject: sqlite.ProjectListModePreference{
 			ProjectOrderIds: []string{"project-1"},
 		},
+		WorkspaceOrderByParentId: map[string][]string{
+			"project-1:node-1": {"ws-without-local-row"},
+		},
 	}
 	_, err := handler.callRPCForTest(
 		context.Background(),
@@ -79,6 +81,9 @@ func TestGetSetListPreferences_RoundTrip(t *testing.T) {
 	if len(got.ByProject.ProjectOrderIds) != 1 || got.ByProject.ProjectOrderIds[0] != "project-1" {
 		t.Fatalf("project order = %v, want [project-1]", got.ByProject.ProjectOrderIds)
 	}
+	if order := got.WorkspaceOrderByParentId["project-1:node-1"]; len(order) != 1 || order[0] != "ws-without-local-row" {
+		t.Fatalf("workspace order = %v, want [ws-without-local-row]", order)
+	}
 }
 
 func TestGetListPreferences_RequiresOrganizationID(t *testing.T) {
@@ -89,46 +94,4 @@ func TestGetListPreferences_RequiresOrganizationID(t *testing.T) {
 
 	_, err = handler.callRPCForTest(context.Background(), rpc.MethodProjectSetListPreferences, marshalParams(t, map[string]any{}))
 	requireRPCError(t, err, "organizationId is required")
-}
-
-func TestGetListPreferences_PrunesDeletedWorkspace(t *testing.T) {
-	handler := newPreferencesHandler(t)
-	database := sqlite.NewWorkspaceStore(handler.deps.Database)
-
-	if err := database.Create(context.Background(), &sqlite.Workspace{
-		ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
-		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: "/tmp/ws", State: "active",
-	}); err != nil {
-		t.Fatalf("create workspace: %v", err)
-	}
-
-	if _, err := handler.callRPCForTest(
-		context.Background(),
-		rpc.MethodProjectSetListPreferences,
-		marshalParams(t, map[string]any{
-			"organizationId": "org-1",
-			"preferences": sqlite.ProjectListPreference{
-				WorkspaceOrderByParentId: map[string][]string{"project-1:node-1": {"ws-1", "ws-gone"}},
-			},
-		}),
-	); err != nil {
-		t.Fatalf("set list preferences: %v", err)
-	}
-
-	if err := database.Delete(context.Background(), "ws-1"); err != nil {
-		t.Fatalf("delete workspace: %v", err)
-	}
-
-	result, err := handler.callRPCForTest(
-		context.Background(),
-		rpc.MethodProjectGetListPreferences,
-		marshalParams(t, map[string]any{"organizationId": "org-1"}),
-	)
-	if err != nil {
-		t.Fatalf("get list preferences: %v", err)
-	}
-	got := result.(sqlite.ProjectListPreference)
-	if len(got.WorkspaceOrderByParentId["project-1:node-1"]) != 0 {
-		t.Fatalf("deleted workspace id must be pruned, got %v", got.WorkspaceOrderByParentId)
-	}
 }

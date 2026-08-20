@@ -9,6 +9,7 @@ import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFl
 import { chatStore } from "../../../domains/agent/state/chatStore";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
+import { setDisplayRepoIds } from "../../../domains/workspace/commands/workspaceCommands";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { projectStore } from "../state/projectStore";
 import { createProject, deleteProject, updateProjectConfig } from "./projectCommands";
@@ -147,6 +148,94 @@ describe("projectCommands", () => {
     expect(workspaceStore.getState().workspaces).toEqual([]);
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a hidden project across snapshot reloads while hydrating new workspaces", async () => {
+    sessionStore.setState({
+      organizations: [{ id: "org-1", name: "Org 1" }],
+      selectedOrganizationId: "org-1",
+      loaded: true,
+    });
+    rpcMocks.listProjects
+      .mockResolvedValueOnce([
+        {
+          id: "project-1",
+          name: "Project 1",
+          sourceType: "git",
+          repoProvider: "github",
+          repoUrl: "https://github.com/test/project-1.git",
+          repoKey: "project-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          createdByUserId: "user-1",
+          workspaces: [],
+        },
+        {
+          id: "project-2",
+          name: "Project 2",
+          sourceType: "git",
+          repoProvider: "github",
+          repoUrl: "https://github.com/test/project-2.git",
+          repoKey: "project-2",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          createdByUserId: "user-1",
+          workspaces: [],
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "project-1",
+          name: "Project 1",
+          sourceType: "git",
+          repoProvider: "github",
+          repoUrl: "https://github.com/test/project-1.git",
+          repoKey: "project-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          createdByUserId: "user-1",
+          workspaces: [],
+        },
+        {
+          id: "project-2",
+          name: "Project 2",
+          sourceType: "git",
+          repoProvider: "github",
+          repoUrl: "https://github.com/test/project-2.git",
+          repoKey: "project-2",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          createdByUserId: "user-1",
+          workspaces: [
+            {
+              id: "workspace-new",
+              organizationId: "org-1",
+              projectId: "project-2",
+              userId: "user-1",
+              nodeId: "node-1",
+              kind: "worktree",
+              status: "active",
+              branch: "feature-new",
+              sourceBranch: "main",
+              localPath: "/tmp/workspaces/project-2/feature-new",
+              latestPullRequest: null,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        },
+      ]);
+
+    await loadWorkspaceSnapshot();
+    setDisplayRepoIds(["project-1"]);
+    await loadWorkspaceSnapshot();
+
+    const state = projectStore.getState();
+    expect(state.displayProjectIds).toEqual(["project-1"]);
+    expect(state.organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual(["project-1"]);
+    expect(workspaceStore.getState().workspaces).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "workspace-new", projectId: "project-2" })]),
+    );
   });
 
   it("merges daemon local folders after the org snapshot load()", async () => {

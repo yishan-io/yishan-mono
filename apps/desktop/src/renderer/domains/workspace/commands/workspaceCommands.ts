@@ -7,6 +7,7 @@ import {
 import { renameGitBranch } from "@renderer/domains/git";
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
+import { sessionStore } from "@renderer/domains/session";
 
 import {
   DEFAULT_RIGHT_PANE_TAB,
@@ -62,7 +63,8 @@ export function subscribeOpenCreateWorkspaceDialog(
 /** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */
 export function setDisplayRepoIds(repoIds: string[]) {
   const previousDisplayIds = projectStore.getState().displayProjectIds;
-  projectStore.getState().setDisplayProjectIds(repoIds);
+  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
+  projectStore.getState().setOrganizationDisplayProjectIds(selectedOrganizationId, repoIds);
 
   const repoIdSet = new Set(repoIds);
   const prevSet = new Set(previousDisplayIds);

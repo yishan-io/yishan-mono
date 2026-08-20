@@ -35,15 +35,6 @@ func TestProjectListPreferenceStore_GetMissingOrgReturnsDefaults(t *testing.T) {
 
 func TestProjectListPreferenceStore_RoundTrip(t *testing.T) {
 	store := openTestProjectListPreferenceDB(t)
-	workspaceStore := NewWorkspaceStore(store.database)
-	for _, workspace := range []*Workspace{
-		{ID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-a", Kind: "primary", Status: "active", LocalPath: "/tmp/ws-1", State: "active"},
-		{ID: "ws-2", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-a", Kind: "worktree", Status: "active", LocalPath: "/tmp/ws-2", State: "active"},
-	} {
-		if err := workspaceStore.Create(context.Background(), workspace); err != nil {
-			t.Fatalf("create workspace %s: %v", workspace.ID, err)
-		}
-	}
 
 	want := ProjectListPreference{
 		Version: ProjectListPreferencesVersion,
@@ -73,9 +64,6 @@ func TestProjectListPreferenceStore_RoundTrip(t *testing.T) {
 	}
 	if got.ByProject.NodeOrderByParentId["project:project-1"][0] != "node-a" {
 		t.Fatalf("node order = %v", got.ByProject.NodeOrderByParentId)
-	}
-	if got.ByNode.NodeOrderByParentId["root:node"][1] != "node-a" {
-		t.Fatalf("root node order = %v", got.ByNode.NodeOrderByParentId)
 	}
 	if len(got.ByNode.FoldedNodeKeys) != 1 || got.ByNode.FoldedNodeKeys[0] != "node-a:project-1" {
 		t.Fatalf("folded node keys = %v", got.ByNode.FoldedNodeKeys)
@@ -137,30 +125,9 @@ func TestProjectListPreferenceStore_UnknownVersionReturnsDefaults(t *testing.T) 
 	}
 }
 
-func TestProjectListPreferenceStore_PruneRemovesDeletedWorkspaceIDs(t *testing.T) {
+func TestProjectListPreferenceStore_GetPreservesStaleWorkspaceOrderIDs(t *testing.T) {
 	store := openTestProjectListPreferenceDB(t)
-	workspaceStore := NewWorkspaceStore(store.database)
-
-	// Live row: workspace ws-1 (org-1, node-a). Project ids are no longer
-	// pruned locally (projects are remote-authoritative); the desktop prunes
-	// them against the remote list.
-	if err := workspaceStore.Create(context.Background(), &Workspace{
-		ID:             "ws-1",
-		OrganizationID: "org-1",
-		ProjectID:      "project-1",
-		NodeID:         "node-a",
-		Kind:           "primary",
-		Status:         "active",
-		LocalPath:      "/tmp/live",
-		State:          "active",
-	}); err != nil {
-		t.Fatalf("create workspace: %v", err)
-	}
-
 	stored := ProjectListPreference{
-		ByProject: ProjectListModePreference{
-			ProjectOrderIds: []string{"project-1", "project-gone"},
-		},
 		WorkspaceOrderByParentId: map[string][]string{
 			"project-1:node-a":    {"ws-1", "ws-gone"},
 			"project-1:node-gone": {"ws-gone"},
@@ -174,33 +141,16 @@ func TestProjectListPreferenceStore_PruneRemovesDeletedWorkspaceIDs(t *testing.T
 	if err != nil {
 		t.Fatalf("get preferences: %v", err)
 	}
-
-	// Project ids are untouched (not pruned locally).
-	byProject := got.ByProject
-	if len(byProject.ProjectOrderIds) != 2 || byProject.ProjectOrderIds[0] != "project-1" {
-		t.Fatalf("project order must be preserved (not pruned), got %v", byProject.ProjectOrderIds)
+	if order := got.WorkspaceOrderByParentId["project-1:node-a"]; len(order) != 2 || order[1] != "ws-gone" {
+		t.Fatalf("workspace order = %v, want [ws-1 ws-gone]", order)
 	}
-	wsOrder, ok := got.WorkspaceOrderByParentId["project-1:node-a"]
-	if !ok || len(wsOrder) != 1 || wsOrder[0] != "ws-1" {
-		t.Fatalf("pruned workspace order = %v (ok=%v), want [ws-1]", wsOrder, ok)
-	}
-	if _, ok := got.WorkspaceOrderByParentId["project-1:node-gone"]; ok {
-		t.Fatalf("empty workspace order key must be dropped, got %v", got.WorkspaceOrderByParentId)
+	if order := got.WorkspaceOrderByParentId["project-1:node-gone"]; len(order) != 1 || order[0] != "ws-gone" {
+		t.Fatalf("stale workspace group = %v, want [ws-gone]", order)
 	}
 }
 
 func TestProjectListPreferenceStore_MigratesLegacyPerModeWorkspaceOrder(t *testing.T) {
 	store := openTestProjectListPreferenceDB(t)
-	workspaceStore := NewWorkspaceStore(store.database)
-	for _, workspace := range []*Workspace{
-		{ID: "ws-a", OrganizationID: "org-1", ProjectID: "p1", NodeID: "n1", Kind: "primary", Status: "active", LocalPath: "/tmp/ws-a", State: "active"},
-		{ID: "ws-b", OrganizationID: "org-1", ProjectID: "p1", NodeID: "n1", Kind: "worktree", Status: "active", LocalPath: "/tmp/ws-b", State: "active"},
-	} {
-		if err := workspaceStore.Create(context.Background(), workspace); err != nil {
-			t.Fatalf("create workspace %s: %v", workspace.ID, err)
-		}
-	}
-
 	// Shape written by early builds: workspace order lived inside each mode.
 	legacy := `{"version":1,` +
 		`"by_project":{"projectOrderIds":["p1"],"workspaceOrderByParentId":{"p1:n1":["ws-a"]}},` +

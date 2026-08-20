@@ -19,9 +19,9 @@ func projectListPreferencesKey(organizationID string) string {
 
 // ProjectListModePreference holds one hierarchy mode's order/fold state.
 // Lists are order hints: ids absent from a list are implicitly last, and
-// stale ids (deleted projects/workspaces) are tolerated by consumers and
-// pruned on read. Workspace order is intentionally NOT here: it is shared
-// across modes (the same workspaces hang under the same project+node groups
+// stale ids are tolerated by consumers and preserved on read. Workspace order
+// is intentionally shared across modes (the same workspaces hang under the
+// same project+node groups
 // in both hierarchy modes).
 type ProjectListModePreference struct {
 	ProjectOrderIds     []string            `json:"projectOrderIds"`
@@ -53,10 +53,8 @@ func NewProjectListPreferenceStore(database *sql.DB) *ProjectListPreferenceStore
 }
 
 // Get returns the org's persisted preferences. Missing or corrupt persisted
-// state returns empty defaults so consumers can rely on a valid shape. Ids
-// that no longer reference live local projects/workspaces are pruned so any
-// consumer (desktop today, mobile later) receives clean data without its own
-// reconciliation. Node ids reference remote entities and are kept as-is.
+// state returns empty defaults so consumers can rely on a valid shape. Order
+// hints are remote-authoritative and remain unchanged, including stale IDs.
 func (store *ProjectListPreferenceStore) Get(ctx context.Context, organizationID string) (ProjectListPreference, error) {
 	preference := ProjectListPreference{Version: ProjectListPreferencesVersion}
 	if organizationID == "" {
@@ -87,7 +85,6 @@ func (store *ProjectListPreferenceStore) Get(ctx context.Context, organizationID
 	if stored.WorkspaceOrderByParentId == nil {
 		migrateLegacyWorkspaceOrder([]byte(raw), &stored)
 	}
-	store.prune(ctx, organizationID, &stored)
 	return stored, nil
 }
 
@@ -105,25 +102,6 @@ func (store *ProjectListPreferenceStore) Set(ctx context.Context, organizationID
 		return fmt.Errorf("write project list preferences: %w", err)
 	}
 	return nil
-}
-
-// prune drops workspace-order hints that reference rows no longer live in this
-// org. Project ids are not pruned here: projects are remote-authoritative and
-// the desktop prunes them against the remote list; stale ids are tolerated by
-// consumers. Best effort: if the live-id query fails, the stored state is
-// returned unchanged.
-func (store *ProjectListPreferenceStore) prune(ctx context.Context, organizationID string, preference *ProjectListPreference) {
-	workspaceIDs, err := store.liveIDs(ctx, `SELECT id FROM workspaces WHERE organization_id = ?`, organizationID)
-	if err != nil {
-		return
-	}
-
-	for key, ids := range preference.WorkspaceOrderByParentId {
-		preference.WorkspaceOrderByParentId[key] = filterLiveIDs(ids, workspaceIDs)
-		if len(preference.WorkspaceOrderByParentId[key]) == 0 {
-			delete(preference.WorkspaceOrderByParentId, key)
-		}
-	}
 }
 
 // migrateLegacyWorkspaceOrder merges the per-mode workspace order written by
@@ -160,34 +138,4 @@ func migrateLegacyWorkspaceOrder(raw []byte, preference *ProjectListPreference) 
 	if len(merged) > 0 {
 		preference.WorkspaceOrderByParentId = merged
 	}
-}
-
-// liveIDs returns the id set for one org from a SELECT id query.
-func (store *ProjectListPreferenceStore) liveIDs(ctx context.Context, query string, organizationID string) (map[string]struct{}, error) {
-	rows, err := store.database.QueryContext(ctx, query, organizationID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	live := make(map[string]struct{})
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		live[id] = struct{}{}
-	}
-	return live, rows.Err()
-}
-
-// filterLiveIDs returns ids that exist in live, preserving order.
-func filterLiveIDs(ids []string, live map[string]struct{}) []string {
-	filtered := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if _, ok := live[id]; ok {
-			filtered = append(filtered, id)
-		}
-	}
-	return filtered
 }
