@@ -18,7 +18,22 @@ import (
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	term "yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace"
 )
+
+type testWorkspaceResolver func(workspaceID string) (workspace.Workspace, error)
+
+func (resolve testWorkspaceResolver) GetWorkspace(workspaceID string) (workspace.Workspace, error) {
+	return resolve(workspaceID)
+}
+
+func defaultTestWorkspaceResolver(workspaceID string) (workspace.Workspace, error) {
+	return workspace.Workspace{
+		ID:        workspaceID,
+		ProjectID: "project-" + workspaceID,
+		OrgID:     "org-" + workspaceID,
+	}, nil
+}
 
 // newTestService builds an agent application service for tests with a router
 // wired for the pi/skill/customize namespaces.
@@ -31,6 +46,7 @@ func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Serv
 	t.Cleanup(cancel)
 
 	svc := NewService(Deps{
+		Workspace:            testWorkspaceResolver(defaultTestWorkspaceResolver),
 		AgentMgr:             agentmanager.NewManager(),
 		PIAuth:               NewManagedPiAuthStore(),
 		ModelList:            modellist.NewService(),

@@ -3,14 +3,17 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/workspace"
 )
 
 func TestPiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing.T) {
@@ -144,6 +147,91 @@ func TestPiStart_OverridesLegacyAgentDirEnv(t *testing.T) {
 	}
 	if got == legacyAgentDir {
 		t.Fatalf("expected managed pi agent dir to override legacy dir %q", legacyAgentDir)
+	}
+}
+
+func TestPiStart_InjectsAuthoritativeWorkspaceIdentityEnv(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	t.Setenv("YISHAN_PROJECT_ID", "forged-project")
+	t.Setenv("YISHAN_ORG_ID", "forged-org")
+
+	markerPath := filepath.Join(homeDir, "pi-env.txt")
+	fakePiDir := t.TempDir()
+	fakePi := filepath.Join(fakePiDir, "pi")
+	fakePiScript := fmt.Sprintf("#!/bin/sh\nenv > %q\nIFS= read -r _ || exit 0\n", markerPath)
+	if err := os.WriteFile(fakePi, []byte(fakePiScript), 0o755); err != nil {
+		t.Fatalf("write fake pi binary: %v", err)
+	}
+	t.Setenv("PATH", fakePiDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	s := newTestHandler(t)
+	s.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+		if workspaceID != "workspace-1" {
+			return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
+		}
+		return workspace.Workspace{ID: workspaceID, ProjectID: "project-from-daemon", OrgID: "org-from-daemon"}, nil
+	})
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	connState := &rpc.Connection{}
+	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-identity-env",
+		"tabId":       "tab-1",
+		"paneId":      "pane-1",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi start: %v", err)
+	}
+	defer func() {
+		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
+			"sessionId": "session-identity-env",
+		}))
+	}()
+
+	env := strings.Split(waitForFileContent(t, markerPath), "\n")
+	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", "workspace-1")
+	assertEnvValue(t, env, "YISHAN_PROJECT_ID", "project-from-daemon")
+	assertEnvValue(t, env, "YISHAN_ORG_ID", "org-from-daemon")
+	assertEnvValue(t, env, "YISHAN_TAB_ID", "tab-1")
+	assertEnvValue(t, env, "YISHAN_PANE_ID", "pane-1")
+	assertEnvValue(t, env, config.PiAgentDirEnvKey, filepath.Join(homeDir, ".yishan", "pi", "agent"))
+}
+
+func TestPiStart_RejectsUnknownWorkspace(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	installBlockingFakePiBinary(t)
+
+	s := newTestHandler(t)
+	s.deps.Workspace = testWorkspaceResolver(func(string) (workspace.Workspace, error) {
+		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeNotFound, "workspace not found")
+	})
+	cwd := filepath.Join(homeDir, "worktrees", "unknown")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	_, err := s.Start(context.Background(), &rpc.Connection{}, rpc.PiStartParams{
+		SessionID:   "session-unknown-workspace",
+		TabID:       "tab-1",
+		WorkspaceID: "unknown-workspace",
+		CWD:         cwd,
+	})
+	if err == nil {
+		t.Fatal("expected pi.start to reject an unknown workspace")
+	}
+	var rpcErr *rpc.Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != rpc.CodeNotFound {
+		t.Fatalf("error = %v, want rpc.CodeNotFound", err)
+	}
+	if _, exists := s.deps.AgentMgr.Session("session-unknown-workspace"); exists {
+		t.Fatal("pi.start started a session for an unknown workspace")
 	}
 }
 

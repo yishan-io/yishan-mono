@@ -3,8 +3,10 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,11 +203,13 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesChatSessionWhenDesktopConnec
 	// Route "pi" to a fake binary so the test never spawns the real agent.
 	fakePiDir := t.TempDir()
 	fakePi := filepath.Join(fakePiDir, "pi")
-	fakePiScript := `#!/bin/sh
+	markerPath := filepath.Join(homeDir, "pi-task-run-env.txt")
+	fakePiScript := fmt.Sprintf(`#!/bin/sh
+env > %q
 while IFS= read -r line; do
-  printf '%s\n' '{"type":"session_info","name":"fake-pi-task-run"}'
+  printf '%%s\n' '{"type":"session_info","name":"fake-pi-task-run"}'
 done
-`
+`, markerPath)
 	if err := os.WriteFile(fakePi, []byte(fakePiScript), 0o755); err != nil {
 		t.Fatalf("write fake pi binary: %v", err)
 	}
@@ -228,7 +232,7 @@ done
 				},
 			},
 		},
-		workspace.Workspace{ID: "ws-1", Path: root},
+		workspace.Workspace{ID: "ws-1", Path: root, ProjectID: "project-1", OrgID: "org-1"},
 		nil,
 	)
 
@@ -262,4 +266,12 @@ done
 	if sessions := s.deps.Terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 0 {
 		t.Fatalf("chat-mode task run started terminal sessions: %#v", sessions)
 	}
+
+	env := strings.Split(waitForFileContent(t, markerPath), "\n")
+	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", "ws-1")
+	assertEnvValue(t, env, "YISHAN_PROJECT_ID", "project-1")
+	assertEnvValue(t, env, "YISHAN_ORG_ID", "org-1")
+	assertEnvValue(t, env, "YISHAN_TAB_ID", "task-ws-1")
+	assertEnvValue(t, env, "YISHAN_PANE_ID", "pane-task-ws-1")
+	assertEnvValue(t, env, "PI_CODING_AGENT_DIR", filepath.Join(homeDir, ".yishan", "pi", "agent"))
 }

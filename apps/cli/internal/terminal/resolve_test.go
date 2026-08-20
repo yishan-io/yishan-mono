@@ -142,6 +142,32 @@ func TestResolveSessionMetadataEnv(t *testing.T) {
 	}
 }
 
+func TestResolveSessionMetadataEnv_ClearsInheritedIdentityWithoutWorkspaceValues(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	got := resolveSessionMetadataEnv([]string{
+		"PATH=/usr/bin",
+		"YISHAN_PROJECT_ID=stale-project",
+		"YISHAN_ORG_ID=stale-org",
+	}, StartRequest{
+		WorkspaceID: "workspace-1",
+		TabID:       "tab-1",
+		PaneID:      "pane-1",
+	})
+	joined := strings.Join(got, "\n")
+	for _, expected := range []string{"YISHAN_PROJECT_ID=", "YISHAN_ORG_ID="} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected %s in env, got %v", expected, got)
+		}
+	}
+	for _, unexpected := range []string{"YISHAN_PROJECT_ID=stale-project", "YISHAN_ORG_ID=stale-org"} {
+		if strings.Contains(joined, unexpected) {
+			t.Fatalf("unexpected inherited identity %s in env, got %v", unexpected, got)
+		}
+	}
+}
+
 func TestResolveManagedRuntimeEnvResolvesOrigZdotdirWhenAlreadyManaged(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
