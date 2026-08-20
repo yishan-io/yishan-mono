@@ -1,5 +1,6 @@
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
 import { useDialogRegistration } from "@renderer/domains/workbench";
+import { isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getDefaultWorktreeLocation } from "../../daemon/projectDaemonClient";
@@ -25,6 +26,7 @@ type ProjectConfigDialogViewProps = {
 export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfigDialogViewProps) {
   const { t } = useTranslation();
   const projects = projectStore((state) => state.projects);
+  const workspaces = workspaceStore((state) => state.workspaces);
   const {
     repo,
     draft,
@@ -44,10 +46,17 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
     onClose,
   });
   const [activeSection, setActiveSection] = useState<ProjectConfigSectionId>("general");
+  const isFolderWorkspaceConfig = workspaces.some(
+    (workspace) => (workspace.repoId === repoId || workspace.projectId === repoId) && isFolderWorkspace(workspace),
+  );
+  const displayedSection = isFolderWorkspaceConfig && activeSection === "scripts" ? "general" : activeSection;
 
   useDialogRegistration(open);
 
-  const sectionItems = useMemo(() => getProjectConfigSectionItems(t), [t]);
+  const sectionItems = useMemo(
+    () => getProjectConfigSectionItems(t, !isFolderWorkspaceConfig),
+    [isFolderWorkspaceConfig, t],
+  );
 
   return (
     <Dialog
@@ -64,9 +73,9 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
       <DialogTitle>{t("project.actions.config")}</DialogTitle>
       <DialogContent sx={{ p: 0 }}>
         <Stack direction="row" sx={{ minHeight: 420 }}>
-          <ProjectConfigSectionNav activeSection={activeSection} items={sectionItems} onSelect={setActiveSection} />
+          <ProjectConfigSectionNav activeSection={displayedSection} items={sectionItems} onSelect={setActiveSection} />
           <Box sx={{ flex: 1, overflow: "auto", p: 2.5 }}>
-            {activeSection === "general" && (
+            {displayedSection === "general" && (
               <ProjectConfigGeneralSection
                 draft={draft}
                 isSaving={isSaving}
@@ -80,10 +89,10 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                 onPickWorktreeFolder={handlePickWorktreeFolder}
               />
             )}
-            {activeSection === "scripts" && (
+            {displayedSection === "scripts" && !isFolderWorkspaceConfig && (
               <ProjectConfigScriptsSection draft={draft} isSaving={isSaving} setDraft={setDraft} />
             )}
-            {activeSection === "commands" && (
+            {displayedSection === "commands" && (
               <ProjectConfigCommandsSection draft={draft} isSaving={isSaving} setDraft={setDraft} />
             )}
           </Box>
