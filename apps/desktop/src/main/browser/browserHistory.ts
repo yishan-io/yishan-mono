@@ -1,11 +1,10 @@
 import { existsSync } from "node:fs";
 import { appendFile, copyFile, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { app } from "electron";
 import { getErrorMessage } from "../../shared/errors/getErrorMessage";
-import { resolveCliProfileName } from "../daemon/daemonHealthCheck";
-import type { BrowserHistoryEntry, BrowserHistoryGroup } from "../ipc";
+import type { BrowserHistoryEntry, BrowserHistoryGroup } from "../bridge/browser";
+import { resolveDaemonProfilePath } from "../daemon/daemonEndpoint";
 import { isDevMode } from "../runtime/environment";
 
 const MAX_ENTRIES = 500;
@@ -24,7 +23,7 @@ function historyFileName(): string {
 }
 
 function resolveCliProfileDir(): string {
-  return join(homedir(), ".yishan", "profiles", resolveCliProfileName());
+  return resolveDaemonProfilePath();
 }
 
 /**
@@ -124,7 +123,9 @@ function parseEntries(raw: string): BrowserHistoryEntry[] {
     }
     try {
       entries.push(JSON.parse(trimmed) as BrowserHistoryEntry);
-    } catch {}
+    } catch {
+      // Deliberately skip malformed JSONL history records so valid history remains available.
+    }
   }
   return entries;
 }

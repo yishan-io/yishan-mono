@@ -11,7 +11,7 @@
 export {
   emitDesktopRpcEventToBus,
   subscribeDesktopRpcEvent,
-  type DesktopRpcEventEnvelope,
+  type DesktopEventEnvelope,
 } from "./desktopRpcEventBus";
 export {
   BACKEND_EVENT_NAME_BY_SOURCE,

@@ -1,4 +1,4 @@
-import type { DesktopBridge } from "@main/ipc";
+import type { DesktopBridge } from "@main/bridge/desktopBridge";
 
 declare global {
   interface Window {

@@ -6,7 +6,7 @@ import { listOrganizations } from "@renderer/domains/organization";
  * refresh subscription. UI and hooks call these instead of opening transport
  * (api/restClient, api/sessionApi, api/systemApi, rpc) directly.
  */
-import type { DaemonInfoResult } from "../../../../main/ipc";
+import type { DaemonInfoResult } from "../../../../main/bridge/daemon";
 import {
   RestApiError,
   onAuthExpired,

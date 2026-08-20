@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readExternalClipboardSourcePathsFromSystem } from "./externalClipboardPipeline";
+import { readExternalClipboardSourcePathsFromSystem } from "./externalFileClipboardReader";
 
 const mocks = vi.hoisted(() => ({
   runCommandForStdout: vi.fn(),
@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   clipboardReadText: vi.fn(),
 }));
 
-vi.mock("./process", () => ({
+vi.mock("../clipboard/process", () => ({
   runCommandForStdout: mocks.runCommandForStdout,
 }));
 

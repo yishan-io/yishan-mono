@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DaemonDevProcess } from "./daemonDevProcess";
 import { DaemonManager } from "./daemonManager";
 
 const originalDaemonHealthUrl = process.env.YISHAN_DAEMON_HEALTH_URL;
+const originalNodeEnv = process.env.NODE_ENV;
 
 afterEach(() => {
   process.env.YISHAN_DAEMON_HEALTH_URL = originalDaemonHealthUrl;
+  process.env.NODE_ENV = originalNodeEnv;
 });
 
 describe("DaemonManager", () => {
@@ -16,6 +19,21 @@ describe("DaemonManager", () => {
     await expect(manager.ensureStarted()).rejects.toThrow("Daemon did not become healthy after start");
 
     expect(run).toHaveBeenCalledWith(["daemon", "start", "--profile", "default"]);
+  });
+
+  it("stops the profile daemon through the CLI before starting a dev foreground child", async () => {
+    process.env.NODE_ENV = "development";
+    const run = vi.fn().mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
+    const start = vi.fn(async (_waitForHealthy: () => Promise<void>, stopProfileDaemon: () => Promise<void>) => {
+      await stopProfileDaemon();
+    });
+    const devProcess = { start, stop: vi.fn() } as unknown as DaemonDevProcess;
+    const manager = new DaemonManager({ run, devProcess, preferCli: false });
+
+    await manager.ensureStarted();
+
+    expect(run).toHaveBeenCalledWith(["daemon", "stop", "--profile", "dev"]);
+    expect(start).toHaveBeenCalledOnce();
   });
 
   it("throws when daemon start exits non-zero", async () => {

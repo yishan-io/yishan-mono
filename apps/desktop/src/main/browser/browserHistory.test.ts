@@ -3,7 +3,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { app } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BrowserHistoryEntry } from "../ipc";
+import type { BrowserHistoryEntry } from "../bridge/browser";
 import { appendBrowserHistoryEntry, flushBrowserHistoryPruneCheck, loadBrowserHistoryGroups } from "./browserHistory";
 
 vi.mock("electron", () => ({
@@ -62,7 +62,7 @@ describe("browserHistory account scoping", () => {
   });
 
   afterEach(() => {
-    delete process.env.YISHAN_PROFILE;
+    process.env.YISHAN_PROFILE = undefined;
     rmSync(homeDir, { recursive: true, force: true });
     rmSync(userDataDir, { recursive: true, force: true });
   });

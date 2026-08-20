@@ -1,7 +1,7 @@
 import { getVoiceTranscriptionUsage } from "@renderer/domains/agent";
 import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "@renderer/domains/session";
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
-import type { DaemonLogResult } from "../../../../main/ipc";
+import type { DaemonLogResult } from "../../../../main/bridge/daemon";
 import {
   createServiceToken as createServiceTokenFromApi,
   listServiceTokens as listServiceTokensFromApi,
@@ -49,4 +49,4 @@ export async function getDaemonLog(): Promise<DaemonLogResult> {
 }
 
 export { getDaemonQuitOnExit, setDaemonQuitOnExit };
-export type { DaemonLogResult } from "../../../../main/ipc";
+export type { DaemonLogResult } from "../../../../main/bridge/daemon";

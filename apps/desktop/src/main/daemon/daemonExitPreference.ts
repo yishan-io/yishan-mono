@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { dirname, resolve } from "node:path";
-import { isDevMode } from "../runtime/environment";
+import { dirname } from "node:path";
+import { resolveDaemonProfilePath } from "./daemonEndpoint";
 
 const DAEMON_SETTINGS_FILE_NAME = "daemon.settings.json";
 
@@ -14,15 +13,8 @@ const DEFAULTS: DaemonSettings = {
   quitOnExit: false,
 };
 
-function resolveCliProfileName(): string {
-  if (isDevMode()) {
-    return "dev";
-  }
-  return process.env.YISHAN_PROFILE?.trim() || "default";
-}
-
 function resolveDaemonSettingsFilePath(): string {
-  return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_SETTINGS_FILE_NAME);
+  return resolveDaemonProfilePath(DAEMON_SETTINGS_FILE_NAME);
 }
 
 /** Reads persisted daemon settings, returning defaults when the file is missing. */

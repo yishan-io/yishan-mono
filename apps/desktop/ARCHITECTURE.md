@@ -6,7 +6,8 @@ This document defines the stable ownership model for the Electron Renderer
 in the Renderer.
 
 The Electron main process (`src/main`) is outside this document. Change it only
-when a Renderer boundary requires a host contract change.
+when a Renderer boundary requires a host contract change. Its ownership model is
+[documented separately](./src/main/ARCHITECTURE.md).
 
 Use `../../.my-context/architecture/refactor/desktop-domain-rules.md` as the
 detailed Domain specification. Finish responsibility normalization with

@@ -1,6 +1,9 @@
 import type { App, MenuItemConstructorOptions, WebContents } from "electron";
 import { Menu } from "electron";
-import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload } from "../ipc";
+import { autoUpdater } from "electron-updater";
+import { getErrorMessage } from "../../shared/errors/getErrorMessage";
+import { desktopHostEventChannels } from "../bridge/channels";
+import type { DesktopUpdateEventPayload } from "../bridge/updates";
 import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./autoUpdateDismissalState";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./autoUpdateService";
 
@@ -9,6 +12,7 @@ export type UpdateRuntimeOptions = {
   sendEvent: (payload: Record<string, unknown>) => void;
   /** Brings the app window forward (menu actions). */
   focusApp: () => void;
+  prepareForRestart: () => Promise<void>;
 };
 
 /**
@@ -100,7 +104,7 @@ export class UpdateRuntime {
       }
     } catch (error: unknown) {
       this.setUpdateMenuItemEnabled(true);
-      const message = error instanceof Error ? error.message : "An unexpected error occurred.";
+      const message = getErrorMessage(error);
       this.dispatchUpdateEvent({ status: "error", source: "manual", message });
     }
   }
@@ -112,6 +116,13 @@ export class UpdateRuntime {
       this.dispatchUpdateEvent({ status: "error", source: "download", message: result.error });
     }
     return result;
+  }
+
+  /** Prepares shutdown then installs the downloaded update. */
+  async install(): Promise<{ ok: true }> {
+    await this.options.prepareForRestart();
+    autoUpdater.quitAndInstall(false, true);
+    return { ok: true };
   }
 
   /** Updates the "Check for Updates" menu item's enabled state and label. */
@@ -134,5 +145,5 @@ export class UpdateRuntime {
 
 /** Convenience: send a desktop-rpc event envelope to one webContents. */
 export function sendDesktopRpcEvent(webContents: WebContents | null, payload: Record<string, unknown>): void {
-  webContents?.send(DESKTOP_RPC_IPC_CHANNELS.event, payload);
+  webContents?.send(desktopHostEventChannels.event, payload);
 }

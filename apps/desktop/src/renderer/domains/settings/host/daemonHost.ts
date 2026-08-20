@@ -8,7 +8,7 @@
  */
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 
-export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "../../../../main/ipc";
+export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "../../../../main/bridge/daemon";
 
 /** Reads current daemon identity and version from desktop main-process IPC. */
 export async function getDaemonInfo() {

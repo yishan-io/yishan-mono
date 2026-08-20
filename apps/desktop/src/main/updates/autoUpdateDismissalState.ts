@@ -1,4 +1,4 @@
-import type { DesktopUpdateEventPayload } from "../ipc";
+import type { DesktopUpdateEventPayload } from "../bridge/updates";
 
 /** Returns the local calendar date in YYYY-MM-DD format. */
 export function resolveLocalCalendarDate(now = new Date()): string {
