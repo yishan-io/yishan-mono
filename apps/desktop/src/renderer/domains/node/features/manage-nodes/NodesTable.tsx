@@ -2,7 +2,7 @@ import { IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, 
 import { StatusIndicator } from "@renderer/ui/components/StatusIndicator";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
-import type { OrganizationMemberRecord } from "../../../organization/api/types";
+import type { OrganizationMemberRecord } from "@renderer/domains/organization";
 import type { NodeRecord } from "../../api/types";
 import {
   resolveNodeKindLabel,

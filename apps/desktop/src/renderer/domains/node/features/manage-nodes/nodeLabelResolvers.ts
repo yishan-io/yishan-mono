@@ -1,4 +1,4 @@
-import type { OrganizationMemberRecord } from "../../../organization/api/types";
+import type { OrganizationMemberRecord } from "@renderer/domains/organization";
 import type { NodeRecord } from "../../api/types";
 
 /** Resolves the display name of a node's owner member. */
