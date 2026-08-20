@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   checkForUpdatesManually: vi.fn(),
   downloadUpdate: vi.fn(),
   startAutoUpdates: vi.fn(),
+  prepareForRestart: vi.fn(),
+  quitAndInstall: vi.fn(),
   shouldSuppress: vi.fn(() => false),
   resolveLocalCalendarDate: vi.fn(() => "2026-06-29"),
 }));
@@ -25,18 +27,19 @@ vi.mock("./autoUpdateDismissalState", () => ({
   resolveLocalCalendarDate: mocks.resolveLocalCalendarDate,
 }));
 
+vi.mock("electron-updater", () => ({ autoUpdater: { quitAndInstall: mocks.quitAndInstall } }));
+
 vi.mock("./autoUpdateService", () => ({
   startAutoUpdates: mocks.startAutoUpdates,
   checkForUpdatesManually: mocks.checkForUpdatesManually,
   downloadUpdate: mocks.downloadUpdate,
 }));
 
-import { desktopHostEventChannels } from "../bridge/channels";
-
 function createRuntime() {
   return new UpdateRuntime(mocks.app as never, {
     sendEvent: mocks.sendEvent,
     focusApp: mocks.focusApp,
+    prepareForRestart: mocks.prepareForRestart,
   });
 }
 
@@ -117,6 +120,20 @@ describe("UpdateRuntime", () => {
         payload: { status: "error", source: "download", message: "boom" },
       }),
     );
+  });
+
+  it("prepares restart before calling updater with exact arguments", async () => {
+    const runtime = createRuntime();
+    await expect(runtime.install()).resolves.toEqual({ ok: true });
+    expect(mocks.prepareForRestart).toHaveBeenCalledOnce();
+    expect(mocks.quitAndInstall).toHaveBeenCalledWith(false, true);
+  });
+
+  it("rejects install when restart preparation rejects", async () => {
+    const runtime = createRuntime();
+    mocks.prepareForRestart.mockRejectedValueOnce(new Error("cleanup failed"));
+    await expect(runtime.install()).rejects.toThrow("cleanup failed");
+    expect(mocks.quitAndInstall).not.toHaveBeenCalled();
   });
 
   it("starts the auto-update poller with event routing", () => {
