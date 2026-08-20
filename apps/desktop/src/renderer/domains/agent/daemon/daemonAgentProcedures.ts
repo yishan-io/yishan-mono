@@ -214,6 +214,10 @@ export async function updateAllAgentSkills(): Promise<{ updated: boolean }> {
   return (await request("skill.updateAll", {})) as { updated: boolean };
 }
 
+export async function listAvailableAgentTools(): Promise<{ tools: string[] }> {
+  return (await request("customize.tools.list", {})) as { tools: string[] };
+}
+
 // ─── customize: extensions ───────────────────────────────────────────────────
 
 export async function listPiExtensions(): Promise<{ extensions: PiExtensionInfo[] }> {

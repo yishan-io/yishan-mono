@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentsSettingsView } from "./AgentsSettingsView";
 
@@ -12,6 +12,7 @@ const mocked = {
   removeAgentDefinition: vi.fn(),
   restoreAgentDefinition: vi.fn(),
   listAgentModels: vi.fn(),
+  listAvailableAgentTools: vi.fn(),
 };
 
 const AVAILABLE_MODELS = [
@@ -47,6 +48,7 @@ vi.mock("../../commands/agentDefinitionCommands", () => ({
   updateAgentDefinition: (input: { name: string; content: string }) => mocked.updateAgentDefinition(input),
   removeAgentDefinition: (name: string) => mocked.removeAgentDefinition(name),
   restoreAgentDefinition: (name: string) => mocked.restoreAgentDefinition(name),
+  listAvailableAgentTools: () => mocked.listAvailableAgentTools(),
 }));
 
 const OFFICIAL = {
@@ -58,19 +60,9 @@ const OFFICIAL = {
   official: true,
 };
 
-const USER = {
-  name: "my-helper",
-  description: "My custom helper",
-  model: "",
-  thinking: "",
-  tools: [],
-  official: false,
-};
-
-const USER_CONTENT = "---\nname: my-helper\ndescription: My custom helper\n---\n# body\n";
-
 describe("AgentDefinitionDialogsCreate", () => {
   beforeEach(() => {
+    mocked.listAvailableAgentTools.mockResolvedValue([]);
     mocked.listAgentModels.mockResolvedValue({
       agentKind: "pi",
       models: AVAILABLE_MODELS,
@@ -83,6 +75,74 @@ describe("AgentDefinitionDialogsCreate", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it("uses discovered tools and Pi built-ins without legacy suggestions when the create dialog mounts", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([OFFICIAL]);
+    mocked.listAvailableAgentTools.mockResolvedValue(["runtime_extension_tool"]);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("general");
+    fireEvent.click(screen.getByTestId("create-agent-button"));
+    const toolsInput = screen.getByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalled());
+    fireEvent.change(toolsInput, { target: { value: "runtime" } });
+    expect(await screen.findByText("runtime_extension_tool")).toBeTruthy();
+
+    for (const builtInTool of ["read", "bash", "edit", "write", "grep", "find", "ls"]) {
+      fireEvent.change(toolsInput, { target: { value: builtInTool } });
+      expect(await screen.findByText(builtInTool)).toBeTruthy();
+    }
+
+    fireEvent.change(toolsInput, { target: { value: "apply" } });
+    expect(screen.queryByText("apply_patch")).toBeNull();
+  });
+
+  it("reloads the catalog when the create dialog remounts", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([OFFICIAL]);
+    mocked.listAvailableAgentTools
+      .mockResolvedValueOnce(["first_extension_tool"])
+      .mockResolvedValueOnce(["updated_extension_tool"]);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("general");
+    fireEvent.click(screen.getByTestId("create-agent-button"));
+    let toolsInput = screen.getByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalled());
+    fireEvent.change(toolsInput, { target: { value: "first" } });
+    expect(await screen.findByText("first_extension_tool")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("common.actions.cancel"));
+    fireEvent.click(screen.getByTestId("create-agent-button"));
+    toolsInput = screen.getByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalledTimes(2));
+    fireEvent.change(toolsInput, { target: { value: "updated" } });
+
+    expect(await screen.findByText("updated_extension_tool")).toBeTruthy();
+    expect(screen.queryByText("first_extension_tool")).toBeNull();
+    expect(mocked.listAvailableAgentTools).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses fallback suggestions and accepts free-form input when catalog loading fails", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocked.listAgentDefinitions.mockResolvedValue([OFFICIAL]);
+    mocked.listAvailableAgentTools.mockRejectedValue(new Error("catalog unavailable"));
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("general");
+    fireEvent.click(screen.getByTestId("create-agent-button"));
+    const toolsInput = screen.getByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalled());
+    fireEvent.change(toolsInput, { target: { value: "apply" } });
+    expect(await screen.findByText("apply_patch")).toBeTruthy();
+    fireEvent.change(toolsInput, { target: { value: "custom_tool" } });
+    fireEvent.keyDown(toolsInput, { key: "Enter", code: "Enter" });
+    expect(screen.getByText("custom_tool")).toBeTruthy();
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to load available agent tools", "catalog unavailable");
+    consoleErrorSpy.mockRestore();
   });
 
   it("create dialog calls the create command with name/description/content", async () => {
@@ -241,7 +301,10 @@ describe("AgentDefinitionDialogsCreate", () => {
     const openrouterOptions = await screen.findAllByText("OpenRouter");
     const openrouterOption = openrouterOptions.find((element) => element.tagName !== "title");
     expect(openrouterOption).toBeTruthy();
-    fireEvent.click(openrouterOption!);
+    if (!openrouterOption) {
+      return;
+    }
+    fireEvent.click(openrouterOption);
     expect(screen.getByText("anthropic/claude-opus-4.5")).toBeTruthy();
     expect(screen.getByText("deepseek/deepseek-v4-flash-latest")).toBeTruthy();
     expect(screen.queryByText("Claude Sonnet 4.5")).toBeNull();

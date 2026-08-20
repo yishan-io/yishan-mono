@@ -12,6 +12,7 @@ const mocked = {
   removeAgentDefinition: vi.fn(),
   restoreAgentDefinition: vi.fn(),
   listAgentModels: vi.fn(),
+  listAvailableAgentTools: vi.fn(),
 };
 
 const AVAILABLE_MODELS = [
@@ -47,6 +48,7 @@ vi.mock("../../commands/agentDefinitionCommands", () => ({
   updateAgentDefinition: (input: { name: string; content: string }) => mocked.updateAgentDefinition(input),
   removeAgentDefinition: (name: string) => mocked.removeAgentDefinition(name),
   restoreAgentDefinition: (name: string) => mocked.restoreAgentDefinition(name),
+  listAvailableAgentTools: () => mocked.listAvailableAgentTools(),
 }));
 
 const OFFICIAL = {
@@ -71,6 +73,7 @@ const USER_CONTENT = "---\nname: my-helper\ndescription: My custom helper\n---\n
 
 describe("AgentDefinitionDialogsEdit", () => {
   beforeEach(() => {
+    mocked.listAvailableAgentTools.mockResolvedValue([]);
     mocked.listAgentModels.mockResolvedValue({
       agentKind: "pi",
       models: AVAILABLE_MODELS,
@@ -83,6 +86,49 @@ describe("AgentDefinitionDialogsEdit", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it("loads runtime extension tools when the edit dialog mounts", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({ ...USER, content: USER_CONTENT });
+    mocked.listAvailableAgentTools.mockResolvedValue(["runtime_extension_tool"]);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+    const toolsInput = await screen.findByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    expect(screen.getByTestId("agent-detail-save").textContent).toBe("common.actions.save");
+    await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalled());
+    fireEvent.change(toolsInput, { target: { value: "runtime" } });
+
+    expect(await screen.findByText("runtime_extension_tool")).toBeTruthy();
+  });
+
+  it("refetches a changed catalog when the edit dialog remounts", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({ ...USER, content: USER_CONTENT });
+    mocked.listAvailableAgentTools
+      .mockResolvedValueOnce(["first_extension_tool"])
+      .mockResolvedValueOnce(["updated_extension_tool"]);
+
+    render(<AgentsSettingsView />);
+
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+    let toolsInput = await screen.findByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalledTimes(1));
+    fireEvent.change(toolsInput, { target: { value: "first" } });
+    expect(await screen.findByText("first_extension_tool")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("common.actions.cancel"));
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+    toolsInput = await screen.findByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalledTimes(2));
+    fireEvent.change(toolsInput, { target: { value: "updated" } });
+
+    expect(await screen.findByText("updated_extension_tool")).toBeTruthy();
+    expect(screen.queryByText("first_extension_tool")).toBeNull();
   });
 
   it("matches a provider-less frontmatter model to its real list entry", async () => {

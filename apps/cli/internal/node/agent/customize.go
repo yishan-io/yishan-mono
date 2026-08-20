@@ -18,6 +18,14 @@ import (
 // network fetch cannot occupy an RPC handler slot indefinitely.
 const managedCommandTimeout = 10 * time.Minute
 
+func (s *Service) ToolsList(ctx context.Context) (any, error) {
+	tools, err := setup.ListPiTools(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list pi tools: %w", err)
+	}
+	return map[string]any{"tools": tools}, nil
+}
+
 func (s *Service) ExtensionsList(ctx context.Context) (any, error) {
 	extensions, err := setup.ListPiExtensions()
 	if err != nil {

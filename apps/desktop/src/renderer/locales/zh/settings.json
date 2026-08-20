@@ -663,6 +663,7 @@
         "actions": {
           "add": "添加扩展",
           "update": "更新",
+          "updating": "更新中…",
           "remove": "移除"
         },
         "dialogs": {

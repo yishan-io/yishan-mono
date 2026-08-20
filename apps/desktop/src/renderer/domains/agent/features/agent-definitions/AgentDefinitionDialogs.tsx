@@ -219,7 +219,7 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
             void handleSave();
           }}
         >
-          {t("settings.customize.agents.actions.edit")}
+          {t("common.actions.save")}
         </Button>
       </DialogActions>
       {showOverwriteConfirm ? (

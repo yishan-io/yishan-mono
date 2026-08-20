@@ -137,6 +137,34 @@ describe("ExtensionsSettingsView", () => {
     await waitFor(() => expect(mocked.updateExtension).toHaveBeenCalledWith("npm:@yishan-io/pi-notify"));
   });
 
+  it("shows progress while an extension update is running", async () => {
+    mocked.listExtensions.mockResolvedValue([OFFICIAL]);
+    let completeUpdate: (() => void) | undefined;
+    mocked.updateExtension.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          completeUpdate = resolve;
+        }),
+    );
+
+    render(<ExtensionsSettingsView />);
+
+    await screen.findByText("@yishan-io/pi-notify");
+    const row = screen.getByTestId("extension-row-@yishan-io/pi-notify");
+    fireEvent.click(within(row).getByText("settings.customize.extensions.actions.update"));
+
+    await waitFor(() => expect(mocked.updateExtension).toHaveBeenCalledWith("npm:@yishan-io/pi-notify"));
+    expect(within(row).getByText("settings.customize.extensions.actions.updating")).toBeTruthy();
+    expect(within(row).getByRole("progressbar")).toBeTruthy();
+
+    if (!completeUpdate) {
+      throw new Error("expected update operation to be pending");
+    }
+    completeUpdate();
+
+    await waitFor(() => expect(within(row).getByText("settings.customize.extensions.actions.update")).toBeTruthy());
+  });
+
   it("shows the latest version and update only when a new version is available", async () => {
     mocked.listExtensions.mockResolvedValue([OFFICIAL, USER]);
 

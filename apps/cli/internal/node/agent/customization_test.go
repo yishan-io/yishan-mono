@@ -3,6 +3,9 @@ package agent
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	setup "yishan/apps/cli/internal/agent/setup"
@@ -66,6 +69,39 @@ func TestCustomizeExtensionsRemove_OfficialRejected(t *testing.T) {
 	handler := newSkillTestHandler(t)
 	_, err := handler.ExtensionsRemove(context.Background(), rpc.CustomizeExtensionSourceParams{Source: "npm:@yishan-io/pi-notify"})
 	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
+}
+
+func TestCustomizeToolsList_ReturnsToolsResponse(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell collector fixture is unix-only")
+	}
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	agentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
+	if err := os.MkdirAll(agentDir, 0o755); err != nil {
+		t.Fatalf("create managed agent directory: %v", err)
+	}
+	binDir := t.TempDir()
+	piPath := filepath.Join(binDir, "pi")
+	catalogOutput := "__YISHAN_TOOL_CATALOG__:[\"read\",\"grep\"]\\n"
+	if err := os.WriteFile(piPath, []byte("#!/bin/sh\nprintf '"+catalogOutput+"'\n"), 0o755); err != nil {
+		t.Fatalf("write fake pi: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	handler := newSkillTestHandler(t)
+	result, err := handler.callRPCForTest(context.Background(), rpc.MethodCustomizeToolsList, nil)
+	if err != nil {
+		t.Fatalf("CustomizeToolsList: %v", err)
+	}
+	payload, ok := result.(map[string]any)
+	if !ok || len(payload) != 1 {
+		t.Fatalf("response = %#v, want exactly {tools: []string}", result)
+	}
+	tools, ok := payload["tools"].([]string)
+	if !ok || len(tools) != 2 || tools[0] != "read" || tools[1] != "grep" {
+		t.Fatalf("response = %#v, want exactly {tools: []string{read, grep}}", result)
+	}
 }
 
 func TestCustomize_RoutesExtensionsMethods(t *testing.T) {

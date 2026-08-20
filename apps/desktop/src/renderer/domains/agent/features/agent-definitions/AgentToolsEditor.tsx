@@ -1,10 +1,13 @@
 import { Autocomplete, TextField } from "@mui/material";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listAvailableAgentTools } from "../../commands/agentDefinitionCommands";
 
 // Common pi / yishan tool names offered as suggestions in the tools editor.
 // Entry is free-form: extensions register tools beyond this list, so any
 // name the user types is accepted.
-const KNOWN_AGENT_TOOLS = [
+const LEGACY_AGENT_TOOL_SUGGESTIONS = [
   "Agent",
   "apply_patch",
   "ask_user",
@@ -37,6 +40,12 @@ const KNOWN_AGENT_TOOLS = [
   "write",
 ];
 
+const PI_BUILTIN_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"];
+
+function mergeToolNames(...toolLists: string[][]): string[] {
+  return Array.from(new Set(toolLists.flat()));
+}
+
 /** Compares two tool lists by value (order matters — it mirrors the frontmatter). */
 export function sameToolList(a: string[], b: string[]): boolean {
   if (a.length !== b.length) {
@@ -57,13 +66,37 @@ type AgentToolsEditorProps = {
  */
 export function AgentToolsEditor({ tools, onChange }: AgentToolsEditorProps) {
   const { t } = useTranslation();
+  const [options, setOptions] = useState(LEGACY_AGENT_TOOL_SUGGESTIONS);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadAvailableTools = async () => {
+      try {
+        const discoveredTools = await listAvailableAgentTools();
+        if (!isCancelled) {
+          setOptions(mergeToolNames(discoveredTools, PI_BUILTIN_TOOLS));
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error("Failed to load available agent tools", getErrorMessage(error));
+        }
+      }
+    };
+
+    // fire-and-forget: effect cannot await catalog loading
+    void loadAvailableTools();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
   const label = t("settings.customize.agents.dialogs.toolsLabel");
   return (
     <Autocomplete
       multiple
       freeSolo
       size="small"
-      options={KNOWN_AGENT_TOOLS}
+      options={options}
       value={tools}
       onChange={(_event, value) => {
         const next = value

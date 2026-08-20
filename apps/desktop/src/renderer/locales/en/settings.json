@@ -696,6 +696,7 @@
         "actions": {
           "add": "Add extension",
           "update": "Update",
+          "updating": "Updating…",
           "remove": "Remove"
         },
         "dialogs": {

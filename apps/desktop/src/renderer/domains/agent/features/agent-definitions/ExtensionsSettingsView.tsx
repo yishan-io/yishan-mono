@@ -2,7 +2,7 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -32,6 +32,13 @@ import {
 import type { PiExtensionInfo } from "../../daemon/daemonAgentTypes";
 
 const LOCAL_FILE_SOURCE = "local file";
+
+type ExtensionOperation = "remove" | "update";
+
+type OperatingExtension = {
+  source: string;
+  operation: ExtensionOperation;
+};
 
 const EXTENSION_TABLE_SX = {
   "& th": {
@@ -129,7 +136,7 @@ export function ExtensionsSettingsView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [extensions, setExtensions] = useState<PiExtensionInfo[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [operatingSource, setOperatingSource] = useState<string | null>(null);
+  const [operatingExtension, setOperatingExtension] = useState<OperatingExtension | null>(null);
   const [removeCandidate, setRemoveCandidate] = useState<PiExtensionInfo | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
@@ -159,15 +166,20 @@ export function ExtensionsSettingsView() {
   }, [loadExtensions]);
 
   const runOperation = useCallback(
-    async (source: string, operation: () => Promise<void>, successKey: string) => {
-      setOperatingSource(source);
+    async (
+      source: string,
+      operation: ExtensionOperation,
+      executeOperation: () => Promise<void>,
+      successKey: string,
+    ) => {
+      setOperatingExtension({ source, operation });
       try {
-        await operation();
+        await executeOperation();
         setSnackbar(t(successKey));
       } catch (error) {
         setSnackbar(getErrorMessage(error));
       } finally {
-        setOperatingSource(null);
+        setOperatingExtension(null);
       }
       void loadExtensions();
     },
@@ -216,7 +228,9 @@ export function ExtensionsSettingsView() {
                 ) : (
                   extensions.map((extension) => {
                     const isLocalFile = extension.source === LOCAL_FILE_SOURCE;
-                    const isOperating = operatingSource === extension.source;
+                    const isOperating = operatingExtension?.source === extension.source;
+                    const isUpdating =
+                      operatingExtension?.source === extension.source && operatingExtension.operation === "update";
                     return (
                       <TableRow key={extension.source} data-testid={`extension-row-${extension.name}`}>
                         <TableCell>
@@ -273,12 +287,18 @@ export function ExtensionsSettingsView() {
                                   onClick={() =>
                                     void runOperation(
                                       extension.source,
+                                      "update",
                                       () => updateExtension(extension.source),
                                       "settings.customize.extensions.messages.updated",
                                     )
                                   }
+                                  startIcon={isUpdating ? <CircularProgress size={14} color="inherit" /> : undefined}
                                 >
-                                  {t("settings.customize.extensions.actions.update")}
+                                  {t(
+                                    isUpdating
+                                      ? "settings.customize.extensions.actions.updating"
+                                      : "settings.customize.extensions.actions.update",
+                                  )}
                                 </Button>
                               ) : null}
                               {!extension.official ? (
@@ -350,6 +370,7 @@ export function ExtensionsSettingsView() {
                 setRemoveCandidate(null);
                 void runOperation(
                   candidate.source,
+                  "remove",
                   () => removeExtension(candidate.source),
                   "settings.customize.extensions.messages.removed",
                 );
