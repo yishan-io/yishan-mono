@@ -431,6 +431,7 @@ describe("useOpenTabAutoRefresh", () => {
       expect(commands.readDiff).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/changed.ts" });
       expect(commands.refreshDiffTabContent).toHaveBeenCalledWith({
         tabId: "diff-1",
+        path: "src/changed.ts",
         oldContent: "old:src/changed.ts",
         newContent: "new:src/changed.ts",
       });

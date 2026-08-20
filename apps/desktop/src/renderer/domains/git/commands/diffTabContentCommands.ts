@@ -20,8 +20,17 @@ export function seedDiffTabContent(input: {
 }
 
 /** Syncs one open diff tab content after external changes. */
-export function refreshDiffTabContent(input: { tabId: string; oldContent: string; newContent: string }): void {
-  diffTabContentStore.getState().update(input.tabId, { oldContent: input.oldContent, newContent: input.newContent });
+export function refreshDiffTabContent(input: {
+  tabId: string;
+  path?: string;
+  oldContent: string;
+  newContent: string;
+}): void {
+  diffTabContentStore.getState().update(input.tabId, {
+    path: input.path,
+    oldContent: input.oldContent,
+    newContent: input.newContent,
+  });
 }
 
 /** Removes diff tab content when the owning Workbench tab closes. */

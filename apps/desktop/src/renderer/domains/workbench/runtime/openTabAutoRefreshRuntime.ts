@@ -167,6 +167,7 @@ export function createOpenTabAutoRefreshRuntime() {
 
             commands.refreshDiffTabContent({
               tabId: tab.id,
+              path: tab.path,
               oldContent: response.oldContent,
               newContent: response.newContent,
             });
@@ -275,6 +276,7 @@ export function createOpenTabAutoRefreshRuntime() {
                     });
             commands.refreshDiffTabContent({
               tabId: tab.id,
+              path: tab.path,
               oldContent: response.oldContent,
               newContent: response.newContent,
             });
