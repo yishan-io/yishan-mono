@@ -1,20 +1,12 @@
-import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
+import { ListItemIcon, Menu, MenuItem } from "@mui/material";
 import type { GitPullRequest, GitPullRequestSummary } from "@renderer/domains/git";
-import { ProjectConfigDialogView, ProjectDeleteDialogView } from "@renderer/domains/project";
-import { CreateWorkspaceDialogView, RenameWorkspaceDialogView } from "@renderer/domains/workspace";
-import { WorkspaceDeleteDialogView } from "@renderer/domains/workspace";
-import { WorkspaceInfoPopperView } from "@renderer/domains/workspace";
-import type { PendingWorkspaceDeletion } from "@renderer/domains/workspace";
-import type { WorkspaceItem } from "@renderer/domains/workspace";
+import type { PendingWorkspaceDeletion, WorkspaceItem } from "@renderer/domains/workspace";
 import type { TFunction } from "i18next";
 import type { Dispatch, SetStateAction } from "react";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
-import {
-  type ExternalAppId,
-  type ExternalAppMenuEntry,
-  findExternalAppPreset,
-} from "../../../../shared/contracts/externalApps";
-import { ContextMenu, type ContextMenuEntry } from "../../../ui/components/ContextMenu";
+import type { ExternalAppId, ExternalAppMenuEntry } from "../../../../shared/contracts/externalApps";
+import { ProjectListContextMenus } from "./ProjectListContextMenus";
+import { ProjectListDialogOverlays } from "./ProjectListDialogOverlays";
 
 type PendingProjectDeletion = {
   projectName: string;
@@ -94,362 +86,102 @@ type ProjectListMenusProps = {
   handleWorkspaceInfoPopoverMouseLeave: () => void;
 };
 
-export function ProjectListMenus({
-  t,
-  projectContextMenu,
-  workspaceContextMenu,
-  workspaces,
-  displayWorkspaceIdByProjectId,
-  canOpenWorkspaceInExternalApp,
-  externalAppMenuEntries,
-  lastUsedWorkspaceExternalAppPreset,
-  openWorkspaceInLastUsedExternalAppActionLabel,
-  openWorkspaceInFileManagerActionLabel,
-  closeAllContextMenus,
-  closeWorkspaceMenus,
-  closeProjectContextMenu,
-  handleOpenProjectConfig,
-  handleRequestProjectDeletion,
-  handleRequestWorkspaceDeletion,
-  handleDeleteLocalFolder,
-  handleOpenWorkspaceInExternalApp,
-  handleOpenWorkspaceInFileManager,
-  setRenameWorkspaceContext,
-  projectActionsAnchorEl,
-  setProjectActionsAnchorEl,
-  projectActionsProjectId,
-  setProjectActionsProjectId,
-  projectContextMenuAnchorPosition,
-  workspaceContextMenuAnchorPosition,
-  isCreateWorkspaceOpen,
-  createWorkspaceProjectId,
-  setIsCreateWorkspaceOpen,
-  setCreateWorkspaceProjectId,
-  renameWorkspaceContext,
-  isProjectConfigOpen,
-  projectConfigProjectId,
-  setIsProjectConfigOpen,
-  setProjectConfigProjectId,
-  pendingWorkspaceDeletion,
-  isDeletingWorkspace,
-  handleCancelWorkspaceDeletion,
-  handleConfirmWorkspaceDeletion,
-  setPendingWorkspaceDeletion,
-  pendingProjectDeletion,
-  isDeletingProject,
-  handleCancelProjectDeletion,
-  handleConfirmProjectDeletion,
-  isWorkspaceInfoOpen,
-  workspaceInfoAnchorEl,
-  hoveredWorkspace,
-  isHoveredWorkspacePrimary,
-  hoveredWorkspaceCurrentBranch,
-  hoveredWorkspacePullRequest,
-  hoveredWorkspaceLatestPullRequest,
-  handleWorkspaceInfoPopoverMouseEnter,
-  handleWorkspaceInfoPopoverMouseLeave,
-}: ProjectListMenusProps) {
-  const projectContextMenuItems: ContextMenuEntry[] = [
-    {
-      id: "repo-config",
-      label: t("project.actions.config"),
-      icon: <LuSettings size={14} />,
-      onSelect: () => {
-        if (!projectContextMenu) {
-          return;
-        }
-
-        handleOpenProjectConfig(projectContextMenu.repoId);
-      },
-    },
-    {
-      id: "repo-delete",
-      label: t("project.actions.delete"),
-      icon: <LuTrash2 size={14} />,
-      onSelect: () => {
-        if (!projectContextMenu) {
-          return;
-        }
-
-        handleRequestProjectDeletion(projectContextMenu.repoId);
-      },
-    },
-  ];
-
-  const workspaceExternalAppItems: ContextMenuEntry[] = externalAppMenuEntries.reduce<ContextMenuEntry[]>(
-    (items, entry) => {
-      if (entry.kind === "app") {
-        const appPreset = findExternalAppPreset(entry.appId);
-        if (!appPreset) {
-          return items;
-        }
-
-        items.push({
-          id: appPreset.id,
-          label: appPreset.label,
-          icon: <Box component="img" src={appPreset.iconSrc} alt="" sx={{ width: 16, height: 16 }} />,
-          onSelect: () => {
-            void handleOpenWorkspaceInExternalApp(appPreset.id);
-          },
-        });
-        return items;
-      }
-
-      const jetBrainsItems: ContextMenuEntry[] = entry.appIds.reduce<ContextMenuEntry[]>((childItems, appId) => {
-        const appPreset = findExternalAppPreset(appId);
-        if (!appPreset) {
-          return childItems;
-        }
-
-        childItems.push({
-          id: appPreset.id,
-          label: appPreset.label,
-          icon: <Box component="img" src={appPreset.iconSrc} alt="" sx={{ width: 16, height: 16 }} />,
-          onSelect: () => {
-            void handleOpenWorkspaceInExternalApp(appPreset.id);
-          },
-        });
-        return childItems;
-      }, []);
-
-      items.push({
-        id: `group-${entry.id}`,
-        label: entry.label,
-        icon: <Box component="img" src={entry.iconSrc} alt="" sx={{ width: 16, height: 16 }} />,
-        items: jetBrainsItems,
-      });
-      return items;
-    },
-    [],
-  );
-
-  const workspaceContextTarget =
-    workspaceContextMenu &&
-    workspaces.find(
-      (workspace) =>
-        workspace.id === workspaceContextMenu.workspaceId &&
-        // Folder rows carry projectId = "local-folder" (repoId = folder id),
-        // while git workspace rows carry repoId = project id. Accept either
-        // identity field so folder rows resolve to a context target.
-        (workspace.repoId === workspaceContextMenu.repoId || workspace.projectId === workspaceContextMenu.repoId),
-    );
-  const isWorkspaceContextTargetLocal = Boolean(
-    workspaceContextTarget &&
-      (workspaceContextTarget.kind === "local" ||
-        displayWorkspaceIdByProjectId[workspaceContextTarget.repoId] === workspaceContextTarget.id),
-  );
-  const isWorkspaceContextTargetFolder = Boolean(workspaceContextTarget?.kind === "folder");
-
-  const hasWorkspaceExternalAppItems = workspaceExternalAppItems.length > 0;
-
-  const workspaceContextMenuItems: ContextMenuEntry[] = [
-    {
-      id: "workspace-open-in-file-manager",
-      label: openWorkspaceInFileManagerActionLabel,
-      onSelect: () => {
-        void handleOpenWorkspaceInFileManager();
-      },
-    },
-    ...(!isWorkspaceContextTargetFolder &&
-    canOpenWorkspaceInExternalApp &&
-    hasWorkspaceExternalAppItems &&
-    lastUsedWorkspaceExternalAppPreset
-      ? [
-          {
-            id: "workspace-open-last-used-external-app",
-            label: openWorkspaceInLastUsedExternalAppActionLabel,
-            endAdornment: (
-              <Box
-                component="img"
-                src={lastUsedWorkspaceExternalAppPreset.iconSrc}
-                alt=""
-                sx={{ width: 16, height: 16, ml: 1 }}
-              />
-            ),
-            onSelect: () => {
-              void handleOpenWorkspaceInExternalApp(lastUsedWorkspaceExternalAppPreset.id);
-            },
-          },
-        ]
-      : []),
-    ...(!isWorkspaceContextTargetFolder && canOpenWorkspaceInExternalApp && hasWorkspaceExternalAppItems
-      ? [
-          {
-            id: "workspace-open-external-app-submenu",
-            label: t("workspace.actions.openInExternalApp"),
-            items: workspaceExternalAppItems,
-          },
-        ]
-      : []),
-    ...(workspaceContextMenu && !isWorkspaceContextTargetLocal && !isWorkspaceContextTargetFolder
-      ? [
-          {
-            id: "workspace-rename",
-            label: t("workspace.actions.rename"),
-            onSelect: () => {
-              if (!workspaceContextMenu) {
-                return;
-              }
-
-              const workspace = workspaces.find((item) => item.id === workspaceContextMenu.workspaceId);
-              const isWorkspaceDisplayedAsLocal =
-                workspace?.kind === "local" ||
-                (workspace ? displayWorkspaceIdByProjectId[workspace.repoId] === workspace.id : false);
-              if (!workspace || isWorkspaceDisplayedAsLocal) {
-                return;
-              }
-
-              closeWorkspaceMenus();
-              setRenameWorkspaceContext({
-                projectId: workspace.repoId,
-                workspaceId: workspace.id,
-              });
-            },
-          },
-          {
-            id: "workspace-delete",
-            label: t("workspace.actions.delete"),
-            onSelect: () => {
-              if (!workspaceContextMenu) {
-                return;
-              }
-
-              handleRequestWorkspaceDeletion(workspaceContextMenu.repoId, workspaceContextMenu.workspaceId);
-            },
-          },
-        ]
-      : []),
-    ...(workspaceContextMenu && isWorkspaceContextTargetFolder
-      ? [
-          {
-            id: "workspace-folder-delete",
-            label: t("workspace.actions.deleteFolder"),
-            onSelect: () => {
-              if (!workspaceContextMenu) {
-                return;
-              }
-
-              handleDeleteLocalFolder(workspaceContextMenu.workspaceId);
-            },
-          },
-        ]
-      : []),
-  ];
+export function ProjectListMenus(props: ProjectListMenusProps) {
+  const closeProjectActionsMenu = () => {
+    props.setProjectActionsAnchorEl(null);
+    props.setProjectActionsProjectId("");
+  };
 
   return (
     <>
       <Menu
-        open={Boolean(projectActionsAnchorEl && projectActionsProjectId)}
-        anchorEl={projectActionsAnchorEl}
-        onClose={() => {
-          setProjectActionsAnchorEl(null);
-          setProjectActionsProjectId("");
-        }}
+        open={Boolean(props.projectActionsAnchorEl && props.projectActionsProjectId)}
+        anchorEl={props.projectActionsAnchorEl}
+        onClose={closeProjectActionsMenu}
       >
         <MenuItem
           onClick={() => {
-            if (!projectActionsProjectId) {
+            if (!props.projectActionsProjectId) {
               return;
             }
 
-            handleOpenProjectConfig(projectActionsProjectId);
-            setProjectActionsAnchorEl(null);
-            setProjectActionsProjectId("");
+            props.handleOpenProjectConfig(props.projectActionsProjectId);
+            closeProjectActionsMenu();
           }}
         >
           <ListItemIcon>
             <LuSettings size={14} />
           </ListItemIcon>
-          {t("project.actions.config")}
+          {props.t("project.actions.config")}
         </MenuItem>
         <MenuItem
           onClick={() => {
-            if (!projectActionsProjectId) {
+            if (!props.projectActionsProjectId) {
               return;
             }
 
-            handleRequestProjectDeletion(projectActionsProjectId);
-            setProjectActionsAnchorEl(null);
-            setProjectActionsProjectId("");
+            props.handleRequestProjectDeletion(props.projectActionsProjectId);
+            closeProjectActionsMenu();
           }}
         >
           <ListItemIcon>
             <LuTrash2 size={14} />
           </ListItemIcon>
-          {t("project.actions.delete")}
+          {props.t("project.actions.delete")}
         </MenuItem>
       </Menu>
-      <ContextMenu
-        open={Boolean(projectContextMenu)}
-        onClose={closeAllContextMenus}
-        anchorPosition={projectContextMenuAnchorPosition}
-        items={projectContextMenuItems}
+      <ProjectListContextMenus
+        t={props.t}
+        projectContextMenu={props.projectContextMenu}
+        workspaceContextMenu={props.workspaceContextMenu}
+        workspaces={props.workspaces}
+        displayWorkspaceIdByProjectId={props.displayWorkspaceIdByProjectId}
+        canOpenWorkspaceInExternalApp={props.canOpenWorkspaceInExternalApp}
+        externalAppMenuEntries={props.externalAppMenuEntries}
+        lastUsedWorkspaceExternalAppPreset={props.lastUsedWorkspaceExternalAppPreset}
+        openWorkspaceInLastUsedExternalAppActionLabel={props.openWorkspaceInLastUsedExternalAppActionLabel}
+        openWorkspaceInFileManagerActionLabel={props.openWorkspaceInFileManagerActionLabel}
+        closeAllContextMenus={props.closeAllContextMenus}
+        closeWorkspaceMenus={props.closeWorkspaceMenus}
+        handleOpenProjectConfig={props.handleOpenProjectConfig}
+        handleRequestProjectDeletion={props.handleRequestProjectDeletion}
+        handleRequestWorkspaceDeletion={props.handleRequestWorkspaceDeletion}
+        handleDeleteLocalFolder={props.handleDeleteLocalFolder}
+        handleOpenWorkspaceInExternalApp={props.handleOpenWorkspaceInExternalApp}
+        handleOpenWorkspaceInFileManager={props.handleOpenWorkspaceInFileManager}
+        setRenameWorkspaceContext={props.setRenameWorkspaceContext}
+        projectContextMenuAnchorPosition={props.projectContextMenuAnchorPosition}
+        workspaceContextMenuAnchorPosition={props.workspaceContextMenuAnchorPosition}
       />
-      <ContextMenu
-        open={Boolean(workspaceContextMenu)}
-        onClose={closeWorkspaceMenus}
-        anchorPosition={workspaceContextMenuAnchorPosition}
-        items={workspaceContextMenuItems}
-      />
-      <CreateWorkspaceDialogView
-        open={isCreateWorkspaceOpen}
-        projectId={createWorkspaceProjectId}
-        onClose={() => {
-          setIsCreateWorkspaceOpen(false);
-          setCreateWorkspaceProjectId("");
-        }}
-      />
-      <RenameWorkspaceDialogView
-        open={Boolean(renameWorkspaceContext)}
-        projectId={renameWorkspaceContext?.projectId ?? ""}
-        workspaceId={renameWorkspaceContext?.workspaceId ?? ""}
-        onClose={() => {
-          setRenameWorkspaceContext(null);
-        }}
-      />
-      <ProjectConfigDialogView
-        open={isProjectConfigOpen}
-        repoId={projectConfigProjectId}
-        onClose={() => {
-          setIsProjectConfigOpen(false);
-          setProjectConfigProjectId("");
-        }}
-      />
-      <WorkspaceDeleteDialogView
-        open={Boolean(pendingWorkspaceDeletion)}
-        workspaceName={pendingWorkspaceDeletion?.workspaceName ?? ""}
-        allowRemoveBranch={pendingWorkspaceDeletion?.allowRemoveBranch ?? true}
-        isDeleting={isDeletingWorkspace}
-        onCancel={handleCancelWorkspaceDeletion}
-        onConfirm={() => void handleConfirmWorkspaceDeletion()}
-        onAllowRemoveBranchChange={(nextValue) => {
-          if (!pendingWorkspaceDeletion) {
-            return;
-          }
-
-          setPendingWorkspaceDeletion({
-            ...pendingWorkspaceDeletion,
-            allowRemoveBranch: nextValue,
-          });
-        }}
-      />
-      <ProjectDeleteDialogView
-        open={Boolean(pendingProjectDeletion)}
-        repoName={pendingProjectDeletion?.projectName ?? ""}
-        isDeleting={isDeletingProject}
-        onCancel={handleCancelProjectDeletion}
-        onConfirm={() => void handleConfirmProjectDeletion()}
-      />
-      <WorkspaceInfoPopperView
-        open={isWorkspaceInfoOpen}
-        anchorEl={workspaceInfoAnchorEl}
-        workspace={hoveredWorkspace}
-        isPrimaryWorkspace={isHoveredWorkspacePrimary}
-        currentBranch={hoveredWorkspaceCurrentBranch}
-        pullRequest={hoveredWorkspacePullRequest}
-        latestPullRequest={hoveredWorkspaceLatestPullRequest}
-        onMouseEnter={handleWorkspaceInfoPopoverMouseEnter}
-        onMouseLeave={handleWorkspaceInfoPopoverMouseLeave}
+      <ProjectListDialogOverlays
+        isCreateWorkspaceOpen={props.isCreateWorkspaceOpen}
+        createWorkspaceProjectId={props.createWorkspaceProjectId}
+        setIsCreateWorkspaceOpen={props.setIsCreateWorkspaceOpen}
+        setCreateWorkspaceProjectId={props.setCreateWorkspaceProjectId}
+        renameWorkspaceContext={props.renameWorkspaceContext}
+        setRenameWorkspaceContext={props.setRenameWorkspaceContext}
+        isProjectConfigOpen={props.isProjectConfigOpen}
+        projectConfigProjectId={props.projectConfigProjectId}
+        setIsProjectConfigOpen={props.setIsProjectConfigOpen}
+        setProjectConfigProjectId={props.setProjectConfigProjectId}
+        pendingWorkspaceDeletion={props.pendingWorkspaceDeletion}
+        isDeletingWorkspace={props.isDeletingWorkspace}
+        handleCancelWorkspaceDeletion={props.handleCancelWorkspaceDeletion}
+        handleConfirmWorkspaceDeletion={props.handleConfirmWorkspaceDeletion}
+        setPendingWorkspaceDeletion={props.setPendingWorkspaceDeletion}
+        pendingProjectDeletion={props.pendingProjectDeletion}
+        isDeletingProject={props.isDeletingProject}
+        handleCancelProjectDeletion={props.handleCancelProjectDeletion}
+        handleConfirmProjectDeletion={props.handleConfirmProjectDeletion}
+        isWorkspaceInfoOpen={props.isWorkspaceInfoOpen}
+        workspaceInfoAnchorEl={props.workspaceInfoAnchorEl}
+        hoveredWorkspace={props.hoveredWorkspace}
+        isHoveredWorkspacePrimary={props.isHoveredWorkspacePrimary}
+        hoveredWorkspaceCurrentBranch={props.hoveredWorkspaceCurrentBranch}
+        hoveredWorkspacePullRequest={props.hoveredWorkspacePullRequest}
+        hoveredWorkspaceLatestPullRequest={props.hoveredWorkspaceLatestPullRequest}
+        handleWorkspaceInfoPopoverMouseEnter={props.handleWorkspaceInfoPopoverMouseEnter}
+        handleWorkspaceInfoPopoverMouseLeave={props.handleWorkspaceInfoPopoverMouseLeave}
       />
     </>
   );

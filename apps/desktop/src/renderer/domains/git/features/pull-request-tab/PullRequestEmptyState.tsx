@@ -25,7 +25,7 @@ export default function PullRequestEmptyState({
           alignItems: "center",
         }}
       >
-        <Typography variant="body2" sx={{ color: "#999", textAlign: "center" }}>
+        <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>
           {t("workspace.pr.empty")}
         </Typography>
         <Button

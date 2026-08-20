@@ -1,16 +1,8 @@
-import { Box, IconButton, Tooltip, useTheme } from "@mui/material";
-import { GitChangeTotals } from "@renderer/domains/git";
-import { resolveWorkspaceNotificationColor } from "@renderer/domains/notification";
-import { renderProjectIcon } from "@renderer/domains/project";
+import { Box, IconButton, Tooltip } from "@mui/material";
 import type { DragEvent, MouseEvent } from "react";
-import { CgSpinner } from "react-icons/cg";
-import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
-import { LuChevronRight, LuCloud, LuFolder, LuFolderOpen, LuLaptop, LuServer } from "react-icons/lu";
-import { LuEllipsis } from "react-icons/lu";
-import { LuPlus } from "react-icons/lu";
-import { LuArchive } from "react-icons/lu";
-import { LuTriangleAlert } from "react-icons/lu";
-import { CliSpinner } from "../../../../ui/components/CliSpinner";
+import { LuChevronRight, LuTriangleAlert } from "react-icons/lu";
+import { WorkspaceTreeRowActions } from "./WorkspaceTreeRowActions";
+import { WorkspaceTreeRowIcon } from "./WorkspaceTreeRowIcon";
 import type { WorkspaceTreeRow } from "./types";
 
 export const WORKSPACE_TREE_ROW_HEIGHT = 30;
@@ -43,6 +35,7 @@ type WorkspaceTreeRowViewProps = {
   onDragEnd?: (event: DragEvent<HTMLElement>) => void;
 };
 
+/** Render a single interactive row in the workspace tree. */
 export function WorkspaceTreeRowView({
   row,
   isExpanded,
@@ -64,11 +57,9 @@ export function WorkspaceTreeRowView({
   onDrop,
   onDragEnd,
 }: WorkspaceTreeRowViewProps) {
-  const theme = useTheme();
   const isFolderLike = row.kind !== "workspace";
   const workspaceId = row.kind === "workspace" ? row.id.replace(/^workspace:/, "") : "";
   const isBroken = row.lifecycleState === "error";
-  const workspaceIconColor = resolveWorkspaceNotificationColor(row.notificationTone ?? "none");
 
   return (
     <Box
@@ -163,106 +154,7 @@ export function WorkspaceTreeRowView({
       ) : (
         <Box sx={{ width: 20, height: 20, mr: 0.5 }} />
       )}
-      {row.kind === "project" ? (
-        row.isLocalFolderGroup ? (
-          <Box
-            component="span"
-            sx={{
-              width: 20,
-              height: 20,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "text.secondary",
-            }}
-          >
-            {isExpanded ? <LuFolderOpen size={16} /> : <LuFolder size={16} />}
-          </Box>
-        ) : (
-          <Box
-            component="span"
-            sx={{
-              width: 20,
-              height: 20,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: row.color ?? theme.palette.primary.main,
-              color: theme.palette.common.white,
-              fontSize: 12,
-              fontWeight: 700,
-              borderRadius: 0.5,
-            }}
-          >
-            {renderProjectIcon(row.icon ?? undefined, 12)}
-          </Box>
-        )
-      ) : row.kind === "node" ? (
-        <Box component="span" sx={{ width: 16, height: 16, display: "inline-flex", color: "text.secondary" }}>
-          {row.nodeKind === "managed" ? (
-            <LuLaptop size={16} />
-          ) : row.nodeScope === "shared" ? (
-            <LuCloud size={16} />
-          ) : (
-            <LuServer size={16} />
-          )}
-        </Box>
-      ) : row.kind === "workspace" ? (
-        <Box component="span" sx={{ width: 16, height: 16, display: "inline-flex", color: workspaceIconColor }}>
-          {row.isCreating ? (
-            <Box
-              component="span"
-              data-testid={`workspace-creating-spinner-${workspaceId}`}
-              sx={{
-                display: "inline-flex",
-                "@keyframes workspace-creating-spin": {
-                  from: { transform: "rotate(0deg)" },
-                  to: { transform: "rotate(360deg)" },
-                },
-                animation: "workspace-creating-spin 1s linear infinite",
-              }}
-            >
-              <CgSpinner size={16} />
-            </Box>
-          ) : row.isLocalFolder ? (
-            <LuFolder size={16} data-testid={`workspace-folder-icon-${workspaceId}`} />
-          ) : row.runtimeStatus === "running" ? (
-            <Box component="span" data-testid={`workspace-status-running-spinner-${workspaceId}`}>
-              <CliSpinner fontSize={20} />
-            </Box>
-          ) : row.workspaceKind === "local" ? (
-            <HiOutlineCube
-              size={16}
-              data-testid={
-                row.notificationTone === "waiting_input"
-                  ? `workspace-status-waiting-input-badge-${workspaceId}`
-                  : row.notificationTone === "done"
-                    ? `workspace-status-done-badge-${workspaceId}`
-                    : row.notificationTone === "failed"
-                      ? `workspace-status-failed-badge-${workspaceId}`
-                      : `workspace-kind-local-${workspaceId}`
-              }
-            />
-          ) : (
-            <HiCubeTransparent
-              size={16}
-              data-testid={
-                row.notificationTone === "waiting_input"
-                  ? `workspace-status-waiting-input-badge-${workspaceId}`
-                  : row.notificationTone === "done"
-                    ? `workspace-status-done-badge-${workspaceId}`
-                    : row.notificationTone === "failed"
-                      ? `workspace-status-failed-badge-${workspaceId}`
-                      : `workspace-icon-${workspaceId}`
-              }
-            />
-          )}
-        </Box>
-      ) : (
-        <Box sx={{ width: 16, height: 16, color: row.kind === "workspace" ? "text.secondary" : "primary.main" }}>
-          {isFolderLike && isExpanded ? <LuFolderOpen size={16} /> : <LuFolder size={16} />}
-        </Box>
-      )}
+      <WorkspaceTreeRowIcon row={row} isExpanded={isExpanded} workspaceId={workspaceId} />
       <Box
         component="span"
         data-testid={row.kind === "workspace" ? `workspace-name-${workspaceId}` : undefined}
@@ -290,82 +182,15 @@ export function WorkspaceTreeRowView({
           </Box>
         </Tooltip>
       ) : null}
-      {row.kind === "workspace" ? (
-        <Box sx={{ ml: "auto", minWidth: 84, position: "relative", display: "flex", justifyContent: "flex-end" }}>
-          {(row.additions ?? 0) > 0 || (row.deletions ?? 0) > 0 ? (
-            <GitChangeTotals
-              className="workspace-change-totals"
-              testId={`workspace-change-totals-${workspaceId}`}
-              additions={row.additions ?? 0}
-              deletions={row.deletions ?? 0}
-              sx={{ justifyContent: "flex-end", width: "100%", flexShrink: 0 }}
-            />
-          ) : null}
-          {row.workspaceKind === "local" || row.isLocalFolder ? null : (
-            <Box
-              className="workspace-actions"
-              data-testid={`workspace-actions-${workspaceId}`}
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: "50%",
-                transform: "translateY(-50%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 0,
-              }}
-            >
-              <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"}>
-                <IconButton
-                  aria-label={deleteWorkspaceLabel ?? "Close workspace"}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onWorkspaceRequestDelete?.();
-                  }}
-                  sx={{ width: 24, height: 24 }}
-                >
-                  <LuArchive size={13} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          )}
-        </Box>
-      ) : null}
-      {row.kind === "project" ? (
-        <>
-          {row.supportsGitFeatures !== false ? (
-            <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"}>
-              <IconButton
-                className="project-actions"
-                aria-label="workspace.actions.add"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onProjectCreateWorkspaceClick?.(event);
-                }}
-                sx={{ ml: "auto" }}
-              >
-                <LuPlus size={14} />
-              </IconButton>
-            </Tooltip>
-          ) : null}
-          {row.isLocalFolderGroup ? null : (
-            <IconButton
-              className="project-actions"
-              aria-label="Project actions"
-              onClick={(event) => {
-                event.stopPropagation();
-                onProjectActionsClick?.(event);
-              }}
-              // With no add-workspace button (non-git projects) the auto margin
-              // moves here so the actions stay pinned to the row's right edge.
-              sx={row.supportsGitFeatures === false ? { ml: "auto" } : undefined}
-            >
-              <LuEllipsis size={14} />
-            </IconButton>
-          )}
-        </>
-      ) : null}
+      <WorkspaceTreeRowActions
+        row={row}
+        workspaceId={workspaceId}
+        deleteWorkspaceLabel={deleteWorkspaceLabel}
+        createWorkspaceTooltipLabel={createWorkspaceTooltipLabel}
+        onWorkspaceRequestDelete={onWorkspaceRequestDelete}
+        onProjectCreateWorkspaceClick={onProjectCreateWorkspaceClick}
+        onProjectActionsClick={onProjectActionsClick}
+      />
     </Box>
   );
 }

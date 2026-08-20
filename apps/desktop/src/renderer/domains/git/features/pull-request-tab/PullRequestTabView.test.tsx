@@ -21,12 +21,12 @@ vi.mock("@renderer/domains/git", async () => {
   };
 });
 
-import { refreshWorkspacePullRequest } from "@renderer/domains/git";
 import type { GitPullRequest } from "@renderer/domains/git";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { WorkspacePullRequestRecord } from "../../api/types";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
+import type { WorkspacePullRequestRecord } from "../../api/types";
+import { getCheckStatePresentation } from "./PullRequestChecksSection";
 import { PullRequestTabView } from "./PullRequestTabView";
 
 const mocked = vi.hoisted(() => ({
@@ -193,6 +193,20 @@ describe("PullRequestTabView", () => {
           description: "All good",
           url: "https://ci.example.com/run/42",
         },
+        {
+          name: "Unit tests",
+          workflow: "test",
+          state: "FAILURE",
+          description: "A test failed",
+          url: "https://ci.example.com/run/43",
+        },
+        {
+          name: "Lint",
+          workflow: "quality",
+          state: "IN_PROGRESS",
+          description: "Running",
+          url: "https://ci.example.com/run/44",
+        },
       ],
       deployments: [
         {
@@ -210,6 +224,11 @@ describe("PullRequestTabView", () => {
     expect(screen.getByText("#42 Add PR tab")).toBeTruthy();
     expect(screen.getByText("workspace.pr.approved")).toBeTruthy();
     expect(screen.getByText("build / CI")).toBeTruthy();
+    expect(screen.getByText("test / Unit tests")).toBeTruthy();
+    expect(screen.getByText("quality / Lint")).toBeTruthy();
+    expect(getCheckStatePresentation("SUCCESS")).toEqual({ icon: "success", color: "success.main" });
+    expect(getCheckStatePresentation("FAILURE")).toEqual({ icon: "failure", color: "error.main" });
+    expect(getCheckStatePresentation("IN_PROGRESS")).toEqual({ icon: "pending", color: "text.secondary" });
     expect(screen.getByText("production")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "workspace.pr.viewDetails" }));
