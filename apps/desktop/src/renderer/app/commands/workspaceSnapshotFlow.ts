@@ -1,5 +1,5 @@
-import type { ProjectRecord } from "@renderer/api/types";
 import { listOrganizations } from "@renderer/domains/organization";
+import type { ProjectRecord } from "@renderer/domains/project";
 import { listProjectsByOrg, projectStore } from "@renderer/domains/project";
 
 import { sessionStore } from "@renderer/domains/session";

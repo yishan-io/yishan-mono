@@ -25,6 +25,7 @@ export type {
   ProjectListModePreference,
   ProjectListPreference,
 } from "./daemon/projectDaemonClient";
+export type { ProjectRecord, ProjectWithWorkspacesRecord } from "./api/types";
 export { projectStore, type ProjectStoreState } from "./state/projectStore";
 
 // Stable UI entry points for cross-feature composition.

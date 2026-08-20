@@ -1,5 +1,5 @@
 import { requestJson } from "@renderer/api/restClient";
-import type { ProjectRecord, ProjectWithWorkspacesRecord } from "@renderer/api/types";
+import type { ProjectRecord, ProjectWithWorkspacesRecord } from "./types";
 
 /** Lists projects for one organization. */
 export async function listProjects(

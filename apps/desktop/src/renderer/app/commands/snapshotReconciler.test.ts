@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import type { ProjectRecord, WorkspaceRecord } from "@renderer/api/types";
+import type { ProjectRecord } from "@renderer/domains/project";
+import type { WorkspaceRecord } from "@renderer/domains/workspace";
 import type { WorkspaceItem, WorkspaceStatus } from "@renderer/domains/workspace";
 import { describe, expect, it } from "vitest";
 import { type SnapshotReconcilerInput, reconcileWorkspaceSnapshot } from "./snapshotReconciler";

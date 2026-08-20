@@ -1,4 +1,4 @@
-import type { WorkspacePullRequestRecord } from "@renderer/api/types";
+import type { WorkspacePullRequestRecord } from "./types";
 
 export type { WorkspacePullRequestRecord };
 import { requestJson } from "@renderer/api/restClient";

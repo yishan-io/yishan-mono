@@ -105,6 +105,7 @@ export {
 // Agent configuration + definition commands (desktop7 Phase 23 — moved from Settings).
 
 export { getVoiceTranscriptionUsage } from "./api/voiceTranscriptionApi";
+export type { VoiceTranscriptionResponse, VoiceTranscriptionUsageRecord } from "./api/types";
 export {
   checkAgentGlobalConfigExternalDirectoryPermission,
   ensureAgentGlobalConfigExternalDirectoryPermission,

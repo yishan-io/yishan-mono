@@ -3,7 +3,7 @@ import type {
   OrganizationInviteRecord,
   OrganizationMemberRecord,
   OrganizationRecord,
-} from "@renderer/api/types";
+} from "./types";
 
 export type { AddOrganizationMemberResponse, OrganizationInviteRecord, OrganizationMemberRecord, OrganizationRecord };
 import { requestJson } from "@renderer/api/restClient";

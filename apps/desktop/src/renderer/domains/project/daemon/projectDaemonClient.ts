@@ -1,11 +1,7 @@
+import type { WorkspaceRecord } from "@renderer/domains/workspace";
 import { request } from "@renderer/rpc";
 import { asRecord, readOptionalBoolean, readOptionalString } from "@shared/validation/primitiveReaders";
-import type {
-  ProjectCommandRecord,
-  ProjectRecord,
-  ProjectWithWorkspacesRecord,
-  WorkspaceRecord,
-} from "../../../api/types";
+import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord } from "../api/types";
 
 /** One hierarchy mode's left-pane order/fold state (order hints; missing ids are last). */
 export type ProjectListModePreference = {

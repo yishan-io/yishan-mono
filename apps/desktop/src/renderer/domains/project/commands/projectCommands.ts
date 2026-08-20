@@ -7,7 +7,7 @@ import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
-import type { ProjectWithWorkspacesRecord } from "../../../api/types";
+import type { ProjectWithWorkspacesRecord } from "../api/types";
 
 import { sessionStore } from "@renderer/domains/session";
 import {
