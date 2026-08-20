@@ -1,8 +1,8 @@
-export const DESKTOP_RPC_IPC_CHANNELS = {
+export const desktopHostEventChannels = {
   event: "desktop:rpc/event",
 } as const;
 
-export const HOST_IPC_CHANNELS = {
+export const desktopHostChannels = {
   getDesktopAppVersion: "desktop:host/get-desktop-app-version",
   openLocalFolderDialog: "desktop:host/open-local-folder-dialog",
   toggleMainWindowMaximized: "desktop:host/toggle-main-window-maximized",

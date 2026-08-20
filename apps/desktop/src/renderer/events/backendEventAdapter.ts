@@ -1,4 +1,4 @@
-import type { DesktopRpcEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
+import type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 import type { RpcFrontendMessageKey, RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
 import {
   isNotificationEventPayload,
@@ -138,7 +138,7 @@ export const BACKEND_EVENT_NAME_BY_SOURCE = {
 /**
  * Returns true when a raw RPC method string is one of the frontend message keys.
  */
-export function normalizeBackendEvent(envelope: DesktopRpcEventEnvelope): NormalizedBackendEvent | null {
+export function normalizeBackendEvent(envelope: DesktopEventEnvelope): NormalizedBackendEvent | null {
   if (!isRpcFrontendMessageKey(envelope.method)) {
     return null;
   }

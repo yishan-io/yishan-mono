@@ -1,6 +1,6 @@
 import { ipcMain, systemPreferences } from "electron";
 import { appendBrowserHistoryEntry, loadBrowserHistoryGroups } from "../browser/browserHistory";
-import { HOST_IPC_CHANNELS } from "../bridge/channels";
+import { desktopHostChannels } from "../bridge/channels";
 import { createDesktopNotificationHostAdapter } from "../notifications/service";
 
 /**
@@ -10,16 +10,16 @@ import { createDesktopNotificationHostAdapter } from "../notifications/service";
 export function registerNotificationAndBrowserIpcHandlers() {
   const notificationAdapter = createDesktopNotificationHostAdapter();
 
-  ipcMain.handle(HOST_IPC_CHANNELS.loadBrowserHistory, async () => {
+  ipcMain.handle(desktopHostChannels.loadBrowserHistory, async () => {
     return await loadBrowserHistoryGroups();
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.appendBrowserHistory, async (_event, input) => {
+  ipcMain.handle(desktopHostChannels.appendBrowserHistory, async (_event, input) => {
     await appendBrowserHistoryEntry(input?.entry);
     return { ok: true };
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.dispatchNotification, async (_event, input) => {
+  ipcMain.handle(desktopHostChannels.dispatchNotification, async (_event, input) => {
     const notificationResult = await notificationAdapter.driver.show({
       title: input.title,
       body: input.body,
@@ -32,7 +32,7 @@ export function registerNotificationAndBrowserIpcHandlers() {
     };
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.playNotificationSound, async (_event, input) => {
+  ipcMain.handle(desktopHostChannels.playNotificationSound, async (_event, input) => {
     try {
       await notificationAdapter.playSound({
         eventType: "run-finished",
@@ -52,7 +52,7 @@ export function registerNotificationAndBrowserIpcHandlers() {
     }
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.requestMicrophoneAccess, async () => {
+  ipcMain.handle(desktopHostChannels.requestMicrophoneAccess, async () => {
     if (process.platform !== "darwin") {
       return { granted: true };
     }

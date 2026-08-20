@@ -1,12 +1,12 @@
-import type { DesktopRpcEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
+import type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 import { type BackendEventName, type NormalizedBackendEvent, normalizeBackendEvent } from "./backendEventAdapter";
 import { subscribeDesktopRpcEvent } from "./desktopRpcEventBus";
 
 type NormalizedBackendEventListener = (event: NormalizedBackendEvent) => void;
 
 type BackendEventPipelineDependencies = {
-  subscribeRawEvent: (listener: (envelope: DesktopRpcEventEnvelope) => void) => () => void;
-  normalize: (envelope: DesktopRpcEventEnvelope) => NormalizedBackendEvent | null;
+  subscribeRawEvent: (listener: (envelope: DesktopEventEnvelope) => void) => () => void;
+  normalize: (envelope: DesktopEventEnvelope) => NormalizedBackendEvent | null;
 };
 
 type BackendEventPipeline = {
@@ -51,7 +51,7 @@ export function createBackendEventPipeline(
   let unsubscribeRawEvents: (() => void) | null = null;
 
   /** Handles one raw desktop RPC envelope and forwards normalized events. */
-  function handleRawEvent(envelope: DesktopRpcEventEnvelope) {
+  function handleRawEvent(envelope: DesktopEventEnvelope) {
     const normalizedEvent = dependencies.normalize(envelope);
     if (!normalizedEvent) {
       return;

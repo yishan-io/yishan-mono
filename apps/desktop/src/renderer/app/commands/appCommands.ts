@@ -14,8 +14,8 @@ import {
 import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { getDesktopBridge, getDesktopHostBridge } from "@renderer/platform/hostBridge";
-import type { DesktopUpdateEventPayload } from "../../../main/bridge/updates";
 import type { AuthStatusResult } from "../../../main/bridge/auth";
+import type { DesktopUpdateEventPayload } from "../../../main/bridge/updates";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
 import { rendererQueryClient } from "../../queryClient";

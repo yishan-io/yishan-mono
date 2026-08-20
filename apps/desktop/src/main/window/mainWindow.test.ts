@@ -39,7 +39,7 @@ class BrowserWindowMock {
   }
 }
 
-import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
+import { desktopHostEventChannels } from "../bridge/channels";
 // The electron mock above provides a constructable BrowserWindow; use the real
 // import only for the assertion on the constructor call.
 const BrowserWindow = windowMocks.constructorMock;
@@ -47,7 +47,9 @@ const BrowserWindow = windowMocks.constructorMock;
 describe("MainWindow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    windowMocks.constructorMock.mockImplementation(function BrowserWindowCtor() { return windowMocks.instance; });
+    windowMocks.constructorMock.mockImplementation(function BrowserWindowCtor() {
+      return windowMocks.instance;
+    });
   });
 
   it("creates one BrowserWindow with the workspace web preferences", () => {
@@ -96,7 +98,7 @@ describe("MainWindow", () => {
   });
 
   it("loads the bundled renderer when no dev URL is set", () => {
-    delete process.env.ELECTRON_RENDERER_URL;
+    vi.stubEnv("ELECTRON_RENDERER_URL", undefined);
     const owner = new MainWindow({ shouldAllowClose: () => false, onClosed: () => {} });
     owner.create();
     owner.loadRenderer();
@@ -134,7 +136,7 @@ describe("MainWindow", () => {
     };
     attachHandler?.(null, guestWebContents);
     expect(windowMocks.instance.webContents.send).toHaveBeenCalledWith(
-      DESKTOP_RPC_IPC_CHANNELS.event,
+      desktopHostEventChannels.event,
       expect.objectContaining({ method: "webviewOpenUrl", payload: { url: "https://example.com" } }),
     );
   });

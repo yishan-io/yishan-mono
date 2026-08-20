@@ -12,14 +12,14 @@ import { clipboard, ipcMain } from "electron";
 import { getErrorMessage } from "../../shared/errors/getErrorMessage";
 import { launchPath, listDetectedExternalAppIds, openExternalUrl } from "../integrations/externalAppLauncher";
 import { readExternalClipboardSourcePathsFromSystem } from "../integrations/externalClipboardPipeline";
-import { HOST_IPC_CHANNELS } from "../bridge/channels";
+import { desktopHostChannels } from "../bridge/channels";
 
 /**
  * Registers IPC handlers for file system operations: open in external app,
  * clipboard, file copy, and file write.
  */
 export function registerFileIpcHandlers() {
-  ipcMain.handle(HOST_IPC_CHANNELS.openEntryInExternalApp, async (_event, input) => {
+  ipcMain.handle(desktopHostChannels.openEntryInExternalApp, async (_event, input) => {
     const absolutePath = resolve(input.workspaceWorktreePath, input.relativePath ?? ".");
     if (input.appId === "system-file-manager") {
       let isDirectory = true;
@@ -45,19 +45,19 @@ export function registerFileIpcHandlers() {
     return { ok: true };
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.listDetectedExternalAppIds, async () => {
+  ipcMain.handle(desktopHostChannels.listDetectedExternalAppIds, async () => {
     return await listDetectedExternalAppIds();
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.openExternalUrl, async (_event, input) => {
+  ipcMain.handle(desktopHostChannels.openExternalUrl, async (_event, input) => {
     return await openExternalUrl(input.url);
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths, async () => {
+  ipcMain.handle(desktopHostChannels.readExternalClipboardSourcePaths, async () => {
     return await readExternalClipboardSourcePathsFromSystem();
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.resolveRealPath, async (_event, input: string) => {
+  ipcMain.handle(desktopHostChannels.resolveRealPath, async (_event, input: string) => {
     const path = String(input ?? "").trim();
     if (!path) {
       return { path: "" };
@@ -70,12 +70,12 @@ export function registerFileIpcHandlers() {
     }
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.writeClipboardText, (_event, text: string) => {
+  ipcMain.handle(desktopHostChannels.writeClipboardText, (_event, text: string) => {
     clipboard.writeText(String(text ?? ""));
     return { ok: true as const };
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.copyFiles, async (_event, input) => {
+  ipcMain.handle(desktopHostChannels.copyFiles, async (_event, input) => {
     try {
       const sourcePaths: string[] = Array.isArray(input?.sourcePaths) ? input.sourcePaths : [];
       const destinationDirectory = String(input?.destinationDirectory ?? "");
@@ -108,7 +108,7 @@ export function registerFileIpcHandlers() {
     }
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.writeFileBase64, async (_event, input) => {
+  ipcMain.handle(desktopHostChannels.writeFileBase64, async (_event, input) => {
     try {
       const absolutePath = String(input?.absolutePath ?? "");
       const contentBase64 = String(input?.contentBase64 ?? "");

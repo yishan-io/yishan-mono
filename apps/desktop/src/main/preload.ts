@@ -1,49 +1,49 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import { DESKTOP_RPC_IPC_CHANNELS, HOST_IPC_CHANNELS } from "./bridge/channels";
+import type { DesktopEventEnvelope } from "../shared/contracts/desktopEventEnvelope";
+import { desktopHostChannels, desktopHostEventChannels } from "./bridge/channels";
 import type { DesktopBridge } from "./bridge/desktopBridge";
-import type { DesktopRpcEventEnvelope } from "../shared/contracts/desktopEventEnvelope";
 
 /** Exposes immutable desktop bootstrap values for renderer transport initialization. */
 const bridge: DesktopBridge = {
   host: {
-    getDesktopAppVersion: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDesktopAppVersion),
-    openLocalFolderDialog: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.openLocalFolderDialog, input),
-    toggleMainWindowMaximized: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.toggleMainWindowMaximized),
-    getMainWindowFullscreenState: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getMainWindowFullscreenState),
-    openEntryInExternalApp: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.openEntryInExternalApp, input),
-    listDetectedExternalAppIds: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.listDetectedExternalAppIds),
-    openExternalUrl: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.openExternalUrl, input),
-    readExternalClipboardSourcePaths: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths),
-    resolveRealPath: (path: string) => ipcRenderer.invoke(HOST_IPC_CHANNELS.resolveRealPath, path),
-    copyFiles: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.copyFiles, input),
-    writeFileBase64: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.writeFileBase64, input),
-    loadBrowserHistory: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.loadBrowserHistory),
-    appendBrowserHistory: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.appendBrowserHistory, input),
-    dispatchNotification: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.dispatchNotification, input),
-    playNotificationSound: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.playNotificationSound, input),
-    requestMicrophoneAccess: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.requestMicrophoneAccess),
-    getPendingUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getPendingUpdate),
-    dismissUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.dismissUpdate),
-    checkForUpdates: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.checkForUpdates),
-    downloadUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.downloadUpdate),
-    installUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.installUpdate),
-    getAuthStatus: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getAuthStatus),
-    login: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.login),
-    getDaemonInfo: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDaemonInfo),
-    restartDaemon: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.restartDaemon),
-    readDaemonLog: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.readDaemonLog),
-    getDaemonQuitOnExit: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDaemonQuitOnExit),
-    setDaemonQuitOnExit: (value) => ipcRenderer.invoke(HOST_IPC_CHANNELS.setDaemonQuitOnExit, value),
-    writeClipboardText: (text: string) => ipcRenderer.invoke(HOST_IPC_CHANNELS.writeClipboardText, text),
+    getDesktopAppVersion: () => ipcRenderer.invoke(desktopHostChannels.getDesktopAppVersion),
+    openLocalFolderDialog: (input) => ipcRenderer.invoke(desktopHostChannels.openLocalFolderDialog, input),
+    toggleMainWindowMaximized: () => ipcRenderer.invoke(desktopHostChannels.toggleMainWindowMaximized),
+    getMainWindowFullscreenState: () => ipcRenderer.invoke(desktopHostChannels.getMainWindowFullscreenState),
+    openEntryInExternalApp: (input) => ipcRenderer.invoke(desktopHostChannels.openEntryInExternalApp, input),
+    listDetectedExternalAppIds: () => ipcRenderer.invoke(desktopHostChannels.listDetectedExternalAppIds),
+    openExternalUrl: (input) => ipcRenderer.invoke(desktopHostChannels.openExternalUrl, input),
+    readExternalClipboardSourcePaths: () => ipcRenderer.invoke(desktopHostChannels.readExternalClipboardSourcePaths),
+    resolveRealPath: (path: string) => ipcRenderer.invoke(desktopHostChannels.resolveRealPath, path),
+    copyFiles: (input) => ipcRenderer.invoke(desktopHostChannels.copyFiles, input),
+    writeFileBase64: (input) => ipcRenderer.invoke(desktopHostChannels.writeFileBase64, input),
+    loadBrowserHistory: () => ipcRenderer.invoke(desktopHostChannels.loadBrowserHistory),
+    appendBrowserHistory: (input) => ipcRenderer.invoke(desktopHostChannels.appendBrowserHistory, input),
+    dispatchNotification: (input) => ipcRenderer.invoke(desktopHostChannels.dispatchNotification, input),
+    playNotificationSound: (input) => ipcRenderer.invoke(desktopHostChannels.playNotificationSound, input),
+    requestMicrophoneAccess: () => ipcRenderer.invoke(desktopHostChannels.requestMicrophoneAccess),
+    getPendingUpdate: () => ipcRenderer.invoke(desktopHostChannels.getPendingUpdate),
+    dismissUpdate: () => ipcRenderer.invoke(desktopHostChannels.dismissUpdate),
+    checkForUpdates: () => ipcRenderer.invoke(desktopHostChannels.checkForUpdates),
+    downloadUpdate: () => ipcRenderer.invoke(desktopHostChannels.downloadUpdate),
+    installUpdate: () => ipcRenderer.invoke(desktopHostChannels.installUpdate),
+    getAuthStatus: () => ipcRenderer.invoke(desktopHostChannels.getAuthStatus),
+    login: () => ipcRenderer.invoke(desktopHostChannels.login),
+    getDaemonInfo: () => ipcRenderer.invoke(desktopHostChannels.getDaemonInfo),
+    restartDaemon: () => ipcRenderer.invoke(desktopHostChannels.restartDaemon),
+    readDaemonLog: () => ipcRenderer.invoke(desktopHostChannels.readDaemonLog),
+    getDaemonQuitOnExit: () => ipcRenderer.invoke(desktopHostChannels.getDaemonQuitOnExit),
+    setDaemonQuitOnExit: (value) => ipcRenderer.invoke(desktopHostChannels.setDaemonQuitOnExit, value),
+    writeClipboardText: (text: string) => ipcRenderer.invoke(desktopHostChannels.writeClipboardText, text),
   },
   events: {
-    subscribe: (listener: (envelope: DesktopRpcEventEnvelope) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, envelope: DesktopRpcEventEnvelope) => {
+    subscribe: (listener: (envelope: DesktopEventEnvelope) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, envelope: DesktopEventEnvelope) => {
         listener(envelope);
       };
-      ipcRenderer.on(DESKTOP_RPC_IPC_CHANNELS.event, handler);
+      ipcRenderer.on(desktopHostEventChannels.event, handler);
       return () => {
-        ipcRenderer.removeListener(DESKTOP_RPC_IPC_CHANNELS.event, handler);
+        ipcRenderer.removeListener(desktopHostEventChannels.event, handler);
       };
     },
   },

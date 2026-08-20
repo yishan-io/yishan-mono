@@ -40,13 +40,13 @@ describe("registerNotificationAndBrowserIpcHandlers", () => {
   });
 
   it("forwards silent notifications through the IPC handler", async () => {
-    const { HOST_IPC_CHANNELS } = await import("../bridge/channels");
+    const { desktopHostChannels } = await import("../bridge/channels");
     const { registerNotificationAndBrowserIpcHandlers } = await import("./notificationAndBrowserHandlers");
 
     registerNotificationAndBrowserIpcHandlers();
 
     const dispatchCall = mocks.ipcHandle.mock.calls.find(
-      ([channel]) => channel === HOST_IPC_CHANNELS.dispatchNotification,
+      ([channel]) => channel === desktopHostChannels.dispatchNotification,
     );
     expect(dispatchCall).toBeDefined();
     if (!dispatchCall) {

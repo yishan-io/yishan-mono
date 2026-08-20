@@ -31,7 +31,7 @@ vi.mock("./autoUpdateService", () => ({
   downloadUpdate: mocks.downloadUpdate,
 }));
 
-import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
+import { desktopHostEventChannels } from "../bridge/channels";
 
 function createRuntime() {
   return new UpdateRuntime(mocks.app as never, {
@@ -112,7 +112,10 @@ describe("UpdateRuntime", () => {
     const failed = await runtime.download();
     expect(failed.ok).toBe(false);
     expect(mocks.sendEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "desktopUpdate", payload: { status: "error", source: "download", message: "boom" } }),
+      expect.objectContaining({
+        method: "desktopUpdate",
+        payload: { status: "error", source: "download", message: "boom" },
+      }),
     );
   });
 

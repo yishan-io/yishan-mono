@@ -12,11 +12,16 @@ import type {
   WriteFileBase64Input,
   WriteFileBase64Result,
 } from "./files";
-import type { DispatchNotificationInput, NotificationDispatchResult, NotificationSoundPreviewResult, PlayNotificationSoundInput } from "./notifications";
+import type {
+  DispatchNotificationInput,
+  NotificationDispatchResult,
+  NotificationSoundPreviewResult,
+  PlayNotificationSoundInput,
+} from "./notifications";
 import type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "./daemon";
 import type { DesktopUpdateEventPayload } from "./updates";
 import type { MainWindowFullscreenState, OpenLocalFolderDialogInput } from "./window";
-import type { DesktopRpcEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
+import type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 
 export type DesktopHostBridge = {
   getDesktopAppVersion: () => Promise<string>;
@@ -51,7 +56,7 @@ export type DesktopHostBridge = {
 };
 
 export type DesktopRpcEventBridge = {
-  subscribe: (listener: (envelope: DesktopRpcEventEnvelope) => void) => () => void;
+  subscribe: (listener: (envelope: DesktopEventEnvelope) => void) => () => void;
 };
 
 export type DesktopBridge = {
@@ -61,8 +66,29 @@ export type DesktopBridge = {
 
 export type { AuthLoginResult, AuthStatusResult } from "./auth";
 export type { DesktopUpdateEventPayload } from "./updates";
-export type { AppendBrowserHistoryInput, BrowserHistoryEntry, BrowserHistoryGroup, LoadBrowserHistoryResult } from "./browser";
+export type {
+  AppendBrowserHistoryInput,
+  BrowserHistoryEntry,
+  BrowserHistoryGroup,
+  LoadBrowserHistoryResult,
+} from "./browser";
 export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "./daemon";
-export type { CopyFilesInput, CopyFilesResult, ExternalAppId, ExternalClipboardReadOutcome, OpenEntryInExternalAppInput, OpenExternalUrlInput, OpenExternalUrlResult, ResolveRealPathResult, WriteFileBase64Input, WriteFileBase64Result } from "./files";
-export type { DispatchNotificationInput, NotificationDispatchResult, NotificationSoundPreviewResult, PlayNotificationSoundInput } from "./notifications";
+export type {
+  CopyFilesInput,
+  CopyFilesResult,
+  ExternalAppId,
+  ExternalClipboardReadOutcome,
+  OpenEntryInExternalAppInput,
+  OpenExternalUrlInput,
+  OpenExternalUrlResult,
+  ResolveRealPathResult,
+  WriteFileBase64Input,
+  WriteFileBase64Result,
+} from "./files";
+export type {
+  DispatchNotificationInput,
+  NotificationDispatchResult,
+  NotificationSoundPreviewResult,
+  PlayNotificationSoundInput,
+} from "./notifications";
 export type { MainWindowFullscreenState, OpenLocalFolderDialogInput } from "./window";

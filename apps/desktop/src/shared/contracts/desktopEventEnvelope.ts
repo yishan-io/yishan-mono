@@ -1,4 +1,4 @@
-export type DesktopRpcEventEnvelope = {
+export type DesktopEventEnvelope = {
   method: string;
   payload?: unknown;
 };

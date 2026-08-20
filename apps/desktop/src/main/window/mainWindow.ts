@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { BrowserWindow, type WebContents } from "electron";
-import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
+import { desktopHostEventChannels } from "../bridge/channels";
 
 export type MainWindowOptions = {
   /** Returns true when the app is in a quit flow (macOS close should destroy). */
@@ -84,13 +84,11 @@ function isWorkspaceNavigationShortcut(input: Electron.Input): boolean {
   }
 
   const normalizedKey = input.key.trim().toLowerCase();
-  return (
-    input.control && input.meta && !input.alt && !input.shift && (normalizedKey === "j" || normalizedKey === "k")
-  );
+  return input.control && input.meta && !input.alt && !input.shift && (normalizedKey === "j" || normalizedKey === "k");
 }
 
 function sendWebviewKeydown(mainWebContents: WebContents, input: Electron.Input): void {
-  mainWebContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+  mainWebContents.send(desktopHostEventChannels.event, {
     method: "webviewKeydown",
     payload: {
       key: input.key,
@@ -192,7 +190,7 @@ export class MainWindow {
       });
 
       webviewContents.setWindowOpenHandler((details) => {
-        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+        mainWindow.webContents.send(desktopHostEventChannels.event, {
           method: "webviewOpenUrl",
           payload: { url: details.url },
         });

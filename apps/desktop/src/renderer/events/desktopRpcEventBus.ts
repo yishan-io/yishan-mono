@@ -1,6 +1,6 @@
+import type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 import { getDesktopBridge } from "../platform/hostBridge";
 import { subscribe } from "../rpc";
-import type { DesktopRpcEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 
 /**
  * Desktop RPC event bus (desktop8 Phase 31: event composition moved out of
@@ -12,11 +12,11 @@ import type { DesktopRpcEventEnvelope } from "../../shared/contracts/desktopEven
  * composition, and App Runtime owns daemon identity refresh.
  */
 
-const desktopRpcEventListeners = new Set<(envelope: DesktopRpcEventEnvelope) => void>();
+const desktopRpcEventListeners = new Set<(envelope: DesktopEventEnvelope) => void>();
 let backendEventsUnsubscribe: (() => void) | null = null;
 let desktopBridgeEventsUnsubscribe: (() => void) | null = null;
 
-function emitDesktopRpcEvent(envelope: DesktopRpcEventEnvelope): void {
+function emitDesktopRpcEvent(envelope: DesktopEventEnvelope): void {
   for (const listener of desktopRpcEventListeners) {
     listener(envelope);
   }
@@ -57,7 +57,7 @@ function ensureBackendEventsSubscription(): void {
  * Registers one raw desktop RPC listener and returns one unsubscribe callback.
  * The listener receives daemon backend events and main-process bridge events.
  */
-export function subscribeDesktopRpcEvent(listener: (envelope: DesktopRpcEventEnvelope) => void): () => void {
+export function subscribeDesktopRpcEvent(listener: (envelope: DesktopEventEnvelope) => void): () => void {
   desktopRpcEventListeners.add(listener);
   desktopBridgeEventsUnsubscribe ??= getDesktopBridge()?.events.subscribe(emitDesktopRpcEvent) ?? null;
   ensureBackendEventsSubscription();
@@ -74,6 +74,8 @@ export function subscribeDesktopRpcEvent(listener: (envelope: DesktopRpcEventEnv
 }
 
 /** Emits one desktop RPC envelope to registered listeners (App Runtime use). */
-export function emitDesktopRpcEventToBus(envelope: DesktopRpcEventEnvelope): void {
+export function emitDesktopRpcEventToBus(envelope: DesktopEventEnvelope): void {
   emitDesktopRpcEvent(envelope);
 }
+
+export type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";

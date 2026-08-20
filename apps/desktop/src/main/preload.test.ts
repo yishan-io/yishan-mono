@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { desktopHostChannels, desktopHostEventChannels } from "./bridge/channels";
 import type { DesktopBridge, DesktopHostBridge } from "./bridge/desktopBridge";
-import { DESKTOP_RPC_IPC_CHANNELS, HOST_IPC_CHANNELS } from "./bridge/channels";
 
 const mocks = vi.hoisted(() => ({
   exposeInMainWorld: vi.fn(),
@@ -48,9 +48,14 @@ const hostCallArguments = {
   writeClipboardText: ["text"],
 } satisfies Record<keyof DesktopHostBridge, unknown[]>;
 
-async function loadPreloadBridge(): Promise<{ bridge: DesktopBridge; desktop: { getPathForFile: (file: File) => string } }> {
+async function loadPreloadBridge(): Promise<{
+  bridge: DesktopBridge;
+  desktop: { getPathForFile: (file: File) => string };
+}> {
   await import("./preload");
-  const bridge = mocks.exposeInMainWorld.mock.calls.find(([name]) => name === "__YISHAN__")?.[1] as DesktopBridge | undefined;
+  const bridge = mocks.exposeInMainWorld.mock.calls.find(([name]) => name === "__YISHAN__")?.[1] as
+    | DesktopBridge
+    | undefined;
   const desktop = mocks.exposeInMainWorld.mock.calls.find(([name]) => name === "desktop")?.[1] as
     | { getPathForFile: (file: File) => string }
     | undefined;
@@ -68,7 +73,10 @@ describe("preload bridge", () => {
   it("exposes desktop helpers and an immutable bridge", async () => {
     const { bridge, desktop } = await loadPreloadBridge();
 
-    expect(mocks.exposeInMainWorld).toHaveBeenCalledWith("desktop", expect.objectContaining({ platform: process.platform }));
+    expect(mocks.exposeInMainWorld).toHaveBeenCalledWith(
+      "desktop",
+      expect.objectContaining({ platform: process.platform }),
+    );
     expect(Object.isFrozen(bridge)).toBe(true);
     desktop.getPathForFile("file" as unknown as File);
     expect(mocks.getPathForFile).toHaveBeenCalledWith("file");
@@ -80,7 +88,7 @@ describe("preload bridge", () => {
 
     hostMethod(...args);
 
-    expect(mocks.invoke).toHaveBeenCalledWith(HOST_IPC_CHANNELS[method as keyof typeof HOST_IPC_CHANNELS], ...args);
+    expect(mocks.invoke).toHaveBeenCalledWith(desktopHostChannels[method as keyof typeof desktopHostChannels], ...args);
   });
 
   it("subscribes and removes the same event listener", async () => {
@@ -90,11 +98,11 @@ describe("preload bridge", () => {
     const registeredHandler = mocks.on.mock.calls[0]?.[1];
 
     expect(registeredHandler).toBeDefined();
-    expect(mocks.on).toHaveBeenCalledWith(DESKTOP_RPC_IPC_CHANNELS.event, registeredHandler);
+    expect(mocks.on).toHaveBeenCalledWith(desktopHostEventChannels.event, registeredHandler);
     (registeredHandler as (event: unknown, envelope: unknown) => void)({}, { method: "desktopUpdate" });
     expect(listener).toHaveBeenCalledWith({ method: "desktopUpdate" });
 
     unsubscribe();
-    expect(mocks.removeListener).toHaveBeenCalledWith(DESKTOP_RPC_IPC_CHANNELS.event, registeredHandler);
+    expect(mocks.removeListener).toHaveBeenCalledWith(desktopHostEventChannels.event, registeredHandler);
   });
 });

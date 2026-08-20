@@ -17,7 +17,7 @@ import { flushBrowserHistoryPruneCheck } from "./browser/browserHistory";
 import { resolveDaemonLogFilePath } from "./daemon/daemonHealthCheck";
 import { DaemonManager } from "./daemon/daemonManager";
 import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSettings";
-import { DESKTOP_RPC_IPC_CHANNELS, HOST_IPC_CHANNELS } from "./bridge/channels";
+import { desktopHostEventChannels, desktopHostChannels } from "./bridge/channels";
 import type { DesktopUpdateEventPayload } from "./bridge/updates";
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
@@ -36,7 +36,7 @@ export class DesktopApplication {
     onClosed: () => {},
   });
   private readonly updateRuntime = new UpdateRuntime(app, {
-    sendEvent: (payload) => this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, payload),
+    sendEvent: (payload) => this.mainWindow.browserWindow?.webContents.send(desktopHostEventChannels.event, payload),
     focusApp: () => this.focusMainWindow(),
   });
   private readonly daemonManager = new DaemonManager();
@@ -187,15 +187,15 @@ export class DesktopApplication {
 
   /** Registers desktop auth IPC endpoints backed by the bundled CLI login/status commands. */
   private registerAuthIpcHandlers() {
-    ipcMain.handle(HOST_IPC_CHANNELS.getDesktopAppVersion, async () => {
+    ipcMain.handle(desktopHostChannels.getDesktopAppVersion, async () => {
       return app.getVersion();
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.getAuthStatus, async () => {
+    ipcMain.handle(desktopHostChannels.getAuthStatus, async () => {
       return await getAuthStatus();
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.login, async () => {
+    ipcMain.handle(desktopHostChannels.login, async () => {
       const result = await login();
       // A successful, non-skipped login switched the active account. Restart
       // the daemon so it re-resolves the account data dir — a running daemon
@@ -211,11 +211,11 @@ export class DesktopApplication {
       return result;
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.getDaemonInfo, async () => {
+    ipcMain.handle(desktopHostChannels.getDaemonInfo, async () => {
       return await this.daemonManager.getInfo();
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.restartDaemon, async () => {
+    ipcMain.handle(desktopHostChannels.restartDaemon, async () => {
       try {
         await this.restartDaemonForAccountSwitch();
         const info = await this.daemonManager.getInfo();
@@ -226,7 +226,7 @@ export class DesktopApplication {
       }
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.readDaemonLog, async () => {
+    ipcMain.handle(desktopHostChannels.readDaemonLog, async () => {
       try {
         const logFilePath = resolveDaemonLogFilePath();
         const content = await readFile(logFilePath, "utf8");
@@ -245,7 +245,7 @@ export class DesktopApplication {
       }
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.getDaemonQuitOnExit, async () => {
+    ipcMain.handle(desktopHostChannels.getDaemonQuitOnExit, async () => {
       try {
         if (this.cachedDaemonQuitOnExit === null) {
           this.cachedDaemonQuitOnExit = await getDaemonQuitOnExit();
@@ -257,7 +257,7 @@ export class DesktopApplication {
       }
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.setDaemonQuitOnExit, async (_event, value: boolean) => {
+    ipcMain.handle(desktopHostChannels.setDaemonQuitOnExit, async (_event, value: boolean) => {
       await setDaemonQuitOnExit(value);
       this.cachedDaemonQuitOnExit = value;
       return { ok: true as const };
@@ -269,7 +269,7 @@ export class DesktopApplication {
     registerFileIpcHandlers();
     registerNotificationAndBrowserIpcHandlers();
 
-    ipcMain.handle(HOST_IPC_CHANNELS.openLocalFolderDialog, async (_event, input) => {
+    ipcMain.handle(desktopHostChannels.openLocalFolderDialog, async (_event, input) => {
       const options: Electron.OpenDialogOptions = {
         properties: ["openDirectory", "createDirectory"],
         defaultPath: input?.startingFolder?.trim() || undefined,
@@ -284,36 +284,36 @@ export class DesktopApplication {
       return result.filePaths[0] ?? null;
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.toggleMainWindowMaximized, async () => {
+    ipcMain.handle(desktopHostChannels.toggleMainWindowMaximized, async () => {
       this.mainWindow.toggleMaximized();
       return { ok: true };
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.getMainWindowFullscreenState, async () => {
+    ipcMain.handle(desktopHostChannels.getMainWindowFullscreenState, async () => {
       return {
         isFullscreen: this.mainWindow.isFullscreen(),
       };
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.getPendingUpdate, async () => {
+    ipcMain.handle(desktopHostChannels.getPendingUpdate, async () => {
       return this.updateRuntime.getPendingUpdate();
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.dismissUpdate, async () => {
+    ipcMain.handle(desktopHostChannels.dismissUpdate, async () => {
       await this.updateRuntime.dismissUpdate();
       return { ok: true as const };
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.checkForUpdates, async () => {
+    ipcMain.handle(desktopHostChannels.checkForUpdates, async () => {
       await this.updateRuntime.handleManualUpdateCheck();
       return { ok: true as const };
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.downloadUpdate, async () => {
+    ipcMain.handle(desktopHostChannels.downloadUpdate, async () => {
       return this.updateRuntime.download();
     });
 
-    ipcMain.handle(HOST_IPC_CHANNELS.installUpdate, async () => {
+    ipcMain.handle(desktopHostChannels.installUpdate, async () => {
       // Mark quit intent before electron-updater closes windows so the
       // macOS close handler does not convert update restart into a hide.
       this.isQuitting = true;
@@ -368,7 +368,7 @@ export class DesktopApplication {
 
   /** Forwards one native menu action to renderer listeners. */
   private dispatchAction(payload: AppActionPayload, options?: DispatchActionOptions): void {
-    this.mainWindow.browserWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+    this.mainWindow.browserWindow?.webContents.send(desktopHostEventChannels.event, {
       method: "appAction",
       payload,
     });

@@ -1,6 +1,6 @@
 import type { App, MenuItemConstructorOptions, WebContents } from "electron";
 import { Menu } from "electron";
-import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
+import { desktopHostEventChannels } from "../bridge/channels";
 import type { DesktopUpdateEventPayload } from "../bridge/updates";
 import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./autoUpdateDismissalState";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./autoUpdateService";
@@ -135,5 +135,5 @@ export class UpdateRuntime {
 
 /** Convenience: send a desktop-rpc event envelope to one webContents. */
 export function sendDesktopRpcEvent(webContents: WebContents | null, payload: Record<string, unknown>): void {
-  webContents?.send(DESKTOP_RPC_IPC_CHANNELS.event, payload);
+  webContents?.send(desktopHostEventChannels.event, payload);
 }
