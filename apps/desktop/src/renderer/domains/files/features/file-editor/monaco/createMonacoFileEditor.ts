@@ -1,6 +1,7 @@
 import { MONO_FONT_FAMILY } from "@renderer/ui/codeThemes";
+import type * as MonacoNs from "monaco-editor";
 import { getLanguageId } from "./editorLanguage";
-import { ensureEditorThemes, monaco } from "./monacoSetup";
+import { loadMonacoSetup } from "./monacoLoader";
 
 /** Props for creating the Monaco editor instance used by FileEditor. */
 export type CreateMonacoFileEditorProps = {
@@ -15,7 +16,10 @@ export type CreateMonacoFileEditorProps = {
 };
 
 /** Replaces editor content without resetting the user's selection or viewport. */
-export function replaceEditorContentPreservingViewState(editor: monaco.editor.IStandaloneCodeEditor, content: string) {
+export function replaceEditorContentPreservingViewState(
+  editor: MonacoNs.editor.IStandaloneCodeEditor,
+  content: string,
+) {
   const selections = editor.getSelections();
   const scrollPosition = { scrollTop: editor.getScrollTop(), scrollLeft: editor.getScrollLeft() };
 
@@ -28,7 +32,7 @@ export function replaceEditorContentPreservingViewState(editor: monaco.editor.IS
 }
 
 /** Creates the Monaco editor instance and backing model for a file. */
-export function createMonacoFileEditor({
+export async function createMonacoFileEditor({
   host,
   path,
   content,
@@ -37,7 +41,11 @@ export function createMonacoFileEditor({
   fontSize,
   wordWrap,
   onContentChange,
-}: CreateMonacoFileEditorProps) {
+}: CreateMonacoFileEditorProps): Promise<{
+  editor: MonacoNs.editor.IStandaloneCodeEditor;
+  model: MonacoNs.editor.ITextModel;
+}> {
+  const { ensureEditorThemes, monaco } = await loadMonacoSetup();
   ensureEditorThemes();
   const language = getLanguageId(path) ?? undefined;
   const fileUri = monaco.Uri.file(path);

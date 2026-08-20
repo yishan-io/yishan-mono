@@ -127,6 +127,7 @@ export function createOpenTabAutoRefreshRuntime() {
               });
               commands.refreshFileTabFromDisk({
                 tabId: tab.id,
+                path: tab.path,
                 content: response.content,
                 deleted: false,
               });
@@ -137,6 +138,7 @@ export function createOpenTabAutoRefreshRuntime() {
 
               commands.refreshFileTabFromDisk({
                 tabId: tab.id,
+                path: tab.path,
                 content: "",
                 deleted: true,
               });
@@ -165,6 +167,7 @@ export function createOpenTabAutoRefreshRuntime() {
 
             commands.refreshDiffTabContent({
               tabId: tab.id,
+              path: tab.path,
               oldContent: response.oldContent,
               newContent: response.newContent,
             });
@@ -232,6 +235,7 @@ export function createOpenTabAutoRefreshRuntime() {
             });
             commands.refreshFileTabFromDisk({
               tabId: tab.id,
+              path: tab.path,
               content: response.content,
               deleted: false,
             });
@@ -242,6 +246,7 @@ export function createOpenTabAutoRefreshRuntime() {
               // it never shows the mock placeholder as if it were real content.
               commands.refreshFileTabFromDisk({
                 tabId: tab.id,
+                path: tab.path,
                 content: "",
                 deleted: true,
               });
@@ -271,6 +276,7 @@ export function createOpenTabAutoRefreshRuntime() {
                     });
             commands.refreshDiffTabContent({
               tabId: tab.id,
+              path: tab.path,
               oldContent: response.oldContent,
               newContent: response.newContent,
             });
@@ -350,18 +356,13 @@ export function createOpenTabAutoRefreshRuntime() {
         return;
       }
 
-      const currentTabIds = new Set(tabs.map((tab) => tab.id));
+      // First call (no seen history yet): every current tab needs its content
+      // loaded. The previous "seed the seen set without refreshing" behavior
+      // left tabs that were already open when the workspace mounted stuck on
+      // the mock placeholder (real content never loads).
       const isInitialSeen = seenTabIds.size === 0;
+      const newTabs = isInitialSeen ? tabs : tabs.filter((tab) => !seenTabIds.has(tab.id));
 
-      if (isInitialSeen) {
-        seenTabIds.clear();
-        for (const tab of tabs) {
-          seenTabIds.add(tab.id);
-        }
-        return;
-      }
-
-      const newTabs = tabs.filter((tab) => !seenTabIds.has(tab.id));
       seenTabIds.clear();
       for (const tab of tabs) {
         seenTabIds.add(tab.id);

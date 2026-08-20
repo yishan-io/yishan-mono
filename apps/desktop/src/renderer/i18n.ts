@@ -151,17 +151,20 @@ export const resources = {
 
 export const i18n = i18next.createInstance();
 
-void i18n.use(initReactI18next).init({
-  resources,
-  defaultNS: "common",
-  ns: [...I18N_NAMESPACES],
-  fallbackNS: [...I18N_FALLBACK_NAMESPACES],
-  lng: resolveStoredLanguage(),
-  fallbackLng: "en",
-  interpolation: {
-    escapeValue: false,
-  },
-});
+/** Initializes the app-wide i18next instance. Called explicitly by the renderer entry. */
+export function initI18n() {
+  return i18n.use(initReactI18next).init({
+    resources,
+    defaultNS: "common",
+    ns: [...I18N_NAMESPACES],
+    fallbackNS: [...I18N_FALLBACK_NAMESPACES],
+    lng: resolveStoredLanguage(),
+    fallbackLng: "en",
+    interpolation: {
+      escapeValue: false,
+    },
+  });
+}
 
 export async function setAppLanguage(languageCode: SupportedLanguageCode): Promise<void> {
   await i18n.changeLanguage(languageCode);

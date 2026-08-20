@@ -23,7 +23,7 @@ export type DiffTabContentStoreState = {
 
   seed: (input: SeedDiffTabContentInput) => void;
   /** Syncs one open diff tab content after external changes. */
-  update: (tabId: string, input: { oldContent: string; newContent: string }) => void;
+  update: (tabId: string, input: { path?: string; oldContent: string; newContent: string }) => void;
   removeTabData: (tabIds: string[]) => void;
 };
 
@@ -43,9 +43,22 @@ export const diffTabContentStore = create<DiffTabContentStoreState>()(
       });
     },
 
-    update: (tabId, input) => {
+    update: (tabId, input: { path?: string; oldContent: string; newContent: string }) => {
       const entry = get().byTabId[tabId];
       if (!entry) {
+        // Never seeded (changes-tab / diff-view open paths do not seed): create
+        // the entry from the diff payload so the viewer shows real content.
+        if (!input.path) {
+          return;
+        }
+        set((state) => {
+          state.byTabId[tabId] = {
+            path: input.path ?? "",
+            oldContent: input.oldContent,
+            newContent: input.newContent,
+            files: undefined,
+          };
+        });
         return;
       }
       if (entry.oldContent === input.oldContent && entry.newContent === input.newContent) {

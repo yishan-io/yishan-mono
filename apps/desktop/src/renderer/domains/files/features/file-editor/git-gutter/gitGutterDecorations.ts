@@ -1,6 +1,7 @@
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
+import type * as MonacoNs from "monaco-editor";
 import type { GitLineChange, GitLineChangeKind } from "../../../features/file-editor/git-gutter/gitGutterDiff";
-import { monaco } from "../monaco/monacoSetup";
+import { loadMonacoSetup } from "../monaco/monacoLoader";
 
 // CSS class names injected for gutter decorations.
 // These are defined in style.css and matched by Monaco's margin decoration class mechanism.
@@ -46,8 +47,15 @@ export function getRulerColor(kind: GitLineChangeKind, isDark: boolean): string 
  * Converts computed line changes to Monaco model decoration options.
  * Each decoration also carries overview ruler metadata so diff positions
  * are visible on the right-rail scrollbar without scrolling.
+ *
+ * Async because the `OverviewRulerLane` runtime enum lives inside the
+ * monaco-editor ESM graph, which is only loaded on demand.
  */
-export function changesToDecorations(changes: GitLineChange[], isDark: boolean): monaco.editor.IModelDeltaDecoration[] {
+export async function changesToDecorations(
+  changes: GitLineChange[],
+  isDark: boolean,
+): Promise<MonacoNs.editor.IModelDeltaDecoration[]> {
+  const { monaco } = await loadMonacoSetup();
   return changes.map((change) => {
     const className = getGutterClassName(change.kind);
     const rulerColor = getRulerColor(change.kind, isDark);

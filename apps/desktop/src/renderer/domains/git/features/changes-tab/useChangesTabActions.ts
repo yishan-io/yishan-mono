@@ -1,5 +1,5 @@
 import { resolveWorkspaceAbsolutePath } from "@renderer/domains/files";
-import { openTab } from "@renderer/domains/workbench";
+import { openTabWithContentSeed } from "@renderer/domains/workbench";
 import type { DiffFileChangeKind, FileDiffEntry } from "@renderer/domains/workbench";
 import { writeClipboardText } from "@renderer/platform/clipboard";
 import { useCallback } from "react";
@@ -97,7 +97,7 @@ export function useChangesTabActions({
               )
             : response;
 
-        openTab({
+        openTabWithContentSeed({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
           path: normalizedRelativePath,
@@ -122,7 +122,7 @@ export function useChangesTabActions({
               workspaceId: selectedWorkspaceId,
               relativePath: normalizedRelativePath,
             });
-            openTab({
+            openTabWithContentSeed({
               workspaceId: selectedWorkspaceId,
               kind: "diff",
               path: normalizedRelativePath,
@@ -140,7 +140,7 @@ export function useChangesTabActions({
           }
         }
 
-        openTab({
+        openTabWithContentSeed({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
           path: normalizedRelativePath,
@@ -151,7 +151,7 @@ export function useChangesTabActions({
         });
       }
     },
-    [openTab, readBranchComparisonDiff, readCommitDiff, readDiff, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [openTabWithContentSeed, readBranchComparisonDiff, readCommitDiff, readDiff, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const selectWorkspaceFile = useCallback(
@@ -174,7 +174,7 @@ export function useChangesTabActions({
           workspaceId: selectedWorkspaceId,
           relativePath: normalizedPath,
         });
-        openTab({
+        openTabWithContentSeed({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
           path: normalizedPath,
@@ -188,7 +188,7 @@ export function useChangesTabActions({
         });
       } catch (error) {
         console.error("Failed to load workspace workspace diff", error);
-        openTab({
+        openTabWithContentSeed({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
           path: normalizedPath,
@@ -199,7 +199,7 @@ export function useChangesTabActions({
         });
       }
     },
-    [openTab, readDiff, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [openTabWithContentSeed, readDiff, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const copyFilePath = useCallback(
@@ -295,7 +295,7 @@ export function useChangesTabActions({
       const firstFile = diffFiles[0];
       if (!firstFile) return;
 
-      openTab({
+      openTabWithContentSeed({
         workspaceId: selectedWorkspaceId,
         kind: "diff",
         path: `${diffFiles.length} files changed`,
@@ -313,7 +313,7 @@ export function useChangesTabActions({
         files: diffFiles,
       });
     },
-    [openTab, readBranchComparisonDiff, readCommitDiff, readDiff, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [openTabWithContentSeed, readBranchComparisonDiff, readCommitDiff, readDiff, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   return {

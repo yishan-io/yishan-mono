@@ -136,17 +136,21 @@ describe("openTabAutoRefreshRuntime", () => {
     const runtime = createOpenTabAutoRefreshRuntime();
     const context = createContext();
 
-    // Initial mount: seeds the seen set without refreshing.
+    // Initial mount: existing tabs get their content loaded too (no seen
+    // history yet), so a tab open before the workspace mounted never stays
+    // on the mock placeholder.
     runtime.refreshNewTabs(() => context);
-    expect(context.commands.readFile).not.toHaveBeenCalled();
+    await vi.runAllTimersAsync();
+    expect(context.commands.readFile).toHaveBeenCalledTimes(1);
+    expect(context.commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/a.ts" });
 
-    // A new tab is added — only it gets refreshed.
+    // A new tab is added — only it gets refreshed (the first tab is now seen).
     const newTab: RefreshableOpenTab = { id: "file-2", kind: "file", path: "src/b.ts" };
     context.tabs = [TAB, newTab];
     runtime.refreshNewTabs(() => context);
     await vi.runAllTimersAsync();
 
-    expect(context.commands.readFile).toHaveBeenCalledTimes(1);
+    expect(context.commands.readFile).toHaveBeenCalledTimes(2);
     expect(context.commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
   });
 });

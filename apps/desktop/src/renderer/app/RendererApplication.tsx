@@ -7,12 +7,17 @@ import { startBackendEventHandlers } from "../app/events";
 import { startDaemonIdentityRuntime } from "../app/runtime/daemonIdentity";
 import { AppThemePreferenceProvider, useThemePreference } from "../domains/settings";
 import { startBackendEventPipeline } from "../events";
-import { i18n } from "../i18n";
+import { i18n, initI18n } from "../i18n";
 import { rendererQueryClient } from "../queryClient";
 import { createAppTheme } from "../ui/theme";
 import { AppUpdateSnackbar } from "./features/launch/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./features/launch/AuthSessionExpiredSnackbar";
 import { AppRoutes } from "./routes/AppRoutes";
+
+// Initialize the app-wide i18next instance before any provider renders
+// (previously a module-scope side effect in i18n.ts; explicit here so importing
+// i18n.ts never initializes the global instance — e.g. in tests).
+void initI18n();
 
 // React 19 dev mode emits performance.measure() entries for every component render/update.
 // These accumulate indefinitely in the Performance API buffer and cause unbounded memory growth.

@@ -1,13 +1,11 @@
 /**
  * Test-only stub for `monaco-editor`. Vitest's transform cannot resolve the
  * package (ESM-only with worker entry points); the renderer reaches it through
- * `helpers/monacoSetup` from several public feature APIs.
- *
- * `helpers/monacoSetup` executes a small amount of monaco configuration at
- * module load (TypeScript defaults, mermaid language registration). The stub
- * provides those surfaces so module graphs that import editor components do
- * not crash in tests. Tests that exercise real monaco behavior declare their
- * own richer `vi.mock("monaco-editor", ...)`, which overrides this stub.
+ * the lazy `monacoLoader` (dynamic `import("./monacoSetup")`), so monacoSetup
+ * only executes when a Monaco editor is actually mounted. The stub provides
+ * the surfaces module graphs that import editor components need; tests that
+ * exercise real monaco behavior declare their own richer `vi.mock("monaco-editor", ...)`,
+ * which overrides this stub.
  */
 
 const noop = () => undefined;

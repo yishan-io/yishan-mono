@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createElement, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { displaySettingsStore } from "../../../../domains/settings/state/displaySettingsStore";
 import { editorSettingsStore } from "../../../../domains/settings/state/editorSettingsStore";
-import { i18n } from "../../../../i18n";
+import { i18n, initI18n } from "../../../../i18n";
 import { renderWithAppTheme } from "../../../../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
 
@@ -209,6 +209,7 @@ afterEach(() => {
 describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {
   beforeEach(async () => {
     // Ensure translated labels resolve (e.g. the view-only toggle).
+    await initI18n();
     await i18n.changeLanguage("en");
   });
 
@@ -221,11 +222,13 @@ describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {
     expect(mockEditorState.createCount).toBe(0);
   });
 
-  it("does not render Vditor for non-markdown files", () => {
+  it("does not render Vditor for non-markdown files", async () => {
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
     expect(screen.queryByTestId("vditor-editor")).toBeNull();
-    expect(mockEditorState.createCount).toBe(1);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBe(1);
+    });
   });
 
   it("calls flushNow on the Vditor handle before save", async () => {

@@ -1,5 +1,12 @@
 /**
  * Workbench feature public API.
+ *
+ * Test-infra constraint: the eager cross-domain imports below (tabCommands →
+ * files/git/agent) make the workbench↔files module cycle real. vite-node
+ * deadlocks when an async `vi.mock` factory `await import()`s a module whose
+ * graph reaches this index before the index itself is mocked (see
+ * WorkspaceNavigatorView.test.tsx). New tests must stub the leaf view instead
+ * of deep-importing through it inside a mock factory.
  */
 export { createFixedRuntimeLayer } from "./runtime/runtimeSurfaceLayer";
 

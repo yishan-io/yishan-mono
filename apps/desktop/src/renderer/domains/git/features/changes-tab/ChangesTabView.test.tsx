@@ -96,6 +96,9 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
     get openTab() {
       return mocks.openTab;
     },
+    get openTabWithContentSeed() {
+      return mocks.openTab;
+    },
   };
 });
 

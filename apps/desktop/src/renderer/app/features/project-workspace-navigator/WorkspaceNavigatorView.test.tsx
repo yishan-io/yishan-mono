@@ -181,6 +181,21 @@ vi.mock("../../../domains/workspace/features/rename-workspace/RenameWorkspaceDia
     open ? <div data-testid="rename-workspace-dialog" /> : null,
 }));
 
+// ProjectDeleteDialogView deep-imports the workbench index (useDialogRegistration),
+// which now eagerly imports the files index (openTabWithContentSeed → files).
+// Loading it inside the async project mock factory would deadlock vitest on the
+// workbench↔files module cycle, so stub it here: render the confirm button and
+// forward onConfirm (the one project-deletion test only asserts deleteProject
+// is called; the i18n mock returns the key as-is).
+vi.mock("../../../domains/project/features/project-delete/ProjectDeleteDialogView", () => ({
+  ProjectDeleteDialogView: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
+    open ? (
+      <button type="button" onClick={onConfirm}>
+        project.actions.delete
+      </button>
+    ) : null,
+}));
+
 vi.mock("@renderer/domains/workspace", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/workspace")>();
   return {
