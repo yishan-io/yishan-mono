@@ -58,6 +58,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
+import {
+  closeAllTabsWithCleanup,
+  closeOtherTabsWithCleanup,
+  closeTabWithCleanup,
+} from "../../commands/tabCloseHandler";
 import { useSelectedWorkspaceWithProject } from "../../selectors";
 import { LaunchView } from "../launch/LaunchView";
 import { useTabContentRenderer } from "../tab-content/useTabContentRenderer";
@@ -342,6 +347,9 @@ export function MainPaneView() {
                     formatAgentSessionTitle={formatAgentSessionTitle}
                     renderTabContent={renderTabContent}
                     renderAgentChatSurface={renderAgentChatSurface}
+                    closeTabWithCleanup={closeTabWithCleanup}
+                    closeOtherTabsWithCleanup={closeOtherTabsWithCleanup}
+                    closeAllTabsWithCleanup={closeAllTabsWithCleanup}
                   />
                 </Box>
               ))}

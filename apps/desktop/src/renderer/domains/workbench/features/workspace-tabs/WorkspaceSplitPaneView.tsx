@@ -6,9 +6,6 @@ import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/spli
 import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
 import type { WorkbenchTab } from "../../../../domains/workbench/tabs";
 import {
-  closeAllTabs,
-  closeOtherTabs,
-  closeTab,
   openTab,
   promoteTemporaryTab,
   renameTab,
@@ -75,6 +72,10 @@ export type WorkspaceSplitPaneProps = {
   formatAgentSessionTitle: (title: string) => string;
   /** App-composed tab content renderer (product UI). */
   renderTabContent: (tab: WorkbenchTab, isSelected: boolean, isInActivePane: boolean) => React.ReactNode;
+  /** App-owned tab-close commands with resource cleanup. */
+  closeTabWithCleanup: (tabId: string, options?: { preferredSelectedTabId?: string }) => void;
+  closeOtherTabsWithCleanup: (tabId: string) => void;
+  closeAllTabsWithCleanup: (tabId: string) => void;
   /** App-composed agent-chat surface renderer (product UI). */
   renderAgentChatSurface: (input: {
     tab: Extract<WorkbenchTab, { kind: "agent-chat" }>;
@@ -115,12 +116,22 @@ export function WorkspaceSplitPane({
   formatAgentSessionTitle,
   renderTabContent,
   renderAgentChatSurface,
+  closeTabWithCleanup,
+  closeOtherTabsWithCleanup,
+  closeAllTabsWithCleanup,
 }: WorkspaceSplitPaneProps) {
   // Stable identity: passed to tab handlers + open-tab auto-refresh; a fresh
   // object every render would re-run their effects on each render.
   const cmd = useMemo(
-    () => ({ openTab, closeTab, selectTab, renameTab, renameTabsForEntryRename, ...tabFileCommands }),
-    [tabFileCommands],
+    () => ({
+      openTab,
+      closeTab: closeTabWithCleanup,
+      selectTab,
+      renameTab,
+      renameTabsForEntryRename,
+      ...tabFileCommands,
+    }),
+    [closeTabWithCleanup, tabFileCommands],
   );
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = { worktreePath };
@@ -313,8 +324,8 @@ export function WorkspaceSplitPane({
           isDraggingSplit={isDraggingSplit}
           onSelectTab={handleSelectTab}
           onCloseTab={handleCloseTab}
-          onCloseOtherTabs={closeOtherTabs}
-          onCloseAllTabs={closeAllTabs}
+          onCloseOtherTabs={closeOtherTabsWithCleanup}
+          onCloseAllTabs={closeAllTabsWithCleanup}
           onTogglePinTab={toggleTabPinned}
           onReorderTab={handleReorderTab}
           onCreateTab={handleCreateTab}
@@ -359,6 +370,8 @@ export function WorkspaceSplitPane({
       workspaceId,
       handleContentPlaceholderChange,
       renderPaneContent,
+      closeOtherTabsWithCleanup,
+      closeAllTabsWithCleanup,
     ],
   );
 

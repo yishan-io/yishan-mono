@@ -14,7 +14,7 @@ import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { WorkspaceView } from "./WorkspaceView";
 
 const commandMocks = vi.hoisted(() => ({
-  closeTab: vi.fn(),
+  closeTabWithCleanup: vi.fn(),
   deleteSelectedFileTreeEntry: vi.fn(),
   listTerminalSessions: vi.fn(async () => []),
   loadWorkspaceSnapshot: vi.fn(async () => undefined),
@@ -40,6 +40,8 @@ const rpcMocks = vi.hoisted(() => ({
   setCurrentOrg: vi.fn(async () => undefined),
 }));
 
+const eventMocks = vi.hoisted(() => ({ listener: undefined as undefined | ((payload: { action: string }) => void) }));
+
 vi.mock("react-i18next", () => ({
   initReactI18next: {
     type: "3rdParty",
@@ -64,7 +66,15 @@ vi.mock("../../events/desktopRpcEventBus", () => ({
 }));
 
 vi.mock("../../events", () => ({
-  subscribeAppActionEvent: vi.fn(() => () => undefined),
+  ACTIONS: { NAVIGATE: "navigate", CLOSE_TAB: "tab.close" },
+  subscribeAppActionEvent: vi.fn((listener) => {
+    eventMocks.listener = listener;
+    return () => undefined;
+  }),
+}));
+
+vi.mock("../../app/commands/tabCloseHandler", () => ({
+  closeTabWithCleanup: commandMocks.closeTabWithCleanup,
 }));
 
 vi.mock("@renderer/domains/git", async (importOriginal) => {
@@ -82,7 +92,6 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
     ...actual,
     activateProject: commandMocks.activateProject,
     activateWorkspace: commandMocks.activateWorkspace,
-    closeTab: commandMocks.closeTab,
     openTab: commandMocks.openTab,
     setSelectedTab: commandMocks.selectTab,
     WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -318,6 +327,22 @@ describe("WorkspaceView", () => {
       expect(screen.queryByTestId("scheduled-job-view")).toBeNull();
       expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("routes the close-tab app action through the App cleanup command", async () => {
+    tabStore.setState({ selectedTabId: "tab-1" });
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(eventMocks.listener).toBeTypeOf("function");
+    });
+    eventMocks.listener?.({ action: "tab.close" });
+
+    expect(commandMocks.closeTabWithCleanup).toHaveBeenCalledWith("tab-1");
   });
 
   it("renders nothing while projects have not yet loaded", () => {
