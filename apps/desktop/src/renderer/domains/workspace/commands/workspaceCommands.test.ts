@@ -170,7 +170,8 @@ describe("workspaceCommands", () => {
     expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
 
-  it("updates visible repo ids and triggers daemon warmup for newly pinned projects", async () => {
+  it("updates the selected organization visibility preference and triggers daemon warmup for newly pinned projects", async () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceStore.setState({
       workspaces: [
         {
@@ -186,11 +187,17 @@ describe("workspaceCommands", () => {
         },
       ],
     });
-    projectStore.setState({ displayProjectIds: [] });
+    projectStore.setState({
+      displayProjectIds: [],
+      projects: [{ id: "repo-1", name: "Repo 1" }],
+    });
 
     setDisplayRepoIds(["repo-1"]);
 
     expect(projectStore.getState().displayProjectIds).toEqual(["repo-1"]);
+    expect(projectStore.getState().organizationPreferencesById).toEqual({
+      "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
+    });
     // Warmup fires asynchronously — flush the promise queue.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(rpcMocks.openProject).toHaveBeenCalledTimes(1);
@@ -200,6 +207,22 @@ describe("workspaceCommands", () => {
       ],
     });
     expect(rpcMocks.closeProject).not.toHaveBeenCalled();
+  });
+
+  it("does not create an organization preference when no organization is selected", () => {
+    sessionStore.setState({ selectedOrganizationId: undefined });
+    projectStore.setState({
+      organizationPreferencesById: {
+        "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
+      },
+    });
+
+    setDisplayRepoIds(["repo-2"]);
+
+    expect(projectStore.getState().displayProjectIds).toEqual(["repo-2"]);
+    expect(projectStore.getState().organizationPreferencesById).toEqual({
+      "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
+    });
   });
 
   it("triggers daemon close for removed projects when unpinning", async () => {
@@ -620,20 +643,21 @@ describe("workspaceCommands", () => {
     resolveClose?.();
   });
 
-  it("delegates workspace view-state updates to workspace and project stores", () => {
-    const setDisplayProjectIdsState = vi.fn();
+  it("passes the selected organization to the project visibility action", () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    const setOrganizationDisplayProjectIdsState = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
       renameWorkspace: renameWorkspaceState,
     });
     projectStore.setState({
-      setDisplayProjectIds: setDisplayProjectIdsState,
+      setOrganizationDisplayProjectIds: setOrganizationDisplayProjectIdsState,
     });
 
     setDisplayRepoIds(["repo-1"]);
     renameWorkspace({ repoId: "repo-1", workspaceId: "workspace-1", name: "next-name" });
 
-    expect(setDisplayProjectIdsState).toHaveBeenCalledWith(["repo-1"]);
+    expect(setOrganizationDisplayProjectIdsState).toHaveBeenCalledWith("org-1", ["repo-1"]);
     expect(renameWorkspaceState).toHaveBeenCalledWith({
       repoId: "repo-1",
       workspaceId: "workspace-1",

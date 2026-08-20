@@ -8,6 +8,9 @@ const mocked = vi.hoisted(() => {
   const setDisplayProjectIds = vi.fn((repoIds: string[]) => {
     stateRef.current.displayProjectIds = repoIds;
   });
+  const setOrganizationDisplayProjectIds = vi.fn((_organizationId: string, repoIds: string[]) => {
+    stateRef.current.displayProjectIds = repoIds;
+  });
 
   const stateRef: {
     current: {
@@ -15,6 +18,7 @@ const mocked = vi.hoisted(() => {
       workspaces: Array<{ id: string; repoId: string; name: string; branch: string }>;
       displayProjectIds: string[];
       setDisplayProjectIds: (repoIds: string[]) => void;
+      setOrganizationDisplayProjectIds: (organizationId: string, repoIds: string[]) => void;
       setOrderedWorkspaceIds: (ids: string[]) => void;
     };
   } = {
@@ -23,6 +27,7 @@ const mocked = vi.hoisted(() => {
       workspaces: [],
       displayProjectIds: [],
       setDisplayProjectIds,
+      setOrganizationDisplayProjectIds,
       setOrderedWorkspaceIds: () => {},
     },
   };
@@ -34,6 +39,7 @@ const mocked = vi.hoisted(() => {
 
   return {
     setDisplayProjectIds,
+    setOrganizationDisplayProjectIds,
     stateRef,
     workspaceStore,
   };
@@ -82,12 +88,14 @@ vi.mock("../../../domains/project/state/projectStore", () => {
       projects: unknown[];
       displayProjectIds: string[];
       setDisplayProjectIds: (ids: string[]) => void;
+      setOrganizationDisplayProjectIds: (organizationId: string, ids: string[]) => void;
     }) => unknown,
   ) =>
     selector({
       projects: mocked.stateRef.current.projects ?? [],
       displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
       setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
+      setOrganizationDisplayProjectIds: mocked.stateRef.current.setOrganizationDisplayProjectIds,
     });
   (
     projectStore as unknown as {
@@ -95,12 +103,14 @@ vi.mock("../../../domains/project/state/projectStore", () => {
         projects: unknown[];
         displayProjectIds: string[];
         setDisplayProjectIds: (ids: string[]) => void;
+        setOrganizationDisplayProjectIds: (organizationId: string, ids: string[]) => void;
       };
     }
   ).getState = () => ({
     projects: mocked.stateRef.current.projects ?? [],
     displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
     setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
+    setOrganizationDisplayProjectIds: mocked.stateRef.current.setOrganizationDisplayProjectIds,
   });
   return { projectStore };
 });
@@ -156,6 +166,7 @@ describe("LeftPaneView deletion", () => {
       workspaces: [{ id: "workspace-1", repoId: "repo-1", name: "Feature A", branch: "feature-a" }],
       displayProjectIds: ["repo-1"],
       setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
+      setOrganizationDisplayProjectIds: mocked.stateRef.current.setOrganizationDisplayProjectIds,
       setOrderedWorkspaceIds: () => {},
     };
   });

@@ -2,7 +2,14 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "../ui/projectIconPresets";
-import { pickRandomProjectColor, pickRandomProjectIcon, projectStore, readLegacyWorkspacePrefs } from "./projectStore";
+import {
+  finalizeLegacyWorkspaceMigration,
+  mergeProjectStorePersistence,
+  pickRandomProjectColor,
+  pickRandomProjectIcon,
+  projectStore,
+  readLegacyWorkspacePrefs,
+} from "./projectStore";
 
 const initialProjectStoreState = projectStore.getState();
 
@@ -44,9 +51,8 @@ describe("projectStore storage migration", () => {
       workspaceListHierarchyMode: "by_node",
     });
 
-    // The persist merge is `...current, ...persisted, ...legacy` — the legacy
-    // read provides exactly these fields; assert they are non-empty so the
-    // merge layers them onto the project store state.
+    // The persist merge is `...current, ...legacy, ...persisted` so legacy
+    // values migrate only when the project store has no newer preference.
     expect(legacy?.displayProjectIds?.length).toBeGreaterThan(0);
     expect(legacy?.lastUsedExternalAppId).toBe("cursor");
     // workspaceStore no longer writes the legacy prefs (partialize returns {}).
@@ -58,6 +64,52 @@ describe("projectStore storage migration", () => {
     // own hydration and reads the preserved legacy key. Verified: the test above
     // reads the legacy key directly (a clobber would make readLegacyWorkspacePrefs
     // return undefined here).
+  });
+
+  it("writes migrated preferences before clearing the legacy workspace store", () => {
+    localStorage.setItem(
+      "yishan-workspace-store",
+      JSON.stringify({ state: { workspaceListHierarchyMode: "by_node" } }),
+    );
+    const setWorkspaceListHierarchyMode = vi.fn();
+
+    finalizeLegacyWorkspaceMigration({
+      workspaceListHierarchyMode: "by_node",
+      setWorkspaceListHierarchyMode,
+    });
+
+    expect(setWorkspaceListHierarchyMode).toHaveBeenCalledWith("by_node");
+    expect(localStorage.getItem("yishan-workspace-store")).toBeNull();
+  });
+
+  it("keeps project-store preferences when stale legacy preferences also exist", () => {
+    localStorage.setItem(
+      "yishan-workspace-store",
+      JSON.stringify({
+        state: {
+          displayProjectIds: ["project-hidden"],
+          organizationPreferencesById: {
+            "org-1": { displayProjectIds: ["project-hidden"], knownProjectIds: ["project-hidden"] },
+          },
+          workspaceListHierarchyMode: "by_project",
+        },
+      }),
+    );
+
+    const merged = mergeProjectStorePersistence(
+      {
+        displayProjectIds: ["project-visible"],
+        organizationPreferencesById: {
+          "org-1": { displayProjectIds: ["project-visible"], knownProjectIds: ["project-hidden", "project-visible"] },
+        },
+        workspaceListHierarchyMode: "by_node",
+      },
+      projectStore.getState(),
+    );
+
+    expect(merged.displayProjectIds).toEqual(["project-visible"]);
+    expect(merged.organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual(["project-visible"]);
+    expect(merged.workspaceListHierarchyMode).toBe("by_node");
   });
 
   it("persists project prefs under the yishan-project-store key", () => {
@@ -87,6 +139,46 @@ describe("projectStore storage migration", () => {
     const state = projectStore.getState();
     expect(state.projects.map((p) => p.id)).toEqual(["repo-1"]);
     expect(state.displayProjectIds).toContain("repo-1");
+  });
+});
+
+describe("organization-aware visible-project preferences", () => {
+  it("synchronizes the active organization preference and persisted state", () => {
+    projectStore.setState({
+      projects: [
+        { id: "repo-1", name: "Repo 1" },
+        { id: "repo-2", name: "Repo 2" },
+      ],
+      organizationPreferencesById: {
+        "org-1": { displayProjectIds: ["repo-1", "repo-2"], knownProjectIds: ["repo-1", "repo-2"] },
+        "org-2": { displayProjectIds: ["repo-2"], knownProjectIds: ["repo-2"] },
+      },
+    });
+
+    projectStore.getState().setOrganizationDisplayProjectIds("org-1", ["repo-1"]);
+
+    expect(projectStore.getState().displayProjectIds).toEqual(["repo-1"]);
+    expect(projectStore.getState().organizationPreferencesById).toEqual({
+      "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1", "repo-2"] },
+      "org-2": { displayProjectIds: ["repo-2"], knownProjectIds: ["repo-2"] },
+    });
+    expect(localStorage.getItem("yishan-project-store")).toContain('"displayProjectIds":["repo-1"]');
+    expect(localStorage.getItem("yishan-project-store")).toContain('"knownProjectIds":["repo-1","repo-2"]');
+  });
+
+  it("updates only the top-level preference when organization id is missing", () => {
+    projectStore.setState({
+      organizationPreferencesById: {
+        "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
+      },
+    });
+
+    projectStore.getState().setOrganizationDisplayProjectIds("  ", ["repo-2"]);
+
+    expect(projectStore.getState().displayProjectIds).toEqual(["repo-2"]);
+    expect(projectStore.getState().organizationPreferencesById).toEqual({
+      "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
+    });
   });
 });
 
