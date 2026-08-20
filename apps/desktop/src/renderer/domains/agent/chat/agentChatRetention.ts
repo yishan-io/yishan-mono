@@ -10,6 +10,24 @@ import type { AgentMessage } from "./agentChatTypes";
 /** Maximum messages retained per chat tab transcript. */
 export const MAX_MESSAGES_PER_TAB = 1000;
 
+/** Merges history with renderer-observed assistant finals, which take precedence over stale snapshots. */
+export function mergeActiveTurnHistory(
+  historyMessages: AgentMessage[],
+  committedMessages: AgentMessage[],
+  rendererFinalAssistantIds?: Record<string, true>,
+): AgentMessage[] {
+  const committedMessagesById = new Map(committedMessages.map((message) => [message.id, message]));
+  const historyMessageIds = new Set(historyMessages.map((message) => message.id));
+  const isRendererFinalAssistant = (message: AgentMessage): boolean =>
+    rendererFinalAssistantIds === undefined || rendererFinalAssistantIds[message.id] === true;
+  return [
+    ...historyMessages.map((message) =>
+      isRendererFinalAssistant(message) ? (committedMessagesById.get(message.id) ?? message) : message,
+    ),
+    ...committedMessages.filter((message) => isRendererFinalAssistant(message) && !historyMessageIds.has(message.id)),
+  ];
+}
+
 /**
  * Trims session messages to fit within MAX_MESSAGES_PER_TAB and the aggregate
  * UTF-8 byte budget. Keeps newest messages; a single oversized message is

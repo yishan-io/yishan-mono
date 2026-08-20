@@ -257,7 +257,7 @@ describe("agentChatTurnTiming — error, no-assistant, and reload lifecycle", ()
     expect(session()?.isTurnActive).toBe(false);
   });
 
-  it("keeps the terminal message untimed after replaceMessages mid-turn and resumes exact timing later", () => {
+  it("keeps active-turn timing when history arrives mid-turn and resumes exact timing later", () => {
     const tabId = "tab-reload";
     const sessionId = "session-reload";
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -270,23 +270,23 @@ describe("agentChatTurnTiming — error, no-assistant, and reload lifecycle", ()
     emitAssistantMessage({ tabId, sessionId, type: "message_start", id: "reload-assistant" });
     expect(session()?.activeCoreTurnAssistantId).toBe("reload-assistant");
 
-    // History replacement clears the streaming message and the core-turn binding.
+    // Stale history must not clear the active streaming message or its core-turn binding.
     vi.setSystemTime(3_000);
     agentChatStore.getState().replaceMessages(tabId, [{ id: "user-1", role: "user", content: "prompt" }]);
-    expect(session()?.activeCoreTurnAssistantId).toBeNull();
+    expect(session()?.activeCoreTurnAssistantId).toBe("reload-assistant");
 
-    // The delayed message_end has no renderer-observed streaming start: commit untimed.
+    // The delayed message_end retains its renderer-observed start time.
     vi.setSystemTime(4_000);
     emitAssistantMessage({ tabId, sessionId, type: "message_end", id: "reload-assistant" });
     const reloaded = session()?.messages.find((message) => message.id === "reload-assistant");
-    expect(reloaded?.startedAtMs).toBeUndefined();
-    expect(reloaded?.durationMs).toBeUndefined();
-    expect(session()?.activeCoreTurnAssistantId).toBeNull();
+    expect(reloaded?.startedAtMs).toBe(2_000);
+    expect(reloaded?.durationMs).toBe(2_000);
+    expect(session()?.activeCoreTurnAssistantId).toBe("reload-assistant");
 
-    // Its turn_end must not fabricate a duration.
+    // turn_end extends the still-bound assistant through the active core turn.
     vi.setSystemTime(6_000);
     handleAgentPiEvent({ sessionId, tabId, workspaceId: "workspace-1", event: { type: "turn_end" } });
-    expect(session()?.messages.find((message) => message.id === "reload-assistant")?.durationMs).toBeUndefined();
+    expect(session()?.messages.find((message) => message.id === "reload-assistant")?.durationMs).toBe(4_000);
 
     // A new core turn with an observed start restores exact timing.
     vi.setSystemTime(7_000);
@@ -299,6 +299,6 @@ describe("agentChatTurnTiming — error, no-assistant, and reload lifecycle", ()
     handleAgentPiEvent({ sessionId, tabId, workspaceId: "workspace-1", event: { type: "turn_end" } });
 
     expect(session()?.messages.find((message) => message.id === "resumed-assistant")?.durationMs).toBe(2_000);
-    expect(session()?.messages.find((message) => message.id === "reload-assistant")?.durationMs).toBeUndefined();
+    expect(session()?.messages.find((message) => message.id === "reload-assistant")?.durationMs).toBe(4_000);
   });
 });

@@ -1,11 +1,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { trimSessionMessages, trimSubagentLiveTranscripts } from "../chat/agentChatRetention";
-import {
-  type RunningSubagentSummary,
-  deriveFinishedSubagents,
-  deriveRunningSubagents,
-} from "../chat/agentChatSubagents";
+import { mergeActiveTurnHistory, trimSessionMessages, trimSubagentLiveTranscripts } from "../chat/agentChatRetention";
+import { deriveRunningSubagents } from "../chat/agentChatSubagents";
 import type {
   AgentCompactionReason,
   AgentMessage,
@@ -17,52 +13,22 @@ import type {
   AgentSessionStats,
   AgentSubagentCancelState,
 } from "../chat/agentChatTypes";
-
-type AgentSubagentProgressTarget = {
-  agentName: string;
-  agentId: string;
-  status: string;
-  childSessionId?: string;
-};
-
-type AgentSessionData = {
-  sessionId: string;
-  state: AgentSessionState;
-  /** Whether the agent has started (turn_start) but not yet ended (turn_end) the current turn. */
-  isTurnActive: boolean;
-  /** Id of the assistant bound to the active Pi core turn for turn_end duration finalization. */
-  activeCoreTurnAssistantId: string | null;
-  compactionReason: AgentCompactionReason;
-  messages: AgentMessage[];
-  streamingMessage: AgentMessage | null;
-  availableModels: AgentModel[];
-  currentModel: AgentModel | null;
-  thinkingLevel: string | null;
-  sessionStats: AgentSessionStats | null;
-  queue: AgentQueueState;
-  pendingUiRequest: AgentPendingUiRequest | null;
-  pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
-  runningSubagents: RunningSubagentSummary[];
-  finishedSubagents: RunningSubagentSummary[];
-  subagentProgressTargets: AgentSubagentProgressTarget[];
-  subagentLiveTranscripts: Record<string, AgentMessage[]>;
-  /** Cancel feedback per running sub-agent row, keyed by childSessionId ?? rowId. */
-  subagentCancelStates: Record<string, AgentSubagentCancelState>;
-  /**
-   * When the owning Pi process died (session_end or a fresh reopen after an
-   * abrupt loss), sub-agent rows started before this moment are interrupted
-   * history, not live runs. Null while the process is alive.
-   */
-  subagentSessionEndedAtMs: number | null;
-  hasLoadedMessages: boolean;
-  hasLoadedModels: boolean;
-  hasLoadedState: boolean;
-  error: string | null;
-  turnError: string | null;
-};
+import {
+  type AgentChatSessionData,
+  type AgentSubagentProgressTarget,
+  createAgentChatSession,
+  setFinishedSubagents,
+  setRunningSubagentsIfChanged,
+} from "./agentChatStoreSession";
+import {
+  mergeAgentChatUsageLedgerHistory,
+  reconcileAgentChatUsageLedgerStats,
+  recordAgentChatUsageLedgerLiveMessages,
+  recordAgentChatUsageLedgerStatsRequest,
+} from "./agentChatUsageLedger";
 
 export type AgentChatStoreState = {
-  sessionsByTabId: Record<string, AgentSessionData>;
+  sessionsByTabId: Record<string, AgentChatSessionData>;
 
   // Actions
   initSession: (tabId: string, sessionId: string) => void;
@@ -81,7 +47,8 @@ export type AgentChatStoreState = {
   setAvailableModels: (tabId: string, models: AgentModel[]) => void;
   setCurrentModel: (tabId: string, model: AgentModel) => void;
   setThinkingLevel: (tabId: string, level: string) => void;
-  setSessionStats: (tabId: string, stats: AgentSessionStats | null) => void;
+  recordSessionStatsRequest: (tabId: string, requestId: string) => void;
+  setSessionStats: (tabId: string, stats: AgentSessionStats | null, requestId?: string) => void;
   setQueue: (tabId: string, queue: AgentQueueState) => void;
   setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
@@ -97,83 +64,8 @@ export type AgentChatStoreState = {
   removeSessions: (tabIds: string[]) => void;
 };
 
-function emptySession(sessionId: string): AgentSessionData {
-  return {
-    sessionId,
-    state: "idle",
-    isTurnActive: false,
-    activeCoreTurnAssistantId: null,
-    compactionReason: null,
-    messages: [],
-    streamingMessage: null,
-    availableModels: [],
-    currentModel: null,
-    thinkingLevel: null,
-    sessionStats: null,
-    queue: { steering: [], followUp: [] },
-    pendingUiRequest: null,
-    pendingUiAutoResponse: null,
-    runningSubagents: [],
-    finishedSubagents: [],
-    subagentProgressTargets: [],
-    subagentLiveTranscripts: {},
-    subagentCancelStates: {},
-    subagentSessionEndedAtMs: null,
-    hasLoadedMessages: false,
-    hasLoadedModels: false,
-    hasLoadedState: false,
-    error: null,
-    turnError: null,
-  };
-}
-
 function omitKeys<T>(record: Record<string, T>, removedIds: Set<string>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).filter(([id]) => !removedIds.has(id)));
-}
-
-function setRunningSubagentsIfChanged(session: AgentSessionData, nextRunningSubagents: RunningSubagentSummary[]): void {
-  if (session.runningSubagents.length === nextRunningSubagents.length) {
-    const isUnchanged = session.runningSubagents.every((subagent, index) => {
-      const nextSubagent = nextRunningSubagents[index];
-      return (
-        nextSubagent &&
-        subagent.rowId === nextSubagent.rowId &&
-        subagent.agentId === nextSubagent.agentId &&
-        subagent.agentName === nextSubagent.agentName &&
-        subagent.childSessionId === nextSubagent.childSessionId &&
-        subagent.title === nextSubagent.title &&
-        subagent.promptSummary === nextSubagent.promptSummary
-      );
-    });
-    if (isUnchanged) {
-      return;
-    }
-  }
-
-  session.runningSubagents = nextRunningSubagents;
-}
-
-function setFinishedSubagents(session: AgentSessionData): void {
-  const nextFinishedSubagents = deriveFinishedSubagents(session.messages);
-  if (session.finishedSubagents.length === nextFinishedSubagents.length) {
-    const isUnchanged = session.finishedSubagents.every((subagent, index) => {
-      const nextSubagent = nextFinishedSubagents[index];
-      return (
-        nextSubagent &&
-        subagent.rowId === nextSubagent.rowId &&
-        subagent.agentId === nextSubagent.agentId &&
-        subagent.agentName === nextSubagent.agentName &&
-        subagent.childSessionId === nextSubagent.childSessionId &&
-        subagent.title === nextSubagent.title &&
-        subagent.promptSummary === nextSubagent.promptSummary
-      );
-    });
-    if (isUnchanged) {
-      return;
-    }
-  }
-
-  session.finishedSubagents = nextFinishedSubagents;
 }
 
 export const agentChatStore = create<AgentChatStoreState>()(
@@ -182,7 +74,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
 
     initSession: (tabId, sessionId) => {
       set((state) => {
-        state.sessionsByTabId[tabId] = emptySession(sessionId);
+        state.sessionsByTabId[tabId] = createAgentChatSession(sessionId);
       });
     },
 
@@ -245,9 +137,13 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
+        session.usageLedger = recordAgentChatUsageLedgerLiveMessages(session.usageLedger, [message]);
         // Deduplicate: skip if message with same id already exists.
         if (session.messages.some((m) => m.id === message.id)) return;
         session.messages.push(message);
+        if (message.role === "assistant") {
+          session.rendererFinalAssistantIds[message.id] = true;
+        }
         session.messages = trimSessionMessages(session.messages);
         setRunningSubagentsIfChanged(
           session,
@@ -261,13 +157,30 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
-        session.messages = trimSessionMessages(messages);
-        session.streamingMessage = null;
-        session.activeCoreTurnAssistantId = null;
+        const hasLiveStream =
+          Boolean(session.streamingMessage) && (session.isTurnActive || session.state === "running");
+        const historyMessages = hasLiveStream
+          ? messages.filter((message) => message.id !== session.streamingMessage?.id)
+          : messages;
+        session.usageLedger = mergeAgentChatUsageLedgerHistory(
+          session.usageLedger,
+          historyMessages,
+          !session.hasLoadedMessages,
+        );
+        const nextMessages = mergeActiveTurnHistory(
+          historyMessages,
+          session.messages,
+          session.rendererFinalAssistantIds,
+        );
+        session.messages = trimSessionMessages(nextMessages);
         session.hasLoadedMessages = true;
+        if (!hasLiveStream) {
+          session.streamingMessage = null;
+          session.activeCoreTurnAssistantId = null;
+        }
         setRunningSubagentsIfChanged(
           session,
-          deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
+          deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
         setFinishedSubagents(session);
       });
@@ -277,6 +190,9 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
+        // A delayed history response can contain an obsolete partial with this
+        // ID. Once live streaming begins, it is the authoritative source.
+        session.messages = session.messages.filter((committedMessage) => committedMessage.id !== message.id);
         session.streamingMessage = message;
         setRunningSubagentsIfChanged(
           session,
@@ -291,11 +207,17 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session || !session.streamingMessage) return;
         const msg = session.streamingMessage;
-        // Deduplicate: skip if message with same id already in messages.
-        if (!session.messages.some((m) => m.id === msg.id)) {
+        session.usageLedger = recordAgentChatUsageLedgerLiveMessages(session.usageLedger, [msg]);
+        const existingMessageIndex = session.messages.findIndex((message) => message.id === msg.id);
+        if (existingMessageIndex >= 0) {
+          session.messages[existingMessageIndex] = msg;
+        } else {
           session.messages.push(msg);
         }
         session.messages = trimSessionMessages(session.messages);
+        if (msg.role === "assistant") {
+          session.rendererFinalAssistantIds[msg.id] = true;
+        }
         session.streamingMessage = null;
         setRunningSubagentsIfChanged(
           session,
@@ -356,11 +278,24 @@ export const agentChatStore = create<AgentChatStoreState>()(
       });
     },
 
-    setSessionStats: (tabId, stats) => {
+    recordSessionStatsRequest: (tabId, requestId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.usageLedger = recordAgentChatUsageLedgerStatsRequest(session.usageLedger, requestId);
+        }
+      });
+    },
+
+    setSessionStats: (tabId, stats, requestId) => {
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (session) {
           session.sessionStats = stats;
+          if (stats) {
+            session.usageLedger = reconcileAgentChatUsageLedgerStats(session.usageLedger, stats, requestId);
+            session.rendererFinalAssistantIds = { ...session.usageLedger.liveParentAssistantIds };
+          }
         }
       });
     },

@@ -169,7 +169,7 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
       }
 
       // fire-and-forget: resync the selector from Pi after a rejected model change
-      void resyncAgentState(tabId, sessionId);
+      void resyncAgentState(sessionId);
       break;
     }
     case "get_available_models": {
@@ -211,11 +211,11 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
       // during a run (e.g. a lifecycle reattach refresh issued mid-turn) reflect pre-turn
       // data and would re-freeze the label on stale values. The post-compaction "?" still
       // works: manual compaction settles to idle before its refresh response arrives.
-      const sessionState = agentChatStore.getState().sessionsByTabId[tabId]?.state;
-      if (sessionState === "running" || sessionState === "compacting") break;
+      const session = agentChatStore.getState().sessionsByTabId[tabId];
+      if (!session || session.state === "running" || session.state === "compacting") break;
       const stats = normalizeSessionStats(event.data);
       if (stats) {
-        agentChatStore.getState().setSessionStats(tabId, stats);
+        agentChatStore.getState().setSessionStats(tabId, stats, responseID);
       }
       break;
     }
@@ -237,7 +237,7 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
 }
 
 /** Sends a get_state command to Pi to resync session state (e.g. after a rejected model change). */
-async function resyncAgentState(tabId: string, sessionId: string): Promise<void> {
+async function resyncAgentState(sessionId: string): Promise<void> {
   await sendPiCommand({ sessionId, command: { type: "get_state" } });
 }
 
@@ -246,9 +246,16 @@ const statsRequestSequenceBySessionId = new Map<string, number>();
 export async function refreshAgentSessionStats(sessionId: string): Promise<void> {
   const requestSequence = (statsRequestSequenceBySessionId.get(sessionId) ?? 0) + 1;
   statsRequestSequenceBySessionId.set(sessionId, requestSequence);
+  const requestId = `agent-chat-stats-${requestSequence}`;
+  const sessionEntry = Object.entries(agentChatStore.getState().sessionsByTabId).find(
+    ([, session]) => session.sessionId === sessionId,
+  );
+  if (sessionEntry) {
+    agentChatStore.getState().recordSessionStatsRequest(sessionEntry[0], requestId);
+  }
   await sendPiCommand({
     sessionId,
-    command: { type: "get_session_stats", id: `agent-chat-stats-${requestSequence}` },
+    command: { type: "get_session_stats", id: requestId },
   });
 }
 

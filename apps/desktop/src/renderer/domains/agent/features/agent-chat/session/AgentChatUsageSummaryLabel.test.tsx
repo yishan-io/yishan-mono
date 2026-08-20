@@ -275,6 +275,75 @@ describe("AgentChatUsageSummaryLabel", () => {
     expect(screen.getByLabelText("CTX: 90/128K (0.1%), $0.30")).toBeTruthy();
   });
 
+  it("transitions from a settled baseline to live exact-once billing and back to settled stats", async () => {
+    seedSession({ currentModelContextWindow: 1_000 });
+    const store = agentChatStore.getState();
+    const completedChild = {
+      id: "completed-child",
+      role: "custom" as const,
+      customType: "pi-subagent-child" as const,
+      content: "",
+      details: {
+        event: "completed" as const,
+        agentId: "child",
+        agentName: "Child",
+        childSessionId: "child-session",
+        usage: { input: 2, output: 3, cacheRead: 4, cacheWrite: 5, cost: 0.05 },
+      },
+    };
+
+    act(() => {
+      store.replaceMessages("tab-1", [
+        {
+          id: "baseline-parent",
+          role: "assistant",
+          content: [],
+          usage: { input: 100, output: 20, cacheRead: 30, cacheWrite: 40, totalTokens: 500, cost: { total: 1 } },
+        },
+      ]);
+      store.setSessionStats("tab-1", {
+        tokens: { input: 100, output: 20, cacheRead: 30, cacheWrite: 40, total: 9_999 },
+        cost: 1,
+        contextUsage: { tokens: 500, contextWindow: 1_000, percent: 50 },
+      });
+    });
+    render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
+    expect(screen.getByLabelText("CTX: 500/1K (50%), $1.00")).toBeTruthy();
+
+    act(() => {
+      store.setSessionStats("tab-1", null);
+      store.appendMessage("tab-1", {
+        id: "live-parent",
+        role: "assistant",
+        content: [],
+        usage: { input: 7, output: 8, cacheRead: 9, cacheWrite: 10, totalTokens: 600, cost: { total: 0.07 } },
+      });
+      store.appendMessage("tab-1", completedChild);
+      store.appendMessage("tab-1", completedChild);
+    });
+
+    const liveLabel = screen.getByLabelText("CTX: 600/1K (60%), $1.12");
+    fireEvent.mouseOver(liveLabel);
+    const liveTooltip = await screen.findByRole("tooltip");
+    expect(liveTooltip.textContent).toContain("109");
+    expect(liveTooltip.textContent).toContain("31");
+    expect(liveTooltip.textContent).toContain("43");
+    expect(liveTooltip.textContent).toContain("55");
+    expect(liveTooltip.textContent).toContain("238");
+    expect(liveTooltip.textContent).toContain("$1.12");
+
+    act(() => {
+      store.setSessionStats("tab-1", {
+        tokens: { input: 107, output: 28, cacheRead: 39, cacheWrite: 50, total: 99_999 },
+        cost: 1.07,
+        contextUsage: { tokens: 700, contextWindow: 1_000, percent: 70 },
+      });
+    });
+
+    expect(screen.getByLabelText("CTX: 700/1K (70%), $1.12")).toBeTruthy();
+    expect(screen.getByRole("tooltip").textContent).toContain("238");
+  });
+
   it("shows the unknown-context placeholder after compaction", () => {
     seedSession({ currentModelContextWindow: 128_000 });
     agentChatStore.getState().setSessionStats("tab-1", {
