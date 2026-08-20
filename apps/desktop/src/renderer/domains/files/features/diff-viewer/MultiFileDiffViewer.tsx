@@ -19,6 +19,7 @@ import {
   createInitialCollapsedKeys,
   getDiffTotals,
 } from "./multiFileDiffState";
+import { useResponsiveDiffViewMode } from "./useResponsiveDiffViewMode";
 
 type MultiFileDiffViewerProps = {
   files: FileDiffEntry[];
@@ -41,7 +42,7 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
 
   const codeViewRef = useRef<CodeViewHandle<undefined>>(null);
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(() => createInitialCollapsedKeys(files));
-  const [sideBySide, setSideBySide] = useState(false);
+  const { rootRef, isSplitView, toggleDiffViewMode } = useResponsiveDiffViewMode();
   const [changesOnly, setChangesOnly] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,11 +63,11 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
   const options = useMemo(
     () => ({
       theme: themeName,
-      diffStyle: (sideBySide ? "split" : "unified") as "split" | "unified",
+      diffStyle: (isSplitView ? "split" : "unified") as "split" | "unified",
       expandUnchanged: !changesOnly,
       overflow: (wordWrap ? "wrap" : "scroll") as "wrap" | "scroll",
     }),
-    [themeName, sideBySide, changesOnly, wordWrap],
+    [themeName, isSplitView, changesOnly, wordWrap],
   );
 
   const searchFiles = useMemo(
@@ -80,8 +81,8 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
   );
 
   const searchMatches = useMemo(
-    () => findDiffMatches(searchFiles, searchQuery, false, sideBySide),
-    [searchFiles, searchQuery, sideBySide],
+    () => findDiffMatches(searchFiles, searchQuery, false, isSplitView),
+    [searchFiles, searchQuery, isSplitView],
   );
 
   const currentMatch: DiffMatch | undefined = searchMatches[currentMatchIndex];
@@ -215,6 +216,7 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
 
   return (
     <Box
+      ref={rootRef}
       sx={{
         height: "100%",
         minHeight: 0,
@@ -231,12 +233,12 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
         allExpanded={allExpanded}
         allCollapsed={allCollapsed}
         changesOnly={changesOnly}
-        sideBySide={sideBySide}
+        sideBySide={isSplitView}
         wrapLines={wordWrap}
         onFoldAll={handleFoldAll}
         onUnfoldAll={handleUnfoldAll}
         onToggleChangesOnly={handleToggleChangesOnly}
-        onToggleSideBySide={() => setSideBySide((previousValue) => !previousValue)}
+        onToggleSideBySide={toggleDiffViewMode}
         onToggleWrapLines={() => editorSettingsStore.getState().setWordWrap(!wordWrap)}
         onToggleSearch={() => setSearchActive((previousValue) => !previousValue)}
       />
