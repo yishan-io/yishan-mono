@@ -1,39 +1,14 @@
-import {
-  Box,
-  Chip,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Stack,
-  Tooltip,
-  Typography,
-} from "@mui/material";
-import {
-  type NotificationSettingsFocusItemId,
-  isNotificationSettingsFocusItemId,
-} from "@renderer/domains/notification";
+import { Box, Stack } from "@mui/material";
+import { isNotificationSettingsFocusItemId } from "@renderer/domains/notification";
 import { getRendererPlatform } from "@renderer/platform/platform";
-import {
-  type ComponentType,
-  type LazyExoticComponent,
-  type ReactNode,
-  Suspense,
-  lazy,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { BiCog } from "react-icons/bi";
-import { RxExit } from "react-icons/rx";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { SearchInput } from "../../../../ui/components/SearchInput";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { useThemePreference } from "../../hooks/useThemePreference";
 import { SettingsErrorBoundary } from "./SettingsErrorBoundary";
 import { SettingsPageLayout } from "./SettingsPageLayout";
+import { SettingsSidebar } from "./SettingsSidebar";
 import { ThemePreferencePicker } from "./ThemePreferencePicker";
 import {
   AccountSettingsView,
@@ -55,16 +30,8 @@ import {
   TerminalSettingsView,
   WorkspaceSettingsView,
 } from "./settingsLazyPages";
+import { type SettingsSearchResult, normalizeSettingsSearchQuery, rankSettingsSearchResult } from "./settingsSearch";
 import {
-  type SettingsSearchResult,
-  normalizeSettingsSearchQuery,
-  rankSettingsSearchResult,
-  renderExperimentalSidebarLabel,
-  renderSidebarLabel,
-} from "./settingsSearch";
-import {
-  type CustomizeFocusItemId,
-  SETTINGS_NAV_SECTIONS,
   SETTINGS_SEARCH_CATALOG,
   type SettingsSearchCatalogItem,
   type SettingsTab,
@@ -266,154 +233,38 @@ export function SettingsView() {
     [focusedNotificationItemId, focusedCustomizeItem, setThemePreference, t, themePreference],
   );
 
+  const handleNavigateBack = useCallback(() => navigate("/"), [navigate]);
+  const handleSearchQueryChange = useCallback((value: string) => setSearchQuery(value), []);
+
+  const handleSelectSearchResult = useCallback(
+    (result: SettingsSearchResult) => {
+      if (result.focusItemId) {
+        setSearchParams({ tab: result.tab, focus: result.focusItemId });
+        return;
+      }
+      setSearchParams({ tab: result.tab });
+    },
+    [setSearchParams],
+  );
+
+  const handleSelectTab = useCallback((tab: SettingsTab) => setSearchParams({ tab }), [setSearchParams]);
+
   return (
     <SettingsPageLayout
       sidebar={
-        <>
-          {/* ── Fixed header: window controls + title + search ── */}
-          <Box sx={{ px: 1.25, pt: 1.5, pb: 0, flexShrink: 0 }}>
-            <Box
-              className="electron-webkit-app-region-drag"
-              sx={{ px: 0, mb: 0.5, display: "flex", alignItems: "center" }}
-            >
-              {shouldReserveMacWindowControlsInset ? <Box sx={{ width: 72, flexShrink: 0 }} /> : null}
-              <Box sx={{ flex: 1 }} />
-              <Tooltip title={t("settings.back")}>
-                <IconButton
-                  className="electron-webkit-app-region-no-drag"
-                  onClick={() => navigate("/")}
-                  data-testid="settings-back-button"
-                  aria-label={t("settings.back")}
-                  sx={{ transform: "rotate(180deg)" }}
-                >
-                  <RxExit size={16} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Typography variant="body2" sx={{ px: 1, mb: 1.25, fontWeight: 700 }}>
-              {t("settings.title")}
-            </Typography>
-
-            <SearchInput
-              placeholder={t("settings.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(value) => {
-                setSearchQuery(value);
-              }}
-            />
-          </Box>
-
-          {/* ── Scrollable nav list below search ── */}
-          <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1.25, pb: 1.5 }}>
-            {normalizedSearchQuery ? (
-              <Box sx={{ mt: 1.5 }}>
-                <List disablePadding>
-                  {searchResults.map((result) => {
-                    const Icon = result.icon;
-                    const isSelected =
-                      selectedTab === result.tab &&
-                      (result.focusItemId === undefined ||
-                        (typeof result.focusItemId === "string" && focusedItemParam === result.focusItemId));
-                    return (
-                      <ListItemButton
-                        key={result.id}
-                        selected={isSelected}
-                        onClick={() => {
-                          if (result.focusItemId) {
-                            setSearchParams({
-                              tab: result.tab,
-                              focus: result.focusItemId,
-                            });
-                            return;
-                          }
-                          setSearchParams({ tab: result.tab });
-                        }}
-                        sx={{ borderRadius: 1, minHeight: 38 }}
-                      >
-                        <ListItemIcon sx={{ minWidth: 28 }}>
-                          <Icon size={16} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            result.tab === "computerUse"
-                              ? renderExperimentalSidebarLabel(result.label, t("settings.computerUse.experimental"))
-                              : renderSidebarLabel(result.label)
-                          }
-                          secondary={
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                color: "text.secondary",
-                              }}
-                            >
-                              {result.sectionLabel}
-                            </Typography>
-                          }
-                        />
-                      </ListItemButton>
-                    );
-                  })}
-                </List>
-                {searchResults.length === 0 ? (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "text.secondary",
-                      px: 1.25,
-                    }}
-                  >
-                    {t("settings.searchNoResults")}
-                  </Typography>
-                ) : null}
-              </Box>
-            ) : (
-              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
-                {SETTINGS_NAV_SECTIONS.map((section) => (
-                  <Box key={section.titleKey}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: "text.secondary",
-                        px: 1,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                      }}
-                    >
-                      {t(section.titleKey)}
-                    </Typography>
-                    <List disablePadding sx={{ mt: 0.5 }}>
-                      {section.items.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <ListItemButton
-                            key={item.tab}
-                            selected={selectedTab === item.tab}
-                            onClick={() => setSearchParams({ tab: item.tab })}
-                            sx={{ borderRadius: 1, minHeight: 34 }}
-                          >
-                            <ListItemIcon sx={{ minWidth: 28 }}>
-                              <Icon size={16} />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={
-                                item.tab === "computerUse"
-                                  ? renderExperimentalSidebarLabel(
-                                      t(item.labelKey),
-                                      t("settings.computerUse.experimental"),
-                                    )
-                                  : renderSidebarLabel(t(item.labelKey))
-                              }
-                            />
-                          </ListItemButton>
-                        );
-                      })}
-                    </List>
-                  </Box>
-                ))}
-              </Stack>
-            )}
-          </Box>
-        </>
+        <SettingsSidebar
+          focusedItemParam={focusedItemParam}
+          isMacWindowControlsInsetReserved={shouldReserveMacWindowControlsInset}
+          normalizedSearchQuery={normalizedSearchQuery}
+          searchQuery={searchQuery}
+          searchResults={searchResults}
+          selectedTab={selectedTab}
+          t={t}
+          onNavigateBack={handleNavigateBack}
+          onSearchQueryChange={handleSearchQueryChange}
+          onSelectSearchResult={handleSelectSearchResult}
+          onSelectTab={handleSelectTab}
+        />
       }
     >
       {selectedTabContentByTab[selectedTab] ?? (
