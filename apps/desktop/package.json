@@ -30,6 +30,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@excalidraw/excalidraw": "^0.18.1",
+    "@lobehub/icons": "5.16.0",
     "@mui/material": "^9.2.0",
     "@mui/x-charts": "^9.4.0",
     "@pierre/diffs": "^1.2.8",

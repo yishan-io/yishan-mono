@@ -1,45 +1,18 @@
 import { Box, useTheme } from "@mui/material";
 import { getPiProviderIcon, getPiProviderIconColor, getPiProviderVisual } from "./piProviderVisuals";
 
-const MONOCHROME_WHITE_FILTER = "brightness(0) saturate(100%) invert(1)";
-
 /**
- * Renders one provider mark: a brand-colored SVG asset when available,
- * otherwise the catalog react-icon with its brand color (fallback icons
- * inherit the surrounding text color). Applies the visual `iconScale` for
- * assets whose mark does not fill the viewBox (e.g. the padded codex.svg).
+ * Renders one provider mark: the brand-color variant when the brand ships one
+ * (both light and dark mode), otherwise the mono/react-icon mark with its
+ * brand color (or the inherited text color). Color variants ignore `color`.
  */
 export function ProviderMark({ providerId, size }: { providerId: string; size: number }) {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
   const visual = getPiProviderVisual(providerId);
-  const scale = visual?.iconScale ?? 1;
-  const scaledTransform = scale !== 1 ? `scale(${scale})` : undefined;
+  const Icon = visual?.ColorIcon ?? getPiProviderIcon(providerId);
+  const color = getPiProviderIconColor(providerId, isDarkMode);
 
-  if (visual?.assetIcon) {
-    return (
-      <Box
-        component="img"
-        src={visual.assetIcon}
-        alt=""
-        aria-hidden
-        sx={{
-          width: size,
-          height: size,
-          maxWidth: "100%",
-          maxHeight: "100%",
-          display: "block",
-          objectFit: "contain",
-          flexShrink: 0,
-          transform: scaledTransform,
-          transformOrigin: "center",
-          filter: visual.monochrome && isDarkMode ? MONOCHROME_WHITE_FILTER : undefined,
-        }}
-      />
-    );
-  }
-
-  const Icon = visual?.icon ?? getPiProviderIcon(providerId);
   return (
     <Box
       sx={{
@@ -51,9 +24,7 @@ export function ProviderMark({ providerId, size }: { providerId: string; size: n
         flexShrink: 0,
       }}
     >
-      <Box sx={{ display: "inline-flex", transform: scaledTransform, transformOrigin: "center" }}>
-        <Icon size={size} color={getPiProviderIconColor(providerId, isDarkMode)} aria-hidden />
-      </Box>
+      <Icon size={size} color={color} aria-hidden />
     </Box>
   );
 }

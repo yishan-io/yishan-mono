@@ -24,7 +24,6 @@ export {
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   type AgentIconContext,
   type AgentIconPresentation,
-  type AgentIconThemeMode,
 } from "./ui/agentIconPresentation";
 
 export type { AgentModelInfo } from "./commands/agentCommands";

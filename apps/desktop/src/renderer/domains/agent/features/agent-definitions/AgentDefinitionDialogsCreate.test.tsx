@@ -236,8 +236,12 @@ describe("AgentDefinitionDialogsCreate", () => {
 
     // Slashes inside the openrouter model key must not split the provider:
     // the first segment stays the provider ("OpenRouter"), never "anthropic"
-    // or "deepseek".
-    fireEvent.click(await screen.findByText("OpenRouter"));
+    // or "deepseek". The lobe ProviderMark adds a matching svg <title>, so
+    // pick the non-title match.
+    const openrouterOptions = await screen.findAllByText("OpenRouter");
+    const openrouterOption = openrouterOptions.find((element) => element.tagName !== "title");
+    expect(openrouterOption).toBeTruthy();
+    fireEvent.click(openrouterOption!);
     expect(screen.getByText("anthropic/claude-opus-4.5")).toBeTruthy();
     expect(screen.getByText("deepseek/deepseek-v4-flash-latest")).toBeTruthy();
     expect(screen.queryByText("Claude Sonnet 4.5")).toBeNull();
