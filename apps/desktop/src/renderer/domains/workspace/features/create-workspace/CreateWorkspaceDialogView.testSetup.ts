@@ -123,12 +123,6 @@ vi.mock("@renderer/domains/git", async () => {
   };
 });
 
-vi.mock("../../../../app/commands/useCommands", () => ({
-  useGitCommands: () => ({
-    getGitAuthorName: getMockedCommands().getGitAuthorName,
-  }),
-}));
-
 vi.mock("@renderer/domains/agent", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/agent")>();
   return {

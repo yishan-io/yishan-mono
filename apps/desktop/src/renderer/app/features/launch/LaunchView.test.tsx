@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
-  return { ...actual, openTab: mocks.openTab };
+  return { ...actual, openTab: mocks.openTab, openTabWithContentSeed: mocks.openTab };
 });
 
 vi.mock("react-i18next", () => ({
@@ -60,16 +60,6 @@ vi.mock("@renderer/domains/workspace", async (importOriginal) => {
   return {
     ...actual,
     openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
-  };
-});
-
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    openTab: mocks.openTab,
-  });
-  return {
-    useAppCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
   };
 });
 

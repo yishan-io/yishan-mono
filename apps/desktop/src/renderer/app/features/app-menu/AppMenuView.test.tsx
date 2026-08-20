@@ -31,18 +31,6 @@ vi.mock("../../../domains/settings/hooks/useThemePreference", () => ({
   }),
 }));
 
-vi.mock("../../../commands/useCommands", () => {
-  const commandSurface = () => ({
-    openExternalUrl,
-    switchOrganization,
-    logout,
-  });
-  return {
-    useAppCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-  };
-});
-
 vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));

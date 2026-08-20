@@ -178,24 +178,6 @@ vi.mock("../../../../domains/workspace/state/workspaceLifecycleNoticeStore", () 
   enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    selectTab: mocked.selectTab,
-    closeTab: mocked.closeTab,
-    createTerminalSession: mocked.createTerminalSession,
-    listTerminalSessions: mocked.listTerminalSessions,
-    readTerminalOutput: mocked.readTerminalOutput,
-    resizeTerminal: mocked.resizeTerminal,
-    subscribeTerminalOutput: mocked.subscribeTerminalOutput,
-    writeTerminalInput: mocked.writeTerminalInput,
-    renameTab: mocked.renameTab,
-  });
-  return {
-    useAppCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-  };
-});
-
 vi.mock("@xterm/xterm", () => {
   class FakeTerminal {
     cols = 120;

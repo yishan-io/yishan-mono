@@ -35,8 +35,7 @@ import {
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAppCommands } from "../../app/commands/useCommands";
-import type { AppCommandSurface } from "../../app/commands/useCommands";
+import { loadWorkspaceSnapshot } from "../../app/commands/workspaceSnapshotFlow";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
 import { ACTIONS } from "../../events";
 import { subscribeAppActionEvent } from "../../events";
@@ -68,7 +67,8 @@ type WorkspaceViewCommands = {
   setActiveWorkspace: typeof setActiveWorkspace;
   openEntryInExternalApp: typeof openEntryInExternalApp;
   refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChanges;
-} & AppCommandSurface;
+  loadWorkspaceSnapshot: typeof loadWorkspaceSnapshot;
+};
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
 function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: ReturnType<typeof useNavigate> }) {
@@ -355,7 +355,6 @@ export function WorkspaceView() {
   // bootstrap effect keys on `cmd`, and a fresh object every render would
   // re-trigger workspace snapshot loads (which race and skip the local-folder
   // merge). The action members are stable module-level functions.
-  const appCommands = useAppCommands();
   const cmd: WorkspaceViewCommands = useMemo(
     () => ({
       activateWorkspace,
@@ -371,9 +370,9 @@ export function WorkspaceView() {
       setActiveWorkspace,
       openEntryInExternalApp,
       refreshWorkspaceGitChanges,
-      ...appCommands,
+      loadWorkspaceSnapshot,
     }),
-    [appCommands],
+    [],
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));

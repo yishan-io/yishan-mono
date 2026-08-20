@@ -5,14 +5,18 @@ import {
   useTerminalTabLookups,
 } from "@renderer/domains/terminal";
 import type { TerminalDetectedPort } from "@renderer/domains/terminal";
-import { activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
+import {
+  activateWorkspace,
+  openTabWithContentSeed,
+  setSelectedTab,
+  workbenchNavigationStore,
+} from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice, workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext } from "react-router-dom";
-import { useWorkbenchCommands } from "../../../app/commands/useCommands";
 import { RouteCloseWatcher } from "../../../hooks/RouteCloseWatcher";
 import { PortsTableMenu, type PortsTableMenuRow } from "./PortsTableMenu";
 
@@ -27,7 +31,6 @@ export function WorkspacePortsMenuControl() {
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
-  const { selectTab } = useWorkbenchCommands();
   const [portsMenuAnchorEl, setPortsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [detectedPorts, setDetectedPorts] = useState<TerminalDetectedPort[]>([]);
   const [isKillingByRowId, setIsKillingByRowId] = useState<Record<string, boolean>>({});
@@ -136,7 +139,7 @@ export function WorkspacePortsMenuControl() {
           const targetTab = terminalTabBySessionId.get(sessionId);
           if (targetTab) {
             activateWorkspace({ workspaceId: targetTab.workspaceId });
-            selectTab(targetTab.id);
+            setSelectedTab(targetTab.id);
           }
           closePortsMenu();
         }}

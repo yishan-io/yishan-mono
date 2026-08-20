@@ -39,16 +39,6 @@ vi.mock("@renderer/domains/git", async () => {
   };
 });
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    getGitAuthorName: mocked.getGitAuthorName,
-  });
-  return {
-    useAppCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-  };
-});
-
 const initialWorkspaceSettingsState = workspaceSettingsStore.getState();
 const initialWorkspaceState = workspaceStore.getState();
 

@@ -45,17 +45,6 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
-    selectTab: mocked.selectTab,
-  });
-  return {
-    useAppCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-  };
-});
-
 let navigateToSettings: (() => void) | null = null;
 
 /** Renders the same workspace shell across child routes so settings behaves like an overlay. */

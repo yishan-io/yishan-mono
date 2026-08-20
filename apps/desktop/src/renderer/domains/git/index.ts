@@ -8,6 +8,7 @@ export type {
   GitPullRequestSummary,
 } from "./pull-request";
 export { diffTabContentStore, type DiffTabContentStoreState } from "./state/diffTabContentStore";
+export { createDiffTabPlaceholder } from "./commands/diffTabPlaceholder";
 export { refreshDiffTabContent, removeDiffTabContent, seedDiffTabContent } from "./commands/diffTabContentCommands";
 export {
   commitGitChanges,

@@ -339,10 +339,15 @@ function scanViolations(): Violation[] {
       // Commands instead. Value imports from another feature (through any
       // path, including the module root API) are a boundary violation.
       // Type-only imports of stable model types are allowed (a Workbench Tab
-      // model legitimately references agent kind types). ----
+      // model legitimately references agent kind types).
+      // Desktop 11 Phase 46 carve-out: `domains/workbench/commands/` MAY
+      // coordinate other Domain public APIs (tab opening seeds Files/Git
+      // content; tab renaming syncs the Agent session). The presentation
+      // layers (features/, ui/, hooks/, runtime/) remain product-free. ----
       if (
         !imp.isTypeOnly &&
         rel.startsWith("domains/workbench/") &&
+        !rel.startsWith("domains/workbench/commands/") &&
         /^domains\/[^/]+/.test(relT) &&
         relT !== "domains/workbench" &&
         !relT.startsWith("domains/workbench/")

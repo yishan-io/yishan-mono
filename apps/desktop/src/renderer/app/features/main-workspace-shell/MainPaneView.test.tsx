@@ -163,41 +163,6 @@ vi.mock("../../../domains/agent/state/chatStore", () => ({
     }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => {
-    const state = mocked.stateRef.current as Record<string, unknown>;
-    return {
-      listDetectedPorts: state.listDetectedPorts,
-      subscribeDetectedPorts: state.subscribeDetectedPorts ?? mocked.subscribeDetectedPorts,
-      getTerminalResourceUsage: state.getTerminalResourceUsage ?? mocked.getTerminalResourceUsage,
-      retainOpenTerminalTabFocus: state.retainOpenTerminalTabFocus ?? vi.fn(),
-      activateProject: state.activateProject,
-      activateWorkspace: state.activateWorkspace,
-      selectTab: state.selectTab,
-      createTab: state.createTab,
-      openTab: state.openTab,
-      closeTab: state.closeTab,
-      closeOtherTabs: state.closeOtherTabs,
-      closeAllTabs: state.closeAllTabs,
-      toggleTabPinned: state.toggleTabPinned,
-      reorderTab: state.reorderTab,
-      renameTab: state.renameTab,
-      readFile: state.readFile,
-      readDiff: state.readDiff,
-      readCommitDiff: state.readCommitDiff,
-      readBranchComparisonDiff: state.readBranchComparisonDiff,
-      refreshFileTabFromDisk: state.refreshFileTabFromDisk,
-      refreshDiffTabContent: state.refreshDiffTabContent,
-      updateFileTabContent: state.updateFileTabContent,
-      markFileTabSaved: state.markFileTabSaved,
-    };
-  };
-  return {
-    useAppCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-  };
-});
-
 vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));

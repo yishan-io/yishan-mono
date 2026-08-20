@@ -1,4 +1,4 @@
-import type { DiffFileChangeKind } from "@renderer/domains/workbench";
+import type { DiffFileChangeKind } from "../../workbench";
 
 function getFileName(path: string): string {
   const normalized = path.replace(/\\/g, "/");

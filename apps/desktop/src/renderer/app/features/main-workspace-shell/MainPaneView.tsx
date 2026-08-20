@@ -49,7 +49,7 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { ColumnSeparator } from "@renderer/domains/workbench";
 import { TabPanel } from "@renderer/domains/workbench";
-import { retainOpenTabFocus } from "@renderer/domains/workbench";
+import { openTabWithContentSeed, retainOpenTabFocus } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
@@ -58,7 +58,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
-import { useWorkbenchCommands } from "../../commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../selectors";
 import { LaunchView } from "../launch/LaunchView";
 import { useTabContentRenderer } from "../tab-content/useTabContentRenderer";
@@ -74,7 +73,6 @@ function clamp(value: number, min: number, max: number): number {
 /** Renders the primary workspace pane with split-pane tabbed content, per-tab views, and pane visibility controls. */
 export function MainPaneView() {
   const { t } = useTranslation();
-  const workbenchCommands = useWorkbenchCommands();
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
@@ -84,7 +82,7 @@ export function MainPaneView() {
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const mergedCmd = useMemo(
     () => ({
-      ...workbenchCommands,
+      openTab: openTabWithContentSeed,
       openEntryInExternalApp,
       markFileTabSaved,
       updateFileTabContent,
@@ -94,7 +92,7 @@ export function MainPaneView() {
       readFile,
       refreshFileTabFromDisk,
     }),
-    [workbenchCommands],
+    [],
   );
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;

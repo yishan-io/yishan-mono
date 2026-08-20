@@ -2,13 +2,12 @@ import { openExternalUrl } from "@renderer/domains/browser";
 import { switchOrganization } from "@renderer/domains/organization";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAppCommands } from "../../commands/useCommands";
+import { logout } from "../../../app/commands/appCommands";
 
 /** Owns local app menu state and behavior while preserving the public AppMenuView API. */
 export function useAppMenuViewState() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAppCommands();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [organizationMenuAnchor, setOrganizationMenuAnchor] = useState<HTMLElement | null>(null);
   const [isCreateOrganizationDialogOpen, setIsCreateOrganizationDialogOpen] = useState(false);
@@ -58,7 +57,7 @@ export function useAppMenuViewState() {
     await logout();
     closeMenus();
     navigate("/");
-  }, [closeMenus, logout, navigate]);
+  }, [closeMenus, navigate]);
 
   const handleOpenExternalUrl = useCallback((url: string) => {
     // fire-and-forget: external browser open should not block menu interaction.
@@ -79,7 +78,7 @@ export function useAppMenuViewState() {
       void switchOrganization(organizationId);
       closeMenus();
     },
-    [closeMenus, switchOrganization],
+    [closeMenus],
   );
 
   const handleOpenCreateOrganizationDialog = useCallback(() => {
