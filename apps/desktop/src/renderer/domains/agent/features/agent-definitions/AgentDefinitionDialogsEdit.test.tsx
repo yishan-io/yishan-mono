@@ -98,6 +98,7 @@ describe("AgentDefinitionDialogsEdit", () => {
     await screen.findByText("my-helper");
     fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
     const toolsInput = await screen.findByLabelText("settings.customize.agents.dialogs.toolsLabel");
+    expect(screen.getByTestId("agent-detail-save").textContent).toBe("common.actions.save");
     await waitFor(() => expect(mocked.listAvailableAgentTools).toHaveBeenCalled());
     fireEvent.change(toolsInput, { target: { value: "runtime" } });
 
