@@ -91,6 +91,6 @@ export { useMarkdownStyles } from "./features/markdown-preview/markdownStyles";
 
 export { MarkdownPreview } from "./features/markdown-preview/MarkdownPreview";
 export { createFileTabPlaceholder } from "./features/file-editor/fileTabPlaceholder";
-export { getFileExtension } from "./features/file-editor/editorLanguage";
+export { getFileExtension } from "./features/file-editor/monaco/editorLanguage";
 export type { GitLineChange, GitLineChangeKind } from "./features/file-editor/git-gutter/gitGutterDiff";
-export { monaco } from "./features/file-editor/monacoSetup";
+export { monaco } from "./features/file-editor/monaco/monacoSetup";

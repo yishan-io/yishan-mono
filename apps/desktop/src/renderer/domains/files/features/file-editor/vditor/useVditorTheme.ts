@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useRef } from "react";
-import type { VditorEditorHandle } from "./vditorEditor";
 import { rethemeMermaidDiagrams } from "./mermaidZoomButton";
+import type { VditorEditorHandle } from "./vditorEditor";
 
 type UseVditorThemeInput = {
   rootRef: RefObject<HTMLDivElement | null>;

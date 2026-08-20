@@ -1,4 +1,4 @@
-import { createVditorEditor, type VditorEditorHandle, type VditorLang } from "./vditorEditor";
+import { type VditorEditorHandle, type VditorLang, createVditorEditor } from "./vditorEditor";
 
 /** Shared state for a single root div, reused across StrictMode remounts. */
 interface RootEditorState {

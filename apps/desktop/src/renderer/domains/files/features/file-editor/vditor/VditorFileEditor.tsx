@@ -14,15 +14,15 @@
 import { displaySettingsStore } from "@renderer/domains/settings";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { i18n } from "../../../../i18n";
-import { DiagramZoomOverlay } from "../../ui/DiagramZoomOverlay";
+import { i18n } from "../../../../../i18n";
+import { DiagramZoomOverlay } from "../../../ui/DiagramZoomOverlay";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
-import { type VditorEditorHandle, resolveVditorLang } from "./vditorEditor";
-import { acquireVditorEditor } from "./vditorEditorRegistry";
 import { useVditorContentSync } from "./useVditorContentSync";
 import { useVditorFocusRequest } from "./useVditorFocusRequest";
 import { useVditorTheme } from "./useVditorTheme";
 import { useVditorWindowInteractions } from "./useVditorWindowInteractions";
+import { type VditorEditorHandle, resolveVditorLang } from "./vditorEditor";
+import { acquireVditorEditor } from "./vditorEditorRegistry";
 import "vditor/dist/index.css";
 import "./vditorTheme.css";
 

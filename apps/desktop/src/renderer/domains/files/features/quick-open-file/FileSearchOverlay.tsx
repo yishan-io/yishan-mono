@@ -6,14 +6,14 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { buildWorkspaceFileUrl, readFile } from "../../commands/fileCommands";
 import { setExpandedFileTreeItems, setSelectedEntryPath } from "../../commands/fileTreeCommands";
+import { fileTreeStore } from "../../state/fileTreeStore";
 import {
   isAudioFile,
   isExcalidrawFile,
   isImageFile,
   isUnsupportedFileTab,
   isVideoFile,
-} from "../../features/file-editor/editorLanguage";
-import { fileTreeStore } from "../../state/fileTreeStore";
+} from "../file-editor/monaco/editorLanguage";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength } from "../file-manager/fileTreeEntries";
 import { FileQuickOpenDialog } from "./FileQuickOpenDialog";
 import { useFileSearchController } from "./useFileSearchController";

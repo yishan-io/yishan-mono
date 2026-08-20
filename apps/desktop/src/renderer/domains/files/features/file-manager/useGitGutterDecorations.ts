@@ -7,12 +7,12 @@ import {
   computeGitLineChanges,
   getHunkForLine,
 } from "../../features/file-editor/git-gutter/gitGutterDiff";
-import { monaco } from "../../features/file-editor/monacoSetup";
 import {
   GIT_GUTTER_DIFF_DEBOUNCE_MS,
   MAX_LIVE_GUTTER_DIFF_LINES,
   changesToDecorations,
 } from "../file-editor/git-gutter/gitGutterDecorations";
+import { monaco } from "../file-editor/monaco/monacoSetup";
 
 export type UseGitGutterDecorationsInput = {
   /** Monaco editor instance to decorate. */

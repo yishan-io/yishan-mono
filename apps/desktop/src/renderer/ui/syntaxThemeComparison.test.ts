@@ -71,7 +71,10 @@ import { language as typescriptDef } from "monaco-editor/esm/vs/basic-languages/
 import { language as yamlDef } from "monaco-editor/esm/vs/basic-languages/yaml/yaml.js";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 import { createHighlighterCore } from "shiki/core";
-import { buildMonacoThemeRules, resolveMonacoTokenColor } from "../domains/files/features/file-editor/monacoThemeRules";
+import {
+  buildMonacoThemeRules,
+  resolveMonacoTokenColor,
+} from "../domains/files/features/file-editor/monaco/monacoThemeRules";
 import { buildOverriddenRules } from "../domains/files/ui/diffTheme";
 import { type CodeThemePalette, resolveCodeTheme } from "./codeThemes";
 

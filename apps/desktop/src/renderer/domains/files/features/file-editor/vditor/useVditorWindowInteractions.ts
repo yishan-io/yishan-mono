@@ -16,7 +16,11 @@ type UseVditorWindowInteractionsInput = {
  *   content so Vditor's copy handler converts the full markdown.
  * - Mermaid zoom expand buttons inside Vditor's rendered preview panels.
  */
-export function useVditorWindowInteractions({ rootRef, isDeletedRef, onZoomDiagramSvg }: UseVditorWindowInteractionsInput) {
+export function useVditorWindowInteractions({
+  rootRef,
+  isDeletedRef,
+  onZoomDiagramSvg,
+}: UseVditorWindowInteractionsInput) {
   const { t } = useTranslation();
 
   useEffect(() => {

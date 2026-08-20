@@ -18,7 +18,7 @@ import {
   isImageFile,
   isUnsupportedFileTab,
   isVideoFile,
-} from "../../features/file-editor/editorLanguage";
+} from "../file-editor/monaco/editorLanguage";
 import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbsolutePath } from "./fileTreeEntries";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";

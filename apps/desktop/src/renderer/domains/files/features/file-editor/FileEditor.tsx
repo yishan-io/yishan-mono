@@ -1,12 +1,12 @@
 import { Box, Typography } from "@mui/material";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { CliSpinner } from "../../../../ui/components/CliSpinner";
-import { isExcalidrawFile } from "../../features/file-editor/editorLanguage";
 import { useGitGutterDecorations } from "../file-manager/useGitGutterDecorations";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 import { MarkdownViewToggle } from "./MarkdownViewToggle";
-import type { VditorFileEditorHandle } from "./VditorFileEditor";
-import { useMonacoFileEditor } from "./useMonacoFileEditor";
+import { isExcalidrawFile } from "./monaco/editorLanguage";
+import { useMonacoFileEditor } from "./monaco/useMonacoFileEditor";
+import type { VditorFileEditorHandle } from "./vditor/VditorFileEditor";
 
 export type FileEditorProps = {
   workspaceId?: string;
@@ -200,8 +200,8 @@ function MonacoFileEditor({
   );
 }
 
-const VditorFileEditor = lazy(() => import("./VditorFileEditor").then((m) => ({ default: m.VditorFileEditor })));
-const ExcalidrawFileEditor = lazy(() => import("./ExcalidrawFileEditor"));
+const VditorFileEditor = lazy(() => import("./vditor/VditorFileEditor").then((m) => ({ default: m.VditorFileEditor })));
+const ExcalidrawFileEditor = lazy(() => import("./excalidraw/ExcalidrawFileEditor"));
 
 /** Dispatches to the Excalidraw editor for .excalidraw files, or Monaco/Vditor for all others. */
 export function FileEditor(props: FileEditorProps) {
