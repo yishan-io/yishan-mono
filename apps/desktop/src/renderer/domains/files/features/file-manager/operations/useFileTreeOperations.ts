@@ -4,7 +4,6 @@ import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 import { closeTab, openTab, renameTabsForEntryRename, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
-import { projectStore } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 
 import { workspaceStore } from "@renderer/domains/workspace";
@@ -19,12 +18,7 @@ import {
 } from "../fileTreeEntries";
 import { mergeWorkspaceEntries } from "../fileTreeMerge";
 import { normalizeRelativePath } from "../fileTreePaths";
-import {
-  applyDirectoryRefreshes,
-  getImmediateChildPath,
-  resolveRefreshDirectoryPaths,
-  shouldEvictChangedEntry,
-} from "../fileTreeRefreshRules";
+import { applyDirectoryRefreshes, resolveRefreshDirectoryPaths } from "../fileTreeRefreshRules";
 import { useFileTreeCrud } from "../operations/useFileTreeCrud";
 import { type FileTreeUndoAction, useFileTreeUndo } from "../operations/useFileTreeUndo";
 import { type FileOperationState, useFileOperationState } from "../useFileOperationState";
@@ -76,18 +70,20 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   const [undoStack, setUndoStack] = useState<FileTreeUndoAction[]>([]);
   const [fileTreeSelectionRequest, setFileTreeSelectionRequest] = useState<FileTreeSelectionRequest | null>(null);
   const repoEntriesRef = useRef<WorkspaceFileEntry[]>([]);
-  const treeCacheByWorkspaceIdRef = useRef(new Map<string, WorkspaceFileEntry[]>());
-  const loadedDirectoryPathsByWorkspaceIdRef = useRef(new Map<string, string[]>());
-  // Tracks which workspace the current repoEntries belong to.
-  // Used to prevent the cache-save effect from writing stale entries from the
-  // previous workspace under the new workspace's key on the transition render.
-  const repoEntriesWorkspaceIdRef = useRef<string | undefined>(undefined);
+  const treeCacheByIdentityRef = useRef(new Map<string, WorkspaceFileEntry[]>());
+  const loadedDirectoryPathsByIdentityRef = useRef(new Map<string, string[]>());
+  const initializedIdentityKeysRef = useRef(new Set<string>());
+  const activeWorkspaceRef = useRef({ identityKey: "", generation: 0 });
+  const latestBatchRequestIdRef = useRef(0);
+  const treeRevisionByIdentityRef = useRef(new Map<string, number>());
+  // Tracks which workspace identity the current repoEntries belong to.
+  const repoEntriesIdentityKeyRef = useRef<string | undefined>(undefined);
   const fileTreeSelectionRequestIdRef = useRef(0);
   const loadedDirectoryPathsRef = useRef(new Set<string>());
+  const loadingDirectoryPathsRef = useRef(new Set<string>());
 
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces);
-  const expandedFileTreeItemsByWorkspaceId = fileTreeStore((state) => state.expandedFileTreeItemsByWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
     (state) =>
       state.workspaces
@@ -101,6 +97,10 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
       : EMPTY_CHANGED_RELATIVE_PATHS,
   );
   const fileTreeRefreshVersion = fileTreeStore((state) => state.fileTreeRefreshVersion);
+  const workspaceIdentityKey =
+    selectedWorkspaceId && selectedWorkspaceWorktreePath
+      ? `${selectedWorkspaceId}\u0000${selectedWorkspaceWorktreePath}`
+      : "";
   const tabs = tabStore((state) => state.tabs);
   const {
     fileOperationState,
@@ -119,79 +119,104 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   }, [repoEntries]);
 
   useEffect(() => {
-    if (!selectedWorkspaceId) {
+    if (!workspaceIdentityKey || repoEntriesIdentityKeyRef.current !== workspaceIdentityKey) {
       return;
     }
-    // Only write the cache when repoEntries actually belong to this workspace.
-    // On the transition render (workspace just changed) selectedWorkspaceId is
-    // already the new id but repoEntries still holds the previous workspace's
-    // files. Writing here would corrupt the new workspace's cache slot.
-    if (repoEntriesWorkspaceIdRef.current !== selectedWorkspaceId) {
-      return;
-    }
-    treeCacheByWorkspaceIdRef.current.set(selectedWorkspaceId, repoEntries);
-    loadedDirectoryPathsByWorkspaceIdRef.current.set(selectedWorkspaceId, [...loadedDirectoryPathsRef.current]);
-  }, [repoEntries, selectedWorkspaceId]);
+    treeCacheByIdentityRef.current.set(workspaceIdentityKey, repoEntries);
+    loadedDirectoryPathsByIdentityRef.current.set(workspaceIdentityKey, [...loadedDirectoryPathsRef.current]);
+  }, [repoEntries, workspaceIdentityKey]);
 
   useEffect(() => {
-    const activeWorkspaceIds = new Set(workspaces.map((workspace) => workspace.id));
-    const cacheByWorkspaceId = treeCacheByWorkspaceIdRef.current;
-    for (const cachedWorkspaceId of cacheByWorkspaceId.keys()) {
-      if (!activeWorkspaceIds.has(cachedWorkspaceId)) {
-        cacheByWorkspaceId.delete(cachedWorkspaceId);
-        loadedDirectoryPathsByWorkspaceIdRef.current.delete(cachedWorkspaceId);
+    const activeIdentityKeys = new Set(
+      workspaces.flatMap((workspace) => {
+        const worktreePath = workspace.worktreePath?.trim();
+        return worktreePath ? [`${workspace.id}\u0000${worktreePath}`] : [];
+      }),
+    );
+    for (const identityKey of treeCacheByIdentityRef.current.keys()) {
+      if (!activeIdentityKeys.has(identityKey)) {
+        treeCacheByIdentityRef.current.delete(identityKey);
+        loadedDirectoryPathsByIdentityRef.current.delete(identityKey);
+        initializedIdentityKeysRef.current.delete(identityKey);
+      }
+    }
+    for (const identityKey of treeRevisionByIdentityRef.current.keys()) {
+      if (!activeIdentityKeys.has(identityKey)) {
+        treeRevisionByIdentityRef.current.delete(identityKey);
       }
     }
   }, [workspaces]);
 
   const refreshLoadedRepoFiles = useCallback(
     async (changedRelativePaths?: string[]): Promise<WorkspaceFileEntry[]> => {
-      if (!selectedWorkspaceWorktreePath) {
-        setRepoEntries([]);
+      const capturedIdentityKey = workspaceIdentityKey;
+      const capturedGeneration = activeWorkspaceRef.current.generation;
+      const batchRequestId = ++latestBatchRequestIdRef.current;
+      const treeRevision = (treeRevisionByIdentityRef.current.get(capturedIdentityKey) ?? 0) + 1;
+      treeRevisionByIdentityRef.current.set(capturedIdentityKey, treeRevision);
+      const isCurrentRequest = () =>
+        activeWorkspaceRef.current.identityKey === capturedIdentityKey &&
+        activeWorkspaceRef.current.generation === capturedGeneration &&
+        latestBatchRequestIdRef.current === batchRequestId;
+
+      if (!selectedWorkspaceWorktreePath || !capturedIdentityKey) {
+        if (isCurrentRequest()) {
+          repoEntriesRef.current = [];
+          setRepoEntries([]);
+        }
         return [];
       }
 
+      const requiresRootLoad = !initializedIdentityKeysRef.current.has(capturedIdentityKey);
+      const refreshDirectoryPaths = requiresRootLoad
+        ? [""]
+        : resolveRefreshDirectoryPaths(changedRelativePaths ?? [], loadedDirectoryPathsRef.current);
       try {
-        const refreshDirectoryPaths = resolveRefreshDirectoryPaths(
-          changedRelativePaths ?? [],
-          loadedDirectoryPathsRef.current,
-        );
         const response = await listFilesBatch({
           workspaceId: selectedWorkspaceId ?? "",
           requests: refreshDirectoryPaths.map((directoryPath) => ({
             relativePath: directoryPath || undefined,
-            // Root fetch is recursive (full tree); loaded-subdirectory refreshes
-            // are shallow — the applyDirectoryRefreshes + changedRelativePaths
-            // filter handles evicting renamed/deleted entries without re-reading
-            // entire subtrees on every file-change event.
             recursive: !directoryPath,
           })),
         });
+        if (!isCurrentRequest()) {
+          return repoEntriesRef.current;
+        }
+
+        const rootResult = response.results.find((result) => !normalizeRelativePath(result.request.relativePath ?? ""));
+        if (requiresRootLoad && (!rootResult || rootResult.error)) {
+          return repoEntriesRef.current;
+        }
         const refreshResults = response.results
           .filter((result) => !result.error)
           .map((result) => ({
             directoryPath: normalizeRelativePath(result.request.relativePath ?? ""),
             files: result.files,
           }));
-
         const nextEntries = applyDirectoryRefreshes(
           repoEntriesRef.current,
           refreshResults,
           loadedDirectoryPathsRef.current,
-          changedRelativePaths,
+          requiresRootLoad ? undefined : changedRelativePaths,
         );
-        repoEntriesWorkspaceIdRef.current = selectedWorkspaceId ?? undefined;
+        repoEntriesIdentityKeyRef.current = capturedIdentityKey;
         repoEntriesRef.current = nextEntries;
+        // Cache the accepted root response before recording initialization.
+        treeCacheByIdentityRef.current.set(capturedIdentityKey, nextEntries);
+        loadedDirectoryPathsByIdentityRef.current.set(capturedIdentityKey, [...loadedDirectoryPathsRef.current]);
+        if (requiresRootLoad) {
+          initializedIdentityKeysRef.current.add(capturedIdentityKey);
+        }
         setRepoEntries(nextEntries);
         return nextEntries;
       } catch (error) {
-        setRepoEntries([]);
-        repoEntriesRef.current = [];
-        console.error("Failed to load workspace files", error);
-        return [];
+        if (isCurrentRequest()) {
+          console.error("Failed to load workspace files", error);
+        }
+        return repoEntriesRef.current;
       }
     },
-    [selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [selectedWorkspaceId, selectedWorkspaceWorktreePath, workspaceIdentityKey],
   );
 
   const loadAllRepoFiles = useCallback(async (): Promise<string[]> => {
@@ -210,10 +235,15 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         return;
       }
 
-      if (loadedDirectoryPathsRef.current.has(normalizedPath)) {
+      const loadedDirectoryPaths = loadedDirectoryPathsRef.current;
+      const loadingDirectoryPaths = loadingDirectoryPathsRef.current;
+      if (loadedDirectoryPaths.has(normalizedPath) || loadingDirectoryPaths.has(normalizedPath)) {
         return;
       }
-      loadedDirectoryPathsRef.current.add(normalizedPath);
+      const capturedIdentityKey = workspaceIdentityKey;
+      const capturedGeneration = activeWorkspaceRef.current.generation;
+      const capturedTreeRevision = treeRevisionByIdentityRef.current.get(capturedIdentityKey) ?? 0;
+      loadingDirectoryPaths.add(normalizedPath);
 
       try {
         const response = await listFiles({
@@ -222,8 +252,18 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
           recursive: false,
         });
 
+        if (
+          activeWorkspaceRef.current.identityKey !== capturedIdentityKey ||
+          activeWorkspaceRef.current.generation !== capturedGeneration ||
+          treeRevisionByIdentityRef.current.get(capturedIdentityKey) !== capturedTreeRevision
+        ) {
+          return;
+        }
         const nextEntries = mergeWorkspaceEntries(repoEntriesRef.current, response.files);
+        loadedDirectoryPaths.add(normalizedPath);
         repoEntriesRef.current = nextEntries;
+        treeCacheByIdentityRef.current.set(capturedIdentityKey, nextEntries);
+        loadedDirectoryPathsByIdentityRef.current.set(capturedIdentityKey, [...loadedDirectoryPaths]);
         setRepoEntries(nextEntries);
       } catch (error) {
         // Suppress benign filesystem errors (stale worktree, removed path, broken symlink)
@@ -240,18 +280,29 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
             error,
           });
         }
+      } finally {
+        loadingDirectoryPaths.delete(normalizedPath);
       }
     },
-    [selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [selectedWorkspaceId, selectedWorkspaceWorktreePath, workspaceIdentityKey],
   );
 
   useEffect(() => {
-    const cachedEntries = selectedWorkspaceId ? treeCacheByWorkspaceIdRef.current.get(selectedWorkspaceId) : null;
-    const cachedLoadedDirectoryPaths = selectedWorkspaceId
-      ? loadedDirectoryPathsByWorkspaceIdRef.current.get(selectedWorkspaceId)
+    if (activeWorkspaceRef.current.identityKey !== workspaceIdentityKey) {
+      activeWorkspaceRef.current = {
+        identityKey: workspaceIdentityKey,
+        generation: activeWorkspaceRef.current.generation + 1,
+      };
+    }
+    const cachedEntries = workspaceIdentityKey ? treeCacheByIdentityRef.current.get(workspaceIdentityKey) : null;
+    const cachedLoadedDirectoryPaths = workspaceIdentityKey
+      ? loadedDirectoryPathsByIdentityRef.current.get(workspaceIdentityKey)
       : null;
-    const expandedItems = selectedWorkspaceId ? (expandedFileTreeItemsByWorkspaceId[selectedWorkspaceId] ?? []) : [];
-    repoEntriesWorkspaceIdRef.current = selectedWorkspaceId ?? undefined;
+    const expandedItems = selectedWorkspaceId
+      ? (fileTreeStore.getState().expandedFileTreeItemsByWorkspaceId[selectedWorkspaceId] ?? [])
+      : [];
+    repoEntriesIdentityKeyRef.current = workspaceIdentityKey || undefined;
+    repoEntriesRef.current = cachedEntries ?? [];
     setRepoEntries(cachedEntries ?? []);
     resetFileOperationState();
     setFileOperationError(null);
@@ -259,7 +310,8 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     setUndoStack([]);
     setFileTreeSelectionRequest(null);
     loadedDirectoryPathsRef.current = new Set(cachedLoadedDirectoryPaths ?? expandedItems);
-  }, [expandedFileTreeItemsByWorkspaceId, resetFileOperationState, selectedWorkspaceId, setFileOperationError]);
+    loadingDirectoryPathsRef.current = new Set();
+  }, [resetFileOperationState, selectedWorkspaceId, setFileOperationError, workspaceIdentityKey]);
 
   const requestFileTreeSelection = useCallback((path: string | null, focus = true) => {
     const normalizedPath = normalizeRelativePath(path ?? "");

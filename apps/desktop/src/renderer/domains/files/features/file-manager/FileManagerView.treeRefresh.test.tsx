@@ -2,7 +2,6 @@
 
 import { fileTreeStore } from "@renderer/domains/files/state/fileTreeStore";
 import { gitProjectionStore } from "@renderer/domains/git";
-import { projectStore } from "@renderer/domains/project/state/projectStore";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileManagerView } from "./FileManagerView";
@@ -262,16 +261,6 @@ vi.mock("./file-tree", () => ({
 
 vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
-  const navState = () => ({
-    activeProjectId: (mocks.stateRef.current.selectedProjectId as string) ?? "",
-    activeWorkspaceId: (mocks.stateRef.current.selectedWorkspaceId as string) ?? "",
-  });
-  const navStore = Object.assign(
-    vi.fn((selector: (state: { activeProjectId: string; activeWorkspaceId: string }) => unknown) =>
-      selector(navState()),
-    ),
-    { getState: navState },
-  );
   return {
     ...actual,
     workbenchNavigationStore: mocks.navStore,
@@ -457,7 +446,7 @@ describe("FileManagerView external file tree refresh", () => {
       ];
       mocks.stateRef.current.selectedWorkspaceId = "workspace-1";
       mocks.listFiles.mockImplementation(({ workspaceId }: { workspaceId: string }) =>
-        workspaceId === "/tmp/repo-a" ? firstLoad.promise : secondLoad.promise,
+        workspaceId === "workspace-1" ? firstLoad.promise : secondLoad.promise,
       );
 
       const { rerender } = render(<FileManagerView />);
@@ -638,5 +627,196 @@ describe("FileManagerView external file tree refresh", () => {
         recursive: true,
       });
     });
+  });
+
+  it("uses a root recursive response before changed-path refreshes for an uninitialized expanded tree", async () => {
+    fileTreeStore.setState({
+      expandedFileTreeItemsByWorkspaceId: { "workspace-1": [".my-context"] },
+      fileTreeChangedRelativePathsByWorktreePath: { "/tmp/repo": [".my-context/tasks/x"] },
+    });
+    mocks.listFiles.mockResolvedValue({
+      files: asEntries([".my-context/", ".my-context/tasks/", ".my-context/tasks/x", "src/", "src/unrelated.ts"]),
+    });
+
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceId: "workspace-1", recursive: true });
+      expect(getFileTreeProps().files).toContain("src/unrelated.ts");
+    });
+  });
+
+  it("invalidates cached entries when a workspace id is reused with a different worktree path", async () => {
+    const newPathLoad = createDeferred<{ files: Array<{ path: string; isIgnored: boolean }> }>();
+    const originalWorkspaces = mocks.stateRef.current.workspaces;
+    mocks.listFiles
+      .mockResolvedValueOnce({ files: asEntries(["old.ts"]) })
+      .mockImplementationOnce(() => newPathLoad.promise);
+
+    try {
+      const { rerender } = render(<FileManagerView />);
+      await waitFor(() => expect(getFileTreeProps().files).toEqual(["old.ts"]));
+
+      mocks.stateRef.current.workspaces = [{ id: "workspace-1", worktreePath: "/tmp/other-repo" }];
+      rerender(<FileManagerView />);
+
+      await waitFor(() => expect(mocks.listFiles).toHaveBeenCalledTimes(2));
+      expect(getFileTreeProps().files).toEqual([]);
+
+      newPathLoad.resolve({ files: asEntries(["new.ts"]) });
+      await waitFor(() => expect(getFileTreeProps().files).toEqual(["new.ts"]));
+    } finally {
+      mocks.stateRef.current.workspaces = originalWorkspaces;
+    }
+  });
+
+  it("preserves current tree entries when a current batch refresh rejects", async () => {
+    const rejectedRefresh = createDeferred<{
+      results: Array<{ request: { relativePath?: string }; files: Array<{ path: string; isIgnored: boolean }> }>;
+    }>();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.listFilesBatch
+      .mockResolvedValueOnce({ results: [{ request: {}, files: asEntries(["existing.ts"]) }] })
+      .mockImplementationOnce(() => rejectedRefresh.promise);
+
+    try {
+      const { rerender } = render(<FileManagerView />);
+
+      await waitFor(() => expect(getFileTreeProps().files).toEqual(["existing.ts"]));
+      fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
+      rerender(<FileManagerView />);
+      await waitFor(() => expect(mocks.listFilesBatch).toHaveBeenCalledTimes(2));
+
+      rejectedRefresh.reject(new Error("refresh failed"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(getFileTreeProps().files).toEqual(["existing.ts"]);
+      expect(consoleError).toHaveBeenCalledWith("Failed to load workspace files", expect.any(Error));
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("does not merge a lazy directory response after a newer batch refresh in the same workspace", async () => {
+    const lazyDirectory = createDeferred<{ files: Array<{ path: string; isIgnored: boolean }> }>();
+    const activeRefresh = createDeferred<{
+      results: Array<{ request: { relativePath?: string }; files: Array<{ path: string; isIgnored: boolean }> }>;
+    }>();
+    mocks.listFilesBatch
+      .mockResolvedValueOnce({ results: [{ request: {}, files: asEntries(["src/", "src/initial.ts"]) }] })
+      .mockImplementationOnce(() => activeRefresh.promise);
+    mocks.listFiles.mockImplementation(({ relativePath }: { relativePath?: string }) =>
+      relativePath === "src" ? lazyDirectory.promise : Promise.resolve({ files: asEntries([]) }),
+    );
+    const { rerender } = render(<FileManagerView />);
+
+    await waitFor(() => expect(getFileTreeProps().files).toEqual(["src/", "src/initial.ts"]));
+    const ensurePromise = getFileTreeProps().onEnsurePathLoaded?.("src");
+    await waitFor(() =>
+      expect(mocks.listFiles).toHaveBeenCalledWith({
+        workspaceId: "workspace-1",
+        relativePath: "src",
+        recursive: false,
+      }),
+    );
+    fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
+    rerender(<FileManagerView />);
+    await waitFor(() => expect(mocks.listFilesBatch).toHaveBeenCalledTimes(2));
+
+    activeRefresh.resolve({ results: [{ request: { relativePath: "src" }, files: asEntries(["src/active.ts"]) }] });
+    await waitFor(() => expect(getFileTreeProps().files).toContain("src/active.ts"));
+    const activeTreeFiles = [...getFileTreeProps().files];
+
+    lazyDirectory.resolve({ files: asEntries(["src/lazy.ts"]) });
+    await ensurePromise;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getFileTreeProps().files).toEqual(activeTreeFiles);
+  });
+
+  it("retries a discarded lazy directory load after a newer batch refresh rejects", async () => {
+    const lazyDirectory = createDeferred<{ files: Array<{ path: string; isIgnored: boolean }> }>();
+    const rejectedRefresh = createDeferred<{
+      results: Array<{ request: { relativePath?: string }; files: Array<{ path: string; isIgnored: boolean }> }>;
+    }>();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.listFilesBatch
+      .mockResolvedValueOnce({ results: [{ request: {}, files: asEntries(["src/", "src/initial.ts"]) }] })
+      .mockImplementationOnce(() => rejectedRefresh.promise);
+    mocks.listFiles
+      .mockImplementationOnce(() => lazyDirectory.promise)
+      .mockResolvedValueOnce({ files: asEntries(["src/retry.ts"]) });
+
+    try {
+      const { rerender } = render(<FileManagerView />);
+      await waitFor(() => expect(getFileTreeProps().files).toEqual(["src/", "src/initial.ts"]));
+
+      const lazyLoadPromise = getFileTreeProps().onEnsurePathLoaded?.("src");
+      await waitFor(() => expect(mocks.listFiles).toHaveBeenCalledTimes(1));
+
+      fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
+      rerender(<FileManagerView />);
+      await waitFor(() => expect(mocks.listFilesBatch).toHaveBeenCalledTimes(2));
+
+      rejectedRefresh.reject(new Error("refresh failed"));
+      lazyDirectory.resolve({ files: asEntries(["src/stale.ts"]) });
+      await lazyLoadPromise;
+
+      await getFileTreeProps().onEnsurePathLoaded?.("src");
+      await waitFor(() => expect(mocks.listFiles).toHaveBeenCalledTimes(2));
+      expect(getFileTreeProps().files).toContain("src/retry.ts");
+      expect(getFileTreeProps().files).not.toContain("src/stale.ts");
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("does not let stale batch success, rejection, or directory loads mutate the active tree", async () => {
+    const oldBatch = createDeferred<{
+      results: Array<{ request: { relativePath?: string }; files: Array<{ path: string; isIgnored: boolean }> }>;
+    }>();
+    const oldRejectedBatch = createDeferred<{
+      results: Array<{ request: { relativePath?: string }; files: Array<{ path: string; isIgnored: boolean }> }>;
+    }>();
+    const oldDirectory = createDeferred<{ files: Array<{ path: string; isIgnored: boolean }> }>();
+    const activeBatch = createDeferred<{
+      results: Array<{ request: { relativePath?: string }; files: Array<{ path: string; isIgnored: boolean }> }>;
+    }>();
+    const originalSelectedWorkspaceId = mocks.stateRef.current.selectedWorkspaceId;
+    const originalWorkspaces = mocks.stateRef.current.workspaces;
+    mocks.listFilesBatch
+      .mockImplementationOnce(() => oldBatch.promise)
+      .mockImplementationOnce(() => oldRejectedBatch.promise)
+      .mockImplementationOnce(() => activeBatch.promise);
+    mocks.listFiles.mockImplementation(({ relativePath }: { relativePath?: string }) =>
+      relativePath === "src" ? oldDirectory.promise : Promise.resolve({ files: asEntries([]) }),
+    );
+
+    try {
+      const { rerender } = render(<FileManagerView />);
+      await waitFor(() => expect(mocks.listFilesBatch).toHaveBeenCalledTimes(1));
+      const ensurePromise = getFileTreeProps().onEnsurePathLoaded?.("src");
+
+      fileTreeStore.setState({ fileTreeRefreshVersion: fileTreeStore.getState().fileTreeRefreshVersion + 1 });
+      rerender(<FileManagerView />);
+      await waitFor(() => expect(mocks.listFilesBatch).toHaveBeenCalledTimes(2));
+
+      mocks.stateRef.current.workspaces = [
+        { id: "workspace-1", worktreePath: "/tmp/repo" },
+        { id: "workspace-2", worktreePath: "/tmp/other-repo" },
+      ];
+      mocks.stateRef.current.selectedWorkspaceId = "workspace-2";
+      rerender(<FileManagerView />);
+      await waitFor(() => expect(mocks.listFilesBatch).toHaveBeenCalledTimes(3));
+      activeBatch.resolve({ results: [{ request: {}, files: asEntries(["active.ts"]) }] });
+      await waitFor(() => expect(getFileTreeProps().files).toEqual(["active.ts"]));
+
+      oldBatch.resolve({ results: [{ request: {}, files: asEntries(["stale.ts"]) }] });
+      oldRejectedBatch.reject(new Error("stale failure"));
+      oldDirectory.resolve({ files: asEntries(["src/stale.ts"]) });
+      await ensurePromise;
+      await waitFor(() => expect(getFileTreeProps().files).toEqual(["active.ts"]));
+    } finally {
+      mocks.stateRef.current.selectedWorkspaceId = originalSelectedWorkspaceId;
+      mocks.stateRef.current.workspaces = originalWorkspaces;
+    }
   });
 });

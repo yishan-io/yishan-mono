@@ -76,7 +76,7 @@ function createZoomButton(
 
 /** Scans the root for rendered mermaid panels missing a zoom button and attaches one. */
 function scanAndAttach(root: HTMLElement, onZoom: (svgContent: string) => void, expandLabel: string): void {
-  const panels = root.querySelectorAll<HTMLElement>(".vditor-ir__preview");
+  const panels = Array.from(root.querySelectorAll<HTMLElement>(".vditor-ir__preview"));
   for (const panel of panels) {
     if (panel.hasAttribute(ATTACHED_ATTR)) {
       continue;
@@ -132,7 +132,7 @@ export async function rethemeMermaidDiagrams(
   root: HTMLElement,
   options: { isDark: boolean; fontFamily?: string; onError?: (message: string) => void },
 ): Promise<void> {
-  const codeBlocks = root.querySelectorAll<HTMLElement>('.vditor-ir__node[data-type="code-block"]');
+  const codeBlocks = Array.from(root.querySelectorAll<HTMLElement>('.vditor-ir__node[data-type="code-block"]'));
   const tasks: Array<Promise<void>> = [];
 
   for (const block of codeBlocks) {
