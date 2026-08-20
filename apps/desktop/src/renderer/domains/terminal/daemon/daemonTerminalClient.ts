@@ -241,7 +241,16 @@ export class DaemonTerminalClient {
           const chunk = rawChunk instanceof Uint8Array ? rawChunk : typeof rawChunk === "string" ? rawChunk : "";
           const nextIndex = (this.terminalNextIndexBySessionId.get(eventSessionId) ?? 0) + 1;
           this.terminalNextIndexBySessionId.set(eventSessionId, nextIndex);
-          handlers.onData({ sessionId: eventSessionId, chunk, nextIndex });
+          handlers.onData({ type: "output", sessionId: eventSessionId, chunk, nextIndex });
+          return;
+        }
+        if (event.method === "terminal.exit") {
+          const payload = asRecord(event.payload) ?? {};
+          handlers.onData({
+            type: "exit",
+            sessionId: readOptionalString(payload.sessionId) || sessionId,
+            exitCode: readOptionalNumber(payload.exitCode),
+          });
           return;
         }
         handlers.onData(event);
@@ -295,9 +304,30 @@ export class DaemonTerminalClient {
       },
       { registerWithDaemon: options.registerWithDaemon },
     );
+    // The daemon pushes terminal.exit notifications on the same subscription
+    // stream as terminal.subscribe, but the transport dispatches notifications
+    // by exact method match. Register a shadow terminal.exit transport
+    // subscription so exit events reach the same handler (desktop8 Phase 31
+    // rewrite lost the method-agnostic matching of the pre-refactor client).
+    let unsubscribeExitTransport: (() => void) | null = null;
+    if (options.method === "terminal.subscribe") {
+      unsubscribeExitTransport = this.subscribeTransport(
+        "terminal.exit",
+        options.params,
+        (event) => {
+          const subscription = this.subscriptionsById.get(subscriptionId);
+          if (!subscription) {
+            return;
+          }
+          subscription.onNotification(event);
+        },
+        { registerWithDaemon: false },
+      );
+    }
     return () => {
       this.subscriptionsById.delete(subscriptionId);
       unsubscribeTransport();
+      unsubscribeExitTransport?.();
     };
   }
 
@@ -401,7 +431,7 @@ export class DaemonTerminalClient {
       }
       subscription.onNotification({
         method: "terminal.output",
-        payload: { sessionId, chunk },
+        payload: { type: "output", sessionId, chunk },
       });
     }
   }

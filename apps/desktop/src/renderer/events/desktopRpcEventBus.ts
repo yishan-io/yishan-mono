@@ -32,19 +32,25 @@ function ensureBackendEventsSubscription(): void {
   }
 
   // Replace the legacy `events.frontendStream.subscribe` path with the
-  // generic RPC subscribe operation (desktop8 Phase 31). The notification
-  // params carry `{ result: { topic, payload } }`; the envelope keeps the
-  // raw topic/method shape that
+  // generic RPC subscribe operation (desktop8 Phase 31). The daemon streams
+  // frontend events as `{ topic, payload }` in the notification params; the
+  // envelope keeps the raw topic/method shape that
   // `app/events/backendEventAdapter.normalizeBackendEvent` expects.
   backendEventsUnsubscribe = subscribe(
     "events.frontendStream",
     undefined,
     (event) => {
-      const params = event.payload as { result?: unknown } | undefined;
-      const streamEvent = params?.result as { topic?: string; payload?: unknown } | undefined;
+      const params = (event.payload ?? {}) as Record<string, unknown>;
+      // The daemon sends the streamed event directly in the params
+      // (`{ topic, payload }`); tolerate a wrapped `{ result: { topic,
+      // payload } }` shape defensively.
+      const wrappedResult = params.result;
+      const hasWrappedResult = wrappedResult !== null && typeof wrappedResult === "object";
+      const streamEvent = (hasWrappedResult ? wrappedResult : params) as { topic?: unknown; payload?: unknown };
+      const topic = typeof streamEvent.topic === "string" ? streamEvent.topic : event.method;
       emitDesktopRpcEvent({
-        method: streamEvent?.topic ?? event.method,
-        payload: streamEvent?.payload ?? params,
+        method: topic,
+        payload: streamEvent.payload ?? params,
       });
     },
     { registerWithDaemon: true },
