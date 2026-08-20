@@ -181,7 +181,7 @@ func TestRunToolCatalogCollector_ReportsTimeout(t *testing.T) {
 	}
 	withPiHome(t)
 	binDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(binDir, "pi"), []byte("#!/bin/sh\nsleep 1\n"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(binDir, "pi"), []byte("#!/bin/sh\nwhile :; do :; done\n"), 0o755); err != nil {
 		t.Fatalf("write fake pi: %v", err)
 	}
 	originalEnv, originalTimeout := managedPiEnvBase, toolCatalogTimeout
