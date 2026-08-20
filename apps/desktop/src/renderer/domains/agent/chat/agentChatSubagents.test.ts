@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deriveRunningSubagents, findMatchingRunningSubagent } from "./agentChatSubagents";
+import {
+  deriveFinishedSubagents,
+  deriveRunningSubagents,
+  findMatchingRunningSubagent,
+  parseSubagentLifecycleMessage,
+} from "./agentChatSubagents";
 import type { AgentMessage } from "./agentChatTypes";
 
 describe("deriveRunningSubagents", () => {
@@ -223,5 +228,80 @@ describe("findMatchingRunningSubagent", () => {
         promptSummary: "Review the code quality of the services directory and return concise findings.",
       }),
     ).toEqual(runningSubagents[0]);
+  });
+});
+
+describe("parseSubagentLifecycleMessage completed usage", () => {
+  const completedLifecycle = (usage: unknown): AgentMessage => ({
+    id: "subagent-completed",
+    role: "custom",
+    customType: "pi-subagent-child",
+    display: false,
+    content: "",
+    details: {
+      event: "completed",
+      agentId: "agent-1",
+      agentName: "reviewer",
+      childSessionId: "child-1",
+      status: "completed",
+      usage,
+    },
+  });
+
+  it("does not expose otherwise valid usage from a started lifecycle entry", () => {
+    const startedMessage: AgentMessage = {
+      id: "subagent-started",
+      role: "custom",
+      customType: "pi-subagent-child",
+      display: false,
+      content: "",
+      details: {
+        event: "started",
+        agentId: "agent-1",
+        agentName: "reviewer",
+        childSessionId: "child-1",
+        usage: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, cost: 0.5 },
+      },
+    };
+
+    expect(parseSubagentLifecycleMessage(startedMessage)).not.toHaveProperty("usage");
+  });
+
+  it("exposes valid completed child billing usage without context metadata", () => {
+    expect(
+      parseSubagentLifecycleMessage(
+        completedLifecycle({
+          input: 10,
+          output: 20,
+          cacheRead: 30,
+          cacheWrite: 40,
+          cost: 0.5,
+          contextTokens: 999,
+          turns: 4,
+        }),
+      )?.usage,
+    ).toEqual({ input: 10, output: 20, cacheRead: 30, cacheWrite: 40, cost: 0.5 });
+  });
+
+  it.each([
+    undefined,
+    null,
+    "invalid",
+    { input: 10, output: 20, cacheRead: 30, cacheWrite: 40 },
+    { input: -10, output: 20, cacheRead: 30, cacheWrite: 40, cost: 0.5 },
+    { input: 10, output: Number.POSITIVE_INFINITY, cacheRead: 30, cacheWrite: 40, cost: 0.5 },
+    { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, cost: -0.5 },
+    { input: 10, output: Number.NaN, cacheRead: 30, cacheWrite: 40, cost: 0.5 },
+  ])("preserves completed lifecycle behavior when usage is invalid: %j", (usage) => {
+    const message = completedLifecycle(usage);
+
+    expect(parseSubagentLifecycleMessage(message)).toMatchObject({
+      event: "completed",
+      agentId: "agent-1",
+      childSessionId: "child-1",
+    });
+    expect(parseSubagentLifecycleMessage(message)).not.toHaveProperty("usage");
+    expect(deriveFinishedSubagents([message])).toHaveLength(1);
+    expect(deriveRunningSubagents([message])).toEqual([]);
   });
 });

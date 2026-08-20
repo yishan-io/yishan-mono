@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { AgentMessage, AgentModel, AgentSessionStats } from "./agentChatTypes";
-import { buildAgentChatUsageSummary, getCompactContextPercent } from "./agentChatUsageSummary";
+import {
+  buildAgentChatUsageSummary,
+  getAgentChatBilledTokenTotal,
+  getCompactContextPercent,
+  sumAgentChatBilledUsage,
+} from "./agentChatUsageSummary";
 
 function buildModel(contextWindow?: number): AgentModel {
   return {
@@ -148,6 +153,35 @@ describe("buildAgentChatUsageSummary (desktop8 Phase 29: numeric calculation sta
     } as AgentMessage;
 
     expect(buildAgentChatUsageSummary([streamingMessage], buildModel(128_000))?.contextTokens).toBe(200);
+  });
+
+  it("uses four billing fields for session totals when totalTokens is only a context snapshot", () => {
+    const billedAssistantMessage = {
+      id: "assistant-billed-total",
+      role: "assistant",
+      content: [{ type: "text", text: "done" }],
+      usage: {
+        input: 10,
+        output: 20,
+        cacheRead: 30,
+        cacheWrite: 40,
+        totalTokens: 999,
+        total: 999,
+        cost: { total: 0.5 },
+      },
+      stopReason: "stop",
+    } satisfies AgentMessage;
+    const messages: AgentMessage[] = [billedAssistantMessage];
+
+    expect(getAgentChatBilledTokenTotal({ input: 10, output: 20, cacheRead: 30, cacheWrite: 40 })).toBe(100);
+    expect(
+      sumAgentChatBilledUsage([
+        { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, cost: 0.5 },
+        { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, cost: 0.1 },
+      ]),
+    ).toEqual({ input: 11, output: 22, cacheRead: 33, cacheWrite: 44, cost: 0.6 });
+    expect(buildAgentChatUsageSummary(messages, buildModel(1_000))?.totalSessionTokens).toBe(100);
+    expect(buildAgentChatUsageSummary(messages, buildModel(1_000))?.contextTokens).toBe(999);
   });
 
   it("derives the cache rate percent from input + cache-read tokens", () => {

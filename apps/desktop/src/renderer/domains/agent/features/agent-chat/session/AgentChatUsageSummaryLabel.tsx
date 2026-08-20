@@ -5,10 +5,16 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
 import {
+  type AgentChatUsageSummary,
   buildAgentChatUsageSummary,
+  getAgentChatBilledTokenTotal,
   roundContextPercent,
 } from "../../../../../domains/agent/chat/agentChatUsageSummary";
 import { agentChatStore } from "../../../../../domains/agent/state/agentChatStore";
+import {
+  type AgentChatUsageLedger,
+  getAgentChatUsageLedgerTotal,
+} from "../../../../../domains/agent/state/agentChatUsageLedger";
 import { formatDetailedTokenCount } from "./agentChatUsageFormatting";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
@@ -37,6 +43,26 @@ export function getUsageSummaryColor(contextPercent: number, themeMode: DesignTo
   return "text.disabled";
 }
 
+/** Combines retained authoritative parent billing with live parent deltas and completed child usage. */
+export function composeAgentChatUsageSummary(
+  usageSummary: AgentChatUsageSummary,
+  usageLedger: AgentChatUsageLedger,
+): AgentChatUsageSummary {
+  const billedUsage = getAgentChatUsageLedgerTotal(usageLedger);
+  const cacheableTokens = billedUsage.input + billedUsage.cacheRead;
+
+  return {
+    ...usageSummary,
+    inputTokens: billedUsage.input,
+    outputTokens: billedUsage.output,
+    cacheReadTokens: billedUsage.cacheRead,
+    cacheWriteTokens: billedUsage.cacheWrite,
+    cacheRatePercent: cacheableTokens > 0 ? Math.round((billedUsage.cacheRead / cacheableTokens) * 100) : 0,
+    totalSessionTokens: getAgentChatBilledTokenTotal(billedUsage),
+    totalCostUsd: billedUsage.cost,
+  };
+}
+
 /** Renders the live agent-chat context/cost summary without rerendering sibling controls. */
 export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabelProps) {
   const { t } = useTranslation();
@@ -45,13 +71,17 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
   const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
   const streamingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
   const sessionStats = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionStats ?? null);
+  const usageLedger = agentChatStore((state) => state.sessionsByTabId[tabId]?.usageLedger ?? null);
   // sessionStats is nulled at turn start (invalidateAgentSessionStats), so during a turn
   // the ?? fallbacks below surface the live estimate built from messages + streamingMessage.
   // Once the turn settles, agent_settled refreshes the authoritative snapshot again.
   const usageSummary = useMemo(() => {
     const messagesForUsage = streamingMessage ? [...messages, streamingMessage] : messages;
-    return buildAgentChatUsageSummary(messagesForUsage, currentModel);
-  }, [currentModel, messages, streamingMessage]);
+    const derivedUsageSummary = buildAgentChatUsageSummary(messagesForUsage, currentModel);
+    return derivedUsageSummary && usageLedger
+      ? composeAgentChatUsageSummary(derivedUsageSummary, usageLedger)
+      : derivedUsageSummary;
+  }, [currentModel, messages, streamingMessage, usageLedger]);
 
   if (!usageSummary) {
     return null;
@@ -65,8 +95,8 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
     contextUsage?.tokens === null
       ? `ctx: ?/${formatDetailedTokenCount(contextWindow)} (?)`
       : `ctx: ${formatDetailedTokenCount(contextTokens)}/${formatDetailedTokenCount(contextWindow)} (${contextPercent}%)`;
-  const totalSessionTokens = sessionStats?.tokens.total ?? usageSummary.totalSessionTokens;
-  const totalCostUsd = sessionStats?.cost ?? usageSummary.totalCostUsd;
+  const totalSessionTokens = usageSummary.totalSessionTokens;
+  const totalCostUsd = usageSummary.totalCostUsd;
   const contextCompactLabel = t("agentChat.usageSummary.contextCompact");
   const compactUsageLabel = `${contextCompactLabel}: ${contextSummaryLabel.slice(4)}, ${usdFormatter.format(totalCostUsd)}`;
 
@@ -106,7 +136,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(sessionStats?.tokens.input ?? usageSummary.inputTokens)}
+        {formatDetailedTokenCount(usageSummary.inputTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -123,7 +153,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(sessionStats?.tokens.output ?? usageSummary.outputTokens)}
+        {formatDetailedTokenCount(usageSummary.outputTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -140,7 +170,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(sessionStats?.tokens.cacheRead ?? usageSummary.cacheReadTokens)}
+        {formatDetailedTokenCount(usageSummary.cacheReadTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -157,7 +187,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(sessionStats?.tokens.cacheWrite ?? usageSummary.cacheWriteTokens)}
+        {formatDetailedTokenCount(usageSummary.cacheWriteTokens)}
       </Typography>
       <Typography
         variant="caption"

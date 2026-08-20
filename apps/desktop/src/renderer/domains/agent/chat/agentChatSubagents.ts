@@ -1,4 +1,5 @@
 import type { AgentMessage } from "./agentChatTypes";
+import { type AgentChatBilledUsage, parseAgentChatBilledUsage } from "./agentChatUsageSummary";
 
 export type AgentSubagentLifecycleEvent = "started" | "completed";
 
@@ -11,6 +12,8 @@ export type AgentSubagentLifecycleDetails = {
   title?: string;
   summary?: string;
   status?: string;
+  /** Final child billing usage, present only for valid completed lifecycle entries. */
+  usage?: AgentChatBilledUsage;
 };
 
 /** One running sub-agent row rendered above the parent chat composer. */
@@ -80,6 +83,7 @@ export function parseSubagentLifecycleMessage(message: AgentMessage): AgentSubag
     title: normalizeOptionalText(payload.title),
     summary: normalizeOptionalText(payload.summary),
     status: normalizeOptionalText(payload.status),
+    ...(event === "completed" ? getCompletedChildUsage(payload.usage) : {}),
   };
 }
 
@@ -334,6 +338,11 @@ function parseLifecyclePayload(value: unknown): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function getCompletedChildUsage(usage: unknown): Pick<AgentSubagentLifecycleDetails, "usage"> {
+  const billedUsage = parseAgentChatBilledUsage(usage);
+  return billedUsage ? { usage: billedUsage } : {};
 }
 
 function normalizeLifecycleEvent(value: unknown): AgentSubagentLifecycleEvent | null {

@@ -2,6 +2,69 @@ import type { AgentContentBlock, AgentMessage, AgentModel, AgentSessionStats } f
 
 const CHARS_PER_TOKEN = 4;
 
+/** Usage fields that contribute to an agent-chat billing total. Context snapshots are excluded. */
+export type AgentChatBilledUsage = {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  cost: number;
+};
+
+/** Sums the four token fields billed for a parent assistant message or completed child session. */
+export function getAgentChatBilledTokenTotal(
+  usage: Pick<AgentChatBilledUsage, "input" | "output" | "cacheRead" | "cacheWrite">,
+): number {
+  return usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
+}
+
+/** Combines parent and completed-child billing usage without including context-only metadata. */
+export function sumAgentChatBilledUsage(usages: Iterable<AgentChatBilledUsage>): AgentChatBilledUsage {
+  const totals: AgentChatBilledUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
+  for (const usage of usages) {
+    totals.input += usage.input;
+    totals.output += usage.output;
+    totals.cacheRead += usage.cacheRead;
+    totals.cacheWrite += usage.cacheWrite;
+    totals.cost += usage.cost;
+  }
+
+  return totals;
+}
+
+/**
+ * Normalizes parent assistant usage for billing. `totalTokens` and `total`
+ * are context snapshots and do not contribute to this result.
+ */
+export function getAgentChatAssistantBilledUsage(usage: AgentMessage["usage"]): AgentChatBilledUsage {
+  return {
+    input: getNonNegativeFiniteNumber(usage?.input),
+    output: getNonNegativeFiniteNumber(usage?.output),
+    cacheRead: getNonNegativeFiniteNumber(usage?.cacheRead),
+    cacheWrite: getNonNegativeFiniteNumber(usage?.cacheWrite),
+    cost: getNonNegativeFiniteNumber(usage?.cost?.total),
+  };
+}
+
+/** Parses completed child usage only when every billing field is a non-negative finite number. */
+export function parseAgentChatBilledUsage(value: unknown): AgentChatBilledUsage | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const usage = value as Record<string, unknown>;
+  const input = getRequiredNonNegativeFiniteNumber(usage.input);
+  const output = getRequiredNonNegativeFiniteNumber(usage.output);
+  const cacheRead = getRequiredNonNegativeFiniteNumber(usage.cacheRead);
+  const cacheWrite = getRequiredNonNegativeFiniteNumber(usage.cacheWrite);
+  const cost = getRequiredNonNegativeFiniteNumber(usage.cost);
+  if (input === null || output === null || cacheRead === null || cacheWrite === null || cost === null) {
+    return null;
+  }
+
+  return { input, output, cacheRead, cacheWrite, cost };
+}
+
 /** Structured usage summary derived from one agent-chat session. */
 export type AgentChatUsageSummary = {
   contextTokens: number;
@@ -30,7 +93,6 @@ export function buildAgentChatUsageSummary(
   const contextTokens = estimateAgentChatContextTokens(messages);
   const contextPercent = roundContextPercent((contextTokens / contextWindow) * 100);
   const usageTotals = sumAgentChatUsageTotals(messages);
-  const totalCostUsd = sumAgentChatCostUsd(messages);
 
   return {
     contextTokens,
@@ -43,7 +105,7 @@ export function buildAgentChatUsageSummary(
     cacheRatePercent: calculateCacheRatePercent(usageTotals.inputTokens, usageTotals.cacheReadTokens),
     reasoningTokens: usageTotals.reasoningTokens,
     totalSessionTokens: usageTotals.totalSessionTokens,
-    totalCostUsd,
+    totalCostUsd: usageTotals.totalCostUsd,
   };
 }
 
@@ -119,22 +181,21 @@ function getUsageTotalTokens(usage: NonNullable<AgentMessage["usage"]>): number 
 
 function sumAgentChatUsageTotals(
   messages: AgentMessage[],
-): Omit<
-  AgentChatUsageSummary,
-  "label" | "contextTokens" | "contextWindow" | "contextPercent" | "cacheRatePercent" | "totalCostUsd"
-> {
+): Omit<AgentChatUsageSummary, "label" | "contextTokens" | "contextWindow" | "contextPercent" | "cacheRatePercent"> {
   return messages.reduce(
     (totals, message) => {
       if (message.role !== "assistant" || !message.usage) {
         return totals;
       }
 
-      totals.inputTokens += message.usage.input ?? 0;
-      totals.outputTokens += message.usage.output ?? 0;
-      totals.cacheReadTokens += message.usage.cacheRead ?? 0;
-      totals.cacheWriteTokens += message.usage.cacheWrite ?? 0;
-      totals.reasoningTokens += message.usage.reasoning ?? 0;
-      totals.totalSessionTokens += getUsageTotalTokens(message.usage);
+      const billedUsage = getAgentChatAssistantBilledUsage(message.usage);
+      totals.inputTokens += billedUsage.input;
+      totals.outputTokens += billedUsage.output;
+      totals.cacheReadTokens += billedUsage.cacheRead;
+      totals.cacheWriteTokens += billedUsage.cacheWrite;
+      totals.reasoningTokens += getNonNegativeFiniteNumber(message.usage.reasoning);
+      totals.totalSessionTokens += getAgentChatBilledTokenTotal(billedUsage);
+      totals.totalCostUsd += billedUsage.cost;
       return totals;
     },
     {
@@ -144,6 +205,7 @@ function sumAgentChatUsageTotals(
       cacheWriteTokens: 0,
       reasoningTokens: 0,
       totalSessionTokens: 0,
+      totalCostUsd: 0,
     },
   );
 }
@@ -162,14 +224,12 @@ function calculateCacheRatePercent(inputTokens: number, cacheReadTokens: number)
   return Math.round((cacheReadTokens / totalCacheableTokens) * 100);
 }
 
-function sumAgentChatCostUsd(messages: AgentMessage[]): number {
-  return messages.reduce((totalCost, message) => {
-    if (message.role !== "assistant") {
-      return totalCost;
-    }
+function getNonNegativeFiniteNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0;
+}
 
-    return totalCost + (message.usage?.cost?.total ?? 0);
-  }, 0);
+function getRequiredNonNegativeFiniteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 function estimateMessageTokens(message: AgentMessage): number {
