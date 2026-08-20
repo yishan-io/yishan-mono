@@ -2,14 +2,30 @@
 
 import { editorSettingsStore } from "@renderer/domains/settings";
 import type { FileDiffEntry } from "@renderer/domains/workbench";
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { useImperativeHandle, useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithAppTheme } from "../../../../testUtils/renderWithAppTheme";
 import { MultiFileDiffViewer } from "./MultiFileDiffViewer";
 
 /** Captured options from the last CodeView render. */
 let lastCodeViewOptions: Record<string, unknown> | undefined;
+let rootWidth = 0;
+
+class MockResizeObserver {
+  static instances: MockResizeObserver[] = [];
+
+  constructor(private readonly callback: ResizeObserverCallback) {
+    MockResizeObserver.instances.push(this);
+  }
+
+  disconnect = vi.fn();
+  observe = vi.fn();
+
+  trigger() {
+    this.callback([], this as unknown as ResizeObserver);
+  }
+}
 
 vi.mock("@pierre/diffs/react", async () => {
   const React = await import("react");
@@ -70,8 +86,17 @@ vi.mock("@pierre/diffs/react", async () => {
   return { CodeView };
 });
 
+beforeEach(() => {
+  MockResizeObserver.instances = [];
+  rootWidth = 0;
+  vi.stubGlobal("ResizeObserver", MockResizeObserver);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(() => ({ width: rootWidth }) as DOMRect);
+});
+
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   lastCodeViewOptions = undefined;
   editorSettingsStore.setState({ wordWrap: true, editorFontSize: 13, codeThemePreference: "yishan" });
 });
@@ -96,6 +121,28 @@ const files: FileDiffEntry[] = [
 ];
 
 describe("MultiFileDiffViewer", () => {
+  it("uses the responsive mode until the toolbar mode selection is changed", () => {
+    rootWidth = 1200;
+    renderWithAppTheme(<MultiFileDiffViewer files={files} />);
+
+    expect(lastCodeViewOptions?.diffStyle).toBe("split");
+
+    rootWidth = 600;
+    act(() => {
+      MockResizeObserver.instances[0]?.trigger();
+    });
+    expect(lastCodeViewOptions?.diffStyle).toBe("unified");
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle side-by-side view" }));
+    expect(lastCodeViewOptions?.diffStyle).toBe("split");
+
+    rootWidth = 600;
+    act(() => {
+      MockResizeObserver.instances[0]?.trigger();
+    });
+    expect(lastCodeViewOptions?.diffStyle).toBe("split");
+  });
+
   it("wires fold-all and unfold-all toolbar actions", () => {
     renderWithAppTheme(<MultiFileDiffViewer files={files} />);
 

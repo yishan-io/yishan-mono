@@ -19,6 +19,7 @@ import { getDiffCssVariablesForPalette } from "../../ui/diffTheme";
 import { DiffSearchPanel } from "./DiffSearchPanel";
 import { isBinaryPath } from "./binaryExtensions";
 import { findDiffMatches } from "./diffSearch";
+import { useResponsiveDiffViewMode } from "./useResponsiveDiffViewMode";
 
 type FileDiffViewerProps = {
   filePath: string;
@@ -34,7 +35,7 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
   const diffLineHeight = Math.round(editorFontSize * 1.5);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [sideBySide, setSideBySide] = useState(false);
+  const { rootRef, isSplitView, toggleDiffViewMode } = useResponsiveDiffViewMode();
   const [changesOnly, setChangesOnly] = useState(true);
 
   const [searchActive, setSearchActive] = useState(false);
@@ -55,8 +56,8 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
   const searchFiles = useMemo(() => [{ oldContent, newContent, fileId: filePath }], [oldContent, newContent, filePath]);
 
   const searchMatches = useMemo(
-    () => findDiffMatches(searchFiles, searchQuery, false, sideBySide),
-    [searchFiles, searchQuery, sideBySide],
+    () => findDiffMatches(searchFiles, searchQuery, false, isSplitView),
+    [searchFiles, searchQuery, isSplitView],
   );
 
   const selectedLines: SelectedLineRange | null = useMemo(() => {
@@ -127,6 +128,7 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
 
   return (
     <Box
+      ref={rootRef}
       sx={{
         height: "100%",
         minHeight: 0,
@@ -154,9 +156,9 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
             {changesOnly ? <LuFileText size={14} /> : <LuDiff size={14} />}
           </IconButton>
         </Tooltip>
-        <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
-          <IconButton onClick={() => setSideBySide((prev) => !prev)} sx={{ ml: 0.5 }}>
-            {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
+        <Tooltip title={isSplitView ? "Switch to inline view" : "Switch to side-by-side view"}>
+          <IconButton onClick={toggleDiffViewMode} sx={{ ml: 0.5 }}>
+            {isSplitView ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
           </IconButton>
         </Tooltip>
         <Tooltip title={wordWrap ? "Disable line wrapping" : "Enable line wrapping"}>
@@ -206,7 +208,7 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
           }
           options={{
             theme: themeName,
-            diffStyle: sideBySide ? "split" : "unified",
+            diffStyle: isSplitView ? "split" : "unified",
             expandUnchanged: !changesOnly,
             overflow: wordWrap ? "wrap" : "scroll",
             disableFileHeader: false,
