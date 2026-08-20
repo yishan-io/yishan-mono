@@ -5,7 +5,8 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import { type AgentToolCallCardProps, extractResultText, getPathBaseName } from "./helpers";
+import { extractResultText, getPathBaseName } from "./diff";
+import type { AgentToolCallCardProps } from "./summary";
 
 const MEMORY_STORE_PREFIX = "Stored memory entry in ";
 

@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import type { DiffStats } from "./helpers";
+import type { DiffStats } from "./diff";
 
 /** Compact diff-stat badge used by edit and write tools. */
 export function ToolDiffStats({ stats, highlight }: { stats: DiffStats; highlight: boolean }) {

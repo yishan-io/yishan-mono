@@ -6,7 +6,9 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import { type AgentToolCallCardProps, extractResultText, parseMemorySearchMatches } from "./helpers";
+import { extractResultText } from "./diff";
+import { parseMemorySearchMatches } from "./memorySearch";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized memory_search tool-call card. */
 export function MemorySearchToolCard({ toolCall, result = null }: AgentToolCallCardProps) {

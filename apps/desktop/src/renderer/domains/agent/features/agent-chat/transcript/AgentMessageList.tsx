@@ -7,7 +7,7 @@ import type {
   AgentMessage as AgentMessageType,
   AgentQueueState,
 } from "../../../../../domains/agent/chat/agentChatTypes";
-import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
+import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentChatEmptyState } from "./AgentChatEmptyState";
 import { AgentTurn } from "./AgentTurn";
 import { QueuedMessageList } from "./QueuedMessageList";

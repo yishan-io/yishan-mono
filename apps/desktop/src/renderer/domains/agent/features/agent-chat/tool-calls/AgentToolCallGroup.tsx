@@ -5,7 +5,7 @@ import { LuChevronDown, LuChevronRight, LuLayers } from "react-icons/lu";
 import { ThinkingBlock } from "../transcript/ThinkingBlock";
 import type { TurnWorkingBlock } from "../transcript/turnModel";
 import { AgentToolCallCard } from "./AgentToolCallCard";
-import { type CompletedSubagentOpenTarget, type ToolCallSummaryItem, summarizeToolCalls } from "./helpers";
+import { type CompletedSubagentOpenTarget, type ToolCallSummaryItem, summarizeToolCalls } from "./summary";
 
 /** Persists expanded tool-run groups across virtualized row unmounts (mirrors savedScrollTopByTabId). */
 const expandedToolRunIds = new Set<string>();

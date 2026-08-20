@@ -2,7 +2,7 @@ import { Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
-import type { AgentToolCallCardProps } from "./helpers";
+import type { AgentToolCallCardProps } from "./summary";
 
 type AskUserOption = {
   title?: unknown;

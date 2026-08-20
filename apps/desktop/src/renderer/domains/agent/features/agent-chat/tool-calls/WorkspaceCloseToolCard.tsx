@@ -4,7 +4,8 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import { type AgentToolCallCardProps, extractResultText } from "./helpers";
+import { extractResultText } from "./diff";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized workspace_close tool-call card. */
 export function WorkspaceCloseToolCard({ toolCall, result = null }: AgentToolCallCardProps) {

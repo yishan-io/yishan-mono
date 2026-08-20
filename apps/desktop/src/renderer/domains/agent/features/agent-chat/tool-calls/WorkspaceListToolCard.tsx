@@ -5,7 +5,9 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import { type AgentToolCallCardProps, extractResultText, parseWorkspaceListCount } from "./helpers";
+import { extractResultText } from "./diff";
+import { parseWorkspaceListCount } from "./lsp";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized workspace_list tool-call card. */
 export function WorkspaceListToolCard({ toolCall, result = null }: AgentToolCallCardProps) {

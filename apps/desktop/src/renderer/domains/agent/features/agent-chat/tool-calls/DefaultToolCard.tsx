@@ -2,7 +2,8 @@ import { Typography } from "@mui/material";
 import { useState } from "react";
 import { ToolCardShell, ToolDefaultHeader, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolOutputSection } from "./ToolOutputSection";
-import { type AgentToolCallCardProps, extractResultText } from "./helpers";
+import { extractResultText } from "./diff";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the fallback tool-call card for unsupported tool types. */
 export function DefaultToolCard({ toolCall, result = null }: AgentToolCallCardProps) {

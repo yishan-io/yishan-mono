@@ -5,7 +5,8 @@ import { AgentMarkdownContent } from "../transcript/AgentMarkdownContent";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
-import { type AgentToolCallCardProps, extractResultText } from "./helpers";
+import { extractResultText } from "./diff";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized web_fetch tool-call card. */
 export function WebFetchToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {

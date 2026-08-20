@@ -4,7 +4,9 @@ import { LuBot, LuPanelRightOpen } from "react-icons/lu";
 import { ToolSummaryBadge } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
-import { type AgentToolCallCardProps, extractResultText, getAgentStatusBadgeColor } from "./helpers";
+import { extractResultText } from "./diff";
+import { getAgentStatusBadgeColor } from "./statusColors";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized Agent delegation tool-call card. */
 export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent }: AgentToolCallCardProps) {

@@ -5,7 +5,8 @@ import { ToolSummaryBadge } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolPathSummary } from "./ToolPathSummary";
-import { type AgentToolCallCardProps, extractResultText } from "./helpers";
+import { extractResultText } from "./diff";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized workspace_create tool-call card. */
 export function WorkspaceCreateToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
