@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
+import { NodesTable } from "./NodesTable";
 
 import type { OrganizationMemberRecord } from "@renderer/domains/organization";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
@@ -216,112 +217,14 @@ export function NodesSettingsView() {
                 {unregisterError}
               </Alert>
             ) : null}
-            <Table
-              size="small"
-              sx={{
-                mt: hasLoadError || scopeChangeError || unregisterError ? 1.5 : 0,
-                "& th": {
-                  fontWeight: 600,
-                  borderBottomColor: "divider",
-                },
-                "& th, & td": {
-                  borderBottomColor: "divider",
-                },
-                "& tbody tr:last-of-type td": {
-                  borderBottom: "none",
-                },
-              }}
-            >
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("settings.nodes.columns.name")}</TableCell>
-                  <TableCell>{t("settings.nodes.columns.type")}</TableCell>
-                  <TableCell>{t("settings.nodes.columns.kind")}</TableCell>
-                  <TableCell>{t("settings.nodes.columns.version")}</TableCell>
-                  <TableCell>{t("settings.nodes.columns.owner")}</TableCell>
-                  <TableCell>{t("settings.nodes.columns.status")}</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {nodes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7}>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: "text.secondary",
-                          py: 1,
-                        }}
-                      >
-                        {t("settings.nodes.empty")}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  nodes.map((node) => (
-                    <TableRow key={node.id}>
-                      <TableCell>{node.name}</TableCell>
-                      <TableCell>
-                        {resolveNodeTypeLabel(
-                          node,
-                          t("settings.nodes.types.private"),
-                          t("settings.nodes.types.shared"),
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {resolveNodeKindLabel(
-                          node,
-                          t("settings.nodes.kinds.managed"),
-                          t("settings.nodes.kinds.external"),
-                        )}
-                      </TableCell>
-                      <TableCell>{resolveNodeVersion(node, t("settings.nodes.values.unknownVersion"))}</TableCell>
-                      <TableCell>{resolveOwnerLabel(node, members, t("settings.nodes.values.unknownOwner"))}</TableCell>
-                      <TableCell>
-                        <StatusIndicator
-                          label={node.isOnline ? t("settings.nodes.status.online") : t("settings.nodes.status.offline")}
-                          color={node.isOnline ? "success" : "disabled"}
-                        />
-                      </TableCell>
-                      <TableCell align="right" sx={{ pr: 0.5 }}>
-                        {canChangeScope(node) ? (
-                          <Tooltip
-                            title={
-                              node.scope === "private"
-                                ? t("settings.nodes.actions.makeShared")
-                                : t("settings.nodes.actions.makePrivate")
-                            }
-                          >
-                            <IconButton
-                              onClick={() => handleScopeChangeRequest(node)}
-                              aria-label={
-                                node.scope === "private"
-                                  ? t("settings.nodes.actions.makeShared")
-                                  : t("settings.nodes.actions.makePrivate")
-                              }
-                            >
-                              <LuArrowLeftRight size={14} />
-                            </IconButton>
-                          </Tooltip>
-                        ) : null}
-                        {canUnregister(node) ? (
-                          <Tooltip title={t("settings.nodes.actions.unregister")}>
-                            <IconButton
-                              color="error"
-                              onClick={() => handleUnregisterRequest(node)}
-                              aria-label={t("settings.nodes.actions.unregister")}
-                            >
-                              <LuTrash2 size={14} />
-                            </IconButton>
-                          </Tooltip>
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <NodesTable
+              nodes={nodes}
+              members={members}
+              canChangeScope={canChangeScope}
+              canUnregister={canUnregister}
+              onScopeChangeRequest={handleScopeChangeRequest}
+              onUnregisterRequest={handleUnregisterRequest}
+            />
           </>
         )}
       </SettingsCard>
