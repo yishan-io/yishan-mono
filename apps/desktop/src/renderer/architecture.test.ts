@@ -65,6 +65,16 @@ const MAIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../main");
 
 const KNOWN_SET = new Set(KNOWN_VIOLATIONS.map((v) => `${v.rule}:${v.file}`));
 
+const ALLOWED_MAIN_CONTRACT_TYPE_IMPORTS = [
+  "app/commands/appCommands.ts:../../../main/bridge/auth",
+  "app/commands/appCommands.ts:../../../main/bridge/updates",
+  "domains/browser/host/browserHost.ts:../../../../main/bridge/browser",
+  "domains/session/commands/sessionCommands.ts:../../../../main/bridge/daemon",
+  "domains/settings/commands/settingsCommands.ts:../../../../main/bridge/daemon",
+  "global.d.ts:@main/bridge/desktopBridge",
+  "platform/hostBridge.ts:../../main/bridge/desktopBridge",
+] as const;
+
 /**
  * Recorded Phase 16 baseline counts (occurrences, not files). A phase must not
  * increase a count; update an entry only when a phase intentionally fixes
@@ -546,6 +556,22 @@ describe("renderer architecture dependency rules", () => {
       const fresh = [...unbaselined(violations, "R1-value-api-rpc"), ...unbaselined(violations, "R1-main")];
       const messages = failureMessages(fresh);
       expect(messages, messages.join("\n")).toEqual([]);
+    });
+  });
+
+  describe("Main bridge contracts", () => {
+    it("allows only the documented type-only renderer imports", () => {
+      const actual: string[] = [];
+      for (const file of walkFiles(RENDERER_ROOT)) {
+        const relativeFile = relative(RENDERER_ROOT, file).replace(/\\/g, "/");
+        for (const imported of extractImports(file)) {
+          const target = resolveSpecifier(imported.spec, file);
+          if (!target || relative(MAIN_ROOT, target).startsWith("..")) continue;
+          expect(imported.isTypeOnly, `${relativeFile} must type-import ${imported.spec}`).toBe(true);
+          actual.push(`${relativeFile}:${imported.spec}`);
+        }
+      }
+      expect(actual.sort()).toEqual([...ALLOWED_MAIN_CONTRACT_TYPE_IMPORTS].sort());
     });
   });
 

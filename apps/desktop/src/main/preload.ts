@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import { DESKTOP_RPC_IPC_CHANNELS, type DesktopBridge, type DesktopRpcEventEnvelope, HOST_IPC_CHANNELS } from "./ipc";
+import { DESKTOP_RPC_IPC_CHANNELS, HOST_IPC_CHANNELS } from "./bridge/channels";
+import type { DesktopBridge } from "./bridge/desktopBridge";
+import type { DesktopRpcEventEnvelope } from "../shared/contracts/desktopEventEnvelope";
 
 /** Exposes immutable desktop bootstrap values for renderer transport initialization. */
 const bridge: DesktopBridge = {

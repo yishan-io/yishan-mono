@@ -8,7 +8,7 @@ import {
   isExternalAppPresetSupportedOnPlatform,
   normalizeExternalAppPlatform,
 } from "../../shared/contracts/externalApps";
-import type { OpenExternalUrlResult } from "../ipc";
+import type { OpenExternalUrlResult } from "../bridge/files";
 import { runCommandForExitCode } from "./process";
 
 export type LaunchPathInput =

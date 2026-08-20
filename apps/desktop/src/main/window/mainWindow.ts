@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { BrowserWindow, type WebContents } from "electron";
-import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
+import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
 
 export type MainWindowOptions = {
   /** Returns true when the app is in a quit flow (macOS close should destroy). */

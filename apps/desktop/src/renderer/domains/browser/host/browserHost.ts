@@ -1,5 +1,5 @@
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
-import type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "../../../../main/ipc";
+import type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "../../../../main/bridge/browser";
 
 /**
  * Browser host boundary — Electron-host I/O for the browser tab surface.
@@ -25,4 +25,4 @@ export async function appendBrowserHistory(input: AppendBrowserHistoryInput): Pr
   return await getDesktopHostBridge().appendBrowserHistory(input);
 }
 
-export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "../../../../main/ipc";
+export type { AppendBrowserHistoryInput, BrowserHistoryGroup } from "../../../../main/bridge/browser";

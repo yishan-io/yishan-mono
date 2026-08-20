@@ -39,7 +39,7 @@ class BrowserWindowMock {
   }
 }
 
-import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
+import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
 // The electron mock above provides a constructable BrowserWindow; use the real
 // import only for the assertion on the constructor call.
 const BrowserWindow = windowMocks.constructorMock;

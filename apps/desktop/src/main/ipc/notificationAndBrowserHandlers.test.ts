@@ -40,7 +40,7 @@ describe("registerNotificationAndBrowserIpcHandlers", () => {
   });
 
   it("forwards silent notifications through the IPC handler", async () => {
-    const { HOST_IPC_CHANNELS } = await import("../ipc");
+    const { HOST_IPC_CHANNELS } = await import("../bridge/channels");
     const { registerNotificationAndBrowserIpcHandlers } = await import("./notificationAndBrowserHandlers");
 
     registerNotificationAndBrowserIpcHandlers();

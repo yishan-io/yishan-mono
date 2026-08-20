@@ -1,5 +1,6 @@
 import { getDesktopBridge } from "../platform/hostBridge";
 import { subscribe } from "../rpc";
+import type { DesktopRpcEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 
 /**
  * Desktop RPC event bus (desktop8 Phase 31: event composition moved out of
@@ -10,11 +11,6 @@ import { subscribe } from "../rpc";
  * listener bus. Root RPC keeps transport only; this module owns the
  * composition, and App Runtime owns daemon identity refresh.
  */
-
-export type DesktopRpcEventEnvelope = {
-  method: string;
-  payload?: unknown;
-};
 
 const desktopRpcEventListeners = new Set<(envelope: DesktopRpcEventEnvelope) => void>();
 let backendEventsUnsubscribe: (() => void) | null = null;

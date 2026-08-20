@@ -12,7 +12,7 @@ import { clipboard, ipcMain } from "electron";
 import { getErrorMessage } from "../../shared/errors/getErrorMessage";
 import { launchPath, listDetectedExternalAppIds, openExternalUrl } from "../integrations/externalAppLauncher";
 import { readExternalClipboardSourcePathsFromSystem } from "../integrations/externalClipboardPipeline";
-import { HOST_IPC_CHANNELS } from "../ipc";
+import { HOST_IPC_CHANNELS } from "../bridge/channels";
 
 /**
  * Registers IPC handlers for file system operations: open in external app,

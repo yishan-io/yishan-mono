@@ -1,4 +1,4 @@
-import type { DesktopRpcEventEnvelope } from "../../main/ipc";
+import type { DesktopRpcEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 import type { RpcFrontendMessageKey, RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
 import {
   isNotificationEventPayload,

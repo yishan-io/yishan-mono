@@ -1,6 +1,6 @@
 import { ipcMain, systemPreferences } from "electron";
 import { appendBrowserHistoryEntry, loadBrowserHistoryGroups } from "../browser/browserHistory";
-import { HOST_IPC_CHANNELS } from "../ipc";
+import { HOST_IPC_CHANNELS } from "../bridge/channels";
 import { createDesktopNotificationHostAdapter } from "../notifications/service";
 
 /**

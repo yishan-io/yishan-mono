@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import type { App } from "electron";
 import { autoUpdater } from "electron-updater";
-import type { DesktopUpdateEventPayload } from "../ipc";
+import type { DesktopUpdateEventPayload } from "../bridge/updates";
 import { isDevMode } from "../runtime/environment";
 
 type AutoUpdaterLike = {

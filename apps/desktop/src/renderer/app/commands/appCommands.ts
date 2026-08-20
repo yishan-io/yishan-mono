@@ -14,7 +14,8 @@ import {
 import { openTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { getDesktopBridge, getDesktopHostBridge } from "@renderer/platform/hostBridge";
-import type { AuthStatusResult, DesktopUpdateEventPayload } from "../../../main/ipc";
+import type { DesktopUpdateEventPayload } from "../../../main/bridge/updates";
+import type { AuthStatusResult } from "../../../main/bridge/auth";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { sessionStore } from "../../domains/session";
 import { rendererQueryClient } from "../../queryClient";
@@ -121,7 +122,7 @@ export function installDesktopUpdate() {
   return getDesktopHostBridge().installUpdate();
 }
 
-export type { DesktopUpdateEventPayload } from "../../../main/ipc";
+export type { DesktopUpdateEventPayload } from "../../../main/bridge/updates";
 
 export { getDaemonLog };
 export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "@renderer/domains/settings";

@@ -31,7 +31,7 @@ vi.mock("./autoUpdateService", () => ({
   downloadUpdate: mocks.downloadUpdate,
 }));
 
-import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
+import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
 
 function createRuntime() {
   return new UpdateRuntime(mocks.app as never, {

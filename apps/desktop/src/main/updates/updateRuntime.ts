@@ -1,6 +1,7 @@
 import type { App, MenuItemConstructorOptions, WebContents } from "electron";
 import { Menu } from "electron";
-import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload } from "../ipc";
+import { DESKTOP_RPC_IPC_CHANNELS } from "../bridge/channels";
+import type { DesktopUpdateEventPayload } from "../bridge/updates";
 import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./autoUpdateDismissalState";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./autoUpdateService";
 
