@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
 import { createProject, inspectLocalProjectSource } from "../../commands/projectCommands";
+import { deriveDefaultProjectName } from "./createProjectNameDerivation";
 import { openLocalFolderDialog } from "../../host/folderPicker";
 
 type RepoDraft = {
@@ -40,22 +41,6 @@ type CreateProjectFormViewProps = {
   autoFocus?: boolean;
   onBusyChange?: (isBusy: boolean) => void;
 };
-
-/** Converts one local path or URL into a default project display name. */
-function deriveDefaultProjectName(input: string): string {
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  const normalized = trimmed.replace(/\\+$/g, "").replace(/\/+$/g, "");
-  const segment =
-    normalized
-      .split(/[\\/]/)
-      .filter((part) => part.length > 0)
-      .at(-1) ?? "";
-  return segment.replace(/\.git$/i, "");
-}
 
 const defaultDraft: RepoDraft = { name: "", source: "local", path: "", gitUrl: "", nameEdited: false };
 
