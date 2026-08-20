@@ -29,7 +29,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X yishan/apps/cli/internal/buildinfo.Version={{.Version}}
+      - -s -w -X yishan/apps/cli/internal/platform/release.Version={{.Version}}
 
   # Linux and Windows: no CGO needed — the pure-Go fsnotify watcher is used
   # on non-Darwin platforms (//go:build !darwin).
@@ -45,7 +45,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X yishan/apps/cli/internal/buildinfo.Version={{.Version}}
+      - -s -w -X yishan/apps/cli/internal/platform/release.Version={{.Version}}
 
 archives:
   - id: yishan-archive

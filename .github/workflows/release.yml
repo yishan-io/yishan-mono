@@ -98,7 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${YISHAN_VERSION}"
-          ldflags="-s -w -X 'yishan/apps/cli/internal/buildinfo.Version=${version}'"
+          ldflags="-s -w -X 'yishan/apps/cli/internal/platform/release.Version=${version}'"
           goos="${{ matrix.goos }}"
           mkdir -p bin
           IFS=',' read -ra goarches <<< "${{ matrix.goarches }}"
