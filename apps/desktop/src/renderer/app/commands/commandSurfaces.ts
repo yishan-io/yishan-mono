@@ -24,23 +24,6 @@ import {
   type setSelectedTab as setSelectedTabCommand,
   type toggleTabPinned as toggleTabPinnedCommand,
 } from "@renderer/domains/workbench";
-import {
-  type activateWorkspacePane as activateWorkspacePaneCommand,
-  closeWorkspace as closeWorkspaceCommand,
-  createWorkspace as createWorkspaceCommand,
-  type deleteLocalFolder as deleteLocalFolderCommand,
-  type deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
-  type focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
-  type openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
-  type openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
-  type renameWorkspaceBranch as renameWorkspaceBranchCommand,
-  type renameWorkspace as renameWorkspaceCommand,
-  type reorderWorkspace as reorderWorkspaceCommand,
-  type setDisplayRepoIds as setDisplayRepoIdsCommand,
-  type toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
-  type toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
-  type undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "@renderer/domains/workspace";
 import type {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -66,39 +49,6 @@ export type AppCommandSurface = {
   ensureAgentGlobalConfigExternalDirectoryPermission: typeof ensureAgentGlobalConfigExternalDirectoryPermissionCommand;
   toggleMainWindowMaximized: typeof toggleMainWindowMaximizedCommand;
   loadWorkspaceSnapshot: () => Promise<void>;
-};
-
-/** Workspace feature command surface. */
-export type WorkspaceCommandSurface = {
-  activateProject: typeof activateProjectCommand;
-  activateWorkspace: typeof activateWorkspaceCommand;
-  setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
-  setLastUsedExternalAppId: (appId: ExternalAppId) => void;
-  toggleLeftPaneVisibility: typeof toggleLeftPaneVisibilityCommand;
-  toggleRightPaneVisibility: typeof toggleRightPaneVisibilityCommand;
-  activateWorkspacePane: typeof activateWorkspacePaneCommand;
-  openCreateWorkspaceDialog: typeof openCreateWorkspaceDialogCommand;
-  focusWorkspaceFileTree: typeof focusWorkspaceFileTreeCommand;
-  deleteSelectedFileTreeEntry: typeof deleteSelectedFileTreeEntryCommand;
-  undoFileTreeOperation: typeof undoFileTreeOperationCommand;
-  openWorkspaceFileSearch: typeof openWorkspaceFileSearchCommand;
-  renameWorkspace: typeof renameWorkspaceCommand;
-  reorderWorkspace: typeof reorderWorkspaceCommand;
-  renameWorkspaceBranch: typeof renameWorkspaceBranchCommand;
-  createWorkspace: (input: {
-    projectId: string;
-    name: string;
-    sourceBranch?: string;
-    targetBranch?: string;
-    nodeId?: string;
-    taskRun?: {
-      agentKind: string;
-      prompt: string;
-      model?: string;
-    };
-  }) => Promise<string | undefined>;
-  closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
-  deleteLocalFolder: typeof deleteLocalFolderCommand;
 };
 
 /** Workbench feature command surface. */

@@ -45,7 +45,6 @@ vi.mock("../../../app/commands/useCommands", () => {
   });
   return {
     useAppCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
     useWorkbenchCommands: commandSurface,
   };
 });

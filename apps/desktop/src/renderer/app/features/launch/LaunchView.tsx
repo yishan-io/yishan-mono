@@ -8,7 +8,7 @@ import {
   type DesktopAgentKind,
 } from "@renderer/domains/agent";
 import { createNewWhiteboard } from "@renderer/domains/files";
-import { workspaceCreateProgressStore, workspaceStore } from "@renderer/domains/workspace";
+import { openWorkspaceFileSearch, workspaceCreateProgressStore, workspaceStore } from "@renderer/domains/workspace";
 
 import type { WorkspaceCreateProgressStep } from "@renderer/domains/workspace";
 import { getRendererPlatform } from "@renderer/platform/platform";
@@ -25,7 +25,7 @@ import {
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
-import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { useWorkbenchCommands } from "../../../app/commands/useCommands";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
@@ -76,7 +76,6 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
   const workspace = workspaces.find((item) => item.id === workspaceId);
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab } = useWorkbenchCommands();
-  const { openWorkspaceFileSearch } = useWorkspaceCommands();
   const platform = getRendererPlatform();
   const isPreparingWorkspace = workspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
   const selectedWorkspace = workspaces.find((w) => w.id === workspaceId);

@@ -9,6 +9,7 @@ import { workspaceStore } from "../../../domains/workspace/state/workspaceStore"
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 
 const mocked = vi.hoisted(() => ({
+  activateWorkspace: vi.fn(),
   killTerminalProcess: vi.fn(),
   listDetectedPorts: vi.fn(),
   setSelectedWorkspaceId: vi.fn(),
@@ -36,6 +37,14 @@ vi.mock("@renderer/domains/terminal", async (importOriginal) => {
   };
 });
 
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
+  return {
+    ...actual,
+    activateWorkspace: mocked.activateWorkspace,
+  };
+});
+
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
@@ -43,7 +52,6 @@ vi.mock("../../../app/commands/useCommands", () => {
   });
   return {
     useAppCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
     useWorkbenchCommands: commandSurface,
   };
 });

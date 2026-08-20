@@ -2,10 +2,8 @@ import { useMemo } from "react";
 import {
   type AppCommandSurface,
   type WorkbenchCommandSurface,
-  type WorkspaceCommandSurface,
   createAppCommands,
   createWorkbenchCommands,
-  createWorkspaceCommands,
 } from "./composition";
 
 /**
@@ -13,14 +11,11 @@ import {
  *
  * The composed `useCommands` surface was removed in Desktop 11 Phase 46;
  * the shortcut runtime now uses a narrow action registry
- * (`shortcuts/types.ts`). Consumers import the remaining surfaces only.
+ * (`shortcuts/types.ts`). The Workbench surface is the last remaining
+ * facade group (Workbench-owned compositions).
  */
 export function useAppCommands(): AppCommandSurface {
   return useMemo(() => createAppCommands(), []);
-}
-
-export function useWorkspaceCommands(): WorkspaceCommandSurface {
-  return useMemo(() => createWorkspaceCommands(), []);
 }
 
 export function useWorkbenchCommands(): WorkbenchCommandSurface {
@@ -30,5 +25,4 @@ export function useWorkbenchCommands(): WorkbenchCommandSurface {
 export type {
   AppCommandSurface,
   WorkbenchCommandSurface,
-  WorkspaceCommandSurface,
 } from "./composition";

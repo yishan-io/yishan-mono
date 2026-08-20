@@ -9,25 +9,34 @@ import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "@renderer/domains/session";
 import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
 import { listTerminalSessions, setActiveWorkspace } from "@renderer/domains/terminal";
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { resizeLeftPane } from "@renderer/domains/workbench";
-import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "@renderer/domains/workbench";
-import { SplitPaneLayout } from "@renderer/domains/workbench";
-import { layoutStore } from "@renderer/domains/workbench";
-import { popupStore } from "@renderer/domains/workbench";
-import { tabStore } from "@renderer/domains/workbench";
-import { WorkspaceLifecycleNoticeView, resolveWorkspaceProjectId, workspaceStore } from "@renderer/domains/workspace";
+import {
+  SplitPaneLayout,
+  WorkspacePaneVisibilityProvider,
+  activateWorkspace,
+  closeTab,
+  layoutStore,
+  openTab,
+  popupStore,
+  resizeLeftPane,
+  setSelectedTab,
+  tabStore,
+  useWorkspacePaneVisibility,
+  workbenchNavigationStore,
+} from "@renderer/domains/workbench";
+import {
+  WorkspaceLifecycleNoticeView,
+  deleteSelectedFileTreeEntry,
+  resolveWorkspaceProjectId,
+  toggleLeftPaneVisibility,
+  toggleRightPaneVisibility,
+  undoFileTreeOperation,
+  workspaceStore,
+} from "@renderer/domains/workspace";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  type AppCommandSurface,
-  type WorkbenchCommandSurface,
-  type WorkspaceCommandSurface,
-  useAppCommands,
-  useWorkbenchCommands,
-  useWorkspaceCommands,
-} from "../../app/commands/useCommands";
+import { useAppCommands } from "../../app/commands/useCommands";
+import type { AppCommandSurface } from "../../app/commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
 import { ACTIONS } from "../../events";
 import { subscribeAppActionEvent } from "../../events";
@@ -45,15 +54,21 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-type WorkspaceViewCommands = WorkspaceCommandSurface &
-  WorkbenchCommandSurface &
-  AppCommandSurface & {
-    listTerminalSessions: typeof listTerminalSessions;
-    setActiveWorkspace: typeof setActiveWorkspace;
-    openEntryInExternalApp: typeof openEntryInExternalApp;
-    refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChanges;
-    listActivePiSessions: typeof listActivePiSessions;
-  };
+type WorkspaceViewCommands = {
+  activateWorkspace: typeof activateWorkspace;
+  toggleLeftPaneVisibility: typeof toggleLeftPaneVisibility;
+  toggleRightPaneVisibility: typeof toggleRightPaneVisibility;
+  deleteSelectedFileTreeEntry: typeof deleteSelectedFileTreeEntry;
+  undoFileTreeOperation: typeof undoFileTreeOperation;
+  selectTab: typeof setSelectedTab;
+  closeTab: typeof closeTab;
+  openTab: typeof openTab;
+  listActivePiSessions: typeof listActivePiSessions;
+  listTerminalSessions: typeof listTerminalSessions;
+  setActiveWorkspace: typeof setActiveWorkspace;
+  openEntryInExternalApp: typeof openEntryInExternalApp;
+  refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChanges;
+} & AppCommandSurface;
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
 function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: ReturnType<typeof useNavigate> }) {
@@ -339,22 +354,26 @@ export function WorkspaceView() {
   // The command surface must stay referentially stable across renders: the
   // bootstrap effect keys on `cmd`, and a fresh object every render would
   // re-trigger workspace snapshot loads (which race and skip the local-folder
-  // merge). Each per-feature hook already memoizes its surface.
-  const workspaceCommands = useWorkspaceCommands();
-  const workbenchCommands = useWorkbenchCommands();
+  // merge). The action members are stable module-level functions.
   const appCommands = useAppCommands();
   const cmd: WorkspaceViewCommands = useMemo(
     () => ({
-      ...workspaceCommands,
-      ...workbenchCommands,
+      activateWorkspace,
+      toggleLeftPaneVisibility,
+      toggleRightPaneVisibility,
+      deleteSelectedFileTreeEntry,
+      undoFileTreeOperation,
+      selectTab: setSelectedTab,
+      closeTab,
+      openTab,
+      listActivePiSessions,
       listTerminalSessions,
       setActiveWorkspace,
       openEntryInExternalApp,
       refreshWorkspaceGitChanges,
-      listActivePiSessions,
       ...appCommands,
     }),
-    [workspaceCommands, workbenchCommands, appCommands],
+    [appCommands],
   );
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));

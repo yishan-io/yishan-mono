@@ -49,16 +49,26 @@ vi.mock("../../../domains/agent/commands/agentChatSessionHistory", () => ({
 
 vi.mock("@renderer/domains/files", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
+  requestDeleteSelection: vi.fn(),
+  requestFileSearch: vi.fn(),
+  requestSelectFolderInFileTree: vi.fn(),
+  requestUndo: vi.fn(),
 }));
+
+vi.mock("@renderer/domains/workspace", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workspace")>();
+  return {
+    ...actual,
+    openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
+  };
+});
 
 vi.mock("../../../app/commands/useCommands", () => {
   const commandSurface = () => ({
     openTab: mocks.openTab,
-    openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
   });
   return {
     useAppCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
     useWorkbenchCommands: commandSurface,
   };
 });

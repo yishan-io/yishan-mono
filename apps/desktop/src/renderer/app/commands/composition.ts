@@ -1,7 +1,6 @@
 import { renameAgentChatSessionByTab as renameAgentChatSessionByTabCommand } from "@renderer/domains/agent";
 import { createFileTabPlaceholder, seedFileTabContent as seedFileTabContentCommand } from "@renderer/domains/files";
 import { seedDiffTabContent as seedDiffTabContentCommand } from "@renderer/domains/git";
-import { projectStore } from "@renderer/domains/project";
 import { tabStore } from "@renderer/domains/workbench";
 import {
   activateProject as activateProjectCommand,
@@ -20,23 +19,6 @@ import {
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
 } from "@renderer/domains/workbench";
-import {
-  activateWorkspacePane as activateWorkspacePaneCommand,
-  closeWorkspace as closeWorkspaceCommand,
-  createWorkspace as createWorkspaceCommand,
-  deleteLocalFolder as deleteLocalFolderCommand,
-  deleteSelectedFileTreeEntry as deleteSelectedFileTreeEntryCommand,
-  focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
-  openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
-  openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
-  renameWorkspaceBranch as renameWorkspaceBranchCommand,
-  renameWorkspace as renameWorkspaceCommand,
-  reorderWorkspace as reorderWorkspaceCommand,
-  setDisplayRepoIds as setDisplayRepoIdsCommand,
-  toggleLeftPaneVisibility as toggleLeftPaneVisibilityCommand,
-  toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
-  undoFileTreeOperation as undoFileTreeOperationCommand,
-} from "@renderer/domains/workspace";
 import {
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -57,11 +39,7 @@ import { loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand } from "./workspa
  */
 
 /** App-level commands (Electron host, auth, app flows). */
-import type {
-  AppCommandSurface,
-  WorkbenchCommandSurface,
-  WorkspaceCommandSurface,
-} from "./commandSurfaces";
+import type { AppCommandSurface, WorkbenchCommandSurface } from "./commandSurfaces";
 
 export function createAppCommands(): AppCommandSurface {
   return {
@@ -70,29 +48,6 @@ export function createAppCommands(): AppCommandSurface {
     ensureAgentGlobalConfigExternalDirectoryPermission: ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
     toggleMainWindowMaximized: toggleMainWindowMaximizedCommand,
     loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
-  };
-}
-
-export function createWorkspaceCommands(): WorkspaceCommandSurface {
-  return {
-    activateProject: activateProjectCommand,
-    activateWorkspace: activateWorkspaceCommand,
-    setDisplayRepoIds: setDisplayRepoIdsCommand,
-    setLastUsedExternalAppId: projectStore.getState().setLastUsedExternalAppId,
-    toggleLeftPaneVisibility: toggleLeftPaneVisibilityCommand,
-    toggleRightPaneVisibility: toggleRightPaneVisibilityCommand,
-    activateWorkspacePane: activateWorkspacePaneCommand,
-    openCreateWorkspaceDialog: openCreateWorkspaceDialogCommand,
-    focusWorkspaceFileTree: focusWorkspaceFileTreeCommand,
-    deleteSelectedFileTreeEntry: deleteSelectedFileTreeEntryCommand,
-    undoFileTreeOperation: undoFileTreeOperationCommand,
-    openWorkspaceFileSearch: openWorkspaceFileSearchCommand,
-    renameWorkspace: renameWorkspaceCommand,
-    reorderWorkspace: reorderWorkspaceCommand,
-    renameWorkspaceBranch: renameWorkspaceBranchCommand,
-    createWorkspace: createWorkspaceCommand,
-    closeWorkspace: closeWorkspaceCommand,
-    deleteLocalFolder: deleteLocalFolderCommand,
   };
 }
 
@@ -149,5 +104,4 @@ export function createWorkbenchCommands(): WorkbenchCommandSurface {
 export type {
   AppCommandSurface,
   WorkbenchCommandSurface,
-  WorkspaceCommandSurface,
 } from "./commandSurfaces";

@@ -6,7 +6,7 @@ import { resolveWorkspaceNotificationColor } from "@renderer/domains/notificatio
 import { chatStore } from "@renderer/domains/agent";
 import { projectStore, renderProjectIcon, updateProjectConfig } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import { activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { PaneHeader } from "@renderer/domains/workbench";
 import { PaneToggleButton } from "@renderer/domains/workbench";
@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
 import { getMainWindowFullscreenState } from "../../../app/commands/appCommands";
-import { useWorkbenchCommands, useWorkspaceCommands } from "../../../app/commands/useCommands";
+import { useWorkbenchCommands } from "../../../app/commands/useCommands";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { DaemonVersionWarningControl } from "../launch/DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "../main-workspace-shell/WorkspacePortsMenuControl";
@@ -41,7 +41,6 @@ export function MainPaneTitleBarView() {
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
-  const { activateProject, activateWorkspace } = useWorkspaceCommands();
   const { openTab } = useWorkbenchCommands();
   const selectedRepo = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
