@@ -70,7 +70,7 @@ func (s *Service) startTaskRunChatSession(created workspace.Workspace, taskRun *
 		TabID:       tabID,
 		PaneID:      paneID,
 		WorkspaceID: created.ID,
-	})
+	}, created)
 	if err != nil {
 		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build pi session env")
 		return "failed", nil

@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	"yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	terminalruntime "yishan/apps/cli/internal/terminal"
+	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
@@ -49,6 +48,14 @@ func (s *Service) Start(ctx context.Context, connState *rpc.Connection, req rpc.
 		}
 	}
 
+	if s.deps.Workspace == nil {
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "workspace resolver is unavailable")
+	}
+	resolvedWorkspace, err := s.deps.Workspace.GetWorkspace(req.WorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+
 	args := []string{"--mode", "rpc", "--name", req.TabID, "--approve"}
 	if req.Resume {
 		args = append(args, "--session", req.SessionID)
@@ -56,7 +63,7 @@ func (s *Service) Start(ctx context.Context, connState *rpc.Connection, req rpc.
 		args = append(args, "--session-id", req.SessionID)
 	}
 
-	extraEnv, err := buildPiStartExtraEnv(req)
+	extraEnv, err := buildPiStartExtraEnv(req, resolvedWorkspace)
 	if err != nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
@@ -147,19 +154,14 @@ func (s *Service) Attach(ctx context.Context, connState *rpc.Connection, req rpc
 	return map[string]bool{"ok": true}, nil
 }
 
-func buildPiStartExtraEnv(req rpc.PiStartParams) ([]string, error) {
-	piAgentDir, err := config.ManagedPiAgentDir()
-	if err != nil {
-		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
-	}
-
-	env := terminalruntime.ResolveObserverSessionEnv(
-		nil,
-		req.WorkspaceID,
-		req.TabID,
-		resolvePiStartPaneID(req.TabID, req.PaneID),
-	)
-	return append(env, config.PiAgentDirEnvKey+"="+piAgentDir), nil
+func buildPiStartExtraEnv(req rpc.PiStartParams, resolvedWorkspace workspace.Workspace) ([]string, error) {
+	return terminalruntime.ResolveSessionMetadataEnv(nil, terminalruntime.StartRequest{
+		WorkspaceID: req.WorkspaceID,
+		ProjectID:   resolvedWorkspace.ProjectID,
+		OrgID:       resolvedWorkspace.OrgID,
+		TabID:       req.TabID,
+		PaneID:      resolvePiStartPaneID(req.TabID, req.PaneID),
+	})
 }
 
 func resolvePiStartPaneID(tabID string, paneID string) string {
