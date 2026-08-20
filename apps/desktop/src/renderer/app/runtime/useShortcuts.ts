@@ -1,6 +1,7 @@
+import { closeTabWithCleanup } from "@renderer/app/commands/tabCloseHandler";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { keybindingSettingsStore } from "@renderer/domains/settings";
-import { closeTab, openTab, setSelectedTab, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { openTab, setSelectedTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { popupStore } from "@renderer/domains/workbench";
 import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
 import {
@@ -32,7 +33,7 @@ const WORKSPACE_ROUTE = "/";
  */
 const shortcutActions: ShortcutActionRegistry = {
   activateWorkspacePane,
-  closeTab,
+  closeTab: closeTabWithCleanup,
   closeWorkspace,
   deleteSelectedFileTreeEntry,
   focusWorkspaceFileTree,

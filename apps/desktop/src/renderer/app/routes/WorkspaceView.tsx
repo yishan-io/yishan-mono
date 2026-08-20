@@ -13,7 +13,6 @@ import {
   SplitPaneLayout,
   WorkspacePaneVisibilityProvider,
   activateWorkspace,
-  closeTab,
   layoutStore,
   openTab,
   resizeLeftPane,
@@ -33,6 +32,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { closeTabWithCleanup } from "../../app/commands/tabCloseHandler";
 import { loadWorkspaceSnapshot } from "../../app/commands/workspaceSnapshotFlow";
 import { useSelectedWorkspaceWithProject } from "../../app/selectors";
 import { LeftPaneView } from "../features/main-workspace-shell/LeftPaneView";
@@ -85,7 +85,7 @@ export function WorkspaceView() {
       deleteSelectedFileTreeEntry,
       undoFileTreeOperation,
       selectTab: setSelectedTab,
-      closeTab,
+      closeTab: closeTabWithCleanup,
       openTab,
       listActivePiSessions,
       listTerminalSessions,
