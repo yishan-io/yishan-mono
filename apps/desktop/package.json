@@ -98,7 +98,7 @@
     },
     "files": [
       "dist/**/*",
-      "src/assets/**/*",
+      "src/assets/notification-sounds/**/*",
       "package.json"
     ],
     "asarUnpack": [
@@ -116,6 +116,10 @@
     "mac": {
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
       "category": "public.app-category.developer-tools",
+      "electronLanguages": [
+        "en",
+        "zh_CN"
+      ],
       "icon": "src/assets/icons/yishan.icns",
       "target": [
         {
@@ -143,6 +147,10 @@
       "notarize": true
     },
     "linux": {
+      "electronLanguages": [
+        "en",
+        "zh-CN"
+      ],
       "icon": "src/assets/images/yishan-app-icon.png",
       "executableName": "yishan",
       "target": [
