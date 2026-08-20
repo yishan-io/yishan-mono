@@ -1,27 +1,37 @@
-import { readFile, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { wireAppLifecycle } from "./lifecycle/appLifecycle";
+import { prepareForRestart } from "./lifecycle/restartPreparation";
 import { registerWorkspaceFileProtocol } from "./protocol/workspaceFileProtocol";
 import { registerPermissionPolicy } from "./security/permissionPolicy";
 import { UpdateRuntime } from "./updates/updateRuntime";
 import { MainWindow } from "./window/mainWindow";
 export { isPermissionAllowed } from "./security/permissionPolicy";
-import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
-import { autoUpdater } from "electron-updater";
-import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
+import { resolve } from "node:path";
+import { app, dialog, session } from "electron";
+import type { AppActionPayload } from "../shared/contracts/actions";
 import { getErrorMessage } from "../shared/errors/getErrorMessage";
+import { getDesktopAppVersion } from "./app/desktopAppInfo";
 import { configureApplicationMenu } from "./app/menu";
-import { getAuthStatus, login } from "./auth/cliAuth";
-import { flushBrowserHistoryPruneCheck } from "./browser/browserHistory";
-import { resolveDaemonLogFilePath } from "./daemon/daemonHealthCheck";
+import { loginAndRestartDaemon } from "./auth/accountSwitch";
+import { getAuthStatus } from "./auth/cliAuth";
+import { desktopHostEventChannels } from "./bridge/channels";
+import { registerDesktopHostIpc } from "./bridge/registerDesktopHostIpc";
+import {
+  appendBrowserHistoryEntry,
+  flushBrowserHistoryPruneCheck,
+  loadBrowserHistoryGroups,
+} from "./browser/browserHistory";
+import { writeClipboardText } from "./clipboard/clipboardText";
+import { readExternalClipboardSourcePathsFromSystem } from "./clipboard/externalFileClipboardReader";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonExitPreference";
+import { DaemonHost } from "./daemon/daemonHost";
 import { DaemonManager } from "./daemon/daemonManager";
-import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSettings";
-import { desktopHostEventChannels, desktopHostChannels } from "./bridge/channels";
-import type { DesktopUpdateEventPayload } from "./bridge/updates";
-import { registerFileIpcHandlers } from "./ipc/fileHandlers";
-import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
+import { listDetectedExternalAppIds } from "./external-app/externalAppLauncher";
+import { openExternalUrl } from "./external-app/externalUrlLauncher";
+import { openWorkspaceEntry } from "./external-app/workspaceEntryLauncher";
+import { copyFiles, resolveRealPath, writeFileBase64 } from "./files/fileSystemOperations";
+import { createNotificationHost } from "./notifications/notificationHost";
 import { isDevMode } from "./runtime/environment";
+import { pickLocalFolder } from "./window/folderPicker";
 
 type DispatchActionOptions = {
   focusApp?: boolean;
@@ -38,11 +48,13 @@ export class DesktopApplication {
   private readonly updateRuntime = new UpdateRuntime(app, {
     sendEvent: (payload) => this.mainWindow.browserWindow?.webContents.send(desktopHostEventChannels.event, payload),
     focusApp: () => this.focusMainWindow(),
+    prepareForRestart: () => this.prepareForRestart(),
   });
   private readonly daemonManager = new DaemonManager();
+  private readonly daemonHost = new DaemonHost(this.daemonManager, getDaemonQuitOnExit, setDaemonQuitOnExit);
+  private readonly notificationHost = createNotificationHost();
   private isQuitting = false;
   private pendingProtocolUrl: string | null = null;
-  private cachedDaemonQuitOnExit: boolean | null = null;
 
   /**
    * Starts the desktop app and exits on startup failure.
@@ -103,15 +115,14 @@ export class DesktopApplication {
     // Pre-load daemon settings so before-quit has the correct value even
     // when the user never opens the Settings view during this session.
     try {
-      this.cachedDaemonQuitOnExit = await getDaemonQuitOnExit();
+      this.daemonHost.setCachedQuitOnExit(await getDaemonQuitOnExit());
     } catch (error: unknown) {
       console.warn("Failed to load daemon quit-on-exit setting:", error);
-      this.cachedDaemonQuitOnExit = false;
+      this.daemonHost.setCachedQuitOnExit(false);
     }
 
     await this.daemonManager.ensureStarted();
-    this.registerHostIpcHandlers();
-    this.registerAuthIpcHandlers();
+    this.registerDesktopHostIpc();
     this.mainWindow.create();
     this.mainWindow.loadRenderer();
     configureApplicationMenu({
@@ -168,178 +179,45 @@ export class DesktopApplication {
     this.focusMainWindow();
   }
 
-  /**
-   * Stops and restarts the local daemon so it re-resolves the account data
-   * dir. A running daemon keeps its boot-time account handles, so an account
-   * switch (login/logout token sync) requires a restart to take effect. Stop
-   * failures are logged and tolerated; start failures are surfaced to the
-   * caller (auth itself already succeeded and is not rolled back).
-   */
-  private async restartDaemonForAccountSwitch(): Promise<void> {
-    try {
-      await this.daemonManager.stop();
-    } catch (error: unknown) {
-      console.warn("Daemon stop during account switch:", getErrorMessage(error));
-    }
-
-    await this.daemonManager.ensureStarted();
-  }
-
-  /** Registers desktop auth IPC endpoints backed by the bundled CLI login/status commands. */
-  private registerAuthIpcHandlers() {
-    ipcMain.handle(desktopHostChannels.getDesktopAppVersion, async () => {
-      return app.getVersion();
-    });
-
-    ipcMain.handle(desktopHostChannels.getAuthStatus, async () => {
-      return await getAuthStatus();
-    });
-
-    ipcMain.handle(desktopHostChannels.login, async () => {
-      const result = await login();
-      // A successful, non-skipped login switched the active account. Restart
-      // the daemon so it re-resolves the account data dir — a running daemon
-      // keeps its boot-time account handles until restart. Restart failures
-      // are logged but never fail the login response (auth already succeeded).
-      if (result.authenticated && !result.skipped) {
-        try {
-          await this.restartDaemonForAccountSwitch();
-        } catch (error: unknown) {
-          console.warn("Daemon restart after login failed:", getErrorMessage(error));
-        }
-      }
-      return result;
-    });
-
-    ipcMain.handle(desktopHostChannels.getDaemonInfo, async () => {
-      return await this.daemonManager.getInfo();
-    });
-
-    ipcMain.handle(desktopHostChannels.restartDaemon, async () => {
-      try {
-        await this.restartDaemonForAccountSwitch();
-        const info = await this.daemonManager.getInfo();
-        return { success: true as const, daemonInfo: info };
-      } catch (error: unknown) {
-        const reason = getErrorMessage(error);
-        return { success: false as const, error: reason };
-      }
-    });
-
-    ipcMain.handle(desktopHostChannels.readDaemonLog, async () => {
-      try {
-        const logFilePath = resolveDaemonLogFilePath();
-        const content = await readFile(logFilePath, "utf8");
-        return { ok: true as const, content };
-      } catch (error: unknown) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          (error as NodeJS.ErrnoException).code === "ENOENT"
-        ) {
-          return { ok: true as const, content: "" };
-        }
-        const reason = error instanceof Error ? error.message : "Failed to read daemon log file";
-        return { ok: false as const, error: reason };
-      }
-    });
-
-    ipcMain.handle(desktopHostChannels.getDaemonQuitOnExit, async () => {
-      try {
-        if (this.cachedDaemonQuitOnExit === null) {
-          this.cachedDaemonQuitOnExit = await getDaemonQuitOnExit();
-        }
-        return this.cachedDaemonQuitOnExit;
-      } catch (error: unknown) {
-        console.warn("Failed to read daemon quit-on-exit setting:", error);
-        return false;
-      }
-    });
-
-    ipcMain.handle(desktopHostChannels.setDaemonQuitOnExit, async (_event, value: boolean) => {
-      await setDaemonQuitOnExit(value);
-      this.cachedDaemonQuitOnExit = value;
-      return { ok: true as const };
-    });
-  }
-
-  /** Registers desktop host IPC endpoints used by renderer shell/runtime commands. */
-  private registerHostIpcHandlers() {
-    registerFileIpcHandlers();
-    registerNotificationAndBrowserIpcHandlers();
-
-    ipcMain.handle(desktopHostChannels.openLocalFolderDialog, async (_event, input) => {
-      const options: Electron.OpenDialogOptions = {
-        properties: ["openDirectory", "createDirectory"],
-        defaultPath: input?.startingFolder?.trim() || undefined,
-      };
-      const window = this.mainWindow.browserWindow;
-      const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
-
-      if (result.canceled) {
-        return null;
-      }
-
-      return result.filePaths[0] ?? null;
-    });
-
-    ipcMain.handle(desktopHostChannels.toggleMainWindowMaximized, async () => {
-      this.mainWindow.toggleMaximized();
-      return { ok: true };
-    });
-
-    ipcMain.handle(desktopHostChannels.getMainWindowFullscreenState, async () => {
-      return {
-        isFullscreen: this.mainWindow.isFullscreen(),
-      };
-    });
-
-    ipcMain.handle(desktopHostChannels.getPendingUpdate, async () => {
-      return this.updateRuntime.getPendingUpdate();
-    });
-
-    ipcMain.handle(desktopHostChannels.dismissUpdate, async () => {
-      await this.updateRuntime.dismissUpdate();
-      return { ok: true as const };
-    });
-
-    ipcMain.handle(desktopHostChannels.checkForUpdates, async () => {
-      await this.updateRuntime.handleManualUpdateCheck();
-      return { ok: true as const };
-    });
-
-    ipcMain.handle(desktopHostChannels.downloadUpdate, async () => {
-      return this.updateRuntime.download();
-    });
-
-    ipcMain.handle(desktopHostChannels.installUpdate, async () => {
-      // Mark quit intent before electron-updater closes windows so the
-      // macOS close handler does not convert update restart into a hide.
-      this.isQuitting = true;
-      await this.runBeforeQuitCleanup();
-      autoUpdater.quitAndInstall(false, true);
-      return { ok: true as const };
+  private registerDesktopHostIpc(): void {
+    registerDesktopHostIpc({
+      app: { getVersion: getDesktopAppVersion },
+      auth: {
+        getStatus: getAuthStatus,
+        login: () => loginAndRestartDaemon(() => this.daemonHost.restartForAccountSwitch()),
+      },
+      daemon: this.daemonHost,
+      window: {
+        pickFolder: (input) => pickLocalFolder(this.mainWindow.browserWindow, input),
+        toggleMaximized: () => this.mainWindow.toggleMaximized(),
+        isFullscreen: () => this.mainWindow.isFullscreen(),
+      },
+      updates: this.updateRuntime,
+      browser: { load: loadBrowserHistoryGroups, append: appendBrowserHistoryEntry },
+      notifications: this.notificationHost,
+      fileSystem: { resolveRealPath, copyFiles, writeFileBase64 },
+      externalApp: {
+        openEntry: openWorkspaceEntry,
+        list: listDetectedExternalAppIds,
+        openUrl: ({ url }) => openExternalUrl(url),
+      },
+      clipboard: { readExternalFiles: readExternalClipboardSourcePathsFromSystem, writeText: writeClipboardText },
     });
   }
 
   private async runBeforeQuitCleanup(): Promise<void> {
-    try {
-      await flushBrowserHistoryPruneCheck();
-    } catch (error: unknown) {
-      console.warn("Failed to prune browser history during desktop shutdown", error);
-    }
+    await this.prepareForRestart(false);
+  }
 
-    const shouldStopDaemon = isDevMode() || (this.cachedDaemonQuitOnExit ?? false);
-    if (!shouldStopDaemon) {
-      return;
-    }
-
-    try {
-      await this.daemonManager.stop();
-    } catch (error: unknown) {
-      console.warn("Failed to stop daemon service during desktop shutdown", error);
-    }
+  private async prepareForRestart(markQuitIntent = true): Promise<void> {
+    await prepareForRestart({
+      markQuitting: () => {
+        if (markQuitIntent) this.isQuitting = true;
+      },
+      flushHistory: flushBrowserHistoryPruneCheck,
+      shouldStopDaemon: () => isDevMode() || this.daemonHost.shouldStopOnExit(),
+      stopDaemon: () => this.daemonManager.stop(),
+    });
   }
 
   private async confirmQuit(): Promise<boolean> {

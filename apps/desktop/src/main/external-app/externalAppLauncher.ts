@@ -1,4 +1,3 @@
-import { shell } from "electron";
 import {
   EXTERNAL_APP_PRESETS,
   type ExternalAppId,
@@ -8,35 +7,7 @@ import {
   isExternalAppPresetSupportedOnPlatform,
   normalizeExternalAppPlatform,
 } from "../../shared/contracts/externalApps";
-import type { OpenExternalUrlResult } from "../bridge/files";
-import { runCommandForExitCode } from "./process";
-
-export type LaunchPathInput =
-  | {
-      kind: "system-file-manager";
-      path: string;
-      isDirectory: boolean;
-    }
-  | {
-      kind: "external-app";
-      path: string;
-      appId: ExternalAppId;
-    };
-
-const ALLOWED_EXTERNAL_URL_PROTOCOLS = new Set<string>(["http:", "https:", "mailto:"]);
-
-/** Opens one file path in its containing folder or one directory path in the host file manager. */
-async function launchInFileManager(path: string, isDirectory: boolean): Promise<void> {
-  if (!isDirectory) {
-    shell.showItemInFolder(path);
-    return;
-  }
-
-  const openError = await shell.openPath(path);
-  if (openError) {
-    throw new Error(openError);
-  }
-}
+import { runCommandForExitCode } from "../clipboard/process";
 
 /** Builds platform-specific command candidates used to detect one installed external app preset. */
 function buildExternalAppDetectionCommandCandidates(appId: ExternalAppId): string[][] {
@@ -98,7 +69,7 @@ export async function listDetectedExternalAppIds(): Promise<ExternalAppId[]> {
 }
 
 /** Opens one path in one selected external app preset using platform-specific launch commands. */
-async function launchInExternalApp(path: string, appId: ExternalAppId): Promise<void> {
+export async function launchExternalApp(path: string, appId: ExternalAppId): Promise<void> {
   const appPreset = findExternalAppPreset(appId);
   if (!appPreset) {
     throw new Error("Unsupported external app");
@@ -112,52 +83,4 @@ async function launchInExternalApp(path: string, appId: ExternalAppId): Promise<
   }
 
   throw new Error(`Failed to open path in ${appPreset.label}`);
-}
-
-/** Launches one path via either host file manager integration or external app integration. */
-export async function launchPath(input: LaunchPathInput): Promise<void> {
-  if (input.kind === "system-file-manager") {
-    await launchInFileManager(input.path, input.isDirectory);
-    return;
-  }
-
-  await launchInExternalApp(input.path, input.appId);
-}
-
-/** Returns one normalized URL object when a candidate string parses successfully. */
-function parseExternalUrl(url: string): URL | null {
-  try {
-    return new URL(url);
-  } catch {
-    return null;
-  }
-}
-
-/** Returns true when one parsed URL protocol is allowed for desktop external opening. */
-function isAllowedExternalUrlProtocol(protocol: string): boolean {
-  return ALLOWED_EXTERNAL_URL_PROTOCOLS.has(protocol);
-}
-
-/** Opens one validated external URL through the Electron shell integration. */
-export async function openExternalUrl(url: string): Promise<OpenExternalUrlResult> {
-  const trimmedUrl = url.trim();
-  if (!trimmedUrl) {
-    return { opened: false, reason: "invalid-url" };
-  }
-
-  const parsedUrl = parseExternalUrl(trimmedUrl);
-  if (!parsedUrl) {
-    return { opened: false, reason: "invalid-url" };
-  }
-
-  if (!isAllowedExternalUrlProtocol(parsedUrl.protocol)) {
-    return { opened: false, reason: "unsupported-protocol" };
-  }
-
-  try {
-    await shell.openExternal(parsedUrl.toString());
-    return { opened: true };
-  } catch {
-    return { opened: false, reason: "open-failed" };
-  }
 }

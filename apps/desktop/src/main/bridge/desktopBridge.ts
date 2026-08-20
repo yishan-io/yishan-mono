@@ -1,5 +1,7 @@
+import type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 import type { AuthLoginResult, AuthStatusResult } from "./auth";
-import type { AppendBrowserHistoryInput, BrowserHistoryGroup, LoadBrowserHistoryResult } from "./browser";
+import type { AppendBrowserHistoryInput, LoadBrowserHistoryResult } from "./browser";
+import type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "./daemon";
 import type {
   CopyFilesInput,
   CopyFilesResult,
@@ -18,10 +20,8 @@ import type {
   NotificationSoundPreviewResult,
   PlayNotificationSoundInput,
 } from "./notifications";
-import type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "./daemon";
 import type { DesktopUpdateEventPayload } from "./updates";
 import type { MainWindowFullscreenState, OpenLocalFolderDialogInput } from "./window";
-import type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 
 export type DesktopHostBridge = {
   getDesktopAppVersion: () => Promise<string>;

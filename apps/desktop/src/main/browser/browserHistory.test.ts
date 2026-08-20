@@ -62,7 +62,7 @@ describe("browserHistory account scoping", () => {
   });
 
   afterEach(() => {
-    delete process.env.YISHAN_PROFILE;
+    process.env.YISHAN_PROFILE = undefined;
     rmSync(homeDir, { recursive: true, force: true });
     rmSync(userDataDir, { recursive: true, force: true });
   });

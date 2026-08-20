@@ -1,6 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
-import { launchPath, listDetectedExternalAppIds, openExternalUrl } from "./externalAppLauncher";
+import { launchExternalApp, listDetectedExternalAppIds } from "./externalAppLauncher";
+import { openExternalUrl } from "./externalUrlLauncher";
+import { openInFileManager } from "./fileManagerLauncher";
+
+async function launchPath(
+  input:
+    | { kind: "system-file-manager"; path: string; isDirectory: boolean }
+    | { kind: "external-app"; path: string; appId: ExternalAppId },
+) {
+  if (input.kind === "system-file-manager") return await openInFileManager(input.path, input.isDirectory);
+  return await launchExternalApp(input.path, input.appId);
+}
 
 const mocks = vi.hoisted(() => ({
   runCommandForExitCode: vi.fn(),
@@ -9,7 +20,7 @@ const mocks = vi.hoisted(() => ({
   shellOpenExternal: vi.fn(),
 }));
 
-vi.mock("./process", () => ({
+vi.mock("../clipboard/process", () => ({
   runCommandForExitCode: mocks.runCommandForExitCode,
 }));
 
