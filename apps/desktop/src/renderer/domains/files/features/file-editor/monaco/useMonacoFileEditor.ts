@@ -6,6 +6,14 @@ import { createMonacoFileEditor, replaceEditorContentPreservingViewState } from 
 import { isMarkdownFile } from "./editorLanguage";
 import { loadMonacoSetup } from "./monacoLoader";
 
+// Serializes editor creation per host element. Async creation (lazy monaco
+// load) can otherwise race: React StrictMode double-invokes mount effects on
+// the same host, and fast path switches start a new create before the previous
+// one resolves — two `monaco.editor.create(host)` calls then fight over the
+// same element ("Element already has context attribute"). Queueing per host
+// makes each create wait for the previous create+dispose lifecycle to finish.
+const editorCreateQueues = new WeakMap<HTMLElement, Promise<void>>();
+
 /** Props for creating and syncing the Monaco editor used by FileEditor. */
 export type UseMonacoFileEditorProps = {
   path: string;
@@ -93,24 +101,28 @@ export function useMonacoFileEditor({
       return;
     }
 
+    const host = editorHostRef.current;
     let disposed = false;
     let createdEditor: MonacoNs.editor.IStandaloneCodeEditor | null = null;
     let createdModel: MonacoNs.editor.ITextModel | null = null;
 
-    void createMonacoFileEditor({
-      host: editorHostRef.current,
-      path,
-      content: contentRef.current,
-      isDeleted,
-      theme: themeNameRef.current,
-      fontSize: fontSizeRef.current,
-      wordWrap: wordWrapRef.current ? "on" : "off",
-      onContentChange: (nextContent) => {
-        contentRef.current = nextContent;
-        setCurrentContent(nextContent);
-        onContentChangeRef.current?.(nextContent);
-      },
-    })
+    const createRun = (editorCreateQueues.get(host) ?? Promise.resolve())
+      .then(() =>
+        createMonacoFileEditor({
+          host,
+          path,
+          content: contentRef.current,
+          isDeleted,
+          theme: themeNameRef.current,
+          fontSize: fontSizeRef.current,
+          wordWrap: wordWrapRef.current ? "on" : "off",
+          onContentChange: (nextContent) => {
+            contentRef.current = nextContent;
+            setCurrentContent(nextContent);
+            onContentChangeRef.current?.(nextContent);
+          },
+        }),
+      )
       .then(({ editor, model }) => {
         if (disposed) {
           editor.dispose();
@@ -149,6 +161,15 @@ export function useMonacoFileEditor({
         // mount retries.
         console.error("Failed to create Monaco editor", error);
       });
+    // Errors are consumed above; the queue must stay resolvable so later
+    // creates on the same host are not blocked.
+    editorCreateQueues.set(
+      host,
+      createRun.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
 
     return () => {
       disposed = true;
