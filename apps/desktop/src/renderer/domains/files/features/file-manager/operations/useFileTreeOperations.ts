@@ -9,21 +9,25 @@ import { tabStore } from "@renderer/domains/workbench";
 
 import { workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExternalAppId, WorkspaceFileEntry } from "../../externalApps";
-import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
-import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeEntries";
-import { mergeWorkspaceEntries } from "./fileTreeMerge";
-import { normalizeRelativePath } from "./fileTreePaths";
+import type { ExternalAppId, WorkspaceFileEntry } from "../../../externalApps";
+import type { FileTreeClipboardState } from "../clipboard/clipboardSourceResolvers";
+import { useFileTreeClipboard } from "../clipboard/useFileTreeClipboard";
+import {
+  getFileOperationErrorMessage,
+  mapIgnoredWorkspaceEntryPaths,
+  mapWorkspaceEntryPaths,
+} from "../fileTreeEntries";
+import { mergeWorkspaceEntries } from "../fileTreeMerge";
+import { normalizeRelativePath } from "../fileTreePaths";
 import {
   applyDirectoryRefreshes,
   getImmediateChildPath,
   resolveRefreshDirectoryPaths,
   shouldEvictChangedEntry,
-} from "./fileTreeRefreshRules";
-import { type FileOperationState, useFileOperationState } from "./useFileOperationState";
-import { useFileTreeClipboard } from "./useFileTreeClipboard";
-import { useFileTreeCrud } from "./useFileTreeCrud";
-import { type FileTreeUndoAction, useFileTreeUndo } from "./useFileTreeUndo";
+} from "../fileTreeRefreshRules";
+import { useFileTreeCrud } from "../operations/useFileTreeCrud";
+import { type FileTreeUndoAction, useFileTreeUndo } from "../operations/useFileTreeUndo";
+import { type FileOperationState, useFileOperationState } from "../useFileOperationState";
 
 export type FileTreeSelectionRequest = {
   path: string;

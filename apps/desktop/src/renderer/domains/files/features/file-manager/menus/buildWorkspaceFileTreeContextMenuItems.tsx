@@ -1,12 +1,12 @@
 import { Box } from "@mui/material";
-import type { ContextMenuEntry } from "../../../../ui/components/ContextMenu";
+import type { ContextMenuEntry } from "../../../../../ui/components/ContextMenu";
 import {
   type ExternalAppId,
   type ExternalAppMenuEntry,
   type ExternalAppPreset,
   findExternalAppPreset,
-} from "../../externalApps";
-import { buildFileTreeContextMenuItems as buildBaseContextMenuItems } from "./fileTreeActionRegistry";
+} from "../../../externalApps";
+import { buildFileTreeContextMenuItems as buildBaseContextMenuItems } from "../menus/fileTreeActionRegistry";
 
 type BuildWorkspaceFileTreeContextMenuItemsInput = {
   labels: {

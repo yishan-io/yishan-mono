@@ -26,12 +26,12 @@ import {
 import { fileTreeStore } from "../../state/fileTreeStore";
 import { FileDeletionFeedback } from "./FileDeletionFeedback";
 import { FileOperationStatus } from "./FileOperationStatus";
+import { useFileTreeContextMenuItems } from "./menus/useFileTreeContextMenuItems";
+import { useFileTreeCreateEntryRequest } from "./operations/useFileTreeCreateEntryRequest";
+import { useFileTreeGitChanges } from "./operations/useFileTreeGitChanges";
+import { useFileTreeOperations } from "./operations/useFileTreeOperations";
+import { useFileTreeSignalHandlers } from "./operations/useFileTreeSignalHandlers";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
-import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";
-import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
-import { useFileTreeGitChanges } from "./useFileTreeGitChanges";
-import { useFileTreeOperations } from "./useFileTreeOperations";
-import { useFileTreeSignalHandlers } from "./useFileTreeSignalHandlers";
 type FileManagerViewProps = Record<string, never>;
 
 /** Renders file tree + quick-open and delegates file operations to useFileTreeOperations. */

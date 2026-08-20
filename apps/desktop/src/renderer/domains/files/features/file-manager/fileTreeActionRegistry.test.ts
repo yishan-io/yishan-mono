@@ -7,7 +7,7 @@ import {
   type FileTreeShortcutDefinition,
   buildFileTreeContextMenuItems,
   handleFileTreeShortcutFromRegistry,
-} from "./fileTreeActionRegistry";
+} from "./menus/fileTreeActionRegistry";
 
 function createContextMenuBuildContext(): FileTreeContextMenuBuildContext {
   return {

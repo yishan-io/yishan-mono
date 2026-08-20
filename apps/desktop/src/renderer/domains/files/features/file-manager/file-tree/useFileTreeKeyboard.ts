@@ -1,7 +1,7 @@
 import type { Virtualizer } from "@tanstack/react-virtual";
 import type { KeyboardEvent } from "react";
 import { isEditableTarget } from "../../../../../shortcuts/editableTarget";
-import { handleFileTreeShortcutFromRegistry } from "../fileTreeActionRegistry";
+import { handleFileTreeShortcutFromRegistry } from "../menus/fileTreeActionRegistry";
 import { resolveDestinationDirectoryPath } from "./treeRows";
 import type { EditingEntry, FileTreeProps, VisibleRow } from "./types";
 

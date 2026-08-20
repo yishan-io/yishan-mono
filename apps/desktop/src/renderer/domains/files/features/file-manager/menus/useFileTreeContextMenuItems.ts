@@ -1,9 +1,9 @@
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
-import type { ExternalAppId, ExternalAppMenuEntry } from "../../externalApps";
-import { buildWorkspaceFileTreeContextMenuItems } from "./buildWorkspaceFileTreeContextMenuItems";
-import { resolveDestinationDirectoryPath } from "./file-tree/treeRows";
-import type { FileTreeContextMenuRequest } from "./file-tree/types";
+import type { ExternalAppId, ExternalAppMenuEntry } from "../../../externalApps";
+import { resolveDestinationDirectoryPath } from "../file-tree/treeRows";
+import type { FileTreeContextMenuRequest } from "../file-tree/types";
+import { buildWorkspaceFileTreeContextMenuItems } from "../menus/buildWorkspaceFileTreeContextMenuItems";
 
 type ExternalAppPresetLike = {
   id: ExternalAppId;

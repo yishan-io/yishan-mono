@@ -1,7 +1,7 @@
 import { createFile, deleteEntry, renameEntry } from "@renderer/domains/files/commands/fileCommands";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { useCallback, useRef } from "react";
-import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
+import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "../rightPaneDelete";
 
 type FileTreeUndoAction =
   | { kind: "create-file"; path: string }
