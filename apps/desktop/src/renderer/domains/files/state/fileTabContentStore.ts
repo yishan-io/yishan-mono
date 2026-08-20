@@ -30,10 +30,12 @@ export type FileTabContentStoreState = {
   /** Marks one tab saved; returns the new dirty flag (always false). */
   markSaved: (tabId: string) => boolean | null;
   /**
-   * Syncs one open file tab with disk state. Skips dirty tabs. Returns true
-   * when the tab content changed.
+   * Syncs one open file tab with disk state. Skips dirty tabs. When the tab
+   * has no seeded entry yet (e.g. opened via the file tree / diff path, which
+   * do not seed placeholder content), creates the entry from disk state so
+   * real content still loads. Returns true when the tab content changed.
    */
-  refreshFromDisk: (tabId: string, input: { content: string; deleted: boolean }) => boolean;
+  refreshFromDisk: (tabId: string, input: { path?: string; content: string; deleted: boolean }) => boolean;
   removeTabData: (tabIds: string[]) => void;
 };
 
@@ -93,7 +95,21 @@ export const fileTabContentStore = create<FileTabContentStoreState>()(
     refreshFromDisk: (tabId, input) => {
       const entry = get().byTabId[tabId];
       if (!entry) {
-        return false;
+        // Never seeded (file tree / diff open paths do not seed): create the
+        // entry from disk state so the editor shows real content, not blank.
+        if (!input.path) {
+          return false;
+        }
+        set((state) => {
+          state.byTabId[tabId] = {
+            path: input.path ?? "",
+            content: input.content,
+            savedContent: input.content,
+            isDeleted: input.deleted,
+            isIgnored: false,
+          };
+        });
+        return true;
       }
       // Never clobber unsaved edits with disk state.
       if (entry.content !== entry.savedContent) {

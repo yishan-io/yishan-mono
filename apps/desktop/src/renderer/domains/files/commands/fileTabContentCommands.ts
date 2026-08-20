@@ -31,8 +31,17 @@ export function markFileTabSaved(tabId: string): void {
 }
 
 /** Syncs one open file tab with disk state; the store skips dirty tabs. */
-export function refreshFileTabFromDisk(input: { tabId: string; content: string; deleted: boolean }): void {
-  fileTabContentStore.getState().refreshFromDisk(input.tabId, { content: input.content, deleted: input.deleted });
+export function refreshFileTabFromDisk(input: {
+  tabId: string;
+  path?: string;
+  content: string;
+  deleted: boolean;
+}): void {
+  fileTabContentStore.getState().refreshFromDisk(input.tabId, {
+    path: input.path,
+    content: input.content,
+    deleted: input.deleted,
+  });
 }
 
 /** Removes file tab content when the owning Workbench tab closes. */

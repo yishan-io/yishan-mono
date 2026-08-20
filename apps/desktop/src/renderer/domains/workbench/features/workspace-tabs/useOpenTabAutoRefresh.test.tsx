@@ -140,6 +140,7 @@ describe("useOpenTabAutoRefresh", () => {
     expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/dirty.ts" });
     expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
       tabId: "file-1",
+      path: "src/changed.ts",
       content: "content:src/changed.ts",
       deleted: false,
     });
@@ -388,6 +389,7 @@ describe("useOpenTabAutoRefresh", () => {
       expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
       expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
         tabId: "file-2",
+        path: "src/b.ts",
         content: "content:src/b.ts",
         deleted: false,
       });
@@ -493,6 +495,7 @@ describe("useOpenTabAutoRefresh", () => {
       expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
       expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
         tabId: "file-2",
+        path: "src/b.ts",
         content: "",
         deleted: true,
       });

@@ -127,6 +127,7 @@ export function createOpenTabAutoRefreshRuntime() {
               });
               commands.refreshFileTabFromDisk({
                 tabId: tab.id,
+                path: tab.path,
                 content: response.content,
                 deleted: false,
               });
@@ -137,6 +138,7 @@ export function createOpenTabAutoRefreshRuntime() {
 
               commands.refreshFileTabFromDisk({
                 tabId: tab.id,
+                path: tab.path,
                 content: "",
                 deleted: true,
               });
@@ -232,6 +234,7 @@ export function createOpenTabAutoRefreshRuntime() {
             });
             commands.refreshFileTabFromDisk({
               tabId: tab.id,
+              path: tab.path,
               content: response.content,
               deleted: false,
             });
@@ -242,6 +245,7 @@ export function createOpenTabAutoRefreshRuntime() {
               // it never shows the mock placeholder as if it were real content.
               commands.refreshFileTabFromDisk({
                 tabId: tab.id,
+                path: tab.path,
                 content: "",
                 deleted: true,
               });
