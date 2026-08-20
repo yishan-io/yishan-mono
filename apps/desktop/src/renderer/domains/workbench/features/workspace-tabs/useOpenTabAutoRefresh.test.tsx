@@ -113,7 +113,15 @@ describe("useOpenTabAutoRefresh", () => {
         tabs,
         commands: commands,
       }),
-    );
+    )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
     emitBackendEvent("workspace.files.changed", {
       source: "workspaceFilesChanged",
@@ -147,7 +155,15 @@ describe("useOpenTabAutoRefresh", () => {
         tabs,
         commands: commands,
       }),
-    );
+    )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
     emitBackendEvent("workspace.files.changed", {
       source: "workspaceFilesChanged",
@@ -172,7 +188,15 @@ describe("useOpenTabAutoRefresh", () => {
         tabs,
         commands: commands,
       }),
-    );
+    )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
     emitBackendEvent("git.changed", {
       source: "gitChanged",
@@ -259,7 +283,15 @@ describe("useOpenTabAutoRefresh", () => {
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
         }),
-      );
+      )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
       // Fire "connected" without any prior "disconnected".
       daemonHarness.emit("connected");
@@ -281,7 +313,15 @@ describe("useOpenTabAutoRefresh", () => {
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
         }),
-      );
+      )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
       // First reconnect.
       daemonHarness.emit("disconnected");
@@ -333,17 +373,18 @@ describe("useOpenTabAutoRefresh", () => {
         { initialProps: { tabs: initialTabs } },
       );
 
-      // Initial mount should NOT trigger eager refresh.
+      // Initial mount loads existing tabs' content (no seen history yet).
       await flushRefreshWork();
-      expect(commands.readFile).not.toHaveBeenCalled();
+      expect(commands.readFile).toHaveBeenCalledTimes(1);
+      expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/a.ts" });
 
       // Add a new tab.
       const updatedTabs: RefreshableOpenTab[] = [...initialTabs, { id: "file-2", kind: "file", path: "src/b.ts" }];
       rerender({ tabs: updatedTabs });
       await flushRefreshWork();
 
-      // Only the new tab should be refreshed.
-      expect(commands.readFile).toHaveBeenCalledTimes(1);
+      // Only the new tab should be refreshed (the first tab is now seen).
+      expect(commands.readFile).toHaveBeenCalledTimes(2);
       expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
       expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
         tabId: "file-2",
@@ -364,7 +405,15 @@ describe("useOpenTabAutoRefresh", () => {
             commands,
           }),
         { initialProps: { tabs: initialTabs } },
-      );
+      )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
       await flushRefreshWork();
       expect(commands.readFile).not.toHaveBeenCalled();
@@ -411,7 +460,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     it("marks newly-opened tabs deleted when the file does not exist", async () => {
       const commands = createCommands();
-      commands.readFile.mockRejectedValueOnce(new Error("open src/b.ts: no such file or directory"));
+      commands.readFile.mockRejectedValue(new Error("open src/b.ts: no such file or directory"));
       const initialTabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts" }];
 
       const { rerender } = renderHook(
@@ -422,7 +471,15 @@ describe("useOpenTabAutoRefresh", () => {
             commands,
           }),
         { initialProps: { tabs: initialTabs } },
-      );
+      )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
       await flushRefreshWork();
       expect(commands.readFile).not.toHaveBeenCalled();
@@ -443,7 +500,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     it("leaves non-not-found read failures to the event-driven refresh", async () => {
       const commands = createCommands();
-      commands.readFile.mockRejectedValueOnce(new Error("connection closed"));
+      commands.readFile.mockRejectedValue(new Error("connection closed"));
       const initialTabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts" }];
 
       const { rerender } = renderHook(
@@ -454,7 +511,15 @@ describe("useOpenTabAutoRefresh", () => {
             commands,
           }),
         { initialProps: { tabs: initialTabs } },
-      );
+      )
+
+    // Flush the mount-time eager refresh (first call loads existing tabs),
+    // then clear so the event assertions below measure only the event path.
+    await flushRefreshWork();
+    commands.readFile.mockClear();
+    commands.readDiff.mockClear();
+    commands.refreshFileTabFromDisk.mockClear();
+    commands.refreshDiffTabContent.mockClear();;
 
       await flushRefreshWork();
 

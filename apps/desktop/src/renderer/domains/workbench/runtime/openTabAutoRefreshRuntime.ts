@@ -350,18 +350,13 @@ export function createOpenTabAutoRefreshRuntime() {
         return;
       }
 
-      const currentTabIds = new Set(tabs.map((tab) => tab.id));
+      // First call (no seen history yet): every current tab needs its content
+      // loaded. The previous "seed the seen set without refreshing" behavior
+      // left tabs that were already open when the workspace mounted stuck on
+      // the mock placeholder (real content never loads).
       const isInitialSeen = seenTabIds.size === 0;
+      const newTabs = isInitialSeen ? tabs : tabs.filter((tab) => !seenTabIds.has(tab.id));
 
-      if (isInitialSeen) {
-        seenTabIds.clear();
-        for (const tab of tabs) {
-          seenTabIds.add(tab.id);
-        }
-        return;
-      }
-
-      const newTabs = tabs.filter((tab) => !seenTabIds.has(tab.id));
       seenTabIds.clear();
       for (const tab of tabs) {
         seenTabIds.add(tab.id);
