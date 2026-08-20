@@ -153,39 +153,6 @@ vi.mock("../../../domains/agent/state/chatStore", () => ({
   ) => selector({ workspaceAgentStatusByWorkspaceId: {}, workspaceUnreadToneByWorkspaceId: {} }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    activateProject: ({ projectId }: { projectId: string }) => {
-      mocked.stateRef.current.selectedProjectId = projectId;
-    },
-    activateWorkspace: ({ workspaceId, projectId }: { workspaceId: string; projectId?: string }) => {
-      mocked.stateRef.current.selectedWorkspaceId = workspaceId;
-      if (projectId) {
-        mocked.stateRef.current.selectedProjectId = projectId;
-      }
-    },
-    openTab: vi.fn(),
-    updateProjectConfig: vi.fn(),
-  });
-  return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
-  };
-});
-
 vi.mock("../../../app/commands/appCommands", () => ({
   getMainWindowFullscreenState: () => Promise.resolve({ isFullscreen: false }),
 }));
@@ -295,7 +262,7 @@ describe("mainPaneTitleBarMenus RepoSelectorMenu", () => {
 
 describe("mainPaneTitleBarHelpers renderWorkspaceKindIcon", () => {
   it("renders a folder icon for a folder workspace", () => {
-    const { container } = render(<>{renderWorkspaceKindIcon(folderWorkspace, false, 14)}</>);
+    const { container } = render(renderWorkspaceKindIcon(folderWorkspace, false, 14));
     expect(container.querySelector("svg")).toBeTruthy();
   });
 });

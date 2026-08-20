@@ -11,14 +11,8 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import {
-  type AgentToolCallCardProps,
-  buildWriteToolNewFileDiff,
-  extractResultText,
-  getDiffStats,
-  getToolDisplayPath,
-  parseToolDiff,
-} from "./helpers";
+import { buildWriteToolNewFileDiff, extractResultText, getDiffStats, getToolDisplayPath, parseToolDiff } from "./diff";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized edit/write tool-call card. */
 export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {

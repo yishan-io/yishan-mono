@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
-  return { ...actual, openTab: mocks.openTab };
+  return { ...actual, openTab: mocks.openTab, openTabWithContentSeed: mocks.openTab };
 });
 
 vi.mock("react-i18next", () => ({
@@ -49,29 +49,17 @@ vi.mock("../../../domains/agent/commands/agentChatSessionHistory", () => ({
 
 vi.mock("@renderer/domains/files", () => ({
   createNewWhiteboard: mocks.createNewWhiteboard,
+  requestDeleteSelection: vi.fn(),
+  requestFileSearch: vi.fn(),
+  requestSelectFolderInFileTree: vi.fn(),
+  requestUndo: vi.fn(),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    openTab: mocks.openTab,
-    openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
-  });
+vi.mock("@renderer/domains/workspace", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workspace")>();
   return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
+    ...actual,
+    openWorkspaceFileSearch: mocks.openWorkspaceFileSearch,
   };
 });
 

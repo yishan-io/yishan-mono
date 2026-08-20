@@ -37,32 +37,6 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
-    listPiProviders: mocked.listPiProviders,
-    savePiProvider: mocked.savePiProvider,
-    removePiProvider: mocked.removePiProvider,
-    openPiProviderLogin: mocked.openPiProviderLogin,
-  });
-  return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
-  };
-});
-
 const apiKeyProvider = { provider: "deepseek", type: "api_key" };
 const oauthProvider = { provider: "openai-codex", type: "oauth" };
 const ambientProvider = { provider: "amazon-bedrock", type: "ambient", source: "AWS_PROFILE: ai-bedrock" };

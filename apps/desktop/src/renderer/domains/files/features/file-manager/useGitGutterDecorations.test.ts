@@ -12,7 +12,7 @@ vi.mock("../../../git/commands/gitCommands", () => ({
 }));
 
 // Mock monaco-editor setup module; computeGitLineChanges stays real (pure diff logic).
-vi.mock("../../features/file-editor/monacoSetup", () => ({
+vi.mock("../file-editor/monaco/monacoSetup", () => ({
   ensureEditorThemes: vi.fn(),
   monaco: {
     KeyCode: { Escape: 9 },

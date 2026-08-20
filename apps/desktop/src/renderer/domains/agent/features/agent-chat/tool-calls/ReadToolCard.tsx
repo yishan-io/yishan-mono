@@ -7,7 +7,8 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import { type AgentToolCallCardProps, buildReadSummary, extractResultText } from "./helpers";
+import { buildReadSummary, extractResultText } from "./diff";
+import type { AgentToolCallCardProps } from "./summary";
 
 function getSkillName(readPath: string): string | null {
   const pathSegments = readPath.replace(/\\/g, "/").split("/").filter(Boolean);

@@ -9,6 +9,7 @@ import { workspaceStore } from "../../../domains/workspace/state/workspaceStore"
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 
 const mocked = vi.hoisted(() => ({
+  activateWorkspace: vi.fn(),
   killTerminalProcess: vi.fn(),
   listDetectedPorts: vi.fn(),
   setSelectedWorkspaceId: vi.fn(),
@@ -26,30 +27,21 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => ({
+vi.mock("@renderer/domains/terminal", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/terminal")>();
+  return {
+    ...actual,
     killTerminalProcess: mocked.killTerminalProcess,
     listDetectedPorts: mocked.listDetectedPorts,
-    setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
-    selectTab: mocked.selectTab,
     subscribeDetectedPorts: mocked.subscribeDetectedPorts,
-  });
+  };
+});
+
+vi.mock("@renderer/domains/workbench", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
   return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
+    ...actual,
+    activateWorkspace: mocked.activateWorkspace,
   };
 });
 

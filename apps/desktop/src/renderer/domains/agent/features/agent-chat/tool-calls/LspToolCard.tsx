@@ -5,13 +5,9 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import {
-  type AgentToolCallCardProps,
-  extractResultText,
-  getLspFixStatusColor,
-  parseLspDiagnosticsSummary,
-  parseLspFixSummary,
-} from "./helpers";
+import { extractResultText } from "./diff";
+import { getLspFixStatusColor, parseLspDiagnosticsSummary, parseLspFixSummary } from "./lsp";
+import type { AgentToolCallCardProps } from "./summary";
 
 /**
  * Renders the lsp_diagnostics and lsp_fix tool-call cards: a compact summary

@@ -1,116 +1,18 @@
-import { Alert, Box, Button, Stack, SvgIcon, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Stack, Typography } from "@mui/material";
 import { getRendererPlatform } from "@renderer/platform/platform";
-import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { keybindingSettingsStore } from "../../../../domains/settings/state/keybindingSettingsStore";
 import { detectShortcutConflicts, normalizeKeysString } from "../../../../shortcuts/customKeybindings";
 import { getShortcutDefinitions, getSupportedKeyBindings } from "../../../../shortcuts/keybindings";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
-import { HotkeyDisplay } from "./KeybindingDisplay";
+import { KeybindingRow } from "./KeybindingRow";
+import { toComboFromNativeKeyboardEvent, toDisplayKeysForCombo } from "./keyComboParsing";
 
 type EditingState = {
   shortcutId: string;
   keys: string;
 };
-
-function WarningIcon({ fontSize = "small" }: { fontSize?: "small" | "inherit" }) {
-  return (
-    <SvgIcon fontSize={fontSize} sx={{ color: "warning.main" }} viewBox="0 0 24 24">
-      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-    </SvgIcon>
-  );
-}
-
-function toComboFromKeyboardEvent(event: ReactKeyboardEvent<HTMLElement>): string | undefined {
-  const code = event.code;
-  let rawKeyFromCode: string | undefined;
-  if (code.startsWith("Key") && code.length === 4) {
-    rawKeyFromCode = code.slice(3).toLowerCase();
-  } else if (code.startsWith("Digit") && code.length === 6) {
-    rawKeyFromCode = code.slice(5);
-  } else if (code === "Slash") {
-    rawKeyFromCode = "/";
-  } else if (code === "Backslash") {
-    rawKeyFromCode = "\\";
-  } else if (code === "Backspace") {
-    rawKeyFromCode = "backspace";
-  } else if (code === "Delete") {
-    rawKeyFromCode = "delete";
-  } else if (code === "Escape") {
-    rawKeyFromCode = "esc";
-  }
-
-  const rawKey = (rawKeyFromCode ?? event.key).toLowerCase();
-  if (["control", "meta", "shift", "alt"].includes(rawKey)) {
-    return undefined;
-  }
-
-  const key = rawKey === "escape" ? "esc" : rawKey;
-  const modifiers: string[] = [];
-  if (event.ctrlKey) {
-    modifiers.push("ctrl");
-  }
-  if (event.metaKey) {
-    modifiers.push("command");
-  }
-  if (event.shiftKey) {
-    modifiers.push("shift");
-  }
-  if (event.altKey) {
-    modifiers.push("alt");
-  }
-
-  return [...modifiers, key].join("+");
-}
-
-function toComboFromNativeKeyboardEvent(event: KeyboardEvent): string | undefined {
-  const rawKey = event.key;
-  const syntheticEvent = {
-    code: event.code,
-    key: rawKey,
-    ctrlKey: event.ctrlKey,
-    metaKey: event.metaKey,
-    shiftKey: event.shiftKey,
-    altKey: event.altKey,
-  } as ReactKeyboardEvent<HTMLElement>;
-
-  return toComboFromKeyboardEvent(syntheticEvent);
-}
-
-function toDisplayKeyToken(token: string): string {
-  if (token === "command") {
-    return "⌘";
-  }
-  if (token === "ctrl") {
-    return "CTRL";
-  }
-  if (token === "shift") {
-    return "⇧";
-  }
-  if (token === "alt") {
-    return "ALT";
-  }
-  if (token === "esc") {
-    return "ESC";
-  }
-  if (token === "backspace" || token === "delete") {
-    return "DELETE/BACKSPACE";
-  }
-
-  return token.toUpperCase();
-}
-
-function toDisplayKeysForCombo(combo: string): readonly string[] {
-  const tokens = combo
-    .split("+")
-    .map((token) => token.trim().toLowerCase())
-    .filter((token) => token.length > 0);
-  if (tokens.length === 0) {
-    return [];
-  }
-
-  return tokens.map(toDisplayKeyToken);
-}
 
 export function KeybindingsSettingsView() {
   const { t } = useTranslation();
@@ -319,156 +221,42 @@ export function KeybindingsSettingsView() {
               : "";
 
           return (
-            <Box
+            <KeybindingRow
               key={binding.id}
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "1.4fr 1fr 1fr" },
-                gap: 1,
-                alignItems: "center",
-                px: 1.5,
-                py: 1.2,
-                borderBottom: 1,
-                borderColor: "divider",
+              id={binding.id}
+              descriptionKey={binding.descriptionKey}
+              scopeLabel={
+                binding.scope === "global" ? t("keybindings.scope.global") : t("keybindings.scope.workspace")
+              }
+              displayKeys={displayKeys}
+              hasOverride={hasOverride}
+              hasCommittedConflict={hasCommittedConflict}
+              conflictKeys={conflictByShortcutId.get(binding.id)}
+              hasPendingConflict={hasPendingConflict}
+              isEditing={isEditing}
+              capturedKeys={capturedKeys}
+              isCapturedConflict={isCapturedConflict}
+              isEditingInvalid={isEditingInvalid}
+              pendingConflictTooltip={pendingConflictTooltip}
+              captureConflictTooltip={captureConflictTooltip}
+              captureBoxRef={captureBoxRef}
+              onEditKey={(combo) => setEditingState({ shortcutId: binding.id, keys: combo })}
+              onSave={() => {
+                if (!editingState) {
+                  return;
+                }
+                const normalized = normalizeKeysString(editingState.keys);
+                if (!normalized) {
+                  return;
+                }
+
+                setOverride(binding.id, normalized);
+                setEditingState(null);
               }}
-            >
-              <Box>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "text.primary",
-                  }}
-                >
-                  {t(binding.descriptionKey)}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "text.secondary",
-                  }}
-                >
-                  {binding.scope === "global" ? t("keybindings.scope.global") : t("keybindings.scope.workspace")}
-                </Typography>
-                {hasCommittedConflict ? (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "warning.main",
-                      display: "block",
-                    }}
-                  >
-                    {t("keybindings.conflictWith", { keys: conflictByShortcutId.get(binding.id) })}
-                  </Typography>
-                ) : null}
-              </Box>
-              <Stack
-                direction="row"
-                spacing={0.5}
-                sx={{
-                  alignItems: "center",
-                }}
-              >
-                <HotkeyDisplay keys={displayKeys} />
-                {hasPendingConflict ? (
-                  <Tooltip title={pendingConflictTooltip} placement="top">
-                    <WarningIcon />
-                  </Tooltip>
-                ) : null}
-              </Stack>
-              {isEditing ? (
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{
-                    alignItems: "center",
-                  }}
-                >
-                  <Box
-                    component="button"
-                    type="button"
-                    ref={captureBoxRef}
-                    aria-label={t("keybindings.inputHint")}
-                    sx={{
-                      minWidth: 180,
-                      border: 1,
-                      borderColor: isCapturedConflict ? "warning.main" : isEditingInvalid ? "error.main" : "divider",
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.75,
-                      bgcolor: "background.paper",
-                      outline: "none",
-                    }}
-                    onKeyDown={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      const combo = toComboFromKeyboardEvent(event);
-                      if (!combo) {
-                        return;
-                      }
-
-                      setEditingState({ shortcutId: binding.id, keys: combo });
-                    }}
-                  >
-                    {capturedKeys ? (
-                      <Stack
-                        direction="row"
-                        spacing={0.5}
-                        sx={{
-                          alignItems: "center",
-                        }}
-                      >
-                        <HotkeyDisplay keys={capturedKeys} />
-                        {isCapturedConflict ? (
-                          <Tooltip title={captureConflictTooltip} placement="top">
-                            <WarningIcon />
-                          </Tooltip>
-                        ) : null}
-                      </Stack>
-                    ) : (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: "text.secondary",
-                        }}
-                      >
-                        {t("keybindings.inputHint")}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      const normalized = normalizeKeysString(editingState.keys);
-                      if (!normalized) {
-                        return;
-                      }
-
-                      setOverride(binding.id, normalized);
-                      setEditingState(null);
-                    }}
-                  >
-                    {t("common.actions.save")}
-                  </Button>
-                  <Button size="small" onClick={() => setEditingState(null)}>
-                    {t("common.actions.cancel")}
-                  </Button>
-                </Stack>
-              ) : (
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setEditingState({ shortcutId: binding.id, keys: "" });
-                    }}
-                  >
-                    {t("keybindings.remap")}
-                  </Button>
-                  <Button size="small" disabled={!hasOverride} onClick={() => resetOverride(binding.id)}>
-                    {t("keybindings.reset")}
-                  </Button>
-                </Stack>
-              )}
-            </Box>
+              onCancel={() => setEditingState(null)}
+              onRemap={() => setEditingState({ shortcutId: binding.id, keys: "" })}
+              onReset={() => resetOverride(binding.id)}
+            />
           );
         })}
       </Box>

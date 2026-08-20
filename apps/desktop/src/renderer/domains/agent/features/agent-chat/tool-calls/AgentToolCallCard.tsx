@@ -15,7 +15,7 @@ import { WorkspaceCloseToolCard } from "./WorkspaceCloseToolCard";
 import { WorkspaceCreateToolCard } from "./WorkspaceCreateToolCard";
 import { WorkspaceFindToolCard } from "./WorkspaceFindToolCard";
 import { WorkspaceListToolCard } from "./WorkspaceListToolCard";
-import type { AgentToolCallCardProps } from "./helpers";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders one agent tool call using a specialized card per tool type. */
 export function AgentToolCallCard(props: AgentToolCallCardProps) {

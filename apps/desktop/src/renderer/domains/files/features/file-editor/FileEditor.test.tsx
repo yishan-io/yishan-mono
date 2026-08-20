@@ -52,7 +52,7 @@ const mockEditorState: {
   setThemeCalls: [] as string[],
 };
 
-vi.mock("../../features/file-editor/monacoSetup", () => ({
+vi.mock("./monaco/monacoSetup", () => ({
   YISHAN_THEME_DARK: "yishan-dark",
   YISHAN_THEME_LIGHT: "yishan-light",
   ensureEditorThemes: vi.fn(),
@@ -127,7 +127,7 @@ vi.mock("../../features/file-editor/monacoSetup", () => ({
   },
 }));
 
-vi.mock("../../editorLanguage", () => ({
+vi.mock("./monaco/editorLanguage", () => ({
   getLanguageId: (path: string) => {
     if (path.endsWith(".unknown")) return null;
     if (path.endsWith(".ts")) return "typescript";
@@ -146,7 +146,7 @@ vi.mock("../../../../domains/git/commands/gitCommands", () => ({
 }));
 
 const capturedExcalidrawProps: { current: Record<string, unknown> } = { current: {} };
-vi.mock("./ExcalidrawFileEditor", () => ({
+vi.mock("./excalidraw/ExcalidrawFileEditor", () => ({
   default: (props: Record<string, unknown>) => {
     capturedExcalidrawProps.current = props;
     return <div data-testid="excalidraw-editor" />;
@@ -156,7 +156,7 @@ vi.mock("./ExcalidrawFileEditor", () => ({
 const capturedWysiwygProps: { current: Record<string, unknown> } = { current: {} };
 let mockFlushNowReturn = "";
 let mockFlushNowCalled = false;
-vi.mock("./VditorFileEditor", () => ({
+vi.mock("./vditor/VditorFileEditor", () => ({
   // biome-ignore lint/suspicious/noExplicitAny: mock ref type in test
   VditorFileEditor: forwardRef((props: Record<string, unknown>, ref: any) => {
     capturedWysiwygProps.current = props;

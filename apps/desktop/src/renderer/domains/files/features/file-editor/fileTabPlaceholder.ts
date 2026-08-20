@@ -1,4 +1,4 @@
-import { isExcalidrawFile } from "../../features/file-editor/editorLanguage";
+import { isExcalidrawFile } from "./monaco/editorLanguage";
 
 /**
  * Produces minimal placeholder content for a file tab opened without

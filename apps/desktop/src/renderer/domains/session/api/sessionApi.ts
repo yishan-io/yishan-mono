@@ -1,5 +1,4 @@
 import { requestJson } from "@renderer/api/restClient";
-import type { OrganizationRecord } from "@renderer/api/types";
 import type { SupportedLanguageCode } from "@renderer/i18n";
 import type { NotificationPreferences } from "@shared/notifications/notificationPreferences";
 

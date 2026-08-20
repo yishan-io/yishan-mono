@@ -11,21 +11,30 @@ import {
   UnsupportedFileView,
   VideoPreview,
 } from "@renderer/domains/files";
+import type { markFileTabSaved, readFile, updateFileTabContent, writeFile } from "@renderer/domains/files";
 import { diffTabContentStore } from "@renderer/domains/git";
 import { TerminalView } from "@renderer/domains/terminal";
-import { TabPanel } from "@renderer/domains/workbench";
+import { TabPanel, type openTabWithContentSeed } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { copyToClipboard } from "@renderer/platform/clipboard";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { FileCommandSurface, WorkbenchCommandSurface } from "../../commands/useCommands";
+
+/** The narrow command surface the tab-content renderer needs from its parent. */
+type TabContentRendererCommands = {
+  openTab: typeof openTabWithContentSeed;
+  readFile: typeof readFile;
+  updateFileTabContent: typeof updateFileTabContent;
+  writeFile: typeof writeFile;
+  markFileTabSaved: typeof markFileTabSaved;
+};
 
 type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;
   externalAppLabel: string;
   focusContentRequestKey: number;
-  cmd: WorkbenchCommandSurface & FileCommandSurface;
+  cmd: TabContentRendererCommands;
   onOpenExternalApp: (filePath: string) => Promise<void>;
 };
 

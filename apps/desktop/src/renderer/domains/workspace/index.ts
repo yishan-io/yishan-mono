@@ -12,6 +12,7 @@ export type {
   WorkspaceStatus,
 } from "./workspaceTypes";
 export type { RpcFrontendMessagePayload } from "@shared/contracts/rpcSchema";
+export type { WorkspacePullRequestSummary, WorkspaceRecord } from "./api/types";
 
 export { workspaceStore, type WorkspaceStoreState } from "./state/workspaceStore";
 export {

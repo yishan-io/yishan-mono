@@ -1,6 +1,6 @@
 import { generateId } from "@shared/ids/generateId";
 import type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "../../externalApps";
-import type { ClipboardFilePayload } from "./clipboardSourceResolvers";
+import type { ClipboardFilePayload } from "./clipboard/clipboardSourceResolvers";
 
 export const LARGE_FILE_OPEN_THRESHOLD_BYTES = 2 * 1024 * 1024;
 

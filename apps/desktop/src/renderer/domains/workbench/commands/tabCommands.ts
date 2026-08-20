@@ -380,3 +380,61 @@ export function setIsRightPaneHidden(workspaceId: string, hidden: boolean): void
 export function removeRightPaneStateForWorkspace(workspaceId: string): void {
   layoutStore.getState().removeRightPaneStateForWorkspace(workspaceId);
 }
+
+/**
+ * Opens a tab and seeds its content when the tab kind needs immediate
+ * placeholder content (file/diff). Workbench owns tab opening and
+ * coordinates the Files and Git public APIs for content seeding
+ * (Desktop 11 Phase 46 — moved from the App command facade).
+ */
+export function openTabWithContentSeed(input: OpenTabInput, options?: { activePaneTabIds?: string[] }): void {
+  openTab(input, options);
+  const openedTabId = tabStore.getState().selectedTabId;
+  // The Files/Git modules are imported lazily so the Workbench public index
+  // stays cheap (the files index transitively loads monaco-editor).
+  if (input.kind === "file") {
+    void import("@renderer/domains/files").then(({ createFileTabPlaceholder, seedFileTabContent }) => {
+      seedFileTabContent({
+        tabId: openedTabId,
+        path: input.path,
+        content: input.content ?? createFileTabPlaceholder(input.path),
+        isUnsupported: input.isUnsupported,
+        unsupportedReason: input.unsupportedReason,
+        isIgnored: input.isIgnored,
+      });
+    });
+  } else if (input.kind === "diff") {
+    void import("@renderer/domains/git").then(({ createDiffTabPlaceholder, seedDiffTabContent }) => {
+      const placeholder = createDiffTabPlaceholder({
+        path: input.path,
+        kind: input.changeKind,
+        additions: input.additions,
+        deletions: input.deletions,
+      });
+      seedDiffTabContent({
+        tabId: openedTabId,
+        path: input.path,
+        oldContent: input.oldContent ?? placeholder.oldContent,
+        newContent: input.newContent ?? placeholder.newContent,
+        files: input.files,
+      });
+    });
+  }
+}
+
+/**
+ * Renames a tab and syncs the agent chat session title when the tab is an
+ * agent-chat tab. Workbench owns tab renaming and coordinates the Agent
+ * public API for the pi-session rename side effect
+ * (Desktop 11 Phase 46 — moved from the App command facade).
+ */
+export function renameTabWithAgentSessionSync(tabId: string, title: string, options?: { userRenamed?: boolean }): void {
+  renameTab(tabId, title, options);
+  // The Agent module is imported lazily so the Workbench public index stays
+  // cheap for the many tests that import it.
+  void import("@renderer/domains/agent").then(({ renameAgentChatSessionByTab }) => {
+    void renameAgentChatSessionByTab(tabId, title).catch((error) => {
+      console.error("Failed to rename pi session", error);
+    });
+  });
+}

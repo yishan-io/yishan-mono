@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 import { AgentToolCallGroup } from "../tool-calls/AgentToolCallGroup";
-import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
+import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentMarkdownContent } from "./AgentMarkdownContent";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolResultMessageContent } from "./ToolResultMessageContent";

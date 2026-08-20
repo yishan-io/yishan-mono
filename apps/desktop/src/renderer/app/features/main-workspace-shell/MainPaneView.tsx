@@ -9,12 +9,31 @@ import {
 import { formatAgentSessionTitle } from "@renderer/domains/agent";
 import { agentSettingsStore } from "@renderer/domains/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
-import { FileSearchOverlay } from "@renderer/domains/files";
-import { getFileTreeIcon } from "@renderer/domains/files";
-import { gitProjectionStore } from "@renderer/domains/git";
+import { FileSearchOverlay, getFileTreeIcon } from "@renderer/domains/files";
+import {
+  createNewWhiteboard,
+  markFileTabSaved,
+  openEntryInExternalApp,
+  readFile,
+  refreshFileTabFromDisk,
+  renameEntry,
+  updateFileTabContent,
+  writeFile,
+} from "@renderer/domains/files";
+import {
+  gitProjectionStore,
+  readBranchComparisonDiff,
+  readCommitDiff,
+  readDiff,
+  refreshDiffTabContent,
+} from "@renderer/domains/git";
 
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
-import { disposeTerminalRuntimesForClosedTabs, forceFitTerminalRuntimes } from "@renderer/domains/terminal";
+import {
+  disposeTerminalRuntimesForClosedTabs,
+  forceFitTerminalRuntimes,
+  retainOpenTerminalTabFocus,
+} from "@renderer/domains/terminal";
 import {
   DEFAULT_RIGHT_PANE_TAB,
   RightPaneTabBar,
@@ -30,7 +49,7 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { ColumnSeparator } from "@renderer/domains/workbench";
 import { TabPanel } from "@renderer/domains/workbench";
-import { retainOpenTabFocus } from "@renderer/domains/workbench";
+import { openTabWithContentSeed, retainOpenTabFocus } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
@@ -39,7 +58,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
-import { useFileCommands, useGitCommands, useTerminalCommands, useWorkbenchCommands } from "../../commands/useCommands";
 import { useSelectedWorkspaceWithProject } from "../../selectors";
 import { LaunchView } from "../launch/LaunchView";
 import { useTabContentRenderer } from "../tab-content/useTabContentRenderer";
@@ -55,10 +73,6 @@ function clamp(value: number, min: number, max: number): number {
 /** Renders the primary workspace pane with split-pane tabbed content, per-tab views, and pane visibility controls. */
 export function MainPaneView() {
   const { t } = useTranslation();
-  const cmd = useTerminalCommands();
-  const workbenchCommands = useWorkbenchCommands();
-  const fileCommands = useFileCommands();
-  const gitCommands = useGitCommands();
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
@@ -67,8 +81,18 @@ export function MainPaneView() {
   const tabs = tabStore((state) => state.tabs);
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const mergedCmd = useMemo(
-    () => ({ ...workbenchCommands, ...fileCommands, ...gitCommands }),
-    [workbenchCommands, fileCommands, gitCommands],
+    () => ({
+      openTab: openTabWithContentSeed,
+      openEntryInExternalApp,
+      markFileTabSaved,
+      updateFileTabContent,
+      writeFile,
+      createNewWhiteboard,
+      renameEntry,
+      readFile,
+      refreshFileTabFromDisk,
+    }),
+    [],
   );
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const lastUsedExternalAppPreset = lastUsedExternalAppId ? findExternalAppPreset(lastUsedExternalAppId) : null;
@@ -204,10 +228,10 @@ export function MainPaneView() {
 
     const terminalTabIds = new Set(tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
     const agentChatTabIds = new Set(tabs.filter((tab) => tab.kind === "agent-chat").map((tab) => tab.id));
-    cmd.retainOpenTerminalTabFocus(terminalTabIds);
+    retainOpenTerminalTabFocus(terminalTabIds);
     retainOpenTabFocus(agentChatTabIds);
     disposeTerminalRuntimesForClosedTabs(terminalTabIds);
-  }, [cmd, tabs]);
+  }, [tabs]);
 
   // Force-fit terminal runtimes when a terminal tab becomes the selected one so
   // the PTY surface fills the pane placeholder (Workbench presents, Terminal fits).
@@ -289,16 +313,16 @@ export function MainPaneView() {
                     enabledAgentKinds={enabledAgentKinds}
                     agentPresetMeta={agentPresetMeta}
                     tabFileCommands={{
-                      createNewWhiteboard: fileCommands.createNewWhiteboard,
-                      renameEntry: fileCommands.renameEntry,
+                      createNewWhiteboard,
+                      renameEntry,
                     }}
                     openTabRefreshCommands={{
-                      readFile: fileCommands.readFile,
-                      refreshFileTabFromDisk: fileCommands.refreshFileTabFromDisk,
-                      readDiff: gitCommands.readDiff,
-                      readCommitDiff: gitCommands.readCommitDiff,
-                      readBranchComparisonDiff: gitCommands.readBranchComparisonDiff,
-                      refreshDiffTabContent: gitCommands.refreshDiffTabContent,
+                      readFile,
+                      refreshFileTabFromDisk,
+                      readDiff,
+                      readCommitDiff,
+                      readBranchComparisonDiff,
+                      refreshDiffTabContent,
                     }}
                     fetchAgentSessionFilePath={fetchAgentSessionFilePath}
                     renderAgentIcon={(agentKind, label) => (

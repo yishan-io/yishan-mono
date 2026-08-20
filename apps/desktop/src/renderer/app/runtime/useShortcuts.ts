@@ -1,17 +1,50 @@
+import { openEntryInExternalApp } from "@renderer/domains/files";
 import { keybindingSettingsStore } from "@renderer/domains/settings";
-import { workbenchNavigationStore } from "@renderer/domains/workbench";
+import { closeTab, openTab, setSelectedTab, workbenchNavigationStore } from "@renderer/domains/workbench";
 import { popupStore } from "@renderer/domains/workbench";
 import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
-import { workspaceStore } from "@renderer/domains/workspace";
+import {
+  activateWorkspacePane,
+  closeWorkspace,
+  deleteSelectedFileTreeEntry,
+  focusWorkspaceFileTree,
+  openCreateWorkspaceDialog,
+  openWorkspaceFileSearch,
+  toggleLeftPaneVisibility,
+  toggleRightPaneVisibility,
+  undoFileTreeOperation,
+  workspaceStore,
+} from "@renderer/domains/workspace";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useCommands } from "../../app/commands/useCommands";
 import { getShortcutDefinitions } from "../../shortcuts/keybindings";
 import { compileShortcutDefinitions } from "../../shortcuts/shortcutRunner";
+import type { ShortcutActionRegistry } from "../../shortcuts/types";
 import { startShortcutRuntime } from "./shortcutRuntime";
 
 const WORKSPACE_ROUTE = "/";
+
+/**
+ * Narrow action registry for the shortcut runtime (Desktop 11 Phase 46).
+ * The members are stable module-level functions; the object identity is
+ * constant, so it needs no memoization.
+ */
+const shortcutActions: ShortcutActionRegistry = {
+  activateWorkspacePane,
+  closeTab,
+  closeWorkspace,
+  deleteSelectedFileTreeEntry,
+  focusWorkspaceFileTree,
+  openCreateWorkspaceDialog,
+  openEntryInExternalApp,
+  openTab,
+  openWorkspaceFileSearch,
+  selectTab: setSelectedTab,
+  toggleLeftPaneVisibility,
+  toggleRightPaneVisibility,
+  undoFileTreeOperation,
+};
 
 /** Registers centralized workspace shortcuts and keeps handlers in sync with latest context. */
 export function useShortcuts(): void {
@@ -23,7 +56,6 @@ export function useShortcuts(): void {
   const activeWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const splitPaneStoreState = splitPaneStore((state) => state);
   const isPopupOpen = popupStore((state) => state.isPopupOpen);
-  const commands = useCommands();
   const overridesById = keybindingSettingsStore((state) => state.overridesById);
   const isCaptureActive = keybindingSettingsStore((state) => state.isCaptureActive);
 
@@ -39,11 +71,10 @@ export function useShortcuts(): void {
       activeWorkspaceId,
       splitPaneStoreState,
       terminalTabTitle: t("terminal.title"),
-      commands,
+      commands: shortcutActions,
       navigate,
     }),
     [
-      commands,
       isPopupOpen,
       isWorkspaceRoute,
       location.pathname,

@@ -6,10 +6,10 @@
  * store mutation). The coordinator (`workspaceSnapshotFlow.ts`) applies the
  * result to the feature stores synchronously in one call stack.
  */
-import type { ProjectRecord, WorkspaceRecord } from "@renderer/api/types";
+import type { ProjectRecord } from "@renderer/domains/project";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "@renderer/domains/project";
 import { resolveHydratedWorkspaceDisplayMetadata } from "@renderer/domains/workspace";
-import type { WorkspaceItem, WorkspaceStatus } from "@renderer/domains/workspace";
+import type { WorkspaceItem, WorkspaceRecord, WorkspaceStatus } from "@renderer/domains/workspace";
 import { getFileName } from "@shared/path/paths";
 import type { ExternalAppId } from "../../../shared/contracts/externalApps";
 

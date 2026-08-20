@@ -34,6 +34,8 @@ const mocked = vi.hoisted(() => {
     stateRef,
     workspaceStore,
     getMainWindowFullscreenState: vi.fn(async () => ({ isFullscreen: false })),
+    activateProject: vi.fn(),
+    activateWorkspace: vi.fn(),
     getTerminalResourceUsage: vi.fn().mockResolvedValue({
       totalCpuPercent: 0,
       totalMemoryBytes: 0,
@@ -96,6 +98,16 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   return {
     ...actual,
     workbenchNavigationStore: navStore,
+    activateProject: (...args: unknown[]) => {
+      const fn = mocked.stateRef.current.activateProject as ((...a: unknown[]) => unknown) | undefined;
+      if (fn) return fn.apply(null, args);
+      return (mocked.activateProject as (...a: unknown[]) => unknown).apply(null, args);
+    },
+    activateWorkspace: (...args: unknown[]) => {
+      const fn = mocked.stateRef.current.activateWorkspace as ((...a: unknown[]) => unknown) | undefined;
+      if (fn) return fn.apply(null, args);
+      return (mocked.activateWorkspace as (...a: unknown[]) => unknown).apply(null, args);
+    },
     RightPaneTabBar: () => (
       <div data-testid="mock-right-pane-tab-bar">
         <button type="button" aria-label="files.files">
@@ -150,54 +162,6 @@ vi.mock("../../../domains/agent/state/chatStore", () => ({
           | undefined) ?? {},
     }),
 }));
-
-vi.mock("../../../app/commands/useCommands", () => {
-  const commandSurface = () => {
-    const state = mocked.stateRef.current as Record<string, unknown>;
-    return {
-      listDetectedPorts: state.listDetectedPorts,
-      subscribeDetectedPorts: state.subscribeDetectedPorts ?? mocked.subscribeDetectedPorts,
-      getTerminalResourceUsage: state.getTerminalResourceUsage ?? mocked.getTerminalResourceUsage,
-      retainOpenTerminalTabFocus: state.retainOpenTerminalTabFocus ?? vi.fn(),
-      activateProject: state.activateProject,
-      activateWorkspace: state.activateWorkspace,
-      selectTab: state.selectTab,
-      createTab: state.createTab,
-      openTab: state.openTab,
-      closeTab: state.closeTab,
-      closeOtherTabs: state.closeOtherTabs,
-      closeAllTabs: state.closeAllTabs,
-      toggleTabPinned: state.toggleTabPinned,
-      reorderTab: state.reorderTab,
-      renameTab: state.renameTab,
-      readFile: state.readFile,
-      readDiff: state.readDiff,
-      readCommitDiff: state.readCommitDiff,
-      readBranchComparisonDiff: state.readBranchComparisonDiff,
-      refreshFileTabFromDisk: state.refreshFileTabFromDisk,
-      refreshDiffTabContent: state.refreshDiffTabContent,
-      updateFileTabContent: state.updateFileTabContent,
-      markFileTabSaved: state.markFileTabSaved,
-    };
-  };
-  return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
-  };
-});
 
 vi.mock("@renderer/platform/platform", () => ({
   getRendererPlatform: () => "darwin",
@@ -385,6 +349,16 @@ vi.mock("@renderer/domains/terminal", async (importOriginal) => {
       <div data-testid="terminal-view" data-tab-id={tabId} data-focus-request-key={focusRequestKey} />
     ),
     disposeTerminalRuntimesForClosedTabs: vi.fn(),
+    listDetectedPorts: (...args: unknown[]) => {
+      const stateFn = mocked.stateRef.current.listDetectedPorts as ((...a: unknown[]) => unknown) | undefined;
+      return stateFn ? stateFn.apply(null, args) : Promise.resolve([]);
+    },
+    subscribeDetectedPorts: (...args: unknown[]) => {
+      const stateFn = mocked.stateRef.current.subscribeDetectedPorts as ((...a: unknown[]) => unknown) | undefined;
+      return stateFn
+        ? stateFn.apply(null, args)
+        : (mocked.subscribeDetectedPorts as (...a: unknown[]) => unknown).apply(null, args);
+    },
   };
 });
 

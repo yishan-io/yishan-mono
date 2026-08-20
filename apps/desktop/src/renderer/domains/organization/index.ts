@@ -16,6 +16,6 @@ export type {
   OrganizationInviteRecord,
   OrganizationMemberRecord,
   OrganizationRecord,
-} from "@renderer/api/types";
+} from "./api/types";
 export { CreateOrganizationDialogView } from "./features/create-organization/CreateOrganizationDialogView";
 export { MemberSettingsView } from "./features/manage-members/MemberSettingsView";

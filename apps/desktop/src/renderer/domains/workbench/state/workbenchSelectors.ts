@@ -1,4 +1,4 @@
-import { findLeaf, findLeafByTabId } from "../split-pane/operations";
+import { findLeaf, findLeafByTabId } from "../split-pane/treeNavigation";
 import type { PaneLeaf, SplitPaneStateSlice } from "../split-pane/types";
 
 /**

@@ -1,4 +1,4 @@
-import type { NodeRecord } from "@renderer/api/types";
+import type { NodeRecord } from "./types";
 
 export type { NodeRecord };
 import { requestJson } from "@renderer/api/restClient";

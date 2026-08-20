@@ -13,7 +13,7 @@ import { tabStore } from "../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../domains/workspace/state/workspaceStore";
 import { WorkspaceView } from "./WorkspaceView";
 
-const commandMocks = {
+const commandMocks = vi.hoisted(() => ({
   closeTab: vi.fn(),
   deleteSelectedFileTreeEntry: vi.fn(),
   listTerminalSessions: vi.fn(async () => []),
@@ -29,7 +29,7 @@ const commandMocks = {
   toggleLeftPaneVisibility: vi.fn(),
   toggleRightPaneVisibility: vi.fn(),
   undoFileTreeOperation: vi.fn(),
-};
+}));
 
 const terminalRecoveryMocks = {
   restoreTerminalTabsFromDaemon: vi.fn(async () => undefined),
@@ -56,6 +56,7 @@ vi.mock("../../components/SplitPaneLayout", () => ({
 
 vi.mock("@renderer/rpc", () => ({
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
+  request: vi.fn(async () => ({})),
 }));
 
 vi.mock("../../events/desktopRpcEventBus", () => ({
@@ -70,28 +71,8 @@ vi.mock("@renderer/domains/git", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/git")>();
   return {
     ...actual,
+    refreshWorkspaceGitChanges: commandMocks.refreshWorkspaceGitChanges,
     useAllWorkspacesGitSync: vi.fn(),
-  };
-});
-
-vi.mock("../../app/commands/useCommands", () => {
-  const commandSurface = () => commandMocks;
-  return {
-    useAppCommands: commandSurface,
-    useSessionCommands: commandSurface,
-    useWorkspaceCommands: commandSurface,
-    useAgentCommands: commandSurface,
-    useGitCommands: commandSurface,
-    useNodeCommands: commandSurface,
-    useNotificationCommands: commandSurface,
-    useOrganizationCommands: commandSurface,
-    useOverviewCommands: commandSurface,
-    useScheduledJobCommands: commandSurface,
-    useFileCommands: commandSurface,
-    useProjectCommands: commandSurface,
-    useWorkbenchCommands: commandSurface,
-    useTerminalCommands: commandSurface,
-    useSettingsCommands: commandSurface,
   };
 });
 
@@ -99,10 +80,47 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
   return {
     ...actual,
+    activateProject: commandMocks.activateProject,
+    activateWorkspace: commandMocks.activateWorkspace,
+    closeTab: commandMocks.closeTab,
+    openTab: commandMocks.openTab,
+    setSelectedTab: commandMocks.selectTab,
     WorkspacePaneVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
     useWorkspacePaneVisibility: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
   };
 });
+
+vi.mock("@renderer/domains/workspace", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/workspace")>();
+  return {
+    ...actual,
+    deleteSelectedFileTreeEntry: commandMocks.deleteSelectedFileTreeEntry,
+    toggleLeftPaneVisibility: commandMocks.toggleLeftPaneVisibility,
+    toggleRightPaneVisibility: commandMocks.toggleRightPaneVisibility,
+    undoFileTreeOperation: commandMocks.undoFileTreeOperation,
+  };
+});
+
+vi.mock("@renderer/domains/files", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/files")>();
+  return {
+    ...actual,
+    openEntryInExternalApp: commandMocks.openEntryInExternalApp,
+  };
+});
+
+vi.mock("@renderer/domains/terminal", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@renderer/domains/terminal")>();
+  return {
+    ...actual,
+    listTerminalSessions: commandMocks.listTerminalSessions,
+    setActiveWorkspace: commandMocks.setActiveWorkspace,
+  };
+});
+
+vi.mock("../../app/commands/workspaceSnapshotFlow", () => ({
+  loadWorkspaceSnapshot: commandMocks.loadWorkspaceSnapshot,
+}));
 
 vi.mock("@renderer/domains/overview", () => ({
   OverviewView: () => <div data-testid="overview-view" />,

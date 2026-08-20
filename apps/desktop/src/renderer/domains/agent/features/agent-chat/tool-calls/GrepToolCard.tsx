@@ -6,13 +6,9 @@ import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
-import {
-  type AgentToolCallCardProps,
-  extractResultText,
-  getPathBaseName,
-  openGrepFileMatch,
-  parseGrepMatchLines,
-} from "./helpers";
+import { extractResultText, getPathBaseName } from "./diff";
+import { openGrepFileMatch, parseGrepMatchLines } from "./grep";
+import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized grep tool-call card. */
 export function GrepToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
