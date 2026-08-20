@@ -17,9 +17,12 @@ Core expectations:
 - For plan creation, prefer `writing-plans`.
 - For debugging unclear failures, prefer `systematic-debugging` before speculative fixes.
 - For behavior changes and bug fixes, prefer `test-driven-development` when the work is meaningfully testable.
+- For small, targeted codebase questions, use direct CodeGraph/read tools; do not delegate.
+- For scoped, read-only codebase research, prefer the `explore` agent. Do not use `builder` solely for research.
 - For final review requests, prefer the `code-reviewer` agent.
 - For plan review, prefer the `plan-reviewer` agent.
-- For task-level implementation, prefer the `builder` agent.
+- For task-level implementation that requires edits, prefer the `builder` agent.
+- Use `general` only when no specialist role fits a short, clearly scoped task.
 - For task-level review during subagent-driven execution, prefer the `task-reviewer` agent.
 - For independent scopes, use parallel subagents only when they do not overlap in files or mutable state.
 
