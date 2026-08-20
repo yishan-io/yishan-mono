@@ -1,4 +1,4 @@
-import { createLeaf } from "./operations";
+import { createLeaf } from "./treeNavigation";
 import type { PaneBranch, SplitDirection, SplitPaneStateSlice } from "./types";
 
 /**

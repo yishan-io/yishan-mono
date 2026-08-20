@@ -1,4 +1,4 @@
-import { createLeaf, findLeaf, findLeafByTabId, replaceNode } from "./operations";
+import { createLeaf, findLeaf, findLeafByTabId, replaceNode } from "./treeNavigation";
 import type { PaneBranch, SplitDirection, SplitPaneStateSlice } from "./types";
 
 /** Creates a sibling pane containing an unplaced tab without mutating the target pane. */
