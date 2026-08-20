@@ -1,40 +1,45 @@
 import { lazy } from "react";
 
 /**
- * Settings lazy page registrations (desktop8 Phase 33: split from
- * SettingsView.tsx).
+ * Settings page registrations.
+ *
+ * Views with no cross-domain reach and no module-level side effects are
+ * imported eagerly. The rest must stay lazy for one of two reasons:
+ *
+ * - Cross-domain views (agent / workspace / terminal / notification / node /
+ *   organization): their domain indexes import the settings index back
+ *   (agent chat uses keybindingSettingsStore, files editors use
+ *   editorSettingsStore / useCodeTheme), so an eager settings→domain edge
+ *   closes the eval-time cycle and breaks ~30 tests (TDZ / i18n-mock
+ *   ordering errors).
+ * - DaemonSettingsView imports the workbench index (useDialogRegistration);
+ *   workbench eagerly imports the files index (tabCommands), and files views
+ *   value-import the settings index — eager loading it closes
+ *   settings→workbench→files→settings.
+ * - LanguageSettingsView imports `../../../../i18n`, whose module scope runs
+ *   `i18n.init()`; loading it from the settings index initializes the global
+ *   i18next instance in every test that imports settings, flipping
+ *   useTranslation from key-returning to real translations.
  */
 
-export const AccountSettingsView = lazy(() =>
-  import("../account/AccountSettingsView").then((m) => ({ default: m.AccountSettingsView })),
-);
+export { AccountSettingsView } from "../account/AccountSettingsView";
 export const MemberSettingsView = lazy(() =>
   import("@renderer/domains/organization").then((m) => ({ default: m.MemberSettingsView })),
 );
-export const ServiceTokenSettingsView = lazy(() =>
-  import("../account/ServiceTokenSettingsView").then((m) => ({ default: m.ServiceTokenSettingsView })),
-);
+export { ServiceTokenSettingsView } from "../account/ServiceTokenSettingsView";
 export const ComputerUseSettingsView = lazy(() =>
   import("@renderer/domains/agent").then((m) => ({ default: m.ComputerUseSettingsView })),
 );
 export const DaemonSettingsView = lazy(() =>
   import("../daemon/DaemonSettingsView").then((m) => ({ default: m.DaemonSettingsView })),
 );
-export const EditorSettingsView = lazy(() =>
-  import("../editor/EditorSettingsView").then((m) => ({ default: m.EditorSettingsView })),
-);
-export const KeybindingsSettingsView = lazy(() =>
-  import("../keybindings/KeybindingsSettingsView").then((m) => ({ default: m.KeybindingsSettingsView })),
-);
+export { EditorSettingsView } from "../editor/EditorSettingsView";
+export { KeybindingsSettingsView } from "../keybindings/KeybindingsSettingsView";
 export const LanguageSettingsView = lazy(() =>
   import("../language/LanguageSettingsView").then((m) => ({ default: m.LanguageSettingsView })),
 );
-export const LinkSettingsView = lazy(() =>
-  import("../link/LinkSettingsView").then((m) => ({ default: m.LinkSettingsView })),
-);
-export const MarkdownSettingsView = lazy(() =>
-  import("../markdown/MarkdownSettingsView").then((m) => ({ default: m.MarkdownSettingsView })),
-);
+export { LinkSettingsView } from "../link/LinkSettingsView";
+export { MarkdownSettingsView } from "../markdown/MarkdownSettingsView";
 export const NodesSettingsView = lazy(() =>
   import("@renderer/domains/node").then((m) => ({ default: m.NodesSettingsView })),
 );
@@ -51,9 +56,7 @@ export const WorkspaceSettingsView = lazy(() =>
 export const AgentProviderSettingsView = lazy(() =>
   import("@renderer/domains/agent").then((m) => ({ default: m.AgentProviderSettingsView })),
 );
-export const CLISettingsView = lazy(() =>
-  import("../cli/CLISettingsView").then((m) => ({ default: m.CLISettingsView })),
-);
+export { CLISettingsView } from "../cli/CLISettingsView";
 export const CustomizeSettingsView = lazy(() =>
   import("@renderer/domains/agent").then((m) => ({ default: m.CustomizeSettingsView })),
 );
