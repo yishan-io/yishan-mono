@@ -38,14 +38,18 @@ describe("gitGutterDecorations model", () => {
     expect(getRulerColor("deleted", false)).toBe(SEMANTIC_COLOR_TOKENS.light.gitDiff.deleted);
   });
 
-  it("builds whole-line decorations for added and modified changes with ruler metadata", () => {
-    const decorations = changesToDecorations(
+  it("builds whole-line decorations for added and modified changes with ruler metadata", async () => {
+    const decorations = await changesToDecorations(
       [change({ lineNumber: 3, kind: "added" }), change({ lineNumber: 7, kind: "modified" })],
       false,
     );
 
-    const first = decorations[0]!;
-    const second = decorations[1]!;
+    expect(decorations).toHaveLength(2);
+    const first = decorations[0];
+    const second = decorations[1];
+    if (!first || !second) {
+      throw new Error("expected two decorations");
+    }
     expect(first.range.startLineNumber).toBe(3);
     expect(first.options.isWholeLine).toBe(true);
     expect(first.options.linesDecorationsClassName).toBe(GUTTER_ADDED_CLASS);
@@ -55,10 +59,14 @@ describe("gitGutterDecorations model", () => {
     expect(second.options.linesDecorationsClassName).toBe(GUTTER_MODIFIED_CLASS);
   });
 
-  it("builds non-whole-line decorations for deleted changes", () => {
-    const decorations = changesToDecorations([change({ lineNumber: 5, kind: "deleted" })], true);
+  it("builds non-whole-line decorations for deleted changes", async () => {
+    const decorations = await changesToDecorations([change({ lineNumber: 5, kind: "deleted" })], true);
 
-    const decoration = decorations[0]!;
+    const decoration = decorations[0];
+    expect(decoration).toBeDefined();
+    if (!decoration) {
+      throw new Error("expected one decoration");
+    }
     expect(decoration.options.isWholeLine).toBe(false);
     expect(decoration.options.linesDecorationsClassName).toBe(GUTTER_DELETED_CLASS);
     expect((decoration.options as { overviewRulerColor?: string }).overviewRulerColor).toBe(

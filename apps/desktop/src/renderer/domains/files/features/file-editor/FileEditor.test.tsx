@@ -207,16 +207,22 @@ afterEach(() => {
 });
 
 describe("FileEditor", () => {
-  it("creates a Monaco editor on mount", () => {
+  it("creates a Monaco editor on mount", async () => {
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
-    expect(mockEditorState.createCount).toBe(1);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBe(1);
+    });
   });
 
-  it("saves via the root capture handler when Cmd+S is pressed on the editor", () => {
+  it("saves via the root capture handler when Cmd+S is pressed on the editor", async () => {
     const onSave = vi.fn();
 
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" onSave={onSave} />);
+
+    await waitFor(() => {
+      expect(mockEditorState.editorDomNode).toBeTruthy();
+    });
 
     // Simulate the user editing the document after mount.
     mockEditorState.editorValue = "saved text";
@@ -230,8 +236,11 @@ describe("FileEditor", () => {
     expect(onSave).toHaveBeenCalledWith("saved text");
   });
 
-  it("preserves Monaco selection and scroll position when content is synchronized", () => {
+  it("preserves Monaco selection and scroll position when content is synchronized", async () => {
     const { rerender } = renderWithAppTheme(<FileEditor path="src/a.ts" content="first" />);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBe(1);
+    });
     const selection = { startLineNumber: 1, startColumn: 3, endLineNumber: 1, endColumn: 3 };
     const scrollPosition = { scrollTop: 96, scrollLeft: 12 };
     mockEditorState.editorSelections = [selection];
@@ -243,56 +252,72 @@ describe("FileEditor", () => {
     expect(mockEditorState.editorScrollPosition).toEqual(scrollPosition);
   });
 
-  it("emits changed content through onContentChange", () => {
+  it("emits changed content through onContentChange", async () => {
     const onContentChange = vi.fn();
 
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" onContentChange={onContentChange} />);
 
+    await waitFor(() => {
+      expect(mockEditorState.contentChangeListener).toBeTruthy();
+    });
+
     // Simulate the user editing the document after mount.
     mockEditorState.editorValue = "next text";
 
-    expect(mockEditorState.contentChangeListener).toBeTruthy();
     mockEditorState.contentChangeListener?.();
 
     expect(onContentChange).toHaveBeenCalledWith("next text");
   });
 
-  it("creates model with the correct language for supported files", () => {
+  it("creates model with the correct language for supported files", async () => {
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
-    expect(mockEditorState.lastModelLanguage).toBe("typescript");
+    await waitFor(() => {
+      expect(mockEditorState.lastModelLanguage).toBe("typescript");
+    });
   });
 
-  it("creates model without language for unsupported files", () => {
+  it("creates model without language for unsupported files", async () => {
     renderWithAppTheme(<FileEditor path="data/file.unknown" content="initial" />);
 
-    expect(mockEditorState.lastModelLanguage).toBeUndefined();
+    await waitFor(() => {
+      expect(mockEditorState.lastModelLanguage).toBeUndefined();
+    });
   });
 
-  it("creates model with file:// URI matching the path", () => {
+  it("creates model with file:// URI matching the path", async () => {
     renderWithAppTheme(<FileEditor path="/Users/dev/project/main.ts" content="initial" />);
 
-    expect(mockEditorState.lastModelUri).toEqual({ scheme: "file", path: "/Users/dev/project/main.ts" });
+    await waitFor(() => {
+      expect(mockEditorState.lastModelUri).toEqual({ scheme: "file", path: "/Users/dev/project/main.ts" });
+    });
   });
 
-  it("uses dark theme when app theme mode is dark", () => {
+  it("uses dark theme when app theme mode is dark", async () => {
     displaySettingsStore.setState({ themePreference: "dark" });
 
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
-    expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-dark");
+    await waitFor(() => {
+      expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-dark");
+    });
   });
 
-  it("uses light theme when app theme mode is light", () => {
+  it("uses light theme when app theme mode is light", async () => {
     // layoutStore default is "system" + useMediaQuery → false = "light"
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />, { mode: "light" });
 
-    expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-light");
+    await waitFor(() => {
+      expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-light");
+    });
   });
 
-  it("updates theme/font/wrap without recreating the editor", () => {
+  it("updates theme/font/wrap without recreating the editor", async () => {
     displaySettingsStore.setState({ themePreference: "light" });
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBeGreaterThan(0);
+    });
     const createCountAfterMount = mockEditorState.createCount;
     expect(createCountAfterMount).toBeGreaterThan(0);
 
@@ -303,14 +328,16 @@ describe("FileEditor", () => {
 
     expect(mockEditorState.createCount).toBe(createCountAfterMount);
     expect(mockEditorState.updateOptionsCalls.at(-1)).toMatchObject({ fontSize: 15, wordWrap: "off" });
-    expect(mockEditorState.setThemeCalls).toContain("yishan-dark");
+    await waitFor(() => {
+      expect(mockEditorState.setThemeCalls).toContain("yishan-dark");
+    });
 
     // Restore stores so later tests see defaults.
     displaySettingsStore.setState({ themePreference: "system" });
     editorSettingsStore.setState({ editorFontSize: 13, wordWrap: true });
   });
 
-  it("focuses the editor when requested", () => {
+  it("focuses the editor when requested", async () => {
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
       return 1;
@@ -318,6 +345,9 @@ describe("FileEditor", () => {
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
     const { rerender } = renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" focusRequestKey={0} />);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBe(1);
+    });
 
     expect(mockEditorState.editorFocus).not.toHaveBeenCalled();
 
@@ -326,14 +356,17 @@ describe("FileEditor", () => {
     expect(mockEditorState.editorFocus).toHaveBeenCalledTimes(1);
   });
 
-  it("recreates editor when path changes", () => {
+  it("recreates editor when path changes", async () => {
     const { rerender } = renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
-
-    expect(mockEditorState.createCount).toBe(1);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBe(1);
+    });
 
     rerender(<FileEditor path="src/b.py" content="print('hi')" />);
 
-    expect(mockEditorState.createCount).toBe(2);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBe(2);
+    });
     expect(mockEditorState.disposeCount).toBe(1);
   });
 
@@ -382,10 +415,12 @@ describe("FileEditor", () => {
       expect(capturedExcalidrawProps.current.path).toBe("scene.excalidraw");
     });
 
-    it("renders the Monaco editor for non-excalidraw files", () => {
+    it("renders the Monaco editor for non-excalidraw files", async () => {
       renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
-      expect(mockEditorState.createCount).toBe(1);
+      await waitFor(() => {
+        expect(mockEditorState.createCount).toBe(1);
+      });
     });
   });
 

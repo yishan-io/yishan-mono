@@ -1,4 +1,5 @@
 import { readDiff } from "@renderer/domains/git";
+import type * as MonacoNs from "monaco-editor";
 import "./gitInlineDiff.css";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -12,11 +13,11 @@ import {
   MAX_LIVE_GUTTER_DIFF_LINES,
   changesToDecorations,
 } from "../file-editor/git-gutter/gitGutterDecorations";
-import { monaco } from "../file-editor/monaco/monacoSetup";
+import { loadMonacoSetup } from "../file-editor/monaco/monacoLoader";
 
 export type UseGitGutterDecorationsInput = {
   /** Monaco editor instance to decorate. */
-  editor: monaco.editor.IStandaloneCodeEditor | null;
+  editor: MonacoNs.editor.IStandaloneCodeEditor | null;
   /** Workspace identity used for daemon diff lookup. */
   workspaceId?: string;
   /** Relative path of the file being edited. */
@@ -56,7 +57,7 @@ export function useGitGutterDecorations({
   isDark = false,
   editorFontSize = 13,
 }: UseGitGutterDecorationsInput): void {
-  const decorationsRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
+  const decorationsRef = useRef<MonacoNs.editor.IEditorDecorationsCollection | null>(null);
   const [headContent, setHeadContent] = useState<string | null>(null);
   const [shouldSkipDecorations, setShouldSkipDecorations] = useState(false);
   const pendingRequestRef = useRef(0);
@@ -101,6 +102,9 @@ export function useGitGutterDecorations({
   const shouldThrottleLiveDiff = currentContent.split("\n").length > MAX_LIVE_GUTTER_DIFF_LINES;
 
   // Compute and apply decorations whenever content or HEAD changes.
+  // `changesToDecorations` resolves asynchronously because the overview-ruler
+  // enum lives inside the monaco ESM graph; a stale resolution (content/editor
+  // changed meanwhile) is dropped via the `cancelled` guard.
   useEffect(() => {
     if (!editor) return;
 
@@ -112,10 +116,12 @@ export function useGitGutterDecorations({
       return;
     }
 
-    const applyChanges = () => {
+    let cancelled = false;
+    const applyChanges = async () => {
       const changes = computeGitLineChanges(headContent, currentContent);
       changesRef.current = changes;
-      const decorations = changesToDecorations(changes, isDark);
+      const decorations = await changesToDecorations(changes, isDark);
+      if (cancelled) return;
 
       if (decorationsRef.current) {
         decorationsRef.current.set(decorations);
@@ -125,99 +131,124 @@ export function useGitGutterDecorations({
     };
 
     if (shouldThrottleLiveDiff) {
-      const timeout = window.setTimeout(applyChanges, GIT_GUTTER_DIFF_DEBOUNCE_MS);
+      const timeout = window.setTimeout(() => {
+        void applyChanges();
+      }, GIT_GUTTER_DIFF_DEBOUNCE_MS);
       return () => {
+        cancelled = true;
         window.clearTimeout(timeout);
       };
     }
 
-    applyChanges();
+    void applyChanges();
+    return () => {
+      cancelled = true;
+    };
   }, [editor, currentContent, headContent, isDark, shouldSkipDecorations, shouldThrottleLiveDiff]);
 
   // Register gutter click handler for showing inline diff.
+  // Handlers are registered only after monacoSetup resolves so the runtime
+  // enum values (MouseTargetType / KeyCode) are safe to read; monaco is
+  // already loaded by the time an editor instance exists.
   useEffect(() => {
     if (!editor) return;
 
-    const mouseDisposable = editor.onMouseDown((event) => {
-      const targetType = event.target.type;
+    let cancelled = false;
+    const disposables: Array<{ dispose: () => void }> = [];
 
-      // Clicking on the ViewZone itself dismisses it
-      if (targetType === monaco.editor.MouseTargetType.CONTENT_VIEW_ZONE) {
-        if (viewZoneRef.current) {
-          removeViewZone(editor, viewZoneRef);
-          return;
-        }
-      }
+    void loadMonacoSetup()
+      .then(({ monaco }) => {
+        if (cancelled) return;
 
-      // Only handle clicks on line decorations in the gutter
-      if (targetType !== monaco.editor.MouseTargetType.GUTTER_LINE_DECORATIONS) {
-        return;
-      }
+        const mouseDisposable = editor.onMouseDown((event) => {
+          const targetType = event.target.type;
 
-      const lineNumber = event.target.position?.lineNumber;
-      if (!lineNumber) return;
+          // Clicking on the ViewZone itself dismisses it
+          if (targetType === monaco.editor.MouseTargetType.CONTENT_VIEW_ZONE) {
+            if (viewZoneRef.current) {
+              removeViewZone(editor, viewZoneRef);
+              return;
+            }
+          }
 
-      // Check if this line has a git change decoration
-      const change = changesRef.current.find((c) => c.lineNumber === lineNumber);
-      if (!change) return;
+          // Only handle clicks on line decorations in the gutter
+          if (targetType !== monaco.editor.MouseTargetType.GUTTER_LINE_DECORATIONS) {
+            return;
+          }
 
-      // Toggle: if clicking the same line that already has a viewzone, remove it
-      if (viewZoneRef.current && viewZoneRef.current.afterLineNumber === lineNumber) {
-        removeViewZone(editor, viewZoneRef);
-        return;
-      }
+          const lineNumber = event.target.position?.lineNumber;
+          if (!lineNumber) return;
 
-      // Remove existing viewzone if any
-      if (viewZoneRef.current) {
-        removeViewZone(editor, viewZoneRef);
-      }
+          // Check if this line has a git change decoration
+          const change = changesRef.current.find((c) => c.lineNumber === lineNumber);
+          if (!change) return;
 
-      // Get the hunk context for this line
-      if (headContent === null) return;
-      const hunkInfo = getHunkForLine(headContent, currentContent, lineNumber);
-      if (!hunkInfo) return;
+          // Toggle: if clicking the same line that already has a viewzone, remove it
+          if (viewZoneRef.current && viewZoneRef.current.afterLineNumber === lineNumber) {
+            removeViewZone(editor, viewZoneRef);
+            return;
+          }
 
-      // Determine where to place the viewzone (above the changed lines)
-      const afterLine = hunkInfo.hunk.newStart - 1;
+          // Remove existing viewzone if any
+          if (viewZoneRef.current) {
+            removeViewZone(editor, viewZoneRef);
+          }
 
-      // Create the viewzone DOM
-      const domNode = createInlineDiffDom(hunkInfo.oldLines, hunkInfo.newLines, change.kind);
-      viewZoneDomRef.current = domNode;
+          // Get the hunk context for this line
+          if (headContent === null) return;
+          const hunkInfo = getHunkForLine(headContent, currentContent, lineNumber);
+          if (!hunkInfo) return;
 
-      // Compute height: header (~30px) + each line (fontSize * 1.5 for
-      // style.css line-height: 1.5, plus 2px for the 1px top/bottom margin on
-      // each diff line) + padding (20px).
-      const LINE_HEIGHT_PX = Math.round(editorFontSize * 1.5) + 2;
-      const HEADER_HEIGHT_PX = 30;
-      const PADDING_PX = 20;
-      let totalLines = hunkInfo.oldLines.length;
-      if (change.kind === "modified") {
-        totalLines += hunkInfo.newLines.length;
-      }
-      totalLines = Math.max(totalLines, 1);
-      const heightInPx = HEADER_HEIGHT_PX + totalLines * LINE_HEIGHT_PX + PADDING_PX;
+          // Determine where to place the viewzone (above the changed lines)
+          const afterLine = hunkInfo.hunk.newStart - 1;
 
-      editor.changeViewZones((accessor) => {
-        const zoneId = accessor.addZone({
-          afterLineNumber: afterLine,
-          heightInPx,
-          domNode,
-          suppressMouseDown: false,
+          // Create the viewzone DOM
+          const domNode = createInlineDiffDom(hunkInfo.oldLines, hunkInfo.newLines, change.kind);
+          viewZoneDomRef.current = domNode;
+
+          // Compute height: header (~30px) + each line (fontSize * 1.5 for
+          // style.css line-height: 1.5, plus 2px for the 1px top/bottom margin on
+          // each diff line) + padding (20px).
+          const LINE_HEIGHT_PX = Math.round(editorFontSize * 1.5) + 2;
+          const HEADER_HEIGHT_PX = 30;
+          const PADDING_PX = 20;
+          let totalLines = hunkInfo.oldLines.length;
+          if (change.kind === "modified") {
+            totalLines += hunkInfo.newLines.length;
+          }
+          totalLines = Math.max(totalLines, 1);
+          const heightInPx = HEADER_HEIGHT_PX + totalLines * LINE_HEIGHT_PX + PADDING_PX;
+
+          editor.changeViewZones((accessor) => {
+            const zoneId = accessor.addZone({
+              afterLineNumber: afterLine,
+              heightInPx,
+              domNode,
+              suppressMouseDown: false,
+            });
+            viewZoneRef.current = { zoneId, afterLineNumber: lineNumber };
+          });
         });
-        viewZoneRef.current = { zoneId, afterLineNumber: lineNumber };
-      });
-    });
 
-    // Escape key dismisses the viewzone
-    const keyDisposable = editor.onKeyDown((event) => {
-      if (event.keyCode === monaco.KeyCode.Escape && viewZoneRef.current) {
-        removeViewZone(editor, viewZoneRef);
-      }
-    });
+        // Escape key dismisses the viewzone
+        const keyDisposable = editor.onKeyDown((event) => {
+          if (event.keyCode === monaco.KeyCode.Escape && viewZoneRef.current) {
+            removeViewZone(editor, viewZoneRef);
+          }
+        });
+
+        disposables.push(mouseDisposable, keyDisposable);
+      })
+      .catch((error) => {
+        // monaco load failure — gutter click/key handlers stay unregistered.
+        console.error("Failed to load Monaco for git gutter interactions", error);
+      });
 
     return () => {
-      mouseDisposable.dispose();
-      keyDisposable.dispose();
+      cancelled = true;
+      for (const disposable of disposables) {
+        disposable.dispose();
+      }
     };
   }, [editor, headContent, currentContent, editorFontSize]);
 
@@ -244,7 +275,7 @@ export function useGitGutterDecorations({
 // ─── ViewZone helpers (Monaco UI mechanics, kept with the hook) ─────────────
 
 function removeViewZone(
-  editor: monaco.editor.IStandaloneCodeEditor,
+  editor: MonacoNs.editor.IStandaloneCodeEditor,
   viewZoneRef: React.MutableRefObject<{ zoneId: string; afterLineNumber: number } | null>,
 ) {
   if (!viewZoneRef.current) return;

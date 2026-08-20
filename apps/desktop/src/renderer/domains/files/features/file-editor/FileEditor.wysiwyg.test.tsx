@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createElement, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { displaySettingsStore } from "../../../../domains/settings/state/displaySettingsStore";
@@ -221,11 +221,13 @@ describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {
     expect(mockEditorState.createCount).toBe(0);
   });
 
-  it("does not render Vditor for non-markdown files", () => {
+  it("does not render Vditor for non-markdown files", async () => {
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
     expect(screen.queryByTestId("vditor-editor")).toBeNull();
-    expect(mockEditorState.createCount).toBe(1);
+    await waitFor(() => {
+      expect(mockEditorState.createCount).toBe(1);
+    });
   });
 
   it("calls flushNow on the Vditor handle before save", async () => {
