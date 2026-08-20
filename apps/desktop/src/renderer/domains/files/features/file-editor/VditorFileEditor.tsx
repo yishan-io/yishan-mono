@@ -14,13 +14,15 @@
 import { displaySettingsStore } from "@renderer/domains/settings";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import type Vditor from "vditor";
 import { i18n } from "../../../../i18n";
 import { DiagramZoomOverlay } from "../../ui/DiagramZoomOverlay";
 import { normalizeMarkdown, shouldApplyExternalContent } from "./editorContentSync";
-import { attachMermaidZoomButtons, rethemeMermaidDiagrams } from "./mermaidZoomButton";
-import { type VditorEditorHandle, createVditorEditor, resolveVditorLang } from "./vditorEditor";
+import { type VditorEditorHandle, resolveVditorLang } from "./vditorEditor";
+import { acquireVditorEditor } from "./vditorEditorRegistry";
+import { useVditorContentSync } from "./useVditorContentSync";
+import { useVditorFocusRequest } from "./useVditorFocusRequest";
+import { useVditorTheme } from "./useVditorTheme";
+import { useVditorWindowInteractions } from "./useVditorWindowInteractions";
 import "vditor/dist/index.css";
 import "./vditorTheme.css";
 
@@ -81,20 +83,11 @@ export interface VditorFileEditorHandle {
  * - `setValue` does NOT re-fire the input callback, so the loop-guard is
  *   simple — but all guards are kept as belt-and-suspenders
  *   because Vditor input timing is render-based.
+ *
+ * Under React.StrictMode the mount effect is double-invoked on the same
+ * root div; `vditorEditorRegistry` keeps one Vditor instance per root and
+ * routes emissions to the currently-mounted instance.
  */
-// ---------------------------------------------------------------------------
-// Module-level shared editor state (one Vditor instance per root div)
-// ---------------------------------------------------------------------------
-
-/** Shared state for a single root div, reused across StrictMode remounts. */
-interface RootEditorState {
-  promise: Promise<VditorEditorHandle>;
-  refCount: number;
-  destroyPending: boolean;
-}
-
-const rootEditorStates = new WeakMap<HTMLElement, RootEditorState>();
-const rootEmitters = new WeakMap<HTMLElement, (markdown: string) => void>();
 
 export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEditorProps>(function VditorFileEditor(
   { path, content, isDeleted, readOnly = false, focusRequestKey = 0, isDark, onContentChange },
@@ -103,7 +96,6 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   // Content width mirrors the preview's readable/full setting so the editor
   // and preview stay visually consistent (readable = 860px centered column).
   const markdownPreviewWidth = displaySettingsStore((state) => state.markdownPreviewWidth);
-  const { t } = useTranslation();
   // Markdown settings from the settings view drive the editor too:
   // - theme override (inherit/light/dark) forces the editor theme independently
   //   of the app theme, matching the preview behavior
@@ -197,10 +189,9 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
   // ── Mount / unmount ──
   // This effect intentionally runs once on mount (remount is driven by
   // key={path} at the call site). Under React.StrictMode the effect is
-  // double-invoked (mount → cleanup → mount) on the same root div.
-  // A module-level WeakMap ensures only one Vditor instance is created
-  // per root div, shared across StrictMode remounts. Emissions are routed
-  // to the currently-mounted instance via rootEmitters.
+  // double-invoked (mount → cleanup → mount) on the same root div. The
+  // registry ensures only one Vditor instance per root div, shared across
+  // StrictMode remounts.
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-once effect — see comment above
   useEffect(() => {
@@ -234,117 +225,25 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
       onContentChange(emitted);
     };
 
-    // Route emissions to this mount's emitContent
-    rootEmitters.set(root, emitContent);
+    const { promise, release } = acquireVditorEditor(
+      root,
+      { defaultValue: content, isDark: resolvedIsDark, lang: vditorLang },
+      emitContent,
+    );
 
-    // Get-or-create shared editor state for this root div
-    let state = rootEditorStates.get(root);
-    if (!state) {
-      state = {
-        promise: createVditorEditor(root, {
-          defaultValue: content,
-          isDark: resolvedIsDark,
-          lang: vditorLang,
-          onMarkdownChange: (md) => rootEmitters.get(root)?.(md),
-        }),
-        refCount: 0,
-        destroyPending: false,
-      };
-      rootEditorStates.set(root, state);
-    }
-    state.refCount += 1;
-    state.destroyPending = false;
-
-    state.promise.then((handle) => {
+    promise.then((handle) => {
       if (destroyed) return;
       onHandleReady(handle);
     });
 
     return () => {
       destroyed = true;
-
-      // Remove this mount's emitter if it is still the current one
-      if (rootEmitters.get(root) === emitContent) {
-        rootEmitters.delete(root);
-      }
-
-      const currentState = rootEditorStates.get(root);
-      if (!currentState) return;
-
-      currentState.refCount -= 1;
-      if (currentState.refCount > 0) {
-        // Another mount still owns this root — leave the editor alive
-        return;
-      }
-
-      // Last mount leaving — destroy the editor
-      const handle = handleRef.current;
-      handleRef.current = null;
-      if (handle) {
-        handle.destroy();
-        rootEditorStates.delete(root);
-      } else {
-        currentState.destroyPending = true;
-        currentState.promise.then((h) => {
-          if (currentState.refCount === 0) {
-            h.destroy();
-            rootEditorStates.delete(root);
-          }
-        });
-      }
+      release();
     };
   }, []);
 
-  // ── External content sync ──
-
-  useEffect(() => {
-    latestContentRef.current = content;
-
-    const handle = handleRef.current;
-    if (!handle) return;
-    if (isDeletedRef.current) return;
-    if (!shouldApplyExternalContent(lastEmittedRef.current, content)) return;
-
-    handle.setValue(content);
-    // setValue does NOT re-fire the input callback, but we reconcile
-    // lastEmittedRef here for correct comparison on the next external change.
-    lastEmittedRef.current = content;
-  }, [content]);
-
-  // ── Dark / light theme ──
-  // Follows the resolved theme: the app theme, unless the settings view's
-  // markdown theme override (inherit/light/dark) forces one. Vditor's own
-  // theme is set at construction (classic/dark). The root data-theme
-  // attribute drives CSS custom-property overrides in vditorTheme.css, which
-  // are authoritative for the app's design tokens. Vditor's setTheme only
-  // toggles the vditor--dark class and swaps the hljs stylesheet, so on an
-  // actual theme change we also re-render already-rendered mermaid diagrams
-  // with the new palette (their SVGs keep the original colors otherwise).
-
-  const prevIsDarkRef = useRef(resolvedIsDark);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    root.setAttribute("data-theme", resolvedIsDark ? "dark" : "light");
-    // Swap both vditor's shell theme and its syntax-highlight stylesheet
-    // (github / github-dark) so existing code blocks re-color immediately.
-    handleRef.current?.vditor.setTheme(
-      resolvedIsDark ? "dark" : "classic",
-      undefined,
-      resolvedIsDark ? "github-dark" : "github",
-    );
-
-    const themeChanged = prevIsDarkRef.current !== resolvedIsDark;
-    prevIsDarkRef.current = resolvedIsDark;
-    if (themeChanged) {
-      void rethemeMermaidDiagrams(root, {
-        isDark: resolvedIsDark,
-        fontFamily: getComputedStyle(root).fontFamily,
-        onError: (message) => console.error("[VditorFileEditor] mermaid re-theme failed:", message),
-      });
-    }
-  }, [resolvedIsDark]);
+  useVditorContentSync({ content, isDeletedRef, handleRef, lastEmittedRef, latestContentRef });
+  useVditorTheme({ rootRef, handleRef, resolvedIsDark });
 
   // ── Read-only for deleted files or view-only mode ──
 
@@ -359,31 +258,7 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
     }
   }, [isDeleted, readOnly]);
 
-  // ── Focus request ──
-
-  useEffect(() => {
-    if (focusRequestKey <= 0) return;
-    if (focusRequestKey === lastFocusKeyRef.current) return;
-    lastFocusKeyRef.current = focusRequestKey;
-
-    const handle = handleRef.current;
-    if (!handle) {
-      pendingFocusRef.current = focusRequestKey;
-      return;
-    }
-
-    const frame = requestAnimationFrame(() => {
-      try {
-        handle.focus();
-      } catch (error: unknown) {
-        console.error("[VditorFileEditor] focus failed:", getErrorMessage(error));
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [focusRequestKey]);
+  useVditorFocusRequest({ focusRequestKey, handleRef, pendingFocusRef, lastFocusKeyRef });
 
   // ── Imperative handle for parent ──
 
@@ -402,60 +277,11 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
     },
   }));
 
-  // ── Select-all (Cmd/Ctrl+A) ──
-  // Chromium's native select-all in Vditor's IR contenteditable only selects
-  // the current block (~15 chars); the selection gets clamped at rendered code
-  // blocks (e.g. mermaid SVG previews). Intercept at the WINDOW CAPTURE phase
-  // (the earliest renderer hook — runs before Vditor's own handlers, React's
-  // delegation, and any ancestor bubble-phase stoppers; it also catches the
-  // synthetic keydown Electron's `webContents.selectAll()` menu-role path
-  // delivers) and select the whole IR content explicitly. The full range
-  // highlights everything and Vditor's own copy handler converts the selection
-  // back to markdown correctly.
-
-  useEffect(() => {
-    const handleSelectAll = (event: KeyboardEvent) => {
-      if (isDeletedRef.current) return;
-      if (!(event.metaKey || event.ctrlKey)) return;
-      if (event.key.toLowerCase() !== "a") return;
-
-      const root = rootRef.current;
-      if (!root) return;
-      // Only act when the key originates inside this editor — don't hijack
-      // Cmd+A while the file tree or other surfaces have focus.
-      if (!(event.target instanceof Node) || !root.contains(event.target)) return;
-
-      event.preventDefault();
-      const pre = root.querySelector(".vditor-ir pre.vditor-reset");
-      if (!pre) return;
-
-      const range = document.createRange();
-      range.selectNodeContents(pre);
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    };
-
-    window.addEventListener("keydown", handleSelectAll, true);
-    return () => {
-      window.removeEventListener("keydown", handleSelectAll, true);
-    };
-  }, []);
-
-  // ── Mermaid zoom button ──
-  // Vditor renders mermaid code blocks into preview panels inside its own DOM;
-  // watch for those panels and attach a hover-revealed expand button that opens
-  // the shared pan/zoom overlay with the rendered SVG (same affordance as the
-  // markdown preview pane).
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    return attachMermaidZoomButtons(root, (svgContent) => setZoomDiagramSvg(svgContent), {
-      expandLabel: t("settings.appearance.markdown.expandDiagram"),
-    });
-  }, [t]);
+  useVditorWindowInteractions({
+    rootRef,
+    isDeletedRef,
+    onZoomDiagramSvg: setZoomDiagramSvg,
+  });
 
   // ── Render ──
 
