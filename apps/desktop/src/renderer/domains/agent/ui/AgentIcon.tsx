@@ -38,7 +38,7 @@ export function AgentIcon({ agentKind, context, label, decorative = false }: Age
     >
       <Icon
         size={icon.slotSize}
-        color={isDarkMode ? "#FFFFFF" : "currentColor"}
+        color={isDarkMode ? theme.palette.common.white : "currentColor"}
         role={decorative ? undefined : "img"}
         aria-hidden={decorative ? true : undefined}
         aria-label={decorative ? undefined : (label ?? "")}

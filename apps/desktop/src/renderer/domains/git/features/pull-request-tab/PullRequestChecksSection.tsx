@@ -8,18 +8,41 @@ interface PullRequestChecksSectionProps {
   checks: GitPullRequestCheck[];
 }
 
-function CheckStateIcon({ state }: { state: string }) {
+const checkStateIcons = {
+  success: LuCheck,
+  failure: LuX,
+  pending: LuCircleDashed,
+};
+
+type CheckStatePresentation = {
+  icon: keyof typeof checkStateIcons;
+  color: "success.main" | "error.main" | "text.secondary";
+};
+
+/** Maps a pull-request check state to its icon and semantic color token. */
+export function getCheckStatePresentation(state: string): CheckStatePresentation {
   const normalizedState = state.toUpperCase();
 
   if (normalizedState === "SUCCESS") {
-    return <LuCheck size={14} color="#16a34a" />;
+    return { icon: "success", color: "success.main" };
   }
 
   if (["FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"].includes(normalizedState)) {
-    return <LuX size={14} color="#dc2626" />;
+    return { icon: "failure", color: "error.main" };
   }
 
-  return <LuCircleDashed size={14} color="#71717a" />;
+  return { icon: "pending", color: "text.secondary" };
+}
+
+function CheckStateIcon({ state }: { state: string }) {
+  const presentation = getCheckStatePresentation(state);
+  const Icon = checkStateIcons[presentation.icon];
+
+  return (
+    <Box sx={{ color: presentation.color }}>
+      <Icon size={14} />
+    </Box>
+  );
 }
 
 /** Renders live pull request checks. */

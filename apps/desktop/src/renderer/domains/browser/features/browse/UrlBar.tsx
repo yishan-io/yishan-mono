@@ -107,9 +107,13 @@ export function UrlBar({
             startAdornment: (
               <InputAdornment position="start" sx={{ mr: 0.5, ml: -0.25 }}>
                 {isHttps ? (
-                  <LuLock size={12} color="#4caf50" />
+                  <Box component="span" sx={{ display: "inline-flex", color: "success.main" }}>
+                    <LuLock size={12} />
+                  </Box>
                 ) : isHttp ? (
-                  <LuLockOpen size={12} color="#ff9800" />
+                  <Box component="span" sx={{ display: "inline-flex", color: "warning.main" }}>
+                    <LuLockOpen size={12} />
+                  </Box>
                 ) : null}
               </InputAdornment>
             ),
