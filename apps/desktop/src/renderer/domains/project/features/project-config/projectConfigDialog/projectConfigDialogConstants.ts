@@ -5,16 +5,20 @@ export type ProjectConfigSectionId = "general" | "scripts" | "commands";
 
 export const PROJECT_CONFIG_ICON_BG_COLOR_PRESETS = PROJECT_COLOR_PRESETS;
 
-export function getProjectConfigSectionItems(t: TFunction) {
+export function getProjectConfigSectionItems(t: TFunction, canConfigureScripts = true) {
   return [
     {
       id: "general" as const,
       label: t("project.config.sections.general", { defaultValue: "General" }),
     },
-    {
-      id: "scripts" as const,
-      label: t("project.config.sections.scripts", { defaultValue: "Scripts" }),
-    },
+    ...(canConfigureScripts
+      ? [
+          {
+            id: "scripts" as const,
+            label: t("project.config.sections.scripts", { defaultValue: "Scripts" }),
+          },
+        ]
+      : []),
     {
       id: "commands" as const,
       label: t("project.config.sections.quickCommands", { defaultValue: "Quick commands" }),

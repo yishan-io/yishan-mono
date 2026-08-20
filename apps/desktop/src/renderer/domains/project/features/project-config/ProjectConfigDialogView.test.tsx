@@ -43,12 +43,12 @@ vi.mock("@renderer/domains/files", async (importOriginal) => {
 
 const initialWorkspaceStoreState = workspaceStore.getState();
 
-function renderProjectConfigDialog() {
+function renderProjectConfigDialog(repoId = "repo-1") {
   const queryClient = new QueryClient();
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <ProjectConfigDialogView open repoId="repo-1" onClose={() => {}} />
+      <ProjectConfigDialogView open repoId={repoId} onClose={() => {}} />
     </QueryClientProvider>,
   );
 }
@@ -85,6 +85,7 @@ describe("ProjectConfigDialogView", () => {
     expect(screen.getByText("core-repo")).toBeTruthy();
     expect(screen.queryByDisplayValue("git@github.com:acme/core-repo.git")).toBeNull();
     expect(screen.queryByDisplayValue("core-repo")).toBeNull();
+    expect(screen.getByRole("button", { name: "Scripts" })).toBeTruthy();
   });
 
   it("labels the context toggle generically", () => {
@@ -111,6 +112,38 @@ describe("ProjectConfigDialogView", () => {
     expect(screen.getByText("Context")).toBeTruthy();
     expect(screen.getByLabelText("What is context?")).toBeTruthy();
     expect(screen.queryByText("Private context hook")).toBeNull();
+  });
+
+  it("hides scripts for a folder workspace", () => {
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "folder-1",
+          projectId: "local-folder",
+          repoId: "folder-1",
+          name: "My Folder",
+          title: "My Folder",
+          sourceBranch: "",
+          branch: "",
+          summaryId: "folder-1",
+          kind: "folder",
+        },
+      ],
+    });
+    projectStore.setState({
+      projects: [
+        {
+          id: "folder-1",
+          name: "My Folder",
+          path: "/Users/test/my-folder",
+          missing: false,
+        },
+      ],
+    });
+
+    renderProjectConfigDialog("folder-1");
+
+    expect(screen.queryByRole("button", { name: "Scripts" })).toBeNull();
   });
 
   it("keeps focus while editing a quick command name", () => {

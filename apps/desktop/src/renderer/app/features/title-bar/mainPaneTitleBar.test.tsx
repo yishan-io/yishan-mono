@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceProjectRecord } from "../../../domains/project/projectTypes";
 import type { WorkspaceItem } from "../../../domains/workspace/workspaceTypes";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
@@ -174,6 +174,10 @@ vi.mock("@renderer/domains/project", async (importOriginal) => {
       return <LuFolder size={size} data-testid={iconId ? `project-icon-${iconId}` : "project-icon-default"} />;
     },
   };
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 beforeEach(() => {
