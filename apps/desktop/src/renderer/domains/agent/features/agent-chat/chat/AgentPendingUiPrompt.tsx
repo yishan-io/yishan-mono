@@ -10,22 +10,17 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentPendingUiRequest } from "../../../chat/agentChatTypes";
+import { PendingCustomResponseInput } from "./PendingCustomResponseInput";
+import { type SelectOption, usePendingUiDraft } from "./usePendingUiDraft";
 
 type AgentPendingUiPromptProps = {
   request: AgentPendingUiRequest;
   onCancel: () => Promise<void> | void;
   onConfirm: (input: { value?: string; confirmed?: boolean }) => Promise<void> | void;
   onSelectCustomResponse: (value: string) => Promise<void> | void;
-};
-
-type SelectOption = {
-  index?: number;
-  value: string;
-  label: string;
-  description?: string;
 };
 
 /** Renders one pending extension UI request inline in the agent chat tab. */
@@ -36,51 +31,20 @@ export function AgentPendingUiPrompt({
   onSelectCustomResponse,
 }: AgentPendingUiPromptProps) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState(request.prefill ?? "");
-  const [isSelectingCustomResponse, setIsSelectingCustomResponse] = useState(false);
-  const [draftBeforeCustomResponse, setDraftBeforeCustomResponse] = useState<string | null>(null);
-  const [selectedMultiSelectIndices, setSelectedMultiSelectIndices] = useState<number[]>([]);
-
-  useEffect(() => {
-    setDraft(request.prefill ?? "");
-    setIsSelectingCustomResponse(false);
-    setDraftBeforeCustomResponse(null);
-  }, [request.id, request.prefill]);
-
-  const selectOptions = useMemo<SelectOption[] | undefined>(() => {
-    return request.options?.map((option) => ({
-      index: option.index,
-      value: option.value,
-      label: option.label,
-      description: option.description,
-    }));
-  }, [request.options]);
-
-  const parsedMultiSelectPrompt = useMemo(() => {
-    if (request.method !== "input" || request.selectionMode !== "multiple" || !selectOptions) {
-      return null;
-    }
-
-    return {
-      question: request.title,
-      options: selectOptions.filter(
-        (option): option is SelectOption & { index: number } => typeof option.index === "number",
-      ),
-      allowFreeform: request.allowFreeform === true,
-    };
-  }, [request.allowFreeform, request.method, request.selectionMode, request.title, selectOptions]);
-
-  useEffect(() => {
-    if (!parsedMultiSelectPrompt) {
-      setSelectedMultiSelectIndices([]);
-      return;
-    }
-
-    const nextSelectedIndices = parseSelectedMultiSelectIndices(draft, parsedMultiSelectPrompt.options);
-    setSelectedMultiSelectIndices(nextSelectedIndices);
-  }, [draft, parsedMultiSelectPrompt]);
-
-  const renderedSelectOptions = selectOptions;
+  const {
+    draft,
+    setDraft,
+    isSelectingCustomResponse,
+    selectedMultiSelectIndices,
+    parsedMultiSelectPrompt,
+    renderedSelectOptions,
+    handleSubmit,
+    handleSelectOption,
+    handleBeginCustomResponse,
+    handleBackToOptions,
+    handleToggleMultiSelectIndex,
+    handleConfirmMultiSelect,
+  } = usePendingUiDraft({ request, onCancel, onConfirm, onSelectCustomResponse });
 
   const displayTitle = useMemo(() => {
     if (parsedMultiSelectPrompt) {
@@ -89,48 +53,6 @@ export function AgentPendingUiPrompt({
 
     return request.title;
   }, [parsedMultiSelectPrompt, request.title]);
-
-  const handleSubmit = useCallback(async () => {
-    if (request.method === "select" && isSelectingCustomResponse) {
-      await onSelectCustomResponse(draft);
-      return;
-    }
-
-    await onConfirm({ value: draft });
-  }, [draft, isSelectingCustomResponse, onConfirm, onSelectCustomResponse, request.method]);
-
-  const handleSelectOption = useCallback(
-    async (optionValue: string) => {
-      await onConfirm({ value: optionValue });
-    },
-    [onConfirm],
-  );
-
-  const handleBeginCustomResponse = useCallback(() => {
-    setDraftBeforeCustomResponse(draft);
-    setDraft(request.prefill ?? "");
-    setIsSelectingCustomResponse(true);
-  }, [draft, request.prefill]);
-
-  const handleBackToOptions = useCallback(() => {
-    setIsSelectingCustomResponse(false);
-    setDraft(draftBeforeCustomResponse ?? request.prefill ?? "");
-    setDraftBeforeCustomResponse(null);
-  }, [draftBeforeCustomResponse, request.prefill]);
-
-  const handleToggleMultiSelectIndex = useCallback((index: number) => {
-    setSelectedMultiSelectIndices((currentIndices) => {
-      const nextIndices = currentIndices.includes(index)
-        ? currentIndices.filter((currentIndex) => currentIndex !== index)
-        : [...currentIndices, index].sort((left, right) => left - right);
-      setDraft(nextIndices.join(", "));
-      return nextIndices;
-    });
-  }, []);
-
-  const handleConfirmMultiSelect = useCallback(async () => {
-    await onConfirm({ value: selectedMultiSelectIndices.join(", ") });
-  }, [onConfirm, selectedMultiSelectIndices]);
 
   return (
     <Box
@@ -193,27 +115,14 @@ export function AgentPendingUiPrompt({
 
           {request.method === "select" ? (
             isSelectingCustomResponse ? (
-              <Stack spacing={1}>
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={3}
-                  placeholder={request.placeholder}
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                />
-                <Stack direction="row" spacing={1}>
-                  <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
-                    {t("common.actions.submit")}
-                  </Button>
-                  <Button size="small" variant="text" color="inherit" onClick={handleBackToOptions}>
-                    {t("common.actions.back")}
-                  </Button>
-                  <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
-                    {t("common.actions.cancel")}
-                  </Button>
-                </Stack>
-              </Stack>
+              <PendingCustomResponseInput
+                placeholder={request.placeholder}
+                draft={draft}
+                onDraftChange={setDraft}
+                onSubmit={handleSubmit}
+                onBack={handleBackToOptions}
+                onCancel={() => void onCancel()}
+              />
             ) : (
               <Stack spacing={1}>
                 <List
@@ -276,27 +185,14 @@ export function AgentPendingUiPrompt({
 
           {parsedMultiSelectPrompt ? (
             isSelectingCustomResponse ? (
-              <Stack spacing={1}>
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={3}
-                  placeholder={request.placeholder}
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                />
-                <Stack direction="row" spacing={1}>
-                  <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
-                    {t("common.actions.submit")}
-                  </Button>
-                  <Button size="small" variant="text" color="inherit" onClick={handleBackToOptions}>
-                    {t("common.actions.back")}
-                  </Button>
-                  <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
-                    {t("common.actions.cancel")}
-                  </Button>
-                </Stack>
-              </Stack>
+              <PendingCustomResponseInput
+                placeholder={request.placeholder}
+                draft={draft}
+                onDraftChange={setDraft}
+                onSubmit={handleSubmit}
+                onBack={handleBackToOptions}
+                onCancel={() => void onCancel()}
+              />
             ) : (
               <Stack spacing={1}>
                 <List
@@ -382,33 +278,4 @@ export function AgentPendingUiPrompt({
       </Stack>
     </Box>
   );
-}
-
-function parseSelectedMultiSelectIndices(
-  draft: string,
-  options: Array<{
-    index: number;
-    label: string;
-  }>,
-): number[] {
-  const optionIndexByLabel = new Map(options.map((option) => [option.label, option.index]));
-
-  return draft
-    .split(",")
-    .map((token) => token.trim())
-    .flatMap((token) => {
-      if (token.length === 0) {
-        return [];
-      }
-
-      const numericIndex = Number.parseInt(token, 10);
-      if (Number.isInteger(numericIndex) && String(numericIndex) === token) {
-        return options.some((option) => option.index === numericIndex) ? [numericIndex] : [];
-      }
-
-      const matchedIndex = optionIndexByLabel.get(token);
-      return typeof matchedIndex === "number" ? [matchedIndex] : [];
-    })
-    .filter((index, position, allIndices) => allIndices.indexOf(index) === position)
-    .sort((left, right) => left - right);
 }
