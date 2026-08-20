@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { I18N_LANGUAGE_STORAGE_KEY, i18n, resources, setAppLanguage } from "./i18n";
+import { I18N_LANGUAGE_STORAGE_KEY, i18n, initI18n, resources, setAppLanguage } from "./i18n";
 
 const localeModulePaths = import.meta.glob("./locales/*/*.json");
 const LANGUAGE_CODES = Object.keys(resources) as Array<keyof typeof resources>;
@@ -19,6 +19,7 @@ function resolveNamespacesForLanguage(languageCode: keyof typeof resources): str
 describe("i18n", () => {
   beforeEach(async () => {
     window.localStorage.removeItem(I18N_LANGUAGE_STORAGE_KEY);
+    await initI18n();
     await i18n.changeLanguage("en");
   });
 

@@ -16,10 +16,11 @@ import { lazy } from "react";
  *   workbench eagerly imports the files index (tabCommands), and files views
  *   value-import the settings index — eager loading it closes
  *   settings→workbench→files→settings.
- * - LanguageSettingsView imports `../../../../i18n`, whose module scope runs
- *   `i18n.init()`; loading it from the settings index initializes the global
- *   i18next instance in every test that imports settings, flipping
- *   useTranslation from key-returning to real translations.
+ *
+ * LanguageSettingsView used to force laziness too: it imports `../../../../i18n`,
+ * whose module scope ran `i18n.init()` — that side effect moved to
+ * RendererApplication's explicit initI18n(), so the view is now safe to import
+ * eagerly.
  */
 
 export { AccountSettingsView } from "../account/AccountSettingsView";
@@ -35,9 +36,7 @@ export const DaemonSettingsView = lazy(() =>
 );
 export { EditorSettingsView } from "../editor/EditorSettingsView";
 export { KeybindingsSettingsView } from "../keybindings/KeybindingsSettingsView";
-export const LanguageSettingsView = lazy(() =>
-  import("../language/LanguageSettingsView").then((m) => ({ default: m.LanguageSettingsView })),
-);
+export { LanguageSettingsView } from "../language/LanguageSettingsView";
 export { LinkSettingsView } from "../link/LinkSettingsView";
 export { MarkdownSettingsView } from "../markdown/MarkdownSettingsView";
 export const NodesSettingsView = lazy(() =>

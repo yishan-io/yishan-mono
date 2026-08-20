@@ -5,7 +5,7 @@ import { createElement, forwardRef, useEffect, useImperativeHandle, useRef } fro
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { displaySettingsStore } from "../../../../domains/settings/state/displaySettingsStore";
 import { editorSettingsStore } from "../../../../domains/settings/state/editorSettingsStore";
-import { i18n } from "../../../../i18n";
+import { i18n, initI18n } from "../../../../i18n";
 import { renderWithAppTheme } from "../../../../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
 
@@ -209,6 +209,7 @@ afterEach(() => {
 describe("FileEditor WYSIWYG (markdown always uses the Vditor editor)", () => {
   beforeEach(async () => {
     // Ensure translated labels resolve (e.g. the view-only toggle).
+    await initI18n();
     await i18n.changeLanguage("en");
   });
 
