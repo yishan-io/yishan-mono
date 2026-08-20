@@ -78,6 +78,8 @@ const (
 	MethodSkillUpdate    = "skill.update"
 	MethodSkillUpdateAll = "skill.updateAll"
 
+	MethodCustomizeToolsList = "customize.tools.list"
+
 	MethodCustomizeExtensionsList    = "customize.extensions.list"
 	MethodCustomizeExtensionsInstall = "customize.extensions.install"
 	MethodCustomizeExtensionsRemove  = "customize.extensions.remove"

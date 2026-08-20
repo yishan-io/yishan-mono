@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -63,16 +64,51 @@ func newPiCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
 
 // resolveManagedBinary resolves one executable (pi, npx, ...) against the
 // env's PATH, with a Windows PATHEXT fallback: ResolveExecutablePathFromEnv
-// stats only the literal name and misses shim variants (pi.exe, npx.cmd),
-// while exec.LookPath probes PATHEXT against the process PATH.
+// stats only the literal name and misses shim variants (pi.exe, npx.cmd), so
+// the fallback probes the supplied managed environment rather than daemon PATH.
 func resolveManagedBinary(binary string, env []string) string {
 	path := shellenv.ResolveExecutablePathFromEnv(binary, env)
-	if path == "" && runtime.GOOS == "windows" {
-		if resolved, err := exec.LookPath(binary); err == nil {
-			path = resolved
+	if path != "" || runtime.GOOS != "windows" {
+		return path
+	}
+	return resolveManagedWindowsBinary(binary, env)
+}
+
+func resolveManagedWindowsBinary(binary string, env []string) string {
+	pathValue := shellenv.EnvValueOrDefault(env, "PATH", "")
+	pathExtensions := shellenv.EnvValueOrDefault(env, "PATHEXT", ".COM;.EXE;.BAT;.CMD")
+	return resolveManagedWindowsBinaryInPath(binary, pathValue, pathExtensions, string(os.PathListSeparator), isManagedBinaryFile)
+}
+
+func isManagedBinaryFile(candidate string) bool {
+	info, err := os.Stat(candidate)
+	return err == nil && !info.IsDir()
+}
+
+func resolveManagedWindowsBinaryInPath(binary, pathValue, pathExtensions, pathSeparator string, isFile func(string) bool) string {
+	for _, candidate := range managedWindowsBinaryCandidates(binary, pathValue, pathExtensions, pathSeparator) {
+		if isFile(candidate) {
+			return candidate
 		}
 	}
-	return path
+	return ""
+}
+
+func managedWindowsBinaryCandidates(binary, pathValue, pathExtensions, pathSeparator string) []string {
+	candidates := make([]string, 0)
+	for directory := range strings.SplitSeq(pathValue, pathSeparator) {
+		directory = strings.TrimSpace(directory)
+		if directory == "" {
+			continue
+		}
+		for extension := range strings.SplitSeq(pathExtensions, ";") {
+			extension = strings.TrimSpace(extension)
+			if extension != "" {
+				candidates = append(candidates, filepath.Join(directory, binary+extension))
+			}
+		}
+	}
+	return candidates
 }
 
 func managedPiEnv() ([]string, error) {

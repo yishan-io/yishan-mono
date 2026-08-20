@@ -103,20 +103,32 @@ func ListPiExtensions() ([]PiExtensionInfo, error) {
 // InstallPiExtension installs a pi package source spec (npm:, git:, https:,
 // or a local path) via `pi install`.
 func InstallPiExtension(ctx context.Context, source string) error {
-	return runPiCommand(ctx, "install", source)
+	if err := runPiCommand(ctx, "install", source); err != nil {
+		return err
+	}
+	InvalidatePiToolCatalog()
+	return nil
 }
 
 // RemovePiExtension uninstalls a package by its full source spec (e.g.
 // "npm:pi-web-fetch") via `pi uninstall`. pi matches removals by source
 // identity, so a bare package name is not a valid target.
 func RemovePiExtension(ctx context.Context, source string) error {
-	return runPiCommand(ctx, "uninstall", source)
+	if err := runPiCommand(ctx, "uninstall", source); err != nil {
+		return err
+	}
+	InvalidatePiToolCatalog()
+	return nil
 }
 
 // UpdatePiExtension re-runs `pi install` on the same source spec so pi
 // re-fetches the package at its latest version.
 func UpdatePiExtension(ctx context.Context, source string) error {
-	return runPiCommand(ctx, "install", source)
+	if err := runPiCommand(ctx, "install", source); err != nil {
+		return err
+	}
+	InvalidatePiToolCatalog()
+	return nil
 }
 
 // EnsureDefaultPiExtensions installs every official extension. Setup runs

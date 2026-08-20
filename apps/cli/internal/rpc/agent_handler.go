@@ -38,9 +38,10 @@ type SkillService interface {
 	UpdateAll(ctx context.Context) (any, error)
 }
 
-// CustomizeService backs the customize.* RPC methods (extensions and agents
-// panels).
+// CustomizeService backs the customize.* RPC methods (tools, extensions, and
+// agents panels).
 type CustomizeService interface {
+	ToolsList(ctx context.Context) (any, error)
 	ExtensionsList(ctx context.Context) (any, error)
 	ExtensionsInstall(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
 	ExtensionsRemove(ctx context.Context, req CustomizeExtensionSourceParams) (any, error)
@@ -188,6 +189,8 @@ func (h *AgentHandler) callCustomize(ctx context.Context, method string, params 
 		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
 	switch sub {
+	case "tools":
+		return h.callCustomizeTools(ctx, method)
 	case "extensions":
 		return h.callCustomizeExtensions(ctx, method, params)
 	case "agents":
@@ -195,6 +198,13 @@ func (h *AgentHandler) callCustomize(ctx context.Context, method string, params 
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 	}
+}
+
+func (h *AgentHandler) callCustomizeTools(ctx context.Context, method string) (any, error) {
+	if method == MethodCustomizeToolsList {
+		return h.Customize.ToolsList(ctx)
+	}
+	return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
 }
 
 func (h *AgentHandler) callCustomizeExtensions(ctx context.Context, method string, params json.RawMessage) (any, error) {

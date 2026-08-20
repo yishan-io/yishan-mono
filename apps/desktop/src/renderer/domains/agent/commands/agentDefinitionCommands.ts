@@ -3,6 +3,7 @@ import {
   getAgentDefinitionDetail as getAgentDefinitionDetailProcedure,
   installPiExtension as installPiExtensionProcedure,
   listAgentDefinitions as listAgentDefinitionsProcedure,
+  listAvailableAgentTools as listAvailableAgentToolsProcedure,
   listPiExtensions as listPiExtensionsProcedure,
   removeAgentDefinition as removeAgentDefinitionProcedure,
   removePiExtension as removePiExtensionProcedure,
@@ -34,6 +35,30 @@ function parseAgentDefinition(entry: Record<string, unknown>): AgentDefinitionIn
     tools: Array.isArray(entry.tools) ? entry.tools.map(String) : [],
     official: Boolean(entry.official),
   };
+}
+
+/** Lists valid tool names from the daemon's current extension catalog. */
+export async function listAvailableAgentTools(): Promise<string[]> {
+  const payload: unknown = await listAvailableAgentToolsProcedure();
+  if (!isToolCatalogPayload(payload)) {
+    return [];
+  }
+
+  const toolNames = new Set<string>();
+  for (const entry of payload.tools) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+    const toolName = entry.trim();
+    if (toolName) {
+      toolNames.add(toolName);
+    }
+  }
+  return Array.from(toolNames);
+}
+
+function isToolCatalogPayload(payload: unknown): payload is { tools: unknown[] } {
+  return typeof payload === "object" && payload !== null && "tools" in payload && Array.isArray(payload.tools);
 }
 
 /** Lists installed pi extensions with official-vs-user classification. */
