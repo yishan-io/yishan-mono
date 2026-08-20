@@ -77,7 +77,7 @@ function copyVditorCdnAssets(): Plugin {
   };
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   plugins: [react(), copyVditorCdnAssets()],
   root: path.resolve(appRoot, "src/renderer"),
   base: "./",
@@ -91,10 +91,12 @@ export default defineConfig(({ command }) => ({
       { find: /^@shared(\/.*)?$/, replacement: `${path.resolve(appRoot, "src/shared")}$1` },
       { find: /^@pi-lsp(\/.*)?$/, replacement: `${path.resolve(appRoot, "../../packages/pi-lsp/src")}$1` },
       // monaco-editor's main entry is ESM-only with worker entry points and
-      // cannot be loaded in vitest; stub only the bare package. Its
-      // `esm/...` subpaths (language definitions, editor.api) load fine and
-      // stay real for tests that exercise them.
-      ...(command !== "build"
+      // cannot be loaded in vitest; stub only the bare package (vitest sets
+      // process.env.VITEST). Its `esm/...` subpaths (language definitions,
+      // editor.api) load fine and stay real for tests that exercise them.
+      // Dev/build must resolve the real package — a dev-serve stub broke the
+      // Monaco editor (and surfaced as `monaco.Uri is undefined`).
+      ...(process.env.VITEST
         ? [
             {
               find: /^monaco-editor$/,
