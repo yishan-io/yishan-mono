@@ -1,6 +1,13 @@
 "use client";
 
 import { useI18n } from "@/i18n";
+import type { IconType } from "@lobehub/icons";
+import Claude from "@lobehub/icons/es/Claude/components/Mono";
+import Codex from "@lobehub/icons/es/Codex/components/Mono";
+import Cursor from "@lobehub/icons/es/Cursor/components/Mono";
+import Gemini from "@lobehub/icons/es/Gemini/components/Mono";
+import OpenCode from "@lobehub/icons/es/OpenCode/components/Mono";
+import Pi from "@lobehub/icons/es/Pi/components/Mono";
 import { CoreFeatureRows } from "./core-feature-rows";
 import { DownloadButton } from "./download-button";
 import { HeroImage } from "./hero-image";
@@ -11,13 +18,13 @@ import { WorkflowDemo } from "./workflow-demo";
 const logoUrl =
   "https://raw.githubusercontent.com/yishan-io/yishan-mono/main/apps/desktop/src/assets/images/yishan-transparent.png";
 
-const agents: { name: string; icon: string; size?: string }[] = [
-  { name: "OpenCode", icon: "/opencode.svg" },
-  { name: "Codex", icon: "/codex.svg", size: "h-7 w-7" },
-  { name: "Claude", icon: "/claude.svg" },
-  { name: "Gemini", icon: "/gemini.svg" },
-  { name: "Cursor", icon: "/cursor.svg" },
-  { name: "Pi", icon: "/pi.svg" },
+const agents: { name: string; Icon: IconType; size?: number }[] = [
+  { name: "OpenCode", Icon: OpenCode },
+  { name: "Codex", Icon: Codex, size: 28 },
+  { name: "Claude", Icon: Claude },
+  { name: "Gemini", Icon: Gemini },
+  { name: "Cursor", Icon: Cursor },
+  { name: "Pi", Icon: Pi },
 ];
 
 function GitHubIcon() {
@@ -89,14 +96,7 @@ export default function LandingPage() {
                   key={agent.name}
                   className="flex items-center gap-1.5 rounded-full border border-[#2A342F] bg-[#151B18] px-3 py-1 text-xs"
                 >
-                  <span
-                    className={`${agent.size ?? "h-3.5 w-3.5"} bg-[#D1B06A]`}
-                    style={{
-                      mask: `url(${agent.icon}) center/contain no-repeat`,
-                      WebkitMask: `url(${agent.icon}) center/contain no-repeat`,
-                    }}
-                    aria-label={agent.name}
-                  />
+                  <agent.Icon size={agent.size ?? 14} color="#D1B06A" aria-label={agent.name} />
                   <span className="text-[#A5B0A8]">{agent.name}</span>
                 </span>
               ))}

@@ -19,26 +19,50 @@ import {
   SiXiaomi,
 } from "react-icons/si";
 
+import {
+  AntGroup,
+  AntGroupColor,
+  Cerebras,
+  CerebrasColor,
+  Codex,
+  CodexColor,
+  Fireworks,
+  FireworksColor,
+  Groq,
+  OpenAI,
+  OpenRouter,
+  OpenRouterColor,
+  Pi,
+  Together,
+  TogetherColor,
+  XAI,
+  ZAI,
+} from "./lobeIcons";
+
 import { KimiIcon } from "./piProviderIcons";
 
 /**
  * Provider visual metadata (desktop8 Phase 29).
  *
  * Presentation counterpart of the authentication catalog in
- * `../piProviders`: brand icons, official colors, and SVG asset hints
- * keyed by provider id. Model stays framework-free; UI consumes this module.
+ * `../piProviders`: brand icons and official colors keyed by provider id.
+ * Model stays framework-free; UI consumes this module.
+ *
+ * Icons: @lobehub/icons Mono components (24×24 viewBox, `currentColor`) for
+ * the providers that previously shipped SVG assets (OpenAI/Groq/Cerebras/
+ * Z.ai etc. and the reused Codex/Pi marks), react-icons/si (Simple Icons)
+ * + react-icons/fa6 for Amazon/Microsoft, with brandColor values from the
+ * Simple Icons v16 dataset. Providers without a brand mark use a neutral
+ * LuCloud fallback.
  */
 
 export type PiProviderVisual = {
+  /** Mono glyph or react-icon mark — dark mode and monochrome brands. */
   icon: IconType;
+  /** Brand-color variant — light mode when the brand ships one. */
+  ColorIcon?: IconType;
   /** Official brand color (hex without `#`) from the Simple Icons dataset. */
   brandColor?: string;
-  /** Path (relative to the renderer public dir) of an official brand SVG asset. */
-  assetIcon?: string;
-  /** True when the SVG asset is monochrome and needs a white filter in dark mode. */
-  monochrome?: boolean;
-  /** Visual scale for assets with padding around the mark (e.g. codex.svg). */
-  iconScale?: number;
 };
 
 export const FALLBACK_PROVIDER_ICON: IconType = LuCloud;
@@ -46,39 +70,34 @@ export const FALLBACK_PROVIDER_ICON: IconType = LuCloud;
 /**
  * Visual metadata by provider id. Keep ids aligned with
  * `PI_PROVIDER_CATALOG` in `../piProviders`.
- *
- * Icons: react-icons/si (Simple Icons brand marks) + react-icons/fa6 for
- * Amazon/Microsoft, with brandColor values from the Simple Icons v16 dataset;
- * official SVG assets (Wikimedia Commons, same practice as the app's own
- * preset-icons) for OpenAI/Groq/Cerebras/Z.ai and the reused Codex mark.
- * Providers without any brand mark use a neutral LuCloud fallback.
  */
 export const PI_PROVIDER_VISUAL_BY_ID: Record<string, PiProviderVisual> = {
   anthropic: { icon: SiAnthropic, brandColor: "191919" },
-  "ant-ling": { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/antling.svg", monochrome: true },
+  // Ant Group's Ant Ling model — same mark as the Ant Group brand logo.
+  "ant-ling": { icon: AntGroup, ColorIcon: AntGroupColor },
   "azure-openai-responses": { icon: FaMicrosoft, brandColor: "0078D4" },
-  openai: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/openai.svg", monochrome: true },
+  openai: { icon: OpenAI },
   deepseek: { icon: SiDeepseek, brandColor: "5786FE" },
   nvidia: { icon: SiNvidia, brandColor: "76B900" },
   google: { icon: SiGooglegemini, brandColor: "8E75B2" },
   "google-vertex": { icon: SiGooglecloud, brandColor: "4285F4" },
   "amazon-bedrock": { icon: FaAmazon, brandColor: "FF9900" },
   mistral: { icon: SiMistralai, brandColor: "FA520F" },
-  groq: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/groq.svg", monochrome: true },
-  cerebras: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/cerebras.svg" },
+  groq: { icon: Groq },
+  cerebras: { icon: Cerebras, ColorIcon: CerebrasColor },
   "cloudflare-ai-gateway": { icon: SiCloudflare, brandColor: "F38020" },
   "cloudflare-workers-ai": { icon: SiCloudflare, brandColor: "F38020" },
-  xai: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/xai.svg", monochrome: true },
-  openrouter: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/openrouter.svg" },
+  xai: { icon: XAI },
+  openrouter: { icon: OpenRouter, ColorIcon: OpenRouterColor },
   "vercel-ai-gateway": { icon: SiVercel, brandColor: "000000" },
-  zai: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/zai.svg" },
-  "zai-coding-cn": { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/zai.svg" },
+  zai: { icon: ZAI },
+  "zai-coding-cn": { icon: ZAI },
   opencode: { icon: SiOpencode, brandColor: "000000" },
   "opencode-go": { icon: SiOpencode, brandColor: "000000" },
-  radius: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/preset-icons/pi.svg", monochrome: true },
+  radius: { icon: Pi },
   huggingface: { icon: SiHuggingface, brandColor: "FFD21E" },
-  fireworks: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/fireworks.svg" },
-  together: { icon: FALLBACK_PROVIDER_ICON, assetIcon: "app-icons/provider-icons/together.svg" },
+  fireworks: { icon: Fireworks, ColorIcon: FireworksColor },
+  together: { icon: Together, ColorIcon: TogetherColor },
   "kimi-coding": { icon: KimiIcon, brandColor: "000000" },
   minimax: { icon: SiMinimax, brandColor: "E73562" },
   "minimax-cn": { icon: SiMinimax, brandColor: "E73562" },
@@ -90,12 +109,7 @@ export const PI_PROVIDER_VISUAL_BY_ID: Record<string, PiProviderVisual> = {
   "xiaomi-token-plan-cn": { icon: SiXiaomi, brandColor: "FF6900" },
   "xiaomi-token-plan-ams": { icon: SiXiaomi, brandColor: "FF6900" },
   "xiaomi-token-plan-sgp": { icon: SiXiaomi, brandColor: "FF6900" },
-  "openai-codex": {
-    icon: FALLBACK_PROVIDER_ICON,
-    assetIcon: "app-icons/preset-icons/codex.svg",
-    monochrome: true,
-    iconScale: 1.5,
-  },
+  "openai-codex": { icon: Codex, ColorIcon: CodexColor },
   "github-copilot": { icon: SiGithubcopilot, brandColor: "000000" },
 };
 
@@ -110,7 +124,7 @@ export function getPiProviderIcon(providerId: string): IconType {
 /**
  * Resolves the icon color for one provider: the official brand hex in light
  * mode, white in dark mode for dark brands (black logos would vanish on dark
- * backgrounds), and undefined (inherit) for fallback icons.
+ * backgrounds), and undefined (inherit) for providers without a brand color.
  */
 export function getPiProviderIconColor(providerId: string, isDarkMode: boolean): string | undefined {
   const brandColor = getPiProviderVisual(providerId)?.brandColor;

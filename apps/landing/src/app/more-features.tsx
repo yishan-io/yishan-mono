@@ -1,5 +1,11 @@
 "use client";
 
+import Claude from "@lobehub/icons/es/Claude/components/Mono";
+import Codex from "@lobehub/icons/es/Codex/components/Mono";
+import Cursor from "@lobehub/icons/es/Cursor/components/Mono";
+import Gemini from "@lobehub/icons/es/Gemini/components/Mono";
+import OpenCode from "@lobehub/icons/es/OpenCode/components/Mono";
+import Pi from "@lobehub/icons/es/Pi/components/Mono";
 import { useEffect, useState } from "react";
 
 // ── Visual: Voice input ────────────────────────────────────────────────────
@@ -426,12 +432,12 @@ function ToolsVisual() {
 // ── Visual: Bring your own agent ───────────────────────────────────────────
 
 const AGENTS_LIST = [
-  { name: "OpenCode", icon: "/opencode.svg" },
-  { name: "Claude", icon: "/claude.svg" },
-  { name: "Codex", icon: "/codex.svg" },
-  { name: "Gemini", icon: "/gemini.svg" },
-  { name: "Cursor", icon: "/cursor.svg" },
-  { name: "Pi", icon: "/pi.svg" },
+  { name: "OpenCode", Icon: OpenCode },
+  { name: "Claude", Icon: Claude },
+  { name: "Codex", Icon: Codex },
+  { name: "Gemini", Icon: Gemini },
+  { name: "Cursor", Icon: Cursor },
+  { name: "Pi", Icon: Pi },
 ];
 
 function AgentCompatVisual() {
@@ -444,14 +450,7 @@ function AgentCompatVisual() {
             key={agent.name}
             className="flex flex-col items-center gap-2 rounded-2xl border border-[#2A342F] bg-[#0F1412] px-3 py-4"
           >
-            <div
-              className="h-6 w-6 bg-[#D1B06A]"
-              style={{
-                mask: `url(${agent.icon}) center/contain no-repeat`,
-                WebkitMask: `url(${agent.icon}) center/contain no-repeat`,
-              }}
-              aria-label={agent.name}
-            />
+            <agent.Icon size={24} color="#D1B06A" aria-label={agent.name} />
             <span className="text-[10px] text-[#A5B0A8]">{agent.name}</span>
           </div>
         ))}

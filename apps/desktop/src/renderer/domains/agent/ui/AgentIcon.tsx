@@ -10,8 +10,10 @@ export type AgentIconProps = {
 };
 
 /**
- * Renders one centralized agent icon variant with shared asset, ratio, and scale rules.
- * Returns null gracefully when agent icon configuration is unavailable.
+ * Renders one centralized agent icon variant with shared component and sizing
+ * rules. Uses the brand-color variant when the brand ships one (both light and
+ * dark mode), otherwise the mono glyph — white in dark mode, inherited text
+ * color in light mode. Returns null gracefully when icon config is missing.
  */
 export function AgentIcon({ agentKind, context, label, decorative = false }: AgentIconProps) {
   const theme = useTheme();
@@ -21,6 +23,8 @@ export function AgentIcon({ agentKind, context, label, decorative = false }: Age
     return null;
   }
 
+  const isDarkMode = theme.palette.mode === "dark";
+  const Icon = icon.ColorIcon ?? icon.Icon;
   return (
     <Box
       sx={{
@@ -32,22 +36,12 @@ export function AgentIcon({ agentKind, context, label, decorative = false }: Age
         flexShrink: 0,
       }}
     >
-      <Box
-        component="img"
-        src={icon.src}
-        alt={decorative ? "" : (label ?? "")}
+      <Icon
+        size={icon.slotSize}
+        color={isDarkMode ? "#FFFFFF" : "currentColor"}
+        role={decorative ? undefined : "img"}
         aria-hidden={decorative ? true : undefined}
-        sx={{
-          width: icon.width,
-          height: icon.height,
-          maxWidth: "100%",
-          maxHeight: "100%",
-          display: "block",
-          objectFit: "contain",
-          filter: icon.filterByTheme[theme.palette.mode] ?? "none",
-          transform: `scale(${icon.scale})`,
-          transformOrigin: "center",
-        }}
+        aria-label={decorative ? undefined : (label ?? "")}
       />
     </Box>
   );

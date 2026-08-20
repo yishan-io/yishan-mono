@@ -159,7 +159,9 @@ describe("AgentDefinitionDialogsEdit", () => {
     // shows "anthropic/claude-sonnet-4-5" rather than the full
     // "openrouter/anthropic/claude-sonnet-4-5".
     await screen.findByText("anthropic/claude-sonnet-4-5");
-    expect(screen.getByText("OpenRouter")).toBeTruthy();
+    // The lobe ProviderMark adds an svg <title> with the same text, so the
+    // provider name may match more than once.
+    expect(screen.getAllByText("OpenRouter").length).toBeGreaterThan(0);
   });
 
   it("keeps an unmatched frontmatter model visible as the selected option", async () => {
