@@ -74,7 +74,7 @@ type Instances interface {
 	// WatchAndTrack registers the filesystem watcher and PR tracker for an
 	// open workspace; Unwatch and StopTracking remove them independently
 	// (the create-rollback cleanup mirrors createflow's split hooks).
-	WatchAndTrack(workspaceID string, path string)
+	WatchAndTrack(workspace workspace.Workspace)
 	Unwatch(path string)
 	StopTracking(workspaceID string)
 }

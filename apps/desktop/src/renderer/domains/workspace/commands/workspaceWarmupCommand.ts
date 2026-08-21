@@ -7,6 +7,7 @@ type WorkspaceOpenProjectEntry = {
   worktreePath: string;
   projectId: string;
   orgId: string;
+  kind?: "folder";
 };
 
 type WorkspaceOpenCandidate = {
@@ -15,6 +16,7 @@ type WorkspaceOpenCandidate = {
   repoId?: string;
   worktreePath?: string;
   state?: "active" | "error" | "closing";
+  kind?: "managed" | "local" | "folder";
 };
 
 export function buildWorkspaceOpenProjectEntries(
@@ -32,7 +34,15 @@ export function buildWorkspaceOpenProjectEntries(
     if (workspace.state === "error") {
       return [];
     }
-    return [{ workspaceId: workspace.id, worktreePath, projectId, orgId: organizationId }];
+    return [
+      {
+        workspaceId: workspace.id,
+        worktreePath,
+        projectId,
+        orgId: organizationId,
+        ...(workspace.kind === "folder" ? { kind: "folder" as const } : {}),
+      },
+    ];
   });
 }
 

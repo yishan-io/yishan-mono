@@ -14,22 +14,20 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
-import { createProject, inspectLocalProjectSource } from "../../commands/projectCommands";
-import { deriveDefaultProjectName } from "./createProjectNameDerivation";
+import { createProject } from "../../commands/projectCommands";
 import { openLocalFolderDialog } from "../../host/folderPicker";
+import { deriveDefaultProjectName } from "./createProjectNameDerivation";
 
 type RepoDraft = {
   name: string;
   source: "local" | "remote";
   path: string;
   gitUrl: string;
-  sourceTypeHint?: "unknown" | "git-local" | "git";
   nameEdited: boolean;
 };
 
 type CreateProjectInput = {
   name: string;
-  sourceTypeHint?: "unknown" | "git-local" | "git";
   path?: string;
   gitUrl?: string;
 };
@@ -80,16 +78,13 @@ export function CreateProjectFormView({
   const handlePickRepoFolder = async () => {
     const selectedPath = await openLocalFolderDialog(repoDraft.path.trim() || undefined);
     if (selectedPath) {
-      const sourceInspection = await inspectLocalProjectSource(selectedPath);
       setPathError(null);
       setRepoDraft((previous) => {
         const nextName = previous.nameEdited ? previous.name : deriveDefaultProjectName(selectedPath);
         return {
           ...previous,
           path: selectedPath,
-          gitUrl: sourceInspection.remoteUrl ?? "",
           name: nextName,
-          sourceTypeHint: sourceInspection.sourceTypeHint,
         };
       });
     }
@@ -110,10 +105,8 @@ export function CreateProjectFormView({
     createProjectMutation.mutate(
       {
         name,
-        sourceTypeHint: repoDraft.source === "remote" ? "git" : repoDraft.sourceTypeHint,
         path: repoDraft.source === "local" ? location : "",
-        gitUrl:
-          repoDraft.source === "remote" ? location : repoDraft.sourceTypeHint === "git" ? repoDraft.gitUrl.trim() : "",
+        gitUrl: repoDraft.source === "remote" ? location : "",
       },
       {
         onError: (error) => {
@@ -155,7 +148,6 @@ export function CreateProjectFormView({
                   ...previous,
                   source: "local",
                   name: nextName,
-                  sourceTypeHint: previous.path ? previous.sourceTypeHint : undefined,
                 };
               });
             }}
@@ -174,7 +166,6 @@ export function CreateProjectFormView({
                   ...previous,
                   source: "remote",
                   name: nextName,
-                  sourceTypeHint: "git",
                 };
               });
             }}
@@ -209,7 +200,6 @@ export function CreateProjectFormView({
                 [repoDraft.source === "local" ? "path" : "gitUrl"]: nextLocation,
                 name: nextName,
                 gitUrl: repoDraft.source === "local" ? "" : nextLocation,
-                sourceTypeHint: repoDraft.source === "remote" ? "git" : undefined,
               };
             });
           }}

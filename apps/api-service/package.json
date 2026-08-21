@@ -3,11 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:bun": "bun --watch src/server.ts",
     "clean:wrangler": "node -e \"require('node:fs').rmSync('.wrangler', { recursive: true, force: true })\"",
     "dev:worker": "bun run clean:wrangler && wrangler dev",
     "db:local": "docker compose up -d postgres",
-    "start": "bun run src/server.ts",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",

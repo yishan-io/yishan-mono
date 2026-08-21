@@ -38,7 +38,7 @@ export {
   syncWorkspaceContextLinks,
 } from "./commands/workspaceCommands";
 export {
-  createLocalFolderImport,
+  applyLocalFolderImport,
   listLocalFolders,
   openFoldersForSnapshot,
   restoreFolderSelectionIfNeeded,
@@ -84,3 +84,5 @@ export {
 export { isFolderWorkspace } from "./local-folder";
 
 export type { BranchDropdownGroups } from "./features/create-workspace/BranchDropdown";
+
+export { getWorkspaceRpc } from "./daemon/daemonWorkspaceClient";

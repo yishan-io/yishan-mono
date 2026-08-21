@@ -69,13 +69,16 @@ describe("DaemonWorkspaceClient", () => {
 
   it("creates a local folder and maps localPath to path", async () => {
     const invoke = vi.fn(async (method: string, params?: unknown) => {
-      if (method === "workspace.createLocalFolder") {
+      if (method === "workspace.importLocalPath") {
         expect(params).toEqual({ path: "/tmp/repo", name: "My Folder" });
         return {
-          id: "folder-1",
-          localPath: "/tmp/repo",
-          state: "ready",
-          health: "healthy",
+          kind: "folder",
+          folder: {
+            id: "folder-1",
+            localPath: "/tmp/repo",
+            state: "ready",
+            health: "healthy",
+          },
         };
       }
 
@@ -83,20 +86,42 @@ describe("DaemonWorkspaceClient", () => {
     });
     const client = new DaemonWorkspaceClient(invoke, new Map());
 
-    const folder = await client.createLocalFolder({ path: "/tmp/repo", name: "My Folder" });
+    const folder = await client.importLocalPath({ path: "/tmp/repo", name: "My Folder" });
 
     expect(folder).toEqual({
-      id: "folder-1",
-      path: "/tmp/repo",
-      state: "ready",
-      health: "healthy",
+      kind: "folder",
+      folder: {
+        id: "folder-1",
+        path: "/tmp/repo",
+        state: "ready",
+        health: "healthy",
+      },
     });
-    expect(folder.name).toBeUndefined();
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledWith("workspace.importLocalPath", {
+      path: "/tmp/repo",
+      name: "My Folder",
+    });
   });
 
-  it("surfaces createLocalFolder invoke errors", async () => {
+  it("returns git metadata without a local folder", async () => {
+    const invoke = vi.fn(async () => ({
+      kind: "git",
+      remoteUrl: "https://github.com/yishan-io/project.git",
+      currentBranch: "main",
+    }));
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(client.importLocalPath({ path: "/tmp/repo" })).resolves.toEqual({
+      kind: "git",
+      remoteUrl: "https://github.com/yishan-io/project.git",
+      currentBranch: "main",
+    });
+  });
+
+  it("surfaces importLocalPath invoke errors", async () => {
     const invoke = vi.fn(async (method: string) => {
-      if (method === "workspace.createLocalFolder") {
+      if (method === "workspace.importLocalPath") {
         throw new Error("daemon refused to create");
       }
 
@@ -104,7 +129,7 @@ describe("DaemonWorkspaceClient", () => {
     });
     const client = new DaemonWorkspaceClient(invoke, new Map());
 
-    await expect(client.createLocalFolder({ path: "/tmp/repo" })).rejects.toThrow("daemon refused to create");
+    await expect(client.importLocalPath({ path: "/tmp/repo" })).rejects.toThrow("daemon refused to create");
   });
 
   it("creates a local folder rejects when path is missing", async () => {
@@ -113,13 +138,13 @@ describe("DaemonWorkspaceClient", () => {
     });
     const client = new DaemonWorkspaceClient(invoke, new Map());
 
-    await expect(client.createLocalFolder({ path: "  " })).rejects.toThrow("path is required");
+    await expect(client.importLocalPath({ path: "  " })).rejects.toThrow("path is required");
     expect(invoke).not.toHaveBeenCalled();
   });
 
   it("creates a local folder rejects for an invalid response record", async () => {
     const invoke = vi.fn(async (method: string) => {
-      if (method === "workspace.createLocalFolder") {
+      if (method === "workspace.importLocalPath") {
         return { localPath: "/tmp/repo" };
       }
 
@@ -127,8 +152,8 @@ describe("DaemonWorkspaceClient", () => {
     });
     const client = new DaemonWorkspaceClient(invoke, new Map());
 
-    await expect(client.createLocalFolder({ path: "/tmp/repo" })).rejects.toThrow(
-      "createLocalFolder returned invalid response",
+    await expect(client.importLocalPath({ path: "/tmp/repo" })).rejects.toThrow(
+      "importLocalPath returned invalid response",
     );
   });
 

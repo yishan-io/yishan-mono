@@ -7,35 +7,39 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
-// WorkspaceCreateLocalFolder registers a local non-git folder as a
-// daemon-owned workspace row. The folder is validated before insertion: it must
-// exist, be a directory, must not already be a git repository (folder
-// workspaces are strictly non-git), and must not already be tracked.
-func (s *Service) CreateLocalFolder(ctx context.Context, req rpc.WorkspaceCreateLocalFolderParams) (any, error) {
+// ImportLocalPath classifies and imports one local directory. Git directories
+// are returned for backend project creation. Non-git directories are persisted
+// as daemon-local folders. Classification happens exactly once per import.
+func (s *Service) ImportLocalPath(ctx context.Context, req rpc.WorkspaceImportLocalPathParams) (any, error) {
 	if s.deps.Database == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
-	rawPath := strings.TrimSpace(req.Path)
-	if rawPath == "" {
-		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "path is required")
-	}
-	resolvedPath, err := s.validateFolderPath(ctx, rawPath)
+	resolvedPath, err := s.validateLocalPath(req.Path)
 	if err != nil {
 		return nil, err
 	}
-	store := sqlite.NewWorkspaceStore(s.deps.Database)
-	created, err := store.CreateFolder(ctx, sqlite.FolderWorkspaceInput{
-		LocalPath: resolvedPath,
-		NodeID:    s.deps.NodeID,
-		Name:      req.Name,
-	})
+	inspect, err := s.inspectLocalPath(ctx, resolvedPath)
 	if err != nil {
-		// A concurrent create may have raced the GetByPath check below; surface
-		// the same "already exists" message the check would have produced.
+		return nil, err
+	}
+	if inspect.IsGitRepository {
+		return rpc.WorkspaceImportLocalPathResult{
+			Kind: "git", RemoteURL: inspect.RemoteURL, CurrentBranch: inspect.CurrentBranch,
+		}, nil
+	}
+	store := sqlite.NewWorkspaceStore(s.deps.Database)
+	if _, err := store.GetByPath(ctx, resolvedPath); err == nil {
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
+	} else if !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
+		return nil, err
+	}
+	created, err := store.CreateFolder(ctx, sqlite.FolderWorkspaceInput{LocalPath: resolvedPath, NodeID: s.deps.NodeID, Name: req.Name})
+	if err != nil {
 		if isFolderPathUniqueViolation(err) {
 			return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
 		}
@@ -45,13 +49,22 @@ func (s *Service) CreateLocalFolder(ctx context.Context, req rpc.WorkspaceCreate
 	if err != nil {
 		return nil, err
 	}
-	return stored, nil
+	return rpc.WorkspaceImportLocalPathResult{Kind: "folder", Folder: &rpc.WorkspaceImportLocalPathFolder{
+		ID: stored.ID, LocalPath: stored.LocalPath, Name: stored.Name, State: stored.State, Health: stored.Health,
+	}}, nil
 }
 
-// validateFolderWorkspacePath normalizes the raw folder path and verifies it is
-// an existing, non-git directory that is not already tracked as a folder
-// workspace. It returns the normalized absolute path.
-func (s *Service) validateFolderPath(ctx context.Context, rawPath string) (string, error) {
+func (s *Service) inspectLocalPath(ctx context.Context, path string) (git.GitInspectResult, error) {
+	if s.deps.InspectLocalPath != nil {
+		return s.deps.InspectLocalPath(ctx, path)
+	}
+	return s.deps.Git.Inspect(ctx, path)
+}
+
+// validateLocalPath normalizes the raw folder path and verifies it is an
+// existing directory. Git classification belongs to ImportLocalPath so a
+// create flow cannot inspect the path more than once.
+func (s *Service) validateLocalPath(rawPath string) (string, error) {
 	resolvedPath := normalizeWorkspaceOpenProjectPath(rawPath)
 	if resolvedPath == "" {
 		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is required")
@@ -62,19 +75,6 @@ func (s *Service) validateFolderPath(ctx context.Context, rawPath string) (strin
 	}
 	if !info.IsDir() {
 		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is not a directory: "+resolvedPath)
-	}
-	inspect, err := s.deps.Git.Inspect(ctx, resolvedPath)
-	if err != nil {
-		return "", err
-	}
-	if inspect.IsGitRepository {
-		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "path is a git repository; folder workspaces must be non-git")
-	}
-	store := sqlite.NewWorkspaceStore(s.deps.Database)
-	if _, err := store.GetByPath(ctx, resolvedPath); err == nil {
-		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
-	} else if !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
-		return "", err
 	}
 	return resolvedPath, nil
 }

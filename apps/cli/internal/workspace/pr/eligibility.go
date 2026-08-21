@@ -11,6 +11,10 @@ import (
 )
 
 func (t *Tracker) shouldTrackWorkspacePullRequest(ws workspace.Workspace) bool {
+	if ws.Kind == workspace.KindFolder {
+		return false
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

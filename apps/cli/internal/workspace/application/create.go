@@ -47,7 +47,7 @@ func (s *Service) executeLocalCreate(ctx context.Context, prepared CreatePlan, r
 			s.rollbackRegistration(ctx, prepared)
 		},
 		FinalizeLocalCreate: func(ctx context.Context, created workspace.Workspace) error {
-			s.deps.Instances.WatchAndTrack(created.ID, created.Path)
+			s.deps.Instances.WatchAndTrack(created)
 			if err := s.deps.Records.FinalizePersisted(ctx, prepared, created); err != nil {
 				s.rollbackCreateFailure(ctx, prepared, created)
 				return err

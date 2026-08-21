@@ -3,14 +3,18 @@ package workspace
 import (
 	"strings"
 
+	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 )
 
 // WatchAndTrack registers the filesystem watcher for a workspace and starts
 // PR tracking for its worktree path.
-func (s *Service) WatchAndTrack(workspaceID string, path string) {
-	s.deps.Watchers.Watch(workspaceID, path)
-	s.deps.PRTracker.EnsureTracked(path, true)
+func (s *Service) WatchAndTrack(ws workspace.Workspace) {
+	if ws.Kind == workspace.KindFolder {
+		return
+	}
+	s.deps.Watchers.Watch(ws.ID, ws.Path)
+	s.deps.PRTracker.EnsureTracked(ws.Path, true)
 }
 
 // WatchActiveWorkspaces registers filesystem watchers for every active
@@ -27,6 +31,6 @@ func (s *Service) WatchActive() {
 		if strings.TrimSpace(ws.Path) == "" {
 			continue
 		}
-		s.WatchAndTrack(ws.ID, ws.Path)
+		s.WatchAndTrack(ws)
 	}
 }

@@ -134,6 +134,7 @@ export type WorkspaceOpenProjectInput = {
     worktreePath: string;
     projectId?: string;
     orgId?: string;
+    kind?: "folder";
   }>;
 };
 

@@ -40,12 +40,14 @@ export async function createProjectHandler(
     localPath: body.localPath,
     contextEnabled: body.contextEnabled,
   });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "project",
-    change: "created",
-    projectId: project.id,
-  });
+  c.executionCtx.waitUntil(
+    c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+      organizationId: params.orgId,
+      resource: "project",
+      change: "created",
+      projectId: project.id,
+    }),
+  );
 
   return c.json({ project }, StatusCodes.CREATED);
 }
@@ -57,12 +59,14 @@ export async function deleteProjectHandler(c: AppContext, params: ProjectWorkspa
     organizationId: params.orgId,
     projectId: params.projectId,
   });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "project",
-    change: "deleted",
-    projectId: params.projectId,
-  });
+  c.executionCtx.waitUntil(
+    c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+      organizationId: params.orgId,
+      resource: "project",
+      change: "deleted",
+      projectId: params.projectId,
+    }),
+  );
 
   return c.json({ ok: true });
 }

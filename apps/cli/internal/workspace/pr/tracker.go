@@ -50,6 +50,7 @@ type TrackerDeps struct {
 	PersistPR            func(context.Context, string, *workspace.WorkspacePullRequest) error
 	ResolvePR            func(context.Context, string, int) error
 	OnPullRequestUpdated func(PullRequestUpdatedEvent)
+	InspectResolver      func(context.Context, string) (git.GitInspectResult, error)
 }
 
 func New(deps TrackerDeps) *Tracker {
@@ -69,8 +70,11 @@ func New(deps TrackerDeps) *Tracker {
 		}
 		return tracker.gits.CurrentBranch(ctx, root)
 	}
-	tracker.inspectResolver = func(ctx context.Context, root string) (git.GitInspectResult, error) {
-		return tracker.gits.Inspect(ctx, root)
+	tracker.inspectResolver = deps.InspectResolver
+	if tracker.inspectResolver == nil {
+		tracker.inspectResolver = func(ctx context.Context, root string) (git.GitInspectResult, error) {
+			return tracker.gits.Inspect(ctx, root)
+		}
 	}
 	tracker.detailResolver = func(ctx context.Context, root string, branch string) (git.GitBranchPullRequestStatus, error) {
 		if _, ok := tracker.instances.GetByPath(root); !ok {
