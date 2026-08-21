@@ -73,7 +73,7 @@ export function createOpenTabAutoRefreshRuntime() {
   let pendingChangedRelativePaths: string[] | undefined;
   let shouldRefreshAllDiffTabs = false;
   let pendingRestrictToTabIds: Set<string> | undefined;
-  const seenTabIds = new Set<string>();
+  const seenTabIdentityById = new Map<string, string>();
 
   async function runRefresh(
     getContext: () => OpenTabAutoRefreshContext,
@@ -360,12 +360,14 @@ export function createOpenTabAutoRefreshRuntime() {
       // loaded. The previous "seed the seen set without refreshing" behavior
       // left tabs that were already open when the workspace mounted stuck on
       // the mock placeholder (real content never loads).
-      const isInitialSeen = seenTabIds.size === 0;
-      const newTabs = isInitialSeen ? tabs : tabs.filter((tab) => !seenTabIds.has(tab.id));
+      const isInitialSeen = seenTabIdentityById.size === 0;
+      const newTabs = isInitialSeen
+        ? tabs
+        : tabs.filter((tab) => seenTabIdentityById.get(tab.id) !== `${tab.kind}:${tab.path}`);
 
-      seenTabIds.clear();
+      seenTabIdentityById.clear();
       for (const tab of tabs) {
-        seenTabIds.add(tab.id);
+        seenTabIdentityById.set(tab.id, `${tab.kind}:${tab.path}`);
       }
 
       if (newTabs.length === 0) {
