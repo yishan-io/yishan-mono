@@ -153,4 +153,23 @@ describe("openTabAutoRefreshRuntime", () => {
     expect(context.commands.readFile).toHaveBeenCalledTimes(2);
     expect(context.commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
   });
+
+  it("eagerly refreshes a temporary tab reused for a different file path", async () => {
+    const runtime = createOpenTabAutoRefreshRuntime();
+    const context = createContext();
+
+    runtime.refreshNewTabs(() => context);
+    await vi.runAllTimersAsync();
+    (context.commands.readFile as ReturnType<typeof vi.fn>).mockClear();
+
+    context.tabs = [{ id: "file-1", kind: "file", path: "docs/other.md" }];
+    runtime.refreshNewTabs(() => context);
+    await vi.runAllTimersAsync();
+
+    expect(context.commands.readFile).toHaveBeenCalledTimes(1);
+    expect(context.commands.readFile).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      relativePath: "docs/other.md",
+    });
+  });
 });
