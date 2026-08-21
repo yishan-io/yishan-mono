@@ -138,6 +138,7 @@ describe("registerAgentTool", () => {
         maxTurns: undefined,
         timeoutMs: undefined,
         workspaceAccess: "read",
+        parentToolCallId: "tool-1",
         parentSession: {
           sessionId: "parent-session-1",
           sessionPath: "/tmp/shared-sessions/parent-session-1.jsonl",

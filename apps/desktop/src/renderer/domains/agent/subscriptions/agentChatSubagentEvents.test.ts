@@ -121,6 +121,7 @@ describe("applySubagentLifecycleWidget", () => {
         agentId: "agent-1",
         agentName: "Builder",
         childSessionId: "child-session-1",
+        state: "running",
         title: "Builder — implement row",
         promptSummary: "implement row",
         startedAtMs: expect.any(Number),

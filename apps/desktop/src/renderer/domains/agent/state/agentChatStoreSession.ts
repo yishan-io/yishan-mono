@@ -100,7 +100,9 @@ export function setRunningSubagentsIfChanged(
         subagent.agentName === nextSubagent.agentName &&
         subagent.childSessionId === nextSubagent.childSessionId &&
         subagent.title === nextSubagent.title &&
-        subagent.promptSummary === nextSubagent.promptSummary
+        subagent.promptSummary === nextSubagent.promptSummary &&
+        subagent.state === nextSubagent.state &&
+        subagent.startedAtMs === nextSubagent.startedAtMs
       );
     })
   )

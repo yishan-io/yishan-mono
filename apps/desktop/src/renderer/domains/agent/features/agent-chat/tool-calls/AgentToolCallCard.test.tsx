@@ -511,6 +511,56 @@ describe("AgentToolCallCard", () => {
     expect(within(promptSection).getByText(/Review the code quality of the services directory/)).toBeTruthy();
   });
 
+  it("shows preparing lifecycle state before an Agent result arrives", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-agent-preparing",
+      name: "Agent",
+      arguments: { agent: "builder", prompt: "Implement the panel." },
+    };
+
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} agentLifecycleState="preparing" />);
+
+    expect(screen.getByText("preparing")).toBeTruthy();
+  });
+
+  it.each(["failed", "cancelled"] as const)(
+    "shows a terminal %s result instead of completed lifecycle state",
+    (terminalStatus) => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: `tool-agent-${terminalStatus}`,
+        name: "Agent",
+        arguments: { agent: "builder", prompt: "Implement the panel." },
+      };
+      const result = {
+        id: `result-agent-${terminalStatus}`,
+        role: "toolResult",
+        toolCallId: toolCall.id,
+        toolName: "Agent",
+        content: `${terminalStatus} child result`,
+        details: {
+          status: terminalStatus,
+          sessionId: "child-session-1",
+        },
+      } as AgentMessage;
+      const onOpenCompletedSubagent = vi.fn();
+
+      renderWithAppTheme(
+        <AgentToolCallCard
+          toolCall={toolCall}
+          result={result}
+          agentLifecycleState="completed"
+          onOpenCompletedSubagent={onOpenCompletedSubagent}
+        />,
+      );
+
+      expect(screen.getByText(terminalStatus)).toBeTruthy();
+      expect(screen.queryByText("completed")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Open sub-agent builder" })).toBeNull();
+    },
+  );
+
   it("keeps child agent feedback folded under a response tab when the child session is available", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",

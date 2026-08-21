@@ -36,8 +36,16 @@ vi.mock("../transcript/ThinkingBlock", () => ({
 }));
 
 vi.mock("./AgentToolCallCard", () => ({
-  AgentToolCallCard: ({ toolCall }: { toolCall: { id: string } }) => (
-    <div data-testid="tool-call-card">{toolCall.id}</div>
+  AgentToolCallCard: ({
+    toolCall,
+    agentLifecycleState,
+  }: {
+    toolCall: { id: string };
+    agentLifecycleState?: string;
+  }) => (
+    <div data-testid="tool-call-card">
+      {toolCall.id}:{agentLifecycleState}
+    </div>
   ),
 }));
 
@@ -150,6 +158,37 @@ describe("AgentToolCallGroup", () => {
     expect(screen.getByText("1 file read")).toBeTruthy();
     expect(screen.queryByTestId("agent-tool-call-group-live")).toBeNull();
     expect(screen.queryByTestId("agent-tool-call-group-body")).toBeNull();
+  });
+
+  it("keeps queued and preparing Agent cards visible with their pending badges while omitting completed cards", () => {
+    render(
+      <AgentToolCallGroup
+        id="g-agent-lifecycle"
+        blocks={[
+          toolCallBlock("agent-queued", "Agent"),
+          toolCallBlock("agent-preparing", "Agent"),
+          toolCallBlock("agent-running", "Agent"),
+          toolCallBlock("agent-completed", "Agent"),
+          toolCallBlock("read-running"),
+        ]}
+        showRunningBlocks
+        agentToolCallStates={
+          new Map([
+            ["agent-queued", "queued"],
+            ["agent-preparing", "preparing"],
+            ["agent-running", "running"],
+            ["agent-completed", "completed"],
+          ])
+        }
+      />,
+    );
+
+    const live = screen.getByTestId("agent-tool-call-group-live");
+    expect(live.textContent).toContain("agent-queued:queued");
+    expect(live.textContent).toContain("agent-preparing:preparing");
+    expect(live.textContent).toContain("agent-running:running");
+    expect(live.textContent).toContain("read-running:");
+    expect(live.textContent).not.toContain("agent-completed");
   });
 
   it("drops a card from the live stack once its result arrives", () => {

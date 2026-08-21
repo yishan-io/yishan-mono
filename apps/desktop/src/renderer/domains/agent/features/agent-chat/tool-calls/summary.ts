@@ -1,3 +1,4 @@
+import type { AgentToolCallLifecycleState } from "../../../chat/agentChatSubagents";
 import type { AgentContentBlock, AgentMessage } from "../../../chat/agentChatTypes";
 
 /** Target of one completed subagent open action. */
@@ -11,6 +12,8 @@ export type CompletedSubagentOpenTarget = {
 export type AgentToolCallCardProps = {
   toolCall: Extract<AgentContentBlock, { type: "toolCall" }>;
   result?: AgentMessage | null;
+  /** Composer lifecycle state for Agent calls; ignored by non-Agent tool cards. */
+  agentLifecycleState?: AgentToolCallLifecycleState;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };

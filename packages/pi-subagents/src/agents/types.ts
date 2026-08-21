@@ -53,6 +53,8 @@ export interface AgentTask {
   prompt: string;
   mode: AgentRunMode;
   cwd: string;
+  /** Tool call ID that initiated this child run, when the parent was a tool invocation. */
+  parentToolCallId?: string;
   parentSession?: ParentSessionReference;
   parentSessionWriter?: ParentSessionWriter;
   childSessionDescriptor?: ChildSessionDescriptor;

@@ -262,6 +262,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-string-details-history"]?.runningSubagents).toEqual([
       {
         rowId: "child-session-string-details",
+        state: "running",
         agentId: "agent-string-details",
         agentName: "Builder",
         childSessionId: "child-session-string-details",
@@ -385,6 +386,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-subagents-history"]?.runningSubagents).toEqual([
       {
         rowId: "child-session-2",
+        state: "running",
         agentId: "agent-2",
         agentName: "Reviewer",
         childSessionId: "child-session-2",
@@ -440,6 +442,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-malformed-message-end"]?.runningSubagents).toEqual([
       {
         rowId: "child-session-message-end",
+        state: "running",
         agentId: "agent-message-end",
         agentName: "Builder",
         childSessionId: "child-session-message-end",
@@ -522,6 +525,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
         agentName: "Builder",
         childSessionId: "child-session-live",
         promptSummary: "implement UI row",
+        state: "running",
         title: "Builder — implement UI row",
       },
     ]);
