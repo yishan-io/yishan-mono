@@ -2,6 +2,7 @@ package setup
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
@@ -42,16 +43,30 @@ type managedAgentManifest struct {
 	Files map[string]string `json:"files"`
 }
 
+// EnsureDefaultPiExtensionSetup installs default extensions and managed agent files
+// with a background context for command-line setup.
 func EnsureDefaultPiExtensionSetup() error {
-	if err := EnsureDefaultPiExtensions(); err != nil {
+	return EnsureDefaultPiExtensionSetupContext(context.Background())
+}
+
+// EnsureDefaultPiExtensionSetupContext installs default extensions and managed agent files with ctx.
+func EnsureDefaultPiExtensionSetupContext(ctx context.Context) error {
+	if err := EnsureDefaultPiExtensionsContext(ctx); err != nil {
 		return err
 	}
 	return ensureManagedPiAgents()
 }
 
+// RemoveDefaultPiExtensionSetup removes default extensions and managed agent files
+// with a background context for command-line setup.
 func RemoveDefaultPiExtensionSetup() error {
+	return RemoveDefaultPiExtensionSetupContext(context.Background())
+}
+
+// RemoveDefaultPiExtensionSetupContext removes default extensions and managed agent files with ctx.
+func RemoveDefaultPiExtensionSetupContext(ctx context.Context) error {
 	var removeErr error
-	if err := RemoveDefaultPiExtensions(); err != nil {
+	if err := RemoveDefaultPiExtensionsContext(ctx); err != nil {
 		removeErr = err
 	}
 	if err := removeManagedPiSetupFiles(); err != nil {

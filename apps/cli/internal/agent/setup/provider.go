@@ -15,6 +15,7 @@ const (
 	piWorkspaceExtensionName = "@yishan-io/pi-workspace"
 	piAskExtensionName       = "@yishan-io/pi-ask"
 	piLspExtensionName       = "@yishan-io/pi-lsp"
+	piCodeGraphExtensionName = "@yishan-io/pi-codegraph"
 )
 
 // defaultPiExtensionNames is the desired extension set for the managed pi
@@ -29,6 +30,7 @@ var defaultPiExtensionNames = []string{
 	piWorkspaceExtensionName,
 	piAskExtensionName,
 	piLspExtensionName,
+	piCodeGraphExtensionName,
 }
 
 // piExtensionInstallSource derives the npm source spec for a default
