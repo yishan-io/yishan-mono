@@ -1,6 +1,7 @@
 import { AgentToolCard } from "./AgentToolCard";
 import { AskUserToolCard } from "./AskUserToolCard";
 import { BashToolCard } from "./BashToolCard";
+import { CodeGraphToolCard } from "./CodeGraphToolCard";
 import { DefaultToolCard } from "./DefaultToolCard";
 import { DiffToolCard } from "./DiffToolCard";
 import { GrepToolCard } from "./GrepToolCard";
@@ -29,6 +30,15 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <DiffToolCard {...props} />;
     case "grep":
       return <GrepToolCard {...props} />;
+    case "codegraph_search":
+    case "codegraph_callers":
+    case "codegraph_callees":
+    case "codegraph_impact":
+    case "codegraph_explore":
+    case "codegraph_node":
+    case "codegraph_status":
+    case "codegraph_files":
+      return <CodeGraphToolCard {...props} />;
     case "Agent":
       return <AgentToolCard {...props} />;
     case "memory_read":
