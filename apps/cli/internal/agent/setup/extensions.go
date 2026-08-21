@@ -131,15 +131,24 @@ func UpdatePiExtension(ctx context.Context, source string) error {
 	return nil
 }
 
-// EnsureDefaultPiExtensions installs every official extension. Setup runs
-// outside the RPC request lifecycle, so it uses a background context; the
-// RPC-facing mutations receive the caller's context.
+// EnsureDefaultPiExtensions installs every official extension with a background context.
 func EnsureDefaultPiExtensions() error {
-	return installPiExtensions(context.Background(), defaultPiExtensionNames)
+	return EnsureDefaultPiExtensionsContext(context.Background())
 }
 
+// EnsureDefaultPiExtensionsContext installs every official extension with ctx.
+func EnsureDefaultPiExtensionsContext(ctx context.Context) error {
+	return installPiExtensions(ctx, defaultPiExtensionNames)
+}
+
+// RemoveDefaultPiExtensions removes every official extension with a background context.
 func RemoveDefaultPiExtensions() error {
-	return removePiExtensions(context.Background(), defaultPiExtensionNames)
+	return RemoveDefaultPiExtensionsContext(context.Background())
+}
+
+// RemoveDefaultPiExtensionsContext removes every official extension with ctx.
+func RemoveDefaultPiExtensionsContext(ctx context.Context) error {
+	return removePiExtensions(ctx, defaultPiExtensionNames)
 }
 
 func DefaultPiExtensionNames() []string {

@@ -181,3 +181,19 @@ func TestParseGitSourceParts_AllSpecForms(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultPiExtensions_IncludeCodeGraphFromNpm(t *testing.T) {
+	found := false
+	for _, name := range DefaultPiExtensionNames() {
+		if name == "@yishan-io/pi-codegraph" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("default Pi extensions do not include @yishan-io/pi-codegraph")
+	}
+	if source := piExtensionInstallSource("@yishan-io/pi-codegraph"); source != "npm:@yishan-io/pi-codegraph" {
+		t.Fatalf("codegraph source = %q, want npm:@yishan-io/pi-codegraph", source)
+	}
+}

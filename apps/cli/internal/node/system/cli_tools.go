@@ -7,6 +7,7 @@ import (
 	clidetector "yishan/apps/cli/internal/agent/catalog/detect"
 	clitoolinstall "yishan/apps/cli/internal/agent/catalog/install"
 	agentkind "yishan/apps/cli/internal/agent/kind"
+	agentsetup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/rpc"
 )
 
@@ -19,6 +20,9 @@ const (
 var cliToolRegistry = clidetector.NewRegistry(agentCLIToolDetector{}, gitHubCLIToolDetector{}, yishanCLIToolDetector{})
 
 var cliToolInstallerRegistry = clitoolinstall.NewRegistry(clitoolinstall.PiInstaller{}, clitoolinstall.YishanInstaller{})
+
+var ensureDefaultPiExtensionSetup = agentsetup.EnsureDefaultPiExtensionSetupContext
+var findCLIToolStatusAfterInstall = findCLIToolStatus
 
 func listCLIToolDetectionStatusesWithRefresh(forceRefresh bool) []clidetector.Status {
 	return cliToolRegistry.List(forceRefresh)
@@ -136,7 +140,12 @@ func installCLITool(ctx context.Context, toolID string) (clidetector.Status, err
 	if err := installer.Install(ctx); err != nil {
 		return clidetector.Status{}, err
 	}
-	return findCLIToolStatus(toolID)
+	if toolID == clitoolinstall.PiToolID {
+		if err := ensureDefaultPiExtensionSetup(ctx); err != nil {
+			return clidetector.Status{}, fmt.Errorf("set up default Pi extensions: %w", err)
+		}
+	}
+	return findCLIToolStatusAfterInstall(toolID)
 }
 
 // uninstallCLITool uninstalls one registered CLI tool and returns its fresh status.

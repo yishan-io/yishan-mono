@@ -154,12 +154,12 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 	if err := EnsureDefaultPiExtensionSetup(); err != nil {
 		t.Fatalf("ensure default pi extension setup: %v", err)
 	}
-	if len(calls) != 8 {
-		t.Fatalf("expected 8 pi extension install calls, got %d", len(calls))
+	if len(calls) != len(defaultPiExtensionNames) {
+		t.Fatalf("expected %d pi extension install calls, got %d", len(defaultPiExtensionNames), len(calls))
 	}
 
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
-	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}, {"install", piExtensionInstallSource(piLspExtensionName)}}
+	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}, {"install", piExtensionInstallSource(piLspExtensionName)}, {"install", "npm:@yishan-io/pi-codegraph"}}
 	for index, call := range calls {
 		if call.name != fakePiPath {
 			t.Fatalf("expected pi command resolved to %q, got %q", fakePiPath, call.name)
@@ -237,11 +237,11 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 	if err := RemoveDefaultPiExtensionSetup(); err != nil {
 		t.Fatalf("remove default pi extension setup: %v", err)
 	}
-	if len(calls) != 8 {
-		t.Fatalf("expected 8 pi extension uninstall calls, got %d", len(calls))
+	if len(calls) != len(defaultPiExtensionNames) {
+		t.Fatalf("expected %d pi extension uninstall calls, got %d", len(defaultPiExtensionNames), len(calls))
 	}
 
-	expectedArgs := [][]string{{"uninstall", piExtensionInstallSource(piNotifyExtensionName)}, {"uninstall", piExtensionInstallSource(piSubagentsExtensionName)}, {"uninstall", piExtensionInstallSource(piMemoryExtensionName)}, {"uninstall", piExtensionInstallSource(piTaskExtensionName)}, {"uninstall", piExtensionInstallSource(piDevFlowExtensionName)}, {"uninstall", piExtensionInstallSource(piWorkspaceExtensionName)}, {"uninstall", piExtensionInstallSource(piAskExtensionName)}, {"uninstall", piExtensionInstallSource(piLspExtensionName)}}
+	expectedArgs := [][]string{{"uninstall", piExtensionInstallSource(piNotifyExtensionName)}, {"uninstall", piExtensionInstallSource(piSubagentsExtensionName)}, {"uninstall", piExtensionInstallSource(piMemoryExtensionName)}, {"uninstall", piExtensionInstallSource(piTaskExtensionName)}, {"uninstall", piExtensionInstallSource(piDevFlowExtensionName)}, {"uninstall", piExtensionInstallSource(piWorkspaceExtensionName)}, {"uninstall", piExtensionInstallSource(piAskExtensionName)}, {"uninstall", piExtensionInstallSource(piLspExtensionName)}, {"uninstall", "npm:@yishan-io/pi-codegraph"}}
 	for index, call := range calls {
 		if call.name != fakePiPath {
 			t.Fatalf("expected pi command resolved to %q, got %q", fakePiPath, call.name)

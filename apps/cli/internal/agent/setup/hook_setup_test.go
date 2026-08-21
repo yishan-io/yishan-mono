@@ -182,12 +182,12 @@ func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 	if err := EnsureDefaultPiExtensions(); err != nil {
 		t.Fatalf("ensure default pi extensions: %v", err)
 	}
-	if len(calls) != 8 {
-		t.Fatalf("expected 8 pi extension install calls, got %d", len(calls))
+	if len(calls) != len(defaultPiExtensionNames) {
+		t.Fatalf("expected %d pi extension install calls, got %d", len(defaultPiExtensionNames), len(calls))
 	}
 
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
-	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}, {"install", piExtensionInstallSource(piLspExtensionName)}}
+	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}, {"install", piExtensionInstallSource(piLspExtensionName)}, {"install", "npm:@yishan-io/pi-codegraph"}}
 	for index, call := range calls {
 		if call.name != fakePiPath {
 			t.Fatalf("expected pi command resolved to %q, got %q", fakePiPath, call.name)
