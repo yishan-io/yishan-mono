@@ -1,5 +1,9 @@
 import { projectStore } from "@renderer/domains/project";
-import { removeRightPaneStateForWorkspace } from "@renderer/domains/workbench";
+import {
+  activateWorkspace,
+  removeRightPaneStateForWorkspace,
+  workbenchNavigationStore,
+} from "@renderer/domains/workbench";
 
 import { sessionStore } from "@renderer/domains/session";
 import { syncTabStoreWithWorkspace } from "../../../domains/workspace/commands/workspaceTabSync";
@@ -9,6 +13,7 @@ import { workspaceStore } from "../../../domains/workspace/state/workspaceStore"
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../local-folder/localFolder";
 import { deleteLocalFolder } from "./localFolderCommands";
+import { resolveWorkspaceAfterClose } from "./workspaceCloseSelection";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 
 type CloseWorkspaceResponse = {
@@ -69,8 +74,10 @@ async function removeWorkspaceInBackground(input: {
 /** Closes one workspace immediately in UI and schedules backend cleanup asynchronously. */
 export async function closeWorkspace(workspaceId: string, options?: { removeBranch?: boolean }): Promise<void> {
   const store = workspaceStore.getState();
-  const previousWorkspaces = store.workspaces;
-  const workspace = store.workspaces.find((item) => item.id === workspaceId);
+  const previousWorkspaces = [...store.workspaces];
+  const orderedWorkspaceIds = [...store.orderedWorkspaceIds];
+  const activeWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+  const workspace = previousWorkspaces.find((item) => item.id === workspaceId);
 
   if (!workspace) {
     return;
@@ -104,6 +111,22 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
 
   // Cleanup per-workspace right-pane signals to avoid accumulating stale entries.
   removeRightPaneStateForWorkspace(workspaceId);
+
+  if (activeWorkspaceId === workspaceId) {
+    const replacementWorkspace = resolveWorkspaceAfterClose({
+      closingWorkspaceId: workspaceId,
+      orderedWorkspaceIds,
+      preCloseWorkspaces: previousWorkspaces,
+    });
+    if (replacementWorkspace) {
+      activateWorkspace({
+        workspaceId: replacementWorkspace.id,
+        projectId: replacementWorkspace.projectId ?? replacementWorkspace.repoId,
+      });
+    } else {
+      workbenchNavigationStore.getState().setActiveWorkspaceId("");
+    }
+  }
 
   await syncTabStoreWithWorkspace(previousWorkspaces);
 
