@@ -27,22 +27,16 @@ export function useTerminalWakeRecovery(tabId: string): void {
 
   const scheduleWakeRecovery = useCallback(() => {
     clearPendingWakeRecovery();
-    if (runWakeRecovery()) {
-      return;
-    }
+    runWakeRecovery();
 
     retryAnimationFrameIdRef.current = window.requestAnimationFrame(() => {
       retryAnimationFrameIdRef.current = null;
-      if (runWakeRecovery()) {
-        clearPendingWakeRecovery();
-      }
+      runWakeRecovery();
     });
 
     retryTimeoutIdsRef.current = WAKE_RECOVERY_DELAY_MS.map((delayMs) =>
       window.setTimeout(() => {
-        if (runWakeRecovery()) {
-          clearPendingWakeRecovery();
-        }
+        runWakeRecovery();
       }, delayMs),
     );
   }, [clearPendingWakeRecovery, runWakeRecovery]);
