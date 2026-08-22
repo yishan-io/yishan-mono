@@ -200,6 +200,18 @@ func Bootstrap(cfg Config) (*App, error) {
 
 	// Build the rpc service layer and the transport server, then the relay
 	// client (it needs the rpc server and the service as its message handler).
+	var localTaskSvc *nodelocaltask.Service
+	localTaskSvc = nodelocaltask.NewService(nodelocaltask.Deps{
+		Repository:     sqlite.NewLocalTaskStore(cfg.Database),
+		Registry:       registry,
+		WorkspaceStore: store,
+		TaskContextsChanged: func() {
+			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
+		},
+		TaskTitleChanged: func(ctx context.Context, taskID string, taskTitle string) {
+			refreshTaskContextTitle(ctx, memorySvc, localTaskSvc, taskID, taskTitle)
+		},
+	})
 	var agentSvc *nodeagent.Service
 	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
 		Registry:     registry,
@@ -222,6 +234,9 @@ func Bootstrap(cfg Config) (*App, error) {
 			agentSvc.PublishWorkspaceCreateCompleted(plan, created, warnings)
 		},
 		Usage: usage,
+		WorkspaceAvailabilityChanged: func() {
+			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
+		},
 	})
 	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
@@ -254,11 +269,6 @@ func Bootstrap(cfg Config) (*App, error) {
 			}
 		},
 	)
-	localTaskSvc := nodelocaltask.NewService(nodelocaltask.Deps{
-		Repository:     sqlite.NewLocalTaskStore(cfg.Database),
-		Registry:       registry,
-		WorkspaceStore: store,
-	})
 	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
 		Workspace: workspaceSvc,
 		Terminals: terminals,
@@ -318,6 +328,9 @@ func Bootstrap(cfg Config) (*App, error) {
 	if err := workspaceSvc.Hydrate(context.Background()); err != nil {
 		return nil, fmt.Errorf("restore persisted workspaces: %w", err)
 	}
+	if err := loadTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc); err != nil {
+		return nil, fmt.Errorf("register Local Task contexts: %w", err)
+	}
 	workspaceSvc.WatchActive()
 
 	// Background tasks (and the lifecycle contexts that bound them).
@@ -333,6 +346,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		ModelList:    modelList,
 		TokenUsage:   tokenUsage,
 		Memory:       memorySvc,
+		TaskContexts: localTaskSvc,
 		Registry:     registry,
 		Computer:     computerSvc,
 		ContextStore: contextStore,

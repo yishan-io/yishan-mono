@@ -189,14 +189,18 @@ func (s *Service) Open(req workspace.OpenRequest) (workspace.Workspace, error) {
 
 	workspace.EnsureGitExclude(absPath, workspace.ContextLinkName)
 
-	return s.deps.Registry.Open(workspace.Workspace{
+	openedWorkspace := s.deps.Registry.Open(workspace.Workspace{
 		ID:        req.ID,
 		Path:      absPath,
 		OrgID:     req.OrgID,
 		ProjectID: req.ProjectID,
 		Kind:      openWorkspaceKind(req.Kind),
 		State:     workspace.StateActive,
-	}), nil
+	})
+	if s.deps.WorkspaceAvailabilityChanged != nil {
+		s.deps.WorkspaceAvailabilityChanged()
+	}
+	return openedWorkspace, nil
 }
 
 // ---- PR persistence (moved from the workspace.Manager facade) ----

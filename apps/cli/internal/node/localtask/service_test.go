@@ -34,6 +34,38 @@ func TestService_CreateDefaultsAndCompletesTask(t *testing.T) {
 	}
 }
 
+func TestService_CreateNotifiesTaskContextLifecycle(t *testing.T) {
+	service, _, _ := newTestService(t)
+	calls := 0
+	service.deps.TaskContextsChanged = func() { calls++ }
+
+	if _, err := service.Create(context.Background(), rpc.LocalTaskCreateParams{Title: "Register context"}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("task context lifecycle calls = %d, want 1", calls)
+	}
+}
+
+func TestService_UpdateTitleNotifiesTaskContextLifecycle(t *testing.T) {
+	service, _, repository := newTestService(t)
+	task := createServiceTask(t, repository, "Old title")
+	var notifiedTaskID string
+	var notifiedTitle string
+	service.deps.TaskTitleChanged = func(_ context.Context, taskID string, taskTitle string) {
+		notifiedTaskID = taskID
+		notifiedTitle = taskTitle
+	}
+
+	newTitle := "New title"
+	if _, err := service.Update(context.Background(), rpc.LocalTaskUpdateParams{ID: task.ID, Title: &newTitle}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if notifiedTaskID != task.ID || notifiedTitle != newTitle {
+		t.Fatalf("title notification = (%q, %q), want (%q, %q)", notifiedTaskID, notifiedTitle, task.ID, newTitle)
+	}
+}
+
 func TestService_CreateRejectsInvalidMetadata(t *testing.T) {
 	service, _, _ := newTestService(t)
 

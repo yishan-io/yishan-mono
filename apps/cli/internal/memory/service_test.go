@@ -337,3 +337,105 @@ func TestShouldIndexPath(t *testing.T) {
 		}
 	}
 }
+
+func TestService_WatcherIncrementalFilteringUsesManagedTaskRoots(t *testing.T) {
+	db := openTestDB(t)
+	worktree := t.TempDir()
+	contextRoot := filepath.Join(worktree, myContextDir)
+	taskRoot := filepath.Join(contextRoot, taskContextDirectory, "task-1")
+	nestedPath := filepath.Join(contextRoot, architectureDir, taskContextDirectory, "design.md")
+	managedPlan := filepath.Join(taskRoot, "plan.md")
+	managedMetadata := filepath.Join(taskRoot, "task.md")
+	for path, body := range map[string]string{nestedPath: "nested watcher design", managedPlan: "managed plan", managedMetadata: "metadata"} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	service := &Service{db: db, taskContexts: make(map[string]TaskContextRef)}
+	service.registerTaskContexts([]TaskContextRef{{Directory: taskRoot, TaskID: "task-1", ProjectID: "project-1"}})
+	if !service.ShouldIndex(nestedPath) || !service.ShouldIndex(managedPlan) || service.ShouldIndex(managedMetadata) {
+		t.Fatal("watcher filtering did not distinguish nested directories from the managed root")
+	}
+	if err := service.OnFileChanged(nestedPath, worktree, "project-1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.OnFileChanged(managedPlan, worktree, "project-1"); err != nil {
+		t.Fatal(err)
+	}
+	assertIndexed(t, db, nestedPath, true)
+	canonicalPlan, err := filepath.EvalSymlinks(managedPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertIndexed(t, db, canonicalPlan, true)
+	assertIndexed(t, db, managedMetadata, false)
+}
+
+func TestService_IncrementalWatcherSkipsOrphanTopLevelTaskContext(t *testing.T) {
+	db := openTestDB(t)
+	worktree := t.TempDir()
+	contextRoot := filepath.Join(worktree, myContextDir)
+	orphanRoot := filepath.Join(contextRoot, taskContextDirectory, "orphan-task")
+	nestedPath := filepath.Join(contextRoot, architectureDir, taskContextDirectory, "design.md")
+	paths := []string{
+		filepath.Join(orphanRoot, "plan.md"),
+		filepath.Join(orphanRoot, "task.md"),
+		filepath.Join(orphanRoot, "research", "detail.md"),
+	}
+	for _, path := range append(paths, nestedPath) {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("incremental orphan phrase"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	service := &Service{db: db, taskContexts: make(map[string]TaskContextRef)}
+	for _, path := range append(paths, nestedPath) {
+		if err := service.OnFileChanged(path, worktree, "project-1"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, path := range paths {
+		assertIndexed(t, db, path, false)
+	}
+	assertIndexed(t, db, nestedPath, true)
+}
+
+func TestService_OnFileDeletedRemovesManagedTaskContextThroughSymlink(t *testing.T) {
+	db := openTestDB(t)
+	canonicalRoot := t.TempDir()
+	taskRoot := filepath.Join(canonicalRoot, taskContextDirectory, "task-delete")
+	if err := os.MkdirAll(taskRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	canonicalPlan := filepath.Join(taskRoot, "plan.md")
+	if err := os.WriteFile(canonicalPlan, []byte("delete attributed plan"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	worktree := t.TempDir()
+	if err := os.Symlink(canonicalRoot, filepath.Join(worktree, myContextDir)); err != nil {
+		t.Fatal(err)
+	}
+	symlinkPlan := filepath.Join(worktree, myContextDir, taskContextDirectory, "task-delete", "plan.md")
+	service := &Service{db: db, taskContexts: make(map[string]TaskContextRef)}
+	service.registerTaskContexts([]TaskContextRef{{Directory: taskRoot, TaskID: "task-delete", ProjectID: "project-1"}})
+	if err := service.OnFileChanged(symlinkPlan, worktree, "project-1"); err != nil {
+		t.Fatal(err)
+	}
+	indexedPlan, err := filepath.EvalSymlinks(canonicalPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertIndexed(t, db, indexedPlan, true)
+	if err := os.Remove(symlinkPlan); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.OnFileDeleted(symlinkPlan); err != nil {
+		t.Fatal(err)
+	}
+	assertIndexed(t, db, indexedPlan, false)
+}

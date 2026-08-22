@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 )
@@ -72,15 +74,46 @@ func TestOpenReadOnly_RejectsWrites(t *testing.T) {
 }
 
 func TestOpenReadOnly_RejectsMissingFile(t *testing.T) {
-	db, err := OpenReadOnly(filepath.Join(t.TempDir(), "nonexistent.db"))
-	if err != nil {
-		t.Fatalf("OpenReadOnly: %v", err)
-	}
-	defer db.Close()
-
-	_, err = db.SearchMemory(SearchInput{Query: "test", Limit: 10})
+	_, err := OpenReadOnly(filepath.Join(t.TempDir(), "nonexistent.db"))
 	if err == nil {
-		t.Error("expected error when querying non-existent read-only database")
+		t.Error("expected error when opening a non-existent read-only database")
+	}
+}
+
+func TestOpenReadOnly_OldSchemaRequiresWritableReconcileUpgrade(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "old.db")
+	seedOldMemorySchema(t, dbPath)
+	if _, err := OpenReadOnly(dbPath); !errors.Is(err, ErrSchemaMigrationRequired) {
+		t.Fatalf("OpenReadOnly error = %v, want migration required", err)
+	}
+	writable, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("OpenDB upgrade: %v", err)
+	}
+	if err := writable.Close(); err != nil {
+		t.Fatal(err)
+	}
+	readOnly, err := OpenReadOnly(dbPath)
+	if err != nil {
+		t.Fatalf("OpenReadOnly after upgrade: %v", err)
+	}
+	defer readOnly.Close()
+}
+
+func seedOldMemorySchema(t *testing.T, dbPath string) {
+	t.Helper()
+	database, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	_, err = database.Exec(`CREATE TABLE memory_files (
+		id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT UNIQUE NOT NULL,
+		project_path TEXT NOT NULL DEFAULT '', project_id TEXT NOT NULL DEFAULT '', type TEXT NOT NULL,
+		body TEXT NOT NULL, fingerprint TEXT NOT NULL, indexed_at INTEGER NOT NULL);
+		CREATE VIRTUAL TABLE memory_fts USING fts5(path, type, body, content='memory_files', content_rowid='id');`)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

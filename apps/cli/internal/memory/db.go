@@ -2,6 +2,7 @@ package memory
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,9 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// ErrSchemaMigrationRequired indicates that a writable reconcile must upgrade the memory index.
+var ErrSchemaMigrationRequired = errors.New("memory index schema is outdated; run 'yishan memory reconcile' to upgrade it")
+
 // fileType classifies a memory file by its location inside the context dir.
 type fileType string
 
@@ -19,6 +23,7 @@ const (
 	FileTypeArchitecture fileType = "architecture"
 	FileTypeArchive      fileType = "archive"
 	FileTypeTask         fileType = "task"
+	FileTypeTaskContext  fileType = "task_context"
 	FileTypeFuture       fileType = "future"
 	FileTypeGlobal       fileType = "global"
 )
@@ -29,12 +34,16 @@ type memoryFile struct {
 	Path string
 	// ProjectPath is the canonical context directory (~/.yishan/contexts/<repoKey>/).
 	// Derived by resolving the .my-context symlink in the worktree.
-	ProjectPath string
-	ProjectID   string
-	Type        fileType
-	Body        string
-	Fingerprint string
-	IndexedAt   int64
+	ProjectPath  string
+	ProjectID    string
+	Type         fileType
+	Source       string
+	TaskID       string
+	TaskTitle    string
+	DocumentType string
+	Body         string
+	Fingerprint  string
+	IndexedAt    int64
 }
 
 type DB struct {
@@ -70,8 +79,40 @@ func OpenReadOnly(dbPath string) (*DB, error) {
 	}
 
 	conn.SetMaxOpenConns(1)
-
+	if err := validateReadOnlySchema(conn); err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
 	return &DB{conn: conn, path: dbPath}, nil
+}
+
+func validateReadOnlySchema(conn *sql.DB) error {
+	rows, err := conn.Query(`PRAGMA table_info(memory_files)`)
+	if err != nil {
+		return fmt.Errorf("inspect read-only memory schema: %w", err)
+	}
+	defer rows.Close()
+	required := map[string]bool{"source": false, "task_id": false, "task_title": false, "document_type": false}
+	for rows.Next() {
+		var columnID, isNotNull, primaryKey int
+		var name, columnType string
+		var defaultValue any
+		if err := rows.Scan(&columnID, &name, &columnType, &isNotNull, &defaultValue, &primaryKey); err != nil {
+			return fmt.Errorf("inspect read-only memory column: %w", err)
+		}
+		if _, ok := required[name]; ok {
+			required[name] = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("inspect read-only memory schema: %w", err)
+	}
+	for _, isPresent := range required {
+		if !isPresent {
+			return ErrSchemaMigrationRequired
+		}
+	}
+	return nil
 }
 
 func (db *DB) Close() error {
@@ -91,6 +132,10 @@ func migrate(conn *sql.DB) error {
 		project_path TEXT NOT NULL DEFAULT '',
 		project_id TEXT NOT NULL DEFAULT '',
 		type TEXT NOT NULL,
+		source TEXT NOT NULL DEFAULT 'memory',
+		task_id TEXT NOT NULL DEFAULT '',
+		task_title TEXT NOT NULL DEFAULT '',
+		document_type TEXT NOT NULL DEFAULT '',
 		body TEXT NOT NULL,
 		fingerprint TEXT NOT NULL,
 		indexed_at INTEGER NOT NULL
@@ -101,6 +146,10 @@ func migrate(conn *sql.DB) error {
 
 	// Additive migration: add project_id if it doesn't exist yet (schema v1 → v2).
 	_, _ = conn.Exec(`ALTER TABLE memory_files ADD COLUMN project_id TEXT NOT NULL DEFAULT ''`)
+	_, _ = conn.Exec(`ALTER TABLE memory_files ADD COLUMN source TEXT NOT NULL DEFAULT 'memory'`)
+	_, _ = conn.Exec(`ALTER TABLE memory_files ADD COLUMN task_id TEXT NOT NULL DEFAULT ''`)
+	_, _ = conn.Exec(`ALTER TABLE memory_files ADD COLUMN task_title TEXT NOT NULL DEFAULT ''`)
+	_, _ = conn.Exec(`ALTER TABLE memory_files ADD COLUMN document_type TEXT NOT NULL DEFAULT ''`)
 
 	_, err = conn.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
 		path, type, body,
@@ -170,13 +219,27 @@ func createFTSTriggers(conn *sql.DB) error {
 }
 
 func (db *DB) UpsertFile(file memoryFile) error {
+	if file.Source == "" {
+		file.Source = SourceMemory
+	}
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
 	_, err := db.conn.Exec(
-		`INSERT OR REPLACE INTO memory_files (path, project_path, project_id, type, body, fingerprint, indexed_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		file.Path, file.ProjectPath, file.ProjectID, string(file.Type), file.Body, file.Fingerprint, file.IndexedAt,
+		`INSERT OR REPLACE INTO memory_files (path, project_path, project_id, type, source, task_id, task_title, document_type, body, fingerprint, indexed_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		file.Path, file.ProjectPath, file.ProjectID, string(file.Type), file.Source, file.TaskID, file.TaskTitle, file.DocumentType, file.Body, file.Fingerprint, file.IndexedAt,
+	)
+	return err
+}
+
+// UpdateTaskContextTitle updates metadata only for indexed rows owned by one Local Task.
+func (db *DB) UpdateTaskContextTitle(taskID string, taskTitle string) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	_, err := db.conn.Exec(
+		`UPDATE memory_files SET task_title = ? WHERE source = ? AND task_id = ?`,
+		taskTitle, SourceTaskContext, taskID,
 	)
 	return err
 }
@@ -196,9 +259,9 @@ func (db *DB) GetByPath(path string) (memoryFile, bool, error) {
 	var file memoryFile
 	var typeStr string
 	err := db.conn.QueryRow(
-		`SELECT id, path, project_path, project_id, type, body, fingerprint, indexed_at FROM memory_files WHERE path = ?`,
+		`SELECT id, path, project_path, project_id, type, source, task_id, task_title, document_type, body, fingerprint, indexed_at FROM memory_files WHERE path = ?`,
 		path,
-	).Scan(&file.ID, &file.Path, &file.ProjectPath, &file.ProjectID, &typeStr, &file.Body, &file.Fingerprint, &file.IndexedAt)
+	).Scan(&file.ID, &file.Path, &file.ProjectPath, &file.ProjectID, &typeStr, &file.Source, &file.TaskID, &file.TaskTitle, &file.DocumentType, &file.Body, &file.Fingerprint, &file.IndexedAt)
 	if err == sql.ErrNoRows {
 		return memoryFile{}, false, nil
 	}
@@ -259,7 +322,7 @@ func (db *DB) Search(query string, projectID string, fileType fileType, limit in
 	defer db.mu.RUnlock()
 
 	ftsQuery := escapeFTS5(query)
-	stmt := `SELECT m.path, snippet(memory_fts, 2, '<mark>', '</mark>', '...', 40), rank
+	stmt := `SELECT m.path, snippet(memory_fts, 2, '<mark>', '</mark>', '...', 40), rank, CASE WHEN m.source = 'task_context' THEN m.source ELSE '' END, m.task_id, m.task_title, m.document_type
 		FROM memory_fts
 		JOIN memory_files m ON memory_fts.rowid = m.id
 		WHERE memory_fts MATCH '` + escapeSQLString(ftsQuery) + `'`
@@ -286,7 +349,7 @@ func (db *DB) Search(query string, projectID string, fileType fileType, limit in
 	var results []MemorySearchResult
 	for rows.Next() {
 		var r MemorySearchResult
-		if err := rows.Scan(&r.Path, &r.Snippet, &r.Score); err != nil {
+		if err := rows.Scan(&r.Path, &r.Snippet, &r.Score, &r.Source, &r.TaskID, &r.TaskTitle, &r.DocumentType); err != nil {
 			return nil, err
 		}
 		results = append(results, r)

@@ -37,13 +37,14 @@ type appDeps struct {
 func (s *Service) newAppService() *application.Service {
 	deps := &appDeps{s: s}
 	return application.New(application.Dependencies{
-		NodeID:      s.deps.NodeID,
-		Now:         nowRFC3339Nano,
-		Environment: deps,
-		Records:     deps,
-		Instances:   deps,
-		Relay:       deps,
-		Events:      deps,
+		NodeID:                       s.deps.NodeID,
+		Now:                          nowRFC3339Nano,
+		Environment:                  deps,
+		Records:                      deps,
+		Instances:                    deps,
+		Relay:                        deps,
+		Events:                       deps,
+		WorkspaceAvailabilityChanged: s.deps.WorkspaceAvailabilityChanged,
 		HookWarnings: func(setupHook string, result *workspace.HookResult) []any {
 			return buildHookWarnings(setupHook, result, s.deps.LogFilePath)
 		},

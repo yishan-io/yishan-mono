@@ -114,6 +114,10 @@ type Dependencies struct {
 	Relay       Relay
 	Events      Events
 
+	// WorkspaceAvailabilityChanged notifies consumers only after a newly
+	// created workspace is both registered and successfully persisted.
+	WorkspaceAvailabilityChanged func()
+
 	// HookWarnings builds the lifecycle-script warnings for the completed
 	// event (daemon-side: needs the daemon log path).
 	HookWarnings func(setupHook string, result *workspace.HookResult) []any

@@ -49,3 +49,39 @@ func TestResolveGlobalContextPath(t *testing.T) {
 		t.Fatalf("resolved path = %q, want %q", resolvedPath, want)
 	}
 }
+
+func TestResolveTaskContextPath_UsesMatchingAuthoritativeWorkspace(t *testing.T) {
+	staleWorkspace := t.TempDir()
+	matchingWorkspace := t.TempDir()
+	canonicalContextPath := filepath.Join(t.TempDir(), "project-context")
+	if err := createProjectContextSymlink(matchingWorkspace, canonicalContextPath); err != nil {
+		t.Fatal(err)
+	}
+	projectID := "project-1"
+	task := Task{ID: "task-1", ProjectID: &projectID}
+	workspaces := []ContextWorkspace{
+		{ProjectID: projectID, WorktreePath: staleWorkspace},
+		{ProjectID: "other-project", WorktreePath: t.TempDir()},
+		{ProjectID: projectID, WorktreePath: matchingWorkspace},
+	}
+	resolvedPath, err := ResolveTaskContextPath(task, workspaces)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalRoot, err := filepath.EvalSymlinks(canonicalContextPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(canonicalRoot, "task-context", task.ID)
+	if resolvedPath != want {
+		t.Fatalf("resolved path = %q, want %q", resolvedPath, want)
+	}
+}
+
+func TestResolveTaskContextPath_DoesNotGuessProjectPath(t *testing.T) {
+	projectID := "project-1"
+	_, err := ResolveTaskContextPath(Task{ID: "task-1", ProjectID: &projectID}, nil)
+	if err != ErrContextUnavailable {
+		t.Fatalf("error = %v, want %v", err, ErrContextUnavailable)
+	}
+}

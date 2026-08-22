@@ -29,6 +29,9 @@ type Service struct {
 
 	// persona holds the daily persona batch extraction state.
 	persona *personaService
+
+	taskContextsMu sync.RWMutex
+	taskContexts   map[string]TaskContextRef
 }
 
 func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAgentFunc) (*Service, error) {
@@ -39,8 +42,9 @@ func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAg
 
 	normalizedConfig := normalizeSummarizerConfig(summarizerConfig)
 	svc := &Service{
-		db:     db,
-		config: normalizedConfig,
+		db:           db,
+		config:       normalizedConfig,
+		taskContexts: make(map[string]TaskContextRef),
 	}
 	svc.summarizer = newSummarizer(normalizedConfig, runAgent)
 	svc.persona = newPersonaService(normalizedConfig, runAgent)
@@ -79,14 +83,20 @@ func (s *Service) UpdateSummarizerConfig(cfg SummarizerConfig) {
 }
 
 func (s *Service) ReconcileNow(refs []WorkspaceRef) (reconcileResult, error) {
+	return s.ReconcileWithTaskContexts(refs, nil)
+}
+
+// ReconcileWithTaskContexts refreshes existing Memory roots and registered Local Task contexts.
+func (s *Service) ReconcileWithTaskContexts(refs []WorkspaceRef, taskContexts []TaskContextRef) (reconcileResult, error) {
 	globalDir, err := globalMemoryDir()
 	if err != nil {
 		globalDir = ""
 	}
-	result, err := s.db.Reconcile(refs, globalDir)
+	result, err := s.db.ReconcileWithTaskContexts(refs, globalDir, taskContexts)
 	if err != nil {
 		return reconcileResult{}, err
 	}
+	s.registerTaskContexts(taskContexts)
 	log.Debug().
 		Int("inserted", result.Inserted).
 		Int("updated", result.Updated).
@@ -108,15 +118,18 @@ func (s *Service) Search(ctx context.Context, query string, projectID string, sc
 // OnFileChanged re-indexes a single file. worktreePath is the git worktree
 // directory; the canonical context root is resolved internally.
 func (s *Service) OnFileChanged(filePath string, worktreePath string, projectID string) error {
-	if !shouldIndexPath(filePath) {
-		return nil
+	if taskContext, documentType, ok := s.findTaskContext(filePath); ok {
+		return s.db.IndexTaskContextFileOnDisk(filePath, taskContext, documentType)
 	}
 	contextRoot := resolveContextRoot(worktreePath)
+	if isTopLevelTaskContextPath(filePath, contextRoot) || s.isManagedTaskContextPath(filePath) || !shouldIndexPath(filePath) {
+		return nil
+	}
 	return s.db.IndexFileOnDisk(filePath, contextRoot, projectID)
 }
 
 func (s *Service) OnFileDeleted(filePath string) error {
-	return s.db.DeleteByPath(filePath)
+	return s.db.DeleteByPath(canonicalTaskContextRoot(filePath))
 }
 
 // SummarizeSession triggers summarization for the workspace, serialized per
@@ -242,7 +255,10 @@ func globalMemoryDir() (string, error) {
 }
 
 func (s *Service) ShouldIndex(filePath string) bool {
-	return shouldIndexPath(filePath)
+	if _, _, ok := s.findTaskContext(filePath); ok {
+		return true
+	}
+	return !s.isManagedTaskContextPath(filePath) && shouldIndexPath(filePath)
 }
 
 func shouldIndexPath(filePath string) bool {

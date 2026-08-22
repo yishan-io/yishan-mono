@@ -20,9 +20,11 @@ type WorkspaceRegistry interface {
 
 // Deps are the explicit dependencies of the Local Task application service.
 type Deps struct {
-	Repository     domain.Repository
-	Registry       WorkspaceRegistry
-	WorkspaceStore workspace.WorkspaceStore
+	Repository          domain.Repository
+	Registry            WorkspaceRegistry
+	WorkspaceStore      workspace.WorkspaceStore
+	TaskContextsChanged func()
+	TaskTitleChanged    func(context.Context, string, string)
 }
 
 // Service validates and orchestrates Local Task lifecycle operations.
@@ -48,7 +50,13 @@ func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (an
 		return nil, err
 	}
 	created, err := s.deps.Repository.Create(ctx, task)
-	return created, err
+	if err != nil {
+		return nil, err
+	}
+	if s.deps.TaskContextsChanged != nil {
+		s.deps.TaskContextsChanged()
+	}
+	return created, nil
 }
 
 // Get loads one Local Task.
@@ -84,7 +92,13 @@ func (s *Service) Update(ctx context.Context, req rpc.LocalTaskUpdateParams) (an
 		return nil, err
 	}
 	updated, err := s.deps.Repository.Update(ctx, taskID, update)
-	return updated, err
+	if err != nil {
+		return nil, err
+	}
+	if req.Title != nil && s.deps.TaskTitleChanged != nil {
+		s.deps.TaskTitleChanged(ctx, updated.ID, updated.Title)
+	}
+	return updated, nil
 }
 
 // Search searches Local Task metadata with optional filters.
@@ -119,22 +133,15 @@ func (s *Service) GetContextDetails(ctx context.Context, req rpc.LocalTaskIDPara
 }
 
 func (s *Service) resolveContextDirectory(task domain.Task) (string, error) {
-	if task.ProjectID == nil {
-		return domain.ResolveDefaultGlobalContextPath(task.ID)
-	}
-	if s.deps.Registry == nil {
-		return "", domain.ErrContextUnavailable
-	}
-	for _, localWorkspace := range s.deps.Registry.List() {
-		if localWorkspace.ProjectID != *task.ProjectID {
-			continue
-		}
-		directory, err := domain.ResolveProjectContextPath(localWorkspace.Path, task.ID)
-		if err == nil {
-			return directory, nil
+	workspaces := make([]domain.ContextWorkspace, 0)
+	if s.deps.Registry != nil {
+		for _, localWorkspace := range s.deps.Registry.List() {
+			workspaces = append(workspaces, domain.ContextWorkspace{
+				ProjectID: localWorkspace.ProjectID, WorktreePath: localWorkspace.Path,
+			})
 		}
 	}
-	return "", domain.ErrContextUnavailable
+	return domain.ResolveTaskContextPath(task, workspaces)
 }
 
 func buildContextDetails(directory string) domain.ContextDetails {

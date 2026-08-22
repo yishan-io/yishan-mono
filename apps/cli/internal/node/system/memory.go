@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -58,8 +59,12 @@ func (s *Service) Reconcile(ctx context.Context) (any, error) {
 			})
 		}
 	}
-	log.Debug().Int("workspaces", len(refs)).Msg("memory reconcile requested")
-	return memSvc.ReconcileNow(refs)
+	taskContexts, err := s.listTaskContexts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug().Int("workspaces", len(refs)).Int("taskContexts", len(taskContexts)).Msg("memory reconcile requested")
+	return memSvc.ReconcileWithTaskContexts(refs, taskContexts)
 }
 
 func (s *Service) Status(ctx context.Context) (any, error) {
@@ -125,4 +130,22 @@ func (s *Service) SetConfig(ctx context.Context, req rpc.MemoryUpdateConfigParam
 		Str("model", cfg.Model).
 		Msg("memory config updated")
 	return map[string]bool{"ok": true}, nil
+}
+
+func (s *Service) listTaskContexts(ctx context.Context) ([]memory.TaskContextRef, error) {
+	if s.deps.TaskContexts == nil {
+		return nil, nil
+	}
+	roots, err := s.deps.TaskContexts.ListContextRoots(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list Local Task contexts: %w", err)
+	}
+	refs := make([]memory.TaskContextRef, 0, len(roots))
+	for _, root := range roots {
+		refs = append(refs, memory.TaskContextRef{
+			Directory: root.Directory, TaskID: root.TaskID,
+			TaskTitle: root.TaskTitle, ProjectID: root.ProjectID,
+		})
+	}
+	return refs, nil
 }

@@ -21,7 +21,7 @@ type retryInstances struct {
 }
 
 func (f *retryInstances) CreateWorkspaceWithProgress(context.Context, workspace.CreateRequest, workspace.CreateProgressReporter) (workspace.Workspace, error) {
-	return workspace.Workspace{}, nil
+	return f.workspace, nil
 }
 func (f *retryInstances) StopWorkspaceTerminals(string) []string {
 	f.calls = append(f.calls, "terminals")
@@ -55,13 +55,21 @@ func (f *retryInstances) WatchAndTrack(workspace.Workspace) error {
 func (f *retryInstances) Unwatch(string)      { f.calls = append(f.calls, "unwatch") }
 func (f *retryInstances) StopTracking(string) { f.calls = append(f.calls, "tracking") }
 
-type retryRecords struct{ closed int }
+type retryRecords struct {
+	closed      int
+	didFinalize bool
+	finalizeErr error
+}
 
 func (*retryRecords) CreateRemoteRecord(context.Context, Registration)                            {}
 func (*retryRecords) UpdateRemoteRecord(context.Context, Registration, string)                    {}
 func (*retryRecords) CloseRemoteRecord(context.Context, string, string, string, workspace.Status) {}
 func (*retryRecords) PersistPrepared(context.Context, CreatePlan) error                           { return nil }
-func (*retryRecords) FinalizePersisted(context.Context, CreatePlan, workspace.Workspace) error {
+func (f *retryRecords) FinalizePersisted(context.Context, CreatePlan, workspace.Workspace) error {
+	if f.finalizeErr != nil {
+		return f.finalizeErr
+	}
+	f.didFinalize = true
 	return nil
 }
 func (f *retryRecords) ClosePersisted(context.Context, string) error { f.closed++; return nil }

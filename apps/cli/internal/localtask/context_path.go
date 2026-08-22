@@ -9,6 +9,12 @@ import (
 
 const projectContextDirectoryName = ".my-context"
 
+// ContextWorkspace supplies an authoritative local workspace path for context resolution.
+type ContextWorkspace struct {
+	ProjectID    string
+	WorktreePath string
+}
+
 // ResolveProjectContextPath resolves a task's context directory through the
 // canonical project context linked from a local workspace.
 func ResolveProjectContextPath(worktreePath string, taskID string) (string, error) {
@@ -20,6 +26,23 @@ func ResolveProjectContextPath(worktreePath string, taskID string) (string, erro
 		return "", fmt.Errorf("resolve project context root: %w", err)
 	}
 	return filepath.Join(contextRoot, "task-context", taskID), nil
+}
+
+// ResolveTaskContextPath resolves a task context from authoritative local workspace paths.
+func ResolveTaskContextPath(task Task, workspaces []ContextWorkspace) (string, error) {
+	if task.ProjectID == nil {
+		return ResolveDefaultGlobalContextPath(task.ID)
+	}
+	for _, workspace := range workspaces {
+		if workspace.ProjectID != *task.ProjectID {
+			continue
+		}
+		directory, err := ResolveProjectContextPath(workspace.WorktreePath, task.ID)
+		if err == nil {
+			return directory, nil
+		}
+	}
+	return "", ErrContextUnavailable
 }
 
 // ResolveGlobalContextPath resolves the context directory for a task without a project.

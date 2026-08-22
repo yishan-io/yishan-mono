@@ -75,6 +75,14 @@ type ContextDetails struct {
 	OutcomePath string `json:"outcomePath"`
 }
 
+// ContextRoot identifies one derived Task Context directory for Memory indexing.
+type ContextRoot struct {
+	TaskID    string
+	TaskTitle string
+	ProjectID string
+	Directory string
+}
+
 // WorkspaceLink relates a Local Task to a local workspace.
 type WorkspaceLink struct {
 	ID          string   `json:"id"`
