@@ -1,0 +1,18 @@
+{
+  "tasks": [
+    {
+      "id": "task-7",
+      "title": "Compatibility validation",
+      "status": "active",
+      "created": "2026-08-26",
+      "path": "tasks/active/task-7-validation"
+    },
+    {
+      "id": "task-6",
+      "title": "Persistence foundation",
+      "status": "completed",
+      "created": "2026-08-24",
+      "path": "tasks/completed/2026/08/task-6-foundation"
+    }
+  ]
+}

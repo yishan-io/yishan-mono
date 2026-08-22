@@ -46,7 +46,7 @@ func (repository *legacyImportRepository) SetPrimaryWorkspaceTask(context.Contex
 	return WorkspaceLink{}, nil
 }
 
-func TestImportLegacyProjectTasks_IsIdempotentAndCopiesContext(t *testing.T) {
+func TestImportLegacyProjectTasks_IsIdempotentAndImportsMetadata(t *testing.T) {
 	root := t.TempDir()
 	legacyDir := filepath.Join(root, "tasks", "active", "task-1-import")
 	if err := os.MkdirAll(legacyDir, 0o755); err != nil {

@@ -51,6 +51,7 @@ func TestLocalTaskStore_SetPrimaryWorkspaceTaskReplacesPrimary(t *testing.T) {
 	if _, err := store.SetPrimaryWorkspaceTask(ctx, first.ID, "workspace-1"); err != nil {
 		t.Fatalf("set first primary task: %v", err)
 	}
+	assertWorkspaceActivePrimary(t, store, "workspace-1", first.ID)
 	primary, err := store.SetPrimaryWorkspaceTask(ctx, second.ID, "workspace-1")
 	if err != nil {
 		t.Fatalf("replace primary task: %v", err)
@@ -58,6 +59,7 @@ func TestLocalTaskStore_SetPrimaryWorkspaceTaskReplacesPrimary(t *testing.T) {
 	if primary.LocalTaskID != second.ID || primary.Role != localtask.LinkRolePrimary {
 		t.Fatalf("primary link = %#v", primary)
 	}
+	assertWorkspaceActivePrimary(t, store, "workspace-1", second.ID)
 	links, err := store.ListWorkspaceLinks(ctx, "workspace-1")
 	if err != nil || len(links) != 2 {
 		t.Fatalf("workspace links = %#v, %v", links, err)
@@ -161,6 +163,15 @@ func TestLocalTaskStore_UpdateWorkspaceLinkStatusRejectsInvalidMissingAndUnlinke
 	if reloaded[0].Status != localtask.StatusCompleted || reloaded[0].UnlinkedAt == nil {
 		t.Fatalf("unlinked history = %#v", reloaded[0])
 	}
+}
+
+func assertWorkspaceActivePrimary(t *testing.T, store *LocalTaskStore, workspaceID string, taskID string) {
+	t.Helper()
+	links, err := store.ListWorkspaceLinks(context.Background(), workspaceID)
+	if err != nil {
+		t.Fatalf("list workspace links: %v", err)
+	}
+	assertActivePrimaryLink(t, links, taskID)
 }
 
 func assertActivePrimaryLink(t *testing.T, links []localtask.WorkspaceLink, taskID string) {
