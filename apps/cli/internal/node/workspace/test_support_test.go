@@ -104,6 +104,15 @@ const apiWorkspaceRecord = `{"workspace":{"id":"ws-record","organizationId":"org
 // and records every request. Unknown paths 404 (usage-collector scans and
 // similar best-effort calls tolerate this).
 func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Service {
+	return newTestServiceWithInspectResolver(t, runtime, nodeID, nil)
+}
+
+func newTestServiceWithInspectResolver(
+	t *testing.T,
+	runtime *session.Session,
+	nodeID string,
+	inspectResolver func(context.Context, string) (git.GitInspectResult, error),
+) *Service {
 	t.Helper()
 	root := t.TempDir()
 	events := eventbus.NewHub()
@@ -117,6 +126,7 @@ func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Serv
 		OnPullRequestUpdated: func(event workspaceprtracker.PullRequestUpdatedEvent) {
 			PublishPullRequestUpdated(events, event)
 		},
+		InspectResolver: inspectResolver,
 	})
 	watchers := NewWatchers(events, prTracker.RefreshWorkspaceByPath)
 	registry.SetOnRemoved(func(workspaceID string, path string) {
@@ -175,6 +185,14 @@ func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Serv
 func newTestHandler(t *testing.T) *Service {
 	t.Helper()
 	return newTestService(t, nil, "node-1")
+}
+
+func newTestHandlerWithInspectResolver(
+	t *testing.T,
+	inspectResolver func(context.Context, string) (git.GitInspectResult, error),
+) *Service {
+	t.Helper()
+	return newTestServiceWithInspectResolver(t, nil, "node-1", inspectResolver)
 }
 
 // setTestDatabase attaches the local SQLite handle to the service.

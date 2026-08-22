@@ -68,12 +68,12 @@ func (h *WorkspaceHandler) Call(ctx context.Context, connection *Connection, met
 			return nil, err
 		}
 		return h.Services.CloseProject(ctx, req)
-	case MethodWorkspaceCreateLocalFolder:
-		var req WorkspaceCreateLocalFolderParams
+	case MethodWorkspaceImportLocalPath:
+		var req WorkspaceImportLocalPathParams
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.CreateLocalFolder(ctx, req)
+		return h.Services.ImportLocalPath(ctx, req)
 	case MethodWorkspaceListLocalFolders:
 		return h.Services.ListLocalFolders(ctx)
 	case MethodWorkspaceDeleteLocalFolder:

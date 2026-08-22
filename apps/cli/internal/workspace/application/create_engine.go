@@ -50,6 +50,7 @@ func CreateWorkspace(registry *instance.Registry, ctx context.Context, req works
 		Path:      paths.WorktreePath,
 		OrgID:     req.OrganizationID,
 		ProjectID: req.ProjectID,
+		Kind:      workspace.KindWorktree,
 		State:     workspace.StateActive,
 	}
 

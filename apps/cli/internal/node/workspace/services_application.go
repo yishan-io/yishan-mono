@@ -209,8 +209,8 @@ func (d *appDeps) RemoveFromMemory(workspaceID string) {
 	d.s.deps.Registry.Remove(workspaceID)
 }
 
-func (d *appDeps) WatchAndTrack(workspaceID string, path string) {
-	d.s.WatchAndTrack(workspaceID, path)
+func (d *appDeps) WatchAndTrack(workspace workspace.Workspace) {
+	d.s.WatchAndTrack(workspace)
 }
 
 func (d *appDeps) Unwatch(path string) {

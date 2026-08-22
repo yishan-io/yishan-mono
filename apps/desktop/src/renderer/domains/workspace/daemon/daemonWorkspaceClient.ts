@@ -31,6 +31,11 @@ type InvokeFn = (method: string, params?: unknown, timeoutMs?: number) => Promis
 
 const WORKSPACE_CREATE_TIMEOUT_MS = 40 * 60 * 1_000;
 
+/** Result of atomically classifying and importing one local directory. */
+export type LocalPathImport =
+  | { kind: "folder"; folder: DaemonLocalFolder }
+  | { kind: "git"; remoteUrl?: string; currentBranch?: string };
+
 export function subscribeDaemonConnectionStatus(
   listener: (status: "connected" | "connecting" | "disconnected") => void,
 ): () => void {
@@ -306,24 +311,31 @@ export class DaemonWorkspaceClient {
     return (await this.invoke("workspace.closeProject", input)) as WorkspaceCloseProjectOutput;
   }
 
-  async createLocalFolder(input: { path: string; name?: string }): Promise<DaemonLocalFolder> {
+  async importLocalPath(input: { path: string; name?: string }): Promise<LocalPathImport> {
     const record = asRecord(input);
-    const rawPath = readOptionalString(record?.path);
-    if (!rawPath) {
+    const path = readOptionalString(record?.path);
+    if (!path) {
       throw new Error("path is required");
     }
 
-    const created = readDaemonLocalFolder(
-      await this.invoke("workspace.createLocalFolder", {
-        path: rawPath,
+    const result = asRecord(
+      await this.invoke("workspace.importLocalPath", {
+        path,
         name: readOptionalString(record?.name),
       }),
     );
-    if (!created || !created.id) {
-      throw new Error("daemon workspace createLocalFolder returned invalid response");
+    if (readOptionalString(result?.kind) === "git") {
+      return {
+        kind: "git",
+        remoteUrl: readOptionalString(result?.remoteUrl),
+        currentBranch: readOptionalString(result?.currentBranch),
+      };
     }
-
-    return created;
+    const folder = readDaemonLocalFolder(result?.folder);
+    if (readOptionalString(result?.kind) === "folder" && folder?.id) {
+      return { kind: "folder", folder };
+    }
+    throw new Error("daemon workspace importLocalPath returned invalid response");
   }
 
   async listLocalFolders(): Promise<DaemonLocalFolder[]> {

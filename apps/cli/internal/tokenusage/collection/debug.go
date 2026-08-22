@@ -25,9 +25,12 @@ func (c *Collector) DebugState() DebugState {
 	knownTimers := make(map[string]string, len(c.timers))
 	for key := range c.timers {
 		scheduledAgents = append(scheduledAgents, key)
-		if key == "startup" {
+		switch key {
+		case "startup":
 			knownTimers[key] = "startup-delay"
-		} else {
+		case tokenUsageRecoveryTimerKey:
+			knownTimers[key] = "recovery"
+		default:
 			knownTimers[key] = "agent-debounce"
 		}
 	}

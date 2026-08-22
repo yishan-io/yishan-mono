@@ -84,6 +84,13 @@ func openLocalWorkspace(t *testing.T, services *Service, id string, path string)
 // openTestWorkspace registers a workspace instance at the given path via the
 // production open path.
 
+func openFolderWorkspace(t *testing.T, services *Service, id string, path string) {
+	t.Helper()
+	if _, err := services.Open(workspace.OpenRequest{ID: id, Path: path, Kind: workspace.KindFolder}); err != nil {
+		t.Fatalf("open folder workspace %s: %v", id, err)
+	}
+}
+
 func openTestWorkspace(t *testing.T, services *Service, id string, path string) workspace.Workspace {
 	t.Helper()
 	ws, err := services.Open(workspace.OpenRequest{ID: id, Path: path})

@@ -156,6 +156,7 @@ type WorkspaceOpenProjectEntry struct {
 	WorktreePath string `json:"worktreePath"`
 	ProjectID    string `json:"projectId,omitempty"`
 	OrgID        string `json:"orgId,omitempty"`
+	Kind         string `json:"kind,omitempty"`
 }
 
 type WorkspaceOpenProjectParams struct {
@@ -176,9 +177,29 @@ type WorkspaceCloseProjectResult struct {
 	Stopped []string `json:"stopped"`
 }
 
-type WorkspaceCreateLocalFolderParams struct {
+type WorkspaceImportLocalPathParams struct {
 	Path string `json:"path"`
 	Name string `json:"name,omitempty"`
+}
+
+// WorkspaceImportLocalPathResult classifies an existing local directory. Git
+// directories are returned for backend project creation; non-git directories
+// are persisted as daemon-local folders.
+type WorkspaceImportLocalPathResult struct {
+	Kind          string                          `json:"kind"`
+	Folder        *WorkspaceImportLocalPathFolder `json:"folder,omitempty"`
+	RemoteURL     string                          `json:"remoteUrl,omitempty"`
+	CurrentBranch string                          `json:"currentBranch,omitempty"`
+}
+
+// WorkspaceImportLocalPathFolder is the daemon-local folder DTO returned when
+// importing a non-git local path.
+type WorkspaceImportLocalPathFolder struct {
+	ID        string  `json:"id"`
+	LocalPath string  `json:"localPath"`
+	Name      *string `json:"name,omitempty"`
+	State     string  `json:"state,omitempty"`
+	Health    *string `json:"health,omitempty"`
 }
 
 type WorkspaceDeleteLocalFolderParams struct {

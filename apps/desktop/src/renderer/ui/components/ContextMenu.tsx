@@ -2,6 +2,7 @@ import { Box, Divider, ListItemIcon, Menu, MenuItem } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { LuChevronRight } from "react-icons/lu";
 
 type ContextMenuLeafItem = {
@@ -184,7 +185,8 @@ export function ContextMenu({
               return;
             }
 
-            closeAllMenus();
+            // Commit the close before an action opens a dialog or starts work.
+            flushSync(closeAllMenus);
             void item.onSelect?.();
           }}
           sx={

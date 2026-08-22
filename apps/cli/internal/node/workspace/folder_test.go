@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -29,23 +30,27 @@ func newFolderHandler(t *testing.T) (*Service, *sqlite.WorkspaceStore) {
 	return s, sqlite.NewWorkspaceStore(database)
 }
 
-func TestWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
+func TestWorkspaceImportLocalPath_HappyPath(t *testing.T) {
 	s, store := newFolderHandler(t)
 	folderPath := t.TempDir()
 
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: folderPath})
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{Path: folderPath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
-	row, ok := result.(sqlite.Workspace)
-	if !ok {
-		t.Fatalf("unexpected result type %T", result)
+	classification, ok := result.(rpc.WorkspaceImportLocalPathResult)
+	if !ok || classification.Kind != "folder" {
+		t.Fatalf("unexpected result %#v", result)
 	}
-	if row.ID == "" || row.LocalPath == "" || row.NodeID != "node-1" || row.Kind != "folder" {
+	row := classification.Folder
+	if row == nil {
+		t.Fatal("expected folder result")
+	}
+	if row.ID == "" || row.LocalPath == "" {
 		t.Fatalf("unexpected folder row: %#v", row)
 	}
 	resolved, err := filepath.EvalSymlinks(folderPath)
@@ -68,56 +73,72 @@ func TestWorkspaceCreateLocalFolder_HappyPath(t *testing.T) {
 	}
 }
 
-func TestWorkspaceCreateLocalFolder_RejectsEmptyPath(t *testing.T) {
+func TestWorkspaceImportLocalPath_RejectsEmptyPath(t *testing.T) {
 	s, _ := newFolderHandler(t)
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: "   "})
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{Path: "   "})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params); err == nil {
 		t.Fatal("expected error for empty path")
 	}
 }
 
-func TestWorkspaceCreateLocalFolder_RejectsNonexistentPath(t *testing.T) {
+func TestWorkspaceImportLocalPath_RejectsNonexistentPath(t *testing.T) {
 	s, _ := newFolderHandler(t)
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: filepath.Join(t.TempDir(), "does-not-exist")})
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{Path: filepath.Join(t.TempDir(), "does-not-exist")})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params); err == nil {
 		t.Fatal("expected error for nonexistent path")
 	}
 }
 
-func TestWorkspaceCreateLocalFolder_RejectsFilePath(t *testing.T) {
+func TestWorkspaceImportLocalPath_RejectsFilePath(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	filePath := filepath.Join(t.TempDir(), "file.txt")
 	if err := os.WriteFile(filePath, []byte("x"), 0o644); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: filePath})
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{Path: filePath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params); err == nil {
 		t.Fatal("expected error for file path (not a directory)")
 	}
 }
 
-func TestWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
+func TestWorkspaceImportLocalPath_ReturnsGitClassification(t *testing.T) {
 	s, store := newFolderHandler(t)
+	inspectionCalls := 0
+	s.deps.InspectLocalPath = func(context.Context, string) (git.GitInspectResult, error) {
+		inspectionCalls++
+		return git.GitInspectResult{
+			IsGitRepository: true,
+			RemoteURL:       "https://github.com/yishan-io/project.git",
+			CurrentBranch:   "main",
+		}, nil
+	}
 	repoPath := t.TempDir()
-	initDispatchWorkspaceTestGitRepoWithCommit(t, repoPath)
 
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: repoPath})
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{Path: repoPath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
-		t.Fatal("expected error for git repository folder")
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params)
+	if err != nil {
+		t.Fatalf("import git repository: %v", err)
 	}
-	// Ensure nothing was persisted for the rejected git folder.
+	classification, ok := result.(rpc.WorkspaceImportLocalPathResult)
+	if !ok || classification.Kind != "git" || classification.Folder != nil {
+		t.Fatalf("classification = %#v, want git without folder", result)
+	}
+	if inspectionCalls != 1 {
+		t.Fatalf("Git.Inspect calls = %d, want 1", inspectionCalls)
+	}
+	// Git paths are returned for backend creation and never persisted as folders.
 	folders, err := store.ListFolders(context.Background())
 	if err != nil {
 		t.Fatalf("list folders: %v", err)
@@ -127,17 +148,17 @@ func TestWorkspaceCreateLocalFolder_RejectsGitRepository(t *testing.T) {
 	}
 }
 
-func TestWorkspaceCreateLocalFolder_RejectsDuplicatePath(t *testing.T) {
+func TestWorkspaceImportLocalPath_RejectsDuplicatePath(t *testing.T) {
 	s, _ := newFolderHandler(t)
 	folderPath := t.TempDir()
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: folderPath})
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{Path: folderPath})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err != nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params); err != nil {
 		t.Fatalf("first create: %v", err)
 	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params); err == nil {
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params); err == nil {
 		t.Fatal("expected error for duplicate path")
 	}
 }
@@ -205,7 +226,7 @@ func TestWorkspaceDeleteLocalFolder_TearsDownOpenFolder(t *testing.T) {
 	// is exercised. Folders are strictly non-git so no real watcher is ever
 	// registered, but the manager entry means the delete path must still run
 	// the same teardown calls the workspace-close flow uses without panic.
-	if _, err := s.Open(workspace.OpenRequest{ID: created.ID, Path: folderPath}); err != nil {
+	if _, err := s.Open(workspace.OpenRequest{ID: created.ID, Path: folderPath, Kind: workspace.KindFolder}); err != nil {
 		t.Fatalf("open folder in manager: %v", err)
 	}
 	if _, err := s.GetWorkspace(created.ID); err != nil {
@@ -251,23 +272,27 @@ func TestWorkspaceDeleteLocalFolder_RejectsEmptyID(t *testing.T) {
 	}
 }
 
-func TestWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
+func TestWorkspaceImportLocalPath_PersistsName(t *testing.T) {
 	s, store := newFolderHandler(t)
 
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{
 		Path: t.TempDir(),
 		Name: "  Marketing Site  ",
 	})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
-	row, ok := result.(sqlite.Workspace)
-	if !ok {
-		t.Fatalf("unexpected result type %T", result)
+	classification, ok := result.(rpc.WorkspaceImportLocalPathResult)
+	if !ok || classification.Kind != "folder" {
+		t.Fatalf("unexpected result %#v", result)
+	}
+	row := classification.Folder
+	if row == nil {
+		t.Fatal("expected folder result")
 	}
 	if row.Name == nil || *row.Name != "Marketing Site" {
 		t.Fatalf("expected trimmed name on create result, got %#v", row.Name)
@@ -282,20 +307,24 @@ func TestWorkspaceCreateLocalFolder_PersistsName(t *testing.T) {
 	}
 }
 
-func TestWorkspaceCreateLocalFolder_EmptyNameIsNil(t *testing.T) {
+func TestWorkspaceImportLocalPath_EmptyNameIsNil(t *testing.T) {
 	s, store := newFolderHandler(t)
 
-	params, err := json.Marshal(rpc.WorkspaceCreateLocalFolderParams{Path: t.TempDir(), Name: "   "})
+	params, err := json.Marshal(rpc.WorkspaceImportLocalPathParams{Path: t.TempDir(), Name: "   "})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
 	}
-	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreateLocalFolder, params)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceImportLocalPath, params)
 	if err != nil {
 		t.Fatalf("create local folder: %v", err)
 	}
-	row, ok := result.(sqlite.Workspace)
-	if !ok {
-		t.Fatalf("unexpected result type %T", result)
+	classification, ok := result.(rpc.WorkspaceImportLocalPathResult)
+	if !ok || classification.Kind != "folder" {
+		t.Fatalf("unexpected result %#v", result)
+	}
+	row := classification.Folder
+	if row == nil {
+		t.Fatal("expected folder result")
 	}
 	stored, err := store.Get(context.Background(), row.ID)
 	if err != nil {

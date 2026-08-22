@@ -100,6 +100,7 @@ func (s *Service) registerErrorWorkspace(storedWorkspace workspace.StoredWorkspa
 			Path:      canonicalizeWorkspacePath(storedWorkspace.LocalPath),
 			OrgID:     storedWorkspace.OrganizationID,
 			ProjectID: storedWorkspace.ProjectID,
+			Kind:      workspace.Kind(storedWorkspace.Kind),
 		}
 	}
 	ws.State = workspace.StateError
@@ -123,7 +124,7 @@ func canonicalizeWorkspacePath(path string) string {
 
 func (s *Service) hydrate(storedWorkspace workspace.StoredWorkspace) error {
 	_, err := s.Open(workspace.OpenRequest{ID: storedWorkspace.ID, Path: storedWorkspace.LocalPath,
-		OrgID: storedWorkspace.OrganizationID, ProjectID: storedWorkspace.ProjectID})
+		OrgID: storedWorkspace.OrganizationID, ProjectID: storedWorkspace.ProjectID, Kind: workspace.Kind(storedWorkspace.Kind)})
 	if err != nil {
 		return fmt.Errorf("restore workspace %q: %w", storedWorkspace.ID, err)
 	}
@@ -193,6 +194,7 @@ func (s *Service) Open(req workspace.OpenRequest) (workspace.Workspace, error) {
 		Path:      absPath,
 		OrgID:     req.OrgID,
 		ProjectID: req.ProjectID,
+		Kind:      openWorkspaceKind(req.Kind),
 		State:     workspace.StateActive,
 	}), nil
 }
@@ -241,4 +243,16 @@ func PRResolvedAt(pullRequest *workspace.WorkspacePullRequest) *string {
 	}
 	resolvedAt := time.Now().UTC().Format(time.RFC3339Nano)
 	return &resolvedAt
+}
+
+// openWorkspaceKind preserves the previous behavior for old callers while
+// assigning an explicit non-folder kind to their runtime workspaces.
+func openWorkspaceKind(kind workspace.Kind) workspace.Kind {
+	if kind == workspace.KindFolder {
+		return workspace.KindFolder
+	}
+	if kind == workspace.KindPrimary {
+		return workspace.KindPrimary
+	}
+	return workspace.KindWorktree
 }

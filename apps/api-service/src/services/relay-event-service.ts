@@ -1,5 +1,13 @@
 import type { ServiceConfig } from "@/types";
 
+/** Maximum duration allowed for a best-effort relay publish request. */
+export const RELAY_EVENT_TIMEOUT_MS = 5_000;
+
+/** Creates the abort signal used to bound an individual relay publish request. */
+export function createRelayEventTimeoutSignal(): AbortSignal {
+  return AbortSignal.timeout(RELAY_EVENT_TIMEOUT_MS);
+}
+
 type WorkspaceSnapshotChangeInput = {
   organizationId: string;
   resource: "project" | "workspace";
@@ -9,9 +17,14 @@ type WorkspaceSnapshotChangeInput = {
   sourceNodeId?: string;
 };
 
+type TimeoutSignalFactory = () => AbortSignal;
+
 /** Publishes best-effort org-scoped invalidation events to the relay. */
 export class RelayEventService {
-  constructor(private readonly config: ServiceConfig) {}
+  constructor(
+    private readonly config: ServiceConfig,
+    private readonly createTimeoutSignal: TimeoutSignalFactory = createRelayEventTimeoutSignal,
+  ) {}
 
   async publishWorkspaceSnapshotChanged(input: WorkspaceSnapshotChangeInput): Promise<void> {
     const relayUrl = this.config.relayUrl?.trim();
@@ -38,6 +51,7 @@ export class RelayEventService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
+        signal: this.createTimeoutSignal(),
       });
 
       if (!response.ok) {

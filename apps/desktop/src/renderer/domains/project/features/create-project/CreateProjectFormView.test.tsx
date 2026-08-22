@@ -7,12 +7,10 @@ import { CreateProjectFormView } from "./CreateProjectFormView";
 
 const mocked = vi.hoisted(() => {
   const createProject = vi.fn();
-  const inspectLocalProjectSource = vi.fn();
   const openLocalFolderDialog = vi.fn();
 
   return {
     createProject,
-    inspectLocalProjectSource,
     openLocalFolderDialog,
   };
 });
@@ -25,7 +23,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../commands/projectCommands", () => ({
   createProject: mocked.createProject,
-  inspectLocalProjectSource: mocked.inspectLocalProjectSource,
 }));
 
 vi.mock("../../host/folderPicker", () => ({
@@ -51,9 +48,6 @@ afterEach(() => {
 describe("CreateProjectFormView", () => {
   it("accepts a non-git folder without a path error and enables Create", async () => {
     mocked.openLocalFolderDialog.mockResolvedValueOnce("/tmp/plain-folder");
-    mocked.inspectLocalProjectSource.mockResolvedValueOnce({
-      sourceTypeHint: "unknown",
-    });
 
     renderForm();
 
@@ -62,7 +56,6 @@ describe("CreateProjectFormView", () => {
 
     await screen.findByDisplayValue("/tmp/plain-folder");
 
-    expect(mocked.inspectLocalProjectSource).toHaveBeenCalledWith("/tmp/plain-folder");
     expect(screen.queryByText("project.form.notAGitRepo")).toBeNull();
 
     const createButton = screen.getByRole("button", { name: "Create" }) as HTMLButtonElement;

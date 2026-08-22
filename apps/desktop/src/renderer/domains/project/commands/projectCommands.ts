@@ -1,18 +1,17 @@
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
-import { inspectGitRepositoryPath } from "@renderer/domains/git";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import type { ProjectWithWorkspacesRecord } from "../api/types";
 
 import { sessionStore } from "@renderer/domains/session";
 import {
+  applyLocalFolderImport,
   buildWorkspaceOpenProjectEntries,
-  createLocalFolderImport,
+  getWorkspaceRpc,
   openWorkspaceEntries,
   syncTabStoreWithWorkspace,
   syncWorkspaceContextLinks,
@@ -25,44 +24,6 @@ import {
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
-
-async function inspectLocalRepository(path: string): Promise<{
-  isGitRepository: boolean;
-  remoteUrl?: string;
-  currentBranch?: string;
-}> {
-  try {
-    const result = await inspectGitRepositoryPath({ path });
-
-    if (import.meta.env.DEV) {
-      console.debug("[projectCommands] git.inspect result", { path, result });
-    }
-
-    return result;
-  } catch {
-    if (import.meta.env.DEV) {
-      console.debug("[projectCommands] git.inspect failed, falling back", { path });
-    }
-
-    return {
-      isGitRepository: false,
-    };
-  }
-}
-
-/** Infers whether one local folder is non-git, git-local, or git with a remote. */
-export async function inspectLocalProjectSource(path: string): Promise<{
-  sourceTypeHint: "unknown" | "git-local" | "git";
-  remoteUrl?: string;
-}> {
-  const metadata = await inspectLocalRepository(path);
-  const remoteUrl = metadata.remoteUrl?.trim() || undefined;
-
-  return {
-    sourceTypeHint: remoteUrl ? "git" : metadata.isGitRepository ? "git-local" : "unknown",
-    remoteUrl,
-  };
-}
 
 /** Creates one project in backend, then applies it into the local legacy store shape. */
 export async function createProject(input: {
@@ -80,38 +41,22 @@ export async function createProject(input: {
     return;
   }
 
-  let inferredSourceTypeHint: "unknown" | "git-local" | "git" =
-    input.sourceTypeHint ?? (isLocalSource ? "git-local" : "git");
+  let inferredSourceTypeHint: "unknown" | "git-local" | "git" = input.sourceTypeHint ?? "git";
   let inferredRemoteUrl = normalizedGitUrl || undefined;
   let inferredDefaultBranch: string | undefined;
   let inferredNodeId: string | undefined;
-  const localRepositoryMetadata = isLocalSource ? await inspectLocalRepository(normalizedPath) : undefined;
 
-  if (isLocalSource && localRepositoryMetadata) {
-    inferredNodeId = sessionStore.getState().daemonId?.trim();
-    inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
-    inferredSourceTypeHint = inferredRemoteUrl
-      ? "git"
-      : localRepositoryMetadata.isGitRepository
-        ? "git-local"
-        : "unknown";
-    inferredDefaultBranch = localRepositoryMetadata.currentBranch || undefined;
-
-    if (import.meta.env.DEV) {
-      console.debug("[projectCommands] local project inference", {
-        path: normalizedPath,
-        inferredSourceTypeHint,
-        inferredRemoteUrl,
-        inferredDefaultBranch,
-        inferredNodeId,
-      });
+  if (isLocalSource) {
+    const workspaceRpc = await getWorkspaceRpc();
+    const localPathImport = await workspaceRpc.importLocalPath({ path: normalizedPath, name: normalizedName });
+    if (localPathImport.kind === "folder") {
+      await applyLocalFolderImport(localPathImport.folder);
+      return;
     }
-  }
-
-  // Non-git local folders live only on the daemon: no backend record or context link.
-  if (isLocalSource && inferredSourceTypeHint === "unknown") {
-    await createLocalFolderImport({ path: normalizedPath, name: normalizedName });
-    return;
+    inferredNodeId = sessionStore.getState().daemonId?.trim();
+    inferredRemoteUrl = localPathImport.remoteUrl;
+    inferredSourceTypeHint = inferredRemoteUrl ? "git" : "git-local";
+    inferredDefaultBranch = localPathImport.currentBranch;
   }
 
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
