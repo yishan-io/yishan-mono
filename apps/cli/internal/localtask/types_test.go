@@ -1,6 +1,9 @@
 package localtask
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestValidateTask_RejectsMissingFieldsAndInvalidEnums(t *testing.T) {
 	tests := []struct {
@@ -57,5 +60,25 @@ func TestValidateLinkStatus_AcceptsLifecycleStatuses(t *testing.T) {
 		if got := ValidateLinkStatus(test.status); got != test.want {
 			t.Fatalf("ValidateLinkStatus(%q) = %v, want %v", test.status, got, test.want)
 		}
+	}
+}
+
+func TestTaskAndWorkspaceLink_JSONIncludesNullableFields(t *testing.T) {
+	taskJSON, err := json.Marshal(Task{ID: "task-1", Title: "Task", Description: "", Status: StatusActive, Priority: PriorityMedium})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"","updatedAt":"","completedAt":null}`
+	if string(taskJSON) != wantTask {
+		t.Fatalf("encoded task = %s, want %s", taskJSON, wantTask)
+	}
+
+	linkJSON, err := json.Marshal(WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Role: LinkRolePrimary, Status: StatusActive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantLink := `{"id":"link-1","localTaskId":"task-1","workspaceId":"workspace-1","role":"primary","status":"active","linkedAt":"","unlinkedAt":null}`
+	if string(linkJSON) != wantLink {
+		t.Fatalf("encoded link = %s, want %s", linkJSON, wantLink)
 	}
 }

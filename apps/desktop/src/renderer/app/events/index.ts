@@ -11,13 +11,21 @@ import { openLink } from "@renderer/domains/browser";
  */
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
+import { refreshActiveLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
 import { createNotificationEventHandlers } from "@renderer/domains/notification";
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { createWorkbenchEventHandlers } from "@renderer/domains/workbench";
 import { createWorkspaceEventHandlers } from "@renderer/domains/workspace";
 import { subscribeBackendEvent } from "@renderer/events";
 import { subscribeDesktopRpcEvent } from "../../events/desktopRpcEventBus";
 import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
+
+async function loadWorkspaceSnapshotAndLocalTasks(): Promise<void> {
+  await loadWorkspaceSnapshot();
+  const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+  await Promise.all([refreshActiveLocalTaskCount(), selectLocalTaskWorkspace(selectedWorkspaceId || null)]);
+}
 
 /** Subscribes to webview new-window requests forwarded by the main process. */
 function subscribeWebviewOpenUrlHandler(): () => void {
@@ -111,7 +119,7 @@ export function startBackendEventHandlers() {
         }
         listener(event.payload);
       }),
-    loadWorkspaceSnapshot,
+    loadWorkspaceSnapshot: loadWorkspaceSnapshotAndLocalTasks,
   })();
   const stopNotificationEventHandlers = createNotificationEventHandlers({
     subscribeInAppNotification: (listener) =>

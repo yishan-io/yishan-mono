@@ -57,14 +57,14 @@ type LinkRole string
 // Task is Local Task metadata authoritative in the local SQLite database.
 type Task struct {
 	ID          string   `json:"id"`
-	ProjectID   *string  `json:"projectId,omitempty"`
+	ProjectID   *string  `json:"projectId"`
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
 	Status      Status   `json:"status"`
 	Priority    Priority `json:"priority"`
 	CreatedAt   string   `json:"createdAt"`
 	UpdatedAt   string   `json:"updatedAt"`
-	CompletedAt *string  `json:"completedAt,omitempty"`
+	CompletedAt *string  `json:"completedAt"`
 }
 
 // ContextDetails contains derived filesystem locations for v1 task documents.
@@ -91,7 +91,7 @@ type WorkspaceLink struct {
 	Role        LinkRole `json:"role"`
 	Status      Status   `json:"status"`
 	LinkedAt    string   `json:"linkedAt"`
-	UnlinkedAt  *string  `json:"unlinkedAt,omitempty"`
+	UnlinkedAt  *string  `json:"unlinkedAt"`
 }
 
 // TaskFilter limits Local Task list results.
