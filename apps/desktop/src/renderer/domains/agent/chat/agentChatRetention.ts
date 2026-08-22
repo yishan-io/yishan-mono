@@ -17,15 +17,59 @@ export function mergeActiveTurnHistory(
   rendererFinalAssistantIds?: Record<string, true>,
 ): AgentMessage[] {
   const committedMessagesById = new Map(committedMessages.map((message) => [message.id, message]));
-  const historyMessageIds = new Set(historyMessages.map((message) => message.id));
+  const terminalHistoryChildSessionIds = new Set(
+    historyMessages
+      .filter(isCompletedSubagentLifecycleMessage)
+      .map(getSubagentChildSessionId)
+      .filter((childSessionId): childSessionId is string => Boolean(childSessionId)),
+  );
+  const liveLifecycleMessages = committedMessages.filter(
+    (message) =>
+      isBackgroundSubagentLifecycleMessage(message) &&
+      !terminalHistoryChildSessionIds.has(getSubagentChildSessionId(message) ?? ""),
+  );
+  const liveLifecycleChildSessionIds = new Set(
+    liveLifecycleMessages.map(getSubagentChildSessionId).filter((childSessionId): childSessionId is string => Boolean(childSessionId)),
+  );
+  const historyWithoutStaleLifecycleMessages = historyMessages.filter((message) => {
+    const childSessionId = getSubagentChildSessionId(message);
+    return !childSessionId || !liveLifecycleChildSessionIds.has(childSessionId);
+  });
+  const historyMessageIds = new Set(historyWithoutStaleLifecycleMessages.map((message) => message.id));
   const isRendererFinalAssistant = (message: AgentMessage): boolean =>
     rendererFinalAssistantIds === undefined || rendererFinalAssistantIds[message.id] === true;
+  const retainedLifecycleMessages = liveLifecycleMessages.filter((message) => !historyMessageIds.has(message.id));
+  const retainedLifecycleMessageIds = new Set(retainedLifecycleMessages.map((message) => message.id));
   return [
-    ...historyMessages.map((message) =>
+    // Keep live metadata before history so transcript trimming drops it before
+    // it drops persisted conversation messages.
+    ...retainedLifecycleMessages,
+    ...historyWithoutStaleLifecycleMessages.map((message) =>
       isRendererFinalAssistant(message) ? (committedMessagesById.get(message.id) ?? message) : message,
     ),
-    ...committedMessages.filter((message) => isRendererFinalAssistant(message) && !historyMessageIds.has(message.id)),
+    ...committedMessages.filter(
+      (message) =>
+        isRendererFinalAssistant(message) &&
+        !historyMessageIds.has(message.id) &&
+        !retainedLifecycleMessageIds.has(message.id),
+    ),
   ];
+}
+
+function isBackgroundSubagentLifecycleMessage(message: AgentMessage): boolean {
+  return message.role === "custom" && message.customType === "pi-subagent-child" && message.details?.mode === "background";
+}
+
+function isCompletedSubagentLifecycleMessage(message: AgentMessage): boolean {
+  return message.role === "custom" && message.customType === "pi-subagent-child" && message.details?.event === "completed";
+}
+
+function getSubagentChildSessionId(message: AgentMessage): string | undefined {
+  if (message.role !== "custom" || message.customType !== "pi-subagent-child") {
+    return undefined;
+  }
+  const childSessionId = message.details?.childSessionId;
+  return typeof childSessionId === "string" ? childSessionId : undefined;
 }
 
 /**

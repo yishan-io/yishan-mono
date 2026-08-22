@@ -155,6 +155,66 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
     ]);
   });
 
+  it("retains a live lifecycle entry when history hydration omits extension entries", () => {
+    const tabId = "tab-lifecycle-hydration";
+    agentChatStore.getState().initSession(tabId, "session-lifecycle-hydration");
+    const toolCall = {
+      id: "assistant-agent-call",
+      role: "assistant" as const,
+      content: [
+        {
+          type: "toolCall" as const,
+          id: "agent-tool-call",
+          name: "Agent",
+          arguments: { agent: "Builder", prompt: "live work" },
+        },
+      ],
+    };
+    const acceptedBackgroundResult = {
+      id: "agent-tool-result",
+      role: "toolResult" as const,
+      toolCallId: "agent-tool-call",
+      toolName: "Agent",
+      content: [{ type: "text" as const, text: "Started Builder as agent-live" }],
+      details: { agentId: "agent-live", mode: "background" },
+    };
+    agentChatStore.getState().appendMessage(tabId, toolCall);
+    agentChatStore.getState().appendMessage(tabId, acceptedBackgroundResult);
+
+    handleAgentPiEvent({
+      sessionId: "session-lifecycle-hydration",
+      tabId,
+      workspaceId: "workspace-1",
+      event: {
+        type: "extension_ui_request",
+        method: "setWidget",
+        widgetKey: "pi-subagents-lifecycle",
+        widgetLines: [
+          JSON.stringify({
+            version: 1,
+            entries: [
+              {
+                version: 1,
+                event: "started",
+                agentId: "agent-live",
+                agentName: "Builder",
+                mode: "background",
+                parentToolCallId: "agent-tool-call",
+                childSessionId: "child-session-live",
+              },
+            ],
+          }),
+        ],
+      },
+    });
+
+    agentChatStore.getState().replaceMessages(tabId, [toolCall, acceptedBackgroundResult]);
+
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+      expect.objectContaining({ childSessionId: "child-session-live", state: "running" }),
+    ]);
+  });
+
   it("ignores malformed toolcall_end deltas without corrupting the streaming message", () => {
     agentChatStore.getState().initSession("tab-malformed-toolcall-delta", "session-malformed-toolcall-delta");
     agentChatStore.getState().updateStreamingMessage("tab-malformed-toolcall-delta", {
