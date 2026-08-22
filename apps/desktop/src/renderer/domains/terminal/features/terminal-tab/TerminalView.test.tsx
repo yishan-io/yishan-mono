@@ -988,7 +988,7 @@ describe("TerminalView", () => {
     expect(mocked.xtermFocus).toHaveBeenCalledTimes(1);
   });
 
-  it("retries wake recovery after focus until the terminal rect is sane", async () => {
+  it("retries wake recovery after a narrow-but-sane focus rect", async () => {
     const state = buildStoreState();
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
@@ -1024,7 +1024,7 @@ describe("TerminalView", () => {
     }
 
     const stableHostRect = createDomRect(640, 360);
-    const hostRectSequence = [createDomRect(10, 200), createDomRect(10, 200), stableHostRect];
+    const hostRectSequence = [createDomRect(60, 200), stableHostRect];
     let hostRectIndex = 0;
     vi.spyOn(runtime.hostElement, "getBoundingClientRect").mockImplementation(() => {
       return hostRectSequence[Math.min(hostRectIndex++, hostRectSequence.length - 1)] ?? stableHostRect;
@@ -1047,20 +1047,19 @@ describe("TerminalView", () => {
     animationFrames.length = 0;
 
     window.dispatchEvent(new FocusEvent("focus"));
-    expect(mocked.resizeTerminal).not.toHaveBeenCalled();
-    expect(mocked.fitTerminal).not.toHaveBeenCalled();
+    expect(mocked.fitTerminal).toHaveBeenCalledTimes(1);
+    expect(mocked.resizeTerminal).toHaveBeenCalledTimes(1);
     expect(animationFrames).toHaveLength(1);
     expect(scheduledTimeouts).toHaveLength(2);
 
-    const nextAnimationFrame = animationFrames.shift();
-    nextAnimationFrame?.(0);
-    expect(mocked.resizeTerminal).not.toHaveBeenCalled();
-    expect(mocked.fitTerminal).not.toHaveBeenCalled();
+    animationFrames.shift()?.(0);
+    expect(mocked.fitTerminal).toHaveBeenCalledTimes(2);
 
     const firstRetryTimeout = scheduledTimeouts.find((scheduledTimeout) => scheduledTimeout?.delayMs === 100);
+    expect(firstRetryTimeout).toBeTruthy();
     firstRetryTimeout?.callback();
 
-    expect(mocked.fitTerminal).toHaveBeenCalledTimes(1);
+    expect(mocked.fitTerminal).toHaveBeenCalledTimes(3);
     expect(mocked.resizeTerminal).toHaveBeenCalledTimes(1);
     expect(mocked.resizeTerminal).toHaveBeenCalledWith({
       sessionId: "session-wake-focus",
@@ -1069,7 +1068,9 @@ describe("TerminalView", () => {
     });
 
     const delayedRetryTimeout = scheduledTimeouts.find((scheduledTimeout) => scheduledTimeout?.delayMs === 300);
-    expect(delayedRetryTimeout).toBeUndefined();
+    expect(delayedRetryTimeout).toBeTruthy();
+    delayedRetryTimeout?.callback();
+    expect(mocked.fitTerminal).toHaveBeenCalledTimes(4);
   });
 
   it("recovers the terminal immediately when the document becomes visible with a sane rect", async () => {
@@ -1121,7 +1122,7 @@ describe("TerminalView", () => {
 
     expect(mocked.fitTerminal).toHaveBeenCalledTimes(1);
     expect(mocked.resizeTerminal).toHaveBeenCalledTimes(1);
-    expect(animationFrames).toHaveLength(0);
+    expect(animationFrames).toHaveLength(1);
   });
 
   it("releases macOS Cmd+W from terminal key handling for renderer tab close", async () => {
