@@ -61,6 +61,25 @@ type Service struct {
 	// piSessions owns the pi agent session registry (maps + mutexes live in
 	// internal/agent/session); the service only coordinates through it.
 	piSessions *session.Registry
+	// stopProcess is overridden by focused tests to exercise cleanup failures.
+	stopProcess func(*agentmanager.Session) error
+	// afterProcessStart is a focused-test barrier for the manager/register gap.
+	afterProcessStart func()
+	// afterWorkspaceClaims is a focused-test barrier after workspace stop coalescing.
+	afterWorkspaceClaims func()
+	// afterAttachWaitForStart is a focused-test barrier before attach waits for
+	// registry metadata after observing a manager-visible process.
+	afterAttachWaitForStart func()
+	// afterStopClaim is a focused-test barrier after pi.stop publishes its claim.
+	afterStopClaim func()
+	// afterStartStopConflict is a focused-test barrier after pi.start observes
+	// a live process and before it waits for the published stop result.
+	afterStartStopConflict func()
+	// afterWorkspaceStopWaiter is a focused-test barrier for a coalesced caller.
+	afterWorkspaceStopWaiter func()
+
+	workspaceStopsMu sync.Mutex
+	workspaceStops   map[string]*workspaceStop
 
 	// desktopConns tracks live WebSocket connections tagged as the Yishan
 	// desktop app (client=desktop). Used to decide how task runs attached to
@@ -81,9 +100,11 @@ func NewService(deps Deps) *Service {
 		deps.AgentLifecycleCtx = context.Background()
 	}
 	return &Service{
-		deps:         deps,
-		piSessions:   session.NewRegistry(),
-		desktopConns: make(map[*rpc.Connection]struct{}),
+		deps:           deps,
+		piSessions:     session.NewRegistry(),
+		stopProcess:    func(proc *agentmanager.Session) error { return proc.Close() },
+		desktopConns:   make(map[*rpc.Connection]struct{}),
+		workspaceStops: make(map[string]*workspaceStop),
 	}
 }
 

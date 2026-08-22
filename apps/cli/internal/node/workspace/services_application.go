@@ -47,6 +47,11 @@ func (s *Service) newAppService() *application.Service {
 		HookWarnings: func(setupHook string, result *workspace.HookResult) []any {
 			return buildHookWarnings(setupHook, result, s.deps.LogFilePath)
 		},
+		BeginAgentCleanup: func(ctx context.Context, workspaceID string) (any, error) {
+			return s.beginAgentCleanup(ctx, workspaceID)
+		},
+		AbortAgentCleanup:  s.abortAgentCleanup,
+		CommitAgentCleanup: s.commitAgentCleanup,
 		SyncUsage: func(source string) {
 			if s.deps.TokenUsage != nil {
 				s.deps.TokenUsage.SyncNow(source)
@@ -59,7 +64,7 @@ func (s *Service) newAppService() *application.Service {
 			return s.deps.CleanupStore.Add(sqlite.PendingWorkspaceCleanup{
 				WorkspaceID: req.WorkspaceID, Path: req.Path, Branch: req.Branch,
 				RemoveBranch: req.RemoveBranch, ForceWorktree: req.ForceWorktree,
-				ForceBranch: req.ForceBranch, PostHook: req.PostHook,
+				ForceBranch: req.ForceBranch, PostHook: req.PostHook, AgentSummaryDone: req.AgentSummaryDone,
 			})
 		},
 		RemoveCleanup: func(workspaceID string) error {
@@ -67,6 +72,12 @@ func (s *Service) newAppService() *application.Service {
 				return nil
 			}
 			return s.deps.CleanupStore.Remove(workspaceID)
+		},
+		ClaimAgentSummary: func(workspaceID string) (bool, error) {
+			if s.deps.CleanupStore == nil {
+				return false, nil
+			}
+			return s.deps.CleanupStore.ClaimAgentSummary(workspaceID)
 		},
 		MarkCleanupFailure: func(workspaceID string, cleanupErr error) error {
 			if s.deps.CleanupStore == nil {
@@ -190,8 +201,12 @@ func (d *appDeps) CreateWorkspaceWithProgress(ctx context.Context, req workspace
 	return application.CreateWorkspace(d.s.deps.Registry, ctx, req, report)
 }
 
+func (d *appDeps) StopWorkspaceTerminals(workspaceID string) []string {
+	return d.s.stopWorkspaceTerminals(workspaceID)
+}
+
 func (d *appDeps) CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error) {
-	return d.s.CloseLocal(ctx, req)
+	return d.s.closeWorkspace(ctx, req)
 }
 
 func (d *appDeps) CloseWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error) {
@@ -202,23 +217,32 @@ func (d *appDeps) SetState(workspaceID string, state instance.State, health inst
 	return d.s.deps.Registry.SetState(workspaceID, state, health)
 }
 func (d *appDeps) Get(workspaceID string) (workspace.Workspace, error) {
+	if d.s.deps.Registry == nil {
+		return workspace.Workspace{}, fmt.Errorf("workspace runtime is unavailable")
+	}
 	return d.s.GetWorkspace(workspaceID)
 }
 
 func (d *appDeps) RemoveFromMemory(workspaceID string) {
-	d.s.deps.Registry.Remove(workspaceID)
+	if d.s.deps.Registry != nil {
+		d.s.deps.Registry.Remove(workspaceID)
+	}
 }
 
-func (d *appDeps) WatchAndTrack(workspaceID string, path string) {
-	d.s.WatchAndTrack(workspaceID, path)
+func (d *appDeps) WatchAndTrack(workspaceID string, path string) error {
+	return d.s.WatchAndTrack(workspaceID, path)
 }
 
 func (d *appDeps) Unwatch(path string) {
-	d.s.deps.Watchers.Unwatch(path)
+	if d.s.deps.Watchers != nil {
+		d.s.deps.Watchers.Unwatch(path)
+	}
 }
 
 func (d *appDeps) StopTracking(workspaceID string) {
-	d.s.deps.PRTracker.StopTracking(workspaceID)
+	if d.s.deps.PRTracker != nil {
+		d.s.deps.PRTracker.StopTracking(workspaceID)
+	}
 }
 
 // ---- Relay ----

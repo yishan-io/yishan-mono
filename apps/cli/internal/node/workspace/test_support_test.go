@@ -104,6 +104,11 @@ const apiWorkspaceRecord = `{"workspace":{"id":"ws-record","organizationId":"org
 // and records every request. Unknown paths 404 (usage-collector scans and
 // similar best-effort calls tolerate this).
 func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Service {
+	svc, _ := newTestServiceWithAgent(t, runtime, nodeID)
+	return svc
+}
+
+func newTestServiceWithAgent(t *testing.T, runtime *session.Session, nodeID string) (*Service, *nodeagent.Service) {
 	t.Helper()
 	root := t.TempDir()
 	events := eventbus.NewHub()
@@ -168,7 +173,7 @@ func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Serv
 	router.Register("file", &rpc.FileHandler{Services: svc})
 	router.Register("git", &rpc.GitHandler{Services: svc})
 	svc.router = router
-	return svc
+	return svc, agentSvc
 }
 
 // newTestHandler builds a plain workspace service with a wired router.

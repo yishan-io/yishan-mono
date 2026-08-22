@@ -35,10 +35,14 @@ func (s *Service) Close(ctx context.Context, req rpc.WorkspaceCloseParams) (any,
 	if result.Relayed {
 		return map[string]any{"workspaceId": result.WorkspaceID, "status": result.Status}, nil
 	}
-	return map[string]any{
+	response := map[string]any{
 		"workspace":   map[string]string{"id": result.WorkspaceID, "status": result.Status},
 		"workspaceId": result.WorkspaceID,
-	}, nil
+	}
+	if len(result.TerminalCleanupErrors) > 0 {
+		response["terminalCleanupErrors"] = result.TerminalCleanupErrors
+	}
+	return response, nil
 }
 
 func (s *Service) RefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error) {

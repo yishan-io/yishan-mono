@@ -177,3 +177,74 @@ func TestWorkspaceCleanupStore_MissingLegacyFileIsFine(t *testing.T) {
 		t.Fatalf("expected no items, got %d", len(items))
 	}
 }
+
+func TestWorkspaceCleanupStore_ClaimAgentSummaryIsAtomicAndPersistent(t *testing.T) {
+	profileDir := t.TempDir()
+	database, err := Open(profileDir)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	store, err := NewWorkspaceCleanupStore(database, filepath.Join(profileDir, PendingCleanupFileName))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	if err := store.Add(PendingWorkspaceCleanup{WorkspaceID: "workspace-1", Path: "/tmp/ws-1"}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	secondStore, err := NewWorkspaceCleanupStore(database, filepath.Join(profileDir, PendingCleanupFileName))
+	if err != nil {
+		t.Fatalf("new concurrent store: %v", err)
+	}
+	claims := make(chan bool, 2)
+	errs := make(chan error, 2)
+	for _, concurrentStore := range []*WorkspaceCleanupStore{store, secondStore} {
+		go func(candidate *WorkspaceCleanupStore) {
+			claimed, claimErr := candidate.ClaimAgentSummary("workspace-1")
+			claims <- claimed
+			errs <- claimErr
+		}(concurrentStore)
+	}
+	claimedCount := 0
+	for range 2 {
+		if claimErr := <-errs; claimErr != nil {
+			t.Fatalf("claim agent summary: %v", claimErr)
+		}
+		if <-claims {
+			claimedCount++
+		}
+	}
+	if claimedCount != 1 {
+		t.Fatalf("summary claims = %d, want exactly one", claimedCount)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatalf("close database: %v", err)
+	}
+
+	reloadedDatabase, err := Open(profileDir)
+	if err != nil {
+		t.Fatalf("reopen database: %v", err)
+	}
+	defer reloadedDatabase.Close()
+	reloadedStore, err := NewWorkspaceCleanupStore(reloadedDatabase, filepath.Join(profileDir, PendingCleanupFileName))
+	if err != nil {
+		t.Fatalf("reload store: %v", err)
+	}
+	items, err := reloadedStore.List()
+	if err != nil {
+		t.Fatalf("list reloaded store: %v", err)
+	}
+	if len(items) != 1 || !items[0].AgentSummaryDone {
+		t.Fatalf("reloaded cleanup = %+v, want persisted summary marker", items)
+	}
+	claimed, err := reloadedStore.ClaimAgentSummary("workspace-1")
+	if err != nil {
+		t.Fatalf("claim persisted marker: %v", err)
+	}
+	if claimed {
+		t.Fatal("reloaded cleanup claimed summary twice")
+	}
+}

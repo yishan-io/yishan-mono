@@ -8,6 +8,7 @@ import (
 
 	agentcmd "yishan/apps/cli/internal/agent/command"
 	agentmanager "yishan/apps/cli/internal/agent/process"
+	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/rpc"
 	term "yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
@@ -58,74 +59,93 @@ func (s *Service) maybeStartTaskRun(prepared application.CreatePlan, created wor
 }
 
 func (s *Service) startTaskRunChatSession(created workspace.Workspace, taskRun *workspace.TaskRunConfig) (string, *taskRunSessionInfo) {
+	admission, err := s.piSessions.Admit(created.ID)
+	if err != nil {
+		log.Warn().Err(err).Str("workspaceId", created.ID).Msg("task run: workspace is closing")
+		return "failed", nil
+	}
+	return s.startAdmittedTaskRun(created, taskRun, admission)
+}
+
+func (s *Service) startAdmittedTaskRun(created workspace.Workspace, taskRun *workspace.TaskRunConfig, admission *session.Admission) (string, *taskRunSessionInfo) {
+	defer s.piSessions.ReleaseAdmission(admission)
+	session, sessionID, tabID, ok := s.startTaskRunPiProcess(created, taskRun)
+	if !ok {
+		return "failed", nil
+	}
+	if !s.registerTaskRunAdmission(admission, created, sessionID, tabID, session) {
+		return "failed", nil
+	}
+	return s.sendTaskRunPrompt(created, taskRun, sessionID, session)
+}
+
+func (s *Service) startTaskRunPiProcess(created workspace.Workspace, taskRun *workspace.TaskRunConfig) (*agentmanager.Session, string, string, bool) {
 	sessionID := "task-" + created.ID
 	tabID := sessionID
-	paneID := "pane-" + sessionID
-
-	args := []string{"--mode", "rpc", "--name", tabID, "--approve", "--session-id", sessionID}
-	if strings.TrimSpace(taskRun.Model) != "" {
-		args = append(args, "--model", strings.TrimSpace(taskRun.Model))
+	extraEnv, ok := s.buildTaskRunExtraEnv(created, tabID)
+	if !ok || s.deps.AgentLifecycleCtx.Err() != nil {
+		return nil, "", "", false
 	}
-	extraEnv, err := buildPiStartExtraEnv(rpc.PiStartParams{
-		TabID:       tabID,
-		PaneID:      paneID,
-		WorkspaceID: created.ID,
-	}, created)
+	session, err := s.deps.AgentMgr.Start(s.deps.AgentLifecycleCtx, s.taskRunStartOptions(created, taskRun, sessionID, tabID, extraEnv))
 	if err != nil {
-		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build pi session env")
-		return "failed", nil
+		log.Warn().Err(err).Str("workspaceId", created.ID).Msg("task run: failed to start pi session")
+		return nil, "", "", false
 	}
+	return session, sessionID, tabID, true
+}
 
-	if err := s.deps.AgentLifecycleCtx.Err(); err != nil {
-		log.Warn().Err(err).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: daemon is shutting down")
-		return "failed", nil
+func (s *Service) buildTaskRunExtraEnv(created workspace.Workspace, tabID string) ([]string, bool) {
+	extraEnv, err := buildPiStartExtraEnv(rpc.PiStartParams{TabID: tabID, PaneID: "pane-" + tabID, WorkspaceID: created.ID}, created)
+	if err == nil {
+		return extraEnv, true
 	}
-	session, startErr := s.deps.AgentMgr.Start(s.deps.AgentLifecycleCtx, agentmanager.StartOptions{
-		SessionID:   sessionID,
-		TabID:       tabID,
-		WorkspaceID: created.ID,
-		Binary:      "pi",
-		Args:        args,
-		CWD:         created.Path,
-		ExtraEnv:    extraEnv,
-		OnEvent:     s.makePiEventCallback(sessionID),
-	})
-	if startErr != nil {
-		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start pi session")
-		return "failed", nil
+	log.Warn().Err(err).Str("workspaceId", created.ID).Msg("task run: failed to build pi session env")
+	return nil, false
+}
+
+func (s *Service) taskRunStartOptions(created workspace.Workspace, taskRun *workspace.TaskRunConfig, sessionID, tabID string, extraEnv []string) agentmanager.StartOptions {
+	args := []string{"--mode", "rpc", "--name", tabID, "--approve", "--session-id", sessionID}
+	if model := strings.TrimSpace(taskRun.Model); model != "" {
+		args = append(args, "--model", model)
 	}
+	return agentmanager.StartOptions{SessionID: sessionID, TabID: tabID, WorkspaceID: created.ID, Binary: "pi", Args: args, CWD: created.Path, ExtraEnv: extraEnv, OnEvent: s.makePiEventCallback(sessionID), OnExit: s.handlePiSessionExit}
+}
 
-	s.piSessions.Register(sessionID, nil, session, tabID, created.ID, created.Path, true)
+func (s *Service) registerTaskRunAdmission(admission *session.Admission, created workspace.Workspace, sessionID, tabID string, proc *agentmanager.Session) bool {
+	if s.afterProcessStart != nil {
+		s.afterProcessStart()
+	}
+	if s.piSessions.RegisterAdmission(admission, sessionID, nil, proc, tabID, created.Path, true) {
+		return true
+	}
+	stopErr := s.stopProcess(proc)
+	s.piSessions.RejectAdmission(admission, sessionID, nil, proc, tabID, created.Path, true, stopErr)
+	if stopErr != nil {
+		log.Warn().Err(stopErr).Str("workspaceId", created.ID).Msg("task run: failed to stop session crossing workspace close")
+	}
+	return false
+}
 
-	promptCmd, marshalErr := json.Marshal(map[string]any{"type": "prompt", "message": taskRun.Prompt})
-	if marshalErr != nil {
+func (s *Service) sendTaskRunPrompt(created workspace.Workspace, taskRun *workspace.TaskRunConfig, sessionID string, proc *agentmanager.Session) (string, *taskRunSessionInfo) {
+	promptCmd, err := json.Marshal(map[string]any{"type": "prompt", "message": taskRun.Prompt})
+	if err == nil {
+		err = proc.Send(promptCmd)
+	}
+	if err != nil {
 		s.cleanupTaskRunSession(sessionID)
-		log.Warn().Err(marshalErr).Str("workspaceId", created.ID).Msg("task run: failed to encode prompt")
+		log.Warn().Err(err).Str("workspaceId", created.ID).Msg("task run: failed to send prompt to pi session")
 		return "failed", nil
 	}
-	if sendErr := session.Send(promptCmd); sendErr != nil {
-		s.cleanupTaskRunSession(sessionID)
-		log.Warn().Err(sendErr).Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to send prompt to pi session")
-		return "failed", nil
-	}
-	log.Info().Str("workspaceId", created.ID).Str("sessionId", sessionID).Str("agentKind", taskRun.AgentKind).Str("prompt", taskRun.Prompt).Msg("task run: pi session started")
+	log.Info().Str("workspaceId", created.ID).Str("sessionId", sessionID).Msg("task run: pi session started")
 	return "started", &taskRunSessionInfo{sessionID: sessionID, title: buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind)}
 }
 
 // cleanupTaskRunSession stops a just-started task run pi session and removes it
 // from the registry when the run cannot proceed (e.g. prompt send failed).
 func (s *Service) cleanupTaskRunSession(sessionID string) {
-	// Mark the session as stopping before the (potentially slow) process
-	// teardown so a concurrent pi.start/pi.attach cannot bind to a dying
-	// process, mirroring handlePiStop.
-	if !s.piSessions.MarkStopping(sessionID) {
-		return
-	}
-
-	if err := s.deps.AgentMgr.Stop(sessionID); err != nil {
+	if err := s.stopRegisteredSession(context.Background(), sessionID); err != nil {
 		log.Warn().Err(err).Str("sessionId", sessionID).Msg("task run: failed to stop pi session after prompt failure")
 	}
-	s.piSessions.Delete(sessionID)
 }
 
 func (s *Service) startTaskRunTerminal(created workspace.Workspace, taskRun *workspace.TaskRunConfig) string {

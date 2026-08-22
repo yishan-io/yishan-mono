@@ -234,6 +234,23 @@ func Bootstrap(cfg Config) (*App, error) {
 			workspaceSvc.RelayCreateCompleted(prepared, completed)
 		},
 	})
+	workspaceSvc.SetAgentCleanupLifecycle(
+		func(ctx context.Context, workspaceID string) (any, error) {
+			return agentSvc.BeginWorkspaceAgentCleanup(ctx, workspaceID)
+		},
+		func(handle any) {
+			cleanup, ok := handle.(*nodeagent.WorkspaceAgentCleanup)
+			if ok {
+				agentSvc.AbortWorkspaceAgentCleanup(cleanup)
+			}
+		},
+		func(handle any) {
+			cleanup, ok := handle.(*nodeagent.WorkspaceAgentCleanup)
+			if ok {
+				agentSvc.CommitWorkspaceAgentCleanup(cleanup)
+			}
+		},
+	)
 	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
 		Workspace: workspaceSvc,
 		Terminals: terminals,

@@ -8,9 +8,16 @@ import (
 
 // WatchAndTrack registers the filesystem watcher for a workspace and starts
 // PR tracking for its worktree path.
-func (s *Service) WatchAndTrack(workspaceID string, path string) {
-	s.deps.Watchers.Watch(workspaceID, path)
-	s.deps.PRTracker.EnsureTracked(path, true)
+func (s *Service) WatchAndTrack(workspaceID string, path string) error {
+	if s.deps.Watchers != nil {
+		if err := s.deps.Watchers.Watch(workspaceID, path); err != nil {
+			return err
+		}
+	}
+	if s.deps.PRTracker != nil {
+		s.deps.PRTracker.EnsureTracked(path, true)
+	}
+	return nil
 }
 
 // WatchActiveWorkspaces registers filesystem watchers for every active
@@ -27,6 +34,6 @@ func (s *Service) WatchActive() {
 		if strings.TrimSpace(ws.Path) == "" {
 			continue
 		}
-		s.WatchAndTrack(ws.ID, ws.Path)
+		_ = s.WatchAndTrack(ws.ID, ws.Path) // startup watchers are best-effort
 	}
 }

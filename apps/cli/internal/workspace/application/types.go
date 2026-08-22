@@ -59,11 +59,12 @@ type CloseCommand struct {
 // CleanupRequest mirrors workspace.ClosePathRequest for the daemon's pending
 // cleanup store (create rollback / close retry).
 type CleanupRequest struct {
-	WorkspaceID   string
-	Path          string
-	Branch        string
-	RemoveBranch  bool
-	ForceWorktree bool
-	ForceBranch   bool
-	PostHook      string
+	WorkspaceID      string
+	Path             string
+	Branch           string
+	RemoveBranch     bool
+	ForceWorktree    bool
+	ForceBranch      bool
+	PostHook         string
+	AgentSummaryDone bool
 }

@@ -17,91 +17,73 @@ import (
 )
 
 func TestPiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing.T) {
+	s, conn, cwd := startDisconnectSurvivalSession(t)
+	assertPiSessionSurvivesDisconnect(t, s, conn, cwd)
+	assertPiStartRejectedAfterShutdown(t, s, conn, cwd)
+}
+
+func startDisconnectSurvivalSession(t *testing.T) (*Service, *rpc.Connection, string) {
+	t.Helper()
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 	installBlockingFakePiBinary(t)
-
-	s := newTestHandler(t)
 	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
 	if err := os.MkdirAll(cwd, 0o755); err != nil {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
-
-	connectionCtx, cancelConnection := context.WithCancel(context.Background())
-	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(connectionCtx, connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-survives-disconnect",
-		"tabId":       "tab-1",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
+	connectionCtx, cancel := context.WithCancel(context.Background())
+	conn := &rpc.Connection{}
+	s := newTestHandler(t)
+	_, err := s.callAgentRPCForTest(connectionCtx, conn, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId": "session-survives-disconnect", "tabId": "tab-1", "workspaceId": "workspace-1", "cwd": cwd,
 	}))
 	if err != nil {
 		t.Fatalf("dispatchPi start: %v", err)
 	}
-	cancelConnection()
-	time.Sleep(100 * time.Millisecond)
+	cancel()
+	return s, conn, cwd
+}
 
+func assertPiSessionSurvivesDisconnect(t *testing.T, s *Service, conn *rpc.Connection, cwd string) {
+	t.Helper()
+	time.Sleep(100 * time.Millisecond)
 	session, exists := s.deps.AgentMgr.Session("session-survives-disconnect")
 	if !exists {
 		t.Fatal("expected pi session to remain active after its WebSocket context was cancelled")
 	}
-
-	reconnectedConnState := &rpc.Connection{}
-	_, err = s.callAgentRPCForTest(context.Background(), reconnectedConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
-		"sessionId": "session-survives-disconnect",
-		"tabId":     "tab-reconnected",
-	}))
+	_, err := s.callAgentRPCForTest(context.Background(), &rpc.Connection{}, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{"sessionId": "session-survives-disconnect", "tabId": "tab-reconnected"}))
 	if err != nil {
 		t.Fatalf("dispatchPi attach after reconnect: %v", err)
 	}
-
 	s.Shutdown()
 	if _, exists := s.deps.AgentMgr.Session(session.ID()); exists {
 		t.Fatal("pi session remained active after daemon shutdown")
 	}
-	if _, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-after-shutdown",
-		"tabId":       "tab-2",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
-	})); err == nil {
+}
+
+func assertPiStartRejectedAfterShutdown(t *testing.T, s *Service, conn *rpc.Connection, cwd string) {
+	t.Helper()
+	_, err := s.callAgentRPCForTest(context.Background(), conn, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId": "session-after-shutdown", "tabId": "tab-2", "workspaceId": "workspace-1", "cwd": cwd,
+	}))
+	if err == nil {
 		t.Fatal("expected pi start to be rejected after daemon shutdown")
 	}
 }
 
 func TestPiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-	installBlockingFakePiBinary(t)
+	s, conn, cwd := newPiStartService(t)
+	startPiSession(t, s, conn, "session-exists", "tab-1", "workspace-1", cwd)
+	defer stopPiForAttachTest(t, s, conn, "session-exists")
 
-	s := newTestHandler(t)
-	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
-	if err := os.MkdirAll(cwd, 0o755); err != nil {
-		t.Fatalf("mkdir cwd: %v", err)
-	}
-
-	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-exists",
-		"tabId":       "tab-1",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
+	_, err := s.callAgentRPCForTest(context.Background(), conn, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId": "session-exists", "tabId": "tab-2", "workspaceId": "workspace-1", "cwd": cwd,
 	}))
-	if err != nil {
-		t.Fatalf("first dispatchPi start: %v", err)
-	}
-	defer func() {
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
-			"sessionId": "session-exists",
-		}))
-	}()
+	assertSessionExistsRPCError(t, err)
+}
 
-	_, err = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-exists",
-		"tabId":       "tab-2",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
-	}))
+func assertSessionExistsRPCError(t *testing.T, err error) {
+	t.Helper()
 	if err == nil {
 		t.Fatal("expected duplicate session error")
 	}
@@ -159,7 +141,7 @@ func TestPiStart_InjectsAuthoritativeWorkspaceIdentityEnv(t *testing.T) {
 	markerPath := filepath.Join(homeDir, "pi-env.txt")
 	fakePiDir := t.TempDir()
 	fakePi := filepath.Join(fakePiDir, "pi")
-	fakePiScript := fmt.Sprintf("#!/bin/sh\nenv > %q\nIFS= read -r _ || exit 0\n", markerPath)
+	fakePiScript := fmt.Sprintf("#!/bin/sh\nenv > %q.tmp && mv %q.tmp %q\nIFS= read -r _ || exit 0\n", markerPath, markerPath, markerPath)
 	if err := os.WriteFile(fakePi, []byte(fakePiScript), 0o755); err != nil {
 		t.Fatalf("write fake pi binary: %v", err)
 	}
@@ -177,23 +159,24 @@ func TestPiStart_InjectsAuthoritativeWorkspaceIdentityEnv(t *testing.T) {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
 
-	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-identity-env",
-		"tabId":       "tab-1",
-		"paneId":      "pane-1",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
+	startPiIdentityEnvSession(t, s, cwd)
+	assertPiIdentityEnv(t, markerPath, homeDir)
+}
+
+func startPiIdentityEnvSession(t *testing.T, s *Service, cwd string) {
+	t.Helper()
+	conn := &rpc.Connection{}
+	_, err := s.callAgentRPCForTest(context.Background(), conn, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId": "session-identity-env", "tabId": "tab-1", "paneId": "pane-1", "workspaceId": "workspace-1", "cwd": cwd,
 	}))
 	if err != nil {
 		t.Fatalf("dispatchPi start: %v", err)
 	}
-	defer func() {
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
-			"sessionId": "session-identity-env",
-		}))
-	}()
+	t.Cleanup(func() { stopPiForAttachTest(t, s, conn, "session-identity-env") })
+}
 
+func assertPiIdentityEnv(t *testing.T, markerPath, homeDir string) {
+	t.Helper()
 	env := strings.Split(waitForFileContent(t, markerPath), "\n")
 	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", "workspace-1")
 	assertEnvValue(t, env, "YISHAN_PROJECT_ID", "project-from-daemon")
@@ -236,224 +219,168 @@ func TestPiStart_RejectsUnknownWorkspace(t *testing.T) {
 }
 
 func TestPiAttach_WaitsForConcurrentStart(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-	installBlockingFakePiBinary(t)
-
-	s := newTestHandler(t)
-	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
-	if err := os.MkdirAll(cwd, 0o755); err != nil {
-		t.Fatalf("mkdir cwd: %v", err)
+	fixture := startConcurrentPiSession(t)
+	attachConn := &rpc.Connection{}
+	attachWaiting := make(chan struct{})
+	fixture.service.afterAttachWaitForStart = func() { close(attachWaiting) }
+	attachDone := attachConcurrentPiSession(t, fixture, attachConn)
+	<-attachWaiting
+	close(fixture.releaseGate)
+	<-fixture.startDone
+	if err := <-attachDone; err != nil {
+		t.Fatalf("attach during concurrent start: %v", err)
 	}
+	assertConcurrentPiAttach(t, fixture.service, attachConn)
+}
 
-	// Hold the winner's Start in its reservation window (id in `starting`, not
-	// yet in `sessions`), exactly the state a second tab's attach races.
+type concurrentPiStartFixture struct {
+	service     *Service
+	releaseGate chan struct{}
+	startDone   chan struct{}
+}
+
+func startConcurrentPiSession(t *testing.T) concurrentPiStartFixture {
+	t.Helper()
+	s, _, cwd := newPiStartService(t)
 	releaseGate := make(chan struct{})
-	agentmanager.StartGate = func() {
-		<-releaseGate
-	}
+	agentmanager.StartGate = func() { <-releaseGate }
 	t.Cleanup(func() { agentmanager.StartGate = nil })
-
 	startDone := make(chan struct{})
 	go func() {
 		defer close(startDone)
 		_, _ = s.callAgentRPCForTest(context.Background(), &rpc.Connection{}, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-			"sessionId":   "session-concurrent",
-			"tabId":       "tab-1",
-			"workspaceId": "workspace-1",
-			"cwd":         cwd,
+			"sessionId": "session-concurrent", "tabId": "tab-1", "workspaceId": "workspace-1", "cwd": cwd,
 		}))
 	}()
 	waitForStartingReservation(t, s, "session-concurrent")
+	return concurrentPiStartFixture{service: s, releaseGate: releaseGate, startDone: startDone}
+}
 
-	// A second opener attaches while the start is still in flight: it must wait
-	// for the start to finish and then bind to the winning process.
-	attachConnState := &rpc.Connection{}
-	attachDone := make(chan error, 1)
+func attachConcurrentPiSession(t *testing.T, fixture concurrentPiStartFixture, conn *rpc.Connection) <-chan error {
+	t.Helper()
+	done := make(chan error, 1)
 	go func() {
-		_, err := s.callAgentRPCForTest(context.Background(), attachConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
-			"sessionId":   "session-concurrent",
-			"tabId":       "tab-2",
-			"workspaceId": "workspace-1",
-			"cwd":         cwd,
+		_, err := fixture.service.callAgentRPCForTest(context.Background(), conn, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
+			"sessionId": "session-concurrent", "tabId": "tab-2", "workspaceId": "workspace-1",
 		}))
-		attachDone <- err
+		done <- err
 	}()
+	return done
+}
 
-	// The attach must not fail (or resolve) while the start is still reserved.
-	select {
-	case err := <-attachDone:
-		t.Fatalf("attach resolved before the start finished: %v", err)
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	close(releaseGate)
-	<-startDone
-	if err := <-attachDone; err != nil {
-		t.Fatalf("attach during concurrent start: %v", err)
-	}
-
-	// The winner's registry entry must be intact and owned by the attached tab.
+func assertConcurrentPiAttach(t *testing.T, s *Service, conn *rpc.Connection) {
+	t.Helper()
 	state, exists := s.piSessions.Get("session-concurrent")
 	if !exists {
 		t.Fatal("expected the concurrent start's session to remain registered")
 	}
-	if state.Conn != attachConnState {
+	if state.Conn != conn {
 		t.Fatal("expected the attaching tab to own the session after the wait")
 	}
 }
 
 func TestPiStart_WaitsForStoppingSessionThenStartsFresh(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-	installSlowExitFakePiBinary(t)
-
-	s := newTestHandler(t)
-	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
-	if err := os.MkdirAll(cwd, 0o755); err != nil {
-		t.Fatalf("mkdir cwd: %v", err)
-	}
-
-	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-race",
-		"tabId":       "tab-1",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
-	}))
-	if err != nil {
-		t.Fatalf("first dispatchPi start: %v", err)
-	}
-
-	// Close the session in the background so the teardown is in flight when the
-	// reopen's pi.start arrives.
-	stopDone := make(chan struct{})
-	go func() {
-		defer close(stopDone)
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
-			"sessionId": "session-race",
-		}))
-	}()
-	waitForStoppingMarker(t, s, "session-race")
-
-	// A reopen of the same id during the teardown must wait and then start a
-	// fresh process instead of failing with ErrSessionExists.
+	s, conn, cwd, stopDone := startStoppingPiSession(t, "session-race")
 	startStartedAt := time.Now()
-	_, err = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-race",
-		"tabId":       "tab-reopened",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
-	}))
-	if err != nil {
-		t.Fatalf("dispatchPi start during stop: %v", err)
-	}
+	startPiSession(t, s, conn, "session-race", "tab-reopened", "workspace-1", cwd)
 	if time.Since(startStartedAt) < 200*time.Millisecond {
 		t.Fatalf("expected pi.start to wait for the in-flight stop, took %v", time.Since(startStartedAt))
 	}
 	<-stopDone
-
-	if _, exists := s.deps.AgentMgr.Session("session-race"); !exists {
-		t.Fatal("expected a fresh session after the reopen")
-	}
-	state, exists := s.piSessions.Get("session-race")
-	if !exists || state.TabID != "tab-reopened" {
-		t.Fatalf("expected reopened tab to own the fresh session, got %#v", state)
-	}
+	assertFreshPiSessionAfterStop(t, s, "session-race", "tab-reopened")
 }
 
-func TestPiStart_RetriesWhenStopMarkerArrivesLate(t *testing.T) {
+func startStoppingPiSession(t *testing.T, sessionID string) (*Service, *rpc.Connection, string, <-chan struct{}) {
+	t.Helper()
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 	installSlowExitFakePiBinary(t)
-
-	s := newTestHandler(t)
 	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
 	if err := os.MkdirAll(cwd, 0o755); err != nil {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
-
-	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-race-late",
-		"tabId":       "tab-1",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
-	}))
-	if err != nil {
-		t.Fatalf("first dispatchPi start: %v", err)
-	}
-
-	// Dispatch the stop and the reopen back-to-back WITHOUT waiting for the
-	// stopping marker: pi.start's first attempt may see ErrSessionExists before
-	// the marker is set. It must retry after the teardown and start fresh.
+	s, conn := newTestHandler(t), &rpc.Connection{}
+	startPiSession(t, s, conn, sessionID, "tab-1", "workspace-1", cwd)
 	stopDone := make(chan struct{})
 	go func() {
 		defer close(stopDone)
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
-			"sessionId": "session-race-late",
-		}))
+		_, _ = s.callAgentRPCForTest(context.Background(), conn, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{"sessionId": sessionID}))
 	}()
+	waitForStoppingMarker(t, s, sessionID)
+	return s, conn, cwd, stopDone
+}
 
-	_, err = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-race-late",
-		"tabId":       "tab-reopened",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
-	}))
-	if err != nil {
-		t.Fatalf("dispatchPi start racing a late stop marker: %v", err)
+func assertFreshPiSessionAfterStop(t *testing.T, s *Service, sessionID, tabID string) {
+	t.Helper()
+	if _, exists := s.deps.AgentMgr.Session(sessionID); !exists {
+		t.Fatal("expected a fresh session after the reopen")
 	}
-	<-stopDone
-
-	if _, exists := s.deps.AgentMgr.Session("session-race-late"); !exists {
-		t.Fatal("expected a fresh session after the retried reopen")
-	}
-	state, exists := s.piSessions.Get("session-race-late")
-	if !exists || state.TabID != "tab-reopened" {
+	state, exists := s.piSessions.Get(sessionID)
+	if !exists || state.TabID != tabID {
 		t.Fatalf("expected reopened tab to own the fresh session, got %#v", state)
+	}
+}
+
+func TestPiStart_RetriesAfterPublishedStopMarker(t *testing.T) {
+	s, connState, cwd := newPiStartService(t)
+	startPiSession(t, s, connState, "session-race-late", "tab-1", "workspace-1", cwd)
+	stopMarkerPublished := make(chan struct{})
+	allowStopCompletion := make(chan struct{})
+	startReachedConflict := make(chan struct{})
+	releaseStartRetry := make(chan struct{})
+	s.afterStopClaim = func() { close(stopMarkerPublished) }
+	s.afterStartStopConflict = func() {
+		close(startReachedConflict)
+		<-releaseStartRetry
+	}
+	s.stopProcess = func(proc *agentmanager.Session) error {
+		<-allowStopCompletion
+		return proc.Close()
+	}
+
+	startDone := make(chan error, 1)
+	go func() {
+		_, startErr := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+			"sessionId": "session-race-late", "tabId": "tab-reopened", "workspaceId": "workspace-1", "cwd": cwd,
+		}))
+		startDone <- startErr
+	}()
+	<-startReachedConflict // Start received ErrSessionExists before pi.stop claimed it.
+
+	stopDone := make(chan error, 1)
+	go func() {
+		_, stopErr := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{"sessionId": "session-race-late"}))
+		stopDone <- stopErr
+	}()
+	<-stopMarkerPublished
+	finishStartStopRace(t, releaseStartRetry, allowStopCompletion, stopDone, startDone)
+	assertFreshPiSessionAfterStop(t, s, "session-race-late", "tab-reopened")
+}
+
+func finishStartStopRace(t *testing.T, releaseStartRetry, allowStopCompletion chan<- struct{}, stopDone, startDone <-chan error) {
+	t.Helper()
+	close(releaseStartRetry)
+	close(allowStopCompletion)
+	if err := <-stopDone; err != nil {
+		t.Fatalf("dispatchPi stop: %v", err)
+	}
+	if err := <-startDone; err != nil {
+		t.Fatalf("dispatchPi start racing a published stop marker: %v", err)
 	}
 }
 
 func TestPiAttach_RejectsStoppingSession(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-	installSlowExitFakePiBinary(t)
-
-	s := newTestHandler(t)
-	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
-	if err := os.MkdirAll(cwd, 0o755); err != nil {
-		t.Fatalf("mkdir cwd: %v", err)
-	}
-
-	connState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-attach-stop",
-		"tabId":       "tab-1",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
+	s, conn, _, _ := startStoppingPiSession(t, "session-attach-stop")
+	_, err := s.callAgentRPCForTest(context.Background(), &rpc.Connection{}, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
+		"sessionId": "session-attach-stop", "tabId": "tab-reopened", "workspaceId": "workspace-2",
+		"cwd": "pi-project-reopened",
 	}))
-	if err != nil {
-		t.Fatalf("dispatchPi start: %v", err)
-	}
+	assertStoppingPiAttachRejected(t, err)
+	assertStoppingPiAttachOwnership(t, s, conn)
+}
 
-	stopDone := make(chan struct{})
-	go func() {
-		defer close(stopDone)
-		_, _ = s.callAgentRPCForTest(context.Background(), connState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
-			"sessionId": "session-attach-stop",
-		}))
-	}()
-	waitForStoppingMarker(t, s, "session-attach-stop")
-
-	// Attach during the teardown must not rebind a doomed process.
-	reboundConnState := &rpc.Connection{}
-	_, err = s.callAgentRPCForTest(context.Background(), reboundConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-attach-stop",
-		"tabId":       "tab-reopened",
-		"workspaceId": "workspace-2",
-		"cwd":         cwd,
-	}))
+func assertStoppingPiAttachRejected(t *testing.T, err error) {
+	t.Helper()
 	if err == nil {
 		t.Fatal("expected attach to be rejected while the session is stopping")
 	}
@@ -464,75 +391,40 @@ func TestPiAttach_RejectsStoppingSession(t *testing.T) {
 	if rpcErr.Code != rpc.CodeNotFound {
 		t.Fatalf("expected rpc code %d, got %d", rpc.CodeNotFound, rpcErr.Code)
 	}
-
-	// The rejected attach must not have rebound the connection or routing
-	// metadata: while the entry still exists (the in-flight stop may have
-	// already deleted it), the original tab must still own the session.
-	state, exists := s.piSessions.Get("session-attach-stop")
-	if exists {
-		if state.Conn != connState {
-			t.Fatal("expected the rejected attach to leave connState unchanged")
-		}
-		if state.TabID != "tab-1" {
-			t.Fatalf("expected the rejected attach to leave tabID unchanged, got %q", state.TabID)
-		}
-	}
-
-	<-stopDone
 }
 
-func TestPiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
+func assertStoppingPiAttachOwnership(t *testing.T, s *Service, conn *rpc.Connection) {
+	t.Helper()
+	state, exists := s.piSessions.Get("session-attach-stop")
+	if !exists {
+		return
+	}
+	if state.Conn != conn {
+		t.Fatal("expected the rejected attach to leave connState unchanged")
+	}
+	if state.TabID != "tab-1" {
+		t.Fatalf("expected the rejected attach to leave tabID unchanged, got %q", state.TabID)
+	}
+}
+
+func newPiStartService(t *testing.T) (*Service, *rpc.Connection, string) {
+	t.Helper()
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 	installBlockingFakePiBinary(t)
-
-	s := newTestHandler(t)
 	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
 	if err := os.MkdirAll(cwd, 0o755); err != nil {
 		t.Fatalf("mkdir cwd: %v", err)
 	}
+	return newTestHandler(t), &rpc.Connection{}, cwd
+}
 
-	originalConnState := &rpc.Connection{}
-	_, err := s.callAgentRPCForTest(context.Background(), originalConnState, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-attach",
-		"tabId":       "tab-attach",
-		"workspaceId": "workspace-1",
-		"cwd":         cwd,
+func startPiSession(t *testing.T, s *Service, conn *rpc.Connection, sessionID, tabID, workspaceID, cwd string) {
+	t.Helper()
+	_, err := s.callAgentRPCForTest(context.Background(), conn, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId": sessionID, "tabId": tabID, "workspaceId": workspaceID, "cwd": cwd,
 	}))
 	if err != nil {
 		t.Fatalf("dispatchPi start: %v", err)
-	}
-	defer func() {
-		_, _ = s.callAgentRPCForTest(context.Background(), originalConnState, rpc.MethodPiStop, mustMarshalJSON(t, map[string]any{
-			"sessionId": "session-attach",
-		}))
-	}()
-
-	reboundConnState := &rpc.Connection{}
-	_, err = s.callAgentRPCForTest(context.Background(), reboundConnState, rpc.MethodPiAttach, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-attach",
-		"tabId":       "tab-reopened",
-		"workspaceId": "workspace-2",
-		"cwd":         filepath.Join(homeDir, "worktrees", "pi-project-reopened"),
-	}))
-	if err != nil {
-		t.Fatalf("dispatchPi attach: %v", err)
-	}
-
-	state, _ := s.piSessions.Get("session-attach")
-	if state == nil {
-		t.Fatal("expected pi session state to exist after attach")
-	}
-	if state.Conn != reboundConnState {
-		t.Fatalf("expected attach to rebind connState")
-	}
-	if state.TabID != "tab-reopened" {
-		t.Fatalf("expected attach to rebind tabID, got %q", state.TabID)
-	}
-	if state.WorkspaceID != "workspace-2" {
-		t.Fatalf("expected attach to rebind workspaceID, got %q", state.WorkspaceID)
-	}
-	if state.CWD != filepath.Join(homeDir, "worktrees", "pi-project-reopened") {
-		t.Fatalf("expected attach to rebind cwd, got %q", state.CWD)
 	}
 }
