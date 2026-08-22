@@ -14,12 +14,16 @@ const legacyTasksDirectory = "tasks"
 
 // ImportLegacyProjectTasks imports legacy task metadata into SQLite without moving Task Context files.
 func ImportLegacyProjectTasks(ctx context.Context, repository Repository, legacyContextRoot string, projectID string) error {
-	records, err := readLegacyTaskRecords(legacyContextRoot)
+	canonicalRoot, err := canonicalLegacyContextRoot(legacyContextRoot)
+	if err != nil {
+		return err
+	}
+	records, err := readLegacyTaskRecords(canonicalRoot)
 	if err != nil {
 		return err
 	}
 	for _, record := range records {
-		if err := importLegacyTask(ctx, repository, legacyContextRoot, projectID, record); err != nil {
+		if err := importLegacyTask(ctx, repository, canonicalRoot, projectID, record); err != nil {
 			return err
 		}
 	}
@@ -39,11 +43,14 @@ type legacyTaskRecord struct {
 }
 
 func readLegacyTaskRecords(contextRoot string) ([]legacyTaskRecord, error) {
-	statePath := filepath.Join(contextRoot, legacyTasksDirectory, "state.json")
-	content, err := os.ReadFile(statePath)
-	if errors.Is(err, os.ErrNotExist) {
+	statePath, exists, err := resolveLegacyFile(contextRoot, filepath.Join(contextRoot, legacyTasksDirectory), "state.json")
+	if err != nil {
+		return nil, fmt.Errorf("resolve legacy task state: %w", err)
+	}
+	if !exists {
 		return nil, nil
 	}
+	content, err := os.ReadFile(statePath)
 	if err != nil {
 		return nil, fmt.Errorf("read legacy task state: %w", err)
 	}
@@ -62,7 +69,7 @@ func importLegacyTask(ctx context.Context, repository Repository, contextRoot st
 	if err != nil {
 		return err
 	}
-	description, completedAt, err := readLegacyTaskMetadata(taskPath, record.Status)
+	description, completedAt, err := readLegacyTaskMetadata(contextRoot, taskPath, record.Status)
 	if err != nil {
 		return err
 	}
@@ -80,9 +87,9 @@ func validateLegacyTaskRecord(record legacyTaskRecord) error {
 }
 
 func createLegacyTaskIfMissing(ctx context.Context, repository Repository, projectID string, record legacyTaskRecord, description string, completedAt *string) error {
-	_, err := repository.Get(ctx, record.ID)
+	existing, err := repository.Get(ctx, record.ID)
 	if err == nil {
-		return nil
+		return validateLegacyTaskProject(existing, projectID)
 	}
 	if !errors.Is(err, ErrTaskNotFound) {
 		return fmt.Errorf("read legacy local task %q: %w", record.ID, err)
@@ -95,30 +102,38 @@ func createLegacyTaskIfMissing(ctx context.Context, repository Repository, proje
 	return nil
 }
 
-func readLegacyTaskMetadata(taskPath string, status string) (string, *string, error) {
-	content, err := os.ReadFile(filepath.Join(taskPath, "task.md"))
-	if errors.Is(err, os.ErrNotExist) {
+func readLegacyTaskMetadata(contextRoot string, taskPath string, status string) (string, *string, error) {
+	briefPath, exists, err := resolveLegacyFile(contextRoot, taskPath, "task.md")
+	if err != nil {
+		return "", nil, fmt.Errorf("resolve legacy task brief: %w", err)
+	}
+	if !exists {
 		return "", nil, nil
 	}
+	content, err := os.ReadFile(briefPath)
 	if err != nil {
 		return "", nil, fmt.Errorf("read legacy task brief: %w", err)
 	}
 	description := buildLegacyTaskDescription(legacyTaskSection(string(content), "Goal"), legacyTaskSection(string(content), "Acceptance Criteria"))
-	completedAt, err := readLegacyCompletionDate(taskPath, status)
+	completedAt, err := readLegacyCompletionDate(contextRoot, taskPath, status)
 	if err != nil {
 		return "", nil, err
 	}
 	return description, completedAt, nil
 }
 
-func readLegacyCompletionDate(taskPath string, status string) (*string, error) {
+func readLegacyCompletionDate(contextRoot string, taskPath string, status string) (*string, error) {
 	if status != string(StatusCompleted) {
 		return nil, nil
 	}
-	content, err := os.ReadFile(filepath.Join(taskPath, "outcome.md"))
-	if errors.Is(err, os.ErrNotExist) {
+	outcomePath, exists, err := resolveLegacyFile(contextRoot, taskPath, "outcome.md")
+	if err != nil {
+		return nil, fmt.Errorf("resolve legacy outcome: %w", err)
+	}
+	if !exists {
 		return nil, nil
 	}
+	content, err := os.ReadFile(outcomePath)
 	if err != nil {
 		return nil, fmt.Errorf("read legacy outcome: %w", err)
 	}
@@ -174,10 +189,60 @@ func resolveLegacyTaskPath(contextRoot string, legacyPath string) (string, error
 	if filepath.IsAbs(legacyPath) {
 		return "", errors.New("legacy task path must be relative")
 	}
-	root := filepath.Clean(contextRoot)
-	target := filepath.Clean(filepath.Join(root, legacyPath))
-	if target == root || !strings.HasPrefix(target, root+string(filepath.Separator)) {
+	target := filepath.Clean(filepath.Join(contextRoot, legacyPath))
+	if filepath.Clean(target) == filepath.Clean(contextRoot) || !isWithinLegacyRoot(contextRoot, target) {
 		return "", errors.New("legacy task path escapes context root")
 	}
-	return target, nil
+	resolved, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		return "", fmt.Errorf("resolve legacy task directory: %w", err)
+	}
+	if filepath.Clean(resolved) == filepath.Clean(contextRoot) || !isWithinLegacyRoot(contextRoot, resolved) {
+		return "", errors.New("legacy task directory symlink escapes context root")
+	}
+	return filepath.Clean(resolved), nil
+}
+
+func canonicalLegacyContextRoot(contextRoot string) (string, error) {
+	resolved, err := filepath.EvalSymlinks(filepath.Clean(contextRoot))
+	if err != nil {
+		return "", fmt.Errorf("resolve legacy context root: %w", err)
+	}
+	return filepath.Clean(resolved), nil
+}
+
+func resolveLegacyFile(contextRoot string, directory string, fileName string) (string, bool, error) {
+	target := filepath.Join(directory, fileName)
+	if _, err := os.Lstat(target); errors.Is(err, os.ErrNotExist) {
+		return "", false, nil
+	} else if err != nil {
+		return "", false, err
+	}
+	resolved, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		return "", false, err
+	}
+	if !isWithinLegacyRoot(contextRoot, resolved) {
+		return "", false, errors.New("legacy file symlink escapes context root")
+	}
+	return filepath.Clean(resolved), true, nil
+}
+
+func isWithinLegacyRoot(root string, target string) bool {
+	relative, err := filepath.Rel(filepath.Clean(root), filepath.Clean(target))
+	return err == nil && relative != ".." && !filepath.IsAbs(relative) &&
+		!strings.HasPrefix(relative, ".."+string(filepath.Separator))
+}
+
+func validateLegacyTaskProject(task Task, projectID string) error {
+	if task.ProjectID != nil && *task.ProjectID == projectID {
+		return nil
+	}
+	existingProjectID := ""
+	if task.ProjectID != nil {
+		existingProjectID = *task.ProjectID
+	}
+	return &LegacyTaskIDCollisionError{
+		TaskID: task.ID, ExistingProjectID: existingProjectID, ImportProjectID: projectID,
+	}
 }

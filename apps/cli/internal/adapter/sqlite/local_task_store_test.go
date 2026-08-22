@@ -42,6 +42,51 @@ func TestLocalTaskStore_CreateUpdateAndSearch(t *testing.T) {
 	}
 }
 
+func TestLocalTaskStore_SearchEscapesFTS5Syntax(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	created := createTestLocalTask(t, store, "Quotes OR operators")
+	queries := []string{`"quotes`, `quotes OR`, `quotes - operators`, `NEAR(quotes`, `quotes*`, `quotes:`}
+	for _, query := range queries {
+		results, err := store.Search(ctx, query, localtask.TaskFilter{})
+		if err != nil {
+			t.Fatalf("Search(%q) returned FTS error: %v", query, err)
+		}
+		for _, result := range results {
+			if result.ID != created.ID {
+				t.Fatalf("Search(%q) returned unexpected task %#v", query, result)
+			}
+		}
+	}
+}
+
+func TestLocalTaskStore_UpdatePreservesCompletedAtAcrossLifecycle(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	task := createTestLocalTask(t, store, "Lifecycle timestamp")
+	completed := localtask.StatusCompleted
+	if _, err := store.Update(ctx, task.ID, localtask.TaskUpdate{Status: &completed}); err != nil {
+		t.Fatal(err)
+	}
+	const original = "2026-08-24 12:34:56"
+	if _, err := store.database.ExecContext(ctx, `UPDATE local_tasks SET completed_at = ? WHERE id = ?`, original, task.ID); err != nil {
+		t.Fatal(err)
+	}
+	stillCompleted, err := store.Update(ctx, task.ID, localtask.TaskUpdate{Status: &completed})
+	if err != nil || stillCompleted.CompletedAt == nil || *stillCompleted.CompletedAt != original {
+		t.Fatalf("repeated completion = %#v, %v", stillCompleted, err)
+	}
+	active := localtask.StatusActive
+	reopened, err := store.Update(ctx, task.ID, localtask.TaskUpdate{Status: &active})
+	if err != nil || reopened.CompletedAt != nil {
+		t.Fatalf("reopened task = %#v, %v", reopened, err)
+	}
+	recompleted, err := store.Update(ctx, task.ID, localtask.TaskUpdate{Status: &completed})
+	if err != nil || recompleted.CompletedAt == nil || *recompleted.CompletedAt == original {
+		t.Fatalf("recompleted task = %#v, %v", recompleted, err)
+	}
+}
+
 func TestLocalTaskStore_SetPrimaryWorkspaceTaskReplacesPrimary(t *testing.T) {
 	ctx := context.Background()
 	store, workspaceStore := openTestLocalTaskStore(t)
@@ -133,7 +178,7 @@ func TestLocalTaskStore_UpdateWorkspaceLinkStatusCompletesAndReactivatesPrimary(
 	assertActivePrimaryLink(t, links, first.ID)
 }
 
-func TestLocalTaskStore_UpdateWorkspaceLinkStatusRejectsInvalidMissingAndUnlinkedActive(t *testing.T) {
+func TestLocalTaskStore_UpdateWorkspaceLinkStatusRejectsInvalidMissingAndUnlinkedChanges(t *testing.T) {
 	ctx := context.Background()
 	store, workspaceStore := openTestLocalTaskStore(t)
 	task := createTestLocalTask(t, store, "History task")
@@ -153,8 +198,10 @@ func TestLocalTaskStore_UpdateWorkspaceLinkStatusRejectsInvalidMissingAndUnlinke
 	if err := store.UnlinkWorkspace(ctx, link.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, localtask.StatusActive); !errors.Is(err, localtask.ErrInvalidLink) {
-		t.Fatalf("reactivate history error = %v", err)
+	for _, status := range []localtask.Status{localtask.StatusActive, localtask.StatusPaused, localtask.StatusCompleted} {
+		if _, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, status); !errors.Is(err, localtask.ErrInvalidLink) {
+			t.Fatalf("update unlinked history to %q error = %v", status, err)
+		}
 	}
 	reloaded, err := store.ListTaskLinks(ctx, task.ID)
 	if err != nil || len(reloaded) != 1 {

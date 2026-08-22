@@ -40,6 +40,8 @@ func loadTaskContextRegistrations(ctx context.Context, memorySvc *memory.Service
 			Directory: root.Directory, TaskID: root.TaskID, TaskTitle: root.TaskTitle, ProjectID: root.ProjectID,
 		})
 	}
-	memorySvc.RegisterTaskContexts(refs)
+	if err := memorySvc.ReplaceTaskContexts(refs); err != nil {
+		return fmt.Errorf("replace task context registrations: %w", err)
+	}
 	return nil
 }

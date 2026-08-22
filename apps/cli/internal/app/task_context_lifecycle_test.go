@@ -14,6 +14,7 @@ import (
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/application"
 )
 
 func TestBootstrap_RegistersPersistedTaskContextsAfterWorkspaceHydration(t *testing.T) {
@@ -35,6 +36,74 @@ func TestBootstrap_RegistersPersistedTaskContextsAfterWorkspaceHydration(t *test
 	}
 	if len(results) != 0 {
 		t.Fatalf("deleted Task Context result remained indexed: %#v", results)
+	}
+}
+
+func TestWorkspaceClose_PurgesFinalProjectTaskContextAndRetainsOtherWorkspace(t *testing.T) {
+	database := openTestDB(t)
+	contextRoot := t.TempDir()
+	taskRoot := filepath.Join(contextRoot, "task-context", "closing-task")
+	planPath := writeTaskPlan(t, taskRoot)
+	seedProjectTask(t, database, "closing-task")
+	app := bootstrapTaskContextApp(t, database)
+	firstPath := openTaskContextWorkspace(t, app, contextRoot, "workspace-first")
+	_ = openTaskContextWorkspace(t, app, contextRoot, "workspace-second")
+	if err := app.memory.OnFileChanged(planPath, firstPath, "project-1"); err != nil {
+		t.Fatalf("index Task Context: %v", err)
+	}
+
+	closeTaskContextWorkspace(t, app, "workspace-first")
+	assertTaskContextResultCount(t, app.memory, 1)
+	closeTaskContextWorkspace(t, app, "workspace-second")
+	assertTaskContextResultCount(t, app.memory, 0)
+}
+
+func TestWorkspaceRetryClose_PurgesFinalProjectTaskContext(t *testing.T) {
+	database := openTestDB(t)
+	contextRoot := t.TempDir()
+	taskRoot := filepath.Join(contextRoot, "task-context", "retry-closing-task")
+	planPath := writeTaskPlan(t, taskRoot)
+	seedProjectTask(t, database, "retry-closing-task")
+	app := bootstrapTaskContextApp(t, database)
+	worktree := openTaskContextWorkspace(t, app, contextRoot, "workspace-retry")
+	if err := app.memory.OnFileChanged(planPath, worktree, "project-1"); err != nil {
+		t.Fatalf("index Task Context: %v", err)
+	}
+
+	if err := app.workspaceSvc.RetryClose(context.Background(), application.CleanupRequest{
+		WorkspaceID: "workspace-retry", Path: worktree,
+	}); err != nil {
+		t.Fatalf("retry close workspace: %v", err)
+	}
+	assertTaskContextResultCount(t, app.memory, 0)
+}
+
+func openTaskContextWorkspace(t *testing.T, app *App, contextRoot string, workspaceID string) string {
+	t.Helper()
+	worktree := t.TempDir()
+	if err := os.Symlink(contextRoot, filepath.Join(worktree, ".my-context")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if _, err := app.workspaceSvc.Open(workspace.OpenRequest{
+		ID: workspaceID, Path: worktree, ProjectID: "project-1", Kind: workspace.KindFolder,
+	}); err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+	return worktree
+}
+
+func closeTaskContextWorkspace(t *testing.T, app *App, workspaceID string) {
+	t.Helper()
+	if _, err := app.workspaceSvc.CloseLocal(context.Background(), workspace.CloseRequest{WorkspaceID: workspaceID}); err != nil {
+		t.Fatalf("close workspace %q: %v", workspaceID, err)
+	}
+}
+
+func assertTaskContextResultCount(t *testing.T, service *memory.Service, expected int) {
+	t.Helper()
+	results, err := service.Search(context.Background(), "lifecycle registration phrase", "", "", 10)
+	if err != nil || len(results) != expected {
+		t.Fatalf("Task Context search results = %#v, %v, want %d", results, err, expected)
 	}
 }
 

@@ -104,6 +104,26 @@ func (s *Service) RegisterTaskContexts(refs []TaskContextRef) {
 	s.registerTaskContexts(refs)
 }
 
+// ReplaceTaskContexts replaces registrations and purges indexed documents that are no longer authoritative.
+func (s *Service) ReplaceTaskContexts(refs []TaskContextRef) error {
+	s.registerTaskContexts(refs)
+	paths := make([]string, 0, len(refs)*len(taskContextDocuments)*2)
+	for _, ref := range refs {
+		cleanRoot := filepath.Clean(ref.Directory)
+		canonicalRoot := canonicalTaskContextRoot(ref.Directory)
+		for fileName := range taskContextDocuments {
+			paths = append(paths, filepath.Join(cleanRoot, fileName))
+			if canonicalRoot != cleanRoot {
+				paths = append(paths, filepath.Join(canonicalRoot, fileName))
+			}
+		}
+	}
+	if err := s.db.DeleteTaskContextsNotIn(paths); err != nil {
+		return fmt.Errorf("purge unregistered task contexts: %w", err)
+	}
+	return nil
+}
+
 func (s *Service) registerTaskContexts(refs []TaskContextRef) {
 	s.taskContextsMu.Lock()
 	defer s.taskContextsMu.Unlock()

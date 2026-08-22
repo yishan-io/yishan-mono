@@ -137,11 +137,7 @@ func readProfileWorkspaceRefs() ([]memory.WorkspaceRef, error) {
 }
 
 func readProfileMemorySources() ([]memory.WorkspaceRef, []memory.TaskContextRef, error) {
-	dataDir, err := config.ResolveAccountDataDir(appConfig.ConfigPath)
-	if err != nil {
-		return nil, nil, err
-	}
-	database, err := sqlite.OpenReadOnly(dataDir)
+	database, err := openLocalTaskDatabase()
 	if err != nil {
 		return nil, nil, err
 	}

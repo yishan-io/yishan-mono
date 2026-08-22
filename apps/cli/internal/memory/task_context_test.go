@@ -69,6 +69,40 @@ func TestReconcileWithTaskContexts_SkipsOrphanTopLevelTaskContext(t *testing.T) 
 	assertIndexed(t, db, canonicalNestedPath, true)
 }
 
+func TestReplaceTaskContexts_PurgesOnlyUnregisteredTaskContextRows(t *testing.T) {
+	db := openTestDB(t)
+	projectRoot := t.TempDir()
+	globalRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(projectRoot, "plan.md"), []byte("project purge phrase"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(globalRoot, "plan.md"), []byte("global retention phrase"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	refs := []TaskContextRef{
+		{Directory: projectRoot, TaskID: "project-task", ProjectID: "project-1"},
+		{Directory: globalRoot, TaskID: "global-task"},
+	}
+	if _, err := db.ReconcileWithTaskContexts(nil, "", refs); err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{db: db}
+	if err := service.ReplaceTaskContexts(refs[1:]); err != nil {
+		t.Fatal(err)
+	}
+	projectResults, err := db.Search("project purge", "", "", 10)
+	if err != nil || len(projectResults) != 0 {
+		t.Fatalf("purged project results = %#v, %v", projectResults, err)
+	}
+	if _, found, getErr := db.GetByPath(filepath.Join(globalRoot, "plan.md")); getErr != nil || !found {
+		t.Fatalf("global path after replacement found = %t, %v", found, getErr)
+	}
+	globalResults, err := db.Search("global retention", "", "", 10)
+	if err != nil || len(globalResults) != 1 || globalResults[0].TaskID != "global-task" {
+		t.Fatalf("retained global results = %#v, %v", globalResults, err)
+	}
+}
+
 func TestSearch_TaskContextAttributionAndMetadataFTSIsolation(t *testing.T) {
 	db := openTestDB(t)
 	taskRoot := t.TempDir()

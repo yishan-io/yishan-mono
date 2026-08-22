@@ -46,6 +46,19 @@ var (
 )
 
 // Status is a Local Task lifecycle state.
+// LegacyTaskIDCollisionError reports a legacy ID already owned by another project.
+type LegacyTaskIDCollisionError struct {
+	TaskID            string
+	ExistingProjectID string
+	ImportProjectID   string
+}
+
+// Error describes the conflicting legacy task ownership.
+func (err *LegacyTaskIDCollisionError) Error() string {
+	return "legacy task " + err.TaskID + " belongs to project " + err.ExistingProjectID +
+		", not import project " + err.ImportProjectID
+}
+
 type Status string
 
 // Priority is a Local Task's personal priority.

@@ -80,17 +80,18 @@ func (*retryRecords) LocalRow(context.Context, string) (workspace.Record, bool) 
 func TestRetryClose_FinalizesOnceAfterFailure(t *testing.T) {
 	instances := &retryInstances{isRuntimeOpen: true, workspace: workspace.Workspace{ID: "ws", Path: "/workspace"}, removeErr: errors.New("remove failed")}
 	records := &retryRecords{}
-	var summaryCalls, usageClears, commits, aborts, marks int
+	var summaryCalls, usageClears, commits, aborts, marks, availabilityChanges int
 	service := New(Dependencies{
 		Instances: instances, Records: records,
-		BeginAgentCleanup:  func(context.Context, string) (any, error) { return "handle", nil },
-		AbortAgentCleanup:  func(any) { aborts++; instances.calls = append(instances.calls, "abort") },
-		CommitAgentCleanup: func(any) { commits++; instances.calls = append(instances.calls, "commit") },
-		ClaimAgentSummary:  func(string) (bool, error) { marks++; return true, nil },
-		SummarizeAgents:    func(string, workspace.CloseRequest) { summaryCalls++ },
-		ClearAgentUsage:    func(string) { usageClears++ },
-		MarkCleanupFailure: func(string, error) error { return nil },
-		RemoveCleanup:      func(string) error { return nil },
+		BeginAgentCleanup:            func(context.Context, string) (any, error) { return "handle", nil },
+		AbortAgentCleanup:            func(any) { aborts++; instances.calls = append(instances.calls, "abort") },
+		CommitAgentCleanup:           func(any) { commits++; instances.calls = append(instances.calls, "commit") },
+		ClaimAgentSummary:            func(string) (bool, error) { marks++; return true, nil },
+		SummarizeAgents:              func(string, workspace.CloseRequest) { summaryCalls++ },
+		ClearAgentUsage:              func(string) { usageClears++ },
+		MarkCleanupFailure:           func(string, error) error { return nil },
+		RemoveCleanup:                func(string) error { return nil },
+		WorkspaceAvailabilityChanged: func() { availabilityChanges++ },
 	})
 	cleanup := CleanupRequest{WorkspaceID: "ws", Path: "/workspace"}
 	if err := service.RetryClose(context.Background(), cleanup); err == nil {
@@ -102,16 +103,16 @@ func TestRetryClose_FinalizesOnceAfterFailure(t *testing.T) {
 	if want := []string{"active", "watch", "abort"}; !equalRetryCalls(instances.calls[len(instances.calls)-3:], want) {
 		t.Fatalf("failed retry cleanup order = %v, want restore before abort", instances.calls)
 	}
-	if hasRetryCall(instances.calls, "memory") {
-		t.Fatalf("failed retry removed workspace runtime: %v", instances.calls)
+	if hasRetryCall(instances.calls, "memory") || availabilityChanges != 0 {
+		t.Fatalf("failed retry removed workspace runtime or refreshed availability: %v, refreshes %d", instances.calls, availabilityChanges)
 	}
 	instances.removeErr = nil
 	cleanup.AgentSummaryDone = true
 	if err := service.RetryClose(context.Background(), cleanup); err != nil {
 		t.Fatalf("successful retry: %v", err)
 	}
-	if summaryCalls != 1 || usageClears != 1 || commits != 1 || records.closed != 1 || marks != 1 {
-		t.Fatalf("successful retry finalization = summary:%d usage:%d commits:%d closed:%d marks:%d", summaryCalls, usageClears, commits, records.closed, marks)
+	if summaryCalls != 1 || usageClears != 1 || commits != 1 || records.closed != 1 || marks != 1 || availabilityChanges != 1 {
+		t.Fatalf("successful retry finalization = summary:%d usage:%d commits:%d closed:%d marks:%d refreshes:%d", summaryCalls, usageClears, commits, records.closed, marks, availabilityChanges)
 	}
 	assertRetryStopBeforeRemove(t, instances.calls)
 	assertRetryRemoveBeforeAgentCommit(t, instances.calls)

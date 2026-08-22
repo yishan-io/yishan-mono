@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -28,6 +29,29 @@ func TestImportLegacyProjectTasks_ImportsFixtureWithoutChangingMarkdown(t *testi
 	assertImportedLegacyTasks(t, database)
 	assertMarkdownFilesEqual(t, contextRoot, markdownBefore)
 	assertCompletedImportCannotRepeat(t, command, database, contextRoot)
+}
+
+func TestImportLegacyProjectTasks_RejectsCrossProjectIDCollisionWithoutMarker(t *testing.T) {
+	contextRoot := copyLegacyTaskFixture(t)
+	database := openLegacyImportTestDatabase(t)
+	command := &cobra.Command{}
+	if err := importLegacyProjectTasks(command, database, contextRoot, "project-1"); err != nil {
+		t.Fatalf("import first project: %v", err)
+	}
+
+	err := importLegacyProjectTasks(command, database, contextRoot, "project-2")
+	var collision *localtask.LegacyTaskIDCollisionError
+	if !errors.As(err, &collision) {
+		t.Fatalf("second project import error = %v, want typed collision", err)
+	}
+	isComplete, markerErr := sqlite.LocalTaskLegacyImportCompleted(context.Background(), database, "project-2")
+	if markerErr != nil || isComplete {
+		t.Fatalf("second project marker = %t, %v, want false", isComplete, markerErr)
+	}
+	imported, getErr := sqlite.NewLocalTaskStore(database).Get(context.Background(), "task-7")
+	if getErr != nil || imported.ProjectID == nil || *imported.ProjectID != "project-1" {
+		t.Fatalf("colliding task attribution = %#v, %v", imported, getErr)
+	}
 }
 
 func TestImportLegacyProjectTasks_FailedImportCanRetry(t *testing.T) {

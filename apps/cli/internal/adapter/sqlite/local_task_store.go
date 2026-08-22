@@ -159,7 +159,7 @@ func updateWorkspaceLinkStatus(ctx context.Context, transaction *sql.Tx, linkID 
 	if err != nil {
 		return localtask.WorkspaceLink{}, err
 	}
-	if link.UnlinkedAt != nil && status == localtask.StatusActive {
+	if link.UnlinkedAt != nil {
 		return localtask.WorkspaceLink{}, localtask.ErrInvalidLink
 	}
 	if link.Role == localtask.LinkRolePrimary && status == localtask.StatusActive {

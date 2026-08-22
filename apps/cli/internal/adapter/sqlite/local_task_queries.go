@@ -25,8 +25,20 @@ func buildLocalTaskSearchQuery(search string, filter localtask.TaskFilter) (stri
 		JOIN local_tasks ON local_tasks.id = local_tasks_fts.local_task_id`
 	where, arguments := buildLocalTaskFilter(filter, "local_tasks")
 	where = append([]string{"local_tasks_fts MATCH ?"}, where...)
-	arguments = append([]any{search}, arguments...)
+	arguments = append([]any{escapeLocalTaskFTS5(search)}, arguments...)
 	return query + " WHERE " + strings.Join(where, " AND ") + " ORDER BY bm25(local_tasks_fts), local_tasks.id", arguments
+}
+
+func escapeLocalTaskFTS5(query string) string {
+	tokens := strings.Fields(query)
+	if len(tokens) == 0 {
+		return `""`
+	}
+	terms := make([]string, len(tokens))
+	for index, token := range tokens {
+		terms[index] = `"` + strings.ReplaceAll(token, `"`, `""`) + `"`
+	}
+	return strings.Join(terms, " OR ")
 }
 
 func buildLocalTaskFilter(filter localtask.TaskFilter, table string) ([]string, []any) {
@@ -83,8 +95,10 @@ func appendLocalTaskStatusUpdate(assignments *[]string, arguments *[]any, status
 	if status == nil {
 		return
 	}
-	*assignments = append(*assignments, "status = ?", "completed_at = CASE WHEN ? = 'completed' THEN datetime('now') ELSE NULL END")
-	*arguments = append(*arguments, *status, *status)
+	*assignments = append(*assignments, "status = ?", `completed_at = CASE
+		WHEN ? = 'completed' AND status <> 'completed' THEN datetime('now')
+		WHEN ? = 'completed' THEN completed_at ELSE NULL END`)
+	*arguments = append(*arguments, *status, *status, *status)
 }
 
 func appendLocalTaskPriorityUpdate(assignments *[]string, arguments *[]any, priority *localtask.Priority) {

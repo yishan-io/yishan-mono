@@ -244,6 +244,24 @@ func (db *DB) UpdateTaskContextTitle(taskID string, taskTitle string) error {
 	return err
 }
 
+// DeleteTaskContextsNotIn removes indexed Local Task documents outside authoritative registrations.
+func (db *DB) DeleteTaskContextsNotIn(paths []string) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if len(paths) == 0 {
+		_, err := db.conn.Exec(`DELETE FROM memory_files WHERE source = ?`, SourceTaskContext)
+		return err
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(paths)), ",")
+	arguments := make([]any, 0, len(paths)+1)
+	arguments = append(arguments, SourceTaskContext)
+	for _, path := range paths {
+		arguments = append(arguments, path)
+	}
+	_, err := db.conn.Exec(`DELETE FROM memory_files WHERE source = ? AND path NOT IN (`+placeholders+`)`, arguments...)
+	return err
+}
+
 func (db *DB) DeleteByPath(path string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()

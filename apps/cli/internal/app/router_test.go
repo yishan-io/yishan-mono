@@ -68,4 +68,19 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 	if mapped := rpc.MapRPCError(err); mapped == nil || mapped.Code != rpc.CodeInvalidParams {
 		t.Fatalf("update invalid link status error = %v, mapped = %#v", err, mapped)
 	}
+	if _, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskUnlinkWorkspace,
+		json.RawMessage(`{"linkId":"`+link.ID+`"}`)); err != nil {
+		t.Fatalf("unlink workspace: %v", err)
+	}
+	for _, status := range []domain.Status{domain.StatusPaused, domain.StatusCompleted} {
+		_, err = router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskUpdateWorkspaceLinkStatus,
+			json.RawMessage(`{"linkId":"`+link.ID+`","status":"`+string(status)+`"}`))
+		if mapped := rpc.MapRPCError(err); mapped == nil || mapped.Code != rpc.CodeInvalidParams {
+			t.Fatalf("update unlinked link to %q error = %v, mapped = %#v", status, err, mapped)
+		}
+	}
+	history, err := sqlite.NewLocalTaskStore(database).ListTaskLinks(context.Background(), created.ID)
+	if err != nil || len(history) != 1 || history[0].Status != domain.StatusCompleted || history[0].UnlinkedAt == nil {
+		t.Fatalf("unlinked repository history = %#v, %v", history, err)
+	}
 }

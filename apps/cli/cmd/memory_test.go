@@ -136,6 +136,39 @@ type testTaskContextPaths struct {
 	taskRoot   string
 }
 
+func TestOpenAndReconcileMemoryDB_MigratesEmptyProfileDatabase(t *testing.T) {
+	profileDir := t.TempDir()
+	originalConfigPath := appConfig.ConfigPath
+	appConfig.ConfigPath = filepath.Join(profileDir, "credential.yaml")
+	defer func() { appConfig.ConfigPath = originalConfigPath }()
+
+	database, err := sqlite.Open(profileDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	memoryDB, err := openAndReconcileMemoryDB()
+	if err != nil {
+		t.Fatalf("openAndReconcileMemoryDB: %v", err)
+	}
+	if err := memoryDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	database, err = sqlite.OpenReadOnly(profileDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	var tableName string
+	if err := database.QueryRow(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'local_tasks'`).Scan(&tableName); err != nil {
+		t.Fatalf("local_tasks migration was not applied: %v", err)
+	}
+}
+
 func TestOpenAndReconcileMemoryDB_PreservesAuthoritativeTaskContexts(t *testing.T) {
 	paths := setupCommandTaskContext(t)
 	originalConfigPath := appConfig.ConfigPath
