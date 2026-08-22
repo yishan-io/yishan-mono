@@ -8,6 +8,7 @@ import { workspaceStore } from "../../../domains/workspace/state/workspaceStore"
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
 import { isFolderWorkspace } from "../local-folder/localFolder";
 import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
+import { resolveWorkspaceAfterClose } from "./workspaceCloseSelection";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
 /**
@@ -91,7 +92,7 @@ export async function deleteLocalFolder(id: string): Promise<void> {
     return;
   }
 
-  const previousWorkspaces = workspaceStore.getState().workspaces;
+  const previousWorkspaces = [...workspaceStore.getState().workspaces];
   try {
     const workspaceRpc = await getWorkspaceRpc();
     await workspaceRpc.deleteLocalFolder({ id: folderId });
@@ -100,18 +101,27 @@ export async function deleteLocalFolder(id: string): Promise<void> {
     throw new Error(getErrorMessage(error));
   }
 
-  workspaceStore.getState().removeLocalFolder(folderId);
-  await syncTabStoreWithWorkspace(previousWorkspaces);
-
-  // The deleted folder may have been the active workspace; re-activate the
-  // remaining selection through the Workbench navigation command.
-  const remainingWorkspaces = workspaceStore.getState().workspaces;
+  const currentWorkspaceState = workspaceStore.getState();
+  const currentWorkspaces = [...currentWorkspaceState.workspaces];
+  const orderedWorkspaceIds = [...currentWorkspaceState.orderedWorkspaceIds];
   const activeWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+  workspaceStore.getState().removeLocalFolder(folderId);
+
   if (activeWorkspaceId === folderId) {
-    const nextFolderWorkspace = remainingWorkspaces.find(
-      (workspace) => workspace.projectId === LOCAL_FOLDER_PROJECT_ID,
-    );
-    const nextWorkspaceId = nextFolderWorkspace?.id ?? remainingWorkspaces[0]?.id ?? "";
-    activateWorkspace({ workspaceId: nextWorkspaceId, projectId: LOCAL_FOLDER_PROJECT_ID });
+    const replacementWorkspace = resolveWorkspaceAfterClose({
+      closingWorkspaceId: folderId,
+      orderedWorkspaceIds,
+      preCloseWorkspaces: currentWorkspaces,
+    });
+    if (replacementWorkspace) {
+      activateWorkspace({
+        workspaceId: replacementWorkspace.id,
+        projectId: replacementWorkspace.projectId ?? replacementWorkspace.repoId,
+      });
+    } else {
+      workbenchNavigationStore.getState().setActiveWorkspaceId("");
+    }
   }
+
+  await syncTabStoreWithWorkspace(previousWorkspaces);
 }

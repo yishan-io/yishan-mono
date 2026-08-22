@@ -1,5 +1,5 @@
 import { projectStore } from "@renderer/domains/project";
-import { resolveTabForWorkspace } from "@renderer/domains/workbench";
+import { activateWorkspace } from "@renderer/domains/workbench";
 
 import { sessionStore } from "@renderer/domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
@@ -182,7 +182,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     }),
   );
   workspaceCreateProgressStore.getState().startWorkspaceCreateProgress(workspaceId);
-  resolveTabForWorkspace(workspaceId);
+  activateWorkspace({ workspaceId, projectId });
 
   return workspaceId;
 }
