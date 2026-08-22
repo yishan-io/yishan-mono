@@ -37,7 +37,7 @@ Yishan gives agents persistent project memory, shared context, and repeatable wo
 
 ## More
 
-- **Autopilot** — schedule recurring agent jobs on a cadence — code reviews, health checks, weekly summaries — running automatically while you focus elsewhere.
+- **Automation** — schedule recurring agent jobs on a cadence — code reviews, health checks, weekly summaries — running automatically while you focus elsewhere.
 - **PR visibility** — see pull request state, checks, and review status without leaving Yishan.
 - **Works with your tools** — open files in VS Code, Cursor, JetBrains, Sublime, Xcode, and more. Yishan bridges to your tools instead of replacing them.
 - **Bring your own agent** — works with OpenCode, Claude, Codex, Gemini, Cursor, and Pi. Use the agents you already know.

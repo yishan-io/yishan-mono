@@ -1,6 +1,6 @@
 {
   "scheduledJob": {
-    "title": "Autopilot",
+    "title": "Automation",
     "loadError": "Failed to load scheduled jobs.",
     "empty": "No scheduled jobs are configured for this organization.",
     "status": {
