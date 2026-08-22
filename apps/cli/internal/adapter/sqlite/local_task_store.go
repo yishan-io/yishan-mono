@@ -127,11 +127,74 @@ func (store *LocalTaskStore) insertWorkspaceLink(ctx context.Context, link local
 // UnlinkWorkspace keeps link history while removing the current association.
 func (store *LocalTaskStore) UnlinkWorkspace(ctx context.Context, linkID string) error {
 	result, err := store.database.ExecContext(ctx, `UPDATE local_task_workspace_links
-		SET unlinked_at = datetime('now') WHERE id = ? AND unlinked_at IS NULL`, linkID)
+		SET status = 'completed', unlinked_at = datetime('now') WHERE id = ? AND unlinked_at IS NULL`, linkID)
 	if err != nil {
 		return fmt.Errorf("unlink local task from workspace: %w", err)
 	}
 	return requireWorkspaceLinkUpdated(result)
+}
+
+// UpdateWorkspaceLinkStatus changes a link lifecycle status transactionally.
+func (store *LocalTaskStore) UpdateWorkspaceLinkStatus(ctx context.Context, linkID string, status localtask.Status) (localtask.WorkspaceLink, error) {
+	if err := localtask.ValidateLinkStatus(status); err != nil {
+		return localtask.WorkspaceLink{}, err
+	}
+	transaction, err := store.database.BeginTx(ctx, nil)
+	if err != nil {
+		return localtask.WorkspaceLink{}, fmt.Errorf("begin update workspace link status: %w", err)
+	}
+	link, err := updateWorkspaceLinkStatus(ctx, transaction, linkID, status)
+	if err != nil {
+		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
+		return localtask.WorkspaceLink{}, err
+	}
+	if err := transaction.Commit(); err != nil {
+		return localtask.WorkspaceLink{}, fmt.Errorf("commit workspace link status: %w", err)
+	}
+	return link, nil
+}
+
+func updateWorkspaceLinkStatus(ctx context.Context, transaction *sql.Tx, linkID string, status localtask.Status) (localtask.WorkspaceLink, error) {
+	link, err := getWorkspaceLinkInTx(ctx, transaction, linkID)
+	if err != nil {
+		return localtask.WorkspaceLink{}, err
+	}
+	if link.UnlinkedAt != nil && status == localtask.StatusActive {
+		return localtask.WorkspaceLink{}, localtask.ErrInvalidLink
+	}
+	if link.Role == localtask.LinkRolePrimary && status == localtask.StatusActive {
+		if err := demoteOtherPrimaryWorkspaceTask(ctx, transaction, link.WorkspaceID, link.ID); err != nil {
+			return localtask.WorkspaceLink{}, err
+		}
+	}
+	row := transaction.QueryRowContext(ctx, `UPDATE local_task_workspace_links SET status = ? WHERE id = ?
+		RETURNING `+localTaskLinkColumns, status, linkID)
+	updated, err := scanWorkspaceLink(row)
+	if err != nil {
+		return localtask.WorkspaceLink{}, fmt.Errorf("update workspace link status: %w", err)
+	}
+	return updated, nil
+}
+
+func getWorkspaceLinkInTx(ctx context.Context, transaction *sql.Tx, linkID string) (localtask.WorkspaceLink, error) {
+	link, err := scanWorkspaceLink(transaction.QueryRowContext(ctx,
+		`SELECT `+localTaskLinkColumns+` FROM local_task_workspace_links WHERE id = ?`, linkID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return localtask.WorkspaceLink{}, localtask.ErrLinkNotFound
+	}
+	if err != nil {
+		return localtask.WorkspaceLink{}, fmt.Errorf("get local task workspace link: %w", err)
+	}
+	return link, nil
+}
+
+func demoteOtherPrimaryWorkspaceTask(ctx context.Context, transaction *sql.Tx, workspaceID string, linkID string) error {
+	_, err := transaction.ExecContext(ctx, `UPDATE local_task_workspace_links SET role = 'related'
+		WHERE workspace_id = ? AND id <> ? AND role = 'primary' AND status = 'active' AND unlinked_at IS NULL`, workspaceID, linkID)
+	if err != nil {
+		return fmt.Errorf("replace active primary local task: %w", err)
+	}
+	return nil
 }
 
 // ListWorkspaceLinks loads all task links for a workspace, newest first.
@@ -163,7 +226,7 @@ func (store *LocalTaskStore) SetPrimaryWorkspaceTask(ctx context.Context, taskID
 	}
 	link, err := store.setPrimaryWorkspaceTask(ctx, transaction, taskID, workspaceID)
 	if err != nil {
-		_ = transaction.Rollback()
+		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
 		return localtask.WorkspaceLink{}, err
 	}
 	if err := transaction.Commit(); err != nil {

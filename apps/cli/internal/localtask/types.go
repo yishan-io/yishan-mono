@@ -41,6 +41,8 @@ var (
 	ErrInvalidTask = errors.New("invalid local task")
 	// ErrInvalidLink indicates a workspace link violates the Local Task lifecycle contract.
 	ErrInvalidLink = errors.New("invalid local task workspace link")
+	// ErrContextUnavailable indicates no approved local context path can be resolved.
+	ErrContextUnavailable = errors.New("local task context unavailable")
 )
 
 // Status is a Local Task lifecycle state.
@@ -54,26 +56,34 @@ type LinkRole string
 
 // Task is Local Task metadata authoritative in the local SQLite database.
 type Task struct {
-	ID          string
-	ProjectID   *string
-	Title       string
-	Description string
-	Status      Status
-	Priority    Priority
-	CreatedAt   string
-	UpdatedAt   string
-	CompletedAt *string
+	ID          string   `json:"id"`
+	ProjectID   *string  `json:"projectId,omitempty"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Status      Status   `json:"status"`
+	Priority    Priority `json:"priority"`
+	CreatedAt   string   `json:"createdAt"`
+	UpdatedAt   string   `json:"updatedAt"`
+	CompletedAt *string  `json:"completedAt,omitempty"`
+}
+
+// ContextDetails contains derived filesystem locations for v1 task documents.
+type ContextDetails struct {
+	Directory   string `json:"directory"`
+	PlanPath    string `json:"planPath"`
+	NotesPath   string `json:"notesPath"`
+	OutcomePath string `json:"outcomePath"`
 }
 
 // WorkspaceLink relates a Local Task to a local workspace.
 type WorkspaceLink struct {
-	ID          string
-	LocalTaskID string
-	WorkspaceID string
-	Role        LinkRole
-	Status      Status
-	LinkedAt    string
-	UnlinkedAt  *string
+	ID          string   `json:"id"`
+	LocalTaskID string   `json:"localTaskId"`
+	WorkspaceID string   `json:"workspaceId"`
+	Role        LinkRole `json:"role"`
+	Status      Status   `json:"status"`
+	LinkedAt    string   `json:"linkedAt"`
+	UnlinkedAt  *string  `json:"unlinkedAt,omitempty"`
 }
 
 // TaskFilter limits Local Task list results.
@@ -95,7 +105,7 @@ type TaskUpdate struct {
 // SearchResult is a Local Task metadata FTS result.
 type SearchResult struct {
 	Task
-	Rank float64
+	Rank float64 `json:"rank"`
 }
 
 // Repository persists Local Task metadata and workspace relationships.
@@ -107,6 +117,7 @@ type Repository interface {
 	Search(context.Context, string, TaskFilter) ([]SearchResult, error)
 	LinkWorkspace(context.Context, WorkspaceLink) (WorkspaceLink, error)
 	UnlinkWorkspace(context.Context, string) error
+	UpdateWorkspaceLinkStatus(context.Context, string, Status) (WorkspaceLink, error)
 	ListWorkspaceLinks(context.Context, string) ([]WorkspaceLink, error)
 	ListTaskLinks(context.Context, string) ([]WorkspaceLink, error)
 	SetPrimaryWorkspaceTask(context.Context, string, string) (WorkspaceLink, error)
@@ -133,6 +144,14 @@ func ValidateTaskUpdate(update TaskUpdate) error {
 	}
 	if update.Priority != nil && !isValidPriority(*update.Priority) {
 		return ErrInvalidTask
+	}
+	return nil
+}
+
+// ValidateLinkStatus validates a workspace link lifecycle status.
+func ValidateLinkStatus(status Status) error {
+	if !isValidStatus(status) {
+		return ErrInvalidLink
 	}
 	return nil
 }

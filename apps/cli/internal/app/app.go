@@ -28,6 +28,7 @@ import (
 	nodeagent "yishan/apps/cli/internal/node/agent"
 	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/node/hook"
+	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
@@ -113,6 +114,8 @@ type App struct {
 	agentSvc *nodeagent.Service
 	// workspaceSvc is the workspace application service (lifecycle, relay).
 	workspaceSvc *nodeworkspace.Service
+	// localTaskSvc is the local-only task application service.
+	localTaskSvc *nodelocaltask.Service
 	// hookIngress handles the agent hook HTTP ingress (pi notify bridge).
 	hookIngress *hook.Ingress
 	// router is the namespace routing table.
@@ -251,6 +254,11 @@ func Bootstrap(cfg Config) (*App, error) {
 			}
 		},
 	)
+	localTaskSvc := nodelocaltask.NewService(nodelocaltask.Deps{
+		Repository:     sqlite.NewLocalTaskStore(cfg.Database),
+		Registry:       registry,
+		WorkspaceStore: store,
+	})
 	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
 		Workspace: workspaceSvc,
 		Terminals: terminals,
@@ -296,6 +304,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		cancelCleanup:        cancelCleanup,
 		agentSvc:             agentSvc,
 		workspaceSvc:         workspaceSvc,
+		localTaskSvc:         localTaskSvc,
 		hookIngress:          hookIngress,
 	}
 
@@ -330,7 +339,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		SettingsPath: cfg.SettingsPath,
 		ServerCtx:    context.Background(),
 	})
-	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
+	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
 	app.relay = relay.NewClient(relay.ClientConfig{
@@ -438,6 +447,6 @@ func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 
 // NewRouter builds the namespace routing table for the node services (test
 // and composition helper; Bootstrap wires it into the app).
-func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
-	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
+func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
+	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 }

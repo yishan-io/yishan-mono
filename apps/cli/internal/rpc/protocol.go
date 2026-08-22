@@ -14,6 +14,7 @@ import (
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
+	"yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/worktree"
@@ -99,6 +100,9 @@ func MapRPCError(err error) *RPCError {
 	if errors.As(err, &workspaceErr) {
 		return &RPCError{Code: mapWorkspaceErrorCode(workspaceErr.Code), Message: workspaceErr.Message}
 	}
+	if code, isLocalTaskError := mapLocalTaskErrorCode(err); isLocalTaskError {
+		return &RPCError{Code: code, Message: err.Error()}
+	}
 	return &RPCError{Code: CodeServerError, Message: err.Error()}
 }
 
@@ -177,5 +181,16 @@ func mapWorkspaceErrorCode(code workspace.ErrorCode) int {
 		return CodeSessionInactive
 	default:
 		return CodeServerError
+	}
+}
+
+func mapLocalTaskErrorCode(err error) (int, bool) {
+	switch {
+	case errors.Is(err, localtask.ErrInvalidTask), errors.Is(err, localtask.ErrInvalidLink):
+		return CodeInvalidParams, true
+	case errors.Is(err, localtask.ErrTaskNotFound), errors.Is(err, localtask.ErrLinkNotFound), errors.Is(err, localtask.ErrContextUnavailable):
+		return CodeNotFound, true
+	default:
+		return CodeServerError, false
 	}
 }

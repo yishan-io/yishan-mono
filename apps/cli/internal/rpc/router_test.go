@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"yishan/apps/cli/internal/computer"
+	"yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -219,5 +220,27 @@ func TestWireMethodNamesCarryNamespaces(t *testing.T) {
 		if found && ns == "git" {
 			t.Fatalf("expected %q NOT to route to git namespace", method)
 		}
+	}
+}
+
+func TestMapRPCError_LocalTaskDomainErrorsSurviveWrapping(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		code int
+	}{
+		{"invalid task", localtask.ErrInvalidTask, CodeInvalidParams},
+		{"invalid link", localtask.ErrInvalidLink, CodeInvalidParams},
+		{"task not found", localtask.ErrTaskNotFound, CodeNotFound},
+		{"link not found", localtask.ErrLinkNotFound, CodeNotFound},
+		{"context unavailable", localtask.ErrContextUnavailable, CodeNotFound},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := MapRPCError(fmt.Errorf("wrapped: %w", test.err))
+			if got == nil || got.Code != test.code {
+				t.Fatalf("MapRPCError(wrapped) = %#v, want code %d", got, test.code)
+			}
+		})
 	}
 }

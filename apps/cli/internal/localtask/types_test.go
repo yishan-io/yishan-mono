@@ -42,3 +42,20 @@ func TestValidateWorkspaceLink_RejectsInvalidValues(t *testing.T) {
 		t.Fatalf("ValidateWorkspaceLink() error = %v, want %v", err, ErrInvalidLink)
 	}
 }
+
+func TestValidateLinkStatus_AcceptsLifecycleStatuses(t *testing.T) {
+	tests := []struct {
+		status Status
+		want   error
+	}{
+		{StatusActive, nil},
+		{StatusPaused, nil},
+		{StatusCompleted, nil},
+		{Status("invalid"), ErrInvalidLink},
+	}
+	for _, test := range tests {
+		if got := ValidateLinkStatus(test.status); got != test.want {
+			t.Fatalf("ValidateLinkStatus(%q) = %v, want %v", test.status, got, test.want)
+		}
+	}
+}

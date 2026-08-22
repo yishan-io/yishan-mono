@@ -33,6 +33,9 @@ func (repository *legacyImportRepository) LinkWorkspace(context.Context, Workspa
 	return WorkspaceLink{}, nil
 }
 func (repository *legacyImportRepository) UnlinkWorkspace(context.Context, string) error { return nil }
+func (repository *legacyImportRepository) UpdateWorkspaceLinkStatus(context.Context, string, Status) (WorkspaceLink, error) {
+	return WorkspaceLink{}, nil
+}
 func (repository *legacyImportRepository) ListWorkspaceLinks(context.Context, string) ([]WorkspaceLink, error) {
 	return nil, nil
 }

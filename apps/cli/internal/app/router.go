@@ -2,6 +2,7 @@ package app
 
 import (
 	nodeagent "yishan/apps/cli/internal/node/agent"
+	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
@@ -14,7 +15,7 @@ import (
 // and call exactly one typed service method; the daemon implements the
 // services. The agent namespaces (pi/skill/customize) route through the rpc
 // AgentHandler into the daemon's AgentService implementation.
-func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
+func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
 	router := rpc.NewRouter()
 	router.Register("list", &rpc.WorkspaceHandler{Services: workspaceSvc})
 	router.Register("workspace", &rpc.WorkspaceHandler{Services: workspaceSvc})
@@ -25,6 +26,7 @@ func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspa
 	router.Register("computer", &rpc.ComputerHandler{Services: systemSvc})
 	router.Register("memory", &rpc.MemoryHandler{Services: systemSvc})
 	router.Register("project", &rpc.ProjectHandler{Services: projectSvc})
+	router.Register("localTask", &rpc.LocalTaskHandler{Services: localTaskSvc})
 	router.Register("system", &rpc.SystemHandler{Services: systemSvc})
 	router.Register("pi", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("skill", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
