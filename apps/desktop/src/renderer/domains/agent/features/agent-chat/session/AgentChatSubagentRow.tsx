@@ -5,7 +5,6 @@ import type { AgentSubagentCancelState } from "../../../../../domains/agent/chat
 
 type AgentChatSubagentRowProps = {
   subagent: RunningSubagentSummary;
-  isRunning?: boolean;
   /** True when the row is interrupted history (its owning process died). */
   isInterrupted?: boolean;
   canCancel?: boolean;
@@ -17,7 +16,6 @@ type AgentChatSubagentRowProps = {
 /** Renders one compact running sub-agent row above the parent agent-chat composer. */
 export function AgentChatSubagentRow({
   subagent,
-  isRunning = false,
   isInterrupted = false,
   canCancel = false,
   cancelState,
@@ -63,7 +61,7 @@ export function AgentChatSubagentRow({
           color: "inherit",
         }}
       >
-        {isRunning ? (
+        {subagent.state === "running" ? (
           <Tooltip title="Sub-agent running" placement="top">
             <Box
               component="span"
@@ -99,6 +97,13 @@ export function AgentChatSubagentRow({
         >
           {subagent.promptSummary}
         </Typography>
+        <Typography
+          variant="caption"
+          data-testid={`subagent-row-state-${rowId}`}
+          sx={{ color: "text.secondary", flexShrink: 0 }}
+        >
+          {getSubagentStateLabel(subagent.state)}
+        </Typography>
         {isInterrupted ? (
           <Typography
             variant="caption"
@@ -109,7 +114,7 @@ export function AgentChatSubagentRow({
           </Typography>
         ) : null}
       </Box>
-      {onCancel && !isInterrupted ? (
+      {onCancel && subagent.state === "running" && !isInterrupted ? (
         <Tooltip title={cancelFeedbackTooltip(cancelState, canCancel)} placement="top">
           <span>
             <IconButton
@@ -168,6 +173,19 @@ export function AgentChatSubagentRow({
       ) : null}
     </Paper>
   );
+}
+
+function getSubagentStateLabel(state: RunningSubagentSummary["state"]): string {
+  switch (state) {
+    case "queued":
+      return "Queued";
+    case "preparing":
+      return "Preparing";
+    case "running":
+      return "Running";
+    default:
+      return "Preparing";
+  }
 }
 
 function isCancelUnavailable(cancelState: AgentSubagentCancelState | undefined, canCancel: boolean): boolean {

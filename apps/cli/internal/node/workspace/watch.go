@@ -3,21 +3,24 @@ package workspace
 import (
 	"strings"
 
+	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/instance"
 )
 
 // WatchAndTrack registers the filesystem watcher for a workspace and starts
 // PR tracking for its worktree path.
-func (s *Service) WatchAndTrack(workspaceID string, path string) error {
+func (s *Service) WatchAndTrack(ws workspace.Workspace) error {
+	if ws.Kind == workspace.KindFolder {
+		return nil
+	}
+	var watchErr error
 	if s.deps.Watchers != nil {
-		if err := s.deps.Watchers.Watch(workspaceID, path); err != nil {
-			return err
-		}
+		watchErr = s.deps.Watchers.Watch(ws.ID, ws.Path)
 	}
 	if s.deps.PRTracker != nil {
-		s.deps.PRTracker.EnsureTracked(path, true)
+		s.deps.PRTracker.EnsureTracked(ws.Path, true)
 	}
-	return nil
+	return watchErr
 }
 
 // WatchActiveWorkspaces registers filesystem watchers for every active
@@ -34,6 +37,6 @@ func (s *Service) WatchActive() {
 		if strings.TrimSpace(ws.Path) == "" {
 			continue
 		}
-		_ = s.WatchAndTrack(ws.ID, ws.Path) // startup watchers are best-effort
+		_ = s.WatchAndTrack(ws) // startup watchers are best-effort
 	}
 }

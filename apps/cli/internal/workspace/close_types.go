@@ -11,6 +11,7 @@ type OpenRequest struct {
 	OrgID           string `json:"orgId,omitempty"`
 	ProjectID       string `json:"projectId,omitempty"`
 	PRAlreadyMerged bool   `json:"prAlreadyMerged,omitempty"`
+	Kind            Kind   `json:"kind,omitempty"`
 }
 
 // RefreshPullRequestRequest targets a workspace by id or worktree path for a

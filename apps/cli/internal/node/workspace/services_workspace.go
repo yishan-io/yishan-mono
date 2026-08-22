@@ -66,8 +66,10 @@ func (s *Service) RefreshPullRequest(ctx context.Context, req workspace.RefreshP
 		return nil, err
 	}
 
-	s.deps.PRTracker.EnsureTracked(ws.Path, false)
-	s.deps.PRTracker.RefreshWorkspaceByPath(ws.Path)
+	if ws.Kind != workspace.KindFolder {
+		s.deps.PRTracker.EnsureTracked(ws.Path, false)
+		s.deps.PRTracker.RefreshWorkspaceByPath(ws.Path)
+	}
 
 	refreshedWorkspace, err := s.GetWorkspace(ws.ID)
 	if err != nil {

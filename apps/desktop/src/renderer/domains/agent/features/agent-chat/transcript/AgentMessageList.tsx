@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
+import { resolveAgentToolCallLifecycleStates } from "../../../../../domains/agent/chat/agentChatSubagents";
 import type {
   AgentMessage as AgentMessageType,
   AgentQueueState,
@@ -177,6 +178,10 @@ function AgentMessageListComponent({
     return display;
   }, [messages, trailingMessage]);
   const rows = useMemo(() => buildTranscriptRows(displayMessages, isTurnRunning), [displayMessages, isTurnRunning]);
+  const agentToolCallStates = useMemo(
+    () => resolveAgentToolCallLifecycleStates(messages, trailingMessage),
+    [messages, trailingMessage],
+  );
   const rowIdsRef = useRef<string[]>([]);
   rowIdsRef.current = rows.map((row) => (row.kind === "user" ? `user:${row.message.id}` : row.turn.id));
   const getVirtualMessageKey = useCallback((index: number) => rowIdsRef.current[index] ?? index, []);
@@ -397,6 +402,7 @@ function AgentMessageListComponent({
                     <AgentTurn
                       turn={row.turn}
                       workspacePath={workspacePath}
+                      agentToolCallStates={agentToolCallStates}
                       onOpenCompletedSubagent={onOpenCompletedSubagent}
                     />
                   )}

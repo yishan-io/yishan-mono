@@ -13,7 +13,7 @@ import (
 // wired in New (branchResolver / inspectResolver / detailResolver), so tests
 // and alternate providers can substitute their own queries. No storage and no
 // event publication happens here beyond the instance/PR state transition in
-// setWorkspacePullRequest.
+// setRefreshedWorkspacePullRequest.
 
 // refreshWorkspace resolves the current branch and pull request for one
 // workspace and applies the result to the instance registry. Tracking is
@@ -27,7 +27,7 @@ func (t *Tracker) refreshWorkspace(ws workspace.Workspace) error {
 	branch, err := t.branchResolver(ctx, ws.Path)
 	if err != nil {
 		if shouldDisableTrackingForBranchError(err) {
-			t.setWorkspacePullRequest(ws, nil, false)
+			t.setRefreshedWorkspacePullRequest(ws, nil, false)
 			log.Debug().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh disabled tracking because branch could not be resolved")
 			return nil
 		}
@@ -37,7 +37,7 @@ func (t *Tracker) refreshWorkspace(ws workspace.Workspace) error {
 	branch = strings.TrimSpace(branch)
 	log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh resolved branch")
 	if branch == "" || branch == "HEAD" {
-		t.setWorkspacePullRequest(ws, nil, true)
+		t.setRefreshedWorkspacePullRequest(ws, nil, true)
 		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh cleared PR because branch is empty or detached")
 		return nil
 	}
@@ -45,7 +45,7 @@ func (t *Tracker) refreshWorkspace(ws workspace.Workspace) error {
 	pr, err := t.detailResolver(ctx, ws.Path, branch)
 	if err != nil {
 		if shouldErrDisableTracking(err) {
-			t.setWorkspacePullRequest(ws, nil, false)
+			t.setRefreshedWorkspacePullRequest(ws, nil, false)
 			log.Debug().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh disabled tracking for repository without PR support")
 			return nil
 		}
@@ -53,7 +53,7 @@ func (t *Tracker) refreshWorkspace(ws workspace.Workspace) error {
 		return err
 	}
 	if !pr.Found {
-		t.setWorkspacePullRequest(ws, nil, true)
+		t.setRefreshedWorkspacePullRequest(ws, nil, true)
 		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh found no pull request")
 		return nil
 	}
@@ -75,7 +75,7 @@ func (t *Tracker) refreshWorkspace(ws workspace.Workspace) error {
 		Deployments:    pr.Deployments,
 	}
 	complete := status == "merged"
-	t.setWorkspacePullRequest(ws, bound, !complete)
+	t.setRefreshedWorkspacePullRequest(ws, bound, !complete)
 	log.Debug().
 		Str("workspaceId", ws.ID).
 		Str("path", ws.Path).
@@ -87,9 +87,70 @@ func (t *Tracker) refreshWorkspace(ws workspace.Workspace) error {
 	return nil
 }
 
-// setWorkspacePullRequest applies a resolved PR state to the instance
+// setRefreshedWorkspacePullRequest applies a resolved PR state to the instance
 // registry, publishes the typed update on meaningful change, maintains the
 // active-tracking set, and hands persistence to the background hooks.
+func (t *Tracker) setRefreshedWorkspacePullRequest(ws workspace.Workspace, pr *workspace.WorkspacePullRequest, keepActive bool) {
+	previousPullRequest, didApply := t.applyRefreshedPullRequest(ws, pr, keepActive)
+	if !didApply {
+		return
+	}
+
+	if prMeaningfullyChanged(previousPullRequest, pr) && t.onPullRequestUpdated != nil {
+		t.onPullRequestUpdated(PullRequestUpdatedEvent{
+			WorkspaceID:           ws.ID,
+			WorkspaceWorktreePath: ws.Path,
+			PullRequest:           pr,
+		})
+	}
+
+	// Persist only meaningful PR changes; UpdatedAt differs on every refresh.
+	if pr != nil && prMeaningfullyChanged(previousPullRequest, pr) {
+		go t.persistPullRequest(ws.ID, pr)
+	}
+	if pr == nil && previousPullRequest != nil {
+		go t.resolvePullRequest(ws.ID, previousPullRequest.Number)
+	}
+}
+
+func (t *Tracker) applyRefreshedPullRequest(
+	ws workspace.Workspace,
+	pr *workspace.WorkspacePullRequest,
+	keepActive bool,
+) (*workspace.WorkspacePullRequest, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	trackedWorkspace, isTracked := t.active[ws.ID]
+	currentWorkspace, isOpen := t.instances.Get(ws.ID)
+	if !isTrackedRefreshWorkspace(ws, trackedWorkspace, currentWorkspace, isTracked, isOpen) {
+		return nil, false
+	}
+	previousPullRequest := currentWorkspace.PullRequest
+	if err := t.instances.SetPullRequest(ws.ID, pr); err != nil {
+		return nil, false
+	}
+	if keepActive {
+		ws.PullRequest = pr
+		t.active[ws.ID] = ws
+	} else {
+		delete(t.active, ws.ID)
+	}
+	return previousPullRequest, true
+}
+
+func isTrackedRefreshWorkspace(
+	refreshed, tracked, current workspace.Workspace,
+	isTracked, isOpen bool,
+) bool {
+	return isTracked && isOpen &&
+		tracked.Path == refreshed.Path && tracked.Kind != workspace.KindFolder &&
+		current.Path == refreshed.Path && current.Kind != workspace.KindFolder
+}
+
+// setWorkspacePullRequest clears state for an ineligible workspace before it
+// enters the active tracking set. Unlike a refresh result, this transition
+// does not require active tracking.
 func (t *Tracker) setWorkspacePullRequest(ws workspace.Workspace, pr *workspace.WorkspacePullRequest, keepActive bool) {
 	previousPullRequest := ws.PullRequest
 	if err := t.instances.SetPullRequest(ws.ID, pr); err != nil {
@@ -114,7 +175,6 @@ func (t *Tracker) setWorkspacePullRequest(ws workspace.Workspace, pr *workspace.
 		delete(t.active, ws.ID)
 	}
 
-	// Persist only meaningful PR changes; UpdatedAt differs on every refresh.
 	if pr != nil && prMeaningfullyChanged(previousPullRequest, pr) {
 		go t.persistPullRequest(ws.ID, pr)
 	}

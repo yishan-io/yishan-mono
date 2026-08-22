@@ -15,7 +15,6 @@ export type {
 export {
   createProject,
   deleteProject,
-  inspectLocalProjectSource,
   updateProjectConfig,
 } from "./commands/projectCommands";
 export { getProjectListPreferences, listProjectsByOrg, setProjectListPreferences } from "./daemon/projectDaemonClient";

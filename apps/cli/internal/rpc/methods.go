@@ -14,7 +14,7 @@ const (
 	MethodWorkspaceHealth             = "workspace.health"
 	MethodWorkspaceOpenProject        = "workspace.openProject"
 	MethodWorkspaceCloseProject       = "workspace.closeProject"
-	MethodWorkspaceCreateLocalFolder  = "workspace.createLocalFolder"
+	MethodWorkspaceImportLocalPath    = "workspace.importLocalPath"
 	MethodWorkspaceListLocalFolders   = "workspace.listLocalFolders"
 	MethodWorkspaceDeleteLocalFolder  = "workspace.deleteLocalFolder"
 

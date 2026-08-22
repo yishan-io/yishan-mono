@@ -964,13 +964,13 @@ describe("AgentChatView", () => {
 
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
 
-    expect(screen.getByText("Running sub-agents")).toBeTruthy();
+    expect(screen.getByText("Sub-agents")).toBeTruthy();
     expect(screen.getByText("code-reviewer")).toBeTruthy();
     expect(screen.getByTestId("subagent-row-summary-tool-agent-stream").textContent).toContain(
       "Review the code quality of the services directory",
     );
-    expect(screen.getByLabelText("Cancel sub-agent code-reviewer").hasAttribute("disabled")).toBe(true);
-    expect(screen.getByTestId("subagent-row-preparing-icon-tool-agent-stream")).toBeTruthy();
+    expect(screen.getByText("Preparing")).toBeTruthy();
+    expect(screen.queryByLabelText("Cancel sub-agent code-reviewer")).toBeNull();
   });
 
   it("opens a pending running subagent once progress widget provides childSessionId", async () => {
@@ -1020,7 +1020,7 @@ describe("AgentChatView", () => {
     });
   });
 
-  it("enables pending subagent cancel via a unique progress target", async () => {
+  it("does not offer cancel for a preparing subagent with a progress target", () => {
     seedSession({
       state: "running",
       streamingMessage: {
@@ -1047,27 +1047,10 @@ describe("AgentChatView", () => {
       },
     ]);
 
-    const { fireEvent } = await import("@testing-library/react");
-
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-parent" isActive />);
 
-    // A live run whose lifecycle entry has not reached the store yet stays
-    // cancellable via its unique progress-widget target (the manager's id).
-    const cancelButton = screen.getByLabelText("Cancel sub-agent code-reviewer");
-    expect(cancelButton.hasAttribute("disabled")).toBe(false);
-
-    fireEvent.click(cancelButton);
-
-    await waitFor(() => {
-      expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
-        tabId: "tab-1",
-        sessionId: "session-1",
-        rowKey: "tool-agent-stream",
-        agentId: "agent-cancel-1",
-        agentName: "code-reviewer",
-        childSessionId: undefined,
-      });
-    });
+    expect(screen.getByTestId("subagent-row-state-tool-agent-stream").textContent).toBe("Preparing");
+    expect(screen.queryByLabelText("Cancel sub-agent code-reviewer")).toBeNull();
   });
 
   it("renders a one-line subagent row above the composer and wires open/cancel actions", async () => {
@@ -1089,7 +1072,7 @@ describe("AgentChatView", () => {
 
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-parent" isActive />);
 
-    expect(screen.getByText("Running sub-agents")).toBeTruthy();
+    expect(screen.getByText("Sub-agents")).toBeTruthy();
     expect(screen.getByText("Builder")).toBeTruthy();
     const summary = screen.getByTestId("subagent-row-summary-child-session-1");
     expect(summary.className).toContain("MuiTypography-noWrap");
@@ -1143,7 +1126,7 @@ describe("AgentChatView", () => {
     // Interrupted history is no longer a live "Running sub-agents" row.
     expect(screen.queryByTestId("subagent-row-interrupted-child-session-old")).toBeNull();
     expect(screen.queryByTestId("subagent-row-button-child-session-old")).toBeNull();
-    expect(screen.queryByText("Running sub-agents")).toBeNull();
+    expect(screen.queryByText("Sub-agents")).toBeNull();
   });
 
   it("keeps sub-agent rows started after the process death live and cancellable", () => {

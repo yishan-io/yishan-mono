@@ -144,6 +144,62 @@ func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T)
 	}
 }
 
+func TestWorkspacePRTracker_BlocksRefreshAfterWorkspaceIsReclassifiedAsFolder(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	var eventWrites atomic.Int32
+	var persistWrites atomic.Int32
+	tracker := New(TrackerDeps{
+		Instances: manager,
+		Gits:      git.NewGitService(),
+		OnPullRequestUpdated: func(PullRequestUpdatedEvent) {
+			eventWrites.Add(1)
+		},
+		PersistPR: func(context.Context, string, *workspace.WorkspacePullRequest) error {
+			persistWrites.Add(1)
+			return nil
+		},
+	})
+	tracker.active[ws.ID] = ws
+	tracker.branchResolver = func(context.Context, string) (string, error) {
+		return "feature/test", nil
+	}
+	refreshStarted := make(chan struct{})
+	releaseRefresh := make(chan struct{})
+	tracker.detailResolver = func(context.Context, string, string) (git.GitBranchPullRequestStatus, error) {
+		close(refreshStarted)
+		<-releaseRefresh
+		return git.GitBranchPullRequestStatus{
+			Found: true, Number: 42, Title: "Stale PR", State: "OPEN", HeadRefName: "feature/test", BaseRefName: "main",
+		}, nil
+	}
+
+	refreshDone := make(chan struct{})
+	go func() {
+		tracker.RefreshWorkspaceByPath(ws.Path)
+		close(refreshDone)
+	}()
+	<-refreshStarted
+
+	tracker.StopTracking(ws.ID)
+	manager.Open(workspace.Workspace{ID: ws.ID, Path: ws.Path, Kind: workspace.KindFolder, State: workspace.StateActive})
+	close(releaseRefresh)
+	<-refreshDone
+
+	updated, ok := manager.Get(ws.ID)
+	if !ok {
+		t.Fatal("expected reclassified folder workspace to remain open")
+	}
+	if updated.PullRequest != nil {
+		t.Fatalf("folder pull request = %#v, want nil", updated.PullRequest)
+	}
+	if got := eventWrites.Load(); got != 0 {
+		t.Fatalf("event writes = %d, want 0", got)
+	}
+	if got := persistWrites.Load(); got != 0 {
+		t.Fatalf("persist writes = %d, want 0", got)
+	}
+}
+
 func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
 	tracker := New(TrackerDeps{Instances: manager, Gits: git.NewGitService()})

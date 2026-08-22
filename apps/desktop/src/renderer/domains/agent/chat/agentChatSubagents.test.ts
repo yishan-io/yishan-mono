@@ -4,6 +4,7 @@ import {
   deriveRunningSubagents,
   findMatchingRunningSubagent,
   parseSubagentLifecycleMessage,
+  resolveAgentToolCallLifecycleStates,
 } from "./agentChatSubagents";
 import type { AgentMessage } from "./agentChatTypes";
 
@@ -36,6 +37,7 @@ describe("deriveRunningSubagents", () => {
         childSessionId: undefined,
         title: "code-reviewer — Review the code quality of the services directory and return concise findings.",
         promptSummary: "Review the code quality of the services directory and return concise findings.",
+        state: "preparing",
         startedAtMs: 1_700_000_000_000,
       },
     ]);
@@ -83,6 +85,7 @@ describe("deriveRunningSubagents", () => {
         childSessionId: "child-session-1",
         title: "code-reviewer — Review the code quality of the services directory in this TypeScript project...",
         promptSummary: "Review the code quality of the services directory in this TypeScript project...",
+        state: "running",
       },
     ]);
 
@@ -131,6 +134,7 @@ describe("deriveRunningSubagents", () => {
         childSessionId: undefined,
         title: "builder — Implement the chat row UI.",
         promptSummary: "Implement the chat row UI.",
+        state: "preparing",
       },
     ]);
   });
@@ -182,8 +186,135 @@ describe("deriveRunningSubagents", () => {
         childSessionId: "child-session-live",
         title: "code-reviewer — live work",
         promptSummary: "live work",
+        state: "running",
         startedAtMs: 1_700_000_000_000,
       },
+    ]);
+  });
+
+  it("derives queued, preparing, and running rows from tool acceptance and lifecycle state", () => {
+    const backgroundToolCall: AgentMessage = {
+      id: "assistant-background",
+      role: "assistant",
+      content: [
+        {
+          type: "toolCall",
+          id: "tool-background",
+          name: "Agent",
+          arguments: { agent: "builder", prompt: "Implement the panel." },
+        },
+      ],
+    };
+    const foregroundToolCall: AgentMessage = {
+      id: "assistant-foreground",
+      role: "assistant",
+      content: [
+        {
+          type: "toolCall",
+          id: "tool-foreground",
+          name: "Agent",
+          arguments: { agent: "reviewer", prompt: "Review the panel." },
+        },
+      ],
+    };
+    const backgroundAccepted: AgentMessage = {
+      id: "tool-result-background",
+      role: "toolResult",
+      toolName: "Agent",
+      toolCallId: "tool-background",
+      content: [],
+      details: { mode: "background" },
+    };
+    const startedLifecycle: AgentMessage = {
+      id: "subagent-started",
+      role: "custom",
+      customType: "pi-subagent-child",
+      display: false,
+      content: "",
+      details: {
+        event: "started",
+        agentId: "agent-running",
+        agentName: "runner",
+        childSessionId: "child-running",
+        parentToolCallId: "tool-running",
+        summary: "Run the panel.",
+      },
+    };
+    const trailingToolCall: AgentMessage = {
+      id: "assistant-streaming",
+      role: "assistant",
+      content: [
+        {
+          type: "toolCall",
+          id: "tool-running",
+          name: "Agent",
+          arguments: { agent: "runner", prompt: "Run the panel." },
+        },
+      ],
+    };
+
+    expect(
+      deriveRunningSubagents(
+        [backgroundToolCall, foregroundToolCall, backgroundAccepted, startedLifecycle],
+        trailingToolCall,
+      ),
+    ).toMatchObject([
+      { rowId: "tool-background", state: "queued" },
+      { rowId: "tool-foreground", state: "preparing" },
+      { rowId: "child-running", state: "running" },
+    ]);
+  });
+
+  it("uses lifecycle parentToolCallId before chronology and reconciles legacy serial calls deterministically", () => {
+    const calls: AgentMessage = {
+      id: "assistant-calls",
+      role: "assistant",
+      content: [
+        {
+          type: "toolCall",
+          id: "tool-legacy-first",
+          name: "Agent",
+          arguments: { agent: "reviewer", prompt: "Review the same target." },
+        },
+        {
+          type: "toolCall",
+          id: "tool-legacy-second",
+          name: "Agent",
+          arguments: { agent: "reviewer", prompt: "Review the same target." },
+        },
+      ],
+    };
+    const completedLegacy: AgentMessage = {
+      id: "legacy-completed",
+      role: "custom",
+      customType: "pi-subagent-child",
+      display: false,
+      content: "",
+      details: {
+        event: "completed",
+        agentId: "agent-first",
+        agentName: "reviewer",
+        childSessionId: "child-first",
+        summary: "Review the same target.",
+      },
+    };
+    const startedLegacy: AgentMessage = {
+      id: "legacy-started",
+      role: "custom",
+      customType: "pi-subagent-child",
+      display: false,
+      content: "",
+      details: {
+        event: "started",
+        agentId: "agent-second",
+        agentName: "reviewer",
+        childSessionId: "child-second",
+        summary: "Review the same target.",
+      },
+    };
+
+    expect(deriveRunningSubagents([calls, completedLegacy, startedLegacy])).toMatchObject([
+      { rowId: "child-second", state: "running" },
     ]);
   });
 
@@ -207,6 +338,277 @@ describe("deriveRunningSubagents", () => {
     expect(deriveRunningSubagents([], trailingMessage, 1_700_000_000_000)).toEqual([]);
   });
 });
+
+describe("resolveAgentToolCallLifecycleStates", () => {
+  it("matches supplied serial legacy lifecycle entries deterministically so one card is live", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "assistant-calls",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "legacy-first",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review it." },
+          },
+          {
+            type: "toolCall",
+            id: "legacy-second",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review it." },
+          },
+        ],
+      },
+      lifecycleMessage("completed", "child-first", "reviewer", "Review it."),
+      lifecycleMessage("started", "child-second", "reviewer", "Review it."),
+    ];
+
+    expect(resolveAgentToolCallLifecycleStates(messages)).toEqual(
+      new Map([
+        ["legacy-first", "completed"],
+        ["legacy-second", "running"],
+      ]),
+    );
+  });
+
+  it("matches same-agent legacy calls by invocation order when summaries are missing or nonmatching", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "assistant-calls",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "legacy-first",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review first." },
+          },
+          {
+            type: "toolCall",
+            id: "legacy-second",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review second." },
+          },
+        ],
+      },
+      {
+        id: "completed-child-first",
+        role: "custom",
+        customType: "pi-subagent-child",
+        display: false,
+        content: "",
+        details: {
+          event: "completed",
+          agentId: "agent-child-first",
+          agentName: "reviewer",
+          childSessionId: "child-first",
+        },
+      },
+      lifecycleMessage("started", "child-second", "reviewer", "An unrelated summary."),
+    ];
+
+    expect(resolveAgentToolCallLifecycleStates(messages)).toEqual(
+      new Map([
+        ["legacy-first", "completed"],
+        ["legacy-second", "running"],
+      ]),
+    );
+  });
+
+  it("does not assign ID-less lifecycle state to an older terminal foreground call", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "assistant-calls",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "legacy-completed-call",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review the first change." },
+          },
+          {
+            type: "toolCall",
+            id: "legacy-running-call",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review the second change." },
+          },
+        ],
+      },
+      {
+        id: "foreground-result",
+        role: "toolResult",
+        toolName: "Agent",
+        toolCallId: "legacy-completed-call",
+        content: "done",
+        details: { mode: "foreground", status: "completed" },
+      },
+      lifecycleMessage("started", "child-second", "reviewer", "An unrelated summary."),
+    ];
+
+    expect(resolveAgentToolCallLifecycleStates(messages)).toEqual(
+      new Map([
+        ["legacy-completed-call", "completed"],
+        ["legacy-running-call", "running"],
+      ]),
+    );
+  });
+
+  it("preserves source order for serial legacy calls with a terminal foreground result", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "old-call",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "old-call-id",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review the old change." },
+          },
+        ],
+      },
+      lifecycleMessage("completed", "old-child", "reviewer", "Review the old change."),
+      {
+        id: "old-terminal-result",
+        role: "toolResult",
+        toolName: "Agent",
+        toolCallId: "old-call-id",
+        content: "done",
+        details: { mode: "foreground", status: "completed" },
+      },
+      {
+        id: "new-call",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "new-call-id",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review the new change." },
+          },
+        ],
+      },
+      lifecycleMessage("started", "new-child", "reviewer", "Review the new change."),
+    ];
+
+    expect(resolveAgentToolCallLifecycleStates(messages)).toEqual(
+      new Map([
+        ["old-call-id", "completed"],
+        ["new-call-id", "running"],
+      ]),
+    );
+  });
+
+  it("uses exact parentToolCallId lifecycle state before legacy matching", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "assistant-calls",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "exact-completed",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Same prompt." },
+          },
+          {
+            type: "toolCall",
+            id: "legacy-running",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Same prompt." },
+          },
+        ],
+      },
+      lifecycleMessage("started", "child-legacy", "reviewer", "Same prompt."),
+      lifecycleMessage("completed", "child-exact", "reviewer", "Same prompt.", "exact-completed"),
+    ];
+
+    expect(resolveAgentToolCallLifecycleStates(messages)).toEqual(
+      new Map([
+        ["exact-completed", "completed"],
+        ["legacy-running", "running"],
+      ]),
+    );
+  });
+
+  it("treats a terminal foreground result as completed when lifecycle history is unavailable", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "assistant-call",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "foreground-call",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review it." },
+          },
+        ],
+      },
+      {
+        id: "foreground-result",
+        role: "toolResult",
+        toolName: "Agent",
+        toolCallId: "foreground-call",
+        content: "done",
+        details: { mode: "foreground", status: "completed" },
+      },
+    ];
+
+    expect(resolveAgentToolCallLifecycleStates(messages)).toEqual(new Map([["foreground-call", "completed"]]));
+  });
+
+  it("keeps true parallel background children live", () => {
+    const messages: AgentMessage[] = [
+      {
+        id: "assistant-calls",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "parallel-one",
+            name: "Agent",
+            arguments: { agent: "reviewer", prompt: "Review one." },
+          },
+          {
+            type: "toolCall",
+            id: "parallel-two",
+            name: "Agent",
+            arguments: { agent: "builder", prompt: "Build two." },
+          },
+        ],
+      },
+      lifecycleMessage("started", "child-one", "reviewer", "Review one.", "parallel-one"),
+      lifecycleMessage("started", "child-two", "builder", "Build two.", "parallel-two"),
+    ];
+
+    expect(resolveAgentToolCallLifecycleStates(messages)).toEqual(
+      new Map([
+        ["parallel-one", "running"],
+        ["parallel-two", "running"],
+      ]),
+    );
+  });
+});
+
+function lifecycleMessage(
+  event: "started" | "completed",
+  childSessionId: string,
+  agentName: string,
+  summary: string,
+  parentToolCallId?: string,
+): AgentMessage {
+  return {
+    id: `${event}-${childSessionId}`,
+    role: "custom",
+    customType: "pi-subagent-child",
+    display: false,
+    content: "",
+    details: { event, agentId: `agent-${childSessionId}`, agentName, childSessionId, summary, parentToolCallId },
+  };
+}
 
 describe("findMatchingRunningSubagent", () => {
   it("matches lifecycle rows against truncated prompt summaries", () => {

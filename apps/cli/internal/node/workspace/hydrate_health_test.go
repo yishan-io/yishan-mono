@@ -62,7 +62,7 @@ func TestHydrateFromDB_ResetsErrorHealthOnRecoveredRow(t *testing.T) {
 	if !ok {
 		t.Fatalf("get hydrated workspace: not found")
 	}
-	if ws.State != workspace.StateActive || ws.Health != "" {
+	if ws.State != workspace.StateActive || ws.Health != "" || ws.Kind != workspace.KindWorktree {
 		t.Fatalf("hydrated workspace = %#v, want state active health empty", ws)
 	}
 	row, err := store.Get(context.Background(), "ws-recovered")
@@ -142,7 +142,7 @@ func TestHealthTransition_FolderWorkspaceSkipsGitCheck(t *testing.T) {
 
 	// A folder workspace is a plain directory (no git) but must stay healthy.
 	path := t.TempDir()
-	openLocalWorkspace(t, s, "ws-folder", path)
+	openFolderWorkspace(t, s, "ws-folder", path)
 	if err := sqlite.NewWorkspaceStore(database).Create(context.Background(), &sqlite.Workspace{
 		ID: "ws-folder", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-1",
 		Kind: string(workspace.KindFolder), Status: "active", LocalPath: path,

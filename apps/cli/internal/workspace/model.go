@@ -59,6 +59,7 @@ type Workspace struct {
 	Path            string                `json:"path"`
 	OrgID           string                `json:"orgId,omitempty"`
 	ProjectID       string                `json:"projectId,omitempty"`
+	Kind            Kind                  `json:"kind"`
 	State           State                 `json:"state"`
 	Health          Health                `json:"health,omitempty"`
 	SetupHookResult *HookResult           `json:"setupHookResult,omitempty"`

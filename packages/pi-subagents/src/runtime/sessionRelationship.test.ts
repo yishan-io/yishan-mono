@@ -20,6 +20,7 @@ function createSampleEntry(overrides: Partial<ParentSessionChildEntry> = {}): Pa
     mode: "foreground",
     childSessionId: "child-session-1",
     title: "Explore — inspect auth",
+    parentToolCallId: "tool-1",
     ...overrides,
   };
 }
@@ -34,10 +35,20 @@ describe("createParentSessionWriter", () => {
 
     expect(sessionManager.appendCustomEntry).toHaveBeenCalledWith(
       "pi-subagent-child",
-      expect.objectContaining({ event: "started", agentId: "agent-1", childSessionId: "child-session-1" }),
+      expect.objectContaining({
+        event: "started",
+        agentId: "agent-1",
+        childSessionId: "child-session-1",
+        parentToolCallId: "tool-1",
+      }),
     );
     expect(emitLifecycle).toHaveBeenCalledWith(
-      expect.objectContaining({ event: "started", agentId: "agent-1", childSessionId: "child-session-1" }),
+      expect.objectContaining({
+        event: "started",
+        agentId: "agent-1",
+        childSessionId: "child-session-1",
+        parentToolCallId: "tool-1",
+      }),
     );
   });
 
@@ -50,9 +61,11 @@ describe("createParentSessionWriter", () => {
 
     expect(sessionManager.appendCustomEntry).toHaveBeenCalledWith(
       "pi-subagent-child",
-      expect.objectContaining({ event: "completed", status: "cancelled" }),
+      expect.objectContaining({ event: "completed", status: "cancelled", parentToolCallId: "tool-1" }),
     );
-    expect(emitLifecycle).toHaveBeenCalledWith(expect.objectContaining({ event: "completed", status: "cancelled" }));
+    expect(emitLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "completed", status: "cancelled", parentToolCallId: "tool-1" }),
+    );
   });
 
   it("returns undefined when the session manager is not mutable", () => {

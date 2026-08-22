@@ -261,6 +261,7 @@ export class AgentManager {
             prompt: task.prompt,
             cwd: task.cwd,
             mode: task.mode,
+            parentToolCallId: task.parentToolCallId,
             parentSession: task.parentSession,
             parentSessionWriter: task.parentSessionWriter,
             childSessionDescriptor: task.childSessionDescriptor,

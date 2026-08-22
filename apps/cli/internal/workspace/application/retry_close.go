@@ -60,7 +60,7 @@ func (s *Service) restoreRetryRuntime(ws workspace.Workspace, isRuntimeOpen bool
 	if err := s.deps.Instances.SetState(ws.ID, instance.StateActive, instance.HealthOK); err != nil {
 		return fmt.Errorf("restore retry workspace state: %w", err)
 	}
-	if err := s.deps.Instances.WatchAndTrack(ws.ID, ws.Path); err != nil {
+	if err := s.deps.Instances.WatchAndTrack(ws); err != nil {
 		if stateErr := s.deps.Instances.SetState(ws.ID, instance.StateClosing, instance.HealthOK); stateErr != nil {
 			return errors.Join(fmt.Errorf("restore retry workspace watchers: %w", err), fmt.Errorf("return retry workspace to closing: %w", stateErr))
 		}

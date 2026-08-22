@@ -30,11 +30,12 @@ import (
 
 // Deps are the explicit dependencies of the workspace application service.
 type Deps struct {
-	Registry  *instance.Registry
-	Store     workspace.WorkspaceStore
-	Files     *files.FileService
-	Git       *git.GitService
-	Terminals *term.Manager
+	Registry         *instance.Registry
+	Store            workspace.WorkspaceStore
+	Files            *files.FileService
+	Git              *git.GitService
+	InspectLocalPath func(context.Context, string) (git.GitInspectResult, error)
+	Terminals        *term.Manager
 
 	Memory       *memory.Service
 	TokenUsage   tokenusage.Service

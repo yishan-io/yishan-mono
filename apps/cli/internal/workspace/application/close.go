@@ -203,7 +203,7 @@ func (s *Service) restoreCloseFailure(ctx context.Context, command CloseCommand,
 	if err := s.deps.Instances.SetState(ws.ID, instance.StateActive, instance.HealthOK); err != nil {
 		return fmt.Errorf("restore workspace state: %w", err)
 	}
-	if err := s.deps.Instances.WatchAndTrack(ws.ID, ws.Path); err != nil {
+	if err := s.deps.Instances.WatchAndTrack(ws); err != nil {
 		// State active without watchers is not a valid restored runtime. Return it
 		// to closing and keep the agent cleanup marker installed.
 		if stateErr := s.deps.Instances.SetState(ws.ID, instance.StateClosing, instance.HealthOK); stateErr != nil {

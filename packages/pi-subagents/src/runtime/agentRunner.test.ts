@@ -128,6 +128,7 @@ describe("startAgentRun", () => {
         cwd: "/tmp/project",
       },
       parentSessionWriter,
+      parentToolCallId: "tool-1",
       agentDefinition: {
         name: "Explore",
         description: "Search the codebase",
@@ -148,6 +149,7 @@ describe("startAgentRun", () => {
         childSessionPath: sessionPath,
         parentSessionId: "parent-session-1",
         parentSessionPath: "/tmp/shared-sessions/parent-session-1.jsonl",
+        parentToolCallId: "tool-1",
       }),
     );
     expect(parentSessionWriter.recordChildSessionCompleted).toHaveBeenCalledWith(
@@ -157,6 +159,7 @@ describe("startAgentRun", () => {
         mode: "foreground",
         childSessionId: "child-session-1",
         childSessionPath: sessionPath,
+        parentToolCallId: "tool-1",
         status: "completed",
       }),
     );

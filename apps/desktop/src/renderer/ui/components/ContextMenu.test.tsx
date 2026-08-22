@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 describe("ContextMenu", () => {
-  it("renders nested submenu items and runs nested selection handler", () => {
+  it("closes nested menus before running a selection handler", () => {
     const onJetBrainsSelect = vi.fn();
 
     render(
@@ -57,9 +57,8 @@ describe("ContextMenu", () => {
     fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "JetBrains" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "WebStorm" }));
 
-    expect(onJetBrainsSelect).toHaveBeenCalledTimes(1);
-    cleanup();
     expect(screen.queryByRole("menuitem", { name: "Open in" })).toBeNull();
+    expect(onJetBrainsSelect).toHaveBeenCalledTimes(1);
   });
 
   it("renders divider entries between action items", () => {

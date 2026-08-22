@@ -27,7 +27,7 @@ type WorkspaceService interface {
 	Health(ctx context.Context, req WorkspaceHealthParams) (any, error)
 	OpenProject(ctx context.Context, req WorkspaceOpenProjectParams) (any, error)
 	CloseProject(ctx context.Context, req WorkspaceCloseProjectParams) (any, error)
-	CreateLocalFolder(ctx context.Context, req WorkspaceCreateLocalFolderParams) (any, error)
+	ImportLocalPath(ctx context.Context, req WorkspaceImportLocalPathParams) (any, error)
 	ListLocalFolders(ctx context.Context) (any, error)
 	DeleteLocalFolder(ctx context.Context, req WorkspaceDeleteLocalFolderParams) (any, error)
 }

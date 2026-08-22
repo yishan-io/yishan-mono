@@ -11,42 +11,24 @@ import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
 import { buildWorkspaceOpenProjectEntries, openWorkspaceEntries } from "./workspaceWarmupCommand";
 
 /**
- * Creates a non-git local folder workspace via the daemon, applies it to the
- * workspace store, and opens it like an imported primary workspace. V1 folders
- * are org-independent with no backend record or context link (see createProject).
+ * Applies a daemon-created non-git local folder to the workspace store and opens
+ * it like an imported primary workspace. Folders are org-independent.
  */
-export async function createLocalFolderImport(input: { path: string; name: string }): Promise<void> {
-  let folder: DaemonLocalFolder;
-  try {
-    const workspaceRpc = await getWorkspaceRpc();
-    folder = await workspaceRpc.createLocalFolder({
-      path: input.path,
-      name: input.name,
-    });
-  } catch (error) {
-    console.error("Failed to create local folder workspace", error);
-    throw new Error(getErrorMessage(error));
-  }
-
+export async function applyLocalFolderImport(folder: DaemonLocalFolder): Promise<void> {
   if (!folder?.id) {
     throw new Error("Daemon local folder response is empty");
   }
 
   workspaceStore.getState().addLocalFolder(folder);
 
-  // Select the newly created folder (mirrors the remote create flow setting
-  // selection via applyCreatedWorkspaceState) so the tab resolves against the
-  // new folder instead of the previous selection.
-  const folderWorkspace = workspaceStore.getState().workspaces.find((w) => w.id === folder.id);
+  // This pure entry construction is the only synchronous work before the
+  // awaited workspace.openProject request below.
+  const folderWorkspace = workspaceStore.getState().workspaces.find((workspace) => workspace.id === folder.id);
   const openEntries = buildWorkspaceOpenProjectEntries(folderWorkspace ? [folderWorkspace] : [], "");
   await openWorkspaceEntries(openEntries);
-  // Refresh only the file tree (folders have no git changes to refresh).
   for (const entry of openEntries) {
     incrementFileTreeRefreshVersion(entry.worktreePath, []);
   }
-
-  // The folder row is already in the store; activate it through the Workbench
-  // navigation command so the active context and tab both update.
   activateWorkspace({ workspaceId: folder.id, projectId: LOCAL_FOLDER_PROJECT_ID });
 }
 
@@ -63,6 +45,7 @@ export async function openFoldersForSnapshot(folders: DaemonLocalFolder[], organ
       id: folder.id,
       projectId: LOCAL_FOLDER_PROJECT_ID,
       worktreePath: folder.path ?? "",
+      kind: "folder",
     })),
     organizationId,
   );

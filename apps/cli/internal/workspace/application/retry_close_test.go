@@ -48,7 +48,7 @@ func (f *retryInstances) Get(string) (workspace.Workspace, error) {
 	return f.workspace, nil
 }
 func (f *retryInstances) RemoveFromMemory(string) { f.calls = append(f.calls, "memory") }
-func (f *retryInstances) WatchAndTrack(string, string) error {
+func (f *retryInstances) WatchAndTrack(workspace.Workspace) error {
 	f.calls = append(f.calls, "watch")
 	return f.watchErr
 }

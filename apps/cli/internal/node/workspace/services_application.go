@@ -229,8 +229,8 @@ func (d *appDeps) RemoveFromMemory(workspaceID string) {
 	}
 }
 
-func (d *appDeps) WatchAndTrack(workspaceID string, path string) error {
-	return d.s.WatchAndTrack(workspaceID, path)
+func (d *appDeps) WatchAndTrack(ws workspace.Workspace) error {
+	return d.s.WatchAndTrack(ws)
 }
 
 func (d *appDeps) Unwatch(path string) {

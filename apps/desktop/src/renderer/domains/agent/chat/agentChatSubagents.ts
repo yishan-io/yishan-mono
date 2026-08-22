@@ -3,12 +3,20 @@ import { type AgentChatBilledUsage, parseAgentChatBilledUsage } from "./agentCha
 
 export type AgentSubagentLifecycleEvent = "started" | "completed";
 
+/** Display state for one active sub-agent panel row. */
+export type AgentSubagentPanelState = "queued" | "preparing" | "running";
+
+/** Lifecycle state for an Agent tool call in the transcript. */
+export type AgentToolCallLifecycleState = AgentSubagentPanelState | "completed";
+
 /** Structured metadata attached to hidden `pi-subagent-child` parent-session entries. */
 export type AgentSubagentLifecycleDetails = {
   event: AgentSubagentLifecycleEvent;
   agentId: string;
   agentName: string;
   childSessionId: string;
+  /** Tool call that created this run, when present in newer lifecycle entries. */
+  parentToolCallId?: string;
   title?: string;
   summary?: string;
   status?: string;
@@ -24,6 +32,7 @@ export type RunningSubagentSummary = {
   childSessionId?: string;
   title: string;
   promptSummary: string;
+  state?: AgentSubagentPanelState;
   /** When the underlying message began, for interrupted-vs-live classification. */
   startedAtMs?: number;
 };
@@ -80,6 +89,7 @@ export function parseSubagentLifecycleMessage(message: AgentMessage): AgentSubag
     agentId,
     agentName,
     childSessionId,
+    parentToolCallId: normalizeOptionalText(payload.parentToolCallId),
     title: normalizeOptionalText(payload.title),
     summary: normalizeOptionalText(payload.summary),
     status: normalizeOptionalText(payload.status),
@@ -149,72 +159,209 @@ export function deriveRunningSubagents(
   trailingMessage?: AgentMessage | null,
   sessionEndedAtMs?: number | null,
 ): RunningSubagentSummary[] {
-  const runningByChildSessionId = new Map<string, RunningSubagentSummary>();
-  const pendingByToolCallId = new Map<string, RunningSubagentSummary>();
-  const messageSequence = trailingMessage ? [...messages, trailingMessage] : messages;
+  const lifecycleRuns = collectLifecycleRuns(messages);
+  const toolCalls = collectAgentToolCalls(messages, trailingMessage);
+  const backgroundAcceptedToolCallIds = collectBackgroundAcceptedToolCallIds(messages);
+  const completedForegroundToolCallIds = collectCompletedForegroundToolCallIds(messages);
+  const lifecycleByToolCallId = matchLifecycleRunsToToolCalls(lifecycleRuns, toolCalls, completedForegroundToolCallIds);
 
-  for (const message of messageSequence) {
+  const activeSubagents: RunningSubagentSummary[] = [];
+  const matchedLifecycleKeys = new Set<LifecycleRun>();
+  for (const toolCall of toolCalls) {
+    const lifecycleRun = lifecycleByToolCallId.get(toolCall.rowId);
+    if (lifecycleRun) {
+      matchedLifecycleKeys.add(lifecycleRun);
+      if (lifecycleRun.event === "started") activeSubagents.push(buildRunningSubagent(lifecycleRun));
+      continue;
+    }
+
+    if (!completedForegroundToolCallIds.has(toolCall.rowId)) {
+      activeSubagents.push({
+        ...toolCall,
+        state: backgroundAcceptedToolCallIds.has(toolCall.rowId) ? "queued" : "preparing",
+      });
+    }
+  }
+
+  for (const lifecycleRun of lifecycleRuns.values()) {
+    if (!matchedLifecycleKeys.has(lifecycleRun) && lifecycleRun.event === "started") {
+      activeSubagents.push(buildRunningSubagent(lifecycleRun));
+    }
+  }
+
+  if (sessionEndedAtMs == null) return activeSubagents;
+  return activeSubagents.filter((subagent) => (subagent.startedAtMs ?? 0) >= sessionEndedAtMs);
+}
+
+/**
+ * Resolves each Agent tool call to its composer lifecycle state. Exact parent
+ * tool-call IDs take precedence; older lifecycle entries are matched in source
+ * order so identical serial delegations consume one call each deterministically.
+ */
+export function resolveAgentToolCallLifecycleStates(
+  messages: AgentMessage[],
+  trailingMessage?: AgentMessage | null,
+): Map<string, AgentToolCallLifecycleState> {
+  const toolCalls = collectAgentToolCalls(messages, trailingMessage);
+  const backgroundAcceptedToolCallIds = collectBackgroundAcceptedToolCallIds(messages);
+  const completedForegroundToolCallIds = collectCompletedForegroundToolCallIds(messages);
+  const lifecycleByToolCallId = matchLifecycleRunsToToolCalls(
+    collectLifecycleRuns(messages),
+    toolCalls,
+    completedForegroundToolCallIds,
+  );
+  const states = new Map<string, AgentToolCallLifecycleState>();
+
+  for (const toolCall of toolCalls) {
+    const lifecycleRun = lifecycleByToolCallId.get(toolCall.rowId);
+    if (lifecycleRun) {
+      states.set(toolCall.rowId, lifecycleRun.event === "started" ? "running" : "completed");
+    } else if (completedForegroundToolCallIds.has(toolCall.rowId)) {
+      states.set(toolCall.rowId, "completed");
+    } else {
+      states.set(toolCall.rowId, backgroundAcceptedToolCallIds.has(toolCall.rowId) ? "queued" : "preparing");
+    }
+  }
+
+  return states;
+}
+
+function matchLifecycleRunsToToolCalls(
+  lifecycleRuns: Map<string, LifecycleRun>,
+  toolCalls: Array<Omit<RunningSubagentSummary, "state">>,
+  completedForegroundToolCallSourceIndexes: Map<string, number>,
+): Map<string, LifecycleRun> {
+  const lifecycleByToolCallId = new Map<string, LifecycleRun>();
+  const matchedLegacyToolCallIds = new Set<string>();
+
+  for (const lifecycleRun of lifecycleRuns.values()) {
+    if (lifecycleRun.parentToolCallId) {
+      lifecycleByToolCallId.set(lifecycleRun.parentToolCallId, lifecycleRun);
+    }
+  }
+
+  for (const lifecycleRun of lifecycleRuns.values()) {
+    if (lifecycleRun.parentToolCallId) continue;
+    // Legacy lifecycle entries lack a stable parent call ID. Pair each run with
+    // the next unmatched invocation for the same agent; title/summary metadata
+    // is optional and cannot disqualify that deterministic pairing.
+    const matchingToolCall = toolCalls.find((toolCall) => {
+      return (
+        !lifecycleByToolCallId.has(toolCall.rowId) &&
+        !matchedLegacyToolCallIds.has(toolCall.rowId) &&
+        shouldMatchLegacyToolCall(lifecycleRun, toolCall.rowId, completedForegroundToolCallSourceIndexes) &&
+        toolCall.agentName === lifecycleRun.agentName
+      );
+    });
+    if (matchingToolCall) {
+      lifecycleByToolCallId.set(matchingToolCall.rowId, lifecycleRun);
+      matchedLegacyToolCallIds.add(matchingToolCall.rowId);
+    }
+  }
+
+  return lifecycleByToolCallId;
+}
+
+type LifecycleRun = {
+  event: AgentSubagentLifecycleEvent;
+  agentId: string;
+  agentName: string;
+  childSessionId: string;
+  parentToolCallId?: string;
+  title?: string;
+  promptSummary: string;
+  startedAtMs?: number;
+  sourceIndex: number;
+};
+
+function collectLifecycleRuns(messages: AgentMessage[]): Map<string, LifecycleRun> {
+  const lifecycleRuns = new Map<string, LifecycleRun>();
+  for (const [sourceIndex, message] of messages.entries()) {
     const lifecycle = parseSubagentLifecycleMessage(message);
-    if (lifecycle) {
-      const lifecycleSummary = lifecycle.summary ?? derivePromptSummary(lifecycle.title, lifecycle.agentName);
-      if (lifecycle.event === "completed") {
-        runningByChildSessionId.delete(lifecycle.childSessionId);
-        removePendingSubagentBySignature(pendingByToolCallId, lifecycle.agentName, lifecycleSummary);
-        continue;
-      }
+    if (!lifecycle) continue;
 
-      removePendingSubagentBySignature(pendingByToolCallId, lifecycle.agentName, lifecycleSummary);
-      runningByChildSessionId.set(lifecycle.childSessionId, {
-        rowId: lifecycle.childSessionId,
-        agentId: lifecycle.agentId,
-        agentName: lifecycle.agentName,
-        childSessionId: lifecycle.childSessionId,
-        title: lifecycle.title ?? buildFallbackTitle(lifecycle.agentName, lifecycle.summary),
-        promptSummary: lifecycleSummary,
-        startedAtMs: extractMessageStartedAtMs(message),
-      });
-      continue;
-    }
+    const lifecycleKey = lifecycle.parentToolCallId ?? lifecycle.childSessionId;
+    lifecycleRuns.set(lifecycleKey, {
+      event: lifecycle.event,
+      agentId: lifecycle.agentId,
+      agentName: lifecycle.agentName,
+      childSessionId: lifecycle.childSessionId,
+      parentToolCallId: lifecycle.parentToolCallId,
+      title: lifecycle.title,
+      promptSummary: lifecycle.summary ?? derivePromptSummary(lifecycle.title, lifecycle.agentName),
+      startedAtMs: extractMessageStartedAtMs(message),
+      sourceIndex,
+    });
+  }
+  return lifecycleRuns;
+}
 
-    if (message.role === "toolResult" && message.toolName === "Agent" && message.toolCallId) {
-      pendingByToolCallId.delete(message.toolCallId);
-      continue;
-    }
-
-    if (message.role !== "assistant" || !Array.isArray(message.content)) {
-      continue;
-    }
-
+function collectAgentToolCalls(
+  messages: AgentMessage[],
+  trailingMessage?: AgentMessage | null,
+): Array<Omit<RunningSubagentSummary, "state">> {
+  const toolCalls: Array<Omit<RunningSubagentSummary, "state">> = [];
+  for (const message of trailingMessage ? [...messages, trailingMessage] : messages) {
+    if (message.role !== "assistant" || !Array.isArray(message.content)) continue;
     for (const block of message.content) {
-      if (block.type !== "toolCall" || block.name !== "Agent") {
-        continue;
-      }
-
-      const pendingSubagent = buildPendingSubagent(block.id, block.arguments);
-      if (!pendingSubagent) {
-        continue;
-      }
-      if (
-        hasMatchingLifecycleSubagent(runningByChildSessionId, pendingSubagent.agentName, pendingSubagent.promptSummary)
-      ) {
-        continue;
-      }
-
-      pendingByToolCallId.set(block.id, {
-        ...pendingSubagent,
-        startedAtMs: extractMessageStartedAtMs(message),
-      });
+      if (block.type !== "toolCall" || block.name !== "Agent") continue;
+      const toolCall = buildPendingSubagent(block.id, block.arguments);
+      if (toolCall) toolCalls.push({ ...toolCall, startedAtMs: extractMessageStartedAtMs(message) });
     }
   }
+  return toolCalls;
+}
 
-  const runningSubagents = [...runningByChildSessionId.values(), ...pendingByToolCallId.values()];
-  if (sessionEndedAtMs == null) {
-    return runningSubagents;
+function collectBackgroundAcceptedToolCallIds(messages: AgentMessage[]): Set<string> {
+  const toolCallIds = new Set<string>();
+  for (const message of messages) {
+    if (
+      message.role === "toolResult" &&
+      message.toolName === "Agent" &&
+      message.toolCallId &&
+      message.details?.mode === "background"
+    ) {
+      toolCallIds.add(message.toolCallId);
+    }
   }
+  return toolCallIds;
+}
 
-  // A `pi-subagent-child` "started" entry with no matching "completed" whose
-  // owning Pi session has since ended is interrupted history, not a live run.
-  return runningSubagents.filter((subagent) => (subagent.startedAtMs ?? 0) >= sessionEndedAtMs);
+function collectCompletedForegroundToolCallIds(messages: AgentMessage[]): Map<string, number> {
+  const toolCallSourceIndexes = new Map<string, number>();
+  for (const [sourceIndex, message] of messages.entries()) {
+    if (
+      message.role === "toolResult" &&
+      message.toolName === "Agent" &&
+      message.toolCallId &&
+      message.details?.mode !== "background"
+    ) {
+      toolCallSourceIndexes.set(message.toolCallId, sourceIndex);
+    }
+  }
+  return toolCallSourceIndexes;
+}
+
+function shouldMatchLegacyToolCall(
+  lifecycleRun: LifecycleRun,
+  toolCallId: string,
+  completedForegroundToolCallSourceIndexes: Map<string, number>,
+): boolean {
+  const terminalResultSourceIndex = completedForegroundToolCallSourceIndexes.get(toolCallId);
+  return terminalResultSourceIndex === undefined || terminalResultSourceIndex > lifecycleRun.sourceIndex;
+}
+
+function buildRunningSubagent(lifecycleRun: LifecycleRun): RunningSubagentSummary {
+  return {
+    rowId: lifecycleRun.childSessionId,
+    agentId: lifecycleRun.agentId,
+    agentName: lifecycleRun.agentName,
+    childSessionId: lifecycleRun.childSessionId,
+    title: lifecycleRun.title ?? buildFallbackTitle(lifecycleRun.agentName, lifecycleRun.promptSummary),
+    promptSummary: lifecycleRun.promptSummary,
+    state: "running",
+    ...(lifecycleRun.startedAtMs === undefined ? {} : { startedAtMs: lifecycleRun.startedAtMs }),
+  };
 }
 
 function buildPendingSubagent(
@@ -230,7 +377,9 @@ function buildPendingSubagent(
   const promptSummary = normalizePromptSummary(prompt);
   return {
     rowId: toolCallId,
+    agentId: undefined,
     agentName,
+    childSessionId: undefined,
     title: buildFallbackTitle(agentName, promptSummary),
     promptSummary,
   };
@@ -238,41 +387,6 @@ function buildPendingSubagent(
 
 function extractMessageStartedAtMs(message: AgentMessage): number | undefined {
   return message.timestamp ?? message.startedAtMs;
-}
-
-function hasMatchingLifecycleSubagent(
-  runningByChildSessionId: Map<string, RunningSubagentSummary>,
-  agentName: string,
-  promptSummary: string,
-): boolean {
-  for (const subagent of runningByChildSessionId.values()) {
-    if (subagent.agentName !== agentName) {
-      continue;
-    }
-    if (summariesLikelyMatch(subagent.promptSummary, promptSummary)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function removePendingSubagentBySignature(
-  pendingByToolCallId: Map<string, RunningSubagentSummary>,
-  agentName: string,
-  promptSummary: string,
-): void {
-  for (const [toolCallId, subagent] of pendingByToolCallId.entries()) {
-    if (subagent.agentName !== agentName) {
-      continue;
-    }
-    if (!summariesLikelyMatch(subagent.promptSummary, promptSummary)) {
-      continue;
-    }
-
-    pendingByToolCallId.delete(toolCallId);
-    return;
-  }
 }
 
 function summariesLikelyMatch(leftSummary: string, rightSummary: string): boolean {

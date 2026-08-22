@@ -14,6 +14,7 @@ export interface StartAgentRunOptions extends CreateChildAgentSessionOptions {
   maxTurns?: number;
   timeoutMs?: number;
   parentSessionWriter?: ParentSessionWriter;
+  parentToolCallId?: string;
 }
 
 /** Live handle for one running child-agent session. */
@@ -106,6 +107,7 @@ export async function startAgentRun(options: StartAgentRunOptions): Promise<Agen
     agentId: options.agentId,
     agentName: options.agentName,
     mode: options.mode,
+    parentToolCallId: options.parentToolCallId,
     title: options.childSessionDescriptor?.title ?? options.agentName,
     summary: options.childSessionDescriptor?.summary,
     parentSessionId: options.parentSession?.sessionId,
@@ -252,6 +254,7 @@ async function runToCompletion(
     agentId: options.agentId,
     agentName: options.agentName,
     mode: options.mode,
+    parentToolCallId: options.parentToolCallId,
     title: options.childSessionDescriptor?.title ?? options.agentName,
     summary: options.childSessionDescriptor?.summary,
     parentSessionId: options.parentSession?.sessionId,

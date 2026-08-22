@@ -43,6 +43,8 @@ export interface ParentSessionChildEntry extends ChildSessionDescriptor {
   agentId: string;
   agentName: string;
   mode: AgentRunMode;
+  /** Tool call ID that initiated this child run, absent in older session entries. */
+  parentToolCallId?: string;
   parentSessionId?: string;
   parentSessionPath?: string;
   childSessionId: string;
