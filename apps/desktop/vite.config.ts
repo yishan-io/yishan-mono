@@ -32,6 +32,7 @@ const VDITOR_CDN_ASSETS = [
   "js/highlight.js/third-languages.js",
   "js/highlight.js/styles/github.min.css",
   "js/highlight.js/styles/github-dark.min.css",
+  "css/content-theme/light.css",
   "js/mermaid/mermaid.min.js",
 ];
 
