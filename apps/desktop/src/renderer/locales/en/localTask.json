@@ -1,0 +1,86 @@
+{
+  "localTask": {
+    "title": "Tasks",
+    "create": {
+      "title": "Create task",
+      "linkFailed": "Creation succeeded for “{{title}}” ({{taskId}}), but linking failed: {{error}}"
+    },
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "priority": "Priority",
+      "status": "Status",
+      "project": "Project",
+      "workspace": "Workspace"
+    },
+    "search": {
+      "label": "Search tasks"
+    },
+    "filters": {
+      "allProjects": "All projects",
+      "allStatuses": "All statuses",
+      "allPriorities": "All priorities",
+      "allWorkspaces": "All workspaces"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "actions": {
+      "create": "Create task",
+      "refresh": "Refresh",
+      "retry": "Retry",
+      "link": "Link task",
+      "retryLink": "Retry link",
+      "setPrimary": "Set primary",
+      "pauseTask": "Pause task",
+      "completeTask": "Complete task",
+      "reactivateTask": "Reactivate task",
+      "pauseLink": "Pause link",
+      "completeLink": "Complete link",
+      "reactivateLink": "Reactivate link",
+      "unlink": "Unlink",
+      "createLocal": "Create Local Task"
+    },
+    "states": {
+      "loading": "Loading tasks",
+      "empty": "No tasks match the current search and filters.",
+      "noDescription": "No description."
+    },
+    "workspace": {
+      "title": "Workspace tasks",
+      "primary": "Current primary task",
+      "noPrimary": "No primary task is assigned to this workspace.",
+      "relatedHistory": "Related tasks and history",
+      "noLinks": "No related or historical task links.",
+      "details": "Task details",
+      "selectTask": "Select a workspace task to view its details."
+    },
+    "context": {
+      "title": "Task Context documents",
+      "loading": "Loading Task Context",
+      "error": "Task Context could not be loaded."
+    },
+    "link": {
+      "title": "Link task to workspace",
+      "task": "Task",
+      "role": "Relationship",
+      "related": "Related",
+      "primary": "Primary",
+      "unlinked": "Unlinked",
+      "loadingCandidates": "Loading link candidates",
+      "noCandidates": "No tasks are available to link."
+    },
+    "activeCount": "Tasks, {{count}} active",
+    "unlink": {
+      "title": "Unlink task?",
+      "description": "Unlink “{{title}}” from this workspace?"
+    }
+  }
+}

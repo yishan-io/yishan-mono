@@ -7,7 +7,7 @@ export const DEFAULT_LEFT_WIDTH = 320;
 export const DEFAULT_RIGHT_WIDTH = 400;
 
 /** Selected right-pane tab per workspace. Owned by Workbench layout (W3). */
-export type WorkspaceRightPaneTab = "files" | "changes" | "pr";
+export type WorkspaceRightPaneTab = "files" | "changes" | "pr" | "tasks";
 
 /** Default right-pane tab when no per-workspace preference has been set. */
 export const DEFAULT_RIGHT_PANE_TAB: WorkspaceRightPaneTab = "files";

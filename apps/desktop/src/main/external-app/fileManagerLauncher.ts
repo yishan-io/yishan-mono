@@ -8,3 +8,9 @@ export async function openInFileManager(path: string, isDirectory: boolean): Pro
   const error = await shell.openPath(path);
   if (error) throw new Error(error);
 }
+
+/** Opens one path with the host operating system's default application. */
+export async function openInDefaultApplication(path: string): Promise<void> {
+  const error = await shell.openPath(path);
+  if (error) throw new Error(error);
+}

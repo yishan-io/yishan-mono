@@ -50,3 +50,15 @@ export function openOverlayPanel(panel: OverlayPanel | null): void {
 export function closeOverlayPanel(): void {
   workbenchNavigationStore.getState().closeOverlayPanel();
 }
+
+/** Toggles the global Task Hub and clears workspace/project context when opening it. */
+export function toggleTaskHubOverlay(): void {
+  const navigation = workbenchNavigationStore.getState();
+  if (navigation.overlayPanel === "tasks") {
+    navigation.closeOverlayPanel();
+    return;
+  }
+  navigation.setActiveProjectId("");
+  navigation.setActiveWorkspaceId("");
+  navigation.setOverlayPanel("tasks");
+}

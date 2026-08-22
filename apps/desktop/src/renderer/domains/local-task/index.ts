@@ -30,3 +30,6 @@ export type {
   UpdateLocalTaskInput,
 } from "./localTaskTypes";
 export { localTaskStore, type LocalTaskStoreState } from "./state/localTaskStore";
+
+export { TaskHubView } from "./features/task-hub/TaskHubView";
+export { WorkspaceTasksView } from "./features/workspace-tasks/WorkspaceTasksView";

@@ -1,0 +1,86 @@
+{
+  "localTask": {
+    "title": "任务",
+    "create": {
+      "title": "创建任务",
+      "linkFailed": "任务“{{title}}”（{{taskId}}）已创建，但关联失败：{{error}}"
+    },
+    "fields": {
+      "title": "标题",
+      "description": "描述",
+      "priority": "优先级",
+      "status": "状态",
+      "project": "项目",
+      "workspace": "工作区"
+    },
+    "search": {
+      "label": "搜索任务"
+    },
+    "filters": {
+      "allProjects": "所有项目",
+      "allStatuses": "所有状态",
+      "allPriorities": "所有优先级",
+      "allWorkspaces": "所有工作区"
+    },
+    "status": {
+      "active": "进行中",
+      "paused": "已暂停",
+      "completed": "已完成"
+    },
+    "priority": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    },
+    "actions": {
+      "create": "创建任务",
+      "refresh": "刷新",
+      "retry": "重试",
+      "link": "关联任务",
+      "retryLink": "重试关联",
+      "setPrimary": "设为主要任务",
+      "pauseTask": "暂停任务",
+      "completeTask": "完成任务",
+      "reactivateTask": "重新激活任务",
+      "pauseLink": "暂停关联",
+      "completeLink": "完成关联",
+      "reactivateLink": "重新激活关联",
+      "unlink": "取消关联",
+      "createLocal": "创建本地任务"
+    },
+    "states": {
+      "loading": "正在加载任务",
+      "empty": "没有符合当前搜索和筛选条件的任务。",
+      "noDescription": "没有描述。"
+    },
+    "workspace": {
+      "title": "工作区任务",
+      "primary": "当前主要任务",
+      "noPrimary": "此工作区尚未分配主要任务。",
+      "relatedHistory": "相关任务和历史",
+      "noLinks": "没有相关或历史任务关联。",
+      "details": "任务详情",
+      "selectTask": "选择一个工作区任务以查看详情。"
+    },
+    "context": {
+      "title": "任务上下文文档",
+      "loading": "正在加载任务上下文",
+      "error": "无法加载任务上下文。"
+    },
+    "link": {
+      "title": "将任务关联到工作区",
+      "task": "任务",
+      "role": "关系",
+      "related": "相关",
+      "primary": "主要",
+      "unlinked": "已取消关联",
+      "loadingCandidates": "正在加载可关联任务",
+      "noCandidates": "没有可关联的任务。"
+    },
+    "activeCount": "任务，{{count}} 个进行中",
+    "unlink": {
+      "title": "取消关联任务？",
+      "description": "要取消“{{title}}”与此工作区的关联吗？"
+    }
+  }
+}

@@ -104,6 +104,12 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
+vi.mock("@renderer/domains/local-task", () => ({
+  WorkspaceTasksView: ({ workspaceId }: { workspaceId: string }) => (
+    <div data-testid="workspace-tasks-view">{workspaceId}</div>
+  ),
+}));
+
 vi.mock("@renderer/platform/clipboard", () => ({
   writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
 }));
@@ -629,5 +635,11 @@ describe("RightPaneView delete flow", () => {
 
     workspaceStoreState.current.projects = previousProjects;
     workspaceStoreState.current.workspaces = previousWorkspaces;
+  });
+
+  it("registers the workspace Tasks content in the right pane", () => {
+    layoutStoreState.current.rightPaneTabByWorkspaceId = { "workspace-1": "tasks" };
+    render(<RightPaneView />);
+    expect(screen.getByTestId("workspace-tasks-view").textContent).toBe("workspace-1");
   });
 });

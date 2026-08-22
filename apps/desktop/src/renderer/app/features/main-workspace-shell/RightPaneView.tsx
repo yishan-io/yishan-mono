@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { FileManagerView } from "@renderer/domains/files";
 import { ChangesTabView } from "@renderer/domains/git";
 import { PullRequestTabView } from "@renderer/domains/git";
+import { WorkspaceTasksView } from "@renderer/domains/local-task";
 import { supportsGitFeatures } from "@renderer/domains/project";
 import { DEFAULT_RIGHT_PANE_TAB, layoutStore } from "@renderer/domains/workbench";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
@@ -29,13 +30,15 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
   // from the workspace first so folders never resolve to git-capable.
   const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
   const activeTab =
-    !gitCapable || activeRightPaneTab === "files"
-      ? "files"
-      : activeRightPaneTab === "changes"
-        ? "changes"
-        : activeRightPaneTab === "pr"
-          ? "pr"
-          : "files";
+    activeRightPaneTab === "tasks"
+      ? "tasks"
+      : !gitCapable || activeRightPaneTab === "files"
+        ? "files"
+        : activeRightPaneTab === "changes"
+          ? "changes"
+          : activeRightPaneTab === "pr"
+            ? "pr"
+            : "files";
 
   return (
     <Box
@@ -79,6 +82,21 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
         }}
       >
         <ChangesTabView />
+      </Box>
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          visibility: activeTab === "tasks" ? "visible" : "hidden",
+          zIndex: activeTab === "tasks" ? 1 : 0,
+          minWidth: 0,
+          minHeight: 0,
+          overflow: "hidden",
+        }}
+      >
+        <WorkspaceTasksView workspaceId={selectedWorkspaceId} />
       </Box>
       <Box
         sx={{

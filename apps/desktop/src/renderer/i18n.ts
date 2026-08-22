@@ -11,6 +11,7 @@ import enFiles from "./locales/en/files.json";
 import enKeybindings from "./locales/en/keybindings.json";
 import enLaunch from "./locales/en/launch.json";
 import enLayout from "./locales/en/layout.json";
+import enLocalTask from "./locales/en/localTask.json";
 import enNativeMenu from "./locales/en/nativeMenu.json";
 import enOnboarding from "./locales/en/onboarding.json";
 import enOrg from "./locales/en/org.json";
@@ -34,6 +35,7 @@ import zhFiles from "./locales/zh/files.json";
 import zhKeybindings from "./locales/zh/keybindings.json";
 import zhLaunch from "./locales/zh/launch.json";
 import zhLayout from "./locales/zh/layout.json";
+import zhLocalTask from "./locales/zh/localTask.json";
 import zhNativeMenu from "./locales/zh/nativeMenu.json";
 import zhOnboarding from "./locales/zh/onboarding.json";
 import zhOrg from "./locales/zh/org.json";
@@ -80,6 +82,7 @@ const I18N_NAMESPACES = [
   "keybindings",
   "launch",
   "layout",
+  "localTask",
   "nativeMenu",
   "onboarding",
   "org",
@@ -109,6 +112,7 @@ export const resources = {
     keybindings: enKeybindings,
     launch: enLaunch,
     layout: enLayout,
+    localTask: enLocalTask,
     nativeMenu: enNativeMenu,
     onboarding: enOnboarding,
     org: enOrg,
@@ -134,6 +138,7 @@ export const resources = {
     keybindings: zhKeybindings,
     launch: zhLaunch,
     layout: zhLayout,
+    localTask: zhLocalTask,
     nativeMenu: zhNativeMenu,
     onboarding: zhOnboarding,
     org: zhOrg,

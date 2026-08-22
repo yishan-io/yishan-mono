@@ -27,6 +27,17 @@ const link: LocalTaskWorkspaceLink = {
 afterEach(() => localTaskStore.setState(initialState, true));
 
 describe("localTaskStore", () => {
+  it("tracks the selected workspace task and defaults details to the active primary", () => {
+    const relatedTask = { ...task, id: "task-2", title: "Related" };
+    const relatedLink = { ...link, id: "link-2", localTaskId: "task-2", role: "related" as const };
+    const requestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
+    localTaskStore.getState().setWorkspaceData(requestId, "workspace-1", [task, relatedTask], [link, relatedLink]);
+
+    expect(localTaskStore.getState().selectedWorkspaceTaskId).toBe("task-1");
+    localTaskStore.getState().selectWorkspaceTask("task-2");
+    expect(localTaskStore.getState().selectedWorkspaceTaskId).toBe("task-2");
+  });
+
   it("mutates hub filters, results, and active count without I/O", () => {
     const actions = localTaskStore.getState();
     actions.setHubFilters({ status: "paused", priority: "high" });

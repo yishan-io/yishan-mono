@@ -18,11 +18,18 @@ export type LocalTaskStoreState = {
   hubLoadState: LocalTaskLoadState;
   hubError: string | null;
   selectedWorkspaceId: string | null;
+  selectedWorkspaceTaskId: string | null;
   workspaceTasks: LocalTask[];
   workspaceLinks: LocalTaskWorkspaceLink[];
   workspaceActiveTaskCount: number;
   workspaceLoadState: LocalTaskLoadState;
   workspaceError: string | null;
+  linkCandidateWorkspaceId: string | null;
+  linkCandidateTasks: LocalTask[];
+  linkCandidateLoadState: LocalTaskLoadState;
+  linkCandidateError: string | null;
+  taskLoadStateByTaskId: Record<string, LocalTaskLoadState>;
+  taskErrorByTaskId: Record<string, string | null>;
   contextByTaskId: Record<string, LocalTaskContextDetails>;
   contextLoadStateByTaskId: Record<string, LocalTaskLoadState>;
   contextErrorByTaskId: Record<string, string | null>;
@@ -41,6 +48,7 @@ export type LocalTaskStoreState = {
   setHubError: (requestId: number, error: string) => void;
   beginWorkspaceLoad: (workspaceId: string) => number;
   clearSelectedWorkspace: () => void;
+  selectWorkspaceTask: (taskId: string) => void;
   setWorkspaceData: (
     requestId: number,
     workspaceId: string,
@@ -48,8 +56,12 @@ export type LocalTaskStoreState = {
     links: LocalTaskWorkspaceLink[],
   ) => void;
   setWorkspaceError: (requestId: number, workspaceId: string, error: string) => void;
+  beginLinkCandidateLoad: (workspaceId: string) => number;
+  setLinkCandidates: (requestId: number, workspaceId: string, tasks: LocalTask[]) => void;
+  setLinkCandidateError: (requestId: number, workspaceId: string, error: string) => void;
   beginTaskLoad: (taskId: string) => number;
   setTaskEntity: (requestId: number, taskId: string, task: LocalTask) => void;
+  setTaskError: (requestId: number, taskId: string, error: string) => void;
   beginContextLoad: (taskId: string) => number;
   setContext: (requestId: number, taskId: string, context: LocalTaskContextDetails) => void;
   setContextError: (requestId: number, taskId: string, error: string) => void;
@@ -68,6 +80,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
     let activeTaskCountRequestGeneration = 0;
     let hubRequestGeneration = 0;
     let workspaceRequestGeneration = 0;
+    let linkCandidateRequestGeneration = 0;
     const taskRequestGenerationByTaskId: Record<string, number> = {};
     const taskEntityRevisionByTaskId: Record<string, number> = {};
     const taskLoadRevisionByTaskId: Record<string, number> = {};
@@ -88,11 +101,18 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       hubLoadState: "idle",
       hubError: null,
       selectedWorkspaceId: null,
+      selectedWorkspaceTaskId: null,
       workspaceTasks: [],
       workspaceLinks: [],
       workspaceActiveTaskCount: 0,
       workspaceLoadState: "idle",
       workspaceError: null,
+      linkCandidateWorkspaceId: null,
+      linkCandidateTasks: [],
+      linkCandidateLoadState: "idle",
+      linkCandidateError: null,
+      taskLoadStateByTaskId: {},
+      taskErrorByTaskId: {},
       contextByTaskId: {},
       contextLoadStateByTaskId: {},
       contextErrorByTaskId: {},
@@ -132,6 +152,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
         set((state) => {
           if (state.selectedWorkspaceId !== workspaceId) {
             state.workspaceTasks = [];
+            state.selectedWorkspaceTaskId = null;
             state.workspaceLinks = [];
             state.workspaceActiveTaskCount = 0;
           }
@@ -145,6 +166,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
         workspaceRequestGeneration += 1;
         set({
           selectedWorkspaceId: null,
+          selectedWorkspaceTaskId: null,
           workspaceTasks: [],
           workspaceLinks: [],
           workspaceActiveTaskCount: 0,
@@ -156,6 +178,13 @@ export const localTaskStore = create<LocalTaskStoreState>()(
         if (requestId !== workspaceRequestGeneration) return;
         set((state) => {
           if (state.selectedWorkspaceId !== workspaceId) return;
+          const linkedTaskIds = new Set(workspaceLinks.map((link) => link.localTaskId));
+          const activePrimary = workspaceLinks.find(
+            (link) => link.role === "primary" && link.status === "active" && !link.unlinkedAt,
+          );
+          if (!state.selectedWorkspaceTaskId || !linkedTaskIds.has(state.selectedWorkspaceTaskId)) {
+            state.selectedWorkspaceTaskId = activePrimary?.localTaskId ?? workspaceLinks[0]?.localTaskId ?? null;
+          }
           state.workspaceTasks = workspaceTasks;
           state.workspaceLinks = workspaceLinks;
           state.workspaceActiveTaskCount = workspaceTasks.filter((task) => task.status === "active").length;
@@ -164,6 +193,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
           for (const task of workspaceTasks) writeTaskEntity(state, task);
         });
       },
+      selectWorkspaceTask: (selectedWorkspaceTaskId) => set({ selectedWorkspaceTaskId }),
       setWorkspaceError: (requestId, workspaceId, workspaceError) => {
         if (requestId !== workspaceRequestGeneration) return;
         set((state) => {
@@ -172,16 +202,60 @@ export const localTaskStore = create<LocalTaskStoreState>()(
           state.workspaceError = workspaceError;
         });
       },
+      beginLinkCandidateLoad: (workspaceId) => {
+        const requestId = ++linkCandidateRequestGeneration;
+        set((state) => {
+          if (state.linkCandidateWorkspaceId !== workspaceId) state.linkCandidateTasks = [];
+          state.linkCandidateWorkspaceId = workspaceId;
+          state.linkCandidateLoadState = "loading";
+          state.linkCandidateError = null;
+        });
+        return requestId;
+      },
+      setLinkCandidates: (requestId, workspaceId, linkCandidateTasks) => {
+        if (requestId !== linkCandidateRequestGeneration) return;
+        set((state) => {
+          if (state.linkCandidateWorkspaceId !== workspaceId) return;
+          state.linkCandidateTasks = linkCandidateTasks;
+          state.linkCandidateLoadState = "loaded";
+          state.linkCandidateError = null;
+          for (const task of linkCandidateTasks) writeTaskEntity(state, task);
+        });
+      },
+      setLinkCandidateError: (requestId, workspaceId, linkCandidateError) => {
+        if (requestId !== linkCandidateRequestGeneration) return;
+        set((state) => {
+          if (state.linkCandidateWorkspaceId !== workspaceId) return;
+          state.linkCandidateLoadState = "error";
+          state.linkCandidateError = linkCandidateError;
+        });
+      },
       beginTaskLoad: (taskId) => {
         const requestId = (taskRequestGenerationByTaskId[taskId] ?? 0) + 1;
         taskRequestGenerationByTaskId[taskId] = requestId;
         taskLoadRevisionByTaskId[taskId] = taskEntityRevisionByTaskId[taskId] ?? 0;
+        set((state) => {
+          state.taskLoadStateByTaskId[taskId] = "loading";
+          state.taskErrorByTaskId[taskId] = null;
+        });
         return requestId;
       },
       setTaskEntity: (requestId, taskId, task) => {
         if (requestId !== taskRequestGenerationByTaskId[taskId]) return;
         if (taskLoadRevisionByTaskId[taskId] !== (taskEntityRevisionByTaskId[taskId] ?? 0)) return;
-        set((state) => writeTaskEntity(state, task));
+        set((state) => {
+          writeTaskEntity(state, task);
+          state.taskLoadStateByTaskId[taskId] = "loaded";
+          state.taskErrorByTaskId[taskId] = null;
+        });
+      },
+      setTaskError: (requestId, taskId, error) => {
+        if (requestId !== taskRequestGenerationByTaskId[taskId]) return;
+        if (taskLoadRevisionByTaskId[taskId] !== (taskEntityRevisionByTaskId[taskId] ?? 0)) return;
+        set((state) => {
+          state.taskLoadStateByTaskId[taskId] = "error";
+          state.taskErrorByTaskId[taskId] = error;
+        });
       },
       beginContextLoad: (taskId) => {
         const requestId = (contextRequestGenerationByTaskId[taskId] ?? 0) + 1;
