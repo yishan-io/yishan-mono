@@ -93,7 +93,7 @@ describe("AgentManager", () => {
     const [record] = agentManager.list();
 
     expect(result.status).toBe("completed");
-    expect(createAgentRun).toHaveBeenCalledTimes(1);
+    expect(createAgentRun).toHaveBeenCalledWith(expect.objectContaining({ parentToolCallId: undefined }));
     expect(record).toMatchObject({
       agentName: "Explore",
       status: "completed",
@@ -110,6 +110,24 @@ describe("AgentManager", () => {
         turns: 1,
       },
     });
+  });
+
+  it("forwards parent tool call ids to agent runs", async () => {
+    const createAgentRun = vi.fn(async () =>
+      createMockRunHandle(
+        Promise.resolve({
+          agentId: "agent-fixed",
+          agentName: "Explore",
+          status: "completed",
+          usage: emptyUsage,
+        }),
+      ),
+    );
+    const agentManager = new AgentManager({ createAgentRun });
+
+    await agentManager.run(createTask({ parentToolCallId: "tool-1" }));
+
+    expect(createAgentRun).toHaveBeenCalledWith(expect.objectContaining({ parentToolCallId: "tool-1" }));
   });
 
   it("marks runs failed when createAgentRun rejects", async () => {

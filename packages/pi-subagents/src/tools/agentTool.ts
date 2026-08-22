@@ -65,6 +65,7 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
         parentModel: ctx.model,
         parentThinking: pi.getThinkingLevel(),
       });
+      task.parentToolCallId = _toolCallId;
       task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
       task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager, {
         emitLifecycle: createLifecycleWidgetEmitter(ctx.ui, ctx.mode),

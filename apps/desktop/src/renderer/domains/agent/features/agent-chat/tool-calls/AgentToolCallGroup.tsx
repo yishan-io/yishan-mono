@@ -2,6 +2,7 @@ import { Box, IconButton, Typography } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight, LuLayers } from "react-icons/lu";
+import type { AgentToolCallLifecycleState } from "../../../chat/agentChatSubagents";
 import { ThinkingBlock } from "../transcript/ThinkingBlock";
 import type { TurnWorkingBlock } from "../transcript/turnModel";
 import { AgentToolCallCard } from "./AgentToolCallCard";
@@ -21,6 +22,8 @@ type AgentToolCallGroupProps = {
    * streaming thoughts) under the summary header.
    */
   showRunningBlocks: boolean;
+  /** Composer lifecycle states keyed by Agent tool-call ID. */
+  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
@@ -36,6 +39,7 @@ export function AgentToolCallGroup({
   id,
   blocks,
   showRunningBlocks,
+  agentToolCallStates,
   workspacePath,
   onOpenCompletedSubagent,
 }: AgentToolCallGroupProps) {
@@ -84,10 +88,10 @@ export function AgentToolCallGroup({
     summarizeToolCalls(toolCalls.map((block) => ({ toolCall: block.toolCall, result: block.result }))),
     t,
   );
-  const runningBlocks = blocks.filter(isRunningBlock);
-  // The header shimmers with an animated gradient while the stack is live (the
-  // same condition that shows the running-blocks panel), mirroring Codex.
-  const isLive = showRunningBlocks && runningBlocks.length > 0;
+  const collapsedBlocks = blocks.filter((block) => isCollapsedBlock(block, agentToolCallStates));
+  // Pending Agent cards remain visible, but only an actively running card makes
+  // the header live. Non-Agent calls retain their result-based live behavior.
+  const isLive = showRunningBlocks && blocks.some((block) => isLiveBlock(block, agentToolCallStates));
 
   return (
     <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5 }}>
@@ -173,13 +177,14 @@ export function AgentToolCallGroup({
                 key={block.id}
                 toolCall={block.toolCall}
                 result={block.result}
+                agentLifecycleState={agentToolCallStates?.get(block.toolCall.id)}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
             ),
           )}
         </Box>
-      ) : showRunningBlocks && runningBlocks.length > 0 ? (
+      ) : showRunningBlocks && collapsedBlocks.length > 0 ? (
         <Box
           data-testid="agent-tool-call-group-live"
           sx={{
@@ -192,7 +197,7 @@ export function AgentToolCallGroup({
             borderLeftColor: "divider",
           }}
         >
-          {runningBlocks.map((block) =>
+          {collapsedBlocks.map((block) =>
             block.kind === "thinking" ? (
               <ThinkingBlock
                 key={block.id}
@@ -205,6 +210,7 @@ export function AgentToolCallGroup({
                 key={block.id}
                 toolCall={block.toolCall}
                 result={block.result}
+                agentLifecycleState={agentToolCallStates?.get(block.toolCall.id)}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
@@ -216,18 +222,35 @@ export function AgentToolCallGroup({
   );
 }
 
-function isRunningBlock(block: TurnWorkingBlock): boolean {
-  // A tool call is still running until its merged result arrives (a background
-  // sub-agent or slow command keeps its card live even after its message was
-  // finalized); a thought is live only while its message is still streaming.
-  // The panel only renders while the owning turn is working (session running
-  // with an active turn), so cleanly stopped sessions never show phantom cards.
-  // Residual edge case: a tool call interrupted without ever producing a result
-  // message stays classified as running for the remainder of the working turn
-  // (e.g. a cancelled delegation followed by an automatic follow-up).
+function isCollapsedBlock(
+  block: TurnWorkingBlock,
+  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>,
+): boolean {
   if (block.kind === "toolCall") {
-    return block.result === null;
+    if (block.toolCall.name !== "Agent") {
+      return block.result === null;
+    }
+
+    const lifecycleState = agentToolCallStates?.get(block.toolCall.id);
+    return lifecycleState === undefined ? block.result === null : lifecycleState !== "completed";
   }
+
+  return block.isStreaming;
+}
+
+function isLiveBlock(
+  block: TurnWorkingBlock,
+  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>,
+): boolean {
+  if (block.kind === "toolCall") {
+    if (block.toolCall.name !== "Agent") {
+      return block.result === null;
+    }
+
+    const lifecycleState = agentToolCallStates?.get(block.toolCall.id);
+    return lifecycleState === undefined ? block.result === null : lifecycleState === "running";
+  }
+
   return block.isStreaming;
 }
 

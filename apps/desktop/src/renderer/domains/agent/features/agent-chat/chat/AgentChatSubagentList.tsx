@@ -45,7 +45,7 @@ export function AgentChatSubagentList({
           fontWeight: 700,
         }}
       >
-        Running sub-agents
+        Sub-agents
       </Typography>
       {runningSubagents.map((subagent) => {
         // Interrupted rows (pre-death) get no cancel; live rows cancel via real ids or a unique progress target.
@@ -53,13 +53,15 @@ export function AgentChatSubagentList({
           subagentSessionEndedAtMs !== null && (subagent.startedAtMs ?? 0) < subagentSessionEndedAtMs;
         const hasUniqueLiveTarget =
           subagentProgressTargets.filter((target) => target.agentName === subagent.agentName).length === 1;
-        const canCancel = !isInterrupted && Boolean(subagent.agentId || subagent.childSessionId || hasUniqueLiveTarget);
+        const canCancel =
+          subagent.state === "running" &&
+          !isInterrupted &&
+          Boolean(subagent.agentId || subagent.childSessionId || hasUniqueLiveTarget);
 
         return (
           <AgentChatSubagentRow
             key={subagent.rowId}
             subagent={subagent}
-            isRunning
             isInterrupted={isInterrupted}
             canCancel={canCancel}
             cancelState={subagentCancelStates[subagent.childSessionId ?? subagent.rowId]}

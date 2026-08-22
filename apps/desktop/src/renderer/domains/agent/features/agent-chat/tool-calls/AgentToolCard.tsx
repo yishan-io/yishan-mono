@@ -8,14 +8,25 @@ import { extractResultText } from "./diff";
 import { getAgentStatusBadgeColor } from "./statusColors";
 import type { AgentToolCallCardProps } from "./summary";
 
+const TERMINAL_AGENT_RESULT_STATUSES = new Set(["completed", "failed", "error", "cancelled", "canceled"]);
+
 /** Renders the specialized Agent delegation tool-call card. */
-export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent }: AgentToolCallCardProps) {
+export function AgentToolCard({
+  toolCall,
+  result = null,
+  onOpenCompletedSubagent,
+  agentLifecycleState,
+}: AgentToolCallCardProps) {
   const resultText = extractResultText(result);
   const [open, setOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"prompt" | "response">(resultText ? "response" : "prompt");
   const agentName = typeof toolCall.arguments.agent === "string" ? toolCall.arguments.agent : null;
   const agentPrompt = typeof toolCall.arguments.prompt === "string" ? toolCall.arguments.prompt : null;
-  const agentStatus = typeof result?.details?.status === "string" ? result.details.status : null;
+  const resultStatus = typeof result?.details?.status === "string" ? result.details.status : null;
+  const agentStatus =
+    resultStatus && TERMINAL_AGENT_RESULT_STATUSES.has(resultStatus)
+      ? resultStatus
+      : (agentLifecycleState ?? resultStatus);
   const childSessionId = typeof result?.details?.sessionId === "string" ? result.details.sessionId : null;
   const agentId = typeof result?.details?.agentId === "string" ? result.details.agentId : undefined;
   const canOpenCompletedSubagent =

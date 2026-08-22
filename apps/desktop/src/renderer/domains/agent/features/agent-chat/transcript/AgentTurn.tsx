@@ -2,6 +2,7 @@ import { Box, CircularProgress, IconButton, Paper, Typography } from "@mui/mater
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import type { AgentToolCallLifecycleState } from "../../../../../domains/agent/chat/agentChatSubagents";
 import { AgentToolCallGroup } from "../tool-calls/AgentToolCallGroup";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentMarkdownContent } from "./AgentMarkdownContent";
@@ -24,6 +25,7 @@ const collapsedTurnIds = new Set<string>();
 type AgentTurnProps = {
   turn: Turn;
   workspacePath?: string;
+  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
@@ -34,7 +36,7 @@ type AgentTurnProps = {
  * hides only the working content (thinking, tool calls); the final summary
  * message's thinking and text stay visible below the header.
  */
-export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: AgentTurnProps) {
+export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenCompletedSubagent }: AgentTurnProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(() => !collapsedTurnIds.has(turn.id));
   const isExpanded = open || turn.isWorking;
@@ -143,6 +145,7 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
                 id={getRunKey(turn.id, section)}
                 blocks={section.blocks}
                 showRunningBlocks={turn.isWorking}
+                agentToolCallStates={agentToolCallStates}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />

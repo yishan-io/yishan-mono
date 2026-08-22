@@ -505,6 +505,45 @@ describe("agentChatStore", () => {
     });
   });
 
+  // ─── running subagent panel state ─────────────────────────────────────────
+
+  describe("running subagent panel state", () => {
+    it("updates an existing Agent row from preparing to queued when its background result arrives", () => {
+      const tabId = "tab-background-subagent";
+      agentChatStore.getState().initSession(tabId, "session-background-subagent");
+
+      agentChatStore.getState().appendMessage(tabId, {
+        id: "assistant-agent-call",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "tool-background-agent",
+            name: "Agent",
+            arguments: { agent: "builder", prompt: "Implement the panel." },
+          },
+        ],
+      });
+
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+        expect.objectContaining({ rowId: "tool-background-agent", state: "preparing" }),
+      ]);
+
+      agentChatStore.getState().appendMessage(tabId, {
+        id: "background-agent-result",
+        role: "toolResult",
+        toolName: "Agent",
+        toolCallId: "tool-background-agent",
+        content: [],
+        details: { mode: "background" },
+      });
+
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+        expect.objectContaining({ rowId: "tool-background-agent", state: "queued" }),
+      ]);
+    });
+  });
+
   // ─── subagentSessionEndedAtMs ──────────────────────────────────────────────
 
   describe("subagentSessionEndedAtMs", () => {
