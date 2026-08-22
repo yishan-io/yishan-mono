@@ -213,3 +213,30 @@ func TestResolveManagedRuntimeEnvPreservesCustomZdotdir(t *testing.T) {
 		t.Fatalf("expected %s, got %v", expectedOrig, got)
 	}
 }
+
+func TestManagerResolveSessionEnv_OverridesAndClearsDaemonEndpoint(t *testing.T) {
+	manager := NewManager()
+	manager.SetDaemonWSEndpoint("ws://127.0.0.1:4312/ws")
+	env := manager.resolveSessionEnv([]string{"YISHAN_DAEMON_WS_URL=stale", "YISHAN_DAEMON_WS_URL=request"}, StartRequest{})
+	assertSingleEnvEntry(t, env, "YISHAN_DAEMON_WS_URL=ws://127.0.0.1:4312/ws")
+
+	manager.SetDaemonWSEndpoint("")
+	env = manager.resolveSessionEnv([]string{"YISHAN_DAEMON_WS_URL=stale"}, StartRequest{})
+	assertSingleEnvEntry(t, env, "YISHAN_DAEMON_WS_URL=")
+}
+
+func assertSingleEnvEntry(t *testing.T, env []string, want string) {
+	t.Helper()
+	count := 0
+	for _, entry := range env {
+		if strings.HasPrefix(entry, "YISHAN_DAEMON_WS_URL=") {
+			count++
+			if entry != want {
+				t.Fatalf("daemon endpoint = %q, want %q", entry, want)
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatalf("daemon endpoint entries = %d, want 1: %v", count, env)
+	}
+}

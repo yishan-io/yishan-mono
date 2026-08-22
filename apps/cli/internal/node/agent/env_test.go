@@ -15,7 +15,7 @@ func TestBuildPiStartExtraEnv_InjectsNotificationSessionEnv(t *testing.T) {
 		TabID:       "tab-2",
 		WorkspaceID: "workspace-2",
 		PaneID:      "pane-2",
-	}, workspace.Workspace{ProjectID: "project-2", OrgID: "org-2"})
+	}, workspace.Workspace{ProjectID: "project-2", OrgID: "org-2"}, "")
 	if err != nil {
 		t.Fatalf("buildPiStartExtraEnv: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestBuildPiStartExtraEnv_FallsBackToPaneIDFromTabID(t *testing.T) {
 	extraEnv, err := buildPiStartExtraEnv(rpc.PiStartParams{
 		TabID:       "tab-3",
 		WorkspaceID: "workspace-3",
-	}, workspace.Workspace{ProjectID: "project-3", OrgID: "org-3"})
+	}, workspace.Workspace{ProjectID: "project-3", OrgID: "org-3"}, "")
 	if err != nil {
 		t.Fatalf("buildPiStartExtraEnv: %v", err)
 	}
@@ -40,4 +40,23 @@ func TestBuildPiStartExtraEnv_FallsBackToPaneIDFromTabID(t *testing.T) {
 	assertPiStartObserverEnv(t, extraEnv, "workspace-3", "tab-3", "pane-tab-3", homeDir)
 	assertEnvValue(t, extraEnv, "YISHAN_PROJECT_ID", "project-3")
 	assertEnvValue(t, extraEnv, "YISHAN_ORG_ID", "org-3")
+}
+
+func TestBuildPiStartExtraEnv_OverridesAndClearsDaemonEndpoint(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	req := rpc.PiStartParams{TabID: "tab", WorkspaceID: "workspace", PaneID: "pane"}
+	workspaceInfo := workspace.Workspace{ProjectID: "project", OrgID: "org"}
+
+	env, err := buildPiStartExtraEnv(req, workspaceInfo, "ws://127.0.0.1:4312/ws")
+	if err != nil {
+		t.Fatalf("buildPiStartExtraEnv: %v", err)
+	}
+	assertEnvValue(t, env, "YISHAN_DAEMON_WS_URL", "ws://127.0.0.1:4312/ws")
+
+	env, err = buildPiStartExtraEnv(req, workspaceInfo, "")
+	if err != nil {
+		t.Fatalf("buildPiStartExtraEnv: %v", err)
+	}
+	assertEnvValue(t, env, "YISHAN_DAEMON_WS_URL", "")
 }

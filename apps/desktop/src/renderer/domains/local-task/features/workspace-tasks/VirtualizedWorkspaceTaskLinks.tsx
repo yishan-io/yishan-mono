@@ -4,7 +4,7 @@ import { useRef } from "react";
 import type { LocalTask, LocalTaskWorkspaceLink } from "../../localTaskTypes";
 import { WorkspaceTaskLinkRow } from "./WorkspaceTaskLinkRow";
 
-const LINK_ROW_ESTIMATED_HEIGHT = 128;
+const LINK_ROW_ESTIMATED_HEIGHT = 96;
 const MAX_LIST_HEIGHT = 480;
 
 type VirtualizedWorkspaceTaskLinksProps = {

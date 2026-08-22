@@ -1,6 +1,5 @@
 import { Box } from "@mui/material";
 import { gitProjectionStore } from "@renderer/domains/git";
-import { localTaskStore } from "@renderer/domains/local-task";
 import {
   ColumnSeparator,
   DEFAULT_RIGHT_PANE_TAB,
@@ -37,8 +36,7 @@ export function MainPaneRightArea({ selectedWorkspaceId, gitCapable, isErrorWork
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
   );
   const changesCount = gitProjectionStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
-  const workspaceTaskCount = localTaskStore((state) => state.workspaceActiveTaskCount);
-  const rightPaneTabs = useMainPaneRightTabs({ gitCapable, changesCount, workspaceTaskCount });
+  const rightPaneTabs = useMainPaneRightTabs({ gitCapable, changesCount });
   const rightDragRef = useRef({ startX: 0, startWidth: 0 });
   const resizeRightStart = useCallback(
     (clientXStart: number) => {

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	agentcmd "yishan/apps/cli/internal/agent/command"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/platform/shellenv"
 )
@@ -66,7 +67,7 @@ func TestBuildAgentSubprocessEnv_SetsPiAgentDirAndPreservesEntries(t *testing.T)
 		config.PiAgentDirEnvKey + "=/stale/one",
 		config.PiAgentDirEnvKey + "=/stale/two",
 	}
-	got, err := BuildAgentSubprocessEnv(base)
+	got, err := BuildAgentSubprocessEnv(base, "")
 	if err != nil {
 		t.Fatalf("BuildAgentSubprocessEnv() error = %v", err)
 	}
@@ -107,7 +108,7 @@ func TestBuildRunAgentFunc_SetsPiAgentDirOnSubprocess(t *testing.T) {
 	installFakePiBinary(t, markerPath)
 	t.Setenv("SHELL", "/bin/sh")
 
-	out, err := BuildRunAgentFunc()(context.Background(), "pi", "", "summarize", "")
+	out, err := BuildRunAgentFunc("")(context.Background(), "pi", "", "summarize", "")
 	if err != nil {
 		t.Fatalf("BuildRunAgentFunc() error = %v (output %q)", err, out)
 	}
@@ -133,7 +134,7 @@ func TestRunAgent_SetsPiAgentDirOnSubprocess(t *testing.T) {
 	installFakePiBinary(t, markerPath)
 	t.Setenv("SHELL", "/bin/sh")
 
-	out, err := BuildRunAgentFunc()(context.Background(), "pi", "", "summarize", "")
+	out, err := BuildRunAgentFunc("")(context.Background(), "pi", "", "summarize", "")
 	if err != nil {
 		t.Fatalf("run agent error = %v (output %q)", err, out)
 	}
@@ -162,7 +163,7 @@ func TestBuildRunAgentFunc_FailedCommandIncludesStderr(t *testing.T) {
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("SHELL", "/bin/sh")
 
-	_, err := BuildRunAgentFunc()(context.Background(), "opencode", "", "prompt", "")
+	_, err := BuildRunAgentFunc("")(context.Background(), "opencode", "", "prompt", "")
 	if err == nil {
 		t.Fatal("expected command failure")
 	}
@@ -197,4 +198,74 @@ func waitForFileContent(t *testing.T, path string) string {
 	}
 	t.Fatalf("timed out waiting for %s", path)
 	return ""
+}
+
+func TestBuildAgentSubprocessEnv_OverridesAndClearsDaemonEndpoint(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	base := []string{"YISHAN_DAEMON_WS_URL=stale", "YISHAN_DAEMON_WS_URL=request"}
+
+	env, err := BuildAgentSubprocessEnv(base, "ws://127.0.0.1:4312/ws")
+	if err != nil {
+		t.Fatalf("BuildAgentSubprocessEnv: %v", err)
+	}
+	assertSingleDaemonEndpoint(t, env, "ws://127.0.0.1:4312/ws")
+
+	env, err = BuildAgentSubprocessEnv(base, "")
+	if err != nil {
+		t.Fatalf("BuildAgentSubprocessEnv: %v", err)
+	}
+	assertSingleDaemonEndpoint(t, env, "")
+}
+
+func assertSingleDaemonEndpoint(t *testing.T, env []string, want string) {
+	t.Helper()
+	count := 0
+	for _, entry := range env {
+		if strings.HasPrefix(entry, "YISHAN_DAEMON_WS_URL=") {
+			count++
+			if entry != "YISHAN_DAEMON_WS_URL="+want {
+				t.Fatalf("daemon endpoint entry = %q, want %q", entry, want)
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatalf("daemon endpoint entries = %d, want 1: %v", count, env)
+	}
+}
+
+func TestRunResolvedAgentCommand_DaemonEndpointWinsAfterCommandExtraEnv(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test is unix-only")
+	}
+
+	for _, test := range []struct {
+		name     string
+		endpoint string
+		want     string
+	}{
+		{name: "overrides command extra env", endpoint: "ws://127.0.0.1:4312/ws", want: "ws://127.0.0.1:4312/ws"},
+		{name: "clears command extra env when unavailable", endpoint: "", want: ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			markerPath := filepath.Join(t.TempDir(), "daemon-endpoint.txt")
+			binaryPath := filepath.Join(t.TempDir(), "pi")
+			script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$YISHAN_DAEMON_WS_URL\" > %q\n", markerPath)
+			if err := os.WriteFile(binaryPath, []byte(script), 0o755); err != nil {
+				t.Fatalf("write fake pi binary: %v", err)
+			}
+
+			_, err := runResolvedAgentCommand(context.Background(), agentcmd.ResolvedCommand{
+				Command:        agentcmd.Command{ExtraEnv: []string{"YISHAN_DAEMON_WS_URL=command"}},
+				ResolvedBinary: binaryPath,
+				Env:            []string{"YISHAN_DAEMON_WS_URL=resolved"},
+			}, "", test.endpoint)
+			if err != nil {
+				t.Fatalf("runResolvedAgentCommand: %v", err)
+			}
+			if got := waitForFileContent(t, markerPath); got != test.want {
+				t.Fatalf("YISHAN_DAEMON_WS_URL = %q, want %q", got, test.want)
+			}
+		})
+	}
 }

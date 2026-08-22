@@ -1,5 +1,4 @@
-import { SYSTEM_DEFAULT_APP_ID, openEntryInExternalApp } from "@renderer/domains/files";
-import { projectStore } from "@renderer/domains/project";
+import { selectFolderInFileTree } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import {
   createLocalTask as createLocalTaskFromDaemon,
@@ -7,10 +6,10 @@ import {
   getLocalTask as getLocalTaskFromDaemon,
   linkLocalTaskWorkspace as linkLocalTaskWorkspaceFromDaemon,
   listLocalTaskLinks as listLocalTaskLinksFromDaemon,
+  listLocalTaskTags as listLocalTaskTagsFromDaemon,
   listLocalTaskWorkspaceLinks as listLocalTaskWorkspaceLinksFromDaemon,
   listLocalTasks as listLocalTasksFromDaemon,
   searchLocalTasks as searchLocalTasksFromDaemon,
-  setPrimaryLocalTask as setPrimaryLocalTaskFromDaemon,
   unlinkLocalTaskWorkspace as unlinkLocalTaskWorkspaceFromDaemon,
   updateLocalTask as updateLocalTaskFromDaemon,
   updateLocalTaskLinkStatus as updateLocalTaskLinkStatusFromDaemon,
@@ -19,7 +18,6 @@ import type {
   CreateLocalTaskInput,
   LocalTask,
   LocalTaskFilters,
-  LocalTaskLinkRole,
   LocalTaskStatus,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
@@ -75,6 +73,17 @@ async function runMutation<T>(operation: () => Promise<T>): Promise<T> {
   } catch (error) {
     localTaskStore.getState().finishMutation(getErrorMessage(error));
     throw error;
+  }
+}
+
+/** Loads daemon-owned Local Task tag suggestions into store-owned state. */
+export async function loadLocalTaskTagSuggestions(): Promise<void> {
+  const requestId = localTaskStore.getState().beginTagSuggestionsLoad();
+  try {
+    const tags = await listLocalTaskTagsFromDaemon();
+    localTaskStore.getState().setTagSuggestions(requestId, tags);
+  } catch (error) {
+    localTaskStore.getState().setTagSuggestionsError(requestId, getErrorMessage(error));
   }
 }
 
@@ -217,17 +226,12 @@ export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInpu
 }
 
 /** Links a Local Task to a workspace and refreshes affected projections. */
-export async function linkLocalTaskWorkspace(
-  taskId: string,
-  workspaceId: string,
-  role?: LocalTaskLinkRole,
-): Promise<LocalTaskWorkspaceLink> {
+export async function linkLocalTaskWorkspace(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
   return runMutation(async () => {
-    const trackedTaskIds = getTrackedTaskLinkProjectionIds();
     const taskIds = invalidateTaskLinkProjections(
-      role === "primary" ? trackedTaskIds : trackedTaskIds.filter((trackedTaskId) => trackedTaskId === taskId),
+      getTrackedTaskLinkProjectionIds().filter((trackedTaskId) => trackedTaskId === taskId),
     );
-    const link = await linkLocalTaskWorkspaceFromDaemon(taskId, workspaceId, role);
+    const link = await linkLocalTaskWorkspaceFromDaemon(taskId, workspaceId);
     await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
     return link;
   });
@@ -242,16 +246,6 @@ export async function unlinkLocalTaskWorkspace(linkId: string): Promise<void> {
   });
 }
 
-/** Sets one workspace's primary Local Task and refreshes affected projections. */
-export async function setPrimaryLocalTask(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
-  return runMutation(async () => {
-    const taskIds = invalidateTaskLinkProjections(getTrackedTaskLinkProjectionIds());
-    const link = await setPrimaryLocalTaskFromDaemon(taskId, workspaceId);
-    await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
-    return link;
-  });
-}
-
 /** Updates one workspace link status and refreshes affected projections. */
 export async function updateLocalTaskLinkStatus(
   linkId: string,
@@ -260,9 +254,7 @@ export async function updateLocalTaskLinkStatus(
   return runMutation(async () => {
     const taskIds = invalidateTaskLinkProjections(getAffectedTaskLinkProjectionIds((link) => link.id === linkId));
     const link = await updateLocalTaskLinkStatusFromDaemon(linkId, status);
-    if (status === "active" && link.role === "primary") {
-      taskIds.push(...invalidateTaskLinkProjections(getTrackedTaskLinkProjectionIds()));
-    } else if (getTrackedTaskLinkProjectionIds().includes(link.localTaskId)) {
+    if (getTrackedTaskLinkProjectionIds().includes(link.localTaskId)) {
       taskIds.push(link.localTaskId);
     }
     await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
@@ -290,7 +282,6 @@ export type CreateAndLinkLocalTaskResult =
 export async function createAndLinkLocalTask(
   input: CreateLocalTaskInput,
   workspaceId: string,
-  role: LocalTaskLinkRole,
 ): Promise<CreateAndLinkLocalTaskResult> {
   localTaskStore.getState().beginMutation();
   let task: LocalTask;
@@ -303,7 +294,7 @@ export async function createAndLinkLocalTask(
   }
 
   try {
-    await linkLocalTaskWorkspaceFromDaemon(task.id, workspaceId, role);
+    await linkLocalTaskWorkspaceFromDaemon(task.id, workspaceId);
   } catch (error) {
     const linkError = getErrorMessage(error);
     await refreshAfterMutation();
@@ -316,21 +307,12 @@ export async function createAndLinkLocalTask(
   return { status: "linked", task };
 }
 
-export type LocalTaskContextDocument = "plan" | "notes" | "outcome";
+const TASK_CONTEXT_RELATIVE_ROOT = ".my-context/task-context";
 
-/** Opens the exact derived Task Context document path in the configured editor or system default application. */
-export async function openLocalTaskContextDocument(taskId: string, document: LocalTaskContextDocument): Promise<void> {
-  const context = localTaskStore.getState().contextByTaskId[taskId];
-  if (!context) return;
-  const pathByDocument = {
-    plan: context.planPath,
-    notes: context.notesPath,
-    outcome: context.outcomePath,
-  };
-  await openEntryInExternalApp({
-    workspaceWorktreePath: pathByDocument[document],
-    appId: projectStore.getState().lastUsedExternalAppId ?? SYSTEM_DEFAULT_APP_ID,
-  });
+/** Opens a project's derived Task Context directory in the workspace file tree. */
+export function openLocalTaskContextInFileTree(taskId: string): void {
+  if (!localTaskStore.getState().contextByTaskId[taskId]) return;
+  selectFolderInFileTree(`${TASK_CONTEXT_RELATIVE_ROOT}/${taskId}`);
 }
 
 /** Selects which workspace-linked Local Task is shown in the details panel. */

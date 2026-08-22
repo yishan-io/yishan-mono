@@ -56,12 +56,12 @@ const (
 	MethodLocalTaskGet                       = "localTask.get"
 	MethodLocalTaskGetContextDetails         = "localTask.getContextDetails"
 	MethodLocalTaskList                      = "localTask.list"
+	MethodLocalTaskListTags                  = "localTask.listTags"
 	MethodLocalTaskUpdate                    = "localTask.update"
 	MethodLocalTaskSearch                    = "localTask.search"
 	MethodLocalTaskLinkWorkspace             = "localTask.linkWorkspace"
 	MethodLocalTaskUnlinkWorkspace           = "localTask.unlinkWorkspace"
 	MethodLocalTaskUpdateWorkspaceLinkStatus = "localTask.updateWorkspaceLinkStatus"
-	MethodLocalTaskSetPrimary                = "localTask.setPrimary"
 	MethodLocalTaskListWorkspaceLinks        = "localTask.listWorkspaceLinks"
 	MethodLocalTaskListTaskLinks             = "localTask.listTaskLinks"
 

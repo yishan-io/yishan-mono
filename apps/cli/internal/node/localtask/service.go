@@ -41,7 +41,7 @@ func NewService(deps Deps) *Service {
 func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (any, error) {
 	task := domain.Task{
 		ID: uuid.NewString(), ProjectID: req.ProjectID, Title: req.Title, Description: req.Description,
-		Status: domain.StatusActive, Priority: req.Priority,
+		Status: domain.StatusActive, Priority: req.Priority, Tags: req.Tags,
 	}
 	if task.Priority == "" {
 		task.Priority = domain.PriorityMedium
@@ -86,7 +86,7 @@ func (s *Service) Update(ctx context.Context, req rpc.LocalTaskUpdateParams) (an
 		return nil, err
 	}
 	update := domain.TaskUpdate{
-		Title: req.Title, Description: req.Description, Status: req.Status, Priority: req.Priority,
+		Title: req.Title, Description: req.Description, Status: req.Status, Priority: req.Priority, Tags: req.Tags,
 	}
 	if err := domain.ValidateTaskUpdate(update); err != nil {
 		return nil, err
@@ -113,6 +113,12 @@ func (s *Service) Search(ctx context.Context, req rpc.LocalTaskSearchParams) (an
 	}
 	results, err := s.deps.Repository.Search(ctx, query, filter)
 	return results, err
+}
+
+// ListTags returns global Local Task tag suggestions.
+func (s *Service) ListTags(ctx context.Context) (any, error) {
+	tags, err := s.deps.Repository.ListTags(ctx)
+	return tags, err
 }
 
 // GetContextDetails derives approved v1 document paths for one Local Task.

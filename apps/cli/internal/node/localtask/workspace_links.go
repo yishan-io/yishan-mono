@@ -17,23 +17,13 @@ func (s *Service) LinkWorkspace(ctx context.Context, req rpc.LocalTaskLinkWorksp
 	if err != nil {
 		return nil, err
 	}
-	role := req.Role
-	if role == "" {
-		role = domain.LinkRoleRelated
-	}
-	if role == domain.LinkRolePrimary {
-		link, linkErr := s.deps.Repository.SetPrimaryWorkspaceTask(ctx, taskID, workspaceID)
-		return link, linkErr
-	}
 	link := domain.WorkspaceLink{
-		ID: uuid.NewString(), LocalTaskID: taskID, WorkspaceID: workspaceID,
-		Role: role, Status: domain.StatusActive,
+		ID: uuid.NewString(), LocalTaskID: taskID, WorkspaceID: workspaceID, Status: domain.StatusActive,
 	}
 	if err := domain.ValidateWorkspaceLink(link); err != nil {
 		return nil, err
 	}
-	created, err := s.deps.Repository.LinkWorkspace(ctx, link)
-	return created, err
+	return s.deps.Repository.LinkWorkspace(ctx, link)
 }
 
 // UnlinkWorkspace removes an active association while preserving history.
@@ -58,16 +48,6 @@ func (s *Service) UpdateWorkspaceLinkStatus(ctx context.Context, req rpc.LocalTa
 		return nil, err
 	}
 	link, err := s.deps.Repository.UpdateWorkspaceLinkStatus(ctx, linkID, req.Status)
-	return link, err
-}
-
-// SetPrimary selects the active primary task for a local workspace.
-func (s *Service) SetPrimary(ctx context.Context, req rpc.LocalTaskSetPrimaryParams) (any, error) {
-	taskID, workspaceID, err := s.validateTaskWorkspace(ctx, req.TaskID, req.WorkspaceID)
-	if err != nil {
-		return nil, err
-	}
-	link, err := s.deps.Repository.SetPrimaryWorkspaceTask(ctx, taskID, workspaceID)
 	return link, err
 }
 

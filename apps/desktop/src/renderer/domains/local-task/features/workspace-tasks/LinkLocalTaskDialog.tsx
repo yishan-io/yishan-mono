@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
   TextField,
   Typography,
 } from "@mui/material";
@@ -18,7 +17,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { linkLocalTaskWorkspace, loadLocalTaskLinkCandidates } from "../../commands/localTaskCommands";
-import type { LocalTask, LocalTaskLinkRole } from "../../localTaskTypes";
+import type { LocalTask } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
 
 type LinkLocalTaskDialogProps = {
@@ -36,7 +35,6 @@ export function LinkLocalTaskDialog({ open, workspaceId, onClose }: LinkLocalTas
   const candidateLoadState = localTaskStore((state) => state.linkCandidateLoadState);
   const candidateError = localTaskStore((state) => state.linkCandidateError);
   const [task, setTask] = useState<LocalTask | null>(null);
-  const [role, setRole] = useState<LocalTaskLinkRole>("related");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submissionLockRef = useRef(false);
@@ -55,19 +53,14 @@ export function LinkLocalTaskDialog({ open, workspaceId, onClose }: LinkLocalTas
     (_event: React.SyntheticEvent, nextTask: LocalTask | null) => setTask(nextTask),
     [],
   );
-  const handleRoleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => setRole(event.target.value as LocalTaskLinkRole),
-    [],
-  );
   const getTaskLabel = useCallback((option: LocalTask) => option.title, []);
   const renderTaskInput = useCallback(
-    (params: AutocompleteRenderInputParams) => <TextField {...params} label={t("localTask.link.task")} />,
+    (params: AutocompleteRenderInputParams) => <TextField {...params} size="small" label={t("localTask.link.task")} />,
     [t],
   );
   const retryCandidates = useCallback(() => void loadLocalTaskLinkCandidates(workspaceId), [workspaceId]);
   const resetAndClose = useCallback(() => {
     setTask(null);
-    setRole("related");
     setSubmitError(null);
     onClose();
   }, [onClose]);
@@ -80,7 +73,7 @@ export function LinkLocalTaskDialog({ open, workspaceId, onClose }: LinkLocalTas
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await linkLocalTaskWorkspace(task.id, workspaceId, role);
+      await linkLocalTaskWorkspace(task.id, workspaceId);
       resetAndClose();
     } catch (error) {
       setSubmitError(getErrorMessage(error));
@@ -88,7 +81,7 @@ export function LinkLocalTaskDialog({ open, workspaceId, onClose }: LinkLocalTas
       submissionLockRef.current = false;
       setIsSubmitting(false);
     }
-  }, [busy, resetAndClose, role, task, workspaceId]);
+  }, [busy, resetAndClose, task, workspaceId]);
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
@@ -115,6 +108,7 @@ export function LinkLocalTaskDialog({ open, workspaceId, onClose }: LinkLocalTas
           </Alert>
         ) : (
           <Autocomplete
+            size="small"
             disabled={busy}
             options={candidates}
             value={task}
@@ -125,10 +119,6 @@ export function LinkLocalTaskDialog({ open, workspaceId, onClose }: LinkLocalTas
             slotProps={{ listbox: { component: VirtualizedListbox } }}
           />
         )}
-        <TextField disabled={busy} select label={t("localTask.link.role")} value={role} onChange={handleRoleChange}>
-          <MenuItem value="related">{t("localTask.link.related")}</MenuItem>
-          <MenuItem value="primary">{t("localTask.link.primary")}</MenuItem>
-        </TextField>
       </DialogContent>
       <DialogActions>
         <Button disabled={busy} onClick={handleClose}>

@@ -28,6 +28,9 @@ func (s *recordingLocalTaskService) GetContextDetails(context.Context, LocalTask
 func (s *recordingLocalTaskService) List(context.Context, LocalTaskListParams) (any, error) {
 	return s.called(MethodLocalTaskList)
 }
+func (s *recordingLocalTaskService) ListTags(context.Context) (any, error) {
+	return s.called(MethodLocalTaskListTags)
+}
 func (s *recordingLocalTaskService) Update(context.Context, LocalTaskUpdateParams) (any, error) {
 	return s.called(MethodLocalTaskUpdate)
 }
@@ -42,9 +45,6 @@ func (s *recordingLocalTaskService) UnlinkWorkspace(context.Context, LocalTaskLi
 }
 func (s *recordingLocalTaskService) UpdateWorkspaceLinkStatus(context.Context, LocalTaskUpdateLinkStatusParams) (any, error) {
 	return s.called(MethodLocalTaskUpdateWorkspaceLinkStatus)
-}
-func (s *recordingLocalTaskService) SetPrimary(context.Context, LocalTaskSetPrimaryParams) (any, error) {
-	return s.called(MethodLocalTaskSetPrimary)
 }
 func (s *recordingLocalTaskService) ListWorkspaceLinks(context.Context, LocalTaskWorkspaceIDParams) (any, error) {
 	return s.called(MethodLocalTaskListWorkspaceLinks)
@@ -62,12 +62,12 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 		{MethodLocalTaskGet, `{"id":"task-1"}`},
 		{MethodLocalTaskGetContextDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskList, `{}`},
+		{MethodLocalTaskListTags, `{}`},
 		{MethodLocalTaskUpdate, `{"id":"task-1","title":"Updated"}`},
 		{MethodLocalTaskSearch, `{"query":"task"}`},
 		{MethodLocalTaskLinkWorkspace, `{"taskId":"task-1","workspaceId":"workspace-1"}`},
 		{MethodLocalTaskUnlinkWorkspace, `{"linkId":"link-1"}`},
 		{MethodLocalTaskUpdateWorkspaceLinkStatus, `{"linkId":"link-1","status":"paused"}`},
-		{MethodLocalTaskSetPrimary, `{"taskId":"task-1","workspaceId":"workspace-1"}`},
 		{MethodLocalTaskListWorkspaceLinks, `{"workspaceId":"workspace-1"}`},
 		{MethodLocalTaskListTaskLinks, `{"id":"task-1"}`},
 	}
@@ -91,6 +91,28 @@ func TestLocalTaskHandler_InvalidParamsDoNotCallService(t *testing.T) {
 	handler := &LocalTaskHandler{Services: service}
 
 	_, err := handler.Call(context.Background(), &Connection{}, MethodLocalTaskCreate, json.RawMessage(`{`))
+	var rpcErr *Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams {
+		t.Fatalf("Call error = %v, want invalid params", err)
+	}
+	if service.calls != 0 {
+		t.Fatalf("service calls = %d, want 0", service.calls)
+	}
+}
+
+func TestLocalTaskHandler_SetPrimaryMethodIsNotFound(t *testing.T) {
+	handler := &LocalTaskHandler{Services: &recordingLocalTaskService{}}
+	_, err := handler.Call(context.Background(), &Connection{}, "localTask.setPrimary", json.RawMessage(`{}`))
+	var rpcErr *Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeMethodNotFound {
+		t.Fatalf("Call error = %v, want method not found", err)
+	}
+}
+
+func TestLocalTaskHandler_ListTagsRejectsMalformedParams(t *testing.T) {
+	service := &recordingLocalTaskService{}
+	handler := &LocalTaskHandler{Services: service}
+	_, err := handler.Call(context.Background(), &Connection{}, MethodLocalTaskListTags, json.RawMessage(`{`))
 	var rpcErr *Error
 	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams {
 		t.Fatalf("Call error = %v, want invalid params", err)

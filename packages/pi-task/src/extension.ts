@@ -1,8 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { registerTaskTools } from "./tools/registerTaskTools";
+import { type LocalTaskToolBackend, registerTaskTools } from "./tools/registerTaskTools";
 
-/** Registers Yishan task-record integration for Pi sessions. */
-export function createPiTaskExtension(pi: ExtensionAPI): void {
-  registerTaskTools(pi);
+/** Registers Yishan daemon-backed task tools, optionally with a test backend. */
+export function createPiTaskExtension(pi: ExtensionAPI, backend?: LocalTaskToolBackend): void {
+  if (backend) registerTaskTools(pi, backend);
+  else registerTaskTools(pi);
 }

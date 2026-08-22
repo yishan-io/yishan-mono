@@ -2,6 +2,10 @@ package terminal
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -409,4 +413,51 @@ func TestSessionLifecycleEventOnNaturalExit(t *testing.T) {
 		t.Fatalf("expected exactly one destroyed lifecycle event, got %d", destroyedCount)
 	}
 	_ = beforeCount
+}
+
+func TestStart_InjectsAuthoritativeDaemonWSEndpointIntoTerminalChild(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test is unix-only")
+	}
+
+	for _, test := range []struct {
+		name     string
+		endpoint string
+		want     string
+	}{
+		{name: "overrides request value", endpoint: "ws://127.0.0.1:4312/ws", want: "ws://127.0.0.1:4312/ws"},
+		{name: "clears unavailable value", endpoint: "", want: ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			markerPath := filepath.Join(t.TempDir(), "daemon-endpoint.txt")
+			manager := NewManager()
+			manager.SetDaemonWSEndpoint(test.endpoint)
+			start, err := manager.Start(context.Background(), t.TempDir(), StartRequest{
+				Command: "sh",
+				Args:    []string{"-c", fmt.Sprintf("printf '%%s' \"$YISHAN_DAEMON_WS_URL\" > %q", markerPath)},
+				Env:     []string{"YISHAN_DAEMON_WS_URL=request"},
+			})
+			if err != nil {
+				t.Fatalf("Start: %v", err)
+			}
+			t.Cleanup(func() { _, _ = manager.Stop(StopRequest{SessionID: start.SessionID}) })
+			if got := waitForTerminalFileContent(t, markerPath); got != test.want {
+				t.Fatalf("YISHAN_DAEMON_WS_URL = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func waitForTerminalFileContent(t *testing.T, path string) string {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		content, err := os.ReadFile(path)
+		if err == nil {
+			return string(content)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %s", path)
+	return ""
 }

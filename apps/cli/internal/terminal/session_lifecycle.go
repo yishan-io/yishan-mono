@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"yishan/apps/cli/internal/platform/config"
+
 	"github.com/creack/pty"
 )
 
@@ -18,7 +20,7 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 
 	cmd := exec.Command(command, args...)
 	cmd.Dir = cwd
-	cmd.Env = resolveSessionMetadataEnv(resolveEnv(os.Environ(), req.Env), req)
+	cmd.Env = m.resolveSessionEnv(resolveEnv(os.Environ(), req.Env), req)
 
 	ptyFile, err := pty.Start(cmd)
 	if err != nil {
@@ -250,4 +252,11 @@ func (m *Manager) session(id string) (*session, error) {
 		return nil, NewError(ErrCodeNotFound, "terminal session not found")
 	}
 	return s, nil
+}
+
+func (m *Manager) resolveSessionEnv(baseEnv []string, req StartRequest) []string {
+	m.mu.RLock()
+	endpoint := m.daemonWSEndpoint
+	m.mu.RUnlock()
+	return config.OverrideDaemonWSEndpointEnv(resolveSessionMetadataEnv(baseEnv, req), endpoint)
 }

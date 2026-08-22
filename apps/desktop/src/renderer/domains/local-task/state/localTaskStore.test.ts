@@ -13,12 +13,12 @@ const task: LocalTask = {
   createdAt: "created",
   updatedAt: "updated",
   completedAt: null,
+  tags: [],
 };
 const link: LocalTaskWorkspaceLink = {
   id: "link-1",
   localTaskId: "task-1",
   workspaceId: "workspace-1",
-  role: "primary",
   status: "active",
   linkedAt: "linked",
   unlinkedAt: null,
@@ -27,9 +27,9 @@ const link: LocalTaskWorkspaceLink = {
 afterEach(() => localTaskStore.setState(initialState, true));
 
 describe("localTaskStore", () => {
-  it("tracks the selected workspace task and defaults details to the active primary", () => {
-    const relatedTask = { ...task, id: "task-2", title: "Related" };
-    const relatedLink = { ...link, id: "link-2", localTaskId: "task-2", role: "related" as const };
+  it("tracks the selected workspace task and defaults details to the first daemon-ordered link", () => {
+    const relatedTask = { ...task, id: "task-2", title: "Second" };
+    const relatedLink = { ...link, id: "link-2", localTaskId: "task-2" };
     const requestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
     localTaskStore.getState().setWorkspaceData(requestId, "workspace-1", [task, relatedTask], [link, relatedLink]);
 
@@ -79,6 +79,28 @@ describe("localTaskStore", () => {
     expect(state.workspaceActiveTaskCount).toBe(1);
     expect(state.contextByTaskId["task-1"]?.planPath).toContain("plan.md");
     expect(state.contextLoadStateByTaskId["task-1"]).toBe("loaded");
+  });
+
+  it("stores daemon tag suggestions and retains values when a refresh fails", () => {
+    let requestId = localTaskStore.getState().beginTagSuggestionsLoad();
+    localTaskStore.getState().setTagSuggestions(requestId, ["desktop", "cli"]);
+    requestId = localTaskStore.getState().beginTagSuggestionsLoad();
+    localTaskStore.getState().setTagSuggestionsError(requestId, "offline");
+
+    expect(localTaskStore.getState()).toMatchObject({
+      tagSuggestions: ["desktop", "cli"],
+      tagSuggestionsLoadState: "error",
+      tagSuggestionsError: "offline",
+    });
+  });
+
+  it("ignores stale tag suggestion responses", () => {
+    const staleRequestId = localTaskStore.getState().beginTagSuggestionsLoad();
+    const currentRequestId = localTaskStore.getState().beginTagSuggestionsLoad();
+    localTaskStore.getState().setTagSuggestions(staleRequestId, ["stale"]);
+    localTaskStore.getState().setTagSuggestions(currentRequestId, ["current"]);
+
+    expect(localTaskStore.getState().tagSuggestions).toEqual(["current"]);
   });
 
   it("upserts a detail entity without changing list projections", () => {

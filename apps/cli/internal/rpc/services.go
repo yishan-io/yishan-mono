@@ -146,12 +146,12 @@ type LocalTaskService interface {
 	Get(ctx context.Context, req LocalTaskIDParams) (any, error)
 	GetContextDetails(ctx context.Context, req LocalTaskIDParams) (any, error)
 	List(ctx context.Context, req LocalTaskListParams) (any, error)
+	ListTags(ctx context.Context) (any, error)
 	Update(ctx context.Context, req LocalTaskUpdateParams) (any, error)
 	Search(ctx context.Context, req LocalTaskSearchParams) (any, error)
 	LinkWorkspace(ctx context.Context, req LocalTaskLinkWorkspaceParams) (any, error)
 	UnlinkWorkspace(ctx context.Context, req LocalTaskLinkIDParams) (any, error)
 	UpdateWorkspaceLinkStatus(ctx context.Context, req LocalTaskUpdateLinkStatusParams) (any, error)
-	SetPrimary(ctx context.Context, req LocalTaskSetPrimaryParams) (any, error)
 	ListWorkspaceLinks(ctx context.Context, req LocalTaskWorkspaceIDParams) (any, error)
 	ListTaskLinks(ctx context.Context, req LocalTaskIDParams) (any, error)
 }

@@ -53,7 +53,9 @@ type Config struct {
 	Session     *session.Session
 	NodeID      string
 	LogFilePath string
-	Database    *sql.DB
+	// DaemonWSEndpoint is the loopback endpoint injected into managed children.
+	DaemonWSEndpoint string
+	Database         *sql.DB
 	// EnvDir is the profile (env root) directory: the token-usage pricing
 	// cache stays machine/runtime-level and does not move with the account.
 	EnvDir string
@@ -141,6 +143,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	store := sqlite.NewStore(sqlite.NewWorkspaceStore(cfg.Database))
 	gitService := git.NewGitService()
 	terminals := terminal.NewManager()
+	terminals.SetDaemonWSEndpoint(cfg.DaemonWSEndpoint)
 
 	legacyCleanupPath := filepath.Join(cfg.DataDir, sqlite.PendingCleanupFileName)
 	cleanupStore, err := sqlite.NewWorkspaceCleanupStore(cfg.Database, legacyCleanupPath)
@@ -194,7 +197,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	agentMgr := agentmanager.NewManager()
 	piAuth := nodeagent.NewManagedPiAuthStore()
 	contextStore := contextstore.NewStore(cfg.SettingsPath)
-	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer)
+	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer, cfg.DaemonWSEndpoint)
 
 	usage := hook.NewUsageTracker()
 
@@ -247,6 +250,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		Terminals:         terminals,
 		ContextStore:      contextStore,
 		AgentLifecycleCtx: agentLifecycleCtx,
+		DaemonWSEndpoint:  cfg.DaemonWSEndpoint,
 		ServerCtx:         context.Background(),
 		RelayCreateCompleted: func(prepared application.CreatePlan, completed map[string]any) {
 			workspaceSvc.RelayCreateCompleted(prepared, completed)
@@ -362,7 +366,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		URL:         cfg.RelayURL,
 		StaticToken: cfg.RelayToken,
 		Server:      app.rpcServer,
-		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session},
+		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session, daemonWSEndpoint: cfg.DaemonWSEndpoint},
 		Events:      events,
 	})
 	terminalSvc.SetRelayClient(app.relay)

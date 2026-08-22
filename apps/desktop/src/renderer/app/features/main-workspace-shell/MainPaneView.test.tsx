@@ -2,7 +2,6 @@
 
 import { AGENT_SETTINGS_STORE_STORAGE_KEY } from "@renderer/domains/agent";
 import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
-import { localTaskStore } from "@renderer/domains/local-task/state/localTaskStore";
 import { WorkspacePaneVisibilityProvider, layoutStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -370,7 +369,6 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   window.localStorage.removeItem(AGENT_SETTINGS_STORE_STORAGE_KEY);
-  localTaskStore.setState({ workspaceActiveTaskCount: 0 });
   layoutStore.setState({ rightPaneTabByWorkspaceId: {} });
   agentSettingsStore.setState({
     inUseByAgentKind: {
@@ -856,9 +854,8 @@ describe("MainPaneView", () => {
     );
   });
 
-  it("registers a selectable Tasks tab with its workspace badge", () => {
+  it("registers a selectable Tasks tab without a count badge", () => {
     const onToggleLeftPane = vi.fn();
-    localTaskStore.setState({ workspaceActiveTaskCount: 4 });
     mocked.stateRef.current = buildStoreState(false);
     mocked.getMainWindowFullscreenState.mockResolvedValue({ isFullscreen: false });
 
@@ -881,7 +878,8 @@ describe("MainPaneView", () => {
     expect(screen.getByRole("button", { name: "files.files" })).toBeTruthy();
     const tasksTab = screen.getByRole("button", { name: "localTask.title" });
     expect(tasksTab).toBeTruthy();
-    expect(within(tasksTab).getByText("4")).toBeTruthy();
+    expect(within(tasksTab).queryByText("4")).toBeNull();
+    expect(tasksTab.querySelector(".MuiBadge-badge")).toBeNull();
     fireEvent.click(tasksTab);
     expect(layoutStore.getState().rightPaneTabByWorkspaceId["workspace-1"]).toBe("tasks");
     expect(screen.getByRole("button", { name: "files.changes" })).toBeTruthy();

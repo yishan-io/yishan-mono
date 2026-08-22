@@ -11,13 +11,13 @@ const taskPayload = {
   createdAt: "2026-08-24T01:00:00Z",
   updatedAt: "2026-08-24T01:10:00Z",
   completedAt: null,
+  tags: [],
 };
 
 const linkPayload = {
   id: "link-1",
   localTaskId: "task-1",
   workspaceId: "workspace-1",
-  role: "primary",
   status: "active",
   linkedAt: "2026-08-24T01:15:00Z",
   unlinkedAt: null,
@@ -34,6 +34,7 @@ describe("DaemonLocalTaskClient", () => {
         return method === "localTask.list" ? [taskPayload] : [linkPayload];
       }
       if (method === "localTask.search") return [{ ...taskPayload, rank: -0.5 }];
+      if (method === "localTask.listTags") return ["desktop", "cli"];
       if (method === "localTask.getContextDetails") {
         return {
           directory: "/context/task-1",
@@ -43,34 +44,49 @@ describe("DaemonLocalTaskClient", () => {
         };
       }
       if (method === "localTask.unlinkWorkspace") return null;
-      if (method.includes("Workspace") || method === "localTask.setPrimary") return linkPayload;
+      if (method.includes("Workspace")) return linkPayload;
       return taskPayload;
     });
     const client = new DaemonLocalTaskClient(invoke);
 
-    await client.create({ title: "Ship desktop", priority: "high" });
+    await client.create({ title: "Ship desktop", priority: "high", tags: ["desktop"] });
     await client.get("task-1");
-    await client.list({ projectId: "project-1", status: "active", priority: "high", workspaceId: "workspace-1" });
-    await client.search("desktop", { status: "active" });
-    await client.update("task-1", { status: "completed" });
+    await client.list({
+      projectId: "project-1",
+      status: "active",
+      priority: "high",
+      workspaceId: "workspace-1",
+      tags: ["desktop", "cli"],
+    });
+    await client.search("desktop", { status: "active", tags: ["desktop"] });
+    await client.listTags();
+    await client.update("task-1", { status: "completed", tags: [] });
     await client.getContext("task-1");
-    await client.linkWorkspace("task-1", "workspace-1", "related");
+    await client.linkWorkspace("task-1", "workspace-1");
     await client.unlinkWorkspace("link-1");
-    await client.setPrimary("task-1", "workspace-1");
     await client.updateLinkStatus("link-1", "paused");
     await client.listWorkspaceLinks("workspace-1");
     await client.listTaskLinks("task-1");
 
     expect(invoke.mock.calls).toEqual([
-      ["localTask.create", { title: "Ship desktop", priority: "high" }],
+      ["localTask.create", { title: "Ship desktop", priority: "high", tags: ["desktop"] }],
       ["localTask.get", { id: "task-1" }],
-      ["localTask.list", { projectId: "project-1", status: "active", priority: "high", workspaceId: "workspace-1" }],
-      ["localTask.search", { query: "desktop", status: "active" }],
-      ["localTask.update", { id: "task-1", status: "completed" }],
+      [
+        "localTask.list",
+        {
+          projectId: "project-1",
+          status: "active",
+          priority: "high",
+          workspaceId: "workspace-1",
+          tags: ["desktop", "cli"],
+        },
+      ],
+      ["localTask.search", { query: "desktop", status: "active", tags: ["desktop"] }],
+      ["localTask.listTags", {}],
+      ["localTask.update", { id: "task-1", status: "completed", tags: [] }],
       ["localTask.getContextDetails", { id: "task-1" }],
-      ["localTask.linkWorkspace", { taskId: "task-1", workspaceId: "workspace-1", role: "related" }],
+      ["localTask.linkWorkspace", { taskId: "task-1", workspaceId: "workspace-1" }],
       ["localTask.unlinkWorkspace", { linkId: "link-1" }],
-      ["localTask.setPrimary", { taskId: "task-1", workspaceId: "workspace-1" }],
       ["localTask.updateWorkspaceLinkStatus", { linkId: "link-1", status: "paused" }],
       ["localTask.listWorkspaceLinks", { workspaceId: "workspace-1" }],
       ["localTask.listTaskLinks", { id: "task-1" }],
@@ -101,6 +117,20 @@ describe("DaemonLocalTaskClient", () => {
     await expect(emptyClient.get("task-1")).resolves.toMatchObject({ description: "" });
   });
 
+  it("sends explicit empty parameters when listing tag suggestions", async () => {
+    const invoke = vi.fn(async () => ["desktop"]);
+    const client = new DaemonLocalTaskClient(invoke);
+
+    await expect(client.listTags()).resolves.toEqual(["desktop"]);
+    expect(invoke.mock.calls).toEqual([["localTask.listTags", {}]]);
+  });
+
+  it("rejects malformed tag suggestion arrays", async () => {
+    const client = new DaemonLocalTaskClient(vi.fn(async () => ["valid", null]));
+
+    await expect(client.listTags()).rejects.toThrow("invalid Local Task tag list payload");
+  });
+
   it.each([
     [
       "missing description",
@@ -118,6 +148,15 @@ describe("DaemonLocalTaskClient", () => {
       },
     ],
     ["invalid status", (payload: typeof taskPayload) => ({ ...payload, status: "unknown" })],
+    [
+      "missing tags",
+      (payload: typeof taskPayload) => {
+        const { tags: _tags, ...taskWithoutTags } = payload;
+        return taskWithoutTags;
+      },
+    ],
+    ["null tags", (payload: typeof taskPayload) => ({ ...payload, tags: null })],
+    ["non-string tag", (payload: typeof taskPayload) => ({ ...payload, tags: ["valid", 1] })],
   ])("rejects %s", async (_name, buildPayload) => {
     const client = new DaemonLocalTaskClient(vi.fn(async () => buildPayload(taskPayload)));
 

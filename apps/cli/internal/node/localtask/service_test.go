@@ -3,6 +3,7 @@ package localtask
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"yishan/apps/cli/internal/adapter/sqlite"
@@ -19,7 +20,7 @@ func TestService_CreateDefaultsAndCompletesTask(t *testing.T) {
 		t.Fatalf("Create: %v", err)
 	}
 	created := createdValue.(domain.Task)
-	if created.ID == "" || created.Status != domain.StatusActive || created.Priority != domain.PriorityMedium {
+	if created.ID == "" || created.Status != domain.StatusActive || created.Priority != domain.PriorityMedium || created.Tags == nil {
 		t.Fatalf("created task = %#v", created)
 	}
 
@@ -100,7 +101,7 @@ func TestService_LinkWorkspaceRequiresPersistedLocalWorkspace(t *testing.T) {
 		t.Fatalf("LinkWorkspace: %v", err)
 	}
 	linked := linkedValue.(domain.WorkspaceLink)
-	if linked.WorkspaceID != "workspace-1" || linked.Role != domain.LinkRoleRelated {
+	if linked.WorkspaceID != "workspace-1" {
 		t.Fatalf("linked workspace = %#v", linked)
 	}
 }
@@ -136,7 +137,7 @@ func TestService_ListNormalizesWorkspaceFilter(t *testing.T) {
 	createWorkspace(t, workspaceStore, "workspace-1")
 	task := createServiceTask(t, repository, "Filtered task")
 	if _, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
-		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Role: domain.LinkRoleRelated, Status: domain.StatusActive,
+		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: domain.StatusActive,
 	}); err != nil {
 		t.Fatalf("link workspace: %v", err)
 	}
@@ -151,29 +152,6 @@ func TestService_ListNormalizesWorkspaceFilter(t *testing.T) {
 	}
 }
 
-func TestService_LinkWorkspacePrimaryReplacesExistingPrimary(t *testing.T) {
-	service, workspaceStore, repository := newTestService(t)
-	createWorkspace(t, workspaceStore, "workspace-1")
-	first := createServiceTask(t, repository, "First")
-	second := createServiceTask(t, repository, "Second")
-	if _, err := service.SetPrimary(context.Background(), rpc.LocalTaskSetPrimaryParams{
-		TaskID: first.ID, WorkspaceID: "workspace-1",
-	}); err != nil {
-		t.Fatalf("SetPrimary: %v", err)
-	}
-	linkedValue, err := service.LinkWorkspace(context.Background(), rpc.LocalTaskLinkWorkspaceParams{
-		TaskID: second.ID, WorkspaceID: "workspace-1", Role: domain.LinkRolePrimary,
-	})
-	if err != nil {
-		t.Fatalf("LinkWorkspace primary: %v", err)
-	}
-	linked := linkedValue.(domain.WorkspaceLink)
-	if linked.LocalTaskID != second.ID || linked.Role != domain.LinkRolePrimary {
-		t.Fatalf("primary link = %#v", linked)
-	}
-	assertOneActivePrimary(t, repository, "workspace-1", second.ID)
-}
-
 func createServiceTask(t *testing.T, repository domain.Repository, title string) domain.Task {
 	t.Helper()
 	task, err := repository.Create(context.Background(), domain.Task{
@@ -185,22 +163,43 @@ func createServiceTask(t *testing.T, repository domain.Repository, title string)
 	return task
 }
 
-func assertOneActivePrimary(t *testing.T, repository domain.Repository, workspaceID string, taskID string) {
-	t.Helper()
-	links, err := repository.ListWorkspaceLinks(context.Background(), workspaceID)
+func TestService_MapsTagsAndListsSuggestions(t *testing.T) {
+	service, _, _ := newTestService(t)
+	createdValue, err := service.Create(context.Background(), rpc.LocalTaskCreateParams{
+		Title: "Tagged", Tags: []string{"  First  ", "second"},
+	})
 	if err != nil {
-		t.Fatalf("list workspace links: %v", err)
+		t.Fatalf("Create: %v", err)
 	}
-	activePrimaryCount := 0
-	for _, link := range links {
-		if link.Role == domain.LinkRolePrimary && link.Status == domain.StatusActive {
-			activePrimaryCount++
-			if link.LocalTaskID != taskID {
-				t.Fatalf("active primary task = %q, want %q", link.LocalTaskID, taskID)
-			}
-		}
+	created := createdValue.(domain.Task)
+	if got, want := created.Tags, []string{"First", "second"}; !slices.Equal(got, want) {
+		t.Fatalf("created tags = %#v, want %#v", got, want)
 	}
-	if activePrimaryCount != 1 {
-		t.Fatalf("active primary count = %d, want 1", activePrimaryCount)
+	listedValue, err := service.List(context.Background(), rpc.LocalTaskListParams{Tags: []string{" second "}})
+	if err != nil || len(listedValue.([]domain.Task)) != 1 {
+		t.Fatalf("List tags = %#v, %v", listedValue, err)
+	}
+	searchedValue, err := service.Search(context.Background(), rpc.LocalTaskSearchParams{
+		Query: "Tagged", LocalTaskListParams: rpc.LocalTaskListParams{Tags: []string{"First", "second"}},
+	})
+	if err != nil || len(searchedValue.([]domain.SearchResult)) != 1 {
+		t.Fatalf("Search tags = %#v, %v", searchedValue, err)
+	}
+
+	cleared := []string{}
+	updatedValue, err := service.Update(context.Background(), rpc.LocalTaskUpdateParams{ID: created.ID, Tags: &cleared})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated := updatedValue.(domain.Task); updated.Tags == nil || len(updated.Tags) != 0 {
+		t.Fatalf("updated tags = %#v, want non-nil empty", updated.Tags)
+	}
+
+	tagsValue, err := service.ListTags(context.Background())
+	if err != nil {
+		t.Fatalf("ListTags: %v", err)
+	}
+	if tags := tagsValue.([]string); tags == nil || len(tags) != 0 {
+		t.Fatalf("suggestion tags = %#v, want non-nil empty", tags)
 	}
 }

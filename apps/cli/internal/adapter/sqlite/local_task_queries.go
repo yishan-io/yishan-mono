@@ -56,11 +56,36 @@ func buildLocalTaskFilter(filter localtask.TaskFilter, table string) ([]string, 
 	if filter.WorkspaceID != nil {
 		where, arguments = appendTaskWorkspaceFilter(where, arguments, table, *filter.WorkspaceID)
 	}
+	for _, normalizedTag := range normalizedTaskFilterTags(filter.Tags) {
+		where, arguments = appendTaskTagFilter(where, arguments, table, normalizedTag)
+	}
 	return where, arguments
 }
 
 func appendTaskFilter(where []string, arguments []any, condition string, value any) ([]string, []any) {
 	return append(where, condition), append(arguments, value)
+}
+
+func normalizedTaskFilterTags(tags []string) []string {
+	normalizedTags, err := localtask.NormalizeTags(tags)
+	if err != nil {
+		return nil
+	}
+	keys := make([]string, 0, len(normalizedTags))
+	for _, tag := range normalizedTags {
+		key, err := localtask.NormalizeTagKey(tag)
+		if err != nil {
+			return nil
+		}
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func appendTaskTagFilter(where []string, arguments []any, table string, normalizedTag string) ([]string, []any) {
+	condition := `EXISTS (SELECT 1 FROM local_task_tags WHERE local_task_id = ` + table + `.id
+		AND normalized_tag = ?)`
+	return append(where, condition), append(arguments, normalizedTag)
 }
 
 func appendTaskWorkspaceFilter(where []string, arguments []any, table string, workspaceID string) ([]string, []any) {
@@ -125,7 +150,7 @@ func scanLocalTasks(rows *sql.Rows) ([]localtask.Task, error) {
 }
 
 func scanLocalTask(scanner interface{ Scan(...any) error }) (localtask.Task, error) {
-	var task localtask.Task
+	task := localtask.Task{Tags: make([]string, 0)}
 	var projectID, completedAt sql.NullString
 	err := scanner.Scan(&task.ID, &projectID, &task.Title, &task.Description, &task.Status, &task.Priority,
 		&task.CreatedAt, &task.UpdatedAt, &completedAt)
@@ -191,8 +216,7 @@ func scanWorkspaceLinks(rows *sql.Rows) ([]localtask.WorkspaceLink, error) {
 func scanWorkspaceLink(scanner interface{ Scan(...any) error }) (localtask.WorkspaceLink, error) {
 	var link localtask.WorkspaceLink
 	var unlinkedAt sql.NullString
-	err := scanner.Scan(&link.ID, &link.LocalTaskID, &link.WorkspaceID, &link.Role, &link.Status,
-		&link.LinkedAt, &unlinkedAt)
+	err := scanner.Scan(&link.ID, &link.LocalTaskID, &link.WorkspaceID, &link.Status, &link.LinkedAt, &unlinkedAt)
 	if err != nil {
 		return localtask.WorkspaceLink{}, err
 	}

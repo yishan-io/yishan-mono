@@ -17,6 +17,9 @@ export type LocalTaskStoreState = {
   activeTaskCount: number;
   hubLoadState: LocalTaskLoadState;
   hubError: string | null;
+  tagSuggestions: string[];
+  tagSuggestionsLoadState: LocalTaskLoadState;
+  tagSuggestionsError: string | null;
   selectedWorkspaceId: string | null;
   selectedWorkspaceTaskId: string | null;
   workspaceTasks: LocalTask[];
@@ -41,6 +44,9 @@ export type LocalTaskStoreState = {
   mutationError: string | null;
   setHubFilters: (filters: LocalTaskFilters) => void;
   setHubSearchQuery: (query: string) => void;
+  beginTagSuggestionsLoad: () => number;
+  setTagSuggestions: (requestId: number, tags: string[]) => void;
+  setTagSuggestionsError: (requestId: number, error: string) => void;
   beginActiveTaskCountLoad: () => number;
   setActiveTaskCount: (requestId: number, activeTaskCount: number) => void;
   beginHubLoad: () => number;
@@ -80,6 +86,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
     let activeTaskCountRequestGeneration = 0;
     let hubRequestGeneration = 0;
     let workspaceRequestGeneration = 0;
+    let tagSuggestionsRequestGeneration = 0;
     let linkCandidateRequestGeneration = 0;
     const taskRequestGenerationByTaskId: Record<string, number> = {};
     const taskEntityRevisionByTaskId: Record<string, number> = {};
@@ -100,6 +107,9 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       activeTaskCount: 0,
       hubLoadState: "idle",
       hubError: null,
+      tagSuggestions: [],
+      tagSuggestionsLoadState: "idle",
+      tagSuggestionsError: null,
       selectedWorkspaceId: null,
       selectedWorkspaceTaskId: null,
       workspaceTasks: [],
@@ -124,6 +134,21 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       mutationError: null,
       setHubFilters: (hubFilters) => set({ hubFilters }),
       setHubSearchQuery: (hubSearchQuery) => set({ hubSearchQuery }),
+      beginTagSuggestionsLoad: () => {
+        const requestId = ++tagSuggestionsRequestGeneration;
+        set({ tagSuggestionsLoadState: "loading", tagSuggestionsError: null });
+        return requestId;
+      },
+      setTagSuggestions: (requestId, tagSuggestions) => {
+        if (requestId === tagSuggestionsRequestGeneration) {
+          set({ tagSuggestions, tagSuggestionsLoadState: "loaded", tagSuggestionsError: null });
+        }
+      },
+      setTagSuggestionsError: (requestId, tagSuggestionsError) => {
+        if (requestId === tagSuggestionsRequestGeneration) {
+          set({ tagSuggestionsLoadState: "error", tagSuggestionsError });
+        }
+      },
       beginActiveTaskCountLoad: () => ++activeTaskCountRequestGeneration,
       setActiveTaskCount: (requestId, activeTaskCount) => {
         if (requestId === activeTaskCountRequestGeneration) set({ activeTaskCount });
@@ -179,11 +204,8 @@ export const localTaskStore = create<LocalTaskStoreState>()(
         set((state) => {
           if (state.selectedWorkspaceId !== workspaceId) return;
           const linkedTaskIds = new Set(workspaceLinks.map((link) => link.localTaskId));
-          const activePrimary = workspaceLinks.find(
-            (link) => link.role === "primary" && link.status === "active" && !link.unlinkedAt,
-          );
           if (!state.selectedWorkspaceTaskId || !linkedTaskIds.has(state.selectedWorkspaceTaskId)) {
-            state.selectedWorkspaceTaskId = activePrimary?.localTaskId ?? workspaceLinks[0]?.localTaskId ?? null;
+            state.selectedWorkspaceTaskId = workspaceLinks[0]?.localTaskId ?? null;
           }
           state.workspaceTasks = workspaceTasks;
           state.workspaceLinks = workspaceLinks;

@@ -5,7 +5,6 @@ import type {
   LocalTask,
   LocalTaskContextDetails,
   LocalTaskFilters,
-  LocalTaskLinkRole,
   LocalTaskPriority,
   LocalTaskSearchResult,
   LocalTaskStatus,
@@ -21,10 +20,6 @@ function isStatus(status: unknown): status is LocalTaskStatus {
 
 function isPriority(priority: unknown): priority is LocalTaskPriority {
   return priority === "low" || priority === "medium" || priority === "high";
-}
-
-function isLinkRole(role: unknown): role is LocalTaskLinkRole {
-  return role === "primary" || role === "related";
 }
 
 function requireRecord(payload: unknown, payloadName: string): Record<string, unknown> {
@@ -49,6 +44,14 @@ function requireNullableString(record: Record<string, unknown>, field: string, p
   return fieldValue;
 }
 
+function requireStringArray(record: Record<string, unknown>, field: string, payloadName: string): string[] {
+  const fieldValue = record[field];
+  if (!Array.isArray(fieldValue) || fieldValue.some((entry) => typeof entry !== "string")) {
+    throw new TypeError(`invalid ${payloadName} payload`);
+  }
+  return fieldValue;
+}
+
 function parseTask(payload: unknown): LocalTask {
   const record = requireRecord(payload, "Local Task");
   if (!isStatus(record.status) || !isPriority(record.priority) || typeof record.description !== "string") {
@@ -64,6 +67,7 @@ function parseTask(payload: unknown): LocalTask {
     createdAt: requireString(record, "createdAt", "Local Task"),
     updatedAt: requireString(record, "updatedAt", "Local Task"),
     completedAt: requireNullableString(record, "completedAt", "Local Task"),
+    tags: requireStringArray(record, "tags", "Local Task"),
   };
 }
 
@@ -81,14 +85,13 @@ function parseSearchResult(payload: unknown): LocalTaskSearchResult {
 
 function parseLink(payload: unknown): LocalTaskWorkspaceLink {
   const record = requireRecord(payload, "Local Task workspace link");
-  if (!isLinkRole(record.role) || !isStatus(record.status)) {
+  if (!isStatus(record.status)) {
     throw new TypeError("invalid Local Task workspace link payload");
   }
   return {
     id: requireString(record, "id", "Local Task workspace link"),
     localTaskId: requireString(record, "localTaskId", "Local Task workspace link"),
     workspaceId: requireString(record, "workspaceId", "Local Task workspace link"),
-    role: record.role,
     status: record.status,
     linkedAt: requireString(record, "linkedAt", "Local Task workspace link"),
     unlinkedAt: requireNullableString(record, "unlinkedAt", "Local Task workspace link"),
@@ -136,6 +139,15 @@ export class DaemonLocalTaskClient {
     return payload.map(parseSearchResult);
   }
 
+  /** Lists globally suggested Local Task tags. */
+  async listTags(): Promise<string[]> {
+    const payload = await this.invoke("localTask.listTags", {});
+    if (!Array.isArray(payload) || payload.some((tag) => typeof tag !== "string")) {
+      throw new TypeError("invalid Local Task tag list payload");
+    }
+    return payload;
+  }
+
   /** Updates mutable Local Task metadata. */
   async update(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
     return parseTask(await this.invoke("localTask.update", { id: taskId, ...input }));
@@ -147,19 +159,13 @@ export class DaemonLocalTaskClient {
   }
 
   /** Creates one active task-to-workspace relationship. */
-  async linkWorkspace(taskId: string, workspaceId: string, role?: LocalTaskLinkRole): Promise<LocalTaskWorkspaceLink> {
-    const params = role ? { taskId, workspaceId, role } : { taskId, workspaceId };
-    return parseLink(await this.invoke("localTask.linkWorkspace", params));
+  async linkWorkspace(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
+    return parseLink(await this.invoke("localTask.linkWorkspace", { taskId, workspaceId }));
   }
 
   /** Completes one workspace relationship while preserving history. */
   async unlinkWorkspace(linkId: string): Promise<void> {
     await this.invoke("localTask.unlinkWorkspace", { linkId });
-  }
-
-  /** Selects the active primary task for one workspace. */
-  async setPrimary(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
-    return parseLink(await this.invoke("localTask.setPrimary", { taskId, workspaceId }));
   }
 
   /** Updates one workspace link's lifecycle status. */
@@ -199,6 +205,10 @@ export async function searchLocalTasks(
 ): Promise<LocalTaskSearchResult[]> {
   return localTaskClient.search(query, filters);
 }
+/** Lists globally suggested Local Task tags through the daemon. */
+export async function listLocalTaskTags(): Promise<string[]> {
+  return localTaskClient.listTags();
+}
 /** Updates one Local Task through the daemon. */
 export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
   return localTaskClient.update(taskId, input);
@@ -208,20 +218,12 @@ export async function getLocalTaskContext(taskId: string): Promise<LocalTaskCont
   return localTaskClient.getContext(taskId);
 }
 /** Links one Local Task to one local workspace. */
-export async function linkLocalTaskWorkspace(
-  taskId: string,
-  workspaceId: string,
-  role?: LocalTaskLinkRole,
-): Promise<LocalTaskWorkspaceLink> {
-  return localTaskClient.linkWorkspace(taskId, workspaceId, role);
+export async function linkLocalTaskWorkspace(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
+  return localTaskClient.linkWorkspace(taskId, workspaceId);
 }
 /** Unlinks one Local Task workspace relationship. */
 export async function unlinkLocalTaskWorkspace(linkId: string): Promise<void> {
   return localTaskClient.unlinkWorkspace(linkId);
-}
-/** Sets one workspace's primary Local Task. */
-export async function setPrimaryLocalTask(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
-  return localTaskClient.setPrimary(taskId, workspaceId);
 }
 /** Updates one Local Task workspace link status. */
 export async function updateLocalTaskLinkStatus(

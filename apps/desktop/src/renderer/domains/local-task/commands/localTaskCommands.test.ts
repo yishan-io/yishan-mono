@@ -8,12 +8,12 @@ import {
   loadLocalTask,
   loadLocalTaskContext,
   loadLocalTaskLinks,
+  loadLocalTaskTagSuggestions,
   refreshActiveLocalTaskCount,
   refreshLocalTaskHub,
   refreshSelectedWorkspaceTasks,
   setLocalTaskHubFilters,
   setLocalTaskHubSearchQuery,
-  setPrimaryLocalTask,
   unlinkLocalTaskWorkspace,
   updateLocalTask,
   updateLocalTaskLinkStatus,
@@ -28,10 +28,10 @@ vi.mock("../daemon/localTaskDaemonClient", () => ({
   getLocalTaskContext: vi.fn(),
   linkLocalTaskWorkspace: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
-  setPrimaryLocalTask: vi.fn(),
   updateLocalTaskLinkStatus: vi.fn(),
   listLocalTaskWorkspaceLinks: vi.fn(),
   listLocalTaskLinks: vi.fn(),
+  listLocalTaskTags: vi.fn(),
 }));
 
 const initialState = localTaskStore.getState();
@@ -55,12 +55,12 @@ const task: LocalTask = {
   createdAt: "created",
   updatedAt: "updated",
   completedAt: null,
+  tags: [],
 };
 const link: LocalTaskWorkspaceLink = {
   id: "link-1",
   localTaskId: "task-1",
   workspaceId: "workspace-1",
-  role: "primary",
   status: "active",
   linkedAt: "linked",
   unlinkedAt: null,
@@ -72,6 +72,28 @@ afterEach(() => {
 });
 
 describe("localTaskCommands", () => {
+  it("loads tag suggestions into store-owned state and retains errors", async () => {
+    vi.mocked(daemon.listLocalTaskTags).mockResolvedValue(["desktop", "cli"]);
+
+    await loadLocalTaskTagSuggestions();
+
+    expect(daemon.listLocalTaskTags).toHaveBeenCalledWith();
+    expect(localTaskStore.getState()).toMatchObject({
+      tagSuggestions: ["desktop", "cli"],
+      tagSuggestionsLoadState: "loaded",
+      tagSuggestionsError: null,
+    });
+
+    vi.mocked(daemon.listLocalTaskTags).mockRejectedValue(new Error("suggestions unavailable"));
+    await loadLocalTaskTagSuggestions();
+
+    expect(localTaskStore.getState()).toMatchObject({
+      tagSuggestions: ["desktop", "cli"],
+      tagSuggestionsLoadState: "error",
+      tagSuggestionsError: "suggestions unavailable",
+    });
+  });
+
   it("refreshes the active count without loading the Task Hub projection", async () => {
     vi.mocked(daemon.listLocalTasks).mockResolvedValue([task, { ...task, id: "task-2" }]);
 
@@ -158,22 +180,19 @@ describe("localTaskCommands", () => {
     vi.mocked(daemon.listLocalTasks).mockResolvedValue([task]);
     vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([link]);
     vi.mocked(daemon.linkLocalTaskWorkspace).mockResolvedValue(link);
-    vi.mocked(daemon.setPrimaryLocalTask).mockResolvedValue(link);
     vi.mocked(daemon.updateLocalTaskLinkStatus).mockResolvedValue({ ...link, status: "paused" });
     vi.mocked(daemon.listLocalTaskLinks).mockResolvedValue([link]);
     await refreshSelectedWorkspaceTasks("workspace-1");
 
-    await linkLocalTaskWorkspace("task-1", "workspace-1", "related");
-    await setPrimaryLocalTask("task-1", "workspace-1");
+    await linkLocalTaskWorkspace("task-1", "workspace-1");
     await updateLocalTaskLinkStatus("link-1", "paused");
     await unlinkLocalTaskWorkspace("link-1");
     await loadLocalTaskLinks("task-1");
 
-    expect(daemon.linkLocalTaskWorkspace).toHaveBeenCalledWith("task-1", "workspace-1", "related");
-    expect(daemon.setPrimaryLocalTask).toHaveBeenCalledWith("task-1", "workspace-1");
+    expect(daemon.linkLocalTaskWorkspace).toHaveBeenCalledWith("task-1", "workspace-1");
     expect(daemon.updateLocalTaskLinkStatus).toHaveBeenCalledWith("link-1", "paused");
     expect(daemon.unlinkLocalTaskWorkspace).toHaveBeenCalledWith("link-1");
-    expect(daemon.listLocalTaskWorkspaceLinks).toHaveBeenCalledTimes(5);
+    expect(daemon.listLocalTaskWorkspaceLinks).toHaveBeenCalledTimes(4);
     expect(localTaskStore.getState()).toMatchObject({
       taskLinksByTaskId: { "task-1": [link] },
       taskLinksLoadStateByTaskId: { "task-1": "loaded" },
@@ -193,126 +212,6 @@ describe("localTaskCommands", () => {
     await loading;
 
     expect(localTaskStore.getState().taskById["task-1"]).toEqual(updatedTask);
-  });
-
-  it("reloads loaded task-link histories for every relationship changed by set-primary", async () => {
-    const previousPrimary = { ...link, localTaskId: "task-old" };
-    const nextPrimary = { ...link, id: "link-2", localTaskId: "task-new", role: "related" as const };
-    localTaskStore.setState({
-      selectedWorkspaceId: "workspace-1",
-      workspaceLinks: [previousPrimary, nextPrimary],
-      taskLinksByTaskId: { "task-old": [previousPrimary], "task-new": [nextPrimary] },
-    });
-    vi.mocked(daemon.setPrimaryLocalTask).mockResolvedValue({ ...nextPrimary, role: "primary" });
-    vi.mocked(daemon.listLocalTasks).mockResolvedValue([]);
-    vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([
-      { ...previousPrimary, role: "related" },
-      { ...nextPrimary, role: "primary" },
-    ]);
-    vi.mocked(daemon.listLocalTaskLinks).mockImplementation(async (taskId) =>
-      taskId === "task-old" ? [{ ...previousPrimary, role: "related" }] : [{ ...nextPrimary, role: "primary" }],
-    );
-
-    await setPrimaryLocalTask("task-new", "workspace-1");
-
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-old");
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-new");
-    expect(localTaskStore.getState().taskLinksByTaskId).toMatchObject({
-      "task-old": [{ role: "related" }],
-      "task-new": [{ role: "primary" }],
-    });
-  });
-
-  it("invalidates in-flight histories before set-primary and reloads previous primary histories", async () => {
-    const previousPrimary = { ...link, localTaskId: "task-old" };
-    const staleInFlight = createDeferred<LocalTaskWorkspaceLink[]>();
-    localTaskStore.setState({
-      selectedWorkspaceId: "workspace-1",
-      workspaceLinks: [previousPrimary],
-      taskLinksByTaskId: { "task-old": [previousPrimary] },
-    });
-    vi.mocked(daemon.listLocalTaskLinks).mockReturnValueOnce(staleInFlight.promise);
-    const oldLoad = loadLocalTaskLinks("task-in-flight");
-    const pendingMutation = createDeferred<LocalTaskWorkspaceLink>();
-    vi.mocked(daemon.setPrimaryLocalTask).mockReturnValue(pendingMutation.promise);
-    vi.mocked(daemon.listLocalTasks).mockResolvedValue([]);
-    vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([]);
-    vi.mocked(daemon.listLocalTaskLinks).mockImplementation(async (taskId) => [
-      { ...link, id: `fresh-${taskId}`, localTaskId: taskId },
-    ]);
-
-    const mutation = setPrimaryLocalTask("task-new", "workspace-1");
-    staleInFlight.resolve([{ ...link, id: "stale", localTaskId: "task-in-flight", role: "related" }]);
-    await oldLoad;
-    expect(localTaskStore.getState().taskLinksByTaskId["task-in-flight"]).toBeUndefined();
-    pendingMutation.resolve({ ...link, id: "link-new", localTaskId: "task-new" });
-    await mutation;
-
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-old");
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-in-flight");
-    expect(localTaskStore.getState().taskLinksByTaskId["task-in-flight"]?.[0]?.id).toBe("fresh-task-in-flight");
-  });
-
-  it("uses full primary invalidation when linking with the primary role", async () => {
-    const previousPrimary = { ...link, localTaskId: "task-old" };
-    const staleInFlight = createDeferred<LocalTaskWorkspaceLink[]>();
-    localTaskStore.setState({
-      selectedWorkspaceId: "workspace-1",
-      workspaceLinks: [previousPrimary],
-      taskLinksByTaskId: { "task-old": [previousPrimary] },
-    });
-    vi.mocked(daemon.listLocalTaskLinks).mockReturnValueOnce(staleInFlight.promise);
-    const oldLoad = loadLocalTaskLinks("task-in-flight");
-    const pendingMutation = createDeferred<LocalTaskWorkspaceLink>();
-    vi.mocked(daemon.linkLocalTaskWorkspace).mockReturnValue(pendingMutation.promise);
-    vi.mocked(daemon.listLocalTasks).mockResolvedValue([]);
-    vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([]);
-    vi.mocked(daemon.listLocalTaskLinks).mockImplementation(async (taskId) => [
-      { ...link, id: `fresh-${taskId}`, localTaskId: taskId },
-    ]);
-
-    const mutation = linkLocalTaskWorkspace("task-new", "workspace-1", "primary");
-    staleInFlight.resolve([{ ...link, id: "stale", localTaskId: "task-in-flight", role: "related" }]);
-    await oldLoad;
-    expect(localTaskStore.getState().taskLinksByTaskId["task-in-flight"]).toBeUndefined();
-    pendingMutation.resolve({ ...link, localTaskId: "task-new" });
-    await mutation;
-
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-old");
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-in-flight");
-  });
-
-  it("reloads every tracked history when reactivating a primary link", async () => {
-    const previousPrimary = { ...link, localTaskId: "task-old" };
-    const reactivatedPrimary = {
-      ...link,
-      id: "link-new",
-      localTaskId: "task-new",
-      status: "paused" as const,
-    };
-    localTaskStore.setState({
-      selectedWorkspaceId: "workspace-1",
-      workspaceLinks: [previousPrimary, reactivatedPrimary],
-      taskLinksByTaskId: { "task-old": [previousPrimary], "task-new": [reactivatedPrimary] },
-    });
-    vi.mocked(daemon.updateLocalTaskLinkStatus).mockResolvedValue({ ...reactivatedPrimary, status: "active" });
-    vi.mocked(daemon.listLocalTasks).mockResolvedValue([]);
-    vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([
-      { ...previousPrimary, role: "related" },
-      { ...reactivatedPrimary, status: "active" },
-    ]);
-    vi.mocked(daemon.listLocalTaskLinks).mockImplementation(async (taskId) =>
-      taskId === "task-old" ? [{ ...previousPrimary, role: "related" }] : [{ ...reactivatedPrimary, status: "active" }],
-    );
-
-    await updateLocalTaskLinkStatus("link-new", "active");
-
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-old");
-    expect(daemon.listLocalTaskLinks).toHaveBeenCalledWith("task-new");
-    expect(localTaskStore.getState().taskLinksByTaskId).toMatchObject({
-      "task-old": [{ role: "related" }],
-      "task-new": [{ role: "primary", status: "active" }],
-    });
   });
 
   it("reloads loaded task-link history after status and unlink mutations", async () => {

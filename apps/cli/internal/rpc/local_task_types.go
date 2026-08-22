@@ -8,6 +8,7 @@ type LocalTaskCreateParams struct {
 	Title       string             `json:"title"`
 	Description string             `json:"description,omitempty"`
 	Priority    localtask.Priority `json:"priority,omitempty"`
+	Tags        []string           `json:"tags,omitempty"`
 }
 
 // LocalTaskIDParams identifies one Local Task.
@@ -21,6 +22,7 @@ type LocalTaskListParams struct {
 	Status      *localtask.Status   `json:"status,omitempty"`
 	Priority    *localtask.Priority `json:"priority,omitempty"`
 	WorkspaceID *string             `json:"workspaceId,omitempty"`
+	Tags        []string            `json:"tags,omitempty"`
 }
 
 // LocalTaskUpdateParams contains mutable Local Task metadata.
@@ -30,6 +32,7 @@ type LocalTaskUpdateParams struct {
 	Description *string             `json:"description,omitempty"`
 	Status      *localtask.Status   `json:"status,omitempty"`
 	Priority    *localtask.Priority `json:"priority,omitempty"`
+	Tags        *[]string           `json:"tags,omitempty"`
 }
 
 // LocalTaskSearchParams contains a metadata search and optional filters.
@@ -38,11 +41,10 @@ type LocalTaskSearchParams struct {
 	LocalTaskListParams
 }
 
-// LocalTaskLinkWorkspaceParams creates a related workspace link.
+// LocalTaskLinkWorkspaceParams creates a workspace link.
 type LocalTaskLinkWorkspaceParams struct {
-	TaskID      string             `json:"taskId"`
-	WorkspaceID string             `json:"workspaceId"`
-	Role        localtask.LinkRole `json:"role,omitempty"`
+	TaskID      string `json:"taskId"`
+	WorkspaceID string `json:"workspaceId"`
 }
 
 // LocalTaskLinkIDParams identifies one workspace link.
@@ -54,12 +56,6 @@ type LocalTaskLinkIDParams struct {
 type LocalTaskUpdateLinkStatusParams struct {
 	LinkID string           `json:"linkId"`
 	Status localtask.Status `json:"status"`
-}
-
-// LocalTaskSetPrimaryParams selects the active primary task for a workspace.
-type LocalTaskSetPrimaryParams struct {
-	TaskID      string `json:"taskId"`
-	WorkspaceID string `json:"workspaceId"`
 }
 
 // LocalTaskWorkspaceIDParams identifies one local workspace.

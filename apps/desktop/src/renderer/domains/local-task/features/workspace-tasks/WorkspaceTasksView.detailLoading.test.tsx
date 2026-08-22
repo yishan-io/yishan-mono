@@ -11,12 +11,12 @@ vi.mock("../../daemon/localTaskDaemonClient", () => ({
   createLocalTask: vi.fn(),
   getLocalTask: vi.fn(),
   listLocalTasks: vi.fn(),
+  listLocalTaskTags: vi.fn(async () => []),
   searchLocalTasks: vi.fn(),
   updateLocalTask: vi.fn(),
   getLocalTaskContext: vi.fn(),
   linkLocalTaskWorkspace: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
-  setPrimaryLocalTask: vi.fn(),
   updateLocalTaskLinkStatus: vi.fn(),
   listLocalTaskWorkspaceLinks: vi.fn(),
   listLocalTaskLinks: vi.fn(),
@@ -40,12 +40,12 @@ const historicalTask: LocalTask = {
   createdAt: "created",
   updatedAt: "updated",
   completedAt: "completed",
+  tags: [],
 };
 const historicalLink: LocalTaskWorkspaceLink = {
   id: "historical-link",
   localTaskId: historicalTask.id,
   workspaceId: "workspace-1",
-  role: "related",
   status: "completed",
   linkedAt: "linked",
   unlinkedAt: "unlinked",
@@ -87,6 +87,8 @@ describe("WorkspaceTasksView detail loading", () => {
         <WorkspaceTasksView workspaceId="workspace-1" />
       </section>,
     );
+    expect(daemon.getLocalTask).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /historical-task/ }));
     expect(daemon.getLocalTask).toHaveBeenCalledTimes(1);
 
     localTaskStore.getState().upsertTaskEntity({ ...historicalTask, id: "unrelated-task" });
@@ -125,11 +127,12 @@ describe("WorkspaceTasksView detail loading", () => {
     });
 
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /historical-task/ }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("transient detail failure");
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.retry" }));
 
-    await waitFor(() => expect(screen.getAllByText("Delayed historical task").length).toBeGreaterThan(1));
+    await waitFor(() => expect(screen.getAllByText("Delayed historical task").length).toBe(1));
     expect(daemon.getLocalTask).toHaveBeenCalledTimes(2);
     expect(daemon.getLocalTask).toHaveBeenLastCalledWith(historicalTask.id);
   });

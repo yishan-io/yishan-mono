@@ -1,13 +1,17 @@
-import { Box, Button, ButtonBase, Chip, Paper, Typography } from "@mui/material";
+import { Box, ButtonBase, Chip, IconButton, Menu, MenuItem, Paper, Typography } from "@mui/material";
 import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  setPrimaryLocalTask,
-  unlinkLocalTaskWorkspace,
-  updateLocalTaskLinkStatus,
-} from "../../commands/localTaskCommands";
+import { LuEllipsis } from "react-icons/lu";
+import { unlinkLocalTaskWorkspace, updateLocalTaskLinkStatus } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskWorkspaceLink } from "../../localTaskTypes";
+import { LocalTaskTagsDisplay } from "../tags/LocalTaskTagsDisplay";
+
+const DENSE_CHIP_SX = {
+  height: 18,
+  fontSize: "0.6875rem",
+  "& .MuiChip-label": { px: 0.625 },
+} as const;
 
 type WorkspaceTaskLinkRowProps = {
   link: LocalTaskWorkspaceLink;
@@ -21,6 +25,7 @@ type WorkspaceTaskLinkRowProps = {
 export function WorkspaceTaskLinkRow({ link, task, selected, isMutationLoading, onSelect }: WorkspaceTaskLinkRowProps) {
   const { t } = useTranslation();
   const [isConfirmingUnlink, setIsConfirmingUnlink] = useState(false);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const isUnlinked = link.unlinkedAt !== null;
   const runLinkMutation = useCallback((operation: () => Promise<unknown>, message: string) => {
     void operation().catch((error) => console.error(message, error));
@@ -30,70 +35,93 @@ export function WorkspaceTaskLinkRow({ link, task, selected, isMutationLoading, 
     runLinkMutation(() => unlinkLocalTaskWorkspace(link.id), "Failed to unlink Local Task");
     setIsConfirmingUnlink(false);
   }, [link.id, runLinkMutation]);
+  const handleToggleStatus = useCallback(() => {
+    setActionMenuAnchor(null);
+    runLinkMutation(
+      () => updateLocalTaskLinkStatus(link.id, link.status === "active" ? "paused" : "active"),
+      "Failed to update Local Task link",
+    );
+  }, [link.id, link.status, runLinkMutation]);
+  const handleComplete = useCallback(() => {
+    setActionMenuAnchor(null);
+    runLinkMutation(() => updateLocalTaskLinkStatus(link.id, "completed"), "Failed to complete Local Task link");
+  }, [link.id, runLinkMutation]);
+  const handleRequestUnlink = useCallback(() => {
+    setActionMenuAnchor(null);
+    setIsConfirmingUnlink(true);
+  }, []);
+  const handleOpenActionMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    setActionMenuAnchor(event.currentTarget);
+  }, []);
+  const handleCloseActionMenu = useCallback(() => setActionMenuAnchor(null), []);
 
   return (
-    <Paper variant="outlined" sx={{ overflow: "hidden", borderColor: selected ? "primary.main" : "divider" }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        overflow: "visible",
+        borderColor: "divider",
+        transition: (theme) =>
+          theme.transitions.create("background-color", { duration: theme.transitions.duration.shortest }),
+        position: "relative",
+        "&:hover": { bgcolor: "action.hover" },
+      }}
+    >
       <ButtonBase
         onClick={handleSelect}
         aria-pressed={selected}
-        sx={{ width: "100%", p: 1.25, display: "flex", alignItems: "center", gap: 0.75, textAlign: "left" }}
+        sx={{ width: "100%", p: 1.25, pr: isUnlinked ? 1.25 : 4.5, display: "block", textAlign: "left" }}
       >
-        <Typography variant="body2" sx={{ flex: 1, fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
           {task?.title ?? link.localTaskId}
         </Typography>
-        <Chip size="small" label={t(`localTask.link.${link.role}`)} />
-        <Chip
-          size="small"
-          variant="outlined"
-          label={isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${link.status}`)}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, mt: 0.5, minWidth: 0 }}>
+          <Chip
+            size="small"
+            variant="outlined"
+            label={isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${link.status}`)}
+            sx={DENSE_CHIP_SX}
+          />
+          {task ? (
+            <>
+              <Chip
+                size="small"
+                variant="outlined"
+                label={t(`localTask.priority.${task.priority}`)}
+                sx={DENSE_CHIP_SX}
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <LocalTaskTagsDisplay tags={task.tags} maxVisible={2} dense />
+              </Box>
+            </>
+          ) : null}
+        </Box>
       </ButtonBase>
       {!isUnlinked ? (
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, px: 1.25, pb: 1.25 }}>
-          {link.role !== "primary" ? (
-            <Button
-              size="small"
-              disabled={isMutationLoading}
-              onClick={() =>
-                runLinkMutation(
-                  () => setPrimaryLocalTask(link.localTaskId, link.workspaceId),
-                  "Failed to set primary Local Task",
-                )
-              }
-            >
-              {t("localTask.actions.setPrimary")}
-            </Button>
-          ) : null}
-          <Button
+        <>
+          <IconButton
             size="small"
             disabled={isMutationLoading}
-            onClick={() =>
-              runLinkMutation(
-                () => updateLocalTaskLinkStatus(link.id, link.status === "active" ? "paused" : "active"),
-                "Failed to update Local Task link",
-              )
-            }
+            aria-label={t("localTask.actions.taskMenu")}
+            onClick={handleOpenActionMenu}
+            sx={{ position: "absolute", top: 4, right: 4 }}
           >
-            {t(link.status === "active" ? "localTask.actions.pauseLink" : "localTask.actions.reactivateLink")}
-          </Button>
-          {link.status !== "completed" ? (
-            <Button
-              size="small"
-              disabled={isMutationLoading}
-              onClick={() =>
-                runLinkMutation(
-                  () => updateLocalTaskLinkStatus(link.id, "completed"),
-                  "Failed to complete Local Task link",
-                )
-              }
-            >
-              {t("localTask.actions.completeLink")}
-            </Button>
-          ) : null}
-          <Button size="small" color="error" disabled={isMutationLoading} onClick={() => setIsConfirmingUnlink(true)}>
-            {t("localTask.actions.unlink")}
-          </Button>
-        </Box>
+            <LuEllipsis size={16} />
+          </IconButton>
+          <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleCloseActionMenu}>
+            <MenuItem disabled={isMutationLoading} onClick={handleToggleStatus}>
+              {t(link.status === "active" ? "localTask.actions.pauseLink" : "localTask.actions.reactivateLink")}
+            </MenuItem>
+            {link.status !== "completed" ? (
+              <MenuItem disabled={isMutationLoading} onClick={handleComplete}>
+                {t("localTask.actions.completeLink")}
+              </MenuItem>
+            ) : null}
+            <MenuItem disabled={isMutationLoading} onClick={handleRequestUnlink} sx={{ color: "error.main" }}>
+              {t("localTask.actions.unlink")}
+            </MenuItem>
+          </Menu>
+        </>
       ) : null}
       <ConfirmationDialog
         open={isConfirmingUnlink}

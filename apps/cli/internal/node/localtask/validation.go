@@ -25,10 +25,14 @@ func taskFilter(req rpc.LocalTaskListParams) domain.TaskFilter {
 		workspaceID := strings.TrimSpace(*req.WorkspaceID)
 		filter.WorkspaceID = &workspaceID
 	}
+	filter.Tags = req.Tags
 	return filter
 }
 
 func (s *Service) validateFilter(ctx context.Context, filter domain.TaskFilter) error {
+	if _, err := domain.NormalizeTags(filter.Tags); err != nil {
+		return err
+	}
 	if filter.Status != nil && !isValidStatus(*filter.Status) {
 		return fmt.Errorf("invalid status: %w", domain.ErrInvalidTask)
 	}

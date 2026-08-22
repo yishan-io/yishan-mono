@@ -15,43 +15,53 @@ import {
 import { type WorkspaceProjectRecord, projectStore } from "@renderer/domains/project";
 import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { type FormEventHandler, useCallback, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createAndLinkLocalTask, createLocalTask, linkLocalTaskWorkspace } from "../../commands/localTaskCommands";
-import type { LocalTask, LocalTaskLinkRole, LocalTaskPriority } from "../../localTaskTypes";
+import {
+  createAndLinkLocalTask,
+  createLocalTask,
+  linkLocalTaskWorkspace,
+  loadLocalTaskTagSuggestions,
+} from "../../commands/localTaskCommands";
+import type { LocalTask, LocalTaskPriority } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
+import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
 
 type CreateLocalTaskDialogProps = {
   open: boolean;
   onClose: () => void;
   workspaceId?: string;
-  defaultLinkRole?: LocalTaskLinkRole;
 };
 
+type SubmitHandler = NonNullable<React.ComponentProps<"form">["onSubmit"]>;
+
 /** Collects metadata and creates one Local Task through the command layer. */
-export function CreateLocalTaskDialog({
-  open,
-  onClose,
-  workspaceId,
-  defaultLinkRole = "related",
-}: CreateLocalTaskDialogProps) {
+export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLocalTaskDialogProps) {
   const { t } = useTranslation();
   const projects = projectStore((state) => state.projects);
   const isMutationLoading = localTaskStore((state) => state.isMutationLoading);
+  const tagSuggestions = localTaskStore((state) => state.tagSuggestions);
   const [project, setProject] = useState<WorkspaceProjectRecord | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<LocalTaskPriority>("medium");
-  const [linkRole, setLinkRole] = useState<LocalTaskLinkRole>(defaultLinkRole);
+  const [tags, setTags] = useState<string[]>([]);
+  const [isTagsDraftValid, setIsTagsDraftValid] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdTask, setCreatedTask] = useState<LocalTask | null>(null);
   const [partialLinkError, setPartialLinkError] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) void loadLocalTaskTagSuggestions();
+  }, [open]);
   const handleProjectChange = useCallback(
     (_event: React.SyntheticEvent, nextProject: WorkspaceProjectRecord | null) => setProject(nextProject),
     [],
   );
   const renderProjectInput = useCallback(
-    (params: AutocompleteRenderInputParams) => <TextField {...params} label={t("localTask.fields.project")} />,
+    (params: AutocompleteRenderInputParams) => (
+      <TextField {...params} size="small" label={t("localTask.fields.project")} />
+    ),
     [t],
   );
   const resetAndClose = useCallback(() => {
@@ -59,22 +69,23 @@ export function CreateLocalTaskDialog({
     setTitle("");
     setDescription("");
     setPriority("medium");
-    setLinkRole(defaultLinkRole);
+    setTags([]);
+    setIsTagsDraftValid(true);
     setSubmitError(null);
     setCreatedTask(null);
     setPartialLinkError(null);
     onClose();
-  }, [defaultLinkRole, onClose]);
-  const handleSubmit = useCallback<FormEventHandler<HTMLFormElement>>(
+  }, [onClose]);
+  const handleSubmit = useCallback<SubmitHandler>(
     async (event) => {
       event.preventDefault();
       const trimmedTitle = title.trim();
-      if (!trimmedTitle || isMutationLoading) return;
+      if (!trimmedTitle || isMutationLoading || !isTagsDraftValid) return;
       setSubmitError(null);
       setPartialLinkError(null);
       try {
         if (workspaceId && createdTask) {
-          await linkLocalTaskWorkspace(createdTask.id, workspaceId, linkRole);
+          await linkLocalTaskWorkspace(createdTask.id, workspaceId);
           resetAndClose();
           return;
         }
@@ -83,13 +94,14 @@ export function CreateLocalTaskDialog({
           title: trimmedTitle,
           description: description.trim(),
           priority,
+          tags,
         };
         if (!workspaceId) {
           await createLocalTask(input);
           resetAndClose();
           return;
         }
-        const result = await createAndLinkLocalTask(input, workspaceId, linkRole);
+        const result = await createAndLinkLocalTask(input, workspaceId);
         if (result.status === "created") {
           setCreatedTask(result.task);
           setPartialLinkError(result.linkError);
@@ -102,7 +114,18 @@ export function CreateLocalTaskDialog({
         else setSubmitError(errorMessage);
       }
     },
-    [createdTask, description, isMutationLoading, linkRole, priority, project?.id, resetAndClose, title, workspaceId],
+    [
+      createdTask,
+      description,
+      isMutationLoading,
+      priority,
+      project?.id,
+      resetAndClose,
+      tags,
+      isTagsDraftValid,
+      title,
+      workspaceId,
+    ],
   );
   const handleDialogClose = useCallback(() => {
     if (!isMutationLoading) resetAndClose();
@@ -124,6 +147,7 @@ export function CreateLocalTaskDialog({
             </Alert>
           ) : null}
           <Autocomplete
+            size="small"
             disabled={isMutationLoading || Boolean(createdTask)}
             options={projects}
             value={project}
@@ -135,6 +159,7 @@ export function CreateLocalTaskDialog({
           <TextField
             autoFocus
             required
+            size="small"
             disabled={isMutationLoading || Boolean(createdTask)}
             label={t("localTask.fields.title")}
             value={title}
@@ -143,13 +168,22 @@ export function CreateLocalTaskDialog({
           <TextField
             multiline
             minRows={3}
+            size="small"
             disabled={isMutationLoading || Boolean(createdTask)}
             label={t("localTask.fields.description")}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
+          <LocalTaskTagsInput
+            tags={tags}
+            suggestions={tagSuggestions}
+            onChange={setTags}
+            onDraftValidityChange={setIsTagsDraftValid}
+            disabled={isMutationLoading || Boolean(createdTask)}
+          />
           <TextField
             select
+            size="small"
             disabled={isMutationLoading || Boolean(createdTask)}
             label={t("localTask.fields.priority")}
             value={priority}
@@ -159,24 +193,12 @@ export function CreateLocalTaskDialog({
             <MenuItem value="medium">{t("localTask.priority.medium")}</MenuItem>
             <MenuItem value="high">{t("localTask.priority.high")}</MenuItem>
           </TextField>
-          {workspaceId ? (
-            <TextField
-              select
-              disabled={isMutationLoading}
-              label={t("localTask.link.role")}
-              value={linkRole}
-              onChange={(event) => setLinkRole(event.target.value as LocalTaskLinkRole)}
-            >
-              <MenuItem value="related">{t("localTask.link.related")}</MenuItem>
-              <MenuItem value="primary">{t("localTask.link.primary")}</MenuItem>
-            </TextField>
-          ) : null}
         </DialogContent>
         <DialogActions>
           <Button disabled={isMutationLoading} onClick={handleDialogClose}>
             {t("common.actions.cancel")}
           </Button>
-          <Button type="submit" variant="contained" disabled={!title.trim() || isMutationLoading}>
+          <Button type="submit" variant="contained" disabled={!title.trim() || isMutationLoading || !isTagsDraftValid}>
             {isMutationLoading ? (
               <CircularProgress size={16} color="inherit" />
             ) : createdTask ? (

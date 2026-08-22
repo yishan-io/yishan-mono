@@ -193,7 +193,7 @@ export function WorkspaceView() {
         ) : overlayPanel === "overview" ? (
           <OverviewView onClose={handleCloseOverlayPanel} />
         ) : overlayPanel === "tasks" ? (
-          <TaskHubView onClose={handleCloseOverlayPanel} />
+          <TaskHubView />
         ) : (
           <MainPaneView />
         )}

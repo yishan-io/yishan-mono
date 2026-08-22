@@ -21,10 +21,6 @@ func TestService_RequiredIdentifiersReturnDomainValidationErrors(t *testing.T) {
 			_, err := service.UnlinkWorkspace(context.Background(), rpc.LocalTaskLinkIDParams{})
 			return err
 		}},
-		{"set primary task", func() error {
-			_, err := service.SetPrimary(context.Background(), rpc.LocalTaskSetPrimaryParams{})
-			return err
-		}},
 		{"list workspace links", func() error {
 			_, err := service.ListWorkspaceLinks(context.Background(), rpc.LocalTaskWorkspaceIDParams{})
 			return err
@@ -58,4 +54,17 @@ func TestService_ListRejectsInvalidPriorityAndWorkspaceFilters(t *testing.T) {
 	missingWorkspaceID := "missing"
 	_, err = service.List(context.Background(), rpc.LocalTaskListParams{WorkspaceID: &missingWorkspaceID})
 	assertWorkspaceNotFound(t, err)
+}
+
+func TestService_ListAndSearchRejectInvalidTagFilters(t *testing.T) {
+	service, _, _ := newTestService(t)
+	invalidTags := []string{" "}
+	if _, err := service.List(context.Background(), rpc.LocalTaskListParams{Tags: invalidTags}); !errors.Is(err, domain.ErrInvalidTask) {
+		t.Fatalf("List invalid tags error = %v", err)
+	}
+	if _, err := service.Search(context.Background(), rpc.LocalTaskSearchParams{
+		Query: "task", LocalTaskListParams: rpc.LocalTaskListParams{Tags: invalidTags},
+	}); !errors.Is(err, domain.ErrInvalidTask) {
+		t.Fatalf("Search invalid tags error = %v", err)
+	}
 }

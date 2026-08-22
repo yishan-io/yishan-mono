@@ -259,7 +259,10 @@ describe("LeftPaneView deletion", () => {
     const overviewButton = screen.getByRole("button", { name: "overview.title" });
     const tasksButton = screen.getByRole("button", { name: "Tasks, 7 active" });
     expect(overviewButton.nextElementSibling).toBe(tasksButton);
-    expect(tasksButton.textContent).toContain("7");
+    const taskCount = screen.getByTestId("local-task-active-count");
+    expect(taskCount.textContent).toBe("7");
+    expect(tasksButton.lastElementChild).toBe(taskCount);
+    expect(taskCount.classList.contains("MuiBadge-colorPrimary")).toBe(false);
 
     fireEvent.click(tasksButton);
     expect(workbenchNavigationStore.getState().overlayPanel).toBe("tasks");

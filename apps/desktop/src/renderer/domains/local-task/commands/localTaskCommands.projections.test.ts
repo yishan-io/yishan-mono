@@ -13,10 +13,10 @@ vi.mock("../daemon/localTaskDaemonClient", () => ({
   getLocalTaskContext: vi.fn(),
   linkLocalTaskWorkspace: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
-  setPrimaryLocalTask: vi.fn(),
   updateLocalTaskLinkStatus: vi.fn(),
   listLocalTaskWorkspaceLinks: vi.fn(),
   listLocalTaskLinks: vi.fn(),
+  listLocalTaskTags: vi.fn(),
 }));
 
 const initialState = localTaskStore.getState();
@@ -30,12 +30,12 @@ const task: LocalTask = {
   createdAt: "created",
   updatedAt: "updated",
   completedAt: null,
+  tags: [],
 };
 const link: LocalTaskWorkspaceLink = {
   id: "link-1",
   localTaskId: task.id,
   workspaceId: "workspace-1",
-  role: "primary",
   status: "active",
   linkedAt: "linked",
   unlinkedAt: null,

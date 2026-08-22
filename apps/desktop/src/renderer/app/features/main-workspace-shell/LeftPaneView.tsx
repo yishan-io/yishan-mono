@@ -1,4 +1,4 @@
-import { Badge, Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 
 import { localTaskStore } from "@renderer/domains/local-task";
 import { projectStore } from "@renderer/domains/project";
@@ -138,11 +138,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       </Button>
       <Button
         variant="text"
-        startIcon={
-          <Badge badgeContent={activeTaskCount} color="primary" max={99} invisible={activeTaskCount <= 0}>
-            <LuListTodo size={14} />
-          </Badge>
-        }
+        startIcon={<LuListTodo size={14} />}
         onClick={handleToggleTasks}
         aria-label={t("localTask.activeCount", { count: activeTaskCount })}
         aria-pressed={isTasksPanelOpen}
@@ -160,6 +156,25 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         }}
       >
         {t("localTask.title")}
+        {activeTaskCount > 0 ? (
+          <Box
+            component="span"
+            data-testid="local-task-active-count"
+            sx={{
+              ml: "auto",
+              minWidth: 20,
+              px: 0.75,
+              borderRadius: 10,
+              bgcolor: "action.selected",
+              color: "text.secondary",
+              fontSize: "0.7rem",
+              lineHeight: 1.5,
+              textAlign: "center",
+            }}
+          >
+            {activeTaskCount > 99 ? "99+" : activeTaskCount}
+          </Box>
+        ) : null}
       </Button>
       <Button
         variant="text"

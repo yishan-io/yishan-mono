@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -205,17 +206,18 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesChatSessionWhenDesktopConnec
 	fakePi := filepath.Join(fakePiDir, "pi")
 	markerPath := filepath.Join(homeDir, "pi-task-run-env.txt")
 	fakePiScript := fmt.Sprintf(`#!/bin/sh
-env > %q
+env > %q.tmp && mv %q.tmp %q
 while IFS= read -r line; do
   printf '%%s\n' '{"type":"session_info","name":"fake-pi-task-run"}'
 done
-`, markerPath)
+`, markerPath, markerPath, markerPath)
 	if err := os.WriteFile(fakePi, []byte(fakePiScript), 0o755); err != nil {
 		t.Fatalf("write fake pi binary: %v", err)
 	}
 	t.Setenv("PATH", fakePiDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	s := newTestHandler(t)
+	s.deps.DaemonWSEndpoint = "ws://127.0.0.1:4312/ws"
 	// Simulate a connected Yishan desktop UI: task runs switch to chat mode.
 	registerTestDesktopConn(s)
 
@@ -274,4 +276,39 @@ done
 	assertEnvValue(t, env, "YISHAN_TAB_ID", "task-ws-1")
 	assertEnvValue(t, env, "YISHAN_PANE_ID", "pane-task-ws-1")
 	assertEnvValue(t, env, "PI_CODING_AGENT_DIR", filepath.Join(homeDir, ".yishan", "pi", "agent"))
+	assertEnvValue(t, env, "YISHAN_DAEMON_WS_URL", "ws://127.0.0.1:4312/ws")
+}
+
+func TestPublishWorkspaceCreateCompleted_HeadlessTaskRunInjectsEndpointAndOwnership(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test is unix-only")
+	}
+
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	t.Setenv("YISHAN_DAEMON_WS_URL", "stale")
+	markerPath := filepath.Join(homeDir, "headless-task-run-env.txt")
+	fakePiDir := t.TempDir()
+	fakePi := filepath.Join(fakePiDir, "pi")
+	fakePiScript := fmt.Sprintf("#!/bin/sh\nenv > %q.tmp && mv %q.tmp %q\n", markerPath, markerPath, markerPath)
+	if err := os.WriteFile(fakePi, []byte(fakePiScript), 0o755); err != nil {
+		t.Fatalf("write fake pi binary: %v", err)
+	}
+	t.Setenv("PATH", fakePiDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	s := newTestHandler(t)
+	endpoint := "ws://127.0.0.1:4312/ws"
+	s.deps.DaemonWSEndpoint = endpoint
+	s.deps.Terminals.SetDaemonWSEndpoint(endpoint)
+	workspacePath := t.TempDir()
+	s.PublishWorkspaceCreateCompleted(application.CreatePlan{
+		LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{AgentKind: "pi", Prompt: "investigate bug"}},
+	}, workspace.Workspace{ID: "ws-headless", Path: workspacePath, ProjectID: "project-headless", OrgID: "org-headless"}, nil)
+	defer stopAllTerminalSessions(s)
+
+	env := strings.Split(waitForFileContent(t, markerPath), "\n")
+	assertEnvValue(t, env, "YISHAN_DAEMON_WS_URL", endpoint)
+	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", "ws-headless")
+	assertEnvValue(t, env, "YISHAN_PROJECT_ID", "project-headless")
+	assertEnvValue(t, env, "YISHAN_ORG_ID", "org-headless")
 }

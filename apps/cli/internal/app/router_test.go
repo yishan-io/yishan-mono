@@ -45,6 +45,21 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 	if _, err := uuid.Parse(created.ID); err != nil {
 		t.Fatalf("generated task ID %q is not a UUID: %v", created.ID, err)
 	}
+	if created.Tags == nil {
+		t.Fatalf("created tags = nil, want non-nil empty array")
+	}
+	tagsValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskListTags, json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatalf("list tags: %v", err)
+	}
+	tags := tagsValue.([]string)
+	if tags == nil || len(tags) != 0 {
+		t.Fatalf("list tags = %#v, want non-nil empty array", tags)
+	}
+	encodedTags, err := json.Marshal(tags)
+	if err != nil || string(encodedTags) != `[]` {
+		t.Fatalf("list tags JSON = %s, %v; want []", encodedTags, err)
+	}
 	if _, err := sqlite.NewLocalTaskStore(database).Get(context.Background(), "../../caller-id"); !errors.Is(err, domain.ErrTaskNotFound) {
 		t.Fatalf("caller task ID lookup error = %v, want task not found", err)
 	}

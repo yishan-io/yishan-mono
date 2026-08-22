@@ -5,13 +5,13 @@ export {
   loadLocalTask,
   loadLocalTaskContext,
   loadLocalTaskLinks,
+  loadLocalTaskTagSuggestions,
   refreshActiveLocalTaskCount,
   refreshLocalTaskHub,
   refreshSelectedWorkspaceTasks,
   selectLocalTaskWorkspace,
   setLocalTaskHubFilters,
   setLocalTaskHubSearchQuery,
-  setPrimaryLocalTask,
   unlinkLocalTaskWorkspace,
   updateLocalTask,
   updateLocalTaskLinkStatus,
@@ -21,7 +21,6 @@ export type {
   LocalTask,
   LocalTaskContextDetails,
   LocalTaskFilters,
-  LocalTaskLinkRole,
   LocalTaskLoadState,
   LocalTaskPriority,
   LocalTaskSearchResult,
@@ -29,6 +28,12 @@ export type {
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "./localTaskTypes";
+export {
+  MAX_LOCAL_TASK_TAG_CODE_POINTS,
+  MAX_LOCAL_TASK_TAGS,
+  getLocalTaskTagsValidationError,
+  normalizeLocalTaskTag,
+} from "./localTaskTags";
 export { localTaskStore, type LocalTaskStoreState } from "./state/localTaskStore";
 
 export { TaskHubView } from "./features/task-hub/TaskHubView";

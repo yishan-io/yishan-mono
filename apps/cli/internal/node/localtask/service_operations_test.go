@@ -68,21 +68,14 @@ func TestService_SearchReturnsMatchesAndRejectsBlankQuery(t *testing.T) {
 	}
 }
 
-func TestService_LinkWorkspaceRejectsMissingTaskAndInvalidRole(t *testing.T) {
-	service, workspaceStore, repository := newTestService(t)
+func TestService_LinkWorkspaceRejectsMissingTask(t *testing.T) {
+	service, workspaceStore, _ := newTestService(t)
 	createWorkspace(t, workspaceStore, "workspace-1")
 	_, err := service.LinkWorkspace(context.Background(), rpc.LocalTaskLinkWorkspaceParams{
 		TaskID: "missing", WorkspaceID: "workspace-1",
 	})
 	if !errors.Is(err, domain.ErrTaskNotFound) {
 		t.Fatalf("LinkWorkspace missing task error = %v", err)
-	}
-	task := createServiceTask(t, repository, "Link task")
-	_, err = service.LinkWorkspace(context.Background(), rpc.LocalTaskLinkWorkspaceParams{
-		TaskID: task.ID, WorkspaceID: "workspace-1", Role: "owner",
-	})
-	if !errors.Is(err, domain.ErrInvalidLink) {
-		t.Fatalf("LinkWorkspace invalid role error = %v", err)
 	}
 }
 
@@ -138,22 +131,6 @@ func TestService_UpdateWorkspaceLinkStatusValidatesAndPreservesHistory(t *testin
 	})
 	if !errors.Is(err, domain.ErrLinkNotFound) {
 		t.Fatalf("missing link error = %v", err)
-	}
-}
-
-func TestService_SetPrimaryCreatesPrimaryAndRejectsMissingWorkspace(t *testing.T) {
-	service, workspaceStore, repository := newTestService(t)
-	task := createServiceTask(t, repository, "Primary task")
-	_, err := service.SetPrimary(context.Background(), rpc.LocalTaskSetPrimaryParams{
-		TaskID: task.ID, WorkspaceID: "missing",
-	})
-	assertWorkspaceNotFound(t, err)
-	createWorkspace(t, workspaceStore, "workspace-1")
-	primaryValue, err := service.SetPrimary(context.Background(), rpc.LocalTaskSetPrimaryParams{
-		TaskID: task.ID, WorkspaceID: "workspace-1",
-	})
-	if err != nil || primaryValue.(domain.WorkspaceLink).Role != domain.LinkRolePrimary {
-		t.Fatalf("SetPrimary = %#v, %v", primaryValue, err)
 	}
 }
 

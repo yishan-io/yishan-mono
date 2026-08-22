@@ -13,7 +13,7 @@ import (
 // initMemory migrates a legacy memory.db into memory/memory.db and opens the
 // memory service. A failed init is non-fatal: memory features are disabled but
 // the daemon keeps running.
-func initMemoryService(dataDir string, summarizer memory.SummarizerConfig) *memory.Service {
+func initMemoryService(dataDir string, summarizer memory.SummarizerConfig, daemonWSEndpoint string) *memory.Service {
 	oldPath := filepath.Join(dataDir, "memory.db")
 	newPath := filepath.Join(dataDir, "memory", "memory.db")
 
@@ -29,7 +29,7 @@ func initMemoryService(dataDir string, summarizer memory.SummarizerConfig) *memo
 		}
 	}
 
-	memSvc, memErr := memory.NewService(newPath, summarizer, nodesystem.BuildRunAgentFunc())
+	memSvc, memErr := memory.NewService(newPath, summarizer, nodesystem.BuildRunAgentFunc(daemonWSEndpoint))
 	if memErr != nil {
 		log.Warn().Err(memErr).Msg("memory service initialization failed, memory features disabled")
 		return nil

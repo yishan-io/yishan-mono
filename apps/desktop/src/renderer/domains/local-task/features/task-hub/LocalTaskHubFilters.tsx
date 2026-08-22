@@ -1,25 +1,25 @@
 import { Autocomplete, type AutocompleteRenderInputParams, MenuItem, TextField } from "@mui/material";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
-import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { setLocalTaskHubFilters } from "../../commands/localTaskCommands";
 import type { LocalTaskFilters, LocalTaskPriority, LocalTaskStatus } from "../../localTaskTypes";
+import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
 
 type LocalTaskHubFiltersProps = {
   filters: LocalTaskFilters;
   projects: WorkspaceProjectRecord[];
-  workspaces: WorkspaceItem[];
+  tagSuggestions: string[];
 };
 
-/** Renders Task Hub project, status, priority, and workspace filters. */
-export function LocalTaskHubFilters({ filters, projects, workspaces }: LocalTaskHubFiltersProps) {
+/** Renders Task Hub project, status, and priority filters. */
+export function LocalTaskHubFilters({ filters, projects, tagSuggestions }: LocalTaskHubFiltersProps) {
   const { t } = useTranslation();
   const applyFilter = useCallback(
-    (field: keyof LocalTaskFilters, value?: string) => {
+    (field: keyof LocalTaskFilters, value?: LocalTaskFilters[keyof LocalTaskFilters]) => {
       const nextFilters = { ...filters };
-      if (value) Object.assign(nextFilters, { [field]: value });
+      if (Array.isArray(value) ? value.length > 0 : Boolean(value)) Object.assign(nextFilters, { [field]: value });
       else delete nextFilters[field];
       void setLocalTaskHubFilters(nextFilters);
     },
@@ -27,10 +27,6 @@ export function LocalTaskHubFilters({ filters, projects, workspaces }: LocalTask
   );
   const handleProjectChange = useCallback(
     (_event: React.SyntheticEvent, project: WorkspaceProjectRecord | null) => applyFilter("projectId", project?.id),
-    [applyFilter],
-  );
-  const handleWorkspaceChange = useCallback(
-    (_event: React.SyntheticEvent, workspace: WorkspaceItem | null) => applyFilter("workspaceId", workspace?.id),
     [applyFilter],
   );
   const handleStatusChange = useCallback(
@@ -42,15 +38,12 @@ export function LocalTaskHubFilters({ filters, projects, workspaces }: LocalTask
     [applyFilter],
   );
   const renderProjectInput = useCallback(
-    (params: AutocompleteRenderInputParams) => <TextField {...params} label={t("localTask.fields.project")} />,
-    [t],
-  );
-  const renderWorkspaceInput = useCallback(
-    (params: AutocompleteRenderInputParams) => <TextField {...params} label={t("localTask.fields.workspace")} />,
+    (params: AutocompleteRenderInputParams) => (
+      <TextField {...params} size="small" placeholder={t("localTask.fields.project")} />
+    ),
     [t],
   );
   const getProjectLabel = useCallback((project: WorkspaceProjectRecord) => project.name, []);
-  const getWorkspaceLabel = useCallback((workspace: WorkspaceItem) => workspace.title || workspace.name, []);
 
   return (
     <>
@@ -64,12 +57,22 @@ export function LocalTaskHubFilters({ filters, projects, workspaces }: LocalTask
         slotProps={{ listbox: { component: VirtualizedListbox } }}
         sx={{ minWidth: 150 }}
       />
+      <LocalTaskTagsInput
+        tags={filters.tags ?? []}
+        suggestions={tagSuggestions}
+        onChange={(tags) => applyFilter("tags", tags)}
+      />
       <TextField
         select
         size="small"
-        label={t("localTask.fields.status")}
         value={filters.status ?? ""}
         onChange={handleStatusChange}
+        slotProps={{
+          select: {
+            displayEmpty: true,
+            inputProps: { "aria-label": t("localTask.fields.status") },
+          },
+        }}
         sx={{ minWidth: 130 }}
       >
         <MenuItem value="">{t("localTask.filters.allStatuses")}</MenuItem>
@@ -80,9 +83,14 @@ export function LocalTaskHubFilters({ filters, projects, workspaces }: LocalTask
       <TextField
         select
         size="small"
-        label={t("localTask.fields.priority")}
         value={filters.priority ?? ""}
         onChange={handlePriorityChange}
+        slotProps={{
+          select: {
+            displayEmpty: true,
+            inputProps: { "aria-label": t("localTask.fields.priority") },
+          },
+        }}
         sx={{ minWidth: 130 }}
       >
         <MenuItem value="">{t("localTask.filters.allPriorities")}</MenuItem>
@@ -90,16 +98,6 @@ export function LocalTaskHubFilters({ filters, projects, workspaces }: LocalTask
         <MenuItem value="medium">{t("localTask.priority.medium")}</MenuItem>
         <MenuItem value="high">{t("localTask.priority.high")}</MenuItem>
       </TextField>
-      <Autocomplete
-        size="small"
-        options={workspaces}
-        value={workspaces.find((workspace) => workspace.id === filters.workspaceId) ?? null}
-        onChange={handleWorkspaceChange}
-        getOptionLabel={getWorkspaceLabel}
-        renderInput={renderWorkspaceInput}
-        slotProps={{ listbox: { component: VirtualizedListbox } }}
-        sx={{ minWidth: 160 }}
-      />
     </>
   );
 }

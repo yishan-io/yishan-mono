@@ -43,7 +43,7 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *session.Session) 
 	// but open handles stay on the boot-time account.
 	ensureUserIDForAccountResolution(runtime, filepath.Join(filepath.Dir(statePath), "credential.yaml"))
 
-	app, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID)
+	app, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID, resolveDaemonWSEndpoint(listener.Addr()))
 	if err != nil {
 		_ = listener.Close() // listener is not owned by a daemon runtime yet
 		return nil, err
@@ -100,7 +100,7 @@ func resolveDaemonID(statePath string) (string, error) {
 // buildHandler composes the account-scoped service graph (node.Bootstrap) and
 // returns the composed app. envDir stays env-root scoped (e.g. the token-usage
 // pricing cache); dataDir is the per-account data dir.
-func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, daemonID string) (*app.App, *relay.Status, error) {
+func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, daemonID string, daemonWSEndpoint string) (*app.App, *relay.Status, error) {
 	envDir := filepath.Dir(statePath)
 	credentialPath := filepath.Join(envDir, "credential.yaml")
 	dataDir, err := config.ResolveAccountDataDir(credentialPath)
@@ -116,6 +116,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, dae
 	app, err := app.Bootstrap(app.Config{
 		Session:          runtime,
 		NodeID:           daemonID,
+		DaemonWSEndpoint: daemonWSEndpoint,
 		LogFilePath:      cfg.LogFilePath,
 		Database:         database,
 		EnvDir:           envDir,
@@ -170,4 +171,26 @@ func buildHTTPServer(app *app.App, daemonID string, relayStatus *relay.Status) *
 		})
 	})
 	return &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+}
+
+func resolveDaemonWSEndpoint(listenerAddr net.Addr) string {
+	tcpAddr, ok := listenerAddr.(*net.TCPAddr)
+	if !ok || tcpAddr.Port <= 0 {
+		return ""
+	}
+	endpointHost := resolveDaemonWSEndpointHost(tcpAddr.IP)
+	if endpointHost == "" {
+		return ""
+	}
+	return "ws://" + net.JoinHostPort(endpointHost, strconv.Itoa(tcpAddr.Port)) + "/ws"
+}
+
+func resolveDaemonWSEndpointHost(listenerIP net.IP) string {
+	if listenerIP.To4() != nil && (listenerIP.IsLoopback() || listenerIP.IsUnspecified()) {
+		return "127.0.0.1"
+	}
+	if listenerIP.To16() != nil && (listenerIP.IsLoopback() || listenerIP.IsUnspecified()) {
+		return "::1"
+	}
+	return ""
 }

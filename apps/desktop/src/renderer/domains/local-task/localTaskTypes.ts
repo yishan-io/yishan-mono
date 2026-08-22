@@ -4,9 +4,6 @@ export type LocalTaskStatus = "active" | "paused" | "completed";
 /** Local Task priority values supported by the daemon. */
 export type LocalTaskPriority = "low" | "medium" | "high";
 
-/** A Local Task's relationship to one local workspace. */
-export type LocalTaskLinkRole = "primary" | "related";
-
 /** Authoritative Local Task metadata returned by the local daemon. */
 export type LocalTask = {
   id: string;
@@ -18,6 +15,7 @@ export type LocalTask = {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  tags: string[];
 };
 
 /** A Local Task metadata search result with its FTS rank. */
@@ -38,7 +36,6 @@ export type LocalTaskWorkspaceLink = {
   id: string;
   localTaskId: string;
   workspaceId: string;
-  role: LocalTaskLinkRole;
   status: LocalTaskStatus;
   linkedAt: string;
   unlinkedAt: string | null;
@@ -50,6 +47,7 @@ export type LocalTaskFilters = {
   status?: LocalTaskStatus;
   priority?: LocalTaskPriority;
   workspaceId?: string;
+  tags?: string[];
 };
 
 /** Metadata accepted when creating a Local Task. */
@@ -58,6 +56,7 @@ export type CreateLocalTaskInput = {
   title: string;
   description?: string;
   priority?: LocalTaskPriority;
+  tags?: string[];
 };
 
 /** Mutable Local Task metadata accepted by the update RPC. */
@@ -66,6 +65,7 @@ export type UpdateLocalTaskInput = {
   description?: string;
   status?: LocalTaskStatus;
   priority?: LocalTaskPriority;
+  tags?: string[];
 };
 
 /** Loading state shared by Local Task data projections. */

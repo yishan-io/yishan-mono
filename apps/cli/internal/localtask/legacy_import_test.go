@@ -30,6 +30,9 @@ func (repository *legacyImportRepository) Update(context.Context, string, TaskUp
 func (repository *legacyImportRepository) Search(context.Context, string, TaskFilter) ([]SearchResult, error) {
 	return nil, nil
 }
+func (repository *legacyImportRepository) ListTags(context.Context) ([]string, error) {
+	return []string{}, nil
+}
 func (repository *legacyImportRepository) LinkWorkspace(context.Context, WorkspaceLink) (WorkspaceLink, error) {
 	return WorkspaceLink{}, nil
 }
@@ -42,9 +45,6 @@ func (repository *legacyImportRepository) ListWorkspaceLinks(context.Context, st
 }
 func (repository *legacyImportRepository) ListTaskLinks(context.Context, string) ([]WorkspaceLink, error) {
 	return nil, nil
-}
-func (repository *legacyImportRepository) SetPrimaryWorkspaceTask(context.Context, string, string) (WorkspaceLink, error) {
-	return WorkspaceLink{}, nil
 }
 
 func TestImportLegacyProjectTasks_IsIdempotentAndImportsMetadata(t *testing.T) {

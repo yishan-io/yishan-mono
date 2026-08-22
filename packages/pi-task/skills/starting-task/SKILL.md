@@ -1,72 +1,41 @@
 ---
 name: starting-task
-description: Use when beginning a new piece of work and deciding whether to create a tracked task in `.my-context/tasks/`, especially before research, planning, or implementation on non-trivial work.
+description: Use when new work may need a tracked Local Task before research, planning, or implementation.
 ---
 
 # Starting Task
 
-Use this skill when new work arrives and you need to decide whether it should become a tracked task.
+Use this skill to decide if work needs a Local Task.
 
-## Purpose
-
-This skill decides when durable task tracking is worthwhile. `pi-task` provides direct task-file operations; `context-task` defines document-quality policy.
-
-## When To Use This Skill
-
-Use this skill when:
-
-- the user asks to start or track a task
-- a request is substantial enough to benefit from durable tracking
-- the work will likely need research, planning, review, or multiple sessions
-
-Usually do not use it for tiny one-shot edits, purely informational questions, or throwaway exploration.
+The SQLite-backed Local Task daemon owns task metadata and status. Pi uses the managed daemon through its configured endpoint. The daemon generates UUIDs. Imported IDs stay opaque.
 
 ## Decision Rule
 
-Create a tracked task when one or more of these is true:
+Create a task when one or more conditions apply:
 
-- the work is multi-step or spans multiple files
-- the work may take multiple sessions
-- the work benefits from explicit notes, planning, or completion history
-- the user explicitly asks to track it
+- The work has multiple steps or files.
+- The work can continue in another session.
+- The work needs notes, a plan, or a completion record.
+- The user asks to track the work.
 
-If none apply, proceed without task initialization.
+Do not create a task for a small one-time edit or a question with no work.
 
-## Start The Record
+## Start a Task
 
-Use `task_start` to create the record. Supply a concise title and all stable information known from the request: ID when one is supplied, ticket reference, focused goal, concrete acceptance criteria, and created date when known.
+Use `task_start` with a concise title. Provide a description, or provide a goal and acceptance criteria. Do not provide both forms.
 
-Prefer a safe inferred first draft over unnecessary follow-up questions. Generate a concise title, focused goal, and concrete acceptance criteria when the user did not provide them; ask only when the request is too ambiguous for a safe default.
+You can set priority and tags at creation. The daemon owns the active status. Do not provide an ID.
 
-`task_start` creates the active task record. Do not create task folders, edit `state.json`, or manipulate task paths directly.
+If `YISHAN_PROJECT_ID` is set, the task belongs to that project. Without it, the task is global.
 
-## After Initialization
+## Work After Start
 
-For tracked work, use the natural phases:
+Use `task_read` for the synthetic, read-only brief. Use `task_update` to change metadata, active or paused status, priority, or tags. Use `task_list` or `task_search` to find tasks.
 
-1. Research — use `context-task` and `context-memory`; record task-specific findings with `task_append_note`.
-2. Plan — use `writing-plans`; persist the coherent plan with `task_write` (`document: "plan"`).
-3. Execute — use `executing-plans` or `subagent-driven-development`.
+Use `task_write` for `plan`, `notes`, or `outcome`. Use `task_append_note` for task-specific discoveries.
 
-For simple, well-scoped work these phases may happen in one session. For larger or riskier work, pause at natural checkpoints and confirm with the user before proceeding.
+Use `task_finish` only when the user explicitly asks to complete the task. It writes the outcome and completes the task.
 
-**Never do these automatically:**
+## Boundaries
 
-- Create or raise a PR without explicit user instruction.
-- Close an external ticket (GitHub issue, Jira, Linear, and so on) without explicit user instruction.
-- Finish a task with `task_finish` without explicit user instruction.
-
-## Red Flags
-
-Do not:
-
-- create tracked tasks for every trivial request
-- ask for fields that can be inferred safely
-- manipulate task folders, task documents, or `state.json` directly
-- create or raise a PR without explicit user instruction
-- close an external ticket without explicit user instruction
-- finish a task without explicit user instruction
-
-## Bottom Line
-
-Use `starting-task` to decide whether work deserves durable tracking, then use `task_start` to create its active record with the best available stable brief.
+Do not create or parse task IDs. Do not bypass the daemon. Do not write the synthetic brief. Do not use `task_update` for completion.

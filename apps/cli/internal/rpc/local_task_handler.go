@@ -21,6 +21,10 @@ func (h *LocalTaskHandler) Call(ctx context.Context, connection *Connection, met
 		return callLocalTask(ctx, params, h.Services.GetContextDetails)
 	case MethodLocalTaskList:
 		return callLocalTask(ctx, params, h.Services.List)
+	case MethodLocalTaskListTags:
+		return callLocalTask(ctx, params, func(ctx context.Context, _ struct{}) (any, error) {
+			return h.Services.ListTags(ctx)
+		})
 	case MethodLocalTaskUpdate:
 		return callLocalTask(ctx, params, h.Services.Update)
 	case MethodLocalTaskSearch:
@@ -31,8 +35,6 @@ func (h *LocalTaskHandler) Call(ctx context.Context, connection *Connection, met
 		return callLocalTask(ctx, params, h.Services.UnlinkWorkspace)
 	case MethodLocalTaskUpdateWorkspaceLinkStatus:
 		return callLocalTask(ctx, params, h.Services.UpdateWorkspaceLinkStatus)
-	case MethodLocalTaskSetPrimary:
-		return callLocalTask(ctx, params, h.Services.SetPrimary)
 	case MethodLocalTaskListWorkspaceLinks:
 		return callLocalTask(ctx, params, h.Services.ListWorkspaceLinks)
 	case MethodLocalTaskListTaskLinks:

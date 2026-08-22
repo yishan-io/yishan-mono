@@ -26,6 +26,7 @@ func TestOpenAndMigrate_CreatesSchemaAndConfiguresDatabase(t *testing.T) {
 	assertTableExists(t, database, "_metadata")
 	assertTableExists(t, database, "token_usage_hourly")
 	assertTableExists(t, database, "local_tasks")
+	assertTableExists(t, database, "local_task_tags")
 	assertTableExists(t, database, "local_task_workspace_links")
 	assertTableExists(t, database, "local_tasks_fts")
 	assertTableExists(t, database, "_migrations")
@@ -49,8 +50,8 @@ func TestMigrate_IsIdempotent(t *testing.T) {
 	if err := database.QueryRow(`SELECT COUNT(*) FROM _migrations`).Scan(&migrationCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationCount != 10 {
-		t.Fatalf("expected ten applied migrations, got %d", migrationCount)
+	if migrationCount != 12 {
+		t.Fatalf("expected twelve applied migrations, got %d", migrationCount)
 	}
 }
 

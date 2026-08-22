@@ -45,6 +45,8 @@ type Deps struct {
 	// ServerCtx is the long-lived context RPC handlers use for server-side
 	// work.
 	ServerCtx context.Context
+	// DaemonWSEndpoint is injected into every Pi child process.
+	DaemonWSEndpoint string
 
 	// RelayCreateCompleted forwards a workspace-create completion to the
 	// origin node via the relay; wired by the composition root.
@@ -141,4 +143,9 @@ func (s *Service) HasDesktopUI() bool {
 	s.desktopConnsMu.Lock()
 	defer s.desktopConnsMu.Unlock()
 	return len(s.desktopConns) > 0
+}
+
+// DaemonWSEndpoint returns the app-owned endpoint configured for Pi children.
+func (s *Service) DaemonWSEndpoint() string {
+	return s.deps.DaemonWSEndpoint
 }

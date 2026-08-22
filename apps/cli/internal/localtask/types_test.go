@@ -36,11 +36,11 @@ func TestValidateTaskUpdate_RejectsInvalidValues(t *testing.T) {
 }
 
 func TestValidateWorkspaceLink_RejectsInvalidValues(t *testing.T) {
-	link := WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Role: LinkRolePrimary, Status: StatusActive}
+	link := WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: StatusActive}
 	if err := ValidateWorkspaceLink(link); err != nil {
 		t.Fatalf("ValidateWorkspaceLink() error = %v", err)
 	}
-	link.Role = "other"
+	link.Status = "other"
 	if err := ValidateWorkspaceLink(link); err != ErrInvalidLink {
 		t.Fatalf("ValidateWorkspaceLink() error = %v, want %v", err, ErrInvalidLink)
 	}
@@ -64,20 +64,20 @@ func TestValidateLinkStatus_AcceptsLifecycleStatuses(t *testing.T) {
 }
 
 func TestTaskAndWorkspaceLink_JSONIncludesNullableFields(t *testing.T) {
-	taskJSON, err := json.Marshal(Task{ID: "task-1", Title: "Task", Description: "", Status: StatusActive, Priority: PriorityMedium})
+	taskJSON, err := json.Marshal(Task{ID: "task-1", Title: "Task", Description: "", Status: StatusActive, Priority: PriorityMedium, Tags: []string{}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"","updatedAt":"","completedAt":null}`
+	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[]}`
 	if string(taskJSON) != wantTask {
 		t.Fatalf("encoded task = %s, want %s", taskJSON, wantTask)
 	}
 
-	linkJSON, err := json.Marshal(WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Role: LinkRolePrimary, Status: StatusActive})
+	linkJSON, err := json.Marshal(WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: StatusActive})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantLink := `{"id":"link-1","localTaskId":"task-1","workspaceId":"workspace-1","role":"primary","status":"active","linkedAt":"","unlinkedAt":null}`
+	wantLink := `{"id":"link-1","localTaskId":"task-1","workspaceId":"workspace-1","status":"active","linkedAt":"","unlinkedAt":null}`
 	if string(linkJSON) != wantLink {
 		t.Fatalf("encoded link = %s, want %s", linkJSON, wantLink)
 	}

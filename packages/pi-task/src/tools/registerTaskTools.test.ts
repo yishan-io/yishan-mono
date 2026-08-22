@@ -1,10 +1,11 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { registerTaskTools } from "./registerTaskTools";
+import type { LocalTask, LocalTaskContextDetails, LocalTaskSearchResult } from "../backend/localTaskTypes";
+import { type LocalTaskToolBackend, registerTaskTools } from "./registerTaskTools";
 
 type ToolResult = { content: Array<{ type: "text"; text: string }>; details: Record<string, unknown> };
 type RegisteredTool = {
@@ -13,190 +14,166 @@ type RegisteredTool = {
   execute: (...args: [string, never, AbortSignal | undefined, undefined, { cwd: string }]) => Promise<ToolResult>;
 };
 
-const TOOL_NAMES = ["task_start", "task_list", "task_read", "task_write", "task_append_note", "task_finish"];
+const TOOL_NAMES = [
+  "task_start",
+  "task_list",
+  "task_search",
+  "task_read",
+  "task_update",
+  "task_write",
+  "task_append_note",
+  "task_finish",
+];
+let contextDirectory = "";
+let projectDirectory = "";
 
-let activeProjectRoot = "";
+beforeEach(async () => {
+  contextDirectory = await realpath(await mkdtemp(join(tmpdir(), "pi-task-tools-")));
+  projectDirectory = await realpath(await mkdtemp(join(tmpdir(), "pi-task-project-")));
+  vi.stubEnv("YISHAN_PROJECT_ID", "project-a");
+});
+afterEach(async () => {
+  vi.unstubAllEnvs();
+  await rm(contextDirectory, { recursive: true, force: true });
+  await rm(projectDirectory, { recursive: true, force: true });
+});
 
 describe("registerTaskTools", () => {
-  let projectRoot: string;
-
-  beforeEach(async () => {
-    projectRoot = await mkdtemp(join(tmpdir(), "pi-task-tools-"));
-    activeProjectRoot = projectRoot;
-  });
-
-  afterEach(async () => {
-    await rm(projectRoot, { recursive: true, force: true });
-  });
-
-  it("registers only the thin task-file tools", () => {
-    const tools = collectTools();
+  it("registers exactly eight strict daemon-backed tools with the locked schemas", () => {
+    const tools = collectTools(createBackend());
 
     expect(tools.map((tool) => tool.name)).toEqual(TOOL_NAMES);
     for (const tool of tools) expect(tool.parameters.additionalProperties).toBe(false);
-    expect(tools.map((tool) => tool.name)).not.toContain("task_reopen");
-    expect(tools.map((tool) => tool.name)).not.toContain("task_update_brief");
+    expect(properties(tools, "task_start")).not.toHaveProperty("id");
+    expect(properties(tools, "task_start")).not.toHaveProperty("ticket");
+    expect(properties(tools, "task_start")).not.toHaveProperty("date");
+    expect(properties(tools, "task_finish")).not.toHaveProperty("date");
+    expect(properties(tools, "task_append_note")).not.toHaveProperty("date");
+    expect(properties(tools, "task_update").status).toMatchObject({ enum: ["active", "paused"] });
+    expect(properties(tools, "task_update").description).toMatchObject({ minLength: 0, maxLength: 10_000 });
+    for (const toolName of ["task_start", "task_list", "task_search", "task_update"]) {
+      expect(properties(tools, toolName).tags).toMatchObject({ maxItems: 12, items: { maxLength: 64 } });
+    }
+    expect(properties(tools, "task_write").document).toMatchObject({ enum: ["notes", "plan", "outcome"] });
+    expect(properties(tools, "task_read").id).not.toHaveProperty("pattern");
   });
 
-  it("creates, reads, writes, annotates, and finishes a task from ctx.cwd", async () => {
-    const tools = collectTools();
-    const start = await execute(requireTool(tools, "task_start"), {
-      id: "scope01",
-      title: "Simplify task package",
-      goal: "Keep task operations direct.",
-      acceptanceCriteria: ["Only thin tools are registered."],
-      created: "2026-07-26",
-    });
+  it("defers production daemon environment lookup until a tool executes", async () => {
+    vi.stubEnv("YISHAN_DAEMON_WS_URL", "");
+    const tools: RegisteredTool[] = [];
 
-    expect(start.details).toMatchObject({ id: "scope01", status: "active" });
-    await expect(readFile(join(projectRoot, ".my-context", "tasks", "state.json"), "utf8")).resolves.toContain(
-      '"id": "scope01"',
+    expect(() =>
+      registerTaskTools({
+        registerTool(tool: RegisteredTool) {
+          tools.push(tool);
+        },
+      } as never),
+    ).not.toThrow();
+    await expect(execute(tools, "task_list", {})).rejects.toThrow("Local Task daemon endpoint is unavailable");
+  });
+
+  it("routes every operation through the injected backend and never writes legacy state", async () => {
+    const backend = createBackend();
+    const tools = collectTools(backend);
+
+    await execute(tools, "task_start", { title: "New task", goal: "Ship", acceptanceCriteria: ["Verify"] });
+    await execute(tools, "task_list", { status: "active" });
+    await execute(tools, "task_search", { query: "task", tags: ["tag"] });
+    await execute(tools, "task_read", { id: "imported/task-id" });
+    await execute(tools, "task_update", { id: "imported/task-id", status: "paused", tags: ["new"] });
+    await execute(tools, "task_write", { id: "imported/task-id", document: "plan", content: "# Plan\n" });
+    await execute(tools, "task_append_note", { id: "imported/task-id", content: "Note\n" });
+    await execute(tools, "task_finish", { id: "imported/task-id", outcome: "Done" });
+
+    expect(backend.create).toHaveBeenCalledWith(expect.objectContaining({ title: "New task", projectId: "project-a" }));
+    expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: "active" });
+    expect(backend.search).toHaveBeenCalledWith("task", { projectId: "project-a", tags: ["tag"] });
+    expect(backend.getContextDetails).toHaveBeenCalled();
+    expect(backend.update).toHaveBeenCalledWith("imported/task-id", { status: "completed" });
+    await expect(readFile(join(contextDirectory, "plan.md"), "utf8")).resolves.toBe("# Plan\n");
+    await expect(readFile(join(contextDirectory, "notes.md"), "utf8")).resolves.toBe("Note\n");
+    await expect(readFile(join(contextDirectory, "outcome.md"), "utf8")).resolves.toBe("Done");
+    await expect(access(join(projectDirectory, ".my-context", "tasks", "state.json"))).rejects.toThrow();
+    await expect(access(join(projectDirectory, ".my-context", "tasks", "active"))).rejects.toThrow();
+    await expect(access(join(projectDirectory, ".my-context", "tasks", "completed"))).rejects.toThrow();
+  });
+
+  it("enforces project scope before document routing", async () => {
+    const backend = createBackend({ getResult: task({ projectId: "other-project" }) });
+    const tools = collectTools(backend);
+
+    await expect(execute(tools, "task_write", { id: "other", document: "plan", content: "blocked" })).rejects.toThrow(
+      "configured project scope",
     );
-
-    await execute(requireTool(tools, "task_write"), {
-      id: "scope01",
-      document: "plan",
-      content: "# Plan\n\n1. Keep it simple.\n",
-    });
-    await execute(requireTool(tools, "task_append_note"), {
-      id: "scope01",
-      content: "Repository machinery is out of scope.",
-      date: "2026-07-26",
-    });
-
-    const plan = await execute(requireTool(tools, "task_read"), { id: "scope01", document: "plan" });
-    expect(plan.content[0]?.text).toContain("Keep it simple.");
-
-    const listed = await execute(requireTool(tools, "task_list"), { status: "active" });
-    expect(listed.content[0]?.text).toContain("scope01");
-
-    const finished = await execute(requireTool(tools, "task_finish"), {
-      id: "scope01",
-      outcome: "Simplified the task package.",
-      completed: "2026-07-26",
-    });
-    expect(finished.details).toMatchObject({ id: "scope01", status: "completed" });
-    await expect(
-      readFile(
-        join(
-          projectRoot,
-          ".my-context",
-          "tasks",
-          "completed",
-          "2026",
-          "07",
-          "scope01-simplify-task-package",
-          "outcome.md",
-        ),
-        "utf8",
-      ),
-    ).resolves.toContain("Simplified the task package.");
+    expect(backend.getContextDetails).not.toHaveBeenCalled();
   });
 
-  it("preserves every parallel task_start state update", async () => {
-    const tools = collectTools();
-    const startTask = requireTool(tools, "task_start");
+  it("forwards abort signals and truncates tool text output", async () => {
+    const controller = new AbortController();
+    const backend = createBackend({ getResult: task({ title: "x".repeat(100_000) }) });
+    const tools = collectTools(backend);
+    const read = requireTool(tools, "task_read");
 
-    await Promise.all([
-      execute(startTask, { id: "start01", title: "First parallel start", created: "2026-07-26" }),
-      execute(startTask, { id: "start02", title: "Second parallel start", created: "2026-07-26" }),
-    ]);
-
-    const listed = await execute(requireTool(tools, "task_list"), { status: "active" });
-    expect((listed.details.tasks as Array<{ id: string }>).map((task) => task.id).sort()).toEqual([
-      "start01",
-      "start02",
-    ]);
-  });
-
-  it("preserves every parallel task_finish state update", async () => {
-    const tools = collectTools();
-    const startTask = requireTool(tools, "task_start");
-    await execute(startTask, { id: "finish01", title: "First parallel finish", created: "2026-07-26" });
-    await execute(startTask, { id: "finish02", title: "Second parallel finish", created: "2026-07-26" });
-
-    const finishTask = requireTool(tools, "task_finish");
-    await Promise.all([
-      execute(finishTask, { id: "finish01", outcome: "First outcome.", completed: "2026-07-26" }),
-      execute(finishTask, { id: "finish02", outcome: "Second outcome.", completed: "2026-07-26" }),
-    ]);
-
-    const listed = await execute(requireTool(tools, "task_list"), { status: "completed" });
-    expect((listed.details.tasks as Array<{ id: string }>).map((task) => task.id).sort()).toEqual([
-      "finish01",
-      "finish02",
-    ]);
-    await expect(
-      execute(requireTool(tools, "task_read"), { id: "finish01", document: "outcome" }),
-    ).resolves.toMatchObject({
-      content: [{ type: "text", text: expect.stringContaining("First outcome.") }],
+    const response = await read.execute("call", { id: "imported/task-id" } as never, controller.signal, undefined, {
+      cwd: "",
     });
-    await expect(
-      execute(requireTool(tools, "task_read"), { id: "finish02", document: "outcome" }),
-    ).resolves.toMatchObject({
-      content: [{ type: "text", text: expect.stringContaining("Second outcome.") }],
-    });
-  });
-
-  it("writes to the completed path and leaves no stale active directory after finish", async () => {
-    const tools = collectTools();
-
-    await execute(requireTool(tools, "task_start"), {
-      id: "stale01",
-      title: "Stale directory test",
-      created: "2026-07-26",
-    });
-    await execute(requireTool(tools, "task_finish"), {
-      id: "stale01",
-      outcome: "Task finished.",
-      completed: "2026-07-26",
-    });
-
-    // Write plan to the now-completed task — must go to completed/, not active/
-    await execute(requireTool(tools, "task_write"), {
-      id: "stale01",
-      document: "plan",
-      content: "# Post-finish plan\n",
-    });
-
-    // Verify plan was written to the completed path
-    const completedPlan = await readFile(
-      join(projectRoot, ".my-context", "tasks", "completed", "2026", "07", "stale01-stale-directory-test", "plan.md"),
-      "utf8",
-    );
-    expect(completedPlan).toContain("Post-finish plan");
-
-    // Verify no stale active directory was left behind
-    await expect(
-      readFile(join(projectRoot, ".my-context", "tasks", "active", "stale01-stale-directory-test", "plan.md"), "utf8"),
-    ).rejects.toThrow();
-  });
-
-  it("rejects unsafe task IDs before they can create a task directory", async () => {
-    const tools = collectTools();
-
-    await expect(execute(requireTool(tools, "task_start"), { id: "../escape", title: "Unsafe" })).rejects.toThrow(
-      "Task ID",
-    );
+    expect(backend.get).toHaveBeenCalledWith("imported/task-id", { signal: controller.signal });
+    expect(response.details.truncated).toBe(true);
   });
 });
 
-function collectTools(): RegisteredTool[] {
+function collectTools(backend: LocalTaskToolBackend): RegisteredTool[] {
   const tools: RegisteredTool[] = [];
-  registerTaskTools({
-    registerTool(tool: RegisteredTool) {
-      tools.push(tool);
-    },
-  } as never);
+  registerTaskTools(
+    {
+      registerTool(tool: RegisteredTool) {
+        tools.push(tool);
+      },
+    } as never,
+    backend,
+  );
   return tools;
 }
-
+function properties(tools: RegisteredTool[], name: string): Record<string, unknown> {
+  return requireTool(tools, name).parameters.properties;
+}
 function requireTool(tools: RegisteredTool[], name: string): RegisteredTool {
   const tool = tools.find((entry) => entry.name === name);
   if (!tool) throw new Error(`Expected ${name} to be registered`);
   return tool;
 }
-
-function execute(tool: RegisteredTool, params: Record<string, unknown>): Promise<ToolResult> {
-  return tool.execute("tool-call", params as never, undefined, undefined, { cwd: activeProjectRoot });
+function execute(tools: RegisteredTool[], name: string, params: Record<string, unknown>): Promise<ToolResult> {
+  return requireTool(tools, name).execute("call", params as never, undefined, undefined, { cwd: projectDirectory });
+}
+function createBackend(overrides: { getResult?: LocalTask } = {}): LocalTaskToolBackend {
+  const localTask = task();
+  const details: LocalTaskContextDetails = {
+    directory: contextDirectory,
+    planPath: join(contextDirectory, "plan.md"),
+    notesPath: join(contextDirectory, "notes.md"),
+    outcomePath: join(contextDirectory, "outcome.md"),
+  };
+  return {
+    create: vi.fn().mockResolvedValue(localTask),
+    get: vi.fn().mockResolvedValue(overrides.getResult ?? localTask),
+    list: vi.fn().mockResolvedValue([localTask]),
+    search: vi.fn().mockResolvedValue([{ ...localTask, rank: 1 } satisfies LocalTaskSearchResult]),
+    update: vi.fn().mockResolvedValue({ ...localTask, status: "completed" }),
+    getContextDetails: vi.fn().mockResolvedValue(details),
+  } as LocalTaskToolBackend;
+}
+function task(overrides: Partial<LocalTask> = {}): LocalTask {
+  return {
+    id: "imported/task-id",
+    projectId: "project-a",
+    title: "Task",
+    description: "Description",
+    status: "active",
+    priority: "medium",
+    createdAt: "2026-08-23T00:00:00Z",
+    updatedAt: "2026-08-23T00:00:00Z",
+    completedAt: null,
+    tags: ["tag"],
+    ...overrides,
+  };
 }

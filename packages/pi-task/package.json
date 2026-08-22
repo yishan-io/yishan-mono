@@ -1,9 +1,11 @@
 {
   "name": "@yishan-io/pi-task",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "keywords": [
-    "pi-package"
+    "pi-package",
+    "local-task",
+    "sqlite"
   ],
   "files": [
     "extensions",
@@ -51,5 +53,9 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.4.0"
+  },
+  "description": "Pi tools and workflow skills for SQLite-backed Local Tasks."
 }

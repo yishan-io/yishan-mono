@@ -4,12 +4,8 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest, LuListTodo } from "react-icons/lu";
 
-/** Builds the right-pane tab registration for the selected workspace capabilities and counts. */
-export function useMainPaneRightTabs(input: {
-  gitCapable: boolean;
-  changesCount: number;
-  workspaceTaskCount: number;
-}): RightPaneTabDef[] {
+/** Builds the right-pane tab registration for the selected workspace capabilities and change count. */
+export function useMainPaneRightTabs(input: { gitCapable: boolean; changesCount: number }): RightPaneTabDef[] {
   const { t } = useTranslation();
   return useMemo(() => {
     const tabs: RightPaneTabDef[] = [
@@ -23,16 +19,7 @@ export function useMainPaneRightTabs(input: {
         value: "tasks",
         label: t("localTask.title"),
         shortcutId: "activate-tasks-pane",
-        icon: (
-          <Badge
-            badgeContent={input.workspaceTaskCount}
-            color="primary"
-            max={99}
-            invisible={input.workspaceTaskCount <= 0}
-          >
-            <LuListTodo size={18} />
-          </Badge>
-        ),
+        icon: <LuListTodo size={18} />,
       },
     ];
     if (input.gitCapable) {
@@ -62,5 +49,5 @@ export function useMainPaneRightTabs(input: {
       );
     }
     return tabs;
-  }, [input.changesCount, input.gitCapable, input.workspaceTaskCount, t]);
+  }, [input.changesCount, input.gitCapable, t]);
 }
