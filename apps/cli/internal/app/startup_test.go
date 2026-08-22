@@ -9,7 +9,9 @@ import (
 
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/tokenusage/collection"
+	"yishan/apps/cli/internal/workspace"
 )
 
 // recordingTokenUsage is a tokenusage.Service fake that records startup/shutdown
@@ -176,4 +178,56 @@ func TestAppClose_ShutdownOrder(t *testing.T) {
 	if err := app.Close(); err != nil {
 		t.Fatalf("second Close: %v", err)
 	}
+}
+
+func TestBootstrap_WiresWorkspaceAgentCleanupLifecycle(t *testing.T) {
+	database := openTestDB(t)
+	app, err := Bootstrap(Config{
+		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(), SettingsPath: "",
+	})
+	if err != nil {
+		t.Fatalf("Bootstrap: %v", err)
+	}
+	defer app.Close()
+
+	if app.agentSvc == nil || app.workspaceSvc == nil {
+		t.Fatal("Bootstrap did not compose agent and workspace services")
+	}
+	installBootstrapTestPi(t)
+	workspacePath := t.TempDir()
+	app.registry.Open(workspace.Workspace{ID: "workspace-1", Path: workspacePath})
+	unrelatedPath := t.TempDir()
+	app.registry.Open(workspace.Workspace{ID: "workspace-2", Path: unrelatedPath})
+	if _, err := app.agentSvc.Start(context.Background(), &rpc.Connection{}, rpc.PiStartParams{
+		SessionID: "agent-1", TabID: "tab-1", WorkspaceID: "workspace-1", CWD: workspacePath,
+	}); err != nil {
+		t.Fatalf("start matching agent through composed service: %v", err)
+	}
+	if _, err := app.agentSvc.Start(context.Background(), &rpc.Connection{}, rpc.PiStartParams{
+		SessionID: "agent-2", TabID: "tab-2", WorkspaceID: "workspace-2", CWD: unrelatedPath,
+	}); err != nil {
+		t.Fatalf("start unrelated agent through composed service: %v", err)
+	}
+	result, err := app.workspaceSvc.CloseLocal(context.Background(), workspace.CloseRequest{
+		WorkspaceID: "workspace-1",
+	})
+	if err != nil || !result.WorktreeRemoved {
+		t.Fatalf("real agent cleanup close = (%#v, %v), want removed worktree", result, err)
+	}
+	if _, exists := app.agentMgr.Session("agent-1"); exists {
+		t.Fatal("workspace close did not stop the matching agent")
+	}
+	if _, exists := app.agentMgr.Session("agent-2"); !exists {
+		t.Fatal("workspace close stopped the unrelated agent")
+	}
+}
+
+func installBootstrapTestPi(t *testing.T) {
+	t.Helper()
+	binDir := t.TempDir()
+	piPath := filepath.Join(binDir, "pi")
+	if err := os.WriteFile(piPath, []byte("#!/bin/sh\nwhile :; do sleep 1; done\n"), 0o755); err != nil {
+		t.Fatalf("write test pi: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }

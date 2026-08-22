@@ -1,5 +1,10 @@
-import { chatStore } from "@renderer/domains/agent";
-import { resolveTabForWorkspace, retainWorkspaceTabs, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { chatStore, stopPiSession } from "@renderer/domains/agent";
+import {
+  resolveTabForWorkspace,
+  retainWorkspaceTabs,
+  tabStore,
+  workbenchNavigationStore,
+} from "@renderer/domains/workbench";
 import { workspaceStore } from "../state/workspaceStore";
 import type { WorkspaceItem } from "../workspaceTypes";
 
@@ -11,6 +16,13 @@ export async function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceIte
   const removedWorkspaceIds = previousWorkspaces
     .filter((workspace) => !nextWorkspaceIds.includes(workspace.id))
     .map((workspace) => workspace.id);
+
+  const removedAgentChatTabs = tabStore
+    .getState()
+    .tabs.filter((tab) => removedWorkspaceIds.includes(tab.workspaceId) && tab.kind === "agent-chat");
+  const piStopPromises = removedAgentChatTabs.map((tab) => stopPiSession(tab.id));
+  // fire-and-forget: workspace removal must not wait for Pi session cleanup.
+  void Promise.allSettled(piStopPromises);
 
   const removedTabIds = retainWorkspaceTabs(nextWorkspaceIds);
 

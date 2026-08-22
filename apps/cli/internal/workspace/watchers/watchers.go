@@ -1,6 +1,7 @@
 package watchers
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -90,55 +91,54 @@ func (ws *Watchers) IsWatching(worktreePath string) bool {
 	return ok
 }
 
-func (ws *Watchers) Watch(workspaceID string, worktreePath string) {
+func (ws *Watchers) Watch(workspaceID string, worktreePath string) error {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
-
-	if _, ok := ws.entries[worktreePath]; ok {
-		return
+	if _, exists := ws.entries[worktreePath]; exists {
+		return nil
 	}
+	entry, err := ws.newWorktreeWatcher(workspaceID, worktreePath)
+	if err != nil {
+		return err
+	}
+	ws.entries[worktreePath] = entry
+	ws.registerContextWatcher(entry)
+	return nil
+}
 
+func (ws *Watchers) newWorktreeWatcher(workspaceID string, worktreePath string) (*worktreeWatcher, error) {
 	gitEntry := filepath.Join(worktreePath, ".git")
 	if _, err := os.Stat(gitEntry); err != nil {
-		return
+		return nil, fmt.Errorf("inspect workspace git entry: %w", err)
 	}
+	entry := ws.buildWorktreeWatcher(workspaceID, worktreePath)
+	backend, err := fswatch.New(fswatch.Config{
+		RecursivePaths: []string{entry.path}, NonRecursivePaths: nonRecursiveWatchPaths(entry),
+		ShouldWatchDir: entry.shouldWatchWorkspaceDir, ShouldDescendDir: entry.shouldWatchWorkspaceDirWithoutGitIgnore,
+		OnPathChanged: entry.handleChangedPath,
+		OnError:       func(err error) { log.Warn().Err(err).Str("path", worktreePath).Msg("workspace watcher error") },
+	})
+	if err != nil {
+		log.Warn().Err(err).Str("path", worktreePath).Msg("failed to create workspace watcher")
+		return nil, fmt.Errorf("create workspace watcher: %w", err)
+	}
+	entry.backend = backend
+	return entry, nil
+}
 
+func (ws *Watchers) buildWorktreeWatcher(workspaceID string, worktreePath string) *worktreeWatcher {
 	entry := &worktreeWatcher{
-		workspaceID:    workspaceID,
-		path:           worktreePath,
-		resolvedGitDir: ResolveGitDir(worktreePath),
-		sink:           ws.sink,
-		readyAt:        time.Now().Add(watcherStartupLag),
-		done:           make(chan struct{}),
-		onGitChanged:   ws.onGitChanged,
-		ignoredPaths:   make(map[string]bool),
-		gitRunner:      gitexec.DefaultRunner(),
+		workspaceID: workspaceID, path: worktreePath, resolvedGitDir: ResolveGitDir(worktreePath), sink: ws.sink,
+		readyAt: time.Now().Add(watcherStartupLag), done: make(chan struct{}), onGitChanged: ws.onGitChanged,
+		ignoredPaths: make(map[string]bool), gitRunner: gitexec.DefaultRunner(),
 	}
-
 	contextLinkPath := filepath.Join(worktreePath, workspace.ContextLinkName)
 	if target, err := filepath.EvalSymlinks(contextLinkPath); err == nil {
 		if info, statErr := os.Stat(target); statErr == nil && info.IsDir() {
 			entry.contextDir = target
 		}
 	}
-
-	backend, err := fswatch.New(fswatch.Config{
-		RecursivePaths:    []string{entry.path},
-		NonRecursivePaths: nonRecursiveWatchPaths(entry),
-		ShouldWatchDir:    entry.shouldWatchWorkspaceDir,
-		ShouldDescendDir:  entry.shouldWatchWorkspaceDirWithoutGitIgnore,
-		OnPathChanged:     entry.handleChangedPath,
-		OnError: func(err error) {
-			log.Warn().Err(err).Str("path", worktreePath).Msg("workspace watcher error")
-		},
-	})
-	if err != nil {
-		log.Warn().Err(err).Str("path", worktreePath).Msg("failed to create workspace watcher")
-		return
-	}
-	entry.backend = backend
-	ws.entries[worktreePath] = entry
-	ws.registerContextWatcher(entry)
+	return entry
 }
 
 func (ws *Watchers) registerContextWatcher(entry *worktreeWatcher) {

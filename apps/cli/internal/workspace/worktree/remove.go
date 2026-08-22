@@ -19,42 +19,66 @@ type RemoveRequest struct {
 	ForceBranch   bool
 }
 
+// RemovalPlan contains all information resolved before deleting a worktree.
+// Resolving the branch first ensures every retryable failure happens before
+// the irreversible worktree removal.
+type RemovalPlan struct {
+	mainWorktreePath string
+	branch           string
+	alreadyGone      bool
+}
+
+// PrepareRemoval validates a removal and resolves its branch before deletion.
+func PrepareRemoval(ctx context.Context, req RemoveRequest) (RemovalPlan, error) {
+	if strings.TrimSpace(req.Path) == "" {
+		return RemovalPlan{}, NewError(ErrCodeInvalidParams, "path is required")
+	}
+	mainWorktreePath, err := MainWorktreePath(ctx, req.Path)
+	if err != nil {
+		if isNotGitRepositoryError(err) {
+			return RemovalPlan{alreadyGone: true}, nil
+		}
+		return RemovalPlan{}, err
+	}
+	branch := req.Branch
+	if req.RemoveBranch && branch == "" {
+		branch, err = currentBranch(ctx, req.Path)
+		if err != nil {
+			return RemovalPlan{}, err
+		}
+	}
+	return RemovalPlan{mainWorktreePath: mainWorktreePath, branch: branch}, nil
+}
+
+// RemovePreparedWorktree performs the irreversible worktree removal.
+func RemovePreparedWorktree(ctx context.Context, req RemoveRequest, plan RemovalPlan) error {
+	if plan.alreadyGone {
+		return nil
+	}
+	return RemoveWorktree(ctx, plan.mainWorktreePath, req.Path, req.ForceWorktree)
+}
+
+// RemovePreparedBranch performs the post-removal branch cleanup.
+func RemovePreparedBranch(ctx context.Context, req RemoveRequest, plan RemovalPlan) error {
+	if !req.RemoveBranch || plan.alreadyGone {
+		return nil
+	}
+	return RemoveBranch(ctx, plan.mainWorktreePath, plan.branch, req.ForceBranch)
+}
+
 // Remove tears down a worktree (the normal close path): it resolves the main
 // worktree for the path, removes the worktree, and optionally the branch. A
 // directory that still exists but lost its git registration is treated as
 // already gone (the leftover directory is deliberately not removed).
 func Remove(ctx context.Context, req RemoveRequest) error {
-	if strings.TrimSpace(req.Path) == "" {
-		return NewError(ErrCodeInvalidParams, "path is required")
-	}
-
-	mainWorktreePath, err := MainWorktreePath(ctx, req.Path)
+	plan, err := PrepareRemoval(ctx, req)
 	if err != nil {
-		if isNotGitRepositoryError(err) {
-			// Directory exists but git registration is gone: nothing left to
-			// tear down via git, and the error can never resolve on retry.
-			return nil
-		}
 		return err
 	}
-
-	branch := req.Branch
-	if req.RemoveBranch && branch == "" {
-		branch, err = currentBranch(ctx, req.Path)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := RemoveWorktree(ctx, mainWorktreePath, req.Path, req.ForceWorktree); err != nil {
+	if err := RemovePreparedWorktree(ctx, req, plan); err != nil {
 		return err
 	}
-	if req.RemoveBranch {
-		if err := RemoveBranch(ctx, mainWorktreePath, branch, req.ForceBranch); err != nil {
-			return err
-		}
-	}
-	return nil
+	return RemovePreparedBranch(ctx, req, plan)
 }
 
 // RemoveWorktree removes a git worktree at the given path (run from its main

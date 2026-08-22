@@ -107,12 +107,26 @@ func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Serv
 	return newTestServiceWithInspectResolver(t, runtime, nodeID, nil)
 }
 
+func newTestServiceWithAgent(t *testing.T, runtime *session.Session, nodeID string) (*Service, *nodeagent.Service) {
+	return newTestServiceWithAgentAndInspectResolver(t, runtime, nodeID, nil)
+}
+
 func newTestServiceWithInspectResolver(
 	t *testing.T,
 	runtime *session.Session,
 	nodeID string,
 	inspectResolver func(context.Context, string) (git.GitInspectResult, error),
 ) *Service {
+	svc, _ := newTestServiceWithAgentAndInspectResolver(t, runtime, nodeID, inspectResolver)
+	return svc
+}
+
+func newTestServiceWithAgentAndInspectResolver(
+	t *testing.T,
+	runtime *session.Session,
+	nodeID string,
+	inspectResolver func(context.Context, string) (git.GitInspectResult, error),
+) (*Service, *nodeagent.Service) {
 	t.Helper()
 	root := t.TempDir()
 	events := eventbus.NewHub()
@@ -178,7 +192,7 @@ func newTestServiceWithInspectResolver(
 	router.Register("file", &rpc.FileHandler{Services: svc})
 	router.Register("git", &rpc.GitHandler{Services: svc})
 	svc.router = router
-	return svc
+	return svc, agentSvc
 }
 
 // newTestHandler builds a plain workspace service with a wired router.

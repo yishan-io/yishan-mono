@@ -56,6 +56,12 @@ type Deps struct {
 	// owned by the hook package.
 	Usage *hook.UsageTracker
 
+	// Agent cleanup callbacks are attached by app after the agent service is
+	// composed. Their handles stay opaque outside node/agent.
+	BeginAgentCleanup  func(context.Context, string) (any, error)
+	AbortAgentCleanup  func(any)
+	CommitAgentCleanup func(any)
+
 	// ServerCtx is the long-lived context RPC handlers use for server-side
 	// work (relayed creates).
 	ServerCtx context.Context
@@ -99,10 +105,20 @@ func (s *Service) SetRelayClient(client *relay.Client) {
 	s.relayClient = client
 }
 
+// SetAgentCleanupLifecycle attaches the agent cleanup callbacks after both
+// node services have been composed by app.
+func (s *Service) SetAgentCleanupLifecycle(begin func(context.Context, string) (any, error), abort func(any), commit func(any)) {
+	s.deps.BeginAgentCleanup = begin
+	s.deps.AbortAgentCleanup = abort
+	s.deps.CommitAgentCleanup = commit
+}
+
 // clearAgentUsage drops the recorded agents for a workspace (close-time
 // cleanup).
 func (s *Service) clearAgentUsage(workspaceID string) {
-	s.deps.Usage.Clear(workspaceID)
+	if s.deps.Usage != nil {
+		s.deps.Usage.Clear(workspaceID)
+	}
 }
 
 // getAgentUsage returns the agents recorded for a workspace.

@@ -66,6 +66,7 @@ type WorkspaceRecords interface {
 // the instance registry in Phase 3).
 type Instances interface {
 	CreateWorkspaceWithProgress(ctx context.Context, req workspace.CreateRequest, report workspace.CreateProgressReporter) (workspace.Workspace, error)
+	StopWorkspaceTerminals(workspaceID string) []string
 	CloseWorkspace(ctx context.Context, req workspace.CloseRequest) (workspace.CloseResult, error)
 	CloseWorkspacePath(ctx context.Context, req workspace.ClosePathRequest) (workspace.CloseResult, error)
 	SetState(workspaceID string, state instance.State, health instance.Health) error
@@ -74,7 +75,7 @@ type Instances interface {
 	// WatchAndTrack registers the filesystem watcher and PR tracker for an
 	// open workspace; Unwatch and StopTracking remove them independently
 	// (the create-rollback cleanup mirrors createflow's split hooks).
-	WatchAndTrack(workspace workspace.Workspace)
+	WatchAndTrack(ws workspace.Workspace) error
 	Unwatch(path string)
 	StopTracking(workspaceID string)
 }
@@ -117,11 +118,19 @@ type Dependencies struct {
 	// event (daemon-side: needs the daemon log path).
 	HookWarnings func(setupHook string, result *workspace.HookResult) []any
 
+	// Agent cleanup is an opaque three-phase lifecycle supplied by the node agent
+	// service. Keeping the handle untyped avoids an application → node package
+	// dependency cycle.
+	BeginAgentCleanup  func(ctx context.Context, workspaceID string) (any, error)
+	AbortAgentCleanup  func(handle any)
+	CommitAgentCleanup func(handle any)
+
 	// Close / rollback side effects (daemon infrastructure).
 	SyncUsage          func(source string)
 	RegisterCleanup    func(req CleanupRequest) error
 	RemoveCleanup      func(workspaceID string) error
 	MarkCleanupFailure func(workspaceID string, cleanupErr error) error
+	ClaimAgentSummary  func(workspaceID string) (bool, error)
 	SummarizeAgents    func(workspaceID string, req workspace.CloseRequest)
 	ClearAgentUsage    func(workspaceID string)
 	Warn               func(workspaceID string, path string, message string, err error)

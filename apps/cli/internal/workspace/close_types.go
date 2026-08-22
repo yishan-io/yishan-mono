@@ -46,6 +46,8 @@ type ClosePathRequest struct {
 // CloseResult captures the outcome of a workspace close operation, including
 // any post-hook execution result.
 type CloseResult struct {
+	// WorktreeRemoved marks the irreversible point: runtime/worktree are gone even if branch deletion fails.
+	WorktreeRemoved       bool        `json:"-"`
 	PostHookResult        *HookResult `json:"postHookResult,omitempty"`
 	TerminalCleanupErrors []string    `json:"terminalCleanupErrors,omitempty"`
 }

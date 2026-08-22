@@ -133,3 +133,43 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 		t.Fatalf("expected no manager runtime records, got %v", s.deps.Registry.List())
 	}
 }
+
+func TestCloseLocalNode_UsesAgentCleanupLifecycle(t *testing.T) {
+	database := openMigratedTestDB(t)
+	s := newBehaviorHandler(t, nil, "node-1", database)
+	path := t.TempDir()
+	openLocalWorkspace(t, s, "ws-agent-close", path)
+
+	var calls []string
+	s.SetAgentCleanupLifecycle(
+		func(context.Context, string) (any, error) { calls = append(calls, "begin"); return "cleanup", nil },
+		func(any) { calls = append(calls, "abort") },
+		func(any) { calls = append(calls, "commit") },
+	)
+	if _, err := s.app.CloseLocal(context.Background(), workspaceCloseParams{WorkspaceID: "ws-agent-close"}); err != nil {
+		t.Fatalf("close local: %v", err)
+	}
+	if want := []string{"begin", "commit"}; !reflect.DeepEqual(calls, want) {
+		t.Fatalf("agent cleanup lifecycle = %v, want %v", calls, want)
+	}
+}
+
+func TestRelayedClose_ExecutorRunsAgentCleanupLifecycle(t *testing.T) {
+	s := newTestHandler(t)
+	workspacePath := t.TempDir()
+	openLocalWorkspace(t, s, "ws-relayed-close", workspacePath)
+	var calls []string
+	s.SetAgentCleanupLifecycle(
+		func(context.Context, string) (any, error) { calls = append(calls, "begin"); return "cleanup", nil },
+		func(any) { calls = append(calls, "abort") },
+		func(any) { calls = append(calls, "commit") },
+	)
+
+	s.handleRelayedClose(relayWorkspaceCloseEnvelope{
+		WorkspaceID: "ws-relayed-close", TargetNodeID: "node-1", Change: relayChangeWorkspaceCloseRequest,
+	})
+
+	if want := []string{"begin", "commit"}; !reflect.DeepEqual(calls, want) {
+		t.Fatalf("executor agent cleanup lifecycle = %v, want %v", calls, want)
+	}
+}

@@ -16,17 +16,18 @@ const PendingCleanupFileName = "pending-workspace-cleanups.json"
 // queue: a workspace whose close/removal was interrupted and will be retried
 // on the next cleanup tick or daemon restart.
 type PendingWorkspaceCleanup struct {
-	WorkspaceID   string `json:"workspaceId"`
-	Path          string `json:"path"`
-	Branch        string `json:"branch,omitempty"`
-	RemoveBranch  bool   `json:"removeBranch,omitempty"`
-	ForceWorktree bool   `json:"forceWorktree,omitempty"`
-	ForceBranch   bool   `json:"forceBranch,omitempty"`
-	PostHook      string `json:"postHook,omitempty"`
-	CreatedAt     string `json:"createdAt"`
-	UpdatedAt     string `json:"updatedAt"`
-	Attempts      int    `json:"attempts"`
-	LastError     string `json:"lastError,omitempty"`
+	WorkspaceID      string `json:"workspaceId"`
+	Path             string `json:"path"`
+	Branch           string `json:"branch,omitempty"`
+	RemoveBranch     bool   `json:"removeBranch,omitempty"`
+	ForceWorktree    bool   `json:"forceWorktree,omitempty"`
+	ForceBranch      bool   `json:"forceBranch,omitempty"`
+	PostHook         string `json:"postHook,omitempty"`
+	AgentSummaryDone bool   `json:"agentSummaryDone,omitempty"`
+	CreatedAt        string `json:"createdAt"`
+	UpdatedAt        string `json:"updatedAt"`
+	Attempts         int    `json:"attempts"`
+	LastError        string `json:"lastError,omitempty"`
 }
 
 type pendingWorkspaceCleanupFile struct {
@@ -92,23 +93,25 @@ func (s *WorkspaceCleanupStore) Add(item PendingWorkspaceCleanup) error {
 	// Preserve the retry history of an existing entry (same as the old JSON store).
 	var attempts int
 	var lastError string
+	var agentSummaryDone int
 	err := s.db.QueryRow(
-		`SELECT attempts, last_error FROM pending_workspace_cleanups WHERE workspace_id = ?`,
+		`SELECT attempts, last_error, agent_summary_done FROM pending_workspace_cleanups WHERE workspace_id = ?`,
 		item.WorkspaceID,
-	).Scan(&attempts, &lastError)
+	).Scan(&attempts, &lastError, &agentSummaryDone)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 	if err == nil {
 		item.Attempts = attempts
 		item.LastError = lastError
+		item.AgentSummaryDone = agentSummaryDone != 0
 	}
 
 	_, err = s.db.Exec(`
 		INSERT INTO pending_workspace_cleanups (
 			workspace_id, path, branch, remove_branch, force_worktree, force_branch,
-			post_hook, created_at, updated_at, attempts, last_error
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			post_hook, agent_summary_done, created_at, updated_at, attempts, last_error
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(workspace_id) DO UPDATE SET
 			path = excluded.path,
 			branch = excluded.branch,
@@ -116,16 +119,38 @@ func (s *WorkspaceCleanupStore) Add(item PendingWorkspaceCleanup) error {
 			force_worktree = excluded.force_worktree,
 			force_branch = excluded.force_branch,
 			post_hook = excluded.post_hook,
+			agent_summary_done = excluded.agent_summary_done,
 			created_at = excluded.created_at,
 			updated_at = excluded.updated_at,
 			attempts = excluded.attempts,
 			last_error = excluded.last_error
 	`,
 		item.WorkspaceID, item.Path, nullableString(item.Branch), boolToInt(item.RemoveBranch),
-		boolToInt(item.ForceWorktree), boolToInt(item.ForceBranch), nullableString(item.PostHook),
+		boolToInt(item.ForceWorktree), boolToInt(item.ForceBranch), nullableString(item.PostHook), boolToInt(item.AgentSummaryDone),
 		item.CreatedAt, item.UpdatedAt, item.Attempts, nullableString(item.LastError),
 	)
 	return err
+}
+
+// ClaimAgentSummary atomically records that this cleanup owns agent
+// summarization. Only the caller that changes the false marker may summarize.
+func (s *WorkspaceCleanupStore) ClaimAgentSummary(workspaceID string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.db.Exec(`
+		UPDATE pending_workspace_cleanups
+		SET agent_summary_done = 1, updated_at = ?
+		WHERE workspace_id = ? AND agent_summary_done = 0
+	`, time.Now().UTC().Format(time.RFC3339Nano), workspaceID)
+	if err != nil {
+		return false, err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows == 1, nil
 }
 
 // Remove drops a pending cleanup entry.
@@ -144,7 +169,7 @@ func (s *WorkspaceCleanupStore) List() ([]PendingWorkspaceCleanup, error) {
 
 	rows, err := s.db.Query(`
 		SELECT workspace_id, path, branch, remove_branch, force_worktree, force_branch,
-			post_hook, created_at, updated_at, attempts, last_error
+			post_hook, agent_summary_done, created_at, updated_at, attempts, last_error
 		FROM pending_workspace_cleanups
 	`)
 	if err != nil {
@@ -155,11 +180,11 @@ func (s *WorkspaceCleanupStore) List() ([]PendingWorkspaceCleanup, error) {
 	var items []PendingWorkspaceCleanup
 	for rows.Next() {
 		var item PendingWorkspaceCleanup
-		var removeBranch, forceWorktree, forceBranch int
+		var removeBranch, forceWorktree, forceBranch, agentSummaryDone int
 		var branch, postHook, lastError sql.NullString
 		if err := rows.Scan(
 			&item.WorkspaceID, &item.Path, &branch, &removeBranch, &forceWorktree, &forceBranch,
-			&postHook, &item.CreatedAt, &item.UpdatedAt, &item.Attempts, &lastError,
+			&postHook, &agentSummaryDone, &item.CreatedAt, &item.UpdatedAt, &item.Attempts, &lastError,
 		); err != nil {
 			return nil, err
 		}
@@ -168,6 +193,7 @@ func (s *WorkspaceCleanupStore) List() ([]PendingWorkspaceCleanup, error) {
 		item.ForceWorktree = forceWorktree != 0
 		item.ForceBranch = forceBranch != 0
 		item.PostHook = postHook.String
+		item.AgentSummaryDone = agentSummaryDone != 0
 		item.LastError = lastError.String
 		items = append(items, item)
 	}
