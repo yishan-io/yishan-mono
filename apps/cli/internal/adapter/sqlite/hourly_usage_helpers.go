@@ -44,6 +44,45 @@ func HourlyUsageRowKey(row HourlyUsageRow) string {
 	return row.ProjectID + "\x00" + row.WorkspaceID + "\x00" + row.AgentKind + "\x00" + row.ModelNormalized + "\x00" + fmt.Sprintf("%d", row.BucketStartHourUTC)
 }
 
+// AggregateScannedHourlyUsageRows sums records with the same persisted hourly key.
+func AggregateScannedHourlyUsageRows(rows []HourlyUsageRow) []HourlyUsageRow {
+	rowsByKey := make(map[string]HourlyUsageRow, len(rows))
+	for _, row := range rows {
+		key := HourlyUsageRowKey(row)
+		existingRow, hasExisting := rowsByKey[key]
+		if !hasExisting {
+			rowsByKey[key] = row
+			continue
+		}
+		rowsByKey[key] = sumScannedHourlyUsageRows(existingRow, row)
+	}
+	aggregatedRows := make([]HourlyUsageRow, 0, len(rowsByKey))
+	for _, row := range rowsByKey {
+		aggregatedRows = append(aggregatedRows, row)
+	}
+	return aggregatedRows
+}
+
+func sumScannedHourlyUsageRows(aggregateRow, scannedRow HourlyUsageRow) HourlyUsageRow {
+	aggregateRow.InputTokens += scannedRow.InputTokens
+	aggregateRow.OutputTokens += scannedRow.OutputTokens
+	aggregateRow.CachedInputTokens += scannedRow.CachedInputTokens
+	aggregateRow.CachedWriteTokens += scannedRow.CachedWriteTokens
+	aggregateRow.ReasoningTokens += scannedRow.ReasoningTokens
+	aggregateRow.TotalTokens += scannedRow.TotalTokens
+	aggregateRow.TotalCostMicrosUSD += scannedRow.TotalCostMicrosUSD
+	aggregateRow.EventCount += scannedRow.EventCount
+	aggregateRow.SessionCount += scannedRow.SessionCount
+	aggregateRow.TurnCount += scannedRow.TurnCount
+	aggregateRow.ToolCallCount += scannedRow.ToolCallCount
+	if costSourcePriority(scannedRow.CostSource) > costSourcePriority(aggregateRow.CostSource) {
+		aggregateRow.CostSource = scannedRow.CostSource
+	}
+	aggregateRow.ScannerSourceKind = scannerSourceKindAggregate
+	aggregateRow.ScannerSourceID = ""
+	return aggregateRow
+}
+
 // MergeHourlyUsageRow merges a scanned row into an existing row, preserving higher
 // token totals and sync metadata.
 func MergeHourlyUsageRow(existingRow HourlyUsageRow, hasExisting bool, scannedRow HourlyUsageRow) HourlyUsageRow {

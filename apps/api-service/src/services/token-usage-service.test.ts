@@ -83,6 +83,32 @@ describe("TokenUsageService", () => {
     expect(result).toEqual({ upserted: 0 });
   });
 
+  it("aggregates concurrent source rows in the same hourly bucket before inserting", async () => {
+    mock.mockWhereSelect.mockResolvedValue([{ id: "workspace-1", projectId: "project-1" }]);
+
+    const result = await service.upsertHourly({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      rows: [
+        buildRow({ costSource: "direct" }),
+        buildRow({ inputTokens: 7, outputTokens: 3, totalTokens: 10, totalCostMicrosUsd: 77, costSource: "direct" }),
+      ],
+    });
+
+    expect(mock.mockValues).toHaveBeenCalledWith([
+      expect.objectContaining({
+        inputTokens: 17,
+        outputTokens: 8,
+        totalTokens: 31,
+        totalCostMicrosUsd: 200,
+        costSource: "direct",
+        eventCount: 2,
+        sessionCount: 2,
+      }),
+    ]);
+    expect(result).toEqual({ upserted: 1 });
+  });
+
   it("inserts only rows whose workspace exists in the same project", async () => {
     mock.mockWhereSelect.mockResolvedValue([{ id: "workspace-1", projectId: "project-1" }]);
 

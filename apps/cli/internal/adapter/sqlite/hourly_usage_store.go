@@ -98,7 +98,7 @@ func (s *HourlyUsageStore) ReplaceAgentHourlyRows(ctx context.Context, agentKind
 	for _, existingRow := range existingRows {
 		existingByKey[HourlyUsageRowKey(existingRow)] = existingRow
 	}
-	for _, scannedRow := range rows {
+	for _, scannedRow := range AggregateScannedHourlyUsageRows(rows) {
 		key := HourlyUsageRowKey(scannedRow)
 		existingRow, hasExisting := existingByKey[key]
 		mergedRow := MergeHourlyUsageRow(existingRow, hasExisting, scannedRow)

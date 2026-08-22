@@ -147,6 +147,52 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 	}
 }
 
+func TestScanPiHourlyUsageKeepsConcurrentSessionSourcesSeparate(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	for _, sessionID := range []string{"session-3", "session-4"} {
+		sessionFixture := strings.ReplaceAll(piDirectCostFixture, "session-3", sessionID)
+		sessionFilePath := filepath.Join(tmpDir, "2026-06-29T13-00-00-000Z_"+sessionID+".jsonl")
+		if err := os.WriteFile(sessionFilePath, []byte(sessionFixture), 0o644); err != nil {
+			t.Fatalf("write %s fixture: %v", sessionID, err)
+		}
+	}
+
+	input := ScanInput{
+		RunID:       "test-run",
+		IngestedAt:  time.Now().UnixMilli(),
+		SessionRoot: tmpDir,
+		Catalog:     testPricingCatalog(),
+		Worktrees: []record.WorktreeRef{{
+			ProjectID:     "proj-1",
+			WorkspaceID:   "ws-1",
+			WorkspacePath: "/tmp/pi-project",
+		}},
+	}
+	rows, err := ScanPiHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan hourly usage: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected two source rows, got %d", len(rows))
+	}
+
+	var totalTokens, totalCostMicros int64
+	sourceIDs := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		if row.ProjectID != "proj-1" || row.WorkspaceID != "ws-1" || row.ModelNormalized != "gpt-5.6-terra" {
+			t.Fatalf("expected matching final hourly key, got %#v", row)
+		}
+		totalTokens += row.TotalTokens
+		totalCostMicros += row.TotalCostMicrosUSD
+		sourceIDs[row.ScannerSourceID] = true
+	}
+	if len(sourceIDs) != 2 || totalTokens != 250 || totalCostMicros != 500_000 {
+		t.Fatalf("expected separate sources with summed 250 tokens and 500000 cost, got %#v", rows)
+	}
+}
+
 func TestScanPiUsesDirectMessageSummationNotDeltas(t *testing.T) {
 	t.Parallel()
 

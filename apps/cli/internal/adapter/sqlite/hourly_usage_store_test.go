@@ -55,6 +55,73 @@ func TestHourlyUsageStorePreservesMergeAndSyncSemantics(t *testing.T) {
 	}
 }
 
+func TestHourlyUsageStoreAggregatesConcurrentSourcesAndKeepsRescansIdempotent(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	store := NewHourlyUsageStore(database)
+	bucketStart := time.Now().UTC().Add(-time.Hour).UnixMilli()
+	firstSessionRow := newTestHourlyUsageRow(bucketStart, 100)
+	firstSessionRow.OutputTokens = 20
+	firstSessionRow.TotalTokens = 120
+	firstSessionRow.TotalCostMicrosUSD = 250_000
+	firstSessionRow.CostSource = CostSourceDirect
+	firstSessionRow.ScannerSourceID = "/tmp/session-1.jsonl"
+	secondSessionRow := newTestHourlyUsageRow(bucketStart, 80)
+	secondSessionRow.OutputTokens = 15
+	secondSessionRow.TotalTokens = 95
+	secondSessionRow.TotalCostMicrosUSD = 125_000
+	secondSessionRow.CostSource = CostSourceDirect
+	secondSessionRow.ScannerSourceID = "/tmp/session-2.jsonl"
+
+	rows := []HourlyUsageRow{firstSessionRow, secondSessionRow}
+	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", rows); err != nil {
+		t.Fatalf("replace concurrent session rows: %v", err)
+	}
+
+	dirtyRows, err := store.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows: %v", err)
+	}
+	if len(dirtyRows) != 1 {
+		t.Fatalf("expected one aggregated dirty row, got %#v", dirtyRows)
+	}
+	aggregatedRow := dirtyRows[0]
+	if aggregatedRow.InputTokens != 180 || aggregatedRow.OutputTokens != 35 || aggregatedRow.TotalTokens != 215 {
+		t.Fatalf("expected summed tokens, got %#v", aggregatedRow)
+	}
+	if aggregatedRow.TotalCostMicrosUSD != 375_000 || aggregatedRow.CostSource != CostSourceDirect {
+		t.Fatalf("expected summed direct cost, got %#v", aggregatedRow)
+	}
+	if aggregatedRow.EventCount != 2 || aggregatedRow.SessionCount != 2 {
+		t.Fatalf("expected summed counts, got %#v", aggregatedRow)
+	}
+	if aggregatedRow.ScannerSourceKind != scannerSourceKindAggregate || aggregatedRow.ScannerSourceID != "" {
+		t.Fatalf("expected aggregate source metadata, got %#v", aggregatedRow)
+	}
+
+	syncedAt := time.Now().UTC().UnixMilli()
+	if err := store.MarkHourlyRowsSynced(context.Background(), dirtyRows, syncedAt); err != nil {
+		t.Fatalf("mark aggregated row synced: %v", err)
+	}
+	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", rows); err != nil {
+		t.Fatalf("rescan concurrent session rows: %v", err)
+	}
+	dirtyRows, err = store.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows after rescan: %v", err)
+	}
+	if len(dirtyRows) != 0 {
+		t.Fatalf("expected idempotent rescan to remain clean, got %#v", dirtyRows)
+	}
+}
+
 func TestHourlyUsageStoreRetainsExpiredDirtyRows(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {

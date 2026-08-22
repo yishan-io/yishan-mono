@@ -5,8 +5,10 @@ import "time"
 // AttributionConfidence records how confidently a scanned usage row was associated with a workspace.
 type AttributionConfidence string
 
-// ScannerSourceKind identifies the scanner's source format.
+// ScannerSourceKind identifies the scanner's source format or a multi-source aggregate.
 type ScannerSourceKind string
+
+const scannerSourceKindAggregate ScannerSourceKind = "aggregate"
 
 // CostSource identifies whether a row's cost was direct, estimated, or unknown.
 type CostSource string
