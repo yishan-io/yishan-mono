@@ -106,8 +106,8 @@ func (i *Ingress) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if i.tokenUsage != nil {
-		i.tokenUsage.Trigger(event.agent, "hook")
+	if i.tokenUsage != nil && event.eventType == "stop" {
+		i.tokenUsage.Trigger(event.agent, "hook-stop")
 	}
 
 	i.usage.Record(event.workspaceID, event.agent)

@@ -10,7 +10,40 @@ import (
 
 	agentkind "yishan/apps/cli/internal/agent/kind"
 	"yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/tokenusage/collection"
 )
+
+type recordingTokenUsage struct {
+	triggers []string
+}
+
+func (r *recordingTokenUsage) StartStartupScan()                 {}
+func (r *recordingTokenUsage) SyncNow(string)                    {}
+func (r *recordingTokenUsage) RequestRecentRecoveryScan(string)  {}
+func (r *recordingTokenUsage) DebugState() collection.DebugState { return collection.DebugState{} }
+func (r *recordingTokenUsage) Close()                            {}
+
+func (r *recordingTokenUsage) Trigger(agentKind string, source string) {
+	r.triggers = append(r.triggers, agentKind+":"+source)
+}
+
+func TestServeAgentHookTriggersTokenUsageOnlyOnStop(t *testing.T) {
+	tokenUsage := &recordingTokenUsage{}
+	ingress := NewIngress(IngressDeps{Events: eventbus.NewHub(), TokenUsage: tokenUsage, Usage: NewUsageTracker()})
+
+	for _, event := range []string{"Start", "PostToolUse", "Stop"} {
+		response := postHookPayload(t, ingress, map[string]any{
+			"agent": "pi", "workspaceId": "ws-1", "tabId": "tab-1", "paneId": "pane-1", "event": event,
+		})
+		if response.Code != http.StatusOK {
+			t.Fatalf("expected status %d for %s, got %d", http.StatusOK, event, response.Code)
+		}
+	}
+
+	if len(tokenUsage.triggers) != 1 || tokenUsage.triggers[0] != "pi:hook-stop" {
+		t.Fatalf("expected only stop hook trigger, got %#v", tokenUsage.triggers)
+	}
+}
 
 func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
 	hub := eventbus.NewHub()
