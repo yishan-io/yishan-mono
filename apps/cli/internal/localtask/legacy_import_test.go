@@ -53,23 +53,22 @@ func TestImportLegacyProjectTasks_IsIdempotentAndCopiesContext(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "tasks", "state.json"), []byte(state), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(legacyDir, "plan.md"), []byte("# Plan"), 0o600); err != nil {
+	taskBrief := "# Import task\n\n## Goal\n\nImport metadata.\n\n## Acceptance Criteria\n\n- Keep IDs.\n"
+	if err := os.WriteFile(filepath.Join(legacyDir, "task.md"), []byte(taskBrief), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	repository := &legacyImportRepository{tasks: map[string]Task{}}
-	targetRoot := t.TempDir()
-	resolveTarget := func(id string) (string, error) { return filepath.Join(targetRoot, id), nil }
 	for range 2 {
-		if err := ImportLegacyProjectTasks(context.Background(), repository, root, "project-1", resolveTarget); err != nil {
+		if err := ImportLegacyProjectTasks(context.Background(), repository, root, "project-1"); err != nil {
 			t.Fatalf("import legacy tasks: %v", err)
 		}
 	}
-	if len(repository.tasks) != 1 || repository.tasks["task-1"].CreatedAt != "2026-08-24" {
+	importedTask := repository.tasks["task-1"]
+	if len(repository.tasks) != 1 || importedTask.CreatedAt != "2026-08-24" {
 		t.Fatalf("imported tasks = %#v", repository.tasks)
 	}
-	content, err := os.ReadFile(filepath.Join(targetRoot, "task-1", "plan.md"))
-	if err != nil || string(content) != "# Plan" {
-		t.Fatalf("copied plan = %q, %v", content, err)
+	if importedTask.Description != "Import metadata.\n\nAcceptance Criteria:\n- Keep IDs." {
+		t.Fatalf("imported description = %q", importedTask.Description)
 	}
 }
 

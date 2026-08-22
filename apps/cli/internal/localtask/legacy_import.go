@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,14 +12,14 @@ import (
 
 const legacyTasksDirectory = "tasks"
 
-// ImportLegacyProjectTasks imports legacy task metadata and copies its Task Context.
-func ImportLegacyProjectTasks(ctx context.Context, repository Repository, legacyContextRoot string, projectID string, resolveTarget func(string) (string, error)) error {
+// ImportLegacyProjectTasks imports legacy task metadata into SQLite without moving Task Context files.
+func ImportLegacyProjectTasks(ctx context.Context, repository Repository, legacyContextRoot string, projectID string) error {
 	records, err := readLegacyTaskRecords(legacyContextRoot)
 	if err != nil {
 		return err
 	}
 	for _, record := range records {
-		if err := importLegacyTask(ctx, repository, legacyContextRoot, projectID, resolveTarget, record); err != nil {
+		if err := importLegacyTask(ctx, repository, legacyContextRoot, projectID, record); err != nil {
 			return err
 		}
 	}
@@ -55,22 +54,19 @@ func readLegacyTaskRecords(contextRoot string) ([]legacyTaskRecord, error) {
 	return state.Tasks, nil
 }
 
-func importLegacyTask(ctx context.Context, repository Repository, contextRoot string, projectID string, resolveTarget func(string) (string, error), record legacyTaskRecord) error {
+func importLegacyTask(ctx context.Context, repository Repository, contextRoot string, projectID string, record legacyTaskRecord) error {
 	if err := validateLegacyTaskRecord(record); err != nil {
 		return err
 	}
-	if err := createLegacyTaskIfMissing(ctx, repository, projectID, record); err != nil {
-		return err
-	}
-	sourcePath, err := resolveLegacyTaskPath(contextRoot, record.Path)
+	taskPath, err := resolveLegacyTaskPath(contextRoot, record.Path)
 	if err != nil {
 		return err
 	}
-	targetPath, err := resolveTarget(record.ID)
+	description, completedAt, err := readLegacyTaskMetadata(taskPath, record.Status)
 	if err != nil {
-		return fmt.Errorf("resolve task context target: %w", err)
+		return err
 	}
-	return copyLegacyTaskContext(sourcePath, targetPath)
+	return createLegacyTaskIfMissing(ctx, repository, projectID, record, description, completedAt)
 }
 
 func validateLegacyTaskRecord(record legacyTaskRecord) error {
@@ -83,7 +79,7 @@ func validateLegacyTaskRecord(record legacyTaskRecord) error {
 	return nil
 }
 
-func createLegacyTaskIfMissing(ctx context.Context, repository Repository, projectID string, record legacyTaskRecord) error {
+func createLegacyTaskIfMissing(ctx context.Context, repository Repository, projectID string, record legacyTaskRecord, description string, completedAt *string) error {
 	_, err := repository.Get(ctx, record.ID)
 	if err == nil {
 		return nil
@@ -92,11 +88,86 @@ func createLegacyTaskIfMissing(ctx context.Context, repository Repository, proje
 		return fmt.Errorf("read legacy local task %q: %w", record.ID, err)
 	}
 	status := Status(record.Status)
-	_, err = repository.Create(ctx, Task{ID: record.ID, ProjectID: &projectID, Title: record.Title, Status: status, Priority: PriorityMedium, CreatedAt: record.Created})
+	_, err = repository.Create(ctx, Task{ID: record.ID, ProjectID: &projectID, Title: record.Title, Description: description, Status: status, Priority: PriorityMedium, CreatedAt: record.Created, CompletedAt: completedAt})
 	if err != nil {
 		return fmt.Errorf("create legacy local task %q: %w", record.ID, err)
 	}
 	return nil
+}
+
+func readLegacyTaskMetadata(taskPath string, status string) (string, *string, error) {
+	content, err := os.ReadFile(filepath.Join(taskPath, "task.md"))
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil, nil
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("read legacy task brief: %w", err)
+	}
+	description := buildLegacyTaskDescription(legacyTaskSection(string(content), "Goal"), legacyTaskSection(string(content), "Acceptance Criteria"))
+	completedAt, err := readLegacyCompletionDate(taskPath, status)
+	if err != nil {
+		return "", nil, err
+	}
+	return description, completedAt, nil
+}
+
+func readLegacyCompletionDate(taskPath string, status string) (*string, error) {
+	if status != string(StatusCompleted) {
+		return nil, nil
+	}
+	content, err := os.ReadFile(filepath.Join(taskPath, "outcome.md"))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read legacy outcome: %w", err)
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		if strings.HasPrefix(line, "**Completed:** ") {
+			date := strings.TrimSpace(strings.TrimPrefix(line, "**Completed:** "))
+			return &date, nil
+		}
+	}
+	return nil, nil
+}
+
+func legacyTaskSection(content string, heading string) string {
+	lines := strings.Split(content, "\n")
+	start := findLegacySectionContentStart(lines, heading)
+	if start == -1 {
+		return ""
+	}
+	end := findLegacySectionEnd(lines, start)
+	return strings.TrimSpace(strings.Join(lines[start:end], "\n"))
+}
+
+func findLegacySectionContentStart(lines []string, heading string) int {
+	for index, line := range lines {
+		if line == "## "+heading {
+			return index + 1
+		}
+	}
+	return -1
+}
+
+func findLegacySectionEnd(lines []string, start int) int {
+	for index := start; index < len(lines); index++ {
+		if strings.HasPrefix(lines[index], "## ") {
+			return index
+		}
+	}
+	return len(lines)
+}
+
+func buildLegacyTaskDescription(goal string, criteria string) string {
+	parts := make([]string, 0, 2)
+	if goal != "" {
+		parts = append(parts, goal)
+	}
+	if criteria != "" {
+		parts = append(parts, "Acceptance Criteria:\n"+criteria)
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 func resolveLegacyTaskPath(contextRoot string, legacyPath string) (string, error) {
@@ -109,41 +180,4 @@ func resolveLegacyTaskPath(contextRoot string, legacyPath string) (string, error
 		return "", errors.New("legacy task path escapes context root")
 	}
 	return target, nil
-}
-
-func copyLegacyTaskContext(sourcePath string, targetPath string) error {
-	if err := os.MkdirAll(targetPath, 0o755); err != nil {
-		return fmt.Errorf("create task context directory: %w", err)
-	}
-	for _, document := range []string{"plan.md", "notes.md", "outcome.md"} {
-		if err := copyMissingFile(filepath.Join(sourcePath, document), filepath.Join(targetPath, document)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func copyMissingFile(sourcePath string, targetPath string) error {
-	if _, err := os.Stat(targetPath); err == nil {
-		return nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("check task context target: %w", err)
-	}
-	source, err := os.Open(sourcePath)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("open task context source: %w", err)
-	}
-	defer source.Close()
-	target, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return fmt.Errorf("create task context target: %w", err)
-	}
-	defer target.Close()
-	if _, err := io.Copy(target, source); err != nil {
-		return fmt.Errorf("copy task context: %w", err)
-	}
-	return nil
 }
