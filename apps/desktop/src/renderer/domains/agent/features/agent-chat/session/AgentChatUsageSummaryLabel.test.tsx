@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { COLOR_PRIMITIVES } from "@yishan-io/design-tokens/v1";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
@@ -9,10 +9,14 @@ import { AgentChatUsageSummaryLabel, getUsageSummaryColor } from "./AgentChatUsa
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, replacements?: Record<string, string | number>) => {
       const translations: Record<string, string> = {
         "agentChat.usageSummary.currentContext": "Current context",
         "agentChat.usageSummary.contextCompact": "CTX",
+        "agentChat.usageSummary.contextUsageButton": "Current context: {{usage}}. Open usage details",
+        "agentChat.usageSummary.contextKnown": "{{contextTokens}} of {{contextWindow}} tokens ({{contextPercent}}%)",
+        "agentChat.usageSummary.contextUnknown": "unknown of {{contextWindow}} tokens",
+        "agentChat.usageSummary.details": "Usage details",
         "agentChat.usageSummary.input": "Input",
         "agentChat.usageSummary.output": "Output",
         "agentChat.usageSummary.cacheRead": "Cache read",
@@ -22,8 +26,12 @@ vi.mock("react-i18next", () => ({
         "agentChat.usageSummary.sessionTotalCumulative": "Session total (cumulative)",
         "agentChat.usageSummary.cost": "Cost",
       };
+      const translation = translations[key] ?? key;
 
-      return translations[key] ?? key;
+      return Object.entries(replacements ?? {}).reduce(
+        (result, [replacementKey, replacementValue]) => result.replace(`{{${replacementKey}}}`, String(replacementValue)),
+        translation,
+      );
     },
   }),
 }));
@@ -59,7 +67,7 @@ describe("getUsageSummaryColor", () => {
 });
 
 describe("AgentChatUsageSummaryLabel", () => {
-  it("shows a usage breakdown popup on hover", async () => {
+  it("renders a compact context control with a summary tooltip and detailed popover", async () => {
     seedSession({
       currentModelContextWindow: 128_000,
       messages: [
@@ -85,25 +93,37 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    fireEvent.mouseOver(screen.getByLabelText("CTX: 2.2K/128K (1.7%), $0.25"));
+    const usageButton = screen.getByRole("button", {
+      name: "Current context: 2.2K of 128K tokens (1.7%). Open usage details",
+    });
+    const usageProgress = within(usageButton).getByTestId("context-usage-progress");
+    expect(usageProgress.querySelector(".MuiCircularProgress-track")).toBeTruthy();
+    expect(within(usageButton).queryByRole("progressbar")).toBeNull();
+
+    fireEvent.mouseOver(usageButton);
 
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.textContent).toContain("Current context");
     expect(tooltip.textContent).toContain("2.2K / 128K (1.7%)");
-    expect(tooltip.textContent).toContain("Input");
-    expect(tooltip.textContent).toContain("2.2K");
-    expect(tooltip.textContent).toContain("Output");
-    expect(tooltip.textContent).toContain("16");
-    expect(tooltip.textContent).toContain("Cache read");
-    expect(tooltip.textContent).toContain("1.5K");
-    expect(tooltip.textContent).toContain("Cache write");
-    expect(tooltip.textContent).toContain("24");
-    expect(tooltip.textContent).toContain("Cache rate");
-    expect(tooltip.textContent).toContain("41%");
-    expect(tooltip.textContent).toContain("Reasoning");
-    expect(tooltip.textContent).toContain("120");
-    expect(tooltip.textContent).toContain("Session total (cumulative)");
-    expect(tooltip.textContent).toContain("Cost");
+    expect(tooltip.textContent).not.toContain("Input");
+
+    fireEvent.click(usageButton);
+
+    const popover = await screen.findByRole("dialog", { name: "Usage details" });
+    expect(popover.textContent).toContain("Input");
+    expect(popover.textContent).toContain("2.2K");
+    expect(popover.textContent).toContain("Output");
+    expect(popover.textContent).toContain("16");
+    expect(popover.textContent).toContain("Cache read");
+    expect(popover.textContent).toContain("1.5K");
+    expect(popover.textContent).toContain("Cache write");
+    expect(popover.textContent).toContain("24");
+    expect(popover.textContent).toContain("Cache rate");
+    expect(popover.textContent).toContain("41%");
+    expect(popover.textContent).toContain("Reasoning");
+    expect(popover.textContent).toContain("120");
+    expect(popover.textContent).toContain("Session total (cumulative)");
+    expect(popover.textContent).toContain("Cost");
   });
 
   it("renders the derived usage summary for the current tab", () => {
@@ -131,7 +151,9 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.getByLabelText("CTX: 2.2K/128K (1.7%), $0.25")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Current context: 2.2K of 128K tokens (1.7%). Open usage details" }),
+    ).toBeTruthy();
   });
 
   it("renders nothing when the current model has no context window", () => {
@@ -139,7 +161,7 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.queryByText(/CTX:/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Open usage details/ })).toBeNull();
   });
 
   it("grows the live ctx estimate while an assistant message streams (sessionStats null)", () => {
@@ -176,7 +198,9 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.getByLabelText("CTX: 280/128K (0.2%), $0.25")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Current context: 280 of 128K tokens (0.2%). Open usage details" }),
+    ).toBeTruthy();
 
     act(() => {
       store.updateStreamingMessage("tab-1", {
@@ -186,7 +210,9 @@ describe("AgentChatUsageSummaryLabel", () => {
       } as AgentMessage);
     });
 
-    expect(screen.getByLabelText("CTX: 480/128K (0.4%), $0.25")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Current context: 480 of 128K tokens (0.4%). Open usage details" }),
+    ).toBeTruthy();
   });
 
   it("prefers a stale sessionStats snapshot when one is present (pre-fix freeze documented)", () => {
@@ -228,7 +254,9 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.getByLabelText("CTX: 100/128K (0.1%), $0.25")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Current context: 100 of 128K tokens (0.1%). Open usage details" }),
+    ).toBeTruthy();
   });
 
   it("sums cost across completed assistant messages mid-turn", () => {
@@ -272,7 +300,9 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.getByLabelText("CTX: 90/128K (0.1%), $0.30")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Current context: 90 of 128K tokens (0.1%). Open usage details" }),
+    ).toBeTruthy();
   });
 
   it("transitions from a settled baseline to live exact-once billing and back to settled stats", async () => {
@@ -308,7 +338,9 @@ describe("AgentChatUsageSummaryLabel", () => {
       });
     });
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
-    expect(screen.getByLabelText("CTX: 500/1K (50%), $1.00")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Current context: 500 of 1K tokens (50%). Open usage details" }),
+    ).toBeTruthy();
 
     act(() => {
       store.setSessionStats("tab-1", null);
@@ -322,15 +354,18 @@ describe("AgentChatUsageSummaryLabel", () => {
       store.appendMessage("tab-1", completedChild);
     });
 
-    const liveLabel = screen.getByLabelText("CTX: 600/1K (60%), $1.12");
-    fireEvent.mouseOver(liveLabel);
-    const liveTooltip = await screen.findByRole("tooltip");
-    expect(liveTooltip.textContent).toContain("109");
-    expect(liveTooltip.textContent).toContain("31");
-    expect(liveTooltip.textContent).toContain("43");
-    expect(liveTooltip.textContent).toContain("55");
-    expect(liveTooltip.textContent).toContain("238");
-    expect(liveTooltip.textContent).toContain("$1.12");
+    const liveLabel = screen.getByRole("button", {
+      name: "Current context: 600 of 1K tokens (60%). Open usage details",
+    });
+    fireEvent.click(liveLabel);
+    const usageDetails = await screen.findByRole("dialog", { name: "Usage details" });
+    expect(usageDetails.textContent).toContain("109");
+    expect(usageDetails.textContent).toContain("31");
+    expect(usageDetails.textContent).toContain("43");
+    expect(usageDetails.textContent).toContain("55");
+    expect(usageDetails.textContent).toContain("238");
+    expect(usageDetails.textContent).toContain("$1.12");
+    fireEvent.keyDown(usageDetails, { key: "Escape" });
 
     act(() => {
       store.setSessionStats("tab-1", {
@@ -340,8 +375,11 @@ describe("AgentChatUsageSummaryLabel", () => {
       });
     });
 
-    expect(screen.getByLabelText("CTX: 700/1K (70%), $1.12")).toBeTruthy();
-    expect(screen.getByRole("tooltip").textContent).toContain("238");
+    const settledLabel = screen.getByRole("button", {
+      name: "Current context: 700 of 1K tokens (70%). Open usage details",
+    });
+    fireEvent.click(settledLabel);
+    expect((await screen.findByRole("dialog", { name: "Usage details" })).textContent).toContain("238");
   });
 
   it("shows the unknown-context placeholder after compaction", () => {
@@ -354,6 +392,25 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.getByLabelText("CTX: ?/200K (?), $0.50")).toBeTruthy();
+    const usageButton = screen.getByRole("button", {
+      name: "Current context: unknown of 200K tokens. Open usage details",
+    });
+    expect(within(usageButton).getByTestId("context-usage-progress").getAttribute("aria-valuenow")).toBe("0");
+  });
+
+  it("clamps the context circle to 100% while preserving the reported usage", () => {
+    seedSession({ currentModelContextWindow: 1_000 });
+    agentChatStore.getState().setSessionStats("tab-1", {
+      tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+      cost: 0.5,
+      contextUsage: { tokens: 1_500, contextWindow: 1_000, percent: 150 },
+    });
+
+    render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
+
+    const usageButton = screen.getByRole("button", {
+      name: "Current context: 1.5K of 1K tokens (150%). Open usage details",
+    });
+    expect(within(usageButton).getByTestId("context-usage-progress").getAttribute("aria-valuenow")).toBe("100");
   });
 });
