@@ -23,6 +23,9 @@ func insertLocalTaskTags(ctx context.Context, queryer localTaskQueryer, taskID s
 		if err != nil {
 			return err
 		}
+		if err := upsertLocalTaskTagCatalog(ctx, queryer, normalizedTag, tag); err != nil {
+			return err
+		}
 		if _, err := queryer.ExecContext(ctx, `INSERT INTO local_task_tags
 			(local_task_id, tag, normalized_tag, position) VALUES (?, ?, ?, ?)`, taskID, tag, normalizedTag, position); err != nil {
 			return fmt.Errorf("insert local task tag: %w", err)
@@ -97,4 +100,16 @@ func getLocalTask(ctx context.Context, queryer localTaskQueryer, taskID string) 
 		return localtask.Task{}, err
 	}
 	return task, nil
+}
+
+func upsertLocalTaskTagCatalog(ctx context.Context, queryer localTaskQueryer, key string, name string) error {
+	if _, err := queryer.ExecContext(ctx, `INSERT INTO local_task_tag_catalog (normalized_tag, tag)
+		VALUES (?, ?) ON CONFLICT(normalized_tag) DO NOTHING`, key, name); err != nil {
+		return fmt.Errorf("upsert local task tag catalog entry: %w", err)
+	}
+	if _, err := queryer.ExecContext(ctx, `INSERT INTO local_task_tag_catalog_aliases (normalized_tag, tag)
+		VALUES (?, ?) ON CONFLICT(normalized_tag, tag) DO NOTHING`, key, name); err != nil {
+		return fmt.Errorf("upsert local task tag catalog alias: %w", err)
+	}
+	return nil
 }

@@ -36,6 +36,7 @@ import {
   refreshLocalTaskHub,
   setLocalTaskHubSearchQuery,
   updateLocalTask,
+  updateLocalTaskTagColor,
 } from "../../commands/localTaskCommands";
 import { localTaskStore } from "../../state/localTaskStore";
 import { WorkspaceTaskDetails } from "../workspace-tasks/WorkspaceTaskDetails";
@@ -62,6 +63,7 @@ export function TaskHubView() {
   const contextErrorByTaskId = localTaskStore((state) => state.contextErrorByTaskId);
   const projects = projectStore((state) => state.projects);
   const tagSuggestions = localTaskStore((state) => state.tagSuggestions);
+  const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -246,7 +248,9 @@ export function TaskHubView() {
             contextError={contextErrorByTaskId[selectedTask.id] ?? null}
             isMutationLoading={isMutationLoading}
             onTagsChange={(tags) => updateLocalTask(selectedTask.id, { tags })}
+            onTagColorChange={updateLocalTaskTagColor}
             tagSuggestions={tagSuggestions}
+            tagCatalog={tagCatalog}
           />
         </Box>
       ) : (
@@ -290,7 +294,12 @@ export function TaskHubView() {
             </Box>
             <Collapse in={areFiltersOpen}>
               <Box id="local-task-hub-filters" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                <LocalTaskHubFilters filters={filters} projects={projects} tagSuggestions={tagSuggestions} />
+                <LocalTaskHubFilters
+                  filters={filters}
+                  projects={projects}
+                  tagSuggestions={tagSuggestions}
+                  tagCatalog={tagCatalog}
+                />
               </Box>
             </Collapse>
           </Box>
@@ -322,7 +331,12 @@ export function TaskHubView() {
             </Box>
           ) : (
             <>
-              <LocalTaskList tasks={paginatedTasks} onSelect={handleSelectTask} projectNameById={projectNameById} />
+              <LocalTaskList
+                tasks={paginatedTasks}
+                onSelect={handleSelectTask}
+                projectNameById={projectNameById}
+                tagCatalog={tagCatalog}
+              />
               {pageCount > 1 ? (
                 <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>
                   <Pagination

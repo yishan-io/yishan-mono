@@ -118,7 +118,45 @@ func (s *Service) Search(ctx context.Context, req rpc.LocalTaskSearchParams) (an
 // ListTags returns global Local Task tag suggestions.
 func (s *Service) ListTags(ctx context.Context) (any, error) {
 	tags, err := s.deps.Repository.ListTags(ctx)
-	return tags, err
+	if err != nil {
+		return nil, err
+	}
+	return tagNames(tags), nil
+}
+
+// ListTagCatalog returns global Local Task tag catalog entries including their colors.
+func (s *Service) ListTagCatalog(ctx context.Context) (any, error) {
+	tags, err := s.deps.Repository.ListTags(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+// UpdateTagColor validates and changes a global Local Task tag catalog color.
+func (s *Service) UpdateTagColor(ctx context.Context, req rpc.LocalTaskUpdateTagColorParams) (any, error) {
+	update := domain.TagColorUpdate{Color: req.Color, CustomColor: req.CustomColor}
+	if req.Tag != "" {
+		displayName, err := domain.NormalizeTag(req.Tag)
+		if err != nil {
+			return nil, err
+		}
+		update.DisplayName = &displayName
+	} else if err := domain.ValidateTagKey(req.Key); err != nil {
+		return nil, err
+	}
+	if err := domain.ValidateTagColorUpdate(update); err != nil {
+		return nil, err
+	}
+	return s.deps.Repository.UpdateTagColor(ctx, req.Key, update)
+}
+
+func tagNames(tags []domain.Tag) []string {
+	names := make([]string, len(tags))
+	for index, tag := range tags {
+		names[index] = tag.Name
+	}
+	return names
 }
 
 // GetContextDetails derives approved v1 document paths for one Local Task.

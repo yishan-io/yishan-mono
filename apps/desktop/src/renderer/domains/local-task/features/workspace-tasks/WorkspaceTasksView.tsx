@@ -22,6 +22,7 @@ import {
   refreshSelectedWorkspaceTasks,
   selectWorkspaceLocalTask,
   updateLocalTask,
+  updateLocalTaskTagColor,
 } from "../../commands/localTaskCommands";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "../task-hub/CreateLocalTaskDialog";
@@ -48,6 +49,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
   const contextLoadStateByTaskId = localTaskStore((state) => state.contextLoadStateByTaskId);
   const contextErrorByTaskId = localTaskStore((state) => state.contextErrorByTaskId);
   const tagSuggestions = localTaskStore((state) => state.tagSuggestions);
+  const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
@@ -179,7 +181,9 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               contextError={contextErrorByTaskId[selectedTask.id] ?? null}
               isMutationLoading={isMutationLoading}
               onTagsChange={(tags) => updateLocalTask(selectedTask.id, { tags })}
+              onTagColorChange={updateLocalTaskTagColor}
               tagSuggestions={tagSuggestions}
+              tagCatalog={tagCatalog}
             />
           ) : taskLoadStateByTaskId[detailTaskId] === "error" ? (
             <Alert severity="error" action={<Button onClick={handleRetryTask}>{t("localTask.actions.retry")}</Button>}>
@@ -243,6 +247,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               selectedTaskId={selectedTaskId}
               isMutationLoading={isMutationLoading}
               onSelect={handleSelectTask}
+              tagCatalog={tagCatalog}
             />
           ) : (
             <Typography color="text.secondary" sx={{ py: 2 }}>

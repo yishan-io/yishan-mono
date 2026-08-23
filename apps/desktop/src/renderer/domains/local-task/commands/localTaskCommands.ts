@@ -6,19 +6,22 @@ import {
   getLocalTask as getLocalTaskFromDaemon,
   linkLocalTaskWorkspace as linkLocalTaskWorkspaceFromDaemon,
   listLocalTaskLinks as listLocalTaskLinksFromDaemon,
-  listLocalTaskTags as listLocalTaskTagsFromDaemon,
+  listLocalTaskTagCatalog as listLocalTaskTagCatalogFromDaemon,
   listLocalTaskWorkspaceLinks as listLocalTaskWorkspaceLinksFromDaemon,
   listLocalTasks as listLocalTasksFromDaemon,
   searchLocalTasks as searchLocalTasksFromDaemon,
   unlinkLocalTaskWorkspace as unlinkLocalTaskWorkspaceFromDaemon,
   updateLocalTask as updateLocalTaskFromDaemon,
   updateLocalTaskLinkStatus as updateLocalTaskLinkStatusFromDaemon,
+  updateLocalTaskTagColor as updateLocalTaskTagColorFromDaemon,
 } from "../daemon/localTaskDaemonClient";
 import type {
   CreateLocalTaskInput,
   LocalTask,
   LocalTaskFilters,
   LocalTaskStatus,
+  LocalTaskTagColor,
+  LocalTaskTagCustomColor,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -64,6 +67,10 @@ async function refreshAfterMutation(): Promise<void> {
   ]);
 }
 
+async function refreshAfterTaskMutation(): Promise<void> {
+  await Promise.all([refreshAfterMutation(), loadLocalTaskTagSuggestions()]);
+}
+
 async function runMutation<T>(operation: () => Promise<T>): Promise<T> {
   localTaskStore.getState().beginMutation();
   try {
@@ -78,12 +85,12 @@ async function runMutation<T>(operation: () => Promise<T>): Promise<T> {
 
 /** Loads daemon-owned Local Task tag suggestions into store-owned state. */
 export async function loadLocalTaskTagSuggestions(): Promise<void> {
-  const requestId = localTaskStore.getState().beginTagSuggestionsLoad();
+  const requestId = localTaskStore.getState().beginTagCatalogLoad();
   try {
-    const tags = await listLocalTaskTagsFromDaemon();
-    localTaskStore.getState().setTagSuggestions(requestId, tags);
+    const catalog = await listLocalTaskTagCatalogFromDaemon();
+    localTaskStore.getState().setTagCatalog(requestId, catalog);
   } catch (error) {
-    localTaskStore.getState().setTagSuggestionsError(requestId, getErrorMessage(error));
+    localTaskStore.getState().setTagCatalogError(requestId, getErrorMessage(error));
   }
 }
 
@@ -210,8 +217,29 @@ export async function createLocalTask(input: CreateLocalTaskInput): Promise<Loca
   return runMutation(async () => {
     const task = await createLocalTaskFromDaemon(input);
     localTaskStore.getState().upsertTaskEntity(task);
-    await refreshAfterMutation();
+    await refreshAfterTaskMutation();
     return task;
+  });
+}
+
+/** Sets or clears a global tag color and refreshes the authoritative catalog. */
+export async function updateLocalTaskTagColor(
+  tag: string,
+  color: LocalTaskTagColor | null,
+  customColor: LocalTaskTagCustomColor | null = null,
+): Promise<void> {
+  await runMutation(async () => {
+    const updatedCatalogEntry = await updateLocalTaskTagColorFromDaemon(tag, color, customColor);
+    localTaskStore.getState().upsertTagCatalogEntry(updatedCatalogEntry);
+
+    const requestId = localTaskStore.getState().beginTagCatalogLoad();
+    try {
+      const catalog = await listLocalTaskTagCatalogFromDaemon();
+      localTaskStore.getState().setTagCatalog(requestId, catalog);
+    } catch (error) {
+      // The RPC already succeeded; retain its entry and expose only the best-effort reload failure.
+      localTaskStore.getState().setTagCatalogError(requestId, getErrorMessage(error));
+    }
   });
 }
 
@@ -220,7 +248,7 @@ export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInpu
   return runMutation(async () => {
     const task = await updateLocalTaskFromDaemon(taskId, input);
     localTaskStore.getState().upsertTaskEntity(task);
-    await refreshAfterMutation();
+    await refreshAfterTaskMutation();
     return task;
   });
 }
@@ -297,12 +325,12 @@ export async function createAndLinkLocalTask(
     await linkLocalTaskWorkspaceFromDaemon(task.id, workspaceId);
   } catch (error) {
     const linkError = getErrorMessage(error);
-    await refreshAfterMutation();
+    await refreshAfterTaskMutation();
     localTaskStore.getState().finishMutation(linkError);
     return { status: "created", task, linkError };
   }
 
-  await refreshAfterMutation();
+  await refreshAfterTaskMutation();
   localTaskStore.getState().finishMutation();
   return { status: "linked", task };
 }

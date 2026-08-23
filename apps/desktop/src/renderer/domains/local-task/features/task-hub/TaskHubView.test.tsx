@@ -16,11 +16,14 @@ const commands = vi.hoisted(() => ({
   setLocalTaskHubFilters: vi.fn(async () => undefined),
   setLocalTaskHubSearchQuery: vi.fn(async () => undefined),
   updateLocalTask: vi.fn(async () => undefined),
+  updateLocalTaskTagColor: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../commands/localTaskCommands", () => commands);
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string, options?: { page?: number }) => (options?.page ? `${key} ${options.page}` : key) }),
+  useTranslation: () => ({
+    t: (key: string, options?: { page?: number }) => (options?.page ? `${key} ${options.page}` : key),
+  }),
 }));
 vi.mock("@renderer/domains/project", () => ({
   projectStore: (selector: (state: { projects: Array<{ id: string; name: string }> }) => unknown) =>
@@ -137,6 +140,7 @@ describe("TaskHubView", () => {
     const filterInput = screen.getByRole("combobox", { name: "localTask.fields.tags" });
     fireEvent.change(filterInput, { target: { value: "alpha" } });
     fireEvent.keyDown(filterInput, { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "localTask.tags.colorPicker" }), { key: "Escape" });
     expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ tags: ["alpha"] });
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.create" }));
@@ -145,6 +149,7 @@ describe("TaskHubView", () => {
     if (!createTagsInput) return;
     fireEvent.change(createTagsInput, { target: { value: "  Cafe\u0301  " } });
     fireEvent.keyDown(createTagsInput, { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "localTask.tags.colorPicker" }), { key: "Escape" });
     fireEvent.change(screen.getByRole("textbox", { name: "localTask.fields.title" }), { target: { value: "Tagged" } });
     const createButton = screen.getAllByRole("button", { name: "localTask.actions.create" }).at(-1);
     expect(createButton).toBeTruthy();
@@ -199,6 +204,7 @@ describe("TaskHubView", () => {
     for (const tag of tags) {
       fireEvent.change(tagsInput, { target: { value: tag } });
       fireEvent.keyDown(tagsInput, { key: "Enter" });
+      fireEvent.keyDown(screen.getByRole("dialog", { name: "localTask.tags.colorPicker" }), { key: "Escape" });
     }
     fireEvent.change(tagsInput, { target: { value: invalidTag } });
     fireEvent.keyDown(tagsInput, { key: "Enter" });
@@ -210,19 +216,41 @@ describe("TaskHubView", () => {
     expect(commands.createLocalTask).not.toHaveBeenCalled();
   });
 
-  it("keeps the Task Hub overflow count outside the clipped visible-tag region", () => {
+  it("propagates catalog color tokens to Task Hub row tag chips", () => {
     localTaskStore.setState({
-      hubTasks: [{ ...task, tags: ["a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS), "second", "third"] }],
+      hubTasks: [{ ...task, tags: ["backend"] }],
+      tagCatalog: [{ key: "backend", name: "backend", aliases: ["backend"], color: "blue", customColor: null }],
     });
     render(<TaskHubView />);
 
+    const chip = screen.getByText("backend").closest(".MuiChip-root");
+    expect(chip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(chip?.querySelector(".MuiChip-icon")).toBeNull();
+  });
+
+  it("shows full Task Hub tag labels without clipping and keeps the overflow count unadorned", () => {
+    const longTag = "a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS);
+    localTaskStore.setState({ hubTasks: [{ ...task, tags: [longTag, "second", "third"] }] });
+    render(<TaskHubView />);
+
+    const visibleChip = screen.getByText(longTag).closest(".MuiChip-root");
     const overflowChip = screen.getByText("+1").closest(".MuiChip-root");
-    expect(overflowChip).toBeTruthy();
-    const visibleTagsRegion = overflowChip?.previousElementSibling;
-    expect(visibleTagsRegion).toBeTruthy();
-    expect(getComputedStyle(visibleTagsRegion as Element).overflow).toBe("hidden");
-    expect(getComputedStyle(overflowChip?.parentElement as Element).overflow).toBe("visible");
-    expect(overflowChip?.parentElement?.parentElement).toBe(screen.getByRole("button", { name: /Ship Task Hub/ }));
+    expect(getComputedStyle(visibleChip as Element).maxWidth).not.toBe("120px");
+    expect(visibleChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(overflowChip?.querySelector("svg")).toBeNull();
+  });
+
+  it("allows a maximum tag row to grow instead of overlapping the next virtual row", () => {
+    const maximumTags = Array.from(
+      { length: MAX_LOCAL_TASK_TAGS },
+      (_, index) => `${index}-${"a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS)}`,
+    );
+    localTaskStore.setState({ hubTasks: [{ ...task, tags: maximumTags }] });
+    render(<TaskHubView />);
+
+    const taskRow = screen.getByRole("button", { name: /Ship Task Hub/ });
+    expect(getComputedStyle(taskRow).height).not.toBe("100%");
+    expect(getComputedStyle(taskRow).minHeight).not.toBe("0px");
   });
 
   it("opens a task detail view and returns to the task list", () => {

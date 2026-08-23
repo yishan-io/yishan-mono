@@ -9,11 +9,15 @@ import { LocalTaskTagsDisplay } from "./LocalTaskTagsDisplay";
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
 describe("LocalTaskTagsDisplay", () => {
-  it("keeps the non-shrinking overflow count visible while long compact chips truncate", () => {
+  it("shows full compact labels and excludes the overflow count from tag styling", () => {
     const maximumLengthTag = "a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS);
     render(
       <Box sx={{ width: 80 }}>
-        <LocalTaskTagsDisplay tags={[maximumLengthTag, maximumLengthTag.replace("a", "b"), "third"]} maxVisible={2} />
+        <LocalTaskTagsDisplay
+          tags={[maximumLengthTag, maximumLengthTag.replace("a", "b"), "third"]}
+          maxVisible={2}
+          tagCatalog={[{ key: maximumLengthTag, name: maximumLengthTag, aliases: [maximumLengthTag], color: "blue", customColor: null }]}
+        />
       </Box>,
     );
 
@@ -21,10 +25,10 @@ describe("LocalTaskTagsDisplay", () => {
     const visibleChip = screen.getByText(maximumLengthTag).closest(".MuiChip-root");
     expect(overflowChip).toBeTruthy();
     expect(visibleChip).toBeTruthy();
-    expect(getComputedStyle(overflowChip as Element).flexShrink).toBe("0");
-    expect(getComputedStyle(visibleChip as Element).minWidth).toBe("0px");
-    expect(getComputedStyle(visibleChip as Element).maxWidth).toBe("120px");
-    expect(visibleChip?.querySelector(".MuiChip-label")?.textContent).toBe(maximumLengthTag);
+    expect(getComputedStyle(visibleChip as Element).maxWidth).not.toBe("120px");
+    expect(visibleChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(getComputedStyle(visibleChip as Element).flexShrink).not.toBe("1");
+    expect(overflowChip?.querySelector("svg")).toBeNull();
   });
 
   it("wraps every tag in the detail display instead of clipping them", () => {

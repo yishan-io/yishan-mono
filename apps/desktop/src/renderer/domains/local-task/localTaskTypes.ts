@@ -70,3 +70,18 @@ export type UpdateLocalTaskInput = {
 
 /** Loading state shared by Local Task data projections. */
 export type LocalTaskLoadState = "idle" | "loading" | "loaded" | "error";
+
+/** One daemon-owned global Local Task tag catalog entry. */
+export type LocalTaskTagCatalogEntry = {
+  key: string;
+  name: string;
+  aliases: string[];
+  color: LocalTaskTagColor | null;
+  customColor: LocalTaskTagCustomColor | null;
+};
+
+/** A validated custom Local Task tag color hex value. */
+export type LocalTaskTagCustomColor = `#${string}`;
+
+/** Supported daemon-owned Local Task tag color names. */
+export type LocalTaskTagColor = "amber" | "blue" | "green" | "purple" | "red" | "teal";

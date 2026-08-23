@@ -234,6 +234,9 @@ func TestMapRPCError_LocalTaskDomainErrorsSurviveWrapping(t *testing.T) {
 		{"task not found", localtask.ErrTaskNotFound, CodeNotFound},
 		{"link not found", localtask.ErrLinkNotFound, CodeNotFound},
 		{"context unavailable", localtask.ErrContextUnavailable, CodeNotFound},
+		{"invalid tag key", localtask.ErrInvalidTagKey, CodeInvalidParams},
+		{"invalid tag color", localtask.ErrInvalidTagColor, CodeInvalidParams},
+		{"tag not found", localtask.ErrTagNotFound, CodeNotFound},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

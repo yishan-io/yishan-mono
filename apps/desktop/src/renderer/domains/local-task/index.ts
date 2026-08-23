@@ -15,6 +15,7 @@ export {
   unlinkLocalTaskWorkspace,
   updateLocalTask,
   updateLocalTaskLinkStatus,
+  updateLocalTaskTagColor,
 } from "./commands/localTaskCommands";
 export type {
   CreateLocalTaskInput,
@@ -25,6 +26,8 @@ export type {
   LocalTaskPriority,
   LocalTaskSearchResult,
   LocalTaskStatus,
+  LocalTaskTagCatalogEntry,
+  LocalTaskTagColor,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "./localTaskTypes";

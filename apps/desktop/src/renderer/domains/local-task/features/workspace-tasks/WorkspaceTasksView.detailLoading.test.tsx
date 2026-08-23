@@ -14,6 +14,7 @@ vi.mock("../../daemon/localTaskDaemonClient", () => ({
   listLocalTaskTags: vi.fn(async () => []),
   searchLocalTasks: vi.fn(),
   updateLocalTask: vi.fn(),
+  updateLocalTaskTagColor: vi.fn(),
   getLocalTaskContext: vi.fn(),
   linkLocalTaskWorkspace: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),

@@ -187,31 +187,104 @@ func hydrateLocalTaskSearchResultTags(ctx context.Context, queryer localTaskQuer
 	return hydrateLocalTaskTags(ctx, queryer, taskPointers)
 }
 
-// ListTags returns one deterministic display spelling for each known normalized tag.
-func (store *LocalTaskStore) ListTags(ctx context.Context) ([]string, error) {
-	rows, err := store.database.QueryContext(ctx, `SELECT normalized_tag, tag, local_task_id, position FROM local_task_tags
-		ORDER BY normalized_tag, tag, local_task_id, position`)
+// ListTags returns globally retained Local Task tag catalog entries by normalized key.
+func (store *LocalTaskStore) ListTags(ctx context.Context) ([]localtask.Tag, error) {
+	rows, err := store.database.QueryContext(ctx, `SELECT catalog.normalized_tag, catalog.tag, catalog.color, catalog.custom_color, aliases.tag
+	FROM local_task_tag_catalog AS catalog
+	JOIN local_task_tag_catalog_aliases AS aliases ON aliases.normalized_tag = catalog.normalized_tag
+	ORDER BY catalog.normalized_tag, aliases.tag`)
 	if err != nil {
-		return nil, fmt.Errorf("list local task tags: %w", err)
+		return nil, fmt.Errorf("list local task tag catalog: %w", err)
 	}
 	defer rows.Close()
-	tags := make([]string, 0)
-	seenKeys := make(map[string]struct{})
+	tags := make([]localtask.Tag, 0)
 	for rows.Next() {
-		var normalizedTag, tag, taskID string
-		var position int
-		if err := rows.Scan(&normalizedTag, &tag, &taskID, &position); err != nil {
-			return nil, fmt.Errorf("scan local task tag: %w", err)
+		var key, name, alias string
+		var color, customColor *string
+		if err := rows.Scan(&key, &name, &color, &customColor, &alias); err != nil {
+			return nil, fmt.Errorf("scan local task tag catalog: %w", err)
 		}
-		if _, exists := seenKeys[normalizedTag]; !exists {
-			seenKeys[normalizedTag] = struct{}{}
-			tags = append(tags, tag)
+		if len(tags) == 0 || tags[len(tags)-1].Key != key {
+			tags = append(tags, localtask.Tag{Key: key, Name: name, Color: color, CustomColor: customColor, Aliases: make([]string, 0)})
 		}
+		tags[len(tags)-1].Aliases = append(tags[len(tags)-1].Aliases, alias)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate local task tags: %w", err)
+		return nil, fmt.Errorf("iterate local task tag catalog: %w", err)
 	}
 	return tags, nil
+}
+
+// UpdateTagColor sets or clears a global Local Task tag catalog color.
+func (store *LocalTaskStore) UpdateTagColor(ctx context.Context, key string, update localtask.TagColorUpdate) (localtask.Tag, error) {
+	if err := localtask.ValidateTagColorUpdate(update); err != nil {
+		return localtask.Tag{}, err
+	}
+	if update.DisplayName != nil {
+		return store.ensureAndUpdateTagColor(ctx, *update.DisplayName, update)
+	}
+	if err := localtask.ValidateTagKey(key); err != nil {
+		return localtask.Tag{}, err
+	}
+	return store.updateTagColor(ctx, store.database, key, update)
+}
+
+func (store *LocalTaskStore) ensureAndUpdateTagColor(ctx context.Context, displayName string, update localtask.TagColorUpdate) (localtask.Tag, error) {
+	name, err := localtask.NormalizeTag(displayName)
+	if err != nil {
+		return localtask.Tag{}, err
+	}
+	key, err := localtask.NormalizeTagKey(name)
+	if err != nil {
+		return localtask.Tag{}, err
+	}
+	transaction, err := store.database.BeginTx(ctx, nil)
+	if err != nil {
+		return localtask.Tag{}, fmt.Errorf("begin local task tag color transaction: %w", err)
+	}
+	defer transaction.Rollback() // best-effort rollback unless commit succeeds
+	if err := upsertLocalTaskTagCatalog(ctx, transaction, key, name); err != nil {
+		return localtask.Tag{}, err
+	}
+	if _, err := store.updateTagColor(ctx, transaction, key, update); err != nil {
+		return localtask.Tag{}, err
+	}
+	if err := transaction.Commit(); err != nil {
+		return localtask.Tag{}, fmt.Errorf("commit local task tag color transaction: %w", err)
+	}
+	return store.getTagCatalogEntry(ctx, key)
+}
+
+func (store *LocalTaskStore) updateTagColor(ctx context.Context, queryer localTaskQueryer, key string, update localtask.TagColorUpdate) (localtask.Tag, error) {
+	result, err := queryer.ExecContext(ctx, `UPDATE local_task_tag_catalog
+		SET color = ?, custom_color = ?, updated_at = datetime('now') WHERE normalized_tag = ?`, update.Color, update.CustomColor, key)
+	if err != nil {
+		return localtask.Tag{}, fmt.Errorf("update local task tag color: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return localtask.Tag{}, fmt.Errorf("count local task tag catalog update: %w", err)
+	}
+	if affected == 0 {
+		return localtask.Tag{}, localtask.ErrTagNotFound
+	}
+	if queryer != store.database {
+		return localtask.Tag{Key: key}, nil
+	}
+	return store.getTagCatalogEntry(ctx, key)
+}
+
+func (store *LocalTaskStore) getTagCatalogEntry(ctx context.Context, key string) (localtask.Tag, error) {
+	tags, err := store.ListTags(ctx)
+	if err != nil {
+		return localtask.Tag{}, err
+	}
+	for _, tag := range tags {
+		if tag.Key == key {
+			return tag, nil
+		}
+	}
+	return localtask.Tag{}, localtask.ErrTagNotFound
 }
 
 // LinkWorkspace creates a historical link from a Local Task to a local workspace.

@@ -1,145 +1,168 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+import { Alert, Box, IconButton, Popover, Tooltip } from "@mui/material";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuPlus, LuX } from "react-icons/lu";
-import { getLocalTaskTagsValidationError } from "../../localTaskTags";
-import { LocalTaskTagsInput } from "./LocalTaskTagsInput";
+import { LuPlus } from "react-icons/lu";
+import type { LocalTaskTagCatalogEntry, LocalTaskTagColor, LocalTaskTagCustomColor } from "../../localTaskTypes";
+import { LocalTaskTagChip } from "./LocalTaskTagChip";
+import { LocalTaskTagSelector } from "./LocalTaskTagSelector";
+
+const SELECTOR_POPOVER_HEIGHT = 320;
+const SELECTOR_POPOVER_WIDTH = 280;
 
 type LocalTaskTagsEditorProps = {
   tags: string[];
   suggestions: string[];
+  tagCatalog?: LocalTaskTagCatalogEntry[];
   onTagsChange: (tags: string[]) => Promise<unknown>;
+  onTagColorChange?: (
+    key: string,
+    color: LocalTaskTagColor | null,
+    customColor?: LocalTaskTagCustomColor | null,
+  ) => Promise<unknown>;
   isMutationLoading?: boolean;
 };
 
-/** Edits Local Task tags through direct deletion and a dialog for batch additions. */
-export function LocalTaskTagsEditor({ tags, suggestions, onTagsChange, isMutationLoading }: LocalTaskTagsEditorProps) {
+/** Edits Local Task tags through direct deletion and an anchored tag selector. */
+export function LocalTaskTagsEditor({
+  tags,
+  suggestions,
+  tagCatalog = [],
+  onTagsChange,
+  onTagColorChange,
+  isMutationLoading,
+}: LocalTaskTagsEditorProps) {
   const { t } = useTranslation();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newTags, setNewTags] = useState<string[]>([]);
-  const [isNewTagsInputValid, setIsNewTagsInputValid] = useState(true);
+  const [selectorAnchor, setSelectorAnchor] = useState<HTMLElement | null>(null);
+  const [selectorAnchorTag, setSelectorAnchorTag] = useState<string | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>(tags);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [selectorRevision, setSelectorRevision] = useState(0);
+  const isSelectorOpen = Boolean(selectorAnchor);
   const isDisabled = isMutationLoading || isSubmitting;
-  const combinedTags = useMemo(() => [...tags, ...newTags], [newTags, tags]);
-  const combinedTagsError = useMemo(() => getLocalTaskTagsValidationError(combinedTags), [combinedTags]);
-  const canSubmit = newTags.length > 0 && isNewTagsInputValid && !combinedTagsError && !isDisabled;
 
-  const handleOpenAddDialog = useCallback(() => {
-    setNewTags([]);
-    setIsNewTagsInputValid(true);
-    setSubmitError(null);
-    setIsAddDialogOpen(true);
-  }, []);
-  const handleCloseAddDialog = useCallback(() => {
-    if (isDisabled) return;
-    setIsAddDialogOpen(false);
-    setNewTags([]);
-    setSubmitError(null);
-  }, [isDisabled]);
-  const handleDeleteTag = useCallback(
-    async (tagToDelete: string) => {
+  useEffect(() => {
+    const isTagAnchorRemoved = selectorAnchorTag !== null && !tags.includes(selectorAnchorTag);
+    if (!selectorAnchor || (!isTagAnchorRemoved && selectorAnchor.isConnected)) return;
+    const addButton = addButtonRef.current;
+    if (!addButton?.isConnected) {
+      setSelectorAnchor(null);
+      setSelectorAnchorTag(null);
+      return;
+    }
+    setSelectorAnchor(addButton);
+    setSelectorAnchorTag(null);
+  }, [selectorAnchor, selectorAnchorTag, tags]);
+
+  useEffect(() => {
+    const addButton = addButtonRef.current;
+    if (isDisabled || !addButton || selectorAnchor !== addButton) return;
+    addButton.focus();
+  }, [isDisabled, selectorAnchor]);
+
+  const handleOpenSelector = useCallback(
+    (event: React.MouseEvent<HTMLElement>, tag?: string) => {
       if (isDisabled) return;
+      setSelectedTags(tags);
+      setMutationError(null);
+      setSelectorAnchor(event.currentTarget);
+      setSelectorAnchorTag(tag ?? null);
+    },
+    [isDisabled, tags],
+  );
+  const handleCloseSelector = useCallback(() => {
+    setSelectorAnchor(null);
+    setSelectorAnchorTag(null);
+    setMutationError(null);
+  }, []);
+  const handleSelectionChange = useCallback(
+    async (nextTags: string[]) => {
+      if (isDisabled) return;
+      const previousTags = selectedTags;
+      setSelectedTags(nextTags);
       setIsSubmitting(true);
-      setSubmitError(null);
+      setMutationError(null);
       try {
-        await onTagsChange(tags.filter((tag) => tag !== tagToDelete));
+        await onTagsChange(nextTags);
       } catch (error) {
-        setSubmitError(getErrorMessage(error));
+        setSelectedTags(previousTags);
+        setSelectorRevision((revision) => revision + 1);
+        setMutationError(getErrorMessage(error));
       } finally {
         setIsSubmitting(false);
       }
     },
-    [isDisabled, onTagsChange, tags],
+    [isDisabled, onTagsChange, selectedTags],
   );
-  const handleSubmitAdditions = useCallback(async () => {
-    if (!canSubmit) return;
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      await onTagsChange(combinedTags);
-      setIsAddDialogOpen(false);
-      setNewTags([]);
-    } catch (error) {
-      setSubmitError(getErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [canSubmit, combinedTags, onTagsChange]);
 
   return (
     <>
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
         {tags.map((tag) => (
-          <Chip
+          <LocalTaskTagChip
             key={tag}
-            size="small"
-            variant="outlined"
-            label={tag}
+            tag={tag}
+            tagCatalog={tagCatalog}
             disabled={isDisabled}
-            onDelete={() => void handleDeleteTag(tag)}
-            deleteIcon={<LuX aria-label={t("localTask.tags.delete", { tag })} />}
+            chipProps={{ onClick: (event) => handleOpenSelector(event, tag) }}
           />
         ))}
         <Tooltip title={t("localTask.tags.add")}>
           <Box component="span">
             <IconButton
+              ref={addButtonRef}
               size="small"
               disabled={isDisabled}
               aria-label={t("localTask.tags.add")}
-              onClick={handleOpenAddDialog}
+              onClick={handleOpenSelector}
             >
               <LuPlus size={16} />
             </IconButton>
           </Box>
         </Tooltip>
       </Box>
-      {submitError && !isAddDialogOpen ? <Alert severity="error">{submitError}</Alert> : null}
-      <Dialog open={isAddDialogOpen} onClose={handleCloseAddDialog} fullWidth maxWidth="sm">
-        <DialogTitle>{t("localTask.tags.addTitle")}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <LocalTaskTagsInput
-              tags={newTags}
-              suggestions={suggestions}
-              onChange={setNewTags}
-              onDraftValidityChange={setIsNewTagsInputValid}
-              disabled={isDisabled}
-              label={t("localTask.tags.addInput")}
-            />
-            {combinedTagsError ? (
-              <Alert severity="error" sx={{ mt: 1 }}>
-                {combinedTagsError}
-              </Alert>
-            ) : null}
-            {submitError ? (
-              <Alert severity="error" sx={{ mt: 1 }}>
-                {submitError}
-              </Alert>
-            ) : null}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button disabled={isDisabled} onClick={handleCloseAddDialog}>
-            {t("common.actions.cancel")}
-          </Button>
-          <Button disabled={!canSubmit} onClick={() => void handleSubmitAdditions()}>
-            {t("localTask.actions.add")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {mutationError && !isSelectorOpen ? <Alert severity="error">{mutationError}</Alert> : null}
+      <Popover
+        anchorEl={selectorAnchor}
+        disableEnforceFocus
+        open={isSelectorOpen}
+        onClose={handleCloseSelector}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        slotProps={{
+          paper: {
+            sx: {
+              display: "flex",
+              flexDirection: "column",
+              height: SELECTOR_POPOVER_HEIGHT,
+              mt: 0.5,
+              overflow: "hidden",
+              p: 1,
+              width: SELECTOR_POPOVER_WIDTH,
+            },
+          },
+        }}
+      >
+        <LocalTaskTagSelector
+          tags={selectedTags}
+          suggestions={suggestions}
+          tagCatalog={tagCatalog}
+          onChange={(nextTags) => void handleSelectionChange(nextTags)}
+          onTagColorChange={onTagColorChange}
+          disabled={isDisabled}
+          label={t("localTask.tags.addInput")}
+          autoFocus
+          onEscape={handleCloseSelector}
+          selectorRevision={selectorRevision}
+        />
+        {mutationError ? (
+          <Alert severity="error" sx={{ flexShrink: 0, mt: 1 }}>
+            {mutationError}
+          </Alert>
+        ) : null}
+      </Popover>
     </>
   );
 }

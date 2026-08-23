@@ -91,9 +91,22 @@
     },
     "tags": {
       "add": "Add tags",
-      "addTitle": "Add tags",
       "addInput": "New tags",
-      "delete": "Remove {{tag}}"
+      "delete": "Remove {{tag}}",
+      "colorPicker": "Set color for {{tag}}",
+      "clearColor": "Clear color",
+      "color": {
+        "amber": "Amber",
+        "blue": "Blue",
+        "green": "Green",
+        "purple": "Purple",
+        "red": "Red",
+        "teal": "Teal"
+      },
+      "presetColors": "Preset colors",
+      "customizeColor": "Customize color",
+      "customColorInput": "Custom color",
+      "editColor": "Edit color for {{tag}}"
     }
   }
 }

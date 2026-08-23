@@ -147,6 +147,8 @@ type LocalTaskService interface {
 	GetContextDetails(ctx context.Context, req LocalTaskIDParams) (any, error)
 	List(ctx context.Context, req LocalTaskListParams) (any, error)
 	ListTags(ctx context.Context) (any, error)
+	ListTagCatalog(ctx context.Context) (any, error)
+	UpdateTagColor(ctx context.Context, req LocalTaskUpdateTagColorParams) (any, error)
 	Update(ctx context.Context, req LocalTaskUpdateParams) (any, error)
 	Search(ctx context.Context, req LocalTaskSearchParams) (any, error)
 	LinkWorkspace(ctx context.Context, req LocalTaskLinkWorkspaceParams) (any, error)

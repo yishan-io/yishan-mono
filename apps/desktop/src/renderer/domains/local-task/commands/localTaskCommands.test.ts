@@ -17,6 +17,7 @@ import {
   unlinkLocalTaskWorkspace,
   updateLocalTask,
   updateLocalTaskLinkStatus,
+  updateLocalTaskTagColor,
 } from "./localTaskCommands";
 
 vi.mock("../daemon/localTaskDaemonClient", () => ({
@@ -25,24 +26,26 @@ vi.mock("../daemon/localTaskDaemonClient", () => ({
   listLocalTasks: vi.fn(),
   searchLocalTasks: vi.fn(),
   updateLocalTask: vi.fn(),
+  updateLocalTaskTagColor: vi.fn(),
   getLocalTaskContext: vi.fn(),
   linkLocalTaskWorkspace: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
   updateLocalTaskLinkStatus: vi.fn(),
   listLocalTaskWorkspaceLinks: vi.fn(),
   listLocalTaskLinks: vi.fn(),
-  listLocalTaskTags: vi.fn(),
+  listLocalTaskTagCatalog: vi.fn(),
 }));
 
 const initialState = localTaskStore.getState();
 
 function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
-  let resolve!: (value: T) => void;
-  let reject!: (error: unknown) => void;
+  let resolve: ((value: T) => void) | undefined;
+  let reject: ((error: unknown) => void) | undefined;
   const promise = new Promise<T>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
     reject = rejectPromise;
   });
+  if (!resolve || !reject) throw new Error("deferred promise callbacks were not initialized");
   return { promise, resolve, reject };
 }
 const task: LocalTask = {
@@ -73,22 +76,33 @@ afterEach(() => {
 
 describe("localTaskCommands", () => {
   it("loads tag suggestions into store-owned state and retains errors", async () => {
-    vi.mocked(daemon.listLocalTaskTags).mockResolvedValue(["desktop", "cli"]);
+    vi.mocked(daemon.listLocalTaskTagCatalog).mockResolvedValue([
+      { key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
+      { key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+    ]);
 
     await loadLocalTaskTagSuggestions();
 
-    expect(daemon.listLocalTaskTags).toHaveBeenCalledWith();
+    expect(daemon.listLocalTaskTagCatalog).toHaveBeenCalledWith();
     expect(localTaskStore.getState()).toMatchObject({
-      tagSuggestions: ["desktop", "cli"],
+      tagCatalog: [
+        { key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
+        { key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+      ],
+      tagSuggestions: ["Desktop", "CLI"],
       tagSuggestionsLoadState: "loaded",
       tagSuggestionsError: null,
     });
 
-    vi.mocked(daemon.listLocalTaskTags).mockRejectedValue(new Error("suggestions unavailable"));
+    vi.mocked(daemon.listLocalTaskTagCatalog).mockRejectedValue(new Error("suggestions unavailable"));
     await loadLocalTaskTagSuggestions();
 
     expect(localTaskStore.getState()).toMatchObject({
-      tagSuggestions: ["desktop", "cli"],
+      tagCatalog: [
+        { key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
+        { key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+      ],
+      tagSuggestions: ["Desktop", "CLI"],
       tagSuggestionsLoadState: "error",
       tagSuggestionsError: "suggestions unavailable",
     });
@@ -197,6 +211,65 @@ describe("localTaskCommands", () => {
       taskLinksByTaskId: { "task-1": [link] },
       taskLinksLoadStateByTaskId: { "task-1": "loaded" },
     });
+  });
+
+  it("updates the global tag catalog after setting a color", async () => {
+    const coloredTag = { key: "backend", name: "Backend", aliases: ["Backend"], color: "blue" as const, customColor: null };
+    vi.mocked(daemon.updateLocalTaskTagColor).mockResolvedValue(coloredTag);
+    vi.mocked(daemon.listLocalTaskTagCatalog).mockResolvedValue([coloredTag]);
+
+    await updateLocalTaskTagColor("backend", "blue");
+
+    expect(daemon.updateLocalTaskTagColor).toHaveBeenCalledWith("backend", "blue", null);
+    expect(daemon.listLocalTaskTagCatalog).toHaveBeenCalledOnce();
+    expect(localTaskStore.getState().tagCatalog).toEqual([coloredTag]);
+  });
+
+  it("treats the color update as successful when the catalog reload fails", async () => {
+    const coloredTag = { key: "backend", name: "Backend", aliases: ["Backend"], color: "blue" as const, customColor: null };
+    localTaskStore.setState({
+      tagCatalog: [{ ...coloredTag, color: "red", customColor: null }],
+      tagSuggestions: ["Backend"],
+    });
+    vi.mocked(daemon.updateLocalTaskTagColor).mockResolvedValue(coloredTag);
+    vi.mocked(daemon.listLocalTaskTagCatalog).mockRejectedValue(new Error("catalog reload failed"));
+
+    await expect(updateLocalTaskTagColor("backend", "blue")).resolves.toBeUndefined();
+
+    expect(localTaskStore.getState()).toMatchObject({
+      tagCatalog: [coloredTag],
+      tagSuggestions: ["Backend"],
+      tagSuggestionsLoadState: "error",
+      tagSuggestionsError: "catalog reload failed",
+    });
+  });
+
+  it("keeps the catalog unchanged when clearing a color fails", async () => {
+    const existingCatalog = [{ key: "backend", name: "Backend", aliases: ["Backend"], color: "red" as const, customColor: null }];
+    localTaskStore.setState({ tagCatalog: existingCatalog });
+    vi.mocked(daemon.updateLocalTaskTagColor).mockRejectedValue(new Error("Color update failed"));
+
+    await expect(updateLocalTaskTagColor("backend", null)).rejects.toThrow("Color update failed");
+
+    expect(daemon.listLocalTaskTagCatalog).not.toHaveBeenCalled();
+    expect(localTaskStore.getState().tagCatalog).toEqual(existingCatalog);
+    expect(localTaskStore.getState().mutationError).toBe("Color update failed");
+  });
+
+  it("refreshes the tag catalog after a tag mutation so new aliases resolve in the same session", async () => {
+    const createdTask = { ...task, tags: ["STRASSE"] };
+    vi.mocked(daemon.createLocalTask).mockResolvedValue(createdTask);
+    vi.mocked(daemon.listLocalTasks).mockResolvedValue([createdTask]);
+    vi.mocked(daemon.listLocalTaskTagCatalog).mockResolvedValue([
+      { key: "strasse", name: "Straße", aliases: ["STRASSE", "Straße"], color: "purple", customColor: null },
+    ]);
+
+    await createLocalTask({ title: "Task", tags: ["STRASSE"] });
+
+    expect(daemon.listLocalTaskTagCatalog).toHaveBeenCalledOnce();
+    expect(localTaskStore.getState().tagCatalog).toEqual([
+      { key: "strasse", name: "Straße", aliases: ["STRASSE", "Straße"], color: "purple", customColor: null },
+    ]);
   });
 
   it("does not let a slow detail load overwrite a newer task update", async () => {

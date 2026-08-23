@@ -23,6 +23,7 @@ import {
   createLocalTask,
   linkLocalTaskWorkspace,
   loadLocalTaskTagSuggestions,
+  updateLocalTaskTagColor,
 } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskPriority } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
@@ -42,6 +43,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
   const projects = projectStore((state) => state.projects);
   const isMutationLoading = localTaskStore((state) => state.isMutationLoading);
   const tagSuggestions = localTaskStore((state) => state.tagSuggestions);
+  const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [project, setProject] = useState<WorkspaceProjectRecord | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -177,7 +179,9 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
           <LocalTaskTagsInput
             tags={tags}
             suggestions={tagSuggestions}
+            tagCatalog={tagCatalog}
             onChange={setTags}
+            onTagColorChange={updateLocalTaskTagColor}
             onDraftValidityChange={setIsTagsDraftValid}
             disabled={isMutationLoading || Boolean(createdTask)}
           />

@@ -1,10 +1,10 @@
 import { Box } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
-import type { LocalTask, LocalTaskWorkspaceLink } from "../../localTaskTypes";
+import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
 import { WorkspaceTaskLinkRow } from "./WorkspaceTaskLinkRow";
 
-const LINK_ROW_ESTIMATED_HEIGHT = 96;
+const LINK_ROW_ESTIMATED_HEIGHT = 120;
 const MAX_LIST_HEIGHT = 480;
 
 type VirtualizedWorkspaceTaskLinksProps = {
@@ -13,6 +13,7 @@ type VirtualizedWorkspaceTaskLinksProps = {
   selectedTaskId: string | null;
   isMutationLoading: boolean;
   onSelect: (taskId: string) => void;
+  tagCatalog: LocalTaskTagCatalogEntry[];
 };
 
 /** Renders workspace relationship history with bounded DOM usage while preserving row controls. */
@@ -22,6 +23,7 @@ export function VirtualizedWorkspaceTaskLinks({
   selectedTaskId,
   isMutationLoading,
   onSelect,
+  tagCatalog,
 }: VirtualizedWorkspaceTaskLinksProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -55,6 +57,7 @@ export function VirtualizedWorkspaceTaskLinks({
                 selected={selectedTaskId === link.localTaskId}
                 isMutationLoading={isMutationLoading}
                 onSelect={onSelect}
+                tagCatalog={tagCatalog}
               />
             </Box>
           );

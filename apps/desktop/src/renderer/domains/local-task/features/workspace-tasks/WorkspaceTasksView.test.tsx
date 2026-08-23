@@ -18,6 +18,7 @@ const commands = vi.hoisted(() => ({
   selectWorkspaceLocalTask: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
   updateLocalTask: vi.fn(async () => undefined),
+  updateLocalTaskTagColor: vi.fn(async () => undefined),
   updateLocalTaskLinkStatus: vi.fn(async () => undefined),
 }));
 vi.mock("../../commands/localTaskCommands", () => commands);

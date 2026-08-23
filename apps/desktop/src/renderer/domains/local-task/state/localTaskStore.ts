@@ -5,6 +5,7 @@ import type {
   LocalTaskContextDetails,
   LocalTaskFilters,
   LocalTaskLoadState,
+  LocalTaskTagCatalogEntry,
   LocalTaskWorkspaceLink,
 } from "../localTaskTypes";
 
@@ -17,6 +18,7 @@ export type LocalTaskStoreState = {
   activeTaskCount: number;
   hubLoadState: LocalTaskLoadState;
   hubError: string | null;
+  tagCatalog: LocalTaskTagCatalogEntry[];
   tagSuggestions: string[];
   tagSuggestionsLoadState: LocalTaskLoadState;
   tagSuggestionsError: string | null;
@@ -44,9 +46,10 @@ export type LocalTaskStoreState = {
   mutationError: string | null;
   setHubFilters: (filters: LocalTaskFilters) => void;
   setHubSearchQuery: (query: string) => void;
-  beginTagSuggestionsLoad: () => number;
-  setTagSuggestions: (requestId: number, tags: string[]) => void;
-  setTagSuggestionsError: (requestId: number, error: string) => void;
+  beginTagCatalogLoad: () => number;
+  setTagCatalog: (requestId: number, catalog: LocalTaskTagCatalogEntry[]) => void;
+  setTagCatalogError: (requestId: number, error: string) => void;
+  upsertTagCatalogEntry: (entry: LocalTaskTagCatalogEntry) => void;
   beginActiveTaskCountLoad: () => number;
   setActiveTaskCount: (requestId: number, activeTaskCount: number) => void;
   beginHubLoad: () => number;
@@ -107,6 +110,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       activeTaskCount: 0,
       hubLoadState: "idle",
       hubError: null,
+      tagCatalog: [],
       tagSuggestions: [],
       tagSuggestionsLoadState: "idle",
       tagSuggestionsError: null,
@@ -134,20 +138,35 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       mutationError: null,
       setHubFilters: (hubFilters) => set({ hubFilters }),
       setHubSearchQuery: (hubSearchQuery) => set({ hubSearchQuery }),
-      beginTagSuggestionsLoad: () => {
+      beginTagCatalogLoad: () => {
         const requestId = ++tagSuggestionsRequestGeneration;
         set({ tagSuggestionsLoadState: "loading", tagSuggestionsError: null });
         return requestId;
       },
-      setTagSuggestions: (requestId, tagSuggestions) => {
+      setTagCatalog: (requestId, tagCatalog) => {
         if (requestId === tagSuggestionsRequestGeneration) {
-          set({ tagSuggestions, tagSuggestionsLoadState: "loaded", tagSuggestionsError: null });
+          set({
+            tagCatalog,
+            tagSuggestions: tagCatalog.map((tag) => tag.name),
+            tagSuggestionsLoadState: "loaded",
+            tagSuggestionsError: null,
+          });
         }
       },
-      setTagSuggestionsError: (requestId, tagSuggestionsError) => {
+      setTagCatalogError: (requestId, tagSuggestionsError) => {
         if (requestId === tagSuggestionsRequestGeneration) {
           set({ tagSuggestionsLoadState: "error", tagSuggestionsError });
         }
+      },
+      upsertTagCatalogEntry: (entry) => {
+        set((state) => {
+          const catalogEntryIndex = state.tagCatalog.findIndex((catalogEntry) => catalogEntry.key === entry.key);
+          if (catalogEntryIndex === -1) state.tagCatalog.push(entry);
+          else state.tagCatalog[catalogEntryIndex] = entry;
+          state.tagSuggestions = state.tagCatalog.map((catalogEntry) => catalogEntry.name);
+          state.tagSuggestionsLoadState = "loaded";
+          state.tagSuggestionsError = null;
+        });
       },
       beginActiveTaskCountLoad: () => ++activeTaskCountRequestGeneration,
       setActiveTaskCount: (requestId, activeTaskCount) => {

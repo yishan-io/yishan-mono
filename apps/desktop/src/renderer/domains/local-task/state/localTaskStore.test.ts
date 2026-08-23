@@ -82,10 +82,13 @@ describe("localTaskStore", () => {
   });
 
   it("stores daemon tag suggestions and retains values when a refresh fails", () => {
-    let requestId = localTaskStore.getState().beginTagSuggestionsLoad();
-    localTaskStore.getState().setTagSuggestions(requestId, ["desktop", "cli"]);
-    requestId = localTaskStore.getState().beginTagSuggestionsLoad();
-    localTaskStore.getState().setTagSuggestionsError(requestId, "offline");
+    let requestId = localTaskStore.getState().beginTagCatalogLoad();
+    localTaskStore.getState().setTagCatalog(requestId, [
+      { key: "desktop", name: "desktop", aliases: ["desktop"], color: null, customColor: null },
+      { key: "cli", name: "cli", aliases: ["cli"], color: null, customColor: null },
+    ]);
+    requestId = localTaskStore.getState().beginTagCatalogLoad();
+    localTaskStore.getState().setTagCatalogError(requestId, "offline");
 
     expect(localTaskStore.getState()).toMatchObject({
       tagSuggestions: ["desktop", "cli"],
@@ -95,10 +98,14 @@ describe("localTaskStore", () => {
   });
 
   it("ignores stale tag suggestion responses", () => {
-    const staleRequestId = localTaskStore.getState().beginTagSuggestionsLoad();
-    const currentRequestId = localTaskStore.getState().beginTagSuggestionsLoad();
-    localTaskStore.getState().setTagSuggestions(staleRequestId, ["stale"]);
-    localTaskStore.getState().setTagSuggestions(currentRequestId, ["current"]);
+    const staleRequestId = localTaskStore.getState().beginTagCatalogLoad();
+    const currentRequestId = localTaskStore.getState().beginTagCatalogLoad();
+    localTaskStore
+      .getState()
+      .setTagCatalog(staleRequestId, [{ key: "stale", name: "stale", aliases: ["stale"], color: null, customColor: null }]);
+    localTaskStore
+      .getState()
+      .setTagCatalog(currentRequestId, [{ key: "current", name: "current", aliases: ["current"], color: null, customColor: null }]);
 
     expect(localTaskStore.getState().tagSuggestions).toEqual(["current"]);
   });
@@ -115,4 +122,18 @@ describe("localTaskStore", () => {
     expect(localTaskStore.getState().hubTasks).toEqual([task]);
     expect(localTaskStore.getState().workspaceTasks).toEqual([task]);
   });
+});
+
+it("stores catalog entries and derives autocomplete names without normalizing daemon keys", () => {
+  const requestId = localTaskStore.getState().beginTagCatalogLoad();
+  localTaskStore.getState().setTagCatalog(requestId, [
+    { key: "café", name: "Café", aliases: ["Café"], color: "teal", customColor: null },
+    { key: "backend", name: "Backend", aliases: ["Backend"], color: null, customColor: null },
+  ]);
+
+  expect(localTaskStore.getState().tagCatalog).toEqual([
+    { key: "café", name: "Café", aliases: ["Café"], color: "teal", customColor: null },
+    { key: "backend", name: "Backend", aliases: ["Backend"], color: null, customColor: null },
+  ]);
+  expect(localTaskStore.getState().tagSuggestions).toEqual(["Café", "Backend"]);
 });

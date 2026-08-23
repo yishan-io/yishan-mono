@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEllipsis } from "react-icons/lu";
 import { unlinkLocalTaskWorkspace, updateLocalTaskLinkStatus } from "../../commands/localTaskCommands";
-import type { LocalTask, LocalTaskWorkspaceLink } from "../../localTaskTypes";
+import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
 import { LocalTaskTagsDisplay } from "../tags/LocalTaskTagsDisplay";
 
 const DENSE_CHIP_SX = {
@@ -19,10 +19,18 @@ type WorkspaceTaskLinkRowProps = {
   selected: boolean;
   isMutationLoading: boolean;
   onSelect: (taskId: string) => void;
+  tagCatalog: LocalTaskTagCatalogEntry[];
 };
 
 /** Renders one selectable current or historical workspace-task relationship and its supported actions. */
-export function WorkspaceTaskLinkRow({ link, task, selected, isMutationLoading, onSelect }: WorkspaceTaskLinkRowProps) {
+export function WorkspaceTaskLinkRow({
+  link,
+  task,
+  selected,
+  isMutationLoading,
+  onSelect,
+  tagCatalog,
+}: WorkspaceTaskLinkRowProps) {
   const { t } = useTranslation();
   const [isConfirmingUnlink, setIsConfirmingUnlink] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
@@ -91,7 +99,7 @@ export function WorkspaceTaskLinkRow({ link, task, selected, isMutationLoading, 
                 sx={DENSE_CHIP_SX}
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <LocalTaskTagsDisplay tags={task.tags} maxVisible={2} dense />
+                <LocalTaskTagsDisplay tags={task.tags} maxVisible={2} dense tagCatalog={tagCatalog} />
               </Box>
             </>
           ) : null}

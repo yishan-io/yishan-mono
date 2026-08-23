@@ -35,6 +35,10 @@ describe("DaemonLocalTaskClient", () => {
       }
       if (method === "localTask.search") return [{ ...taskPayload, rank: -0.5 }];
       if (method === "localTask.listTags") return ["desktop", "cli"];
+      if (method === "localTask.listTagCatalog" || method === "localTask.updateTagColor")
+        return method === "localTask.listTagCatalog"
+          ? [{ key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null }]
+          : { key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null };
       if (method === "localTask.getContextDetails") {
         return {
           directory: "/context/task-1",
@@ -60,6 +64,8 @@ describe("DaemonLocalTaskClient", () => {
     });
     await client.search("desktop", { status: "active", tags: ["desktop"] });
     await client.listTags();
+    await client.listTagCatalog();
+    await client.updateTagColor("desktop", "blue");
     await client.update("task-1", { status: "completed", tags: [] });
     await client.getContext("task-1");
     await client.linkWorkspace("task-1", "workspace-1");
@@ -83,6 +89,8 @@ describe("DaemonLocalTaskClient", () => {
       ],
       ["localTask.search", { query: "desktop", status: "active", tags: ["desktop"] }],
       ["localTask.listTags", {}],
+      ["localTask.listTagCatalog", {}],
+      ["localTask.updateTagColor", { tag: "desktop", color: "blue", customColor: null }],
       ["localTask.update", { id: "task-1", status: "completed", tags: [] }],
       ["localTask.getContextDetails", { id: "task-1" }],
       ["localTask.linkWorkspace", { taskId: "task-1", workspaceId: "workspace-1" }],
@@ -162,4 +170,26 @@ describe("DaemonLocalTaskClient", () => {
 
     await expect(client.get("task-1")).rejects.toThrow("invalid Local Task payload");
   });
+});
+
+it("strictly parses tag catalog entries", async () => {
+  const validClient = new DaemonLocalTaskClient(
+    vi.fn(async () => [
+      { key: "café", name: "Café", aliases: ["CAFÉ", "Café"], color: "teal", customColor: null },
+      { key: "plain", name: "Plain", aliases: ["Plain"], color: null, customColor: null },
+    ]),
+  );
+  const malformedClient = new DaemonLocalTaskClient(
+    vi.fn(async () => [{ key: "key", name: "Name", aliases: ["Name"], color: "orange" }]),
+  );
+  const missingAliasesClient = new DaemonLocalTaskClient(
+    vi.fn(async () => [{ key: "key", name: "Name", color: null, customColor: null }]),
+  );
+
+  await expect(validClient.listTagCatalog()).resolves.toEqual([
+    { key: "café", name: "Café", aliases: ["CAFÉ", "Café"], color: "teal", customColor: null },
+    { key: "plain", name: "Plain", aliases: ["Plain"], color: null, customColor: null },
+  ]);
+  await expect(malformedClient.listTagCatalog()).rejects.toThrow("invalid Local Task tag catalog payload");
+  await expect(missingAliasesClient.listTagCatalog()).rejects.toThrow("invalid Local Task tag catalog payload");
 });

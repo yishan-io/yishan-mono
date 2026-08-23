@@ -91,9 +91,22 @@
     },
     "tags": {
       "add": "添加标签",
-      "addTitle": "添加标签",
       "addInput": "新标签",
-      "delete": "移除 {{tag}}"
+      "delete": "移除 {{tag}}",
+      "colorPicker": "设置 {{tag}} 的颜色",
+      "clearColor": "清除颜色",
+      "color": {
+        "amber": "琥珀色",
+        "blue": "蓝色",
+        "green": "绿色",
+        "purple": "紫色",
+        "red": "红色",
+        "teal": "青色"
+      },
+      "presetColors": "预设颜色",
+      "customizeColor": "自定义颜色",
+      "customColorInput": "自定义颜色",
+      "editColor": "编辑 {{tag}} 的颜色"
     }
   }
 }

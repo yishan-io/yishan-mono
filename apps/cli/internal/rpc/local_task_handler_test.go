@@ -31,6 +31,12 @@ func (s *recordingLocalTaskService) List(context.Context, LocalTaskListParams) (
 func (s *recordingLocalTaskService) ListTags(context.Context) (any, error) {
 	return s.called(MethodLocalTaskListTags)
 }
+func (s *recordingLocalTaskService) ListTagCatalog(context.Context) (any, error) {
+	return s.called(MethodLocalTaskListTagCatalog)
+}
+func (s *recordingLocalTaskService) UpdateTagColor(context.Context, LocalTaskUpdateTagColorParams) (any, error) {
+	return s.called(MethodLocalTaskUpdateTagColor)
+}
 func (s *recordingLocalTaskService) Update(context.Context, LocalTaskUpdateParams) (any, error) {
 	return s.called(MethodLocalTaskUpdate)
 }
@@ -63,6 +69,8 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 		{MethodLocalTaskGetContextDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskList, `{}`},
 		{MethodLocalTaskListTags, `{}`},
+		{MethodLocalTaskListTagCatalog, `{}`},
+		{MethodLocalTaskUpdateTagColor, `{"key":"first","color":null}`},
 		{MethodLocalTaskUpdate, `{"id":"task-1","title":"Updated"}`},
 		{MethodLocalTaskSearch, `{"query":"task"}`},
 		{MethodLocalTaskLinkWorkspace, `{"taskId":"task-1","workspaceId":"workspace-1"}`},
@@ -116,6 +124,19 @@ func TestLocalTaskHandler_ListTagsRejectsMalformedParams(t *testing.T) {
 	var rpcErr *Error
 	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams {
 		t.Fatalf("Call error = %v, want invalid params", err)
+	}
+	if service.calls != 0 {
+		t.Fatalf("service calls = %d, want 0", service.calls)
+	}
+}
+
+func TestLocalTaskHandler_UpdateTagColorRequiresColor(t *testing.T) {
+	service := &recordingLocalTaskService{}
+	handler := &LocalTaskHandler{Services: service}
+
+	_, err := handler.Call(context.Background(), &Connection{}, MethodLocalTaskUpdateTagColor, json.RawMessage(`{"key":"first"}`))
+	if err == nil {
+		t.Fatal("Call succeeded without color")
 	}
 	if service.calls != 0 {
 		t.Fatalf("service calls = %d, want 0", service.calls)

@@ -36,6 +36,12 @@ var (
 	ErrInvalidLink = errors.New("invalid local task workspace link")
 	// ErrContextUnavailable indicates no approved local context path can be resolved.
 	ErrContextUnavailable = errors.New("local task context unavailable")
+	// ErrInvalidTagKey indicates a tag catalog key is not daemon-normalized.
+	ErrInvalidTagKey = errors.New("invalid local task tag key")
+	// ErrInvalidTagColor indicates a tag color is not in the supported palette.
+	ErrInvalidTagColor = errors.New("invalid local task tag color")
+	// ErrTagNotFound indicates a requested Local Task tag catalog entry does not exist.
+	ErrTagNotFound = errors.New("local task tag not found")
 )
 
 // Status is a Local Task lifecycle state.
@@ -69,6 +75,22 @@ type Task struct {
 	UpdatedAt   string   `json:"updatedAt"`
 	CompletedAt *string  `json:"completedAt"`
 	Tags        []string `json:"tags"`
+}
+
+// Tag is one globally retained Local Task tag catalog entry.
+type Tag struct {
+	Key         string   `json:"key"`
+	Name        string   `json:"name"`
+	Aliases     []string `json:"aliases"`
+	Color       *string  `json:"color"`
+	CustomColor *string  `json:"customColor"`
+}
+
+// TagColorUpdate is one mutually exclusive global tag color selection.
+type TagColorUpdate struct {
+	Color       *string
+	CustomColor *string
+	DisplayName *string
 }
 
 // ContextDetails contains derived filesystem locations for v1 task documents.
@@ -128,7 +150,8 @@ type Repository interface {
 	List(context.Context, TaskFilter) ([]Task, error)
 	Update(context.Context, string, TaskUpdate) (Task, error)
 	Search(context.Context, string, TaskFilter) ([]SearchResult, error)
-	ListTags(context.Context) ([]string, error)
+	ListTags(context.Context) ([]Tag, error)
+	UpdateTagColor(context.Context, string, TagColorUpdate) (Tag, error)
 	LinkWorkspace(context.Context, WorkspaceLink) (WorkspaceLink, error)
 	UnlinkWorkspace(context.Context, string) error
 	UpdateWorkspaceLinkStatus(context.Context, string, Status) (WorkspaceLink, error)

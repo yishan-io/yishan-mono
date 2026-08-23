@@ -199,7 +199,60 @@ func TestService_MapsTagsAndListsSuggestions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTags: %v", err)
 	}
-	if tags := tagsValue.([]string); tags == nil || len(tags) != 0 {
-		t.Fatalf("suggestion tags = %#v, want non-nil empty", tags)
+	if tags := tagsValue.([]string); !slices.Equal(tags, []string{"First", "second"}) {
+		t.Fatalf("suggestion tags = %#v, want retained catalog names", tags)
+	}
+}
+
+func TestService_ListsTagCatalogAndUpdatesColor(t *testing.T) {
+	service, _, _ := newTestService(t)
+	if _, err := service.Create(context.Background(), rpc.LocalTaskCreateParams{
+		Title: "Tagged", Tags: []string{"  First  "},
+	}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	catalogValue, err := service.ListTagCatalog(context.Background())
+	if err != nil {
+		t.Fatalf("ListTagCatalog: %v", err)
+	}
+	catalog := catalogValue.([]domain.Tag)
+	if len(catalog) != 1 || catalog[0].Key != "first" || catalog[0].Name != "First" || catalog[0].Color != nil {
+		t.Fatalf("catalog = %#v", catalog)
+	}
+
+	blue := domain.TagColorBlue
+	updatedValue, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{
+		Key: "first", Color: &blue,
+	})
+	if err != nil {
+		t.Fatalf("UpdateTagColor: %v", err)
+	}
+	updated := updatedValue.(domain.Tag)
+	if updated.Color == nil || *updated.Color != blue {
+		t.Fatalf("updated catalog tag = %#v", updated)
+	}
+
+	custom := "#123456"
+	newTagValue, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{
+		Tag: " Cafe\u0301 ", CustomColor: &custom,
+	})
+	if err != nil {
+		t.Fatalf("UpdateTagColor new display tag: %v", err)
+	}
+	newTag := newTagValue.(domain.Tag)
+	if newTag.Key != "café" || newTag.Name != "Café" || newTag.CustomColor == nil || *newTag.CustomColor != custom {
+		t.Fatalf("new display tag catalog entry = %#v", newTag)
+	}
+
+	_, err = service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{Key: " first"})
+	if !errors.Is(err, domain.ErrInvalidTagKey) {
+		t.Fatalf("invalid key error = %v, want invalid tag key", err)
+	}
+
+	invalid := "magenta"
+	_, err = service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{Key: "first", Color: &invalid})
+	if !errors.Is(err, domain.ErrInvalidTagColor) {
+		t.Fatalf("invalid color error = %v, want invalid tag color", err)
 	}
 }

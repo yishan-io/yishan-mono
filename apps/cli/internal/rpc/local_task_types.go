@@ -25,6 +25,14 @@ type LocalTaskListParams struct {
 	Tags        []string            `json:"tags,omitempty"`
 }
 
+// LocalTaskUpdateTagColorParams changes a global Local Task tag catalog color.
+type LocalTaskUpdateTagColorParams struct {
+	Tag         string  `json:"tag,omitempty"`
+	Key         string  `json:"key,omitempty"`
+	Color       *string `json:"color"`
+	CustomColor *string `json:"customColor"`
+}
+
 // LocalTaskUpdateParams contains mutable Local Task metadata.
 type LocalTaskUpdateParams struct {
 	ID          string              `json:"id"`

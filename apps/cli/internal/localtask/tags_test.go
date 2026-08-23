@@ -96,3 +96,49 @@ func TestValidateTaskAndUpdate_ValidateTags(t *testing.T) {
 		t.Fatalf("validate update error = %v, want %v", err, ErrInvalidTask)
 	}
 }
+
+func TestValidateTagColor_AcceptsSupportedColorsAndClear(t *testing.T) {
+	blue := TagColorBlue
+	if err := ValidateTagColor(&blue); err != nil {
+		t.Fatalf("validate supported color: %v", err)
+	}
+	if err := ValidateTagColor(nil); err != nil {
+		t.Fatalf("validate clear color: %v", err)
+	}
+	invalid := "magenta"
+	if !errors.Is(ValidateTagColor(&invalid), ErrInvalidTagColor) {
+		t.Fatalf("validate invalid color = %v, want %v", ValidateTagColor(&invalid), ErrInvalidTagColor)
+	}
+}
+
+func TestValidateTagKey_AcceptsNormalizeTagKeyOutput(t *testing.T) {
+	tests := []struct {
+		name string
+		tag  string
+	}{
+		{name: "Cherokee fold", tag: "Ꭰ"},
+		{name: "32 sharp s fold expansion", tag: strings.Repeat("ß", MaxTagCodePoints)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			key, err := NormalizeTagKey(test.tag)
+			if err != nil {
+				t.Fatalf("normalize display tag: %v", err)
+			}
+			if err := ValidateTagKey(key); err != nil {
+				t.Fatalf("validate normalized key %q: %v", key, err)
+			}
+		})
+	}
+}
+
+func TestValidateTagKey_RejectsInvalidWireShape(t *testing.T) {
+	for _, key := range []string{"", " Alpha", "Alpha ", "\xff"} {
+		if !errors.Is(ValidateTagKey(key), ErrInvalidTagKey) {
+			t.Fatalf("validate key %q error = %v, want %v", key, ValidateTagKey(key), ErrInvalidTagKey)
+		}
+	}
+	if err := ValidateTagKey("alpha"); err != nil {
+		t.Fatalf("validate key: %v", err)
+	}
+}

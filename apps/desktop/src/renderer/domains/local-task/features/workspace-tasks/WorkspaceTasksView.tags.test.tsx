@@ -17,6 +17,7 @@ const commands = vi.hoisted(() => ({
   selectWorkspaceLocalTask: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
   updateLocalTask: vi.fn(async () => undefined),
+  updateLocalTaskTagColor: vi.fn(async () => undefined),
   updateLocalTaskLinkStatus: vi.fn(async () => undefined),
 }));
 vi.mock("../../commands/localTaskCommands", () => commands);
@@ -106,6 +107,7 @@ describe("WorkspaceTasksView tags", () => {
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
+      tagCatalog: [{ key: "backend", name: "backend", aliases: ["backend"], color: null, customColor: null }],
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
@@ -116,32 +118,44 @@ describe("WorkspaceTasksView tags", () => {
     fireEvent.click(screen.getByLabelText("localTask.tags.delete"));
 
     await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tags: [] }));
+
     act(() => localTaskStore.setState({ isMutationLoading: true }));
     expect((screen.getByRole("button", { name: "localTask.tags.add" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("keeps the workspace row overflow count outside the clipped visible-tag region", () => {
-    const taggedTask = { ...primaryTask, tags: ["first", "second", "third"] };
+  it("propagates catalog color tokens to workspace rows and detail editor chips", () => {
+    const taggedTask = { ...primaryTask, tags: ["backend"] };
+    localTaskStore.setState({
+      workspaceTasks: [taggedTask, relatedTask],
+      taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
+      tagCatalog: [{ key: "backend", name: "backend", aliases: ["backend"], color: "teal", customColor: null }],
+    });
+    render(<WorkspaceTasksView workspaceId="workspace-1" />);
+
+    const rowChip = screen.getByText("backend").closest(".MuiChip-root");
+    expect(rowChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(rowChip?.querySelector(".MuiChip-icon")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
+    const detailChip = within(screen.getByTestId("local-task-metadata")).getByText("backend").closest(".MuiChip-root");
+    expect(detailChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(detailChip?.querySelector(".MuiChip-icon")).toBeNull();
+  });
+
+  it("shows full workspace row labels and leaves the overflow count unadorned", () => {
+    const longTag = "first".repeat(6);
+    const taggedTask = { ...primaryTask, tags: [longTag, "second", "third"] };
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
-    const firstTagChip = screen.getByText("first").closest(".MuiChip-root");
-    expect(getComputedStyle(firstTagChip as Element).height).toBe("18px");
-    const taskCard = firstTagChip?.closest(".MuiPaper-root");
-    expect(taskCard).toBeTruthy();
-    if (!taskCard) return;
-    const statusChip = within(taskCard as HTMLElement).getByText("localTask.status.active");
-    const priorityChip = within(taskCard as HTMLElement).getByText("localTask.priority.high");
-    expect(statusChip.compareDocumentPosition(priorityChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(priorityChip.compareDocumentPosition(firstTagChip as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(getComputedStyle(firstTagChip as Element).flexGrow).toBe("0");
+    const firstTagChip = screen.getByText(longTag).closest(".MuiChip-root");
+    expect(getComputedStyle(firstTagChip as Element).minHeight).toBe("18px");
+    expect(getComputedStyle(firstTagChip as Element).maxWidth).not.toBe("88px");
+    expect(firstTagChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
     const overflowChip = screen.getByText("+1").closest(".MuiChip-root");
-    expect(overflowChip).toBeTruthy();
-    expect(getComputedStyle(overflowChip?.previousElementSibling as Element).overflow).toBe("hidden");
-    expect(getComputedStyle(overflowChip?.parentElement as Element).overflow).toBe("visible");
-    expect(getComputedStyle(overflowChip?.closest(".MuiPaper-root") as Element).overflow).toBe("visible");
+    expect(overflowChip?.querySelector("svg")).toBeNull();
   });
 });

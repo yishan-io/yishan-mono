@@ -38,6 +38,9 @@ func TestLocalTaskRPCContractFixture_UsesActualMethodsAndExactPayloads(t *testin
 		MethodLocalTaskUpdate,
 		MethodLocalTaskSearch,
 		MethodLocalTaskGetContextDetails,
+		MethodLocalTaskListTagCatalog,
+		MethodLocalTaskUpdateTagColor,
+		MethodLocalTaskUpdateTagColor,
 	}
 	if len(fixture.Requests) != len(methods) {
 		t.Fatalf("fixture requests = %d, want %d", len(fixture.Requests), len(methods))
@@ -82,6 +85,10 @@ func assertLocalTaskContractPayload(t *testing.T, method string, payload json.Ra
 		assertExactJSON(t, payload, LocalTaskUpdateParams{})
 	case MethodLocalTaskSearch:
 		assertExactJSON(t, payload, LocalTaskSearchParams{})
+	case MethodLocalTaskListTagCatalog:
+		assertExactJSON(t, payload, struct{}{})
+	case MethodLocalTaskUpdateTagColor:
+		assertExactJSON(t, payload, LocalTaskUpdateTagColorParams{})
 	default:
 		t.Fatalf("unsupported fixture method %q", method)
 	}
@@ -98,6 +105,10 @@ func assertLocalTaskContractResult(t *testing.T, method string, payload json.Raw
 		assertExactJSON(t, payload, []localtask.SearchResult{})
 	case MethodLocalTaskGetContextDetails:
 		assertExactJSON(t, payload, localtask.ContextDetails{})
+	case MethodLocalTaskListTagCatalog:
+		assertExactJSON(t, payload, []localtask.Tag{})
+	case MethodLocalTaskUpdateTagColor:
+		assertExactJSON(t, payload, localtask.Tag{})
 	default:
 		t.Fatalf("unsupported fixture method %q", method)
 	}

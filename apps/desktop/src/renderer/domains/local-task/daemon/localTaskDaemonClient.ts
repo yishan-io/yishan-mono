@@ -8,6 +8,9 @@ import type {
   LocalTaskPriority,
   LocalTaskSearchResult,
   LocalTaskStatus,
+  LocalTaskTagCatalogEntry,
+  LocalTaskTagColor,
+  LocalTaskTagCustomColor,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -50,6 +53,43 @@ function requireStringArray(record: Record<string, unknown>, field: string, payl
     throw new TypeError(`invalid ${payloadName} payload`);
   }
   return fieldValue;
+}
+
+function isTagColor(color: unknown): color is LocalTaskTagColor {
+  return (
+    color === "amber" ||
+    color === "blue" ||
+    color === "green" ||
+    color === "purple" ||
+    color === "red" ||
+    color === "teal"
+  );
+}
+
+function isCustomTagColor(color: unknown): color is LocalTaskTagCustomColor {
+  return typeof color === "string" && /^#[0-9A-Fa-f]{6}$/.test(color);
+}
+
+function parseTagCatalogEntry(payload: unknown): LocalTaskTagCatalogEntry {
+  const record = requireRecord(payload, "Local Task tag catalog");
+  const color = record.color;
+  if (color !== null && !isTagColor(color)) throw new TypeError("invalid Local Task tag catalog payload");
+  const customColor = record.customColor;
+  if (customColor !== null && !isCustomTagColor(customColor))
+    throw new TypeError("invalid Local Task tag catalog payload");
+  if (color !== null && customColor !== null) throw new TypeError("invalid Local Task tag catalog payload");
+  return {
+    key: requireString(record, "key", "Local Task tag catalog"),
+    name: requireString(record, "name", "Local Task tag catalog"),
+    aliases: requireStringArray(record, "aliases", "Local Task tag catalog"),
+    color,
+    customColor,
+  };
+}
+
+function parseTagCatalog(payload: unknown): LocalTaskTagCatalogEntry[] {
+  if (!Array.isArray(payload)) throw new TypeError("invalid Local Task tag catalog payload");
+  return payload.map(parseTagCatalogEntry);
 }
 
 function parseTask(payload: unknown): LocalTask {
@@ -148,6 +188,20 @@ export class DaemonLocalTaskClient {
     return payload;
   }
 
+  /** Lists daemon-owned global Local Task tag catalog entries. */
+  async listTagCatalog(): Promise<LocalTaskTagCatalogEntry[]> {
+    return parseTagCatalog(await this.invoke("localTask.listTagCatalog", {}));
+  }
+
+  /** Sets or clears a daemon-owned global Local Task tag catalog color. */
+  async updateTagColor(
+    tag: string,
+    color: LocalTaskTagColor | null,
+    customColor: LocalTaskTagCustomColor | null = null,
+  ): Promise<LocalTaskTagCatalogEntry> {
+    return parseTagCatalogEntry(await this.invoke("localTask.updateTagColor", { tag, color, customColor }));
+  }
+
   /** Updates mutable Local Task metadata. */
   async update(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
     return parseTask(await this.invoke("localTask.update", { id: taskId, ...input }));
@@ -208,6 +262,18 @@ export async function searchLocalTasks(
 /** Lists globally suggested Local Task tags through the daemon. */
 export async function listLocalTaskTags(): Promise<string[]> {
   return localTaskClient.listTags();
+}
+/** Lists daemon-owned global Local Task tag catalog entries. */
+export async function listLocalTaskTagCatalog(): Promise<LocalTaskTagCatalogEntry[]> {
+  return localTaskClient.listTagCatalog();
+}
+/** Sets or clears one daemon-owned Local Task tag catalog color. */
+export async function updateLocalTaskTagColor(
+  tag: string,
+  color: LocalTaskTagColor | null,
+  customColor: LocalTaskTagCustomColor | null = null,
+): Promise<LocalTaskTagCatalogEntry> {
+  return localTaskClient.updateTagColor(tag, color, customColor);
 }
 /** Updates one Local Task through the daemon. */
 export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
