@@ -61,6 +61,13 @@ export function useVisibleFileTree({
   const setExpandedItems = useCallback<Dispatch<SetStateAction<string[]>>>(
     (input) => {
       const nextExpandedItems = typeof input === "function" ? input(expandedItems) : input;
+      const hasChanged =
+        nextExpandedItems.length !== expandedItems.length ||
+        nextExpandedItems.some((item, index) => item !== expandedItems[index]);
+
+      if (!hasChanged) {
+        return;
+      }
 
       if (isControlled) {
         onExpandedItemsChange?.(nextExpandedItems);
