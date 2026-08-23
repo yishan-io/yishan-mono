@@ -6,13 +6,15 @@ import {
   Collapse,
   IconButton,
   InputAdornment,
+  Pagination,
+  type PaginationProps,
   TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { projectStore } from "@renderer/domains/project";
 import { PaneHeader, PaneToggleButton, useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LuArrowLeft,
@@ -41,6 +43,8 @@ import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 import { LocalTaskHubFilters } from "./LocalTaskHubFilters";
 import { LocalTaskList } from "./LocalTaskList";
 
+const TASK_HUB_PAGE_SIZE = 20;
+
 /** Renders the global Local Task Hub with creation, search, filters, and list states. */
 export function TaskHubView() {
   const { t } = useTranslation();
@@ -61,6 +65,14 @@ export function TaskHubView() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const previousHubQueryRef = useRef({ filters, searchQuery });
+  const pageCount = Math.ceil(tasks.length / TASK_HUB_PAGE_SIZE);
+  const resolvedCurrentPage = Math.min(currentPage, Math.max(pageCount, 1));
+  const paginatedTasks = useMemo(() => {
+    const firstTaskIndex = (resolvedCurrentPage - 1) * TASK_HUB_PAGE_SIZE;
+    return tasks.slice(firstTaskIndex, firstTaskIndex + TASK_HUB_PAGE_SIZE);
+  }, [resolvedCurrentPage, tasks]);
   const selectedTask = selectedTaskId
     ? (taskById[selectedTaskId] ?? tasks.find((task) => task.id === selectedTaskId))
     : undefined;
@@ -74,6 +86,17 @@ export function TaskHubView() {
     void refreshLocalTaskHub();
     void loadLocalTaskTagSuggestions();
   }, []);
+
+  useEffect(() => {
+    if (previousHubQueryRef.current.filters === filters && previousHubQueryRef.current.searchQuery === searchQuery)
+      return;
+    previousHubQueryRef.current = { filters, searchQuery };
+    setCurrentPage(1);
+  }, [filters, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(resolvedCurrentPage);
+  }, [resolvedCurrentPage]);
 
   useEffect(() => {
     if (!selectedTask) return;
@@ -91,6 +114,15 @@ export function TaskHubView() {
   const handleOpenCreate = useCallback(() => setIsCreateOpen(true), []);
   const handleCloseCreate = useCallback(() => setIsCreateOpen(false), []);
   const handleSelectTask = useCallback((taskId: string) => setSelectedTaskId(taskId), []);
+  const handlePageChange = useCallback((_event: React.ChangeEvent<unknown>, page: number) => setCurrentPage(page), []);
+  const getPaginationItemAriaLabel = useCallback<NonNullable<PaginationProps["getItemAriaLabel"]>>(
+    (type, page, selected) => {
+      if (type === "previous") return t("localTask.pagination.previous");
+      if (type === "next") return t("localTask.pagination.next");
+      return t(selected ? "localTask.pagination.selectedPage" : "localTask.pagination.page", { page });
+    },
+    [t],
+  );
   const handleBackToList = useCallback(() => setSelectedTaskId(null), []);
   const handleOpenContextFolder = useCallback(() => {
     if (!selectedTask) return;
@@ -194,7 +226,7 @@ export function TaskHubView() {
               ) : null}
             </>
           ) : (
-            <Button size="small" variant="text" startIcon={<LuPlus />} onClick={handleOpenCreate}>
+            <Button size="small" variant="text" color="inherit" startIcon={<LuPlus />} onClick={handleOpenCreate}>
               {t("localTask.actions.create")}
             </Button>
           )}
@@ -289,7 +321,20 @@ export function TaskHubView() {
               <Typography color="text.secondary">{t("localTask.states.empty")}</Typography>
             </Box>
           ) : (
-            <LocalTaskList tasks={tasks} onSelect={handleSelectTask} projectNameById={projectNameById} />
+            <>
+              <LocalTaskList tasks={paginatedTasks} onSelect={handleSelectTask} projectNameById={projectNameById} />
+              {pageCount > 1 ? (
+                <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>
+                  <Pagination
+                    count={pageCount}
+                    page={resolvedCurrentPage}
+                    aria-label={t("localTask.pagination.label")}
+                    getItemAriaLabel={getPaginationItemAriaLabel}
+                    onChange={handlePageChange}
+                  />
+                </Box>
+              ) : null}
+            </>
           )}
         </>
       )}

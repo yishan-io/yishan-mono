@@ -17,6 +17,13 @@
     "search": {
       "label": "Search tasks"
     },
+    "pagination": {
+      "label": "Task list pagination",
+      "page": "Go to page {{page}}",
+      "selectedPage": "Page {{page}}",
+      "previous": "Go to previous page",
+      "next": "Go to next page"
+    },
     "filters": {
       "allProjects": "All projects",
       "allStatuses": "All statuses",
