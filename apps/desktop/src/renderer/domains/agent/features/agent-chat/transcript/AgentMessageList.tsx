@@ -368,11 +368,12 @@ function AgentMessageListComponent({
         }}
       >
         <Box
+          data-testid="agent-message-list-content"
           sx={{
             minHeight: "100%",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "flex-end",
+            justifyContent: "flex-start",
             gap: 1,
           }}
         >

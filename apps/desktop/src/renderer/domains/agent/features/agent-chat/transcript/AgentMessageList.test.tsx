@@ -62,6 +62,14 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
+  it("top-aligns short transcripts", () => {
+    const messages: AgentMessageType[] = [{ id: "user-1", role: "user", content: "Prompt" }];
+
+    render(<AgentMessageList tabId="tab-top-alignment" isActive messages={messages} />);
+
+    expect(getComputedStyle(screen.getByTestId("agent-message-list-content")).justifyContent).toBe("flex-start");
+  });
+
   it("renders only virtual rows (standalone user messages and turns) and registers each for dynamic-height measurement", () => {
     const messages = Array.from({ length: 10 }, (_, index): AgentMessageType[] => [
       { id: `user-${index}`, role: "user", content: `Prompt ${index}` },
