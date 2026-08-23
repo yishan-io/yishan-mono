@@ -19,7 +19,9 @@ const commands = vi.hoisted(() => ({
 }));
 
 vi.mock("../../commands/localTaskCommands", () => commands);
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string, options?: { page?: number }) => (options?.page ? `${key} ${options.page}` : key) }),
+}));
 vi.mock("@renderer/domains/project", () => ({
   projectStore: (selector: (state: { projects: Array<{ id: string; name: string }> }) => unknown) =>
     selector({ projects: [{ id: "project-1", name: "Project One" }] }),
@@ -308,14 +310,31 @@ describe("TaskHubView", () => {
     expect((screen.getByRole("button", { name: "common.actions.cancel" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("virtualizes task lists larger than fifty rows and translates enum labels", () => {
+  it("paginates task lists and resets or clamps the page when results change", async () => {
     const tasks = Array.from({ length: 60 }, (_, index) => ({ ...task, id: `task-${index}`, title: `Task ${index}` }));
     localTaskStore.setState({ hubTasks: tasks });
     render(<TaskHubView />);
+
+    expect(screen.getByRole("navigation", { name: "localTask.pagination.label" })).toBeTruthy();
     expect(screen.getByText("Task 0")).toBeTruthy();
-    expect(screen.queryByText("Task 59")).toBeNull();
-    expect(screen.getAllByText("localTask.status.active").length).toBeLessThan(60);
-    expect(screen.getAllByText("localTask.status.active").length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText("localTask.fields.priority: localTask.priority.high").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Task 20")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "localTask.pagination.page 3" }));
+    expect(screen.getByText("Task 40")).toBeTruthy();
+
+    act(() => localTaskStore.setState({ hubFilters: { status: "active" } }));
+    await waitFor(() => expect(screen.getByText("Task 0")).toBeTruthy());
+    expect(screen.queryByText("Task 40")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.pagination.page 2" }));
+    expect(screen.getByText("Task 20")).toBeTruthy();
+    act(() => localTaskStore.setState({ hubTasks: tasks.slice(0, 1) }));
+    await waitFor(() => expect(screen.getByText("Task 0")).toBeTruthy());
+    expect(screen.queryByRole("navigation", { name: "localTask.pagination.label" })).toBeNull();
+  });
+
+  it("hides pagination when the Task Hub has one page", () => {
+    render(<TaskHubView />);
+
+    expect(screen.queryByRole("navigation", { name: "localTask.pagination.label" })).toBeNull();
   });
 });

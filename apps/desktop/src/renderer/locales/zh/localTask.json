@@ -17,6 +17,13 @@
     "search": {
       "label": "搜索任务"
     },
+    "pagination": {
+      "label": "任务列表分页",
+      "page": "转到第 {{page}} 页",
+      "selectedPage": "第 {{page}} 页",
+      "previous": "转到上一页",
+      "next": "转到下一页"
+    },
     "filters": {
       "allProjects": "所有项目",
       "allStatuses": "所有状态",

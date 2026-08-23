@@ -75,6 +75,18 @@ describe("daemon endpoint resolution", () => {
     await expect(resolveDaemonHealthUrl()).resolves.toBe("https://relay.example.test/healthz");
   });
 
+  it("ignores inherited endpoint overrides in development mode", async () => {
+    mocks.isDevMode.mockReturnValue(true);
+    mocks.readFile.mockResolvedValue(JSON.stringify({ host: "127.0.0.1", port: 65000 }));
+    process.env.YISHAN_PROFILE = "default";
+    process.env.YISHAN_DAEMON_HEALTH_URL = "http://127.0.0.1:59066/healthz";
+    process.env.YISHAN_DAEMON_WS_URL = "ws://127.0.0.1:59066/ws";
+
+    await expect(resolveDaemonHealthUrl()).resolves.toBe("http://127.0.0.1:65000/healthz");
+    await expect(resolveDaemonWebSocketUrl()).resolves.toBe("ws://127.0.0.1:65000/ws");
+    expect(mocks.readFile).toHaveBeenCalledWith("/test-home/.yishan/profiles/dev/daemon.state.json", "utf8");
+  });
+
   it("prefers the explicit WebSocket URL over the health URL", async () => {
     process.env.YISHAN_DAEMON_HEALTH_URL = "https://health.example.test/healthz";
     process.env.YISHAN_DAEMON_WS_URL = "  wss://socket.example.test/ws  ";
