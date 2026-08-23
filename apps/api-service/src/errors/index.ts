@@ -6,8 +6,9 @@ export class AppError extends Error {
     readonly status: number,
     readonly code: string,
     readonly details?: Record<string, unknown>,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = "AppError";
   }
 }
@@ -218,6 +219,28 @@ export class ProjectNotFoundError extends AppError {
   constructor(projectId: string) {
     super("Project not found", StatusCodes.NOT_FOUND, "PROJECT_NOT_FOUND", { projectId });
     this.name = "ProjectNotFoundError";
+  }
+}
+
+/** Indicates that a project already exists for the Git identity in its organization. */
+export class ProjectAlreadyExistsError extends AppError {
+  constructor(details: { organizationId: string; repoProvider: string | null; repoKey: string | null }) {
+    super("Project already exists", StatusCodes.CONFLICT, "PROJECT_ALREADY_EXISTS", details);
+    this.name = "ProjectAlreadyExistsError";
+  }
+}
+
+/** Indicates that the project database insert failed without a duplicate Git identity conflict. */
+export class ProjectCreateFailedError extends AppError {
+  constructor(cause?: unknown) {
+    super(
+      "Failed to create project",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "PROJECT_CREATE_FAILED",
+      undefined,
+      cause === undefined ? undefined : { cause },
+    );
+    this.name = "ProjectCreateFailedError";
   }
 }
 

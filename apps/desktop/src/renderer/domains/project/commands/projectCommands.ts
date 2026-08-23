@@ -86,6 +86,10 @@ export async function createProject(input: {
     throw new Error("Backend project response is empty");
   }
 
+  if (sessionStore.getState().selectedOrganizationId?.trim() !== selectedOrganizationId) {
+    return;
+  }
+
   const workspaces = project.workspaces ?? [];
   const primaryWorkspace = workspaces.find((workspace) => workspace.kind === "primary") ?? workspaces[0];
   const resolvedProjectLocalPath = isLocalSource

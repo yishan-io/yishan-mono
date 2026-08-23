@@ -1,4 +1,5 @@
 import type { AppDb } from "@/db/client";
+import { ProjectAlreadyExistsError, ProjectCreateFailedError } from "@/errors";
 import { ProjectService } from "@/services/project-service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,8 +35,16 @@ function makeOrgService(role: string | null = "member") {
   return { getMembershipRole: vi.fn().mockResolvedValue(role) } as any;
 }
 
-function makeCreateDb(options: { insertedProject?: unknown; insertedWorkspace?: unknown } = {}) {
-  const { insertedProject, insertedWorkspace } = options;
+function makeCreateDb(
+  options: {
+    insertedProject?: unknown;
+    insertedWorkspace?: unknown;
+    projectInsertError?: unknown;
+    workspaceInsertError?: unknown;
+    transactionError?: unknown;
+  } = {},
+) {
+  const { insertedProject, insertedWorkspace, projectInsertError, workspaceInsertError, transactionError } = options;
 
   // Outer db: handles assertNodeOwnedByActor (uses this.db directly)
   const outerLimit = vi.fn().mockResolvedValue([{ id: "node-1", scope: "private", ownerUserId: "user-1" }]);
@@ -47,12 +56,18 @@ function makeCreateDb(options: { insertedProject?: unknown; insertedWorkspace?: 
   let txInsertCall = 0;
   const txInsertReturning = vi.fn().mockImplementation(() => {
     txInsertCall += 1;
+    if (txInsertCall === 1 && projectInsertError) return Promise.reject(projectInsertError);
+    if (txInsertCall === 2 && workspaceInsertError) return Promise.reject(workspaceInsertError);
     if (txInsertCall === 1) return Promise.resolve([insertedProject]);
     return Promise.resolve([insertedWorkspace]);
   });
   const txInsertValues = vi.fn().mockReturnValue({ returning: txInsertReturning });
   const txInsert = vi.fn().mockReturnValue({ values: txInsertValues });
-  const transaction = vi.fn().mockImplementation((fn: (tx: unknown) => unknown) => fn({ insert: txInsert }));
+  const transaction = vi.fn().mockImplementation(async (fn: (tx: unknown) => unknown) => {
+    const transactionResult = await fn({ insert: txInsert });
+    if (transactionError) throw transactionError;
+    return transactionResult;
+  });
 
   // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
   const db = { select: outerSelect, transaction } as any;
@@ -158,5 +173,122 @@ describe("ProjectService.createProject", () => {
     expect(result.sourceType).toBe("unknown");
     expect(result.repoKey).toBeNull();
     expect(result.workspaces).toEqual([{ ...insertedWorkspace, latestPullRequest: null }]);
+  });
+
+  it("converts a direct duplicate Git identity violation into ProjectAlreadyExistsError", async () => {
+    const projectInsertError = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+      constraint: "projects_org_repo_provider_key_uq",
+    });
+    const { db } = makeCreateDb({ projectInsertError });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    const creation = service.createProject({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      name: "Project 1",
+      repoUrl: "https://github.com/acme/project-1.git",
+    });
+
+    await expect(creation).rejects.toBeInstanceOf(ProjectAlreadyExistsError);
+    await expect(creation).rejects.toMatchObject({
+      status: 409,
+      code: "PROJECT_ALREADY_EXISTS",
+      details: { organizationId: "org-1", repoProvider: "github", repoKey: "acme/project-1" },
+    });
+  });
+
+  it("converts a duplicate Git identity unique violation into ProjectAlreadyExistsError", async () => {
+    const { db } = makeCreateDb({
+      projectInsertError: new Error("Failed query", {
+        cause: { code: "23505", constraint: "projects_org_repo_provider_key_uq" },
+      }),
+    });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    const creation = service.createProject({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      name: "Project 1",
+      repoUrl: "https://github.com/acme/project-1.git",
+    });
+
+    await expect(creation).rejects.toBeInstanceOf(ProjectAlreadyExistsError);
+    await expect(creation).rejects.toMatchObject({
+      status: 409,
+      code: "PROJECT_ALREADY_EXISTS",
+      details: { organizationId: "org-1", repoProvider: "github", repoKey: "acme/project-1" },
+    });
+  });
+
+  it.each([
+    { code: "23505", constraint: "other_unique_constraint" },
+    { code: "other_error_code", constraint: "projects_org_repo_provider_key_uq" },
+  ])(
+    "converts a nonmatching wrapped violation into ProjectCreateFailedError and preserves its cause",
+    async (cause) => {
+      const projectInsertError = new Error("Failed query", { cause });
+      const { db } = makeCreateDb({ projectInsertError });
+      const service = new ProjectService(db, makeOrgService("member"));
+
+      const creation = service.createProject({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        name: "Project 1",
+        repoUrl: "https://github.com/acme/project-1.git",
+      });
+
+      await expect(creation).rejects.toBeInstanceOf(ProjectCreateFailedError);
+      await expect(creation).rejects.toMatchObject({
+        status: 500,
+        code: "PROJECT_CREATE_FAILED",
+        cause: projectInsertError,
+      });
+    },
+  );
+
+  it("converts a primary workspace insert failure into ProjectCreateFailedError and preserves its cause", async () => {
+    const workspaceInsertError = new Error("primary workspace insert failed");
+    const { db } = makeCreateDb({ insertedProject: PROJECT_ROW, workspaceInsertError });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    const creation = service.createProject({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      name: "Project 1",
+      nodeId: "node-1",
+      localPath: "/project-1",
+    });
+
+    await expect(creation).rejects.toBeInstanceOf(ProjectCreateFailedError);
+    await expect(creation).rejects.toMatchObject({ cause: workspaceInsertError });
+  });
+
+  it("converts a transaction commit failure into ProjectCreateFailedError and preserves its cause", async () => {
+    const transactionError = new Error("transaction commit failed");
+    const { db } = makeCreateDb({ insertedProject: PROJECT_ROW, transactionError });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    const creation = service.createProject({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      name: "Project 1",
+    });
+
+    await expect(creation).rejects.toBeInstanceOf(ProjectCreateFailedError);
+    await expect(creation).rejects.toMatchObject({ cause: transactionError });
+  });
+
+  it("throws ProjectCreateFailedError when the insert returns no project", async () => {
+    const { db } = makeCreateDb();
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    await expect(
+      service.createProject({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        name: "Project 1",
+      }),
+    ).rejects.toBeInstanceOf(ProjectCreateFailedError);
   });
 });
