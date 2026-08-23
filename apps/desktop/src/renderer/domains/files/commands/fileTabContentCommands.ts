@@ -1,5 +1,4 @@
-import { chatStore } from "@renderer/domains/agent";
-import { setFileTabDirty } from "@renderer/domains/workbench";
+import { promoteTemporaryTab, setFileTabDirty } from "@renderer/domains/workbench";
 import { type SeedFileTabContentInput, fileTabContentStore } from "../state/fileTabContentStore";
 
 /**
@@ -19,6 +18,9 @@ export function updateFileTabContent(tabId: string, content: string): void {
   const isDirty = fileTabContentStore.getState().updateContent(tabId, content);
   if (isDirty !== null) {
     setFileTabDirty(tabId, isDirty);
+  }
+  if (isDirty) {
+    promoteTemporaryTab(tabId);
   }
 }
 
