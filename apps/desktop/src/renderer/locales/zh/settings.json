@@ -389,6 +389,18 @@
         "edit": "编辑",
         "expandDiagram": "放大图表"
       },
+      "agentChat": {
+        "title": "智能体聊天",
+        "description": "选择智能体聊天内容的显示宽度。",
+        "width": {
+          "label": "聊天内容宽度",
+          "description": "使用固定的易读列宽，或填满可用空间。",
+          "options": {
+            "fixed": "固定宽度",
+            "full": "全宽"
+          }
+        }
+      },
       "editor": {
         "title": "编辑器",
         "description": "配置代码编辑器外观。",

@@ -8,6 +8,7 @@ import {
   revokeServiceToken as revokeServiceTokenFromApi,
 } from "../api/serviceTokenApi";
 import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "../host/daemonHost";
+import { type AgentChatWidth, displaySettingsStore } from "../state/displaySettingsStore";
 
 /**
  * SettingsCommands — the public command surface for the Settings feature.
@@ -50,3 +51,8 @@ export async function getDaemonLog(): Promise<DaemonLogResult> {
 
 export { getDaemonQuitOnExit, setDaemonQuitOnExit };
 export type { DaemonLogResult } from "../../../../main/bridge/daemon";
+
+/** Updates the preferred agent chat content width. */
+export function setAgentChatWidth(width: AgentChatWidth): void {
+  displaySettingsStore.getState().setAgentChatWidth(width);
+}

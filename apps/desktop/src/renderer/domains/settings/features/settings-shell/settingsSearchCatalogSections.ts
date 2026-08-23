@@ -3,7 +3,6 @@ import {
   BiBell,
   BiBot,
   BiChip,
-  BiCog,
   BiCommand,
   BiDesktop,
   BiDownload,
@@ -146,6 +145,20 @@ export const APPEARANCE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.appearance.editor.wordWrap.description",
       "settings.appearance.markdown.outlineVisible.description",
       "settings.items.appearance",
+    ],
+  },
+  {
+    id: "appearance-agent-chat-width",
+    tab: "appearance",
+    icon: BiBot,
+    labelKey: "settings.appearance.agentChat.title",
+    sectionLabelKey: "settings.items.appearance",
+    keywordKeys: [
+      "settings.appearance.agentChat.description",
+      "settings.appearance.agentChat.width.label",
+      "settings.appearance.agentChat.width.description",
+      "settings.appearance.agentChat.width.options.fixed",
+      "settings.appearance.agentChat.width.options.full",
     ],
   },
 ];

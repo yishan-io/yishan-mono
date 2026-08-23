@@ -12,6 +12,7 @@ import { SettingsSidebar } from "./SettingsSidebar";
 import { ThemePreferencePicker } from "./ThemePreferencePicker";
 import {
   AccountSettingsView,
+  AgentChatWidthSettingsView,
   AgentProviderSettingsView,
   CLISettingsView,
   ComputerUseSettingsView,
@@ -174,6 +175,7 @@ export function SettingsView() {
           <Suspense fallback={null}>
             <MarkdownSettingsView />
           </Suspense>
+          <AgentChatWidthSettingsView />
         </Stack>
       ),
       daemon: (

@@ -8,6 +8,19 @@ export type LinkTarget = "built-in" | "external";
 export type MarkdownThemePreference = "inherit" | "light" | "dark";
 export type MarkdownPreviewFontSize = "small" | "medium" | "large";
 export type MarkdownPreviewWidth = "readable" | "full";
+/** Selects whether agent-chat content is constrained to a readable column or spans its pane. */
+export type AgentChatWidth = "fixed" | "full";
+
+type DisplaySettingsPreferences = Pick<
+  DisplaySettingsState,
+  | "themePreference"
+  | "markdownThemePreference"
+  | "markdownPreviewFontSize"
+  | "markdownPreviewWidth"
+  | "isMarkdownOutlineVisible"
+  | "linkTarget"
+  | "agentChatWidth"
+>;
 
 export type DisplaySettingsState = {
   themePreference: AppThemePreference;
@@ -16,6 +29,7 @@ export type DisplaySettingsState = {
   markdownPreviewWidth: MarkdownPreviewWidth;
   isMarkdownOutlineVisible: boolean;
   linkTarget: LinkTarget;
+  agentChatWidth: AgentChatWidth;
 
   setThemePreference: (preference: AppThemePreference) => void;
   setMarkdownThemePreference: (preference: MarkdownThemePreference) => void;
@@ -23,6 +37,7 @@ export type DisplaySettingsState = {
   setMarkdownPreviewWidth: (width: MarkdownPreviewWidth) => void;
   setIsMarkdownOutlineVisible: (visible: boolean) => void;
   setLinkTarget: (target: LinkTarget) => void;
+  setAgentChatWidth: (width: AgentChatWidth) => void;
 };
 
 /**
@@ -39,6 +54,7 @@ export const displaySettingsStore = create<DisplaySettingsState>()(
       markdownPreviewWidth: "readable" as MarkdownPreviewWidth,
       isMarkdownOutlineVisible: false,
       linkTarget: "built-in" as LinkTarget,
+      agentChatWidth: "fixed" as AgentChatWidth,
 
       setThemePreference: (themePreference) => {
         set({ themePreference });
@@ -58,10 +74,22 @@ export const displaySettingsStore = create<DisplaySettingsState>()(
       setLinkTarget: (linkTarget) => {
         set({ linkTarget });
       },
+      setAgentChatWidth: (agentChatWidth) => {
+        set({ agentChatWidth });
+      },
     }),
     {
       name: DISPLAY_SETTINGS_STORE_STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
+      partialize: (state): DisplaySettingsPreferences => ({
+        themePreference: state.themePreference,
+        markdownThemePreference: state.markdownThemePreference,
+        markdownPreviewFontSize: state.markdownPreviewFontSize,
+        markdownPreviewWidth: state.markdownPreviewWidth,
+        isMarkdownOutlineVisible: state.isMarkdownOutlineVisible,
+        linkTarget: state.linkTarget,
+        agentChatWidth: state.agentChatWidth,
+      }),
     },
   ),
 );
