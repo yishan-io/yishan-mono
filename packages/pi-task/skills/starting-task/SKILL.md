@@ -26,9 +26,15 @@ Use `task_start` with a concise title. Provide a description, or provide a goal 
 
 You can set priority and tags at creation. The daemon owns the active status. Do not provide an ID.
 
+Use `workspace_list` before `task_start` to resolve the current workspace. Use `YISHAN_WORKSPACE_ID` when it is set. Otherwise, select the workspace whose `localPath` matches the current worktree path. When that workspace is non-primary, pass its ID as `workspaceId`. Do not associate a task started in the primary workspace.
+
+For delegated work, associate the task with an existing target workspace. If no target workspace exists, use `workspace_create` first, then pass its returned workspace ID to `task_start`.
+
 If `YISHAN_PROJECT_ID` is set, the task belongs to that project. Without it, the task is global.
 
 ## Work After Start
+
+When a new issue appears during a workspace task, decide whether it is related. Incorporate related work into the current task. Otherwise, ask the user whether to create a separate task.
 
 Use `task_read` for the synthetic, read-only brief. Use `task_update` to change metadata, active or paused status, priority, or tags. Use `task_list` or `task_search` to find tasks.
 

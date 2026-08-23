@@ -4,12 +4,14 @@ import {
   type LocalTaskContextDetails,
   type LocalTaskFilters,
   type LocalTaskSearchResult,
+  type LocalTaskWorkspaceLink,
   type UpdateLocalTaskInput,
   parseLocalTask,
   parseLocalTaskContextDetails,
   parseLocalTaskID,
   parseLocalTaskList,
   parseLocalTaskSearchResults,
+  parseLocalTaskWorkspaceLink,
 } from "./localTaskTypes";
 
 const RPC_ID = 1;
@@ -174,6 +176,21 @@ export class LocalTaskRpcClient {
   async create(input: CreateLocalTaskInput, options?: LocalTaskRpcOptions): Promise<LocalTask> {
     return parseLocalTask(await this.call("localTask.create", input, options));
   }
+  /** Associates one Local Task with a local workspace. */
+  async linkWorkspace(
+    taskId: string,
+    workspaceId: string,
+    options?: LocalTaskRpcOptions,
+  ): Promise<LocalTaskWorkspaceLink> {
+    return parseLocalTaskWorkspaceLink(
+      await this.call(
+        "localTask.linkWorkspace",
+        { taskId: parseLocalTaskID(taskId), workspaceId: parseLocalTaskID(workspaceId) },
+        options,
+      ),
+    );
+  }
+
   /** Loads one Local Task by opaque ID. */
   async get(id: string, options?: LocalTaskRpcOptions): Promise<LocalTask> {
     return parseLocalTask(await this.call("localTask.get", { id: parseLocalTaskID(id) }, options));

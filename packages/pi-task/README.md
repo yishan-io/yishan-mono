@@ -14,7 +14,7 @@ The package uses `YISHAN_PROJECT_ID` when it is set. Operations then use only th
 
 The package registers exactly these eight tools:
 
-- `task_start` creates a task with a title, description or goal and acceptance criteria, priority, and tags.
+- `task_start` creates a task with a title, description or goal and acceptance criteria, priority, tags, and an optional workspace association.
 - `task_list` lists tasks by status, priority, workspace, and tags.
 - `task_search` searches tasks with the same filters.
 - `task_read` reads the synthetic, read-only task brief or a context document.
@@ -25,7 +25,7 @@ The package registers exactly these eight tools:
 
 The synthetic brief shows daemon metadata. It is not a writable context document. The daemon provides paths for `plan`, `notes`, and `outcome`.
 
-Use `task_finish` only when the user explicitly asks to complete the task.
+Use `task_finish` only when the user explicitly asks to complete the task. When the user explicitly says all work is complete, run self-checks and finish without asking again.
 
 ## Development
 

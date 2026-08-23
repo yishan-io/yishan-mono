@@ -98,6 +98,38 @@ describe("LocalTaskRpcClient", () => {
     }
   });
 
+  it("links a task to a workspace through the daemon RPC", async () => {
+    let socket: FakeWebSocket | undefined;
+    const client = new LocalTaskRpcClient(
+      endpoint,
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          socket = this;
+        }
+      },
+    );
+
+    const request = client.linkWorkspace("task-1", "workspace-1");
+    socket?.emit("open");
+    expect(JSON.parse(socket?.send.mock.calls[0]?.[0] ?? "")).toEqual({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "localTask.linkWorkspace",
+      params: { taskId: "task-1", workspaceId: "workspace-1" },
+    });
+    const link = {
+      id: "link-1",
+      localTaskId: "task-1",
+      workspaceId: "workspace-1",
+      status: "active",
+      linkedAt: "2026-08-23T00:00:00Z",
+      unlinkedAt: null,
+    };
+    socket?.emit("message", JSON.stringify({ jsonrpc: "2.0", id: 1, result: link }));
+    await expect(request).resolves.toEqual(link);
+  });
+
   it("rejects invalid, mismatched, and binary response frames", async () => {
     for (const response of ["{", JSON.stringify({ jsonrpc: "2.0", id: 2, result: task }), new Uint8Array()]) {
       let socket: FakeWebSocket | undefined;

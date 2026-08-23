@@ -41,6 +41,7 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
         ),
         priority: Type.Optional(prioritySchema),
         tags: Type.Optional(tagsSchema),
+        workspaceId: Type.Optional(taskIdSchema),
       },
       { additionalProperties: false },
     ),
