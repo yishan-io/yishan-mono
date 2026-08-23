@@ -278,7 +278,7 @@ function TeamVisual() {
   );
 }
 
-// ── Visual: Automation ─────────────────────────────────────────────────────
+// ── Visual: Scheduled Jobs ──────────────────────────────────────────────────
 // Animation: countdown ticks down every second; new run fades in at top of log
 
 const JOBS = [
@@ -306,7 +306,7 @@ const INITIAL_RUNS: RunEntry[] = [
   { label: "Dep audit · timed out", status: "fail", time: "Yesterday 06:00" },
 ];
 
-function AutomationVisual() {
+function ScheduledJobsVisual() {
   const [countdowns, setCountdowns] = useState(JOBS.map((j) => j.initialSecs));
   const [runs, setRuns] = useState<RunEntry[]>(INITIAL_RUNS);
 
@@ -466,7 +466,7 @@ interface Props {
 }
 
 const features = [
-  { visual: <AutomationVisual />, titleKey: "more.0.title", descKey: "more.0.desc" },
+  { visual: <ScheduledJobsVisual />, titleKey: "more.0.title", descKey: "more.0.desc" },
   { visual: <PRVisual />, titleKey: "more.1.title", descKey: "more.1.desc" },
   { visual: <ToolsVisual />, titleKey: "more.2.title", descKey: "more.2.desc" },
   { visual: <AgentCompatVisual />, titleKey: "more.3.title", descKey: "more.3.desc" },
