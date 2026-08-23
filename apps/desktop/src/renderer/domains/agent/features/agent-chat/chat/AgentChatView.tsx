@@ -8,6 +8,7 @@ import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCom
 import { setAgentChatStreamTabVisible } from "../../../subscriptions/agentChatPiEventShared";
 
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
+import { AgentChatContentLayout } from "./AgentChatContentLayout";
 import { MemoizedAgentChatTranscriptPane } from "./AgentChatTranscriptPane";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
 import { AGENT_CHAT_TIP_KEYS, AGENT_CHAT_TIP_PREFIX_KEY } from "./agentChatTipCatalog";
@@ -157,63 +158,69 @@ function AgentChatViewComponent({
 
   if (isInitialHistoryLoadPending && sessionState !== "error") {
     return (
-      <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-        <CircularProgress size={24} />
-      </Box>
+      <AgentChatContentLayout>
+        <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+          <CircularProgress size={24} />
+        </Box>
+      </AgentChatContentLayout>
     );
   }
 
   if (!hasSession) {
     return (
-      <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-        <Typography
-          sx={{
-            color: "text.secondary",
-          }}
-        >
-          Starting agent session…
-        </Typography>
-      </Box>
+      <AgentChatContentLayout>
+        <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+          <Typography
+            sx={{
+              color: "text.secondary",
+            }}
+          >
+            Starting agent session…
+          </Typography>
+        </Box>
+      </AgentChatContentLayout>
     );
   }
 
   if (sessionState === "error") {
     return (
-      <Box
-        sx={{
-          p: 2,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          gap: 1,
-        }}
-      >
-        <Typography
-          variant="body2"
+      <AgentChatContentLayout>
+        <Box
           sx={{
-            color: "error.main",
+            p: 2,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            gap: 1,
           }}
         >
-          Failed to start agent session.
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            color: "text.secondary",
-            maxWidth: 400,
-            textAlign: "center",
-          }}
-        >
-          {error}
-        </Typography>
-      </Box>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "error.main",
+            }}
+          >
+            Failed to start agent session.
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              maxWidth: 400,
+              textAlign: "center",
+            }}
+          >
+            {error}
+          </Typography>
+        </Box>
+      </AgentChatContentLayout>
     );
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+    <AgentChatContentLayout>
       <MemoizedAgentChatTranscriptPane
         tabId={tabId}
         workspaceId={workspaceId}
@@ -250,7 +257,7 @@ function AgentChatViewComponent({
           isReadyForAutoFocus={isReadyForAutoFocus}
         />
       ) : null}
-    </Box>
+    </AgentChatContentLayout>
   );
 }
 

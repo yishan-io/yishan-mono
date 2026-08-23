@@ -8,6 +8,7 @@ export type { AppThemePreference } from "./state/themePreference";
 
 export { editorSettingsStore, type EditorSettingsStoreState } from "./state/editorSettingsStore";
 export { displaySettingsStore } from "./state/displaySettingsStore";
+export type { AgentChatWidth } from "./state/displaySettingsStore";
 export { keybindingSettingsStore, type KeybindingOverrideMap } from "./state/keybindingSettingsStore";
 
 export {

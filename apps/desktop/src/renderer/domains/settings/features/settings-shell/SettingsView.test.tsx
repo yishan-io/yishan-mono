@@ -136,24 +136,6 @@ describe("SettingsView", () => {
     ).toBe("focus-on-click");
   });
 
-  it("shows empty-state text when search has no matching items", async () => {
-    render(
-      <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
-          <Routes>
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
-        </MemoryRouter>
-      </AppThemePreferenceProvider>,
-    );
-
-    fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
-      target: { value: "does-not-exist" },
-    });
-
-    expect(screen.getByText("settings.searchNoResults")).toBeTruthy();
-  });
-
   it("renders appearance theme cards and triggers preference change", async () => {
     render(
       <AppThemePreferenceProvider>

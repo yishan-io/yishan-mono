@@ -407,6 +407,18 @@
         "edit": "Edit",
         "expandDiagram": "Expand diagram"
       },
+      "agentChat": {
+        "title": "Agent chat",
+        "description": "Choose how wide agent chat content appears.",
+        "width": {
+          "label": "Chat content width",
+          "description": "Use a fixed readable column or fill the available space.",
+          "options": {
+            "fixed": "Fixed width",
+            "full": "Full width"
+          }
+        }
+      },
       "editor": {
         "title": "Editor",
         "description": "Configure code editor appearance.",
