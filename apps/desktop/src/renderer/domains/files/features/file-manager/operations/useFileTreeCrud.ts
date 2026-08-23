@@ -7,7 +7,8 @@ import {
   readFile,
   renameEntry,
 } from "@renderer/domains/files/commands/fileCommands";
-import { projectStore } from "@renderer/domains/project";
+import { recordLastUsedExternalApp } from "@renderer/domains/project";
+import { sessionStore } from "@renderer/domains/session";
 import type { OpenTabInput, WorkbenchTab } from "@renderer/domains/workbench";
 import { writeClipboardText } from "@renderer/platform/clipboard";
 import { useCallback, useRef } from "react";
@@ -352,13 +353,15 @@ export function useFileTreeCrud({
         return;
       }
 
+      const selectedOrganizationId = sessionStore.getState().selectedOrganizationId ?? "";
+
       try {
         await openEntryInExternalApp({
           workspaceWorktreePath: selectedWorkspaceWorktreePath,
           appId: input.appId,
           relativePath: input.path?.trim() || undefined,
         });
-        projectStore.getState().setLastUsedExternalAppId(input.appId as ExternalAppId);
+        recordLastUsedExternalApp(selectedOrganizationId, input.appId);
       } catch (error) {
         console.error("Failed to open workspace entry in external app", error);
       }

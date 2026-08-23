@@ -237,8 +237,12 @@ vi.mock("@renderer/domains/project/state/projectStore", () => {
     lastUsedExternalAppId: mocks.stateRef.current.lastUsedExternalAppId as string | undefined,
     setLastUsedExternalAppId: mocks.setLastUsedExternalAppId,
   });
-  return { projectStore };
+  return { projectStore, recordLastUsedExternalApp: mocks.setLastUsedExternalAppId };
 });
+
+vi.mock("@renderer/domains/session", () => ({
+  sessionStore: { getState: () => ({ selectedOrganizationId: "org-1" }) },
+}));
 
 vi.mock("@renderer/domains/workbench/state/tabStore", () => ({
   tabStore: mocks.workspaceStore,
@@ -603,7 +607,7 @@ describe("FileManagerView open in system file manager", () => {
         appId: "cursor",
         relativePath: "src/a.ts",
       });
-      expect(mocks.setLastUsedExternalAppId).toHaveBeenCalledWith("cursor");
+      expect(mocks.setLastUsedExternalAppId).toHaveBeenCalledWith("org-1", "cursor");
     });
   });
 

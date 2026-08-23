@@ -251,6 +251,7 @@ vi.mock("@renderer/domains/project", async () => {
     deleteProject: mocked.deleteProject,
     LOCAL_FOLDER_PROJECT_ID: sharedWorkspace.LOCAL_FOLDER_PROJECT_ID,
     projectStore,
+    recordLastUsedExternalApp: mocked.setLastUsedExternalAppId,
     supportsGitFeatures: projectRules.supportsGitFeatures,
     filterVisibleProjects: projectRules.filterVisibleProjects,
     renderProjectIcon: () => "R",
@@ -345,12 +346,15 @@ vi.mock("../../../domains/project/state/projectStore", () => {
     displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
     lastUsedExternalAppId: mocked.stateRef.current.lastUsedExternalAppId as string | undefined,
   });
-  return { projectStore };
+  return { projectStore, recordLastUsedExternalApp: mocked.setLastUsedExternalAppId };
 });
 
 vi.mock("../../../domains/session/state/sessionStore", () => ({
-  sessionStore: vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
-    selector({ selectedOrganizationId: "" }),
+  sessionStore: Object.assign(
+    vi.fn((selector: (state: { selectedOrganizationId: string }) => unknown) =>
+      selector({ selectedOrganizationId: "org-1" }),
+    ),
+    { getState: () => ({ selectedOrganizationId: "org-1" }) },
   ),
 }));
 
@@ -966,7 +970,7 @@ describe("WorkspaceNavigatorView", () => {
         workspaceWorktreePath: "/tmp/worktrees/workspace-1",
         appId: "cursor",
       });
-      expect(mocked.setLastUsedExternalAppId).toHaveBeenCalledWith("cursor");
+      expect(mocked.setLastUsedExternalAppId).toHaveBeenCalledWith("org-1", "cursor");
     });
   });
 

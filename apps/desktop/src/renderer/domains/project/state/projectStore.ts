@@ -60,7 +60,7 @@ export type ProjectStoreState = {
   updateProjectConfig: (projectId: string, config: RepoConfigUpdate) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
   setOrganizationDisplayProjectIds: (organizationId: string, projectIds: string[]) => void;
-  setLastUsedExternalAppId: (appId: ExternalAppId) => void;
+  setLastUsedExternalAppId: (organizationId: string, appId: ExternalAppId) => void;
   setWorkspaceListHierarchyMode: (mode: "by_project" | "by_node") => void;
 };
 
@@ -309,8 +309,19 @@ export const projectStore = create<ProjectStoreState>()(
           organizationPreferences.knownProjectIds = state.projects.map((project) => project.id);
         });
       },
-      setLastUsedExternalAppId: (lastUsedExternalAppId) => {
-        set({ lastUsedExternalAppId });
+      setLastUsedExternalAppId: (organizationId, lastUsedExternalAppId) => {
+        set((state) => {
+          state.lastUsedExternalAppId = lastUsedExternalAppId;
+
+          const normalizedOrganizationId = organizationId.trim();
+          if (!normalizedOrganizationId) {
+            return;
+          }
+
+          state.organizationPreferencesById ??= {};
+          state.organizationPreferencesById[normalizedOrganizationId] ??= {};
+          state.organizationPreferencesById[normalizedOrganizationId].lastUsedExternalAppId = lastUsedExternalAppId;
+        });
       },
       setWorkspaceListHierarchyMode: (workspaceListHierarchyMode) => {
         set({ workspaceListHierarchyMode });
