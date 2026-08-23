@@ -87,11 +87,14 @@ type diskFile struct {
 	// explicitType overrides classifyFileType when non-empty.
 	// Set for global files which have a known type independent of path structure.
 	explicitType fileType
+	Source       string
+	TaskID       string
+	TaskTitle    string
+	DocumentType string
 }
 
-func scanWorkspaces(refs []WorkspaceRef, globalMemoryDir string) ([]diskFile, error) {
+func scanWorkspaces(refs []WorkspaceRef, globalMemoryDir string, taskContexts []TaskContextRef) ([]diskFile, error) {
 	var files []diskFile
-
 	for _, ref := range refs {
 		contextRoot := resolveContextRoot(ref.WorktreePath)
 		if contextRoot == "" {
@@ -111,7 +114,11 @@ func scanWorkspaces(refs []WorkspaceRef, globalMemoryDir string) ([]diskFile, er
 		}
 	}
 
-	return files, nil
+	taskFiles, err := scanTaskContexts(taskContexts)
+	if err != nil {
+		return nil, err
+	}
+	return append(files, taskFiles...), nil
 }
 
 func scanContextDir(contextRoot string, projectID string) ([]diskFile, error) {
@@ -121,9 +128,10 @@ func scanContextDir(contextRoot string, projectID string) ([]diskFile, error) {
 			return nil
 		}
 		if entry.IsDir() {
-			// Skip nested .my-context duplicates under the context root:
-			// canonical context files never live under a .my-context subdir,
-			// only the misplaced nested-duplicate does.
+			if filepath.Clean(path) == filepath.Join(filepath.Clean(contextRoot), taskContextDirectory) {
+				return filepath.SkipDir
+			}
+			// Skip nested .my-context duplicates under the canonical context root.
 			if entry.Name() == myContextDir && path != contextRoot {
 				return filepath.SkipDir
 			}
@@ -202,68 +210,93 @@ type reconcileResult struct {
 }
 
 func (db *DB) Reconcile(refs []WorkspaceRef, globalMemoryDir string) (reconcileResult, error) {
-	diskFiles, err := scanWorkspaces(refs, globalMemoryDir)
+	return db.ReconcileWithTaskContexts(refs, globalMemoryDir, nil)
+}
+
+func (db *DB) ReconcileWithTaskContexts(refs []WorkspaceRef, globalMemoryDir string, taskContexts []TaskContextRef) (reconcileResult, error) {
+	diskFiles, err := scanWorkspaces(refs, globalMemoryDir, taskContexts)
 	if err != nil {
 		return reconcileResult{}, err
 	}
-
 	dbPaths, err := db.AllPaths()
 	if err != nil {
 		return reconcileResult{}, fmt.Errorf("read db paths: %w", err)
 	}
+	result, diskPaths, err := db.reconcileDiskFiles(diskFiles)
+	if err != nil {
+		return result, err
+	}
+	if err := db.deleteMissingFiles(dbPaths, diskPaths, &result); err != nil {
+		return result, err
+	}
+	return result, nil
+}
 
+func (db *DB) reconcileDiskFiles(files []diskFile) (reconcileResult, map[string]bool, error) {
+	result := reconcileResult{}
+	diskPaths := make(map[string]bool, len(files))
 	now := time.Now().Unix()
-	var result reconcileResult
-
-	diskPathSet := make(map[string]bool, len(diskFiles))
-	for _, df := range diskFiles {
-		diskPathSet[df.Path] = true
-
-		existing, found, getErr := db.GetByPath(df.Path)
-		if getErr != nil {
-			return result, fmt.Errorf("get db file %s: %w", df.Path, getErr)
+	for _, candidate := range files {
+		diskPaths[candidate.Path] = true
+		wasFound, wasChanged, err := db.reconcileDiskFile(candidate, now)
+		if err != nil {
+			return result, diskPaths, err
 		}
-
-		// Skip if content and project metadata are unchanged.
-		if found &&
-			existing.Fingerprint == df.Fingerprint &&
-			existing.ProjectID == df.ProjectID {
-			continue
-		}
-
-		fileType := df.explicitType
-		if fileType == "" {
-			fileType = classifyFileType(df.Path, df.ProjectPath)
-		}
-
-		if err := db.UpsertFile(memoryFile{
-			Path:        df.Path,
-			ProjectPath: df.ProjectPath,
-			ProjectID:   df.ProjectID,
-			Type:        fileType,
-			Body:        df.Body,
-			Fingerprint: df.Fingerprint,
-			IndexedAt:   now,
-		}); err != nil {
-			return result, fmt.Errorf("upsert %s: %w", df.Path, err)
-		}
-		if found {
+		if wasChanged && wasFound {
 			result.Updated++
-		} else {
+		} else if wasChanged {
 			result.Inserted++
 		}
 	}
+	return result, diskPaths, nil
+}
 
-	for _, dbPath := range dbPaths {
-		if !diskPathSet[dbPath] {
-			if err := db.DeleteByPath(dbPath); err != nil {
-				return result, fmt.Errorf("delete db %s: %w", dbPath, err)
-			}
-			result.Deleted++
-		}
+func (db *DB) reconcileDiskFile(candidate diskFile, indexedAt int64) (bool, bool, error) {
+	existing, wasFound, err := db.GetByPath(candidate.Path)
+	if err != nil {
+		return false, false, fmt.Errorf("get db file %s: %w", candidate.Path, err)
 	}
+	if wasFound && isUnchanged(existing, candidate) {
+		return true, false, nil
+	}
+	fileType := candidate.explicitType
+	if fileType == "" {
+		fileType = classifyFileType(candidate.Path, candidate.ProjectPath)
+	}
+	err = db.UpsertFile(memoryFile{
+		Path: candidate.Path, ProjectPath: candidate.ProjectPath, ProjectID: candidate.ProjectID,
+		Type: fileType, Source: candidate.Source, TaskID: candidate.TaskID,
+		TaskTitle: candidate.TaskTitle, DocumentType: candidate.DocumentType, Body: candidate.Body,
+		Fingerprint: candidate.Fingerprint, IndexedAt: indexedAt,
+	})
+	if err != nil {
+		return wasFound, false, fmt.Errorf("upsert %s: %w", candidate.Path, err)
+	}
+	return wasFound, true, nil
+}
 
-	return result, nil
+func (db *DB) deleteMissingFiles(dbPaths []string, diskPaths map[string]bool, result *reconcileResult) error {
+	for _, dbPath := range dbPaths {
+		if diskPaths[dbPath] {
+			continue
+		}
+		if err := db.DeleteByPath(dbPath); err != nil {
+			return fmt.Errorf("delete db %s: %w", dbPath, err)
+		}
+		result.Deleted++
+	}
+	return nil
+}
+
+func isUnchanged(existing memoryFile, disk diskFile) bool {
+	source := disk.Source
+	if source == "" {
+		source = SourceMemory
+	}
+	return existing.Fingerprint == disk.Fingerprint &&
+		existing.ProjectID == disk.ProjectID && existing.Source == source &&
+		existing.TaskID == disk.TaskID && existing.TaskTitle == disk.TaskTitle &&
+		existing.DocumentType == disk.DocumentType
 }
 
 // IndexFileOnDisk indexes or removes a single file.

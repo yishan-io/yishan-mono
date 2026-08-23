@@ -21,7 +21,7 @@ type retryInstances struct {
 }
 
 func (f *retryInstances) CreateWorkspaceWithProgress(context.Context, workspace.CreateRequest, workspace.CreateProgressReporter) (workspace.Workspace, error) {
-	return workspace.Workspace{}, nil
+	return f.workspace, nil
 }
 func (f *retryInstances) StopWorkspaceTerminals(string) []string {
 	f.calls = append(f.calls, "terminals")
@@ -55,13 +55,21 @@ func (f *retryInstances) WatchAndTrack(workspace.Workspace) error {
 func (f *retryInstances) Unwatch(string)      { f.calls = append(f.calls, "unwatch") }
 func (f *retryInstances) StopTracking(string) { f.calls = append(f.calls, "tracking") }
 
-type retryRecords struct{ closed int }
+type retryRecords struct {
+	closed      int
+	didFinalize bool
+	finalizeErr error
+}
 
 func (*retryRecords) CreateRemoteRecord(context.Context, Registration)                            {}
 func (*retryRecords) UpdateRemoteRecord(context.Context, Registration, string)                    {}
 func (*retryRecords) CloseRemoteRecord(context.Context, string, string, string, workspace.Status) {}
 func (*retryRecords) PersistPrepared(context.Context, CreatePlan) error                           { return nil }
-func (*retryRecords) FinalizePersisted(context.Context, CreatePlan, workspace.Workspace) error {
+func (f *retryRecords) FinalizePersisted(context.Context, CreatePlan, workspace.Workspace) error {
+	if f.finalizeErr != nil {
+		return f.finalizeErr
+	}
+	f.didFinalize = true
 	return nil
 }
 func (f *retryRecords) ClosePersisted(context.Context, string) error { f.closed++; return nil }
@@ -72,17 +80,18 @@ func (*retryRecords) LocalRow(context.Context, string) (workspace.Record, bool) 
 func TestRetryClose_FinalizesOnceAfterFailure(t *testing.T) {
 	instances := &retryInstances{isRuntimeOpen: true, workspace: workspace.Workspace{ID: "ws", Path: "/workspace"}, removeErr: errors.New("remove failed")}
 	records := &retryRecords{}
-	var summaryCalls, usageClears, commits, aborts, marks int
+	var summaryCalls, usageClears, commits, aborts, marks, availabilityChanges int
 	service := New(Dependencies{
 		Instances: instances, Records: records,
-		BeginAgentCleanup:  func(context.Context, string) (any, error) { return "handle", nil },
-		AbortAgentCleanup:  func(any) { aborts++; instances.calls = append(instances.calls, "abort") },
-		CommitAgentCleanup: func(any) { commits++; instances.calls = append(instances.calls, "commit") },
-		ClaimAgentSummary:  func(string) (bool, error) { marks++; return true, nil },
-		SummarizeAgents:    func(string, workspace.CloseRequest) { summaryCalls++ },
-		ClearAgentUsage:    func(string) { usageClears++ },
-		MarkCleanupFailure: func(string, error) error { return nil },
-		RemoveCleanup:      func(string) error { return nil },
+		BeginAgentCleanup:            func(context.Context, string) (any, error) { return "handle", nil },
+		AbortAgentCleanup:            func(any) { aborts++; instances.calls = append(instances.calls, "abort") },
+		CommitAgentCleanup:           func(any) { commits++; instances.calls = append(instances.calls, "commit") },
+		ClaimAgentSummary:            func(string) (bool, error) { marks++; return true, nil },
+		SummarizeAgents:              func(string, workspace.CloseRequest) { summaryCalls++ },
+		ClearAgentUsage:              func(string) { usageClears++ },
+		MarkCleanupFailure:           func(string, error) error { return nil },
+		RemoveCleanup:                func(string) error { return nil },
+		WorkspaceAvailabilityChanged: func() { availabilityChanges++ },
 	})
 	cleanup := CleanupRequest{WorkspaceID: "ws", Path: "/workspace"}
 	if err := service.RetryClose(context.Background(), cleanup); err == nil {
@@ -94,16 +103,16 @@ func TestRetryClose_FinalizesOnceAfterFailure(t *testing.T) {
 	if want := []string{"active", "watch", "abort"}; !equalRetryCalls(instances.calls[len(instances.calls)-3:], want) {
 		t.Fatalf("failed retry cleanup order = %v, want restore before abort", instances.calls)
 	}
-	if hasRetryCall(instances.calls, "memory") {
-		t.Fatalf("failed retry removed workspace runtime: %v", instances.calls)
+	if hasRetryCall(instances.calls, "memory") || availabilityChanges != 0 {
+		t.Fatalf("failed retry removed workspace runtime or refreshed availability: %v, refreshes %d", instances.calls, availabilityChanges)
 	}
 	instances.removeErr = nil
 	cleanup.AgentSummaryDone = true
 	if err := service.RetryClose(context.Background(), cleanup); err != nil {
 		t.Fatalf("successful retry: %v", err)
 	}
-	if summaryCalls != 1 || usageClears != 1 || commits != 1 || records.closed != 1 || marks != 1 {
-		t.Fatalf("successful retry finalization = summary:%d usage:%d commits:%d closed:%d marks:%d", summaryCalls, usageClears, commits, records.closed, marks)
+	if summaryCalls != 1 || usageClears != 1 || commits != 1 || records.closed != 1 || marks != 1 || availabilityChanges != 1 {
+		t.Fatalf("successful retry finalization = summary:%d usage:%d commits:%d closed:%d marks:%d refreshes:%d", summaryCalls, usageClears, commits, records.closed, marks, availabilityChanges)
 	}
 	assertRetryStopBeforeRemove(t, instances.calls)
 	assertRetryRemoveBeforeAgentCommit(t, instances.calls)

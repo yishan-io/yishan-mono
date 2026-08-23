@@ -10,7 +10,12 @@
  */
 export { createFixedRuntimeLayer } from "./runtime/runtimeSurfaceLayer";
 
-export { activateProject, activateWorkspace, closeOverlayPanel } from "./commands/navigationCommands";
+export {
+  activateProject,
+  activateWorkspace,
+  closeOverlayPanel,
+  toggleTaskHubOverlay,
+} from "./commands/navigationCommands";
 export {
   bindAgentChatTabSession,
   bindTerminalTabSession,

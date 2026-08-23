@@ -27,6 +27,7 @@ func (s *Service) RetryClose(ctx context.Context, cleanup CleanupRequest) error 
 		return s.abortRetry(cleanup, ws, isRuntimeOpen, handle, errors.Join(err, terminalErrorsError(terminalErrors)))
 	}
 	s.deps.Instances.RemoveFromMemory(cleanup.WorkspaceID)
+	s.notifyWorkspaceAvailabilityChanged()
 	s.commitAgentCleanup(handle)
 	return s.finishRetry(ctx, cleanup, err)
 }

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	"yishan/apps/cli/internal/platform/config"
+
 	"yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/rpc"
@@ -98,7 +100,7 @@ func (s *Service) buildPiStartConfig(req rpc.PiStartParams) (piStartConfig, erro
 	if err != nil {
 		return piStartConfig{}, err
 	}
-	extraEnv, err := buildPiStartExtraEnv(req, resolved)
+	extraEnv, err := buildPiStartExtraEnv(req, resolved, s.deps.DaemonWSEndpoint)
 	if err != nil {
 		return piStartConfig{}, rpc.NewRPCError(rpc.CodeServerError, err.Error())
 	}
@@ -116,7 +118,7 @@ func buildPiStartArgs(req rpc.PiStartParams) []string {
 func (s *Service) startPiProcessOnce(req rpc.PiStartParams, config piStartConfig) (*process.Session, error) {
 	return s.deps.AgentMgr.Start(s.deps.AgentLifecycleCtx, process.StartOptions{
 		SessionID: req.SessionID, TabID: req.TabID, WorkspaceID: req.WorkspaceID,
-		Binary: "pi", Args: config.args, CWD: req.CWD, ExtraEnv: config.extraEnv,
+		Binary: "pi", Args: config.args, CWD: req.CWD, ExtraEnv: config.extraEnv, DaemonWSEndpoint: s.deps.DaemonWSEndpoint,
 		OnEvent: s.makePiEventCallback(req.SessionID), OnExit: s.handlePiSessionExit,
 	})
 }
@@ -194,11 +196,15 @@ func (s *Service) attachPiSession(connState *rpc.Connection, req rpc.PiAttachPar
 	return nil
 }
 
-func buildPiStartExtraEnv(req rpc.PiStartParams, resolvedWorkspace workspace.Workspace) ([]string, error) {
-	return terminalruntime.ResolveSessionMetadataEnv(nil, terminalruntime.StartRequest{
+func buildPiStartExtraEnv(req rpc.PiStartParams, resolvedWorkspace workspace.Workspace, daemonWSEndpoint string) ([]string, error) {
+	env, err := terminalruntime.ResolveSessionMetadataEnv(nil, terminalruntime.StartRequest{
 		WorkspaceID: req.WorkspaceID, ProjectID: resolvedWorkspace.ProjectID, OrgID: resolvedWorkspace.OrgID,
 		TabID: req.TabID, PaneID: resolvePiStartPaneID(req.TabID, req.PaneID),
 	})
+	if err != nil {
+		return nil, err
+	}
+	return config.OverrideDaemonWSEndpointEnv(env, daemonWSEndpoint), nil
 }
 
 func resolvePiStartPaneID(tabID string, paneID string) string {

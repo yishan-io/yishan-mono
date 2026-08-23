@@ -52,6 +52,9 @@ func (s *Service) executeLocalCreate(ctx context.Context, prepared CreatePlan, r
 				s.rollbackCreateFailure(ctx, prepared, created)
 				return err
 			}
+			if s.deps.WorkspaceAvailabilityChanged != nil {
+				s.deps.WorkspaceAvailabilityChanged()
+			}
 			if prepared.Registration != nil {
 				s.deps.Records.UpdateRemoteRecord(ctx, *prepared.Registration, created.Path)
 			}

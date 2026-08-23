@@ -28,6 +28,7 @@ import (
 	nodeagent "yishan/apps/cli/internal/node/agent"
 	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/node/hook"
+	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
@@ -52,7 +53,9 @@ type Config struct {
 	Session     *session.Session
 	NodeID      string
 	LogFilePath string
-	Database    *sql.DB
+	// DaemonWSEndpoint is the loopback endpoint injected into managed children.
+	DaemonWSEndpoint string
+	Database         *sql.DB
 	// EnvDir is the profile (env root) directory: the token-usage pricing
 	// cache stays machine/runtime-level and does not move with the account.
 	EnvDir string
@@ -113,6 +116,8 @@ type App struct {
 	agentSvc *nodeagent.Service
 	// workspaceSvc is the workspace application service (lifecycle, relay).
 	workspaceSvc *nodeworkspace.Service
+	// localTaskSvc is the local-only task application service.
+	localTaskSvc *nodelocaltask.Service
 	// hookIngress handles the agent hook HTTP ingress (pi notify bridge).
 	hookIngress *hook.Ingress
 	// router is the namespace routing table.
@@ -138,6 +143,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	store := sqlite.NewStore(sqlite.NewWorkspaceStore(cfg.Database))
 	gitService := git.NewGitService()
 	terminals := terminal.NewManager()
+	terminals.SetDaemonWSEndpoint(cfg.DaemonWSEndpoint)
 
 	legacyCleanupPath := filepath.Join(cfg.DataDir, sqlite.PendingCleanupFileName)
 	cleanupStore, err := sqlite.NewWorkspaceCleanupStore(cfg.Database, legacyCleanupPath)
@@ -191,12 +197,24 @@ func Bootstrap(cfg Config) (*App, error) {
 	agentMgr := agentmanager.NewManager()
 	piAuth := nodeagent.NewManagedPiAuthStore()
 	contextStore := contextstore.NewStore(cfg.SettingsPath)
-	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer)
+	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer, cfg.DaemonWSEndpoint)
 
 	usage := hook.NewUsageTracker()
 
 	// Build the rpc service layer and the transport server, then the relay
 	// client (it needs the rpc server and the service as its message handler).
+	var localTaskSvc *nodelocaltask.Service
+	localTaskSvc = nodelocaltask.NewService(nodelocaltask.Deps{
+		Repository:     sqlite.NewLocalTaskStore(cfg.Database),
+		Registry:       registry,
+		WorkspaceStore: store,
+		TaskContextsChanged: func() {
+			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
+		},
+		TaskTitleChanged: func(ctx context.Context, taskID string, taskTitle string) {
+			refreshTaskContextTitle(ctx, memorySvc, localTaskSvc, taskID, taskTitle)
+		},
+	})
 	var agentSvc *nodeagent.Service
 	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
 		Registry:     registry,
@@ -219,6 +237,9 @@ func Bootstrap(cfg Config) (*App, error) {
 			agentSvc.PublishWorkspaceCreateCompleted(plan, created, warnings)
 		},
 		Usage: usage,
+		WorkspaceAvailabilityChanged: func() {
+			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
+		},
 	})
 	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
@@ -229,6 +250,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		Terminals:         terminals,
 		ContextStore:      contextStore,
 		AgentLifecycleCtx: agentLifecycleCtx,
+		DaemonWSEndpoint:  cfg.DaemonWSEndpoint,
 		ServerCtx:         context.Background(),
 		RelayCreateCompleted: func(prepared application.CreatePlan, completed map[string]any) {
 			workspaceSvc.RelayCreateCompleted(prepared, completed)
@@ -296,6 +318,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		cancelCleanup:        cancelCleanup,
 		agentSvc:             agentSvc,
 		workspaceSvc:         workspaceSvc,
+		localTaskSvc:         localTaskSvc,
 		hookIngress:          hookIngress,
 	}
 
@@ -308,6 +331,9 @@ func Bootstrap(cfg Config) (*App, error) {
 	// active one (see WatchActiveWorkspaces for why hydration is not enough).
 	if err := workspaceSvc.Hydrate(context.Background()); err != nil {
 		return nil, fmt.Errorf("restore persisted workspaces: %w", err)
+	}
+	if err := loadTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc); err != nil {
+		return nil, fmt.Errorf("register Local Task contexts: %w", err)
 	}
 	workspaceSvc.WatchActive()
 
@@ -324,13 +350,14 @@ func Bootstrap(cfg Config) (*App, error) {
 		ModelList:    modelList,
 		TokenUsage:   tokenUsage,
 		Memory:       memorySvc,
+		TaskContexts: localTaskSvc,
 		Registry:     registry,
 		Computer:     computerSvc,
 		ContextStore: contextStore,
 		SettingsPath: cfg.SettingsPath,
 		ServerCtx:    context.Background(),
 	})
-	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
+	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
 	app.relay = relay.NewClient(relay.ClientConfig{
@@ -339,7 +366,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		URL:         cfg.RelayURL,
 		StaticToken: cfg.RelayToken,
 		Server:      app.rpcServer,
-		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session},
+		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session, daemonWSEndpoint: cfg.DaemonWSEndpoint},
 		Events:      events,
 	})
 	terminalSvc.SetRelayClient(app.relay)
@@ -438,6 +465,6 @@ func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 
 // NewRouter builds the namespace routing table for the node services (test
 // and composition helper; Bootstrap wires it into the app).
-func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service) *rpc.Router {
-	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc)
+func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
+	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 }

@@ -17,7 +17,7 @@ const maxAgentFailureDetailChars = 500
 
 // BuildRunAgentFunc returns the memory summarizer's agent runner: it resolves
 // the agent command (agentkind/model/prompt), runs it, and returns its output.
-func BuildRunAgentFunc() memory.RunAgentFunc {
+func BuildRunAgentFunc(daemonWSEndpoint string) memory.RunAgentFunc {
 	return func(ctx context.Context, agentKind, model, prompt, workDir string) (string, error) {
 		cmd, err := agentcmd.ResolveCommand(agentKind, prompt, model, false)
 		if err != nil {
@@ -26,7 +26,7 @@ func BuildRunAgentFunc() memory.RunAgentFunc {
 			}
 			return "", fmt.Errorf("run %s: %w", agentKind, err)
 		}
-		return runResolvedAgentCommand(ctx, cmd, workDir)
+		return runResolvedAgentCommand(ctx, cmd, workDir, daemonWSEndpoint)
 	}
 }
 
@@ -35,7 +35,7 @@ func BuildRunAgentFunc() memory.RunAgentFunc {
 // PI_CODING_AGENT_DIR pointing at the managed pi agent dir. This mirrors
 // agentmanager.Manager.Start so spawned pi subprocesses read the managed
 // config/auth instead of the stale ~/.pi/agent default.
-func BuildAgentSubprocessEnv(baseEnv []string) ([]string, error) {
+func BuildAgentSubprocessEnv(baseEnv []string, daemonWSEndpoint string) ([]string, error) {
 	piAgentDir, err := config.ManagedPiAgentDir()
 	if err != nil {
 		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
@@ -49,17 +49,17 @@ func BuildAgentSubprocessEnv(baseEnv []string) ([]string, error) {
 		}
 		filtered = append(filtered, entry)
 	}
-	return append(filtered, config.PiAgentDirEnvKey+"="+piAgentDir), nil
+	return config.OverrideDaemonWSEndpointEnv(append(filtered, config.PiAgentDirEnvKey+"="+piAgentDir), daemonWSEndpoint), nil
 }
 
-func runResolvedAgentCommand(ctx context.Context, cmd agentcmd.ResolvedCommand, workDir string) (string, error) {
-	env, err := BuildAgentSubprocessEnv(cmd.Env)
+func runResolvedAgentCommand(ctx context.Context, cmd agentcmd.ResolvedCommand, workDir string, daemonWSEndpoint string) (string, error) {
+	env, err := BuildAgentSubprocessEnv(cmd.Env, daemonWSEndpoint)
 	if err != nil {
 		return "", err
 	}
 
 	execCmd := exec.CommandContext(ctx, cmd.ResolvedBinary, cmd.Args...)
-	execCmd.Env = append(env, cmd.ExtraEnv...)
+	execCmd.Env = config.OverrideDaemonWSEndpointEnv(append(env, cmd.ExtraEnv...), daemonWSEndpoint)
 	if workDir != "" {
 		execCmd.Dir = workDir
 	}

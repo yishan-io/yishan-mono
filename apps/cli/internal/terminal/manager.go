@@ -35,6 +35,7 @@ type Manager struct {
 	portScanHintCh       chan struct{}
 	sessionsListenerMu   sync.RWMutex
 	onSessionsChanged    sessionLifecycleListener
+	daemonWSEndpoint     string
 }
 
 type session struct {
@@ -62,6 +63,13 @@ type session struct {
 
 func NewManager() *Manager {
 	return &Manager{sessions: make(map[string]*session), portScanHintCh: make(chan struct{}, 1)}
+}
+
+// SetDaemonWSEndpoint configures the endpoint injected into every terminal.
+func (m *Manager) SetDaemonWSEndpoint(endpoint string) {
+	m.mu.Lock()
+	m.daemonWSEndpoint = endpoint
+	m.mu.Unlock()
 }
 
 func (m *Manager) SetPortsChangedListener(listener portsChangedListener) {
@@ -109,4 +117,11 @@ func (m *Manager) buildSessionLifecycleEvent(s *session, action string, status s
 		Status:      status,
 		StartedAt:   s.startedAt.Format(time.RFC3339Nano),
 	}
+}
+
+// DaemonWSEndpoint returns the endpoint injected into terminal children.
+func (m *Manager) DaemonWSEndpoint() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.daemonWSEndpoint
 }

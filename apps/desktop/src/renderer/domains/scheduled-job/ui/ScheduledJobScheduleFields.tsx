@@ -1,11 +1,11 @@
 import { Autocomplete, InputAdornment, MenuItem, TextField, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
+import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock3, LuGlobe } from "react-icons/lu";
 import type { ScheduledJobFormDraft } from "../hooks/useScheduledJobFormState";
 import type { ScheduleType } from "../schedule/scheduledJobScheduleRules";
-import { VirtualizedListbox } from "./VirtualizedListbox";
 
 /** IANA timezone names supported by the current JS runtime. */
 export const TIMEZONE_OPTIONS: string[] =

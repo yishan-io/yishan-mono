@@ -140,6 +140,22 @@ type ContextService interface {
 	SetActiveFile(ctx context.Context, req ContextSetActiveFileParams) (any, error)
 }
 
+// LocalTaskService backs the localTask.* RPC methods.
+type LocalTaskService interface {
+	Create(ctx context.Context, req LocalTaskCreateParams) (any, error)
+	Get(ctx context.Context, req LocalTaskIDParams) (any, error)
+	GetContextDetails(ctx context.Context, req LocalTaskIDParams) (any, error)
+	List(ctx context.Context, req LocalTaskListParams) (any, error)
+	ListTags(ctx context.Context) (any, error)
+	Update(ctx context.Context, req LocalTaskUpdateParams) (any, error)
+	Search(ctx context.Context, req LocalTaskSearchParams) (any, error)
+	LinkWorkspace(ctx context.Context, req LocalTaskLinkWorkspaceParams) (any, error)
+	UnlinkWorkspace(ctx context.Context, req LocalTaskLinkIDParams) (any, error)
+	UpdateWorkspaceLinkStatus(ctx context.Context, req LocalTaskUpdateLinkStatusParams) (any, error)
+	ListWorkspaceLinks(ctx context.Context, req LocalTaskWorkspaceIDParams) (any, error)
+	ListTaskLinks(ctx context.Context, req LocalTaskIDParams) (any, error)
+}
+
 // projectService backs the project.* RPC methods. Each method is named after
 // the wire method tail: the service type already carries the namespace.
 type projectService interface {

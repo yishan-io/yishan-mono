@@ -47,8 +47,9 @@ export type ExternalAppMenuEntry =
 export type ExternalAppPlatform = NodeJS.Platform | "unknown";
 
 export const SYSTEM_FILE_MANAGER_APP_ID = "system-file-manager" as const;
+export const SYSTEM_DEFAULT_APP_ID = "system-default" as const;
 
-export type WorkspaceEntryAppId = ExternalAppId | typeof SYSTEM_FILE_MANAGER_APP_ID;
+export type WorkspaceEntryAppId = ExternalAppId | typeof SYSTEM_FILE_MANAGER_APP_ID | typeof SYSTEM_DEFAULT_APP_ID;
 
 const APP_ICONS_BASE_PATH = "app-icons";
 

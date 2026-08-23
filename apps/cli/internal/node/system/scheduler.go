@@ -15,6 +15,7 @@ import (
 	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	agentcmd "yishan/apps/cli/internal/agent/command"
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 )
 
@@ -28,7 +29,7 @@ const (
 // HandleJobRun processes a job.run notification received from the relay: it
 // validates the payload, sends job.ack, and runs the scheduled agent
 // asynchronously.
-func HandleJobRun(runtime *session.Session, connState *rpc.Connection, nodeID string, raw json.RawMessage) {
+func HandleJobRun(runtime *session.Session, connState *rpc.Connection, nodeID string, raw json.RawMessage, daemonWSEndpoint string) {
 	var params relayprotocol.JobRunParams
 	if err := json.Unmarshal(raw, &params); err != nil {
 		log.Warn().Err(err).Msg("scheduler: invalid job.run params")
@@ -52,10 +53,10 @@ func HandleJobRun(runtime *session.Session, connState *rpc.Connection, nodeID st
 	sendJobAck(connState, params.RunID, "accepted", "")
 
 	// Process asynchronously so the relay read loop is not blocked
-	go processRelayJob(runtime, connState, nodeID, params)
+	go processRelayJob(runtime, connState, nodeID, params, daemonWSEndpoint)
 }
 
-func processRelayJob(runtime *session.Session, connState *rpc.Connection, nodeID string, params relayprotocol.JobRunParams) {
+func processRelayJob(runtime *session.Session, connState *rpc.Connection, nodeID string, params relayprotocol.JobRunParams, daemonWSEndpoint string) {
 	startTime := time.Now()
 	client := runtime.APIClient()
 
@@ -81,7 +82,7 @@ func processRelayJob(runtime *session.Session, connState *rpc.Connection, nodeID
 		Str("projectPath", projectPath).
 		Msg("scheduler: executing agent")
 
-	_, execErr := runAgent(agentKind, prompt, model, projectPath)
+	_, execErr := runAgent(agentKind, prompt, model, projectPath, daemonWSEndpoint)
 	finishedAt := time.Now()
 	durationMs := finishedAt.Sub(startTime).Milliseconds()
 
@@ -155,13 +156,13 @@ func sendJobResult(connState *rpc.Connection, runID, status string, durationMs i
 // Agent execution
 // ---------------------------------------------------------------------------
 
-func runAgent(agentKind, prompt, model, projectPath string) (output string, err error) {
+func runAgent(agentKind, prompt, model, projectPath string, daemonWSEndpoint string) (output string, err error) {
 	cmd, err := agentcmd.ResolveCommand(agentKind, prompt, model, false)
 	if err != nil {
 		return "", err
 	}
 
-	env, err := BuildAgentSubprocessEnv(cmd.Env)
+	env, err := BuildAgentSubprocessEnv(cmd.Env, daemonWSEndpoint)
 	if err != nil {
 		return "", err
 	}
@@ -179,14 +180,14 @@ func runAgent(agentKind, prompt, model, projectPath string) (output string, err 
 	// Scheduled jobs should not emit desktop hook notifications. The managed
 	// notify bridge only forwards events when these YISHAN_* hook context vars
 	// are present, so we explicitly clear them for scheduler-spawned agent runs.
-	execCmd.Env = append(
+	execCmd.Env = config.OverrideDaemonWSEndpointEnv(append(
 		env,
 		"YISHAN_WORKSPACE_ID=",
 		"YISHAN_TAB_ID=",
 		"YISHAN_PANE_ID=",
 		"YISHAN_HOOK_INGRESS_URL=",
 		"YISHAN_OBSERVER_TOKEN=",
-	)
+	), daemonWSEndpoint)
 	var stdout, stderr bytes.Buffer
 	execCmd.Stdout = &stdout
 	execCmd.Stderr = &stderr

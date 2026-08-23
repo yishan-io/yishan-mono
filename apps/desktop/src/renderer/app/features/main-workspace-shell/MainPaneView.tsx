@@ -1,4 +1,4 @@
-import { Badge, Box } from "@mui/material";
+import { Box } from "@mui/material";
 import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/domains/agent";
 import { AgentIcon, SessionHistoryMenu } from "@renderer/domains/agent";
 import {
@@ -20,13 +20,7 @@ import {
   updateFileTabContent,
   writeFile,
 } from "@renderer/domains/files";
-import {
-  gitProjectionStore,
-  readBranchComparisonDiff,
-  readCommitDiff,
-  readDiff,
-  refreshDiffTabContent,
-} from "@renderer/domains/git";
+import { readBranchComparisonDiff, readCommitDiff, readDiff, refreshDiffTabContent } from "@renderer/domains/git";
 
 import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 import {
@@ -34,29 +28,15 @@ import {
   forceFitTerminalRuntimes,
   retainOpenTerminalTabFocus,
 } from "@renderer/domains/terminal";
-import {
-  DEFAULT_RIGHT_PANE_TAB,
-  RightPaneTabBar,
-  type RightPaneTabDef,
-  WorkspaceSplitPane,
-  layoutStore,
-  resizeRightPane,
-  setRightPaneTab,
-  tabStore,
-  workbenchNavigationStore,
-} from "@renderer/domains/workbench";
+import { WorkspaceSplitPane, tabStore, workbenchNavigationStore } from "@renderer/domains/workbench";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
-import { useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
-import { ColumnSeparator } from "@renderer/domains/workbench";
 import { TabPanel } from "@renderer/domains/workbench";
 import { openTabWithContentSeed, retainOpenTabFocus } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { DARK_SURFACE_COLORS } from "@renderer/ui/theme";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
 import {
   closeAllTabsWithCleanup,
@@ -67,17 +47,10 @@ import { useSelectedWorkspaceWithProject } from "../../selectors";
 import { LaunchView } from "../launch/LaunchView";
 import { useTabContentRenderer } from "../tab-content/useTabContentRenderer";
 import { MainPaneTitleBarView } from "../title-bar/MainPaneTitleBarView";
-import { RightPaneView } from "./RightPaneView";
-
-const RIGHT_MIN_WIDTH = 280;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
+import { MainPaneRightArea } from "./MainPaneRightArea";
 
 /** Renders the primary workspace pane with split-pane tabbed content, per-tab views, and pane visibility controls. */
 export function MainPaneView() {
-  const { t } = useTranslation();
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
@@ -143,8 +116,6 @@ export function MainPaneView() {
     [],
   );
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
-  const { rightCollapsed, onToggleRightPane, showRightPane } = useWorkspacePaneVisibilityContext();
-  const rightWidth = layoutStore((state) => state.rightWidth);
   const enabledAgentKinds = useMemo(
     () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
     [inUseByAgentKind],
@@ -160,72 +131,6 @@ export function MainPaneView() {
     [],
   );
   const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
-  const activeRightPaneTab = layoutStore(
-    (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
-  );
-  const changesCount = gitProjectionStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
-  const rightPaneTabs: RightPaneTabDef[] = useMemo(() => {
-    const tabs: RightPaneTabDef[] = [
-      {
-        value: "files",
-        label: t("files.files"),
-        shortcutId: "activate-files-pane",
-        icon: <LuFolderTree size={18} />,
-      },
-    ];
-    if (gitCapable) {
-      tabs.push(
-        {
-          value: "changes",
-          label: t("files.changes"),
-          shortcutId: "activate-changes-pane",
-          icon: (
-            <Badge
-              badgeContent={changesCount}
-              color="primary"
-              max={99}
-              invisible={changesCount <= 0}
-              sx={{
-                "& .MuiBadge-badge": {
-                  minWidth: 14,
-                  height: 14,
-                  fontSize: 9,
-                  lineHeight: 1,
-                },
-              }}
-            >
-              <LuGitBranch size={18} />
-            </Badge>
-          ),
-        },
-        {
-          value: "pr",
-          label: t("workspace.pr.tab"),
-          shortcutId: "activate-pr-pane",
-          icon: <LuGitPullRequest size={18} />,
-        },
-      );
-    }
-    return tabs;
-  }, [gitCapable, changesCount, t]);
-
-  // ── right-pane resize ────────────────────────────────────────────────────
-  const rightDragRef = useRef({ startX: 0, startWidth: 0 });
-
-  const resizeRightStart = useCallback(
-    (clientXStart: number) => {
-      if (rightCollapsed) return;
-      rightDragRef.current = { startX: clientXStart, startWidth: rightWidth };
-    },
-    [rightCollapsed, rightWidth],
-  );
-
-  const resizeRightMove = useCallback((clientX: number) => {
-    const { startX, startWidth } = rightDragRef.current;
-    const delta = startX - clientX;
-    const nextWidth = clamp(startWidth + delta, RIGHT_MIN_WIDTH, 800);
-    resizeRightPane(nextWidth);
-  }, []);
 
   useEffect(() => {
     const browserTabIds = new Set(tabs.filter((tab) => tab.kind === "browser").map((tab) => tab.id));
@@ -362,40 +267,11 @@ export function MainPaneView() {
           )}
         </Box>
 
-        {/* Right pane resize separator — hidden when collapsed or the selected workspace is broken */}
-        <Box sx={{ display: rightCollapsed || isErrorWorkspace ? "none" : "block" }}>
-          <ColumnSeparator
-            orientation="horizontal"
-            ariaLabel={t("layout.resize.right")}
-            onResizeStart={resizeRightStart}
-            onResizeMove={resizeRightMove}
-          />
-        </Box>
-
-        {/* Right pane content — hidden when collapsed or the selected workspace is broken (kept mounted so file-tree state survives) */}
-        <Box
-          sx={{
-            display: rightCollapsed || isErrorWorkspace ? "none" : undefined,
-            width: rightWidth,
-            minWidth: RIGHT_MIN_WIDTH,
-            height: "100%",
-            overflow: "hidden",
-          }}
-        >
-          <RightPaneView />
-        </Box>
-
-        {/* Vertical tab bar — hidden for broken workspaces (no tabs allowed) */}
-        {isErrorWorkspace ? null : (
-          <RightPaneTabBar
-            tabs={rightPaneTabs}
-            activeRightPaneTab={activeRightPaneTab}
-            rightCollapsed={rightCollapsed}
-            onToggleRightPane={onToggleRightPane}
-            showRightPane={showRightPane}
-            onSelectTab={(tab) => setRightPaneTab(selectedWorkspaceId, tab)}
-          />
-        )}
+        <MainPaneRightArea
+          selectedWorkspaceId={selectedWorkspaceId}
+          gitCapable={gitCapable}
+          isErrorWorkspace={isErrorWorkspace}
+        />
       </Box>
       <FileSearchOverlay />
     </Box>

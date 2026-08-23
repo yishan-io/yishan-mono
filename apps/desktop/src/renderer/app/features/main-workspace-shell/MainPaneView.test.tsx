@@ -2,8 +2,8 @@
 
 import { AGENT_SETTINGS_STORE_STORAGE_KEY } from "@renderer/domains/agent";
 import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
-import { WorkspacePaneVisibilityProvider } from "@renderer/domains/workbench";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { WorkspacePaneVisibilityProvider, layoutStore } from "@renderer/domains/workbench";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileTabContentStore } from "../../../domains/files/state/fileTabContentStore";
 import type { SplitPaneNode } from "../../../domains/workbench/split-pane";
@@ -108,17 +108,20 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
       if (fn) return fn.apply(null, args);
       return (mocked.activateWorkspace as (...a: unknown[]) => unknown).apply(null, args);
     },
-    RightPaneTabBar: () => (
+    RightPaneTabBar: ({
+      tabs,
+      onSelectTab,
+    }: {
+      tabs: Array<{ value: "files" | "tasks" | "changes" | "pr"; label: string; icon: React.ReactNode }>;
+      onSelectTab: (tab: "files" | "tasks" | "changes" | "pr") => void;
+    }) => (
       <div data-testid="mock-right-pane-tab-bar">
-        <button type="button" aria-label="files.files">
-          files
-        </button>
-        <button type="button" aria-label="files.changes">
-          changes
-        </button>
-        <button type="button" aria-label="workspace.pr.tab">
-          pr
-        </button>
+        {tabs.map((tab) => (
+          <button key={tab.value} type="button" aria-label={tab.label} onClick={() => onSelectTab(tab.value)}>
+            {tab.icon}
+            {tab.value}
+          </button>
+        ))}
       </div>
     ),
   };
@@ -366,6 +369,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   window.localStorage.removeItem(AGENT_SETTINGS_STORE_STORAGE_KEY);
+  layoutStore.setState({ rightPaneTabByWorkspaceId: {} });
   agentSettingsStore.setState({
     inUseByAgentKind: {
       opencode: true,
@@ -850,7 +854,7 @@ describe("MainPaneView", () => {
     );
   });
 
-  it("shows the left pane toggle and right tab bar controls", () => {
+  it("registers a selectable Tasks tab without a count badge", () => {
     const onToggleLeftPane = vi.fn();
     mocked.stateRef.current = buildStoreState(false);
     mocked.getMainWindowFullscreenState.mockResolvedValue({ isFullscreen: false });
@@ -872,6 +876,12 @@ describe("MainPaneView", () => {
 
     expect(screen.getByTestId("main-pane-macos-controls-inset")).toBeTruthy();
     expect(screen.getByRole("button", { name: "files.files" })).toBeTruthy();
+    const tasksTab = screen.getByRole("button", { name: "localTask.title" });
+    expect(tasksTab).toBeTruthy();
+    expect(within(tasksTab).queryByText("4")).toBeNull();
+    expect(tasksTab.querySelector(".MuiBadge-badge")).toBeNull();
+    fireEvent.click(tasksTab);
+    expect(layoutStore.getState().rightPaneTabByWorkspaceId["workspace-1"]).toBe("tasks");
     expect(screen.getByRole("button", { name: "files.changes" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "workspace.pr.tab" })).toBeTruthy();
     expect(onToggleLeftPane).toHaveBeenCalledTimes(1);

@@ -192,7 +192,6 @@ func TestCreateWorkspaceWithProgress_SetsStateActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateWorkspace: %v", err)
 	}
-
 	if ws.State != workspace.StateActive {
 		t.Errorf("Workspace.State = %q, want %q", ws.State, workspace.StateActive)
 	}

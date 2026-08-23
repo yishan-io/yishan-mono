@@ -69,6 +69,7 @@ export { MultiFileDiffViewer } from "./features/diff-viewer/MultiFileDiffViewer"
 export { getDiffCssVariablesForPalette } from "./ui/diffTheme";
 
 export {
+  SYSTEM_DEFAULT_APP_ID,
   SYSTEM_FILE_MANAGER_APP_ID,
   findExternalAppPreset,
   getExternalAppMenuEntries,

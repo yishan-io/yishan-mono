@@ -1,0 +1,15 @@
+{
+  "requests": [
+    {"jsonrpc":"2.0","id":1,"method":"localTask.create","params":{"title":"Task","description":"Description","tags":["first"]},"result":{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"2026-08-23T00:00:00Z","updatedAt":"2026-08-23T00:00:00Z","completedAt":null,"tags":[]}},
+    {"jsonrpc":"2.0","id":1,"method":"localTask.get","params":{"id":"imported/task-id"},"result":{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"2026-08-23T00:00:00Z","updatedAt":"2026-08-23T00:00:00Z","completedAt":null,"tags":[]}},
+    {"jsonrpc":"2.0","id":1,"method":"localTask.list","params":{},"result":[{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"2026-08-23T00:00:00Z","updatedAt":"2026-08-23T00:00:00Z","completedAt":null,"tags":[]}]},
+    {"jsonrpc":"2.0","id":1,"method":"localTask.update","params":{"id":"task-1"},"result":{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"2026-08-23T00:00:00Z","updatedAt":"2026-08-23T00:00:00Z","completedAt":null,"tags":[]}},
+    {"jsonrpc":"2.0","id":1,"method":"localTask.update","params":{"id":"task-1","tags":[]},"result":{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"2026-08-23T00:00:00Z","updatedAt":"2026-08-23T00:00:00Z","completedAt":null,"tags":[]}},
+    {"jsonrpc":"2.0","id":1,"method":"localTask.search","params":{"query":"task"},"result":[{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"2026-08-23T00:00:00Z","updatedAt":"2026-08-23T00:00:00Z","completedAt":null,"tags":[],"rank":1}]},
+    {"jsonrpc":"2.0","id":1,"method":"localTask.getContextDetails","params":{"id":"task-1"},"result":{"directory":"/tmp/tasks/task-1","planPath":"/tmp/tasks/task-1/plan.md","notesPath":"/tmp/tasks/task-1/notes.md","outcomePath":"/tmp/tasks/task-1/outcome.md"}}
+  ],
+  "tagCases": [
+    {"name":"omitted","params":{"id":"task-1"},"hasTags":false},
+    {"name":"empty","params":{"id":"task-1","tags":[]},"hasTags":true}
+  ]
+}

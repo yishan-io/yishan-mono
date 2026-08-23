@@ -145,11 +145,18 @@ func (s *Service) finishClose(ctx context.Context, command CloseCommand, closeRe
 		}
 	}
 	persistErr := s.deps.Records.ClosePersisted(ctx, closeReq.WorkspaceID)
+	s.notifyWorkspaceAvailabilityChanged()
 	if s.deps.ClearAgentUsage != nil {
 		s.deps.ClearAgentUsage(command.WorkspaceID)
 	}
 	result := CloseResult{WorkspaceID: command.WorkspaceID, Status: string(workspace.StatusClosed), PostHookResult: teardown.PostHookResult, TerminalCleanupErrors: teardown.TerminalCleanupErrors}
 	return result, errors.Join(teardownErr, persistErr)
+}
+
+func (s *Service) notifyWorkspaceAvailabilityChanged() {
+	if s.deps.WorkspaceAvailabilityChanged != nil {
+		s.deps.WorkspaceAvailabilityChanged()
+	}
 }
 
 func (s *Service) beginAgentCleanup(ctx context.Context, workspaceID string) (any, error) {

@@ -95,7 +95,7 @@ func (s *Service) startTaskRunPiProcess(created workspace.Workspace, taskRun *wo
 }
 
 func (s *Service) buildTaskRunExtraEnv(created workspace.Workspace, tabID string) ([]string, bool) {
-	extraEnv, err := buildPiStartExtraEnv(rpc.PiStartParams{TabID: tabID, PaneID: "pane-" + tabID, WorkspaceID: created.ID}, created)
+	extraEnv, err := buildPiStartExtraEnv(rpc.PiStartParams{TabID: tabID, PaneID: "pane-" + tabID, WorkspaceID: created.ID}, created, s.deps.DaemonWSEndpoint)
 	if err == nil {
 		return extraEnv, true
 	}
@@ -108,7 +108,7 @@ func (s *Service) taskRunStartOptions(created workspace.Workspace, taskRun *work
 	if model := strings.TrimSpace(taskRun.Model); model != "" {
 		args = append(args, "--model", model)
 	}
-	return agentmanager.StartOptions{SessionID: sessionID, TabID: tabID, WorkspaceID: created.ID, Binary: "pi", Args: args, CWD: created.Path, ExtraEnv: extraEnv, OnEvent: s.makePiEventCallback(sessionID), OnExit: s.handlePiSessionExit}
+	return agentmanager.StartOptions{SessionID: sessionID, TabID: tabID, WorkspaceID: created.ID, Binary: "pi", Args: args, CWD: created.Path, ExtraEnv: extraEnv, DaemonWSEndpoint: s.deps.DaemonWSEndpoint, OnEvent: s.makePiEventCallback(sessionID), OnExit: s.handlePiSessionExit}
 }
 
 func (s *Service) registerTaskRunAdmission(admission *session.Admission, created workspace.Workspace, sessionID, tabID string, proc *agentmanager.Session) bool {
@@ -156,6 +156,8 @@ func (s *Service) startTaskRunTerminal(created workspace.Workspace, taskRun *wor
 	}
 	resp, startErr := s.deps.Terminals.Start(context.Background(), created.Path, term.StartRequest{
 		WorkspaceID: created.ID,
+		ProjectID:   created.ProjectID,
+		OrgID:       created.OrgID,
 		TabID:       "task-" + created.ID,
 		PaneID:      "pane-task-" + created.ID,
 		Title:       buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind),

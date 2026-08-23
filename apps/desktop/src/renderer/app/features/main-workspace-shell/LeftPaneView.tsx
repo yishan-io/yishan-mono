@@ -1,14 +1,19 @@
 import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 
+import { localTaskStore } from "@renderer/domains/local-task";
 import { projectStore } from "@renderer/domains/project";
-import { activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
+import {
+  activateProject,
+  activateWorkspace,
+  toggleTaskHubOverlay,
+  workbenchNavigationStore,
+} from "@renderer/domains/workbench";
 import { PaneHeader } from "@renderer/domains/workbench";
 import { PaneToggleButton } from "@renderer/domains/workbench";
-import { workspaceStore } from "@renderer/domains/workspace";
 import { getRendererPlatform } from "@renderer/platform/platform";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChartBar, LuClock3, LuPanelLeft, LuPlus, LuRefreshCw } from "react-icons/lu";
+import { LuChartBar, LuClock3, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw } from "react-icons/lu";
 import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFlow";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../app-menu/AppMenuView";
@@ -39,6 +44,8 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const setOverlayPanel = workbenchNavigationStore((state) => state.setOverlayPanel);
   const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
   const isOverviewPanelOpen = overlayPanel === "overview";
+  const isTasksPanelOpen = overlayPanel === "tasks";
+  const activeTaskCount = localTaskStore((state) => state.activeTaskCount);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefreshProjects = useCallback(async () => {
@@ -67,6 +74,10 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       activateWorkspace({ workspaceId: "" });
     }
   }, [overlayPanel, setOverlayPanel]);
+
+  const handleToggleTasks = useCallback(() => {
+    toggleTaskHubOverlay();
+  }, []);
 
   return (
     <Box
@@ -124,6 +135,46 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         }}
       >
         {t("overview.title")}
+      </Button>
+      <Button
+        variant="text"
+        startIcon={<LuListTodo size={14} />}
+        onClick={handleToggleTasks}
+        aria-label={t("localTask.activeCount", { count: activeTaskCount })}
+        aria-pressed={isTasksPanelOpen}
+        sx={{
+          justifyContent: "flex-start",
+          color: isTasksPanelOpen ? "primary.main" : "text.secondary",
+          bgcolor: isTasksPanelOpen ? "action.selected" : "transparent",
+          borderRadius: 0,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          px: 2,
+          py: 0.875,
+          flexShrink: 0,
+          ":hover": { bgcolor: isTasksPanelOpen ? "action.selected" : "action.hover" },
+        }}
+      >
+        {t("localTask.title")}
+        {activeTaskCount > 0 ? (
+          <Box
+            component="span"
+            data-testid="local-task-active-count"
+            sx={{
+              ml: "auto",
+              minWidth: 20,
+              px: 0.75,
+              borderRadius: 10,
+              bgcolor: "action.selected",
+              color: "text.secondary",
+              fontSize: "0.7rem",
+              lineHeight: 1.5,
+              textAlign: "center",
+            }}
+          >
+            {activeTaskCount > 99 ? "99+" : activeTaskCount}
+          </Box>
+        ) : null}
       </Button>
       <Button
         variant="text"

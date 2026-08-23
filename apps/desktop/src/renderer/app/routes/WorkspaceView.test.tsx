@@ -21,6 +21,8 @@ const commandMocks = vi.hoisted(() => ({
   openEntryInExternalApp: vi.fn(async () => undefined),
   openTab: vi.fn(),
   refreshWorkspaceGitChanges: vi.fn(async () => undefined),
+  refreshActiveLocalTaskCount: vi.fn(async () => undefined),
+  selectLocalTaskWorkspace: vi.fn(async () => undefined),
   selectTab: vi.fn(),
   setActiveWorkspace: vi.fn(async () => undefined),
   setLeftPaneWidth: vi.fn(),
@@ -75,6 +77,11 @@ vi.mock("../../events", () => ({
 
 vi.mock("../../app/commands/tabCloseHandler", () => ({
   closeTabWithCleanup: commandMocks.closeTabWithCleanup,
+}));
+
+vi.mock("@renderer/domains/local-task", () => ({
+  refreshActiveLocalTaskCount: commandMocks.refreshActiveLocalTaskCount,
+  selectLocalTaskWorkspace: commandMocks.selectLocalTaskWorkspace,
 }));
 
 vi.mock("@renderer/domains/git", async (importOriginal) => {
@@ -198,6 +205,7 @@ describe("WorkspaceView", () => {
     });
     projectStore.setState({ isProjectsLoaded: false, projects: [] });
     workbenchNavigationStore.getState().closeOverlayPanel();
+    workbenchNavigationStore.getState().setActiveWorkspaceId("");
   });
 
   afterEach(() => {
@@ -211,6 +219,28 @@ describe("WorkspaceView", () => {
       projects: [{ id: "project-1", name: "Project 1" }],
     });
   }
+
+  it("loads the active task count and selected-workspace relationships through commands", async () => {
+    setWorkspaceProjectsLoaded();
+    workbenchNavigationStore.getState().setActiveWorkspaceId("workspace-1");
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(commandMocks.refreshActiveLocalTaskCount).toHaveBeenCalledTimes(1);
+      expect(commandMocks.selectLocalTaskWorkspace).toHaveBeenLastCalledWith("workspace-1");
+    });
+
+    act(() => workbenchNavigationStore.getState().setActiveWorkspaceId("workspace-2"));
+
+    await waitFor(() => {
+      expect(commandMocks.selectLocalTaskWorkspace).toHaveBeenLastCalledWith("workspace-2");
+    });
+  });
 
   it("loads the workspace snapshot on mount and again when selected organization changes", async () => {
     render(

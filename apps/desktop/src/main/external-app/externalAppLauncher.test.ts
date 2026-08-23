@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import { launchExternalApp, listDetectedExternalAppIds } from "./externalAppLauncher";
 import { openExternalUrl } from "./externalUrlLauncher";
-import { openInFileManager } from "./fileManagerLauncher";
+import { openInDefaultApplication, openInFileManager } from "./fileManagerLauncher";
+import { openWorkspaceEntry } from "./workspaceEntryLauncher";
 
 async function launchPath(
   input:
@@ -51,6 +52,29 @@ describe("launchPath", () => {
 
   afterEach(() => {
     setPlatform(originalPlatform);
+  });
+
+  it("opens a workspace entry file in its default application without reveal semantics", async () => {
+    resetMocks();
+    mocks.shellOpenPath.mockResolvedValue("");
+
+    await openWorkspaceEntry({
+      workspaceWorktreePath: "/contexts/task-1/plan.md",
+      appId: "system-default",
+    });
+
+    expect(mocks.shellOpenPath).toHaveBeenCalledWith("/contexts/task-1/plan.md");
+    expect(mocks.shellShowItemInFolder).not.toHaveBeenCalled();
+  });
+
+  it("opens a file in its default application without revealing it", async () => {
+    resetMocks();
+    mocks.shellOpenPath.mockResolvedValue("");
+
+    await openInDefaultApplication("/contexts/task-1/plan.md");
+
+    expect(mocks.shellOpenPath).toHaveBeenCalledWith("/contexts/task-1/plan.md");
+    expect(mocks.shellShowItemInFolder).not.toHaveBeenCalled();
   });
 
   it("reveals files in host file manager", async () => {

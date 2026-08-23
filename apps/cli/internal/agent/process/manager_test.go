@@ -3,6 +3,10 @@ package process
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -434,4 +438,59 @@ func TestOnExit_CalledOnceAfterProcessExit(t *testing.T) {
 	if _, exists := m.Session("on-exit-session"); exists {
 		t.Fatal("expected the exited session to be unregistered before OnExit")
 	}
+}
+
+func TestStart_OverridesAndClearsDaemonWSEndpoint(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test is unix-only")
+	}
+
+	for _, test := range []struct {
+		name     string
+		endpoint string
+		want     string
+	}{
+		{name: "overrides request value", endpoint: "ws://127.0.0.1:4312/ws", want: "ws://127.0.0.1:4312/ws"},
+		{name: "clears unavailable value", endpoint: "", want: ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			markerPath := filepath.Join(t.TempDir(), "daemon-endpoint.txt")
+			binaryDir := t.TempDir()
+			binaryPath := filepath.Join(binaryDir, "agent")
+			t.Setenv("PATH", binaryDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+			script := fmt.Sprintf("#!/bin/sh\nenv | grep -i '^yishan_daemon_ws_url=' > %q\n", markerPath)
+			if err := os.WriteFile(binaryPath, []byte(script), 0o755); err != nil {
+				t.Fatalf("write fake agent: %v", err)
+			}
+
+			manager := NewManager()
+			_, err := manager.Start(context.Background(), StartOptions{
+				SessionID:        "daemon-endpoint-" + test.name,
+				Binary:           "agent",
+				DaemonWSEndpoint: test.endpoint,
+				ExtraEnv:         []string{"YISHAN_DAEMON_WS_URL=request", "yishan_daemon_ws_url=lowercase-request"},
+			})
+			if err != nil {
+				t.Fatalf("Start: %v", err)
+			}
+			wantEnv := "YISHAN_DAEMON_WS_URL=" + test.want + "\n"
+			if got := waitForManagerFileContent(t, markerPath); got != wantEnv {
+				t.Fatalf("daemon endpoint environment = %q, want %q", got, wantEnv)
+			}
+		})
+	}
+}
+
+func waitForManagerFileContent(t *testing.T, path string) string {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		content, err := os.ReadFile(path)
+		if err == nil && len(content) > 0 {
+			return string(content)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %s", path)
+	return ""
 }

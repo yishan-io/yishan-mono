@@ -56,6 +56,10 @@ type Deps struct {
 	// owned by the hook package.
 	Usage *hook.UsageTracker
 
+	// WorkspaceAvailabilityChanged refreshes consumers whose roots depend on
+	// the set of resolvable local workspaces.
+	WorkspaceAvailabilityChanged func()
+
 	// Agent cleanup callbacks are attached by app after the agent service is
 	// composed. Their handles stay opaque outside node/agent.
 	BeginAgentCleanup  func(context.Context, string) (any, error)

@@ -8,6 +8,7 @@
  */
 export {
   EXTERNAL_APP_MENU_ENTRIES,
+  SYSTEM_DEFAULT_APP_ID,
   SYSTEM_FILE_MANAGER_APP_ID,
   findExternalAppPreset,
   getExternalAppMenuEntries,

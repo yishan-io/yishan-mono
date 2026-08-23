@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,10 +10,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"yishan/apps/cli/internal/platform/config"
-	"yishan/apps/cli/internal/adapter/sqlite"
-	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/cmd/output"
+	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/localtask"
+	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 var memoryCmd = &cobra.Command{
@@ -86,25 +88,19 @@ func openAndReconcileMemoryDB() (*memory.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	refs, err := readProfileWorkspaceRefs()
+	refs, taskContexts, err := readProfileMemorySources()
 	if err != nil {
-		log.Warn().Err(err).Msg("could not read workspace index, memory may be incomplete")
-		refs = nil
+		_ = db.Close()
+		return nil, fmt.Errorf("load profile memory sources: %w", err)
 	}
-
 	globalDir, _ := memory.GlobalMemoryDir()
-	result, err := db.Reconcile(refs, globalDir)
+	result, err := db.ReconcileWithTaskContexts(refs, globalDir, taskContexts)
 	if err != nil {
-		log.Warn().Err(err).Msg("memory reconcile failed, search may be incomplete")
-	} else {
-		log.Debug().
-			Int("inserted", result.Inserted).
-			Int("updated", result.Updated).
-			Int("deleted", result.Deleted).
-			Msg("memory reconciled")
+		_ = db.Close()
+		return nil, fmt.Errorf("reconcile memory: %w", err)
 	}
-
+	log.Debug().Int("inserted", result.Inserted).Int("updated", result.Updated).
+		Int("deleted", result.Deleted).Msg("memory reconciled")
 	return db, nil
 }
 
@@ -136,28 +132,61 @@ func openMemoryForSearch() (*memory.DB, error) {
 // readProfileWorkspaceRefs reads local workspaces for the current profile from SQLite.
 // The workspace DB lives in the account data dir, not the env root.
 func readProfileWorkspaceRefs() ([]memory.WorkspaceRef, error) {
-	dataDir, err := config.ResolveAccountDataDir(appConfig.ConfigPath)
+	refs, _, err := readProfileMemorySources()
+	return refs, err
+}
+
+func readProfileMemorySources() ([]memory.WorkspaceRef, []memory.TaskContextRef, error) {
+	database, err := openLocalTaskDatabase()
 	if err != nil {
-		return nil, err
-	}
-	database, err := sqlite.OpenReadOnly(dataDir)
-	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer database.Close()
-	workspaceStore := sqlite.NewWorkspaceStore(database)
-	dbWorkspaces, err := workspaceStore.List(context.Background())
+	ctx := context.Background()
+	workspaces, err := sqlite.NewWorkspaceStore(database).List(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	refs := make([]memory.WorkspaceRef, 0, len(dbWorkspaces))
-	for _, ws := range dbWorkspaces {
-		if ws.LocalPath != "" {
-			refs = append(refs, memory.WorkspaceRef{
-				WorktreePath: ws.LocalPath,
-				ProjectID:    ws.ProjectID,
-			})
+	tasks, err := sqlite.NewLocalTaskStore(database).List(ctx, localtask.TaskFilter{})
+	if err != nil {
+		return nil, nil, err
+	}
+	refs, contextWorkspaces := profileWorkspaceRefs(workspaces)
+	taskContexts, err := resolveProfileTaskContexts(tasks, contextWorkspaces)
+	return refs, taskContexts, err
+}
+
+func profileWorkspaceRefs(workspaces []sqlite.Workspace) ([]memory.WorkspaceRef, []localtask.ContextWorkspace) {
+	refs := make([]memory.WorkspaceRef, 0, len(workspaces))
+	contextWorkspaces := make([]localtask.ContextWorkspace, 0, len(workspaces))
+	for _, workspace := range workspaces {
+		if workspace.LocalPath == "" {
+			continue
 		}
+		refs = append(refs, memory.WorkspaceRef{WorktreePath: workspace.LocalPath, ProjectID: workspace.ProjectID})
+		contextWorkspaces = append(contextWorkspaces, localtask.ContextWorkspace{
+			ProjectID: workspace.ProjectID, WorktreePath: workspace.LocalPath,
+		})
+	}
+	return refs, contextWorkspaces
+}
+
+func resolveProfileTaskContexts(tasks []localtask.Task, workspaces []localtask.ContextWorkspace) ([]memory.TaskContextRef, error) {
+	refs := make([]memory.TaskContextRef, 0, len(tasks))
+	for _, task := range tasks {
+		directory, err := localtask.ResolveTaskContextPath(task, workspaces)
+		if errors.Is(err, localtask.ErrContextUnavailable) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("resolve Local Task context %q: %w", task.ID, err)
+		}
+		projectID := ""
+		if task.ProjectID != nil {
+			projectID = *task.ProjectID
+		}
+		refs = append(refs, memory.TaskContextRef{Directory: directory, TaskID: task.ID,
+			TaskTitle: task.Title, ProjectID: projectID})
 	}
 	return refs, nil
 }

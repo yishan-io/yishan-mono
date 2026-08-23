@@ -12,12 +12,18 @@ import (
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/events"
+	"yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace/instance"
 )
+
+// TaskContextSource provides derived Local Task roots for Memory indexing.
+type TaskContextSource interface {
+	ListContextRoots(context.Context) ([]localtask.ContextRoot, error)
+}
 
 // Deps are the explicit dependencies of the system application service.
 type Deps struct {
@@ -27,6 +33,7 @@ type Deps struct {
 	TokenUsage tokenusage.Service
 
 	Memory       *memory.Service
+	TaskContexts TaskContextSource
 	Registry     *instance.Registry
 	Computer     *computer.Service
 	ContextStore *contextstore.Store

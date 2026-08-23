@@ -9,7 +9,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
 /** Which overlay panel (if any) is shown in place of the main pane. */
-export type OverlayPanel = "overview" | "scheduledJob";
+export type OverlayPanel = "overview" | "tasks" | "scheduledJob";
 
 export type WorkbenchNavigationState = {
   activeProjectId: string;

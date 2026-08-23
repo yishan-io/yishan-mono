@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/platform/shellenv"
 )
 
@@ -61,6 +62,8 @@ type StartOptions struct {
 	Args []string
 	// CWD is the working directory for the agent process.
 	CWD string
+	// DaemonWSEndpoint is the app-owned endpoint injected after all inherited and request env values.
+	DaemonWSEndpoint string
 	// ExtraEnv contains additional KEY=VALUE pairs merged on top of the
 	// login-shell environment. The manager always resolves the full
 	// login-shell PATH first; ExtraEnv values override or extend it.
@@ -115,6 +118,7 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 		parts := splitEnvPair(kv)
 		env = shellenv.UpsertEnv(env, parts[0], parts[1])
 	}
+	env = config.OverrideDaemonWSEndpointEnv(env, opts.DaemonWSEndpoint)
 
 	binaryPath := shellenv.ResolveExecutablePathFromEnv(opts.Binary, env)
 	if binaryPath == "" {

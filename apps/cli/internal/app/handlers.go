@@ -43,17 +43,18 @@ func (h appHandler) OnConnect(connection *rpc.Connection, request *http.Request)
 // job dispatch goes to the system service, workspace snapshot changes to the
 // workspace service, terminal session/stream messages to the terminal service.
 type relayHandler struct {
-	system    *nodesystem.Service
-	workspace *nodeworkspace.Service
-	terminal  *nodeterminal.Service
-	runtime   *session.Session
+	system           *nodesystem.Service
+	workspace        *nodeworkspace.Service
+	terminal         *nodeterminal.Service
+	runtime          *session.Session
+	daemonWSEndpoint string
 }
 
 // HandleRelayMessage implements relay.MessageHandler.
 func (h relayHandler) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
 	switch method {
 	case relay.MethodJobRun:
-		nodesystem.HandleJobRun(h.runtime, connState, nodeID, params)
+		nodesystem.HandleJobRun(h.runtime, connState, nodeID, params, h.daemonWSEndpoint)
 		return true
 	case relay.MethodWorkspaceSnapshotChanged:
 		return h.workspace.HandleRelayMessage(ctx, connState, nodeID, method, params)

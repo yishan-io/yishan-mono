@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -426,5 +427,50 @@ func startPiSession(t *testing.T, s *Service, conn *rpc.Connection, sessionID, t
 	}))
 	if err != nil {
 		t.Fatalf("dispatchPi start: %v", err)
+	}
+}
+
+func TestPiStart_OverridesAndClearsDaemonWSEndpointForStartAndResume(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test is unix-only")
+	}
+
+	for _, test := range []struct {
+		name     string
+		resume   bool
+		endpoint string
+		want     string
+	}{
+		{name: "start overrides inherited value", endpoint: "ws://127.0.0.1:4312/ws", want: "ws://127.0.0.1:4312/ws"},
+		{name: "resume overrides inherited value", resume: true, endpoint: "ws://127.0.0.1:4312/ws", want: "ws://127.0.0.1:4312/ws"},
+		{name: "start clears unavailable value", endpoint: "", want: ""},
+		{name: "resume clears unavailable value", resume: true, endpoint: "", want: ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			homeDir := t.TempDir()
+			t.Setenv("HOME", homeDir)
+			t.Setenv("YISHAN_DAEMON_WS_URL", "stale")
+			markerPath := filepath.Join(homeDir, "daemon-endpoint.txt")
+			fakePiDir := t.TempDir()
+			fakePi := filepath.Join(fakePiDir, "pi")
+			script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$YISHAN_DAEMON_WS_URL\" > %q\n", markerPath)
+			if err := os.WriteFile(fakePi, []byte(script), 0o755); err != nil {
+				t.Fatalf("write fake pi: %v", err)
+			}
+			t.Setenv("PATH", fakePiDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+			s := newTestHandler(t)
+			s.deps.DaemonWSEndpoint = test.endpoint
+			cwd := t.TempDir()
+			_, err := s.callAgentRPCForTest(context.Background(), &rpc.Connection{}, rpc.MethodPiStart, mustMarshalJSON(t, map[string]any{
+				"sessionId": "session-daemon-endpoint", "tabId": "tab-1", "workspaceId": "workspace-1", "cwd": cwd, "resume": test.resume,
+			}))
+			if err != nil {
+				t.Fatalf("pi.start: %v", err)
+			}
+			if got := waitForFileContent(t, markerPath); got != test.want {
+				t.Fatalf("YISHAN_DAEMON_WS_URL = %q, want %q", got, test.want)
+			}
+		})
 	}
 }

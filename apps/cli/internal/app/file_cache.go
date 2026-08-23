@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
 
 	"yishan/apps/cli/internal/events"
@@ -50,12 +51,17 @@ func (a *App) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
 	}
 	for _, rel := range relPaths {
 		abs := filepath.Join(worktreePath, rel)
+		if _, err := os.Stat(abs); os.IsNotExist(err) {
+			if deleteErr := a.memory.OnFileDeleted(abs); deleteErr != nil {
+				log.Warn().Err(deleteErr).Str("path", abs).Msg("memory index delete failed")
+			}
+			continue
+		}
 		// Resolve symlinks before the ShouldIndex check: .my-context/ inside a
 		// worktree is a symlink to ~/.yishan/contexts/…, so the unresolved abs
 		// path contains "/.yishan/worktrees/" and would never match the filter.
-		// EvalSymlinks fails for deleted files; in that case resolved stays as
-		// abs and ShouldIndex will return false — delete events for context files
-		// are not currently propagated via this path (pre-existing limitation).
+		// Deleted files were handled above while their symlink parent was still
+		// available for canonical path resolution.
 		resolved := abs
 		if r, err := filepath.EvalSymlinks(abs); err == nil {
 			resolved = r

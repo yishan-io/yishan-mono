@@ -1,7 +1,8 @@
 import { Box } from "@mui/material";
 import { AgentChatRecoveryCoordinator, listActivePiSessions } from "@renderer/domains/agent";
-import { SYSTEM_FILE_MANAGER_APP_ID, openEntryInExternalApp } from "@renderer/domains/files";
+import { openEntryInExternalApp } from "@renderer/domains/files";
 import { gitProjectionStore, refreshWorkspaceGitChanges, useAllWorkspacesGitSync } from "@renderer/domains/git";
+import { TaskHubView, refreshActiveLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
 import { OverviewView } from "@renderer/domains/overview";
 import { CreateProjectDialogView, projectStore } from "@renderer/domains/project";
 
@@ -92,6 +93,8 @@ export function WorkspaceView() {
       setActiveWorkspace,
       openEntryInExternalApp,
       refreshWorkspaceGitChanges,
+      refreshActiveLocalTaskCount,
+      selectLocalTaskWorkspace,
       loadWorkspaceSnapshot,
     }),
     [],
@@ -118,6 +121,8 @@ export function WorkspaceView() {
     workspaceGitRefreshVersion,
   });
   useEffect(() => {
+    // fire-and-forget: command state owns load failures and stale-request protection.
+    void cmd.selectLocalTaskWorkspace(selectedWorkspaceId || null);
     void cmd.setActiveWorkspace({ workspaceId: selectedWorkspaceId || undefined });
   }, [cmd, selectedWorkspaceId]);
 
@@ -187,6 +192,8 @@ export function WorkspaceView() {
           <ScheduledJobView onClose={handleCloseOverlayPanel} />
         ) : overlayPanel === "overview" ? (
           <OverviewView onClose={handleCloseOverlayPanel} />
+        ) : overlayPanel === "tasks" ? (
+          <TaskHubView />
         ) : (
           <MainPaneView />
         )}

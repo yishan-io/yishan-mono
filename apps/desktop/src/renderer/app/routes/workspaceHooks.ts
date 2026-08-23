@@ -1,30 +1,31 @@
-import { listActivePiSessions } from "@renderer/domains/agent";
-import { SYSTEM_FILE_MANAGER_APP_ID, openEntryInExternalApp } from "@renderer/domains/files";
-import { refreshWorkspaceGitChanges } from "@renderer/domains/git";
+import type { listActivePiSessions } from "@renderer/domains/agent";
+import type { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
+import { SYSTEM_FILE_MANAGER_APP_ID, type openEntryInExternalApp } from "@renderer/domains/files";
+import type { refreshWorkspaceGitChanges } from "@renderer/domains/git";
+import type { refreshActiveLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
 import { projectStore } from "@renderer/domains/project";
-import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
-import { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
-import { listTerminalSessions, setActiveWorkspace } from "@renderer/domains/terminal";
+import type { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
+import type { listTerminalSessions, setActiveWorkspace } from "@renderer/domains/terminal";
 import {
-  activateWorkspace,
-  closeTab,
-  openTab,
+  type activateWorkspace,
+  type closeTab,
+  type openTab,
   popupStore,
-  setSelectedTab,
+  type setSelectedTab,
   tabStore,
   workbenchNavigationStore,
 } from "@renderer/domains/workbench";
 import {
-  deleteSelectedFileTreeEntry,
+  type deleteSelectedFileTreeEntry,
   resolveWorkspaceProjectId,
-  toggleLeftPaneVisibility,
-  toggleRightPaneVisibility,
-  undoFileTreeOperation,
+  type toggleLeftPaneVisibility,
+  type toggleRightPaneVisibility,
+  type undoFileTreeOperation,
   workspaceStore,
 } from "@renderer/domains/workspace";
 import { type RefObject, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { loadWorkspaceSnapshot } from "../../app/commands/workspaceSnapshotFlow";
+import { useLocation, type useNavigate } from "react-router-dom";
+import type { loadWorkspaceSnapshot } from "../../app/commands/workspaceSnapshotFlow";
 import { ACTIONS } from "../../events";
 import { subscribeAppActionEvent } from "../../events";
 import { isEditableActiveElement } from "../../shortcuts/editableTarget";
@@ -45,11 +46,16 @@ export type WorkspaceViewCommands = {
   setActiveWorkspace: typeof setActiveWorkspace;
   openEntryInExternalApp: typeof openEntryInExternalApp;
   refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChanges;
+  refreshActiveLocalTaskCount: typeof refreshActiveLocalTaskCount;
+  selectLocalTaskWorkspace: typeof selectLocalTaskWorkspace;
   loadWorkspaceSnapshot: typeof loadWorkspaceSnapshot;
 };
 
 /** Subscribes global app actions and routes them to workspace-level commands. */
-export function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: ReturnType<typeof useNavigate> }) {
+export function useWorkspaceAppActions(input: {
+  cmd: WorkspaceViewCommands;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
   const { cmd, navigate } = input;
   const location = useLocation();
   const isWorkspaceRouteRef = useRef(location.pathname === "/");
@@ -201,6 +207,13 @@ export function useWorkspaceBootstrap(input: {
 
     const loadWorkspaceData = async () => {
       await cmd.loadWorkspaceSnapshot();
+      if (disposed) {
+        return;
+      }
+      await Promise.all([
+        cmd.refreshActiveLocalTaskCount(),
+        cmd.selectLocalTaskWorkspace(workbenchNavigationStore.getState().activeWorkspaceId || null),
+      ]);
       if (disposed) {
         return;
       }

@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { localTaskStore } from "@renderer/domains/local-task";
+import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LeftPaneView } from "./LeftPaneView";
@@ -51,7 +53,7 @@ vi.mock("react-i18next", () => ({
     init: () => undefined,
   },
   useTranslation: () => ({
-    t: (key: string, params?: { name?: string }) => {
+    t: (key: string, params?: { name?: string; count?: number }) => {
       const translations: Record<string, string> = {
         "workspace.actions.delete": "Delete workspace",
         "workspace.delete.confirm": `Delete workspace '${params?.name ?? ""}'?`,
@@ -75,6 +77,7 @@ vi.mock("react-i18next", () => ({
         "project.actions.filter": "Filter",
         "project.actions.pin": "Pin projects",
         "project.actions.addRepository": "Add project",
+        "localTask.activeCount": `Tasks, ${params?.count ?? 0} active`,
       };
 
       return translations[key] ?? key;
@@ -246,6 +249,24 @@ describe("LeftPaneView deletion", () => {
 
     expect(screen.getByTestId("visible-repo-repo-1")).toBeTruthy();
     expect(screen.getByTestId("visible-repo-repo-2")).toBeTruthy();
+  });
+
+  it("shows the active task badge immediately under Overview and opens only the Task Hub", () => {
+    localTaskStore.setState({ activeTaskCount: 7 });
+    workbenchNavigationStore.getState().setOverlayPanel(null);
+    render(<LeftPaneView />);
+
+    const overviewButton = screen.getByRole("button", { name: "overview.title" });
+    const tasksButton = screen.getByRole("button", { name: "Tasks, 7 active" });
+    expect(overviewButton.nextElementSibling).toBe(tasksButton);
+    const taskCount = screen.getByTestId("local-task-active-count");
+    expect(taskCount.textContent).toBe("7");
+    expect(tasksButton.lastElementChild).toBe(taskCount);
+    expect(taskCount.classList.contains("MuiBadge-colorPrimary")).toBe(false);
+
+    fireEvent.click(tasksButton);
+    expect(workbenchNavigationStore.getState().overlayPanel).toBe("tasks");
+    expect(screen.queryByRole("list", { name: "localTask.title" })).toBeNull();
   });
 
   it("shows left pane toggle button in header", () => {
