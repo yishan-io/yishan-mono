@@ -2,7 +2,13 @@ import { Box } from "@mui/material";
 import { chatStore } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
-import { deleteProject, projectStore, useProjectDeletionFlow } from "@renderer/domains/project";
+import {
+  deleteProject,
+  projectStore,
+  recordLastUsedExternalApp,
+  useProjectDeletionFlow,
+} from "@renderer/domains/project";
+import { sessionStore } from "@renderer/domains/session";
 
 import { activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
 
@@ -272,12 +278,14 @@ export function WorkspaceNavigatorView() {
       return;
     }
 
+    const selectedOrganizationId = sessionStore.getState().selectedOrganizationId ?? "";
+
     try {
       await openEntryInExternalApp({
         workspaceWorktreePath: targetWorktreePath,
         appId,
       });
-      projectStore.getState().setLastUsedExternalAppId(appId);
+      recordLastUsedExternalApp(selectedOrganizationId, appId);
     } catch (error) {
       console.error("Failed to open workspace root in external app", error);
     } finally {

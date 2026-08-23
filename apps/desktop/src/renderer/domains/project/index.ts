@@ -15,6 +15,7 @@ export type {
 export {
   createProject,
   deleteProject,
+  recordLastUsedExternalApp,
   updateProjectConfig,
 } from "./commands/projectCommands";
 export { getProjectListPreferences, listProjectsByOrg, setProjectListPreferences } from "./daemon/projectDaemonClient";

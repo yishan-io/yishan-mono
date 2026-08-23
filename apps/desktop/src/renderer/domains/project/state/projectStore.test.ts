@@ -166,6 +166,22 @@ describe("organization-aware visible-project preferences", () => {
     expect(localStorage.getItem("yishan-project-store")).toContain('"knownProjectIds":["repo-1","repo-2"]');
   });
 
+  it("stores the last-used external app in its organization preference", () => {
+    projectStore.setState({
+      organizationPreferencesById: {
+        "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
+      },
+    });
+
+    (projectStore.getState().setLastUsedExternalAppId as unknown as (organizationId: string, appId: "cursor") => void)(
+      "org-1",
+      "cursor",
+    );
+
+    expect(projectStore.getState().lastUsedExternalAppId).toBe("cursor");
+    expect(projectStore.getState().organizationPreferencesById?.["org-1"]?.lastUsedExternalAppId).toBe("cursor");
+  });
+
   it("updates only the top-level preference when organization id is missing", () => {
     projectStore.setState({
       organizationPreferencesById: {

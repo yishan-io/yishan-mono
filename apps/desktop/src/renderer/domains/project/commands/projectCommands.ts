@@ -18,12 +18,18 @@ import {
   workspaceSettingsStore,
   workspaceStore,
 } from "@renderer/domains/workspace";
+import type { ExternalAppId } from "@shared/contracts/externalApps";
 import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
+
+/** Records the last external application used within one organization. */
+export function recordLastUsedExternalApp(organizationId: string, appId: ExternalAppId): void {
+  projectStore.getState().setLastUsedExternalAppId(organizationId, appId);
+}
 
 /** Creates one project in backend, then applies it into the local legacy store shape. */
 export async function createProject(input: {
