@@ -18,15 +18,14 @@
       "uncached": "Uncached",
       "total": "Total",
       "turns": "Turns",
-      "toolCalls": "Tool Calls",
-      "cost": "Cost"
+      "toolCalls": "Tool Calls"
     },
-    "agentUsage": {
-      "title": "Agent Usage",
-      "loading": "Loading...",
-      "noData": "No data available",
-      "totalTokens": "Total Tokens",
-      "agents": "Agents"
+    "dailyCost": {
+      "title": "Daily Cost",
+      "loading": "Loading chart...",
+      "noData": "No cost data available",
+      "cost": "Cost",
+      "total": "Total Cost"
     },
     "modelBreakdown": {
       "title": "Model Breakdown",

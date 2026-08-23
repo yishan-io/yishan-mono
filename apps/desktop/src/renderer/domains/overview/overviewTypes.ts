@@ -29,14 +29,6 @@ export type ModelBreakdownItem = {
   percentage: number;
 };
 
-export type AgentKindBreakdownItem = {
-  agentKind: string;
-  totalTokens: number;
-  inputTokens: number;
-  outputTokens: number;
-  percentage: number;
-};
-
 export type ClosedWorkspaceItem = {
   id: string;
   projectId: string;

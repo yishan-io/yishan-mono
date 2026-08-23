@@ -18,15 +18,14 @@
       "uncached": "\u672a\u7f13\u5b58",
       "total": "\u5408\u8ba1",
       "turns": "\u8f6e\u6b21",
-      "toolCalls": "\u5de5\u5177\u8c03\u7528",
-      "cost": "\u6210\u672c"
+      "toolCalls": "\u5de5\u5177\u8c03\u7528"
     },
-    "agentUsage": {
-      "title": "\u667a\u80fd\u4f53\u7528\u91cf",
-      "loading": "\u52a0\u8f7d\u4e2d...",
-      "noData": "\u6682\u65e0\u6570\u636e",
-      "totalTokens": "\u603b\u4ee4\u724c\u6570",
-      "agents": "\u667a\u80fd\u4f53"
+    "dailyCost": {
+      "title": "\u6bcf\u65e5\u6210\u672c",
+      "loading": "\u6b63\u5728\u52a0\u8f7d\u56fe\u8868...",
+      "noData": "\u6682\u65e0\u6210\u672c\u6570\u636e",
+      "cost": "\u6210\u672c",
+      "total": "\u603b\u6210\u672c"
     },
     "modelBreakdown": {
       "title": "\u6a21\u578b\u660e\u7ec6",

@@ -6,13 +6,6 @@ import type { OverviewTimeRange } from "../../../../domains/overview/commands/ov
 import { overviewStore } from "../../../../domains/overview/state/overviewStore";
 import { formatTokens } from "./tokenFormatting";
 
-const usdFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 type TokenUnit = "B" | "M" | "K" | "raw";
 
 function resolveUnit(total: number): TokenUnit {
@@ -65,7 +58,6 @@ export function TokenUsageChartView() {
   const uncachedTotal = overviewStore((state) => state.uncachedTotal);
   const turnTotal = overviewStore((state) => state.turnTotal);
   const toolCallTotal = overviewStore((state) => state.toolCallTotal);
-  const totalCostUsd = overviewStore((state) => state.totalCostUsd);
 
   const chartData = useMemo(() => {
     const dataByDate = new Map<string, { cachedTokens: number; uncachedTokens: number }>();
@@ -238,19 +230,6 @@ export function TokenUsageChartView() {
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
             {toolCallTotal}
-          </Typography>
-        </Box>
-        <Box>
-          <Typography
-            variant="caption"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            {t("overview.tokenUsage.cost")}
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
-            {usdFormatter.format(totalCostUsd)}
           </Typography>
         </Box>
       </Box>

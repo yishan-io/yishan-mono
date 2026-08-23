@@ -11,7 +11,7 @@ import { LuChartBar } from "react-icons/lu";
 import { overviewStore } from "../../../../domains/overview/state/overviewStore";
 import { getShortcutDisplayLabelById } from "../../../../shortcuts/shortcutDisplay";
 import { loadAllOverviewData } from "../../commands/overviewCommands";
-import { AgentKindChartView } from "./AgentKindChartView";
+import { DailyCostChartView } from "./DailyCostChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
 import { OverviewFiltersView } from "./OverviewFiltersView";
 import { TokenUsageChartView } from "./TokenUsageChartView";
@@ -40,31 +40,25 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const tokenUsageLoadError = overviewStore((state) => state.tokenUsageLoadError);
   const modelBreakdownLoadState = overviewStore((state) => state.modelBreakdownLoadState);
   const modelBreakdownLoadError = overviewStore((state) => state.modelBreakdownLoadError);
-  const agentKindBreakdownLoadState = overviewStore((state) => state.agentKindBreakdownLoadState);
-  const agentKindBreakdownLoadError = overviewStore((state) => state.agentKindBreakdownLoadError);
   const workspaceInsightsLoadState = overviewStore((state) => state.workspaceInsightsLoadState);
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
   const projects = projectStore((state) => state.projects);
 
   useEffect(() => {
     void loadAllOverviewData();
-  }, [loadAllOverviewData]);
+  }, []);
 
   const hasAnyError =
-    tokenUsageLoadState === "error" ||
-    modelBreakdownLoadState === "error" ||
-    agentKindBreakdownLoadState === "error" ||
-    workspaceInsightsLoadState === "error";
+    tokenUsageLoadState === "error" || modelBreakdownLoadState === "error" || workspaceInsightsLoadState === "error";
 
   const isLoading =
     (tokenUsageLoadState === "loading" || tokenUsageLoadState === "idle") &&
     (modelBreakdownLoadState === "loading" || modelBreakdownLoadState === "idle") &&
-    (agentKindBreakdownLoadState === "loading" || agentKindBreakdownLoadState === "idle") &&
     (workspaceInsightsLoadState === "loading" || workspaceInsightsLoadState === "idle");
 
   const handleRetry = useCallback(() => {
     void loadAllOverviewData();
-  }, [loadAllOverviewData]);
+  }, []);
 
   return (
     <Box
@@ -113,11 +107,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
                 </Button>
               }
             >
-              {tokenUsageLoadError ??
-                modelBreakdownLoadError ??
-                agentKindBreakdownLoadError ??
-                workspaceInsightsLoadError ??
-                t("overview.loadError")}
+              {tokenUsageLoadError ?? modelBreakdownLoadError ?? workspaceInsightsLoadError ?? t("overview.loadError")}
             </Alert>
           </Box>
         ) : null}
@@ -135,7 +125,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
                 <TokenUsageChartView />
               </Paper>
               <Paper sx={panelSx}>
-                <AgentKindChartView />
+                <DailyCostChartView />
               </Paper>
             </Box>
             <Box
