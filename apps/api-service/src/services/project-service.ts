@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { projects, workspaces } from "@/db/schema";
 import type { ProjectSourceType, WorkspaceStatus } from "@/db/schema";
-import { ProjectNotFoundError } from "@/errors";
+import { ProjectAlreadyExistsError, ProjectCreateFailedError, ProjectNotFoundError } from "@/errors";
 import { newId } from "@/lib/id";
 import { inferRepoSource } from "@/lib/repo";
 import type { OrganizationService } from "@/services/organization-service";
@@ -73,6 +73,33 @@ type UpdateProjectInput = {
   contextEnabled?: boolean;
 };
 
+type PostgresErrorDetails = {
+  code?: unknown;
+  constraint?: unknown;
+  cause?: unknown;
+};
+
+function hasProjectGitIdentityUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const postgresError = error as PostgresErrorDetails;
+  return postgresError.code === "23505" && postgresError.constraint === "projects_org_repo_provider_key_uq";
+}
+
+function isProjectGitIdentityUniqueViolation(error: unknown): boolean {
+  if (hasProjectGitIdentityUniqueViolation(error)) {
+    return true;
+  }
+
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  return hasProjectGitIdentityUniqueViolation((error as PostgresErrorDetails).cause);
+}
+
 export class ProjectService {
   constructor(
     private readonly db: AppDb,
@@ -101,52 +128,71 @@ export class ProjectService {
       await assertNodeOwnedByActor(this.db, nodeId, input.actorUserId);
     }
 
-    return this.db.transaction(async (tx) => {
-      const insertedRows = await tx
-        .insert(projects)
-        .values({
-          id: newId(),
-          name,
-          sourceType,
-          repoProvider,
-          repoUrl,
-          repoKey,
-          contextEnabled: input.contextEnabled ?? true,
-          organizationId: input.organizationId,
-          createdByUserId: input.actorUserId,
-        })
-        .returning();
-
-      const project = insertedRows[0];
-      if (!project) {
-        throw new Error("Failed to create project");
-      }
-
-      const createdWorkspaces: ProjectWithWorkspacesView["workspaces"] = [];
-
-      if (nodeId && localPath) {
-        const insertedWorkspaces = await tx
-          .insert(workspaces)
-          .values({
-            id: newId(),
-            organizationId: input.organizationId,
-            projectId: project.id,
-            userId: input.actorUserId,
-            nodeId,
-            kind: "primary",
-            branch: null,
-            localPath,
-          })
-          .returning();
-
-        const createdPrimaryWorkspace = insertedWorkspaces[0];
-        if (createdPrimaryWorkspace) {
-          createdWorkspaces.push({ ...createdPrimaryWorkspace, latestPullRequest: null });
+    try {
+      return await this.db.transaction(async (tx) => {
+        let insertedRows: (typeof projects.$inferSelect)[];
+        try {
+          insertedRows = await tx
+            .insert(projects)
+            .values({
+              id: newId(),
+              name,
+              sourceType,
+              repoProvider,
+              repoUrl,
+              repoKey,
+              contextEnabled: input.contextEnabled ?? true,
+              organizationId: input.organizationId,
+              createdByUserId: input.actorUserId,
+            })
+            .returning();
+        } catch (error) {
+          if (isProjectGitIdentityUniqueViolation(error)) {
+            throw new ProjectAlreadyExistsError({
+              organizationId: input.organizationId,
+              repoProvider,
+              repoKey,
+            });
+          }
+          throw new ProjectCreateFailedError(error);
         }
-      }
 
-      return { ...project, workspaces: createdWorkspaces };
-    });
+        const project = insertedRows[0];
+        if (!project) {
+          throw new ProjectCreateFailedError();
+        }
+
+        const createdWorkspaces: ProjectWithWorkspacesView["workspaces"] = [];
+
+        if (nodeId && localPath) {
+          const insertedWorkspaces = await tx
+            .insert(workspaces)
+            .values({
+              id: newId(),
+              organizationId: input.organizationId,
+              projectId: project.id,
+              userId: input.actorUserId,
+              nodeId,
+              kind: "primary",
+              branch: null,
+              localPath,
+            })
+            .returning();
+
+          const createdPrimaryWorkspace = insertedWorkspaces[0];
+          if (createdPrimaryWorkspace) {
+            createdWorkspaces.push({ ...createdPrimaryWorkspace, latestPullRequest: null });
+          }
+        }
+
+        return { ...project, workspaces: createdWorkspaces };
+      });
+    } catch (error) {
+      if (error instanceof ProjectAlreadyExistsError || error instanceof ProjectCreateFailedError) {
+        throw error;
+      }
+      throw new ProjectCreateFailedError(error);
+    }
   }
 
   async listProjects(input: {

@@ -39,9 +39,20 @@ function isLatestWorkspaceSnapshotRequest(requestId: number): boolean {
   return requestId === latestWorkspaceSnapshotRequestId;
 }
 
+function hasSnapshotOmittedProjectAddedDuringRequest(
+  projectIdsAtRequestStart: Set<string>,
+  snapshotProjects: ProjectRecord[],
+): boolean {
+  const snapshotProjectIds = new Set(snapshotProjects.map((project) => project.id));
+  return projectStore
+    .getState()
+    .projects.some((project) => !projectIdsAtRequestStart.has(project.id) && !snapshotProjectIds.has(project.id));
+}
+
 /** Loads the latest workspace snapshot and syncs local desktop/daemon state to it. */
 export async function loadWorkspaceSnapshot(): Promise<void> {
   const requestId = ++latestWorkspaceSnapshotRequestId;
+  const projectIdsAtRequestStart = new Set(projectStore.getState().projects.map((project) => project.id));
   const previousWorkspaces = workspaceStore.getState().workspaces;
   const previousSelectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
 
@@ -83,6 +94,12 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
 
     if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+      return;
+    }
+
+    // A successful local create can update the stores while this request is
+    // pending. Do not let the pre-create response erase that visible project.
+    if (hasSnapshotOmittedProjectAddedDuringRequest(projectIdsAtRequestStart, projects)) {
       return;
     }
 
