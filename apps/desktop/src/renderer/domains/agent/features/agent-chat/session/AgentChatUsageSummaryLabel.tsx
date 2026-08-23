@@ -1,7 +1,7 @@
-import { Box, Tooltip, Typography } from "@mui/material";
+import { Box, CircularProgress, IconButton, Popover, Tooltip, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { COLOR_PRIMITIVES, type DesignTokenThemeMode } from "@yishan-io/design-tokens/v1";
-import { useMemo } from "react";
+import { type MouseEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
 import {
@@ -18,7 +18,8 @@ import {
 import { formatDetailedTokenCount } from "./agentChatUsageFormatting";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
-const USAGE_SUMMARY_FONT_SIZE_PX = 12;
+const CONTEXT_PROGRESS_SIZE_PX = 16;
+const CONTEXT_PROGRESS_THICKNESS = 5;
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -83,6 +84,8 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
       : derivedUsageSummary;
   }, [currentModel, messages, streamingMessage, usageLedger]);
 
+  const [usageDetailsAnchor, setUsageDetailsAnchor] = useState<HTMLElement | null>(null);
+
   if (!usageSummary) {
     return null;
   }
@@ -91,16 +94,38 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
   const contextTokens = contextUsage?.tokens ?? usageSummary.contextTokens;
   const contextWindow = contextUsage?.contextWindow ?? usageSummary.contextWindow;
   const contextPercent = roundContextPercent(contextUsage?.percent ?? usageSummary.contextPercent);
-  const contextSummaryLabel =
-    contextUsage?.tokens === null
-      ? `ctx: ?/${formatDetailedTokenCount(contextWindow)} (?)`
-      : `ctx: ${formatDetailedTokenCount(contextTokens)}/${formatDetailedTokenCount(contextWindow)} (${contextPercent}%)`;
+  const isContextUsageUnknown = contextUsage?.tokens === null;
+  const contextDisplayPercent =
+    isContextUsageUnknown || !Number.isFinite(contextPercent) ? 0 : Math.min(100, Math.max(0, contextPercent));
+  const contextTokensLabel = formatDetailedTokenCount(contextTokens);
+  const contextWindowLabel = formatDetailedTokenCount(contextWindow);
+  const contextTooltipLabel = isContextUsageUnknown
+    ? `? / ${contextWindowLabel} (?)`
+    : `${contextTokensLabel} / ${contextWindowLabel} (${contextPercent}%)`;
+  const contextAriaLabel = t("agentChat.usageSummary.contextUsageButton", {
+    usage: isContextUsageUnknown
+      ? t("agentChat.usageSummary.contextUnknown", { contextWindow: contextWindowLabel })
+      : t("agentChat.usageSummary.contextKnown", {
+          contextPercent,
+          contextTokens: contextTokensLabel,
+          contextWindow: contextWindowLabel,
+        }),
+  });
   const totalSessionTokens = usageSummary.totalSessionTokens;
   const totalCostUsd = usageSummary.totalCostUsd;
-  const contextCompactLabel = t("agentChat.usageSummary.contextCompact");
-  const compactUsageLabel = `${contextCompactLabel}: ${contextSummaryLabel.slice(4)}, ${usdFormatter.format(totalCostUsd)}`;
 
-  const tooltipContent = (
+  const contextTooltipContent = (
+    <Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 0.5 }}>
+      <Typography variant="caption" sx={{ color: "inherit" }}>
+        {t("agentChat.usageSummary.currentContext")}
+      </Typography>
+      <Typography variant="caption" sx={{ color: "inherit", textAlign: "right" }}>
+        {contextTooltipLabel}
+      </Typography>
+    </Box>
+  );
+
+  const detailedUsageContent = (
     <Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 0.5 }}>
       <Typography
         variant="caption"
@@ -117,9 +142,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {contextUsage?.tokens === null
-          ? `? / ${formatDetailedTokenCount(contextWindow)} (?)`
-          : `${formatDetailedTokenCount(contextTokens)} / ${formatDetailedTokenCount(contextWindow)} (${contextPercent}%)`}
+        {contextTooltipLabel}
       </Typography>
       <Typography
         variant="caption"
@@ -264,33 +287,50 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
     </Box>
   );
 
+  const handleUsageDetailsOpen = (event: MouseEvent<HTMLElement>) => {
+    setUsageDetailsAnchor(event.currentTarget);
+  };
+  const handleUsageDetailsClose = () => {
+    setUsageDetailsAnchor(null);
+  };
+
   return (
-    <Tooltip title={tooltipContent} placement="top">
-      <Box
-        component="span"
-        aria-label={compactUsageLabel}
-        sx={{
-          fontSize: USAGE_SUMMARY_FONT_SIZE_PX,
-          lineHeight: 1.5,
-          whiteSpace: "nowrap",
-          cursor: "help",
-        }}
-      >
-        <Box component="span" sx={{ color: "text.disabled" }}>
-          {contextCompactLabel}:
-        </Box>
-        <Box
-          component="span"
-          sx={{
-            color: getUsageSummaryColor(contextUsage?.tokens === null ? 0 : (contextPercent ?? 0), theme.palette.mode),
-          }}
+    <>
+      <Tooltip describeChild title={contextTooltipContent} placement="top">
+        <IconButton
+          aria-expanded={Boolean(usageDetailsAnchor)}
+          aria-haspopup="dialog"
+          aria-label={contextAriaLabel}
+          onClick={handleUsageDetailsOpen}
+          size="small"
+          sx={{ p: 0.25 }}
         >
-          {` ${contextSummaryLabel.slice(4)}`}
-        </Box>
-        <Box component="span" sx={{ color: "text.disabled" }}>
-          {`, ${usdFormatter.format(totalCostUsd)}`}
-        </Box>
-      </Box>
-    </Tooltip>
+          <CircularProgress
+            aria-hidden
+            color="inherit"
+            data-testid="context-usage-progress"
+            enableTrackSlot
+            size={CONTEXT_PROGRESS_SIZE_PX}
+            thickness={CONTEXT_PROGRESS_THICKNESS}
+            value={contextDisplayPercent}
+            variant="determinate"
+            sx={{
+              "& .MuiCircularProgress-track": { color: "divider" },
+              color: getUsageSummaryColor(contextDisplayPercent, theme.palette.mode),
+            }}
+          />
+        </IconButton>
+      </Tooltip>
+      <Popover
+        anchorEl={usageDetailsAnchor}
+        anchorOrigin={{ horizontal: "center", vertical: "bottom" }}
+        onClose={handleUsageDetailsClose}
+        open={Boolean(usageDetailsAnchor)}
+        slotProps={{ paper: { "aria-label": t("agentChat.usageSummary.details"), role: "dialog", sx: { p: 1.5 } } }}
+        transformOrigin={{ horizontal: "center", vertical: "top" }}
+      >
+        {detailedUsageContent}
+      </Popover>
+    </>
   );
 }

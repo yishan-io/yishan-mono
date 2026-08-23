@@ -85,6 +85,10 @@
     "usageSummary": {
       "currentContext": "Current context",
       "contextCompact": "CTX",
+      "contextUsageButton": "Current context: {{usage}}. Open usage details",
+      "contextKnown": "{{contextTokens}} of {{contextWindow}} tokens ({{contextPercent}}%)",
+      "contextUnknown": "unknown of {{contextWindow}} tokens",
+      "details": "Usage details",
       "input": "Input",
       "output": "Output",
       "cacheRead": "Cache read",
