@@ -47,6 +47,7 @@ describe("registerTaskTools", () => {
     expect(properties(tools, "task_start")).not.toHaveProperty("id");
     expect(properties(tools, "task_start")).not.toHaveProperty("ticket");
     expect(properties(tools, "task_start")).not.toHaveProperty("date");
+    expect(properties(tools, "task_start").workspaceId).toMatchObject({ minLength: 1 });
     expect(properties(tools, "task_finish")).not.toHaveProperty("date");
     expect(properties(tools, "task_append_note")).not.toHaveProperty("date");
     expect(properties(tools, "task_update").status).toMatchObject({ enum: ["active", "paused"] });
@@ -76,7 +77,12 @@ describe("registerTaskTools", () => {
     const backend = createBackend();
     const tools = collectTools(backend);
 
-    await execute(tools, "task_start", { title: "New task", goal: "Ship", acceptanceCriteria: ["Verify"] });
+    await execute(tools, "task_start", {
+      title: "New task",
+      goal: "Ship",
+      acceptanceCriteria: ["Verify"],
+      workspaceId: "workspace-1",
+    });
     await execute(tools, "task_list", { status: "active" });
     await execute(tools, "task_search", { query: "task", tags: ["tag"] });
     await execute(tools, "task_read", { id: "imported/task-id" });
@@ -86,6 +92,7 @@ describe("registerTaskTools", () => {
     await execute(tools, "task_finish", { id: "imported/task-id", outcome: "Done" });
 
     expect(backend.create).toHaveBeenCalledWith(expect.objectContaining({ title: "New task", projectId: "project-a" }));
+    expect(backend.linkWorkspace).toHaveBeenCalledWith("imported/task-id", "workspace-1");
     expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: "active" });
     expect(backend.search).toHaveBeenCalledWith("task", { projectId: "project-a", tags: ["tag"] });
     expect(backend.getContextDetails).toHaveBeenCalled();
@@ -159,6 +166,7 @@ function createBackend(overrides: { getResult?: LocalTask } = {}): LocalTaskTool
     list: vi.fn().mockResolvedValue([localTask]),
     search: vi.fn().mockResolvedValue([{ ...localTask, rank: 1 } satisfies LocalTaskSearchResult]),
     update: vi.fn().mockResolvedValue({ ...localTask, status: "completed" }),
+    linkWorkspace: vi.fn(),
     getContextDetails: vi.fn().mockResolvedValue(details),
   } as LocalTaskToolBackend;
 }

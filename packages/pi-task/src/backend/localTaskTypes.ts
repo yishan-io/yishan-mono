@@ -17,6 +17,15 @@ export type LocalTask = {
 };
 /** A Local Task metadata search result. */
 export type LocalTaskSearchResult = LocalTask & { rank: number };
+/** An association between a Local Task and a local workspace. */
+export type LocalTaskWorkspaceLink = {
+  id: string;
+  localTaskId: string;
+  workspaceId: string;
+  status: LocalTaskStatus;
+  linkedAt: string;
+  unlinkedAt: string | null;
+};
 /** Derived paths for Local Task context documents. */
 export type LocalTaskContextDetails = { directory: string; planPath: string; notesPath: string; outcomePath: string };
 /** Filters supported by list and search RPCs. */
@@ -113,6 +122,27 @@ export function parseLocalTask(payload: unknown): LocalTask {
     tags: parseStringArray(record.tags, "Local Task"),
   };
 }
+/** Strictly parses a daemon Local Task workspace link. */
+export function parseLocalTaskWorkspaceLink(payload: unknown): LocalTaskWorkspaceLink {
+  const record = requireRecord(payload, "Local Task workspace link", [
+    "id",
+    "localTaskId",
+    "workspaceId",
+    "status",
+    "linkedAt",
+    "unlinkedAt",
+  ]);
+  if (typeof record.linkedAt !== "string") throw new TypeError("invalid Local Task workspace link payload");
+  return {
+    id: parseLocalTaskID(record.id),
+    localTaskId: parseLocalTaskID(record.localTaskId),
+    workspaceId: parseLocalTaskID(record.workspaceId),
+    status: parseStatus(record.status),
+    linkedAt: record.linkedAt,
+    unlinkedAt: parseNullableString(record.unlinkedAt, "Local Task workspace link"),
+  };
+}
+
 /** Strictly parses a daemon Local Task list. */
 export function parseLocalTaskList(payload: unknown): LocalTask[] {
   if (!Array.isArray(payload)) throw new TypeError("invalid Local Task list payload");

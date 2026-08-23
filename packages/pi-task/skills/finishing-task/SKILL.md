@@ -31,7 +31,7 @@ Use `task_write` for `plan`, `notes`, or `outcome`. Use `task_append_note` for t
 
 ## Complete the Task
 
-After the user explicitly directs completion, use `task_finish` with the factual outcome. The tool writes `outcome` and completes the task.
+After explicit user direction that all work is complete, perform the precondition self-checks. Then use `task_finish` with the factual outcome. Do not ask for confirmation again. The tool writes `outcome` and completes the task.
 
 ## Boundaries
 

@@ -3,6 +3,7 @@ import type {
   LocalTask,
   LocalTaskFilters,
   LocalTaskSearchResult,
+  LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../backend/localTaskTypes";
 
@@ -19,6 +20,11 @@ export type LocalTaskMetadataClient = {
     options?: LocalTaskOperationOptions,
   ): Promise<LocalTaskSearchResult[]>;
   update(id: string, input: UpdateLocalTaskInput, options?: LocalTaskOperationOptions): Promise<LocalTask>;
+  linkWorkspace(
+    taskId: string,
+    workspaceId: string,
+    options?: LocalTaskOperationOptions,
+  ): Promise<LocalTaskWorkspaceLink>;
 };
 
 /** Input accepted when starting a Local Task. */
@@ -29,6 +35,7 @@ export type StartTaskInput = {
   acceptanceCriteria?: string[];
   priority?: CreateLocalTaskInput["priority"];
   tags?: string[];
+  workspaceId?: string;
 };
 /** Optional Local Task list filters that do not control project scope. */
 export type TaskListInput = Omit<LocalTaskFilters, "projectId">;
@@ -50,6 +57,7 @@ export class LocalTaskOperations {
   /** Creates an active Local Task in the configured project, or globally when none is configured. */
   async start(input: StartTaskInput, options: LocalTaskOperationOptions = {}): Promise<LocalTask> {
     assertRuntimeTags(input.tags);
+    const workspaceId = input.workspaceId === undefined ? undefined : requireWorkspaceId(input.workspaceId);
     const createInput = {
       title: requireText(input.title, "Title"),
       description: buildDescription(input),
@@ -57,11 +65,22 @@ export class LocalTaskOperations {
       tags: input.tags,
       ...(this.projectId === undefined ? {} : { projectId: this.projectId }),
     };
-    const task =
+    const task = this.assertInScope(
       options.signal === undefined
         ? await this.client.create(createInput)
-        : await this.client.create(createInput, options);
-    return this.assertInScope(task);
+        : await this.client.create(createInput, options),
+    );
+    if (workspaceId !== undefined) {
+      try {
+        if (options.signal === undefined) await this.client.linkWorkspace(task.id, workspaceId);
+        else await this.client.linkWorkspace(task.id, workspaceId, options);
+      } catch (error) {
+        throw new Error(`Task ${task.id} was created but could not be linked to requested workspace ${workspaceId}.`, {
+          cause: error,
+        });
+      }
+    }
+    return task;
   }
 
   /** Lists metadata tasks within the configured project or the global-only scope. */
@@ -183,6 +202,11 @@ function assertRuntimeUpdateStatus(status: UpdateTaskInput["status"]): void {
 function requireTaskId(id: string): string {
   if (typeof id !== "string" || id.length === 0) throw new Error("Task ID must not be empty.");
   return id;
+}
+
+function requireWorkspaceId(workspaceId: string): string {
+  if (typeof workspaceId !== "string" || workspaceId.length === 0) throw new Error("Workspace ID must not be empty.");
+  return workspaceId;
 }
 
 function requireText(value: string, name: string): string {

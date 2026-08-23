@@ -31,6 +31,35 @@ describe("LocalTaskOperations", () => {
     );
   });
 
+  it("links a newly created task to its requested workspace", async () => {
+    const client = createClient({ create: projectTask });
+    const operations = createLocalTaskOperations(client, "project-a");
+
+    await expect(operations.start({ title: "Task", workspaceId: "workspace-1" })).resolves.toEqual(projectTask);
+    expect(client.linkWorkspace).toHaveBeenCalledWith("imported/task-id", "workspace-1");
+  });
+
+  it("reports the created task and requested workspace when workspace linking fails", async () => {
+    const client = createClient({ create: projectTask });
+    const operations = createLocalTaskOperations(client, "project-a");
+    const linkError = new Error("Workspace is unavailable.");
+    client.linkWorkspace.mockRejectedValueOnce(linkError);
+
+    let error: unknown;
+    try {
+      await operations.start({ title: "Task", workspaceId: "workspace-1" });
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    expect(client.create).toHaveBeenCalledOnce();
+    expect(client.linkWorkspace).toHaveBeenCalledWith("imported/task-id", "workspace-1");
+    expect(error).toMatchObject({
+      message: "Task imported/task-id was created but could not be linked to requested workspace workspace-1.",
+      cause: linkError,
+    });
+  });
+
   it("uses daemon-generated and imported opaque IDs without imposing an ID pattern", async () => {
     const client = createClient({ get: projectTask });
     const operations = createLocalTaskOperations(client, "project-a");
@@ -186,6 +215,7 @@ function createClient(
     list: vi.fn().mockResolvedValue(overrides.list ?? []),
     search: vi.fn().mockResolvedValue(overrides.search ?? []),
     update: vi.fn().mockResolvedValue(overrides.update ?? globalTask),
+    linkWorkspace: vi.fn(),
   };
 }
 
