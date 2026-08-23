@@ -28,7 +28,7 @@
   "more.title": "Everything else you need",
   "more.desc": "",
 
-  "more.0.title": "Automation",
+  "more.0.title": "Scheduled Jobs",
   "more.0.desc": "Schedule recurring agent jobs on a cadence — code reviews, health checks, weekly summaries — running automatically while you focus elsewhere.",
 
   "more.1.title": "PR visibility",
