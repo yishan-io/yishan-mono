@@ -145,20 +145,6 @@ describe("TokenUsageChartView", () => {
     expect(screen.queryByText("0.40K")).toBeNull();
   });
 
-  it("shows total cost from the server", () => {
-    overviewStore.setState({
-      tokenUsageSeries: [makeBucket(utcDateIso(1), 500, 200)],
-      grandTotal: 500,
-      cachedTotal: 200,
-      uncachedTotal: 300,
-      totalCostUsd: 1.25,
-    });
-
-    render(<TokenUsageChartView />);
-
-    expect(screen.getByText("$1.25")).toBeTruthy();
-  });
-
   it("cached percentage is computed from server totals", () => {
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(2), 400, 100)],

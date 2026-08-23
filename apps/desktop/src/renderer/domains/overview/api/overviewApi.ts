@@ -1,10 +1,5 @@
 import { requestJson } from "@renderer/api/restClient";
-import type {
-  AgentKindBreakdownItem,
-  ModelBreakdownItem,
-  OverviewTokenUsageResponse,
-  WorkspaceInsightsResult,
-} from "./overviewApi.types";
+import type { ModelBreakdownItem, OverviewTokenUsageResponse, WorkspaceInsightsResult } from "./overviewApi.types";
 
 type OverviewQueryInput = { range: string; projectId?: string };
 type TokenUsageQueryInput = OverviewQueryInput & { granularity?: string };
@@ -34,15 +29,6 @@ export async function getOverviewModelBreakdown(
 ): Promise<{ models: ModelBreakdownItem[] }> {
   return requestJson<{ models: ModelBreakdownItem[] }>(
     `/orgs/${orgId}/overview/model-breakdown?${overviewQueryString(input)}`,
-  );
-}
-
-export async function getOverviewAgentKindBreakdown(
-  orgId: string,
-  input: OverviewQueryInput,
-): Promise<{ agentKinds: AgentKindBreakdownItem[] }> {
-  return requestJson<{ agentKinds: AgentKindBreakdownItem[] }>(
-    `/orgs/${orgId}/overview/agent-kind-breakdown?${overviewQueryString(input)}`,
   );
 }
 

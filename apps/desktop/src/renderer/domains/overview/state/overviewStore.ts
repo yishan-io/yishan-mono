@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type {
-  AgentKindBreakdownItem,
   ModelBreakdownItem,
   OverviewTimeRange,
   TokenUsageSeriesItem,
@@ -30,10 +29,6 @@ type OverviewStoreState = {
   modelBreakdownLoadState: LoadState;
   modelBreakdownLoadError: string | null;
 
-  agentKindBreakdown: AgentKindBreakdownItem[];
-  agentKindBreakdownLoadState: LoadState;
-  agentKindBreakdownLoadError: string | null;
-
   workspaceInsights: WorkspaceInsightsResult | null;
   workspaceInsightsLoadState: LoadState;
   workspaceInsightsLoadError: string | null;
@@ -56,9 +51,6 @@ type OverviewStoreState = {
 
   setModelBreakdown: (models: ModelBreakdownItem[]) => void;
   setModelBreakdownLoadState: (state: LoadState, error?: string | null) => void;
-
-  setAgentKindBreakdown: (agentKinds: AgentKindBreakdownItem[]) => void;
-  setAgentKindBreakdownLoadState: (state: LoadState, error?: string | null) => void;
 
   setWorkspaceInsights: (insights: WorkspaceInsightsResult) => void;
   setWorkspaceInsightsLoadState: (state: LoadState, error?: string | null) => void;
@@ -84,10 +76,6 @@ export const overviewStore = create<OverviewStoreState>()(
     modelBreakdown: [],
     modelBreakdownLoadState: "idle",
     modelBreakdownLoadError: null,
-
-    agentKindBreakdown: [],
-    agentKindBreakdownLoadState: "idle",
-    agentKindBreakdownLoadError: null,
 
     workspaceInsights: null,
     workspaceInsightsLoadState: "idle",
@@ -131,12 +119,6 @@ export const overviewStore = create<OverviewStoreState>()(
     },
     setModelBreakdownLoadState: (modelBreakdownLoadState, modelBreakdownLoadError = null) => {
       set({ modelBreakdownLoadState, modelBreakdownLoadError });
-    },
-    setAgentKindBreakdown: (agentKindBreakdown) => {
-      set({ agentKindBreakdown });
-    },
-    setAgentKindBreakdownLoadState: (agentKindBreakdownLoadState, agentKindBreakdownLoadError = null) => {
-      set({ agentKindBreakdownLoadState, agentKindBreakdownLoadError });
     },
     setWorkspaceInsights: (workspaceInsights) => {
       set({ workspaceInsights });

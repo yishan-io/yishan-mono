@@ -2,12 +2,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { overviewStore } from "../../../domains/overview/state/overviewStore";
 
 import { sessionStore } from "@renderer/domains/session";
-import {
-  getOverviewAgentKindBreakdown,
-  getOverviewModelBreakdown,
-  getOverviewTokenUsage,
-  getOverviewWorkspaceInsights,
-} from "../api/overviewApi";
+import { getOverviewModelBreakdown, getOverviewTokenUsage, getOverviewWorkspaceInsights } from "../api/overviewApi";
 import type { OverviewTimeRange } from "../overviewTypes";
 
 function selectedOrganizationId(): string {
@@ -62,22 +57,6 @@ export async function refreshOverviewModelBreakdown(): Promise<void> {
   }
 }
 
-export async function refreshOverviewAgentKindBreakdown(): Promise<void> {
-  const { timeRange, selectedProjectId } = overviewStore.getState();
-  overviewStore.getState().setAgentKindBreakdownLoadState("loading");
-
-  try {
-    const result = await getOverviewAgentKindBreakdown(selectedOrganizationId(), {
-      range: timeRange,
-      projectId: selectedProjectId || undefined,
-    });
-    overviewStore.getState().setAgentKindBreakdown(result.agentKinds);
-    overviewStore.getState().setAgentKindBreakdownLoadState("loaded");
-  } catch (error) {
-    overviewStore.getState().setAgentKindBreakdownLoadState("error", getErrorMessage(error));
-  }
-}
-
 export async function refreshOverviewWorkspaceInsights(): Promise<void> {
   const { timeRange, selectedProjectId } = overviewStore.getState();
   overviewStore.getState().setWorkspaceInsightsLoadState("loading");
@@ -95,12 +74,7 @@ export async function refreshOverviewWorkspaceInsights(): Promise<void> {
 }
 
 export async function loadAllOverviewData(): Promise<void> {
-  await Promise.all([
-    refreshOverviewTokenUsage(),
-    refreshOverviewModelBreakdown(),
-    refreshOverviewAgentKindBreakdown(),
-    refreshOverviewWorkspaceInsights(),
-  ]);
+  await Promise.all([refreshOverviewTokenUsage(), refreshOverviewModelBreakdown(), refreshOverviewWorkspaceInsights()]);
 }
 
 export function setOverviewTimeRange(range: OverviewTimeRange): void {
