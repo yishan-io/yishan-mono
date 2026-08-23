@@ -48,27 +48,31 @@ export function resolveDaemonWsUrlFromHealthUrl(healthUrl: string): string {
     return "";
   }
 }
-/** Resolves health URL from explicit health, explicit websocket, then persisted state. */
+/** Resolves health URL from persisted state in development, otherwise explicit overrides then persisted state. */
 export async function resolveDaemonHealthUrl(): Promise<string> {
-  const health = process.env.YISHAN_DAEMON_HEALTH_URL?.trim();
-  if (health) return health;
-  const ws = process.env.YISHAN_DAEMON_WS_URL?.trim();
-  if (ws)
-    try {
-      const url = new URL(ws);
-      return `${url.protocol === "wss:" ? "https:" : "http:"}//${url.host}/healthz`;
-    } catch {}
+  if (!isDevMode()) {
+    const health = process.env.YISHAN_DAEMON_HEALTH_URL?.trim();
+    if (health) return health;
+    const ws = process.env.YISHAN_DAEMON_WS_URL?.trim();
+    if (ws)
+      try {
+        const url = new URL(ws);
+        return `${url.protocol === "wss:" ? "https:" : "http:"}//${url.host}/healthz`;
+      } catch {}
+  }
   const state = await readState();
   return `http://${state.host}:${state.port}/healthz`;
 }
-/** Resolves WebSocket URL from explicit websocket, health, then persisted state. */
+/** Resolves WebSocket URL from persisted state in development, otherwise explicit overrides then persisted state. */
 export async function resolveDaemonWebSocketUrl(): Promise<string> {
-  const ws = process.env.YISHAN_DAEMON_WS_URL?.trim();
-  if (ws) return ws;
-  const health = process.env.YISHAN_DAEMON_HEALTH_URL?.trim();
-  if (health) {
-    const inferred = resolveDaemonWsUrlFromHealthUrl(health);
-    if (inferred) return inferred;
+  if (!isDevMode()) {
+    const ws = process.env.YISHAN_DAEMON_WS_URL?.trim();
+    if (ws) return ws;
+    const health = process.env.YISHAN_DAEMON_HEALTH_URL?.trim();
+    if (health) {
+      const inferred = resolveDaemonWsUrlFromHealthUrl(health);
+      if (inferred) return inferred;
+    }
   }
   const state = await readState();
   return `ws://${state.host}:${state.port}/ws`;
