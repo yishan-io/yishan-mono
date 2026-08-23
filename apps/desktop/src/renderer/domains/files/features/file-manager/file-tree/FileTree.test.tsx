@@ -119,6 +119,46 @@ describe("FileTree", () => {
     });
   });
 
+  it("does not persist unchanged controlled expansion for an unloaded selection request", async () => {
+    const onExpandedItemsChange = vi.fn();
+
+    render(
+      <FileTree
+        files={[]}
+        expandedItems={["src"]}
+        selectionRequest={{ path: "src/pending.ts", requestId: 1 }}
+        onExpandedItemsChange={onExpandedItemsChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onExpandedItemsChange).not.toHaveBeenCalled();
+    });
+  });
+
+  it("applies a pending selection request after its tree row loads", async () => {
+    const onCopyEntry = vi.fn().mockResolvedValue(undefined);
+    const selectionRequest = { path: "src/pending.ts", requestId: 1 };
+    const rendered = render(
+      <FileTree files={[]} expandedItems={["src"]} selectionRequest={selectionRequest} onCopyEntry={onCopyEntry} />,
+    );
+
+    rendered.rerender(
+      <FileTree
+        files={["src/pending.ts"]}
+        expandedItems={["src"]}
+        selectionRequest={selectionRequest}
+        onCopyEntry={onCopyEntry}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByTestId("repo-file-tree-area"), { key: "c", metaKey: true });
+
+    await waitFor(() => {
+      expect(onCopyEntry).toHaveBeenCalledWith("src/pending.ts");
+    });
+  });
+
   it("applies external selection request and focuses tree area for keyboard copy", async () => {
     const onCopyEntry = vi.fn().mockResolvedValue(undefined);
 
