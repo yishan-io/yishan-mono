@@ -366,7 +366,7 @@ function getLastAssistantTimestampMs(items: TurnItem[]): number | null {
   return null;
 }
 
-/** Formats a worked duration like "worked 3s" or "worked 1m 5s". */
+/** Formats a worked duration like "worked 3s", "worked 1m 5s", or "worked 1H5M". */
 export function formatTurnDuration(durationMs: number): string {
   const roundedMs = Math.round(durationMs);
   if (roundedMs < 1000) {
@@ -377,6 +377,9 @@ export function formatTurnDuration(durationMs: number): string {
     return `${seconds}s`;
   }
   const minutes = Math.floor(seconds / 60);
+  if (minutes >= 60) {
+    return `${Math.floor(minutes / 60)}H${minutes % 60}M`;
+  }
   const remainingSeconds = seconds % 60;
   return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
 }

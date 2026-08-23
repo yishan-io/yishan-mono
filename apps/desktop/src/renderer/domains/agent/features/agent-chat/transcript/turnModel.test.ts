@@ -918,4 +918,9 @@ describe("formatTurnDuration", () => {
     expect(formatTurnDuration(65_000)).toBe("1m 5s");
     expect(formatTurnDuration(120_000)).toBe("2m");
   });
+
+  it("formats one hour or more as hours and minutes", () => {
+    expect(formatTurnDuration(60 * 60_000)).toBe("1H0M");
+    expect(formatTurnDuration(65 * 60_000)).toBe("1H5M");
+  });
 });
