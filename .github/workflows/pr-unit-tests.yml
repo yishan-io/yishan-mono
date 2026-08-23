@@ -28,14 +28,6 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            all_bun:
-              - 'package.json'
-              - 'bun.lock'
-              - '.bunfig.toml'
-              - 'tsconfig.json'
-              - 'tsconfig.*.json'
-              - 'biome.json'
-              - '.github/workflows/pr-unit-tests.yml'
             root_bun:
               - 'install.sh'
               - 'install.test.ts'
@@ -63,21 +55,18 @@ jobs:
               - 'packages/pi-ask/**'
             pi_lsp:
               - 'packages/pi-lsp/**'
+            pi_codegraph:
+              - 'packages/pi-codegraph/**'
             core:
               - 'packages/core/**'
             cli:
               - 'apps/cli/**'
-              - 'packages/relay-protocol-go/**'
-              - '.github/workflows/pr-unit-tests.yml'
             relay:
               - 'apps/relay/**'
-              - 'packages/relay-protocol-go/**'
-              - '.github/workflows/pr-unit-tests.yml'
 
       - name: Build test matrix
         id: build-matrix
         env:
-          ALL_BUN_CHANGED: ${{ steps.changes.outputs.all_bun }}
           ROOT_BUN_CHANGED: ${{ steps.changes.outputs.root_bun }}
           API_SERVICE_CHANGED: ${{ steps.changes.outputs.api_service }}
           DESKTOP_CHANGED: ${{ steps.changes.outputs.desktop }}
@@ -90,6 +79,7 @@ jobs:
           PI_WORKSPACE_CHANGED: ${{ steps.changes.outputs.pi_workspace }}
           PI_ASK_CHANGED: ${{ steps.changes.outputs.pi_ask }}
           PI_LSP_CHANGED: ${{ steps.changes.outputs.pi_lsp }}
+          PI_CODEGRAPH_CHANGED: ${{ steps.changes.outputs.pi_codegraph }}
           CORE_CHANGED: ${{ steps.changes.outputs.core }}
           CLI_CHANGED: ${{ steps.changes.outputs.cli }}
           RELAY_CHANGED: ${{ steps.changes.outputs.relay }}
@@ -108,16 +98,15 @@ jobs:
             });
           };
 
-          if (has('ALL_BUN_CHANGED') || has('ROOT_BUN_CHANGED')) {
+          if (has('ROOT_BUN_CHANGED')) {
             addTarget('repo-root', '.', 'bunx vitest run install.test.ts scripts/materialIconTheme.test.ts');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('API_SERVICE_CHANGED') || has('CORE_CHANGED')) {
+          if (has('API_SERVICE_CHANGED')) {
             addTarget('api-service', 'apps/api-service', 'bun run test');
           }
 
           if (
-            has('ALL_BUN_CHANGED') ||
             has('DESKTOP_CHANGED') ||
             has('CORE_CHANGED') ||
             has('DESIGN_TOKENS_CHANGED') ||
@@ -126,40 +115,44 @@ jobs:
             addTarget('desktop', 'apps/desktop', 'bunx vitest run');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('DESIGN_TOKENS_CHANGED')) {
+          if (has('DESIGN_TOKENS_CHANGED')) {
             addTarget('design-tokens', 'packages/design-tokens', 'bun run test');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_MEMORY_CHANGED')) {
+          if (has('PI_MEMORY_CHANGED')) {
             addTarget('pi-memory', 'packages/pi-memory', 'bun run test');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_TASK_CHANGED')) {
+          if (has('PI_TASK_CHANGED')) {
             addTarget('pi-task', 'packages/pi-task', 'bun run test');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_DEV_FLOW_CHANGED')) {
+          if (has('PI_DEV_FLOW_CHANGED')) {
             addTarget('pi-dev-flow', 'packages/pi-dev-flow', 'npm pack --dry-run');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_NOTIFY_CHANGED')) {
+          if (has('PI_NOTIFY_CHANGED')) {
             addTarget('pi-notify', 'packages/pi-notify', 'bun run test');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_SUBAGENTS_CHANGED')) {
+          if (has('PI_SUBAGENTS_CHANGED')) {
             addTarget('pi-subagents', 'packages/pi-subagents', 'bun run test');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_WORKSPACE_CHANGED')) {
+          if (has('PI_WORKSPACE_CHANGED')) {
             addTarget('pi-workspace', 'packages/pi-workspace', 'bun run test');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_ASK_CHANGED')) {
+          if (has('PI_ASK_CHANGED')) {
             addTarget('pi-ask', 'packages/pi-ask', 'bun run test');
           }
 
-          if (has('ALL_BUN_CHANGED') || has('PI_LSP_CHANGED')) {
+          if (has('PI_LSP_CHANGED')) {
             addTarget('pi-lsp', 'packages/pi-lsp', 'bun run test');
+          }
+
+          if (has('PI_CODEGRAPH_CHANGED')) {
+            addTarget('pi-codegraph', 'packages/pi-codegraph', 'bun run test');
           }
 
           const outputs = [
