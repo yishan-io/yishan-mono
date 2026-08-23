@@ -315,7 +315,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
             value={contextDisplayPercent}
             variant="determinate"
             sx={{
-              "& .MuiCircularProgress-track": { color: "text.secondary", opacity: 1 },
+              "& .MuiCircularProgress-track": { color: "divider", opacity: 1 },
               color: getUsageSummaryColor(contextDisplayPercent, theme.palette.mode),
             }}
           />
