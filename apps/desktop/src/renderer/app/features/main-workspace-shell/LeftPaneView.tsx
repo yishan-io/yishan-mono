@@ -13,7 +13,7 @@ import { PaneToggleButton } from "@renderer/domains/workbench";
 import { getRendererPlatform } from "@renderer/platform/platform";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChartBar, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
+import { LuChartBar, LuClock3, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw } from "react-icons/lu";
 import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFlow";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { AppMenuView } from "../app-menu/AppMenuView";
@@ -178,7 +178,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       </Button>
       <Button
         variant="text"
-        startIcon={<LuZap size={14} />}
+        startIcon={<LuClock3 size={14} />}
         onClick={handleToggleScheduledJobs}
         aria-label={t("scheduledJob.title")}
         aria-pressed={isScheduledJobPanelOpen}
