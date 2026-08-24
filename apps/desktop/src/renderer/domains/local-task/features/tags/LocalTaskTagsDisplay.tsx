@@ -1,21 +1,30 @@
 import { Box, Chip } from "@mui/material";
-import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../../localTaskTypes";
 import { LocalTaskTagChip } from "./LocalTaskTagChip";
 
 type LocalTaskTagsDisplayProps = {
-  tags: string[];
+  tagRefs?: LocalTaskTagRef[];
+  /** @deprecated Compatibility input for pre-ID callers. */
+  tags?: string[];
   maxVisible?: number;
   dense?: boolean;
   tagCatalog?: LocalTaskTagCatalogEntry[];
 };
 
 /** Renders Local Task tags as outlined chips, optionally with an overflow count. */
-export function LocalTaskTagsDisplay({ tags, maxVisible, dense = false, tagCatalog = [] }: LocalTaskTagsDisplayProps) {
+export function LocalTaskTagsDisplay({
+  tagRefs,
+  tags,
+  maxVisible,
+  dense = false,
+  tagCatalog = [],
+}: LocalTaskTagsDisplayProps) {
+  const displayTagRefs = tagRefs ?? (tags ?? []).map((name) => ({ id: name, name }));
   const isCompact = maxVisible !== undefined;
-  const visibleTags = isCompact ? tags.slice(0, maxVisible) : tags;
-  const remainingCount = isCompact ? Math.max(0, tags.length - maxVisible) : 0;
+  const visibleTags = isCompact ? displayTagRefs.slice(0, maxVisible) : displayTagRefs;
+  const remainingCount = isCompact ? Math.max(0, displayTagRefs.length - maxVisible) : 0;
 
-  if (tags.length === 0) return null;
+  if (displayTagRefs.length === 0) return null;
   return (
     <Box
       sx={{
@@ -29,7 +38,7 @@ export function LocalTaskTagsDisplay({ tags, maxVisible, dense = false, tagCatal
     >
       <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
         {visibleTags.map((tag) => (
-          <LocalTaskTagChip key={tag} tag={tag} tagCatalog={tagCatalog} dense={dense} />
+          <LocalTaskTagChip key={tag.id} tag={tag} tagCatalog={tagCatalog} dense={dense} />
         ))}
       </Box>
       {remainingCount > 0 ? (

@@ -9,7 +9,14 @@ import { getLocalTaskTagColor } from "./localTaskTagColorPresets";
 describe("Local Task tag catalog aliases", () => {
   it("maps exact daemon-provided display aliases without client-side folding", () => {
     const catalog = [
-      { key: "strasse", name: "Straße", aliases: ["STRASSE", "Straße"], color: "purple" as const, customColor: null },
+      {
+        id: "tag-fixture",
+        key: "strasse",
+        name: "Straße",
+        aliases: ["STRASSE", "Straße"],
+        color: "purple" as const,
+        customColor: null,
+      },
     ];
 
     expect(getLocalTaskTagColor("STRASSE", catalog)).toBe("purple");
@@ -39,6 +46,7 @@ describe("getLocalTaskTagChipSx", () => {
         tag="A complete tag name"
         tagCatalog={[
           {
+            id: "tag-fixture",
             key: "tag",
             name: "A complete tag name",
             aliases: ["A complete tag name"],

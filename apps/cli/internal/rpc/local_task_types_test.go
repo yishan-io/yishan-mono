@@ -43,13 +43,13 @@ func TestLocalTaskWirePayloads_MatchDesktopContract(t *testing.T) {
 	}{
 		{
 			name:     "task with tags",
-			value:    localtask.Task{ID: "task-1", ProjectID: &projectID, Title: "Imported", Description: "Legacy metadata", Status: localtask.StatusCompleted, Priority: localtask.PriorityMedium, CreatedAt: "2026-08-24", UpdatedAt: "2026-08-26", CompletedAt: &completedAt, Tags: []string{"first", "second"}},
-			expected: `{"id":"task-1","projectId":"project-1","title":"Imported","description":"Legacy metadata","status":"completed","priority":"medium","createdAt":"2026-08-24","updatedAt":"2026-08-26","completedAt":"2026-08-25","tags":["first","second"]}`,
+			value:    localtask.Task{ID: "task-1", ProjectID: &projectID, Title: "Imported", Description: "Legacy metadata", Status: localtask.StatusCompleted, Priority: localtask.PriorityMedium, CreatedAt: "2026-08-24", UpdatedAt: "2026-08-26", CompletedAt: &completedAt, Tags: []string{"first", "second"}, TagRefs: []localtask.TagRef{}},
+			expected: `{"id":"task-1","projectId":"project-1","title":"Imported","description":"Legacy metadata","status":"completed","priority":"medium","createdAt":"2026-08-24","updatedAt":"2026-08-26","completedAt":"2026-08-25","tags":["first","second"],"tagRefs":[]}`,
 		},
 		{
 			name:     "task without tags",
-			value:    localtask.Task{ID: "task-2", Title: "Empty", Status: localtask.StatusActive, Priority: localtask.PriorityMedium, Tags: []string{}},
-			expected: `{"id":"task-2","projectId":null,"title":"Empty","description":"","status":"active","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[]}`,
+			value:    localtask.Task{ID: "task-2", Title: "Empty", Status: localtask.StatusActive, Priority: localtask.PriorityMedium, Tags: []string{}, TagRefs: []localtask.TagRef{}},
+			expected: `{"id":"task-2","projectId":null,"title":"Empty","description":"","status":"active","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[],"tagRefs":[]}`,
 		},
 		{
 			name:     "workspace link",
@@ -80,7 +80,7 @@ func TestLocalTaskTagParams_PreserveExplicitEmptyUpdate(t *testing.T) {
 	}
 
 	var update LocalTaskUpdateParams
-	if err := json.Unmarshal([]byte(`{"id":"task-1","tags":[]}`), &update); err != nil {
+	if err := json.Unmarshal([]byte(`{"id":"task-1","tags":[],"tagRefs":[]}`), &update); err != nil {
 		t.Fatal(err)
 	}
 	if update.Tags == nil || len(*update.Tags) != 0 {

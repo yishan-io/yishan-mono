@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEllipsis, LuLink, LuPlus, LuRefreshCw } from "react-icons/lu";
 import {
+  createLocalTaskTag,
   loadLocalTask,
   loadLocalTaskContext,
   loadLocalTaskTagSuggestions,
@@ -22,7 +23,6 @@ import {
   refreshSelectedWorkspaceTasks,
   selectWorkspaceLocalTask,
   updateLocalTask,
-  updateLocalTaskTagColor,
 } from "../../commands/localTaskCommands";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "../task-hub/CreateLocalTaskDialog";
@@ -48,7 +48,6 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
   const contextByTaskId = localTaskStore((state) => state.contextByTaskId);
   const contextLoadStateByTaskId = localTaskStore((state) => state.contextLoadStateByTaskId);
   const contextErrorByTaskId = localTaskStore((state) => state.contextErrorByTaskId);
-  const tagSuggestions = localTaskStore((state) => state.tagSuggestions);
   const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -180,9 +179,8 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               contextLoadState={contextLoadStateByTaskId[selectedTask.id] ?? "idle"}
               contextError={contextErrorByTaskId[selectedTask.id] ?? null}
               isMutationLoading={isMutationLoading}
-              onTagsChange={(tags) => updateLocalTask(selectedTask.id, { tags })}
-              onTagColorChange={updateLocalTaskTagColor}
-              tagSuggestions={tagSuggestions}
+              onTagIdsChange={(tagIds) => updateLocalTask(selectedTask.id, { tagIds })}
+              onCreateTag={createLocalTaskTag}
               tagCatalog={tagCatalog}
             />
           ) : taskLoadStateByTaskId[detailTaskId] === "error" ? (

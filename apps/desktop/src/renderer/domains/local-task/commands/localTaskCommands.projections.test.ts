@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as daemon from "../daemon/localTaskDaemonClient";
 import type { LocalTask, LocalTaskWorkspaceLink } from "../localTaskTypes";
 import { localTaskStore } from "../state/localTaskStore";
-import { loadLocalTask, loadLocalTaskLinkCandidates } from "./localTaskCommands";
+import {
+  deleteLocalTaskTag,
+  loadLocalTask,
+  loadLocalTaskLinkCandidates,
+  renameLocalTaskTag,
+} from "./localTaskCommands";
 
 vi.mock("../daemon/localTaskDaemonClient", () => ({
   createLocalTask: vi.fn(),
@@ -17,6 +22,11 @@ vi.mock("../daemon/localTaskDaemonClient", () => ({
   listLocalTaskWorkspaceLinks: vi.fn(),
   listLocalTaskLinks: vi.fn(),
   listLocalTaskTags: vi.fn(),
+  listLocalTaskTagCatalog: vi.fn(),
+  renameLocalTaskTag: vi.fn(),
+  deleteLocalTaskTag: vi.fn(),
+  createLocalTaskTag: vi.fn(),
+  updateLocalTaskTagColor: vi.fn(),
 }));
 
 const initialState = localTaskStore.getState();
@@ -31,6 +41,7 @@ const task: LocalTask = {
   updatedAt: "updated",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 const link: LocalTaskWorkspaceLink = {
   id: "link-1",
@@ -130,5 +141,85 @@ describe("localTaskCommands projections and detail loading", () => {
     delayedTask.resolve(task);
     await Promise.all([mountedLoad, hiddenStateLoad, unrelatedLoad]);
     expect(daemon.getLocalTask).toHaveBeenCalledTimes(1);
+  });
+  it("reconciles a merged tag across cached projections without reloading global task data", async () => {
+    const canonicalTag = {
+      id: "tag-canonical",
+      key: "canonical",
+      name: "Canonical",
+      aliases: ["Canonical"],
+      color: null,
+      customColor: null,
+    };
+    vi.mocked(daemon.renameLocalTaskTag).mockResolvedValue({ tag: canonicalTag, removedTagId: "tag-merged" });
+    localTaskStore.setState({
+      tagCatalog: [
+        { id: "tag-merged", key: "merged", name: "Merged", aliases: ["Merged"], color: null, customColor: null },
+        canonicalTag,
+      ],
+      taskById: { [task.id]: { ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] } },
+      hubTasks: [{ ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] }],
+      hubFilters: { tagIds: ["tag-merged", "tag-other", "tag-canonical"] },
+      workspaceTasks: [{ ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] }],
+      linkCandidateTasks: [{ ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] }],
+    });
+
+    await expect(renameLocalTaskTag("tag-merged", "Canonical")).resolves.toMatchObject({ removedTagId: "tag-merged" });
+
+    const state = localTaskStore.getState();
+    expect(state.tagCatalog).toEqual([canonicalTag]);
+    expect(state.hubFilters).toEqual({ tagIds: ["tag-canonical", "tag-other"] });
+    for (const cachedTask of [
+      state.taskById[task.id],
+      state.hubTasks[0],
+      state.workspaceTasks[0],
+      state.linkCandidateTasks[0],
+    ]) {
+      expect(cachedTask?.tagRefs).toEqual([{ id: "tag-canonical", name: "Canonical" }]);
+    }
+    expect(daemon.listLocalTaskTagCatalog).not.toHaveBeenCalled();
+    expect(daemon.listLocalTasks).not.toHaveBeenCalled();
+    expect(daemon.searchLocalTasks).not.toHaveBeenCalled();
+    expect(daemon.listLocalTaskWorkspaceLinks).not.toHaveBeenCalled();
+    expect(daemon.getLocalTask).not.toHaveBeenCalled();
+  });
+
+  it("reconciles a deleted tag across cached projections without reloading global task data", async () => {
+    const deletedTag = {
+      id: "tag-deleted",
+      key: "deleted",
+      name: "Deleted",
+      aliases: ["Deleted"],
+      color: null,
+      customColor: null,
+    };
+    vi.mocked(daemon.deleteLocalTaskTag).mockResolvedValue(undefined);
+    localTaskStore.setState({
+      tagCatalog: [deletedTag],
+      taskById: { [task.id]: { ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] } },
+      hubTasks: [{ ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] }],
+      hubFilters: { tagIds: ["tag-deleted", "tag-other"] },
+      workspaceTasks: [{ ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] }],
+      linkCandidateTasks: [{ ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] }],
+    });
+
+    await deleteLocalTaskTag("tag-deleted");
+
+    const state = localTaskStore.getState();
+    expect(state.tagCatalog).toEqual([]);
+    expect(state.hubFilters).toEqual({ tagIds: ["tag-other"] });
+    for (const cachedTask of [
+      state.taskById[task.id],
+      state.hubTasks[0],
+      state.workspaceTasks[0],
+      state.linkCandidateTasks[0],
+    ]) {
+      expect(cachedTask?.tagRefs).toEqual([]);
+    }
+    expect(daemon.listLocalTaskTagCatalog).not.toHaveBeenCalled();
+    expect(daemon.listLocalTasks).not.toHaveBeenCalled();
+    expect(daemon.searchLocalTasks).not.toHaveBeenCalled();
+    expect(daemon.listLocalTaskWorkspaceLinks).not.toHaveBeenCalled();
+    expect(daemon.getLocalTask).not.toHaveBeenCalled();
   });
 });

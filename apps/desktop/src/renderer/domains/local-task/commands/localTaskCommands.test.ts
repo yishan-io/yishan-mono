@@ -59,6 +59,7 @@ const task: LocalTask = {
   updatedAt: "updated",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 const link: LocalTaskWorkspaceLink = {
   id: "link-1",
@@ -77,8 +78,8 @@ afterEach(() => {
 describe("localTaskCommands", () => {
   it("loads tag suggestions into store-owned state and retains errors", async () => {
     vi.mocked(daemon.listLocalTaskTagCatalog).mockResolvedValue([
-      { key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
-      { key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+      { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
+      { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
     ]);
 
     await loadLocalTaskTagSuggestions();
@@ -86,8 +87,8 @@ describe("localTaskCommands", () => {
     expect(daemon.listLocalTaskTagCatalog).toHaveBeenCalledWith();
     expect(localTaskStore.getState()).toMatchObject({
       tagCatalog: [
-        { key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
-        { key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+        { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
+        { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
       ],
       tagSuggestions: ["Desktop", "CLI"],
       tagSuggestionsLoadState: "loaded",
@@ -99,8 +100,8 @@ describe("localTaskCommands", () => {
 
     expect(localTaskStore.getState()).toMatchObject({
       tagCatalog: [
-        { key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
-        { key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+        { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
+        { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
       ],
       tagSuggestions: ["Desktop", "CLI"],
       tagSuggestionsLoadState: "error",
@@ -214,7 +215,14 @@ describe("localTaskCommands", () => {
   });
 
   it("updates the global tag catalog after setting a color", async () => {
-    const coloredTag = { key: "backend", name: "Backend", aliases: ["Backend"], color: "blue" as const, customColor: null };
+    const coloredTag = {
+      id: "tag-fixture",
+      key: "backend",
+      name: "Backend",
+      aliases: ["Backend"],
+      color: "blue" as const,
+      customColor: null,
+    };
     vi.mocked(daemon.updateLocalTaskTagColor).mockResolvedValue(coloredTag);
     vi.mocked(daemon.listLocalTaskTagCatalog).mockResolvedValue([coloredTag]);
 
@@ -226,7 +234,14 @@ describe("localTaskCommands", () => {
   });
 
   it("treats the color update as successful when the catalog reload fails", async () => {
-    const coloredTag = { key: "backend", name: "Backend", aliases: ["Backend"], color: "blue" as const, customColor: null };
+    const coloredTag = {
+      id: "tag-fixture",
+      key: "backend",
+      name: "Backend",
+      aliases: ["Backend"],
+      color: "blue" as const,
+      customColor: null,
+    };
     localTaskStore.setState({
       tagCatalog: [{ ...coloredTag, color: "red", customColor: null }],
       tagSuggestions: ["Backend"],
@@ -245,7 +260,16 @@ describe("localTaskCommands", () => {
   });
 
   it("keeps the catalog unchanged when clearing a color fails", async () => {
-    const existingCatalog = [{ key: "backend", name: "Backend", aliases: ["Backend"], color: "red" as const, customColor: null }];
+    const existingCatalog = [
+      {
+        id: "tag-fixture",
+        key: "backend",
+        name: "Backend",
+        aliases: ["Backend"],
+        color: "red" as const,
+        customColor: null,
+      },
+    ];
     localTaskStore.setState({ tagCatalog: existingCatalog });
     vi.mocked(daemon.updateLocalTaskTagColor).mockRejectedValue(new Error("Color update failed"));
 
@@ -261,14 +285,28 @@ describe("localTaskCommands", () => {
     vi.mocked(daemon.createLocalTask).mockResolvedValue(createdTask);
     vi.mocked(daemon.listLocalTasks).mockResolvedValue([createdTask]);
     vi.mocked(daemon.listLocalTaskTagCatalog).mockResolvedValue([
-      { key: "strasse", name: "Straße", aliases: ["STRASSE", "Straße"], color: "purple", customColor: null },
+      {
+        id: "tag-fixture",
+        key: "strasse",
+        name: "Straße",
+        aliases: ["STRASSE", "Straße"],
+        color: "purple",
+        customColor: null,
+      },
     ]);
 
     await createLocalTask({ title: "Task", tags: ["STRASSE"] });
 
     expect(daemon.listLocalTaskTagCatalog).toHaveBeenCalledOnce();
     expect(localTaskStore.getState().tagCatalog).toEqual([
-      { key: "strasse", name: "Straße", aliases: ["STRASSE", "Straße"], color: "purple", customColor: null },
+      {
+        id: "tag-fixture",
+        key: "strasse",
+        name: "Straße",
+        aliases: ["STRASSE", "Straße"],
+        color: "purple",
+        customColor: null,
+      },
     ]);
   });
 

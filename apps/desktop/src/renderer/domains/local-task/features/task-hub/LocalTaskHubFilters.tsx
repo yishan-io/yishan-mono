@@ -3,7 +3,7 @@ import type { WorkspaceProjectRecord } from "@renderer/domains/project";
 import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { setLocalTaskHubFilters, updateLocalTaskTagColor } from "../../commands/localTaskCommands";
+import { createLocalTaskTag, setLocalTaskHubFilters } from "../../commands/localTaskCommands";
 import type {
   LocalTaskFilters,
   LocalTaskPriority,
@@ -15,12 +15,11 @@ import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
 type LocalTaskHubFiltersProps = {
   filters: LocalTaskFilters;
   projects: WorkspaceProjectRecord[];
-  tagSuggestions: string[];
   tagCatalog: LocalTaskTagCatalogEntry[];
 };
 
 /** Renders Task Hub project, status, and priority filters. */
-export function LocalTaskHubFilters({ filters, projects, tagSuggestions, tagCatalog }: LocalTaskHubFiltersProps) {
+export function LocalTaskHubFilters({ filters, projects, tagCatalog }: LocalTaskHubFiltersProps) {
   const { t } = useTranslation();
   const applyFilter = useCallback(
     (field: keyof LocalTaskFilters, value?: LocalTaskFilters[keyof LocalTaskFilters]) => {
@@ -64,11 +63,10 @@ export function LocalTaskHubFilters({ filters, projects, tagSuggestions, tagCata
         sx={{ minWidth: 150 }}
       />
       <LocalTaskTagsInput
-        tags={filters.tags ?? []}
-        suggestions={tagSuggestions}
+        tagIds={filters.tagIds ?? []}
         tagCatalog={tagCatalog}
-        onChange={(tags) => applyFilter("tags", tags)}
-        onTagColorChange={updateLocalTaskTagColor}
+        onChange={(tagIds) => applyFilter("tagIds", tagIds)}
+        onCreateTag={createLocalTaskTag}
       />
       <TextField
         select

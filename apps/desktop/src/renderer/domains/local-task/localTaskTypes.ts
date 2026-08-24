@@ -16,6 +16,7 @@ export type LocalTask = {
   updatedAt: string;
   completedAt: string | null;
   tags: string[];
+  tagRefs: LocalTaskTagRef[];
 };
 
 /** A Local Task metadata search result with its FTS rank. */
@@ -48,6 +49,19 @@ export type LocalTaskFilters = {
   priority?: LocalTaskPriority;
   workspaceId?: string;
   tags?: string[];
+  tagIds?: string[];
+};
+
+/** One stable catalog tag reference assigned to a Local Task. */
+export type LocalTaskTagRef = {
+  id: string;
+  name?: string;
+};
+
+/** Result returned when a catalog tag rename merges its source into another tag. */
+export type LocalTaskTagRenameResult = {
+  tag: LocalTaskTagCatalogEntry;
+  removedTagId?: string;
 };
 
 /** Metadata accepted when creating a Local Task. */
@@ -57,6 +71,7 @@ export type CreateLocalTaskInput = {
   description?: string;
   priority?: LocalTaskPriority;
   tags?: string[];
+  tagIds?: string[];
 };
 
 /** Mutable Local Task metadata accepted by the update RPC. */
@@ -66,6 +81,7 @@ export type UpdateLocalTaskInput = {
   status?: LocalTaskStatus;
   priority?: LocalTaskPriority;
   tags?: string[];
+  tagIds?: string[];
 };
 
 /** Loading state shared by Local Task data projections. */
@@ -73,6 +89,7 @@ export type LocalTaskLoadState = "idle" | "loading" | "loaded" | "error";
 
 /** One daemon-owned global Local Task tag catalog entry. */
 export type LocalTaskTagCatalogEntry = {
+  id: string;
   key: string;
   name: string;
   aliases: string[];

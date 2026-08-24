@@ -74,7 +74,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		t.Fatalf("tag catalog = %#v", catalog)
 	}
 	updatedTagValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskUpdateTagColor,
-		json.RawMessage(`{"key":"first","color":"blue"}`))
+		json.RawMessage(`{"id":"`+catalog[0].ID+`","color":"blue"}`))
 	if err != nil {
 		t.Fatalf("update tag color: %v", err)
 	}
@@ -83,9 +83,9 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		t.Fatalf("updated tag = %#v", updatedTag)
 	}
 	for _, params := range []json.RawMessage{
-		json.RawMessage(`{"key":"first"}`),
-		json.RawMessage(`{"key":"first","color":1}`),
-		json.RawMessage(`{"key":"first","color":false}`),
+		json.RawMessage(`{"id":"` + catalog[0].ID + `"}`),
+		json.RawMessage(`{"id":"` + catalog[0].ID + `","color":1}`),
+		json.RawMessage(`{"id":"` + catalog[0].ID + `","color":false}`),
 	} {
 		_, err = router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskUpdateTagColor, params)
 		if err == nil {
@@ -96,7 +96,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		}
 	}
 	clearedTagValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskUpdateTagColor,
-		json.RawMessage(`{"key":"first","color":null}`))
+		json.RawMessage(`{"id":"`+catalog[0].ID+`","color":null}`))
 	if err != nil {
 		t.Fatalf("clear tag color: %v", err)
 	}
@@ -143,6 +143,38 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		if mapped := rpc.MapRPCError(err); mapped == nil || mapped.Code != rpc.CodeInvalidParams {
 			t.Fatalf("update unlinked link to %q error = %v, mapped = %#v", status, err, mapped)
 		}
+	}
+	createdTagValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskCreateTag,
+		json.RawMessage(`{"name":"Second"}`))
+	if err != nil {
+		t.Fatalf("create stable tag: %v", err)
+	}
+	createdTag := createdTagValue.(domain.Tag)
+	renamedTagValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskRenameTag,
+		json.RawMessage(`{"id":"`+createdTag.ID+`","name":"First"}`))
+	if err != nil {
+		t.Fatalf("merge stable tags: %v", err)
+	}
+	renamedTag := renamedTagValue.(rpc.LocalTaskRenameTagResult)
+	if renamedTag.Tag.ID != catalog[0].ID || renamedTag.RemovedTagID == nil || *renamedTag.RemovedTagID != createdTag.ID {
+		t.Fatalf("merge response = %#v", renamedTag)
+	}
+	for _, staleMutation := range []struct {
+		method string
+		params json.RawMessage
+	}{
+		{rpc.MethodLocalTaskRenameTag, json.RawMessage(`{"id":"` + createdTag.ID + `","name":"Renamed"}`)},
+		{rpc.MethodLocalTaskUpdateTagColor, json.RawMessage(`{"id":"` + createdTag.ID + `","color":"blue"}`)},
+		{rpc.MethodLocalTaskDeleteTag, json.RawMessage(`{"id":"` + createdTag.ID + `"}`)},
+	} {
+		if _, err := router.Call(context.Background(), &rpc.Connection{}, staleMutation.method, staleMutation.params); err == nil || rpc.MapRPCError(err).Code != rpc.CodeNotFound {
+			t.Fatalf("%s stale tag ID error = %v", staleMutation.method, err)
+		}
+	}
+	deletedTagValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskDeleteTag,
+		json.RawMessage(`{"id":"`+catalog[0].ID+`"}`))
+	if err != nil || deletedTagValue.(rpc.LocalTaskDeleteTagResult).DeletedTagID != catalog[0].ID {
+		t.Fatalf("delete stable tag response = %#v, %v", deletedTagValue, err)
 	}
 	history, err := sqlite.NewLocalTaskStore(database).ListTaskLinks(context.Background(), created.ID)
 	if err != nil || len(history) != 1 || history[0].Status != domain.StatusCompleted || history[0].UnlinkedAt == nil {

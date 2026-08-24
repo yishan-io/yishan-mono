@@ -6,6 +6,14 @@ import { localTaskStore } from "../../state/localTaskStore";
 import { WorkspaceTasksView } from "./WorkspaceTasksView";
 
 const commands = vi.hoisted(() => ({
+  createLocalTaskTag: vi.fn(async (name: string) => ({
+    id: `tag-${name}`,
+    key: name,
+    name,
+    aliases: [name],
+    color: null,
+    customColor: null,
+  })),
   loadLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
@@ -32,6 +40,7 @@ vi.mock("@tanstack/react-virtual", () => ({
     getTotalSize: () => count * 128,
     getVirtualItems: () =>
       Array.from({ length: Math.min(count, 8) }, (_, index) => ({ index, key: index, start: index * 128, size: 128 })),
+    scrollToIndex: vi.fn(),
   }),
 }));
 
@@ -46,6 +55,7 @@ const primaryTask = {
   updatedAt: "2026-01-01",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 const relatedTask = {
   ...primaryTask,
@@ -102,33 +112,39 @@ describe("WorkspaceTasksView tags", () => {
     localTaskStore.setState(initialState, true);
   });
 
-  it("removes a detail tag through the update command and disables controls during mutations", async () => {
-    const taggedTask = { ...primaryTask, tags: ["backend"] };
+  it("removes a detail tag through its selector and disables selector changes during mutations", async () => {
+    const taggedTask = { ...primaryTask, tagRefs: [{ id: "tag-backend", name: "backend" }] };
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
-      tagCatalog: [{ key: "backend", name: "backend", aliases: ["backend"], color: null, customColor: null }],
+      tagCatalog: [
+        { id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: null, customColor: null },
+      ],
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
     const metadata = screen.getByTestId("local-task-metadata");
     expect(metadata.contains(screen.getByTestId("local-task-status-icon"))).toBe(true);
     expect(metadata.contains(screen.getByText("backend"))).toBe(true);
-    expect(metadata.contains(screen.getByRole("button", { name: "localTask.tags.add" }))).toBe(true);
-    fireEvent.click(screen.getByLabelText("localTask.tags.delete"));
+    expect(metadata.contains(screen.getByRole("combobox", { name: "localTask.fields.tags" }))).toBe(true);
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.tags" }));
+    fireEvent.click(await screen.findByRole("option", { name: "backend" }));
 
-    await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tags: [] }));
+    await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tagIds: [] }));
 
     act(() => localTaskStore.setState({ isMutationLoading: true }));
-    expect((screen.getByRole("button", { name: "localTask.tags.add" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("combobox", { name: "localTask.fields.tags" }) as HTMLInputElement).disabled).toBe(true);
+    expect(commands.updateLocalTask).toHaveBeenCalledTimes(1);
   });
 
   it("propagates catalog color tokens to workspace rows and detail editor chips", () => {
-    const taggedTask = { ...primaryTask, tags: ["backend"] };
+    const taggedTask = { ...primaryTask, tagRefs: [{ id: "tag-backend", name: "backend" }] };
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
-      tagCatalog: [{ key: "backend", name: "backend", aliases: ["backend"], color: "teal", customColor: null }],
+      tagCatalog: [
+        { id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "teal", customColor: null },
+      ],
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
@@ -144,7 +160,14 @@ describe("WorkspaceTasksView tags", () => {
 
   it("shows full workspace row labels and leaves the overflow count unadorned", () => {
     const longTag = "first".repeat(6);
-    const taggedTask = { ...primaryTask, tags: [longTag, "second", "third"] };
+    const taggedTask = {
+      ...primaryTask,
+      tagRefs: [
+        { id: "tag-long", name: longTag },
+        { id: "tag-second", name: "second" },
+        { id: "tag-third", name: "third" },
+      ],
+    };
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },

@@ -16,7 +16,16 @@ describe("LocalTaskTagsDisplay", () => {
         <LocalTaskTagsDisplay
           tags={[maximumLengthTag, maximumLengthTag.replace("a", "b"), "third"]}
           maxVisible={2}
-          tagCatalog={[{ key: maximumLengthTag, name: maximumLengthTag, aliases: [maximumLengthTag], color: "blue", customColor: null }]}
+          tagCatalog={[
+            {
+              id: "tag-fixture",
+              key: maximumLengthTag,
+              name: maximumLengthTag,
+              aliases: [maximumLengthTag],
+              color: "blue",
+              customColor: null,
+            },
+          ]}
         />
       </Box>,
     );

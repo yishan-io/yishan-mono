@@ -6,6 +6,7 @@ import type {
   LocalTaskFilters,
   LocalTaskLoadState,
   LocalTaskTagCatalogEntry,
+  LocalTaskTagRef,
   LocalTaskWorkspaceLink,
 } from "../localTaskTypes";
 
@@ -45,11 +46,14 @@ export type LocalTaskStoreState = {
   isMutationLoading: boolean;
   mutationError: string | null;
   setHubFilters: (filters: LocalTaskFilters) => void;
+  reconcileHubTagFilter: (removedTagId: string, survivingTagId?: string) => void;
   setHubSearchQuery: (query: string) => void;
   beginTagCatalogLoad: () => number;
   setTagCatalog: (requestId: number, catalog: LocalTaskTagCatalogEntry[]) => void;
   setTagCatalogError: (requestId: number, error: string) => void;
   upsertTagCatalogEntry: (entry: LocalTaskTagCatalogEntry) => void;
+  reconcileTagRename: (renamedTag: LocalTaskTagCatalogEntry, removedTagId?: string) => void;
+  reconcileTagDeletion: (deletedTagId: string) => void;
   beginActiveTaskCountLoad: () => number;
   setActiveTaskCount: (requestId: number, activeTaskCount: number) => void;
   beginHubLoad: () => number;
@@ -81,6 +85,7 @@ export type LocalTaskStoreState = {
   beginMutation: () => void;
   finishMutation: (error?: string) => void;
   upsertTaskEntity: (task: LocalTask) => void;
+  invalidateTaskEntities: (taskIds: string[]) => void;
 };
 
 /** Stores Local Task entities, projections, context, links, and operation state. */
@@ -100,6 +105,50 @@ export const localTaskStore = create<LocalTaskStoreState>()(
     const writeTaskEntity = (state: LocalTaskStoreState, task: LocalTask) => {
       state.taskById[task.id] = task;
       taskEntityRevisionByTaskId[task.id] = (taskEntityRevisionByTaskId[task.id] ?? 0) + 1;
+    };
+
+    const reconcileTaskTagRefs = (
+      task: LocalTask,
+      removedTagId: string,
+      renamedTag?: LocalTaskTagCatalogEntry,
+    ): LocalTask => {
+      let hasChanged = false;
+      const tagRefs: LocalTaskTagRef[] = [];
+      const tagIds = new Set<string>();
+      for (const tagRef of task.tagRefs) {
+        if (!renamedTag && tagRef.id === removedTagId) {
+          hasChanged = true;
+          continue;
+        }
+        const reconciledTagRef =
+          renamedTag && (tagRef.id === removedTagId || tagRef.id === renamedTag.id)
+            ? { id: renamedTag.id, name: renamedTag.name }
+            : tagRef;
+        if (tagIds.has(reconciledTagRef.id)) {
+          hasChanged = true;
+          continue;
+        }
+        if (reconciledTagRef !== tagRef) hasChanged = true;
+        tagIds.add(reconciledTagRef.id);
+        tagRefs.push(reconciledTagRef);
+      }
+      return hasChanged ? { ...task, tagRefs } : task;
+    };
+
+    const reconcileCachedTaskTagRefs = (
+      state: LocalTaskStoreState,
+      removedTagId: string,
+      renamedTag?: LocalTaskTagCatalogEntry,
+    ) => {
+      for (const task of Object.values(state.taskById)) {
+        const reconciledTask = reconcileTaskTagRefs(task, removedTagId, renamedTag);
+        if (reconciledTask !== task) writeTaskEntity(state, reconciledTask);
+      }
+      state.hubTasks = state.hubTasks.map((task) => reconcileTaskTagRefs(task, removedTagId, renamedTag));
+      state.workspaceTasks = state.workspaceTasks.map((task) => reconcileTaskTagRefs(task, removedTagId, renamedTag));
+      state.linkCandidateTasks = state.linkCandidateTasks.map((task) =>
+        reconcileTaskTagRefs(task, removedTagId, renamedTag),
+      );
     };
 
     return {
@@ -137,6 +186,16 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       isMutationLoading: false,
       mutationError: null,
       setHubFilters: (hubFilters) => set({ hubFilters }),
+      reconcileHubTagFilter: (removedTagId, survivingTagId) => {
+        set((state) => {
+          if (!state.hubFilters.tagIds?.includes(removedTagId)) return;
+          const tagIds = state.hubFilters.tagIds.flatMap((tagId) => {
+            if (tagId !== removedTagId) return [tagId];
+            return survivingTagId ? [survivingTagId] : [];
+          });
+          state.hubFilters.tagIds = [...new Set(tagIds)];
+        });
+      },
       setHubSearchQuery: (hubSearchQuery) => set({ hubSearchQuery }),
       beginTagCatalogLoad: () => {
         const requestId = ++tagSuggestionsRequestGeneration;
@@ -166,6 +225,28 @@ export const localTaskStore = create<LocalTaskStoreState>()(
           state.tagSuggestions = state.tagCatalog.map((catalogEntry) => catalogEntry.name);
           state.tagSuggestionsLoadState = "loaded";
           state.tagSuggestionsError = null;
+        });
+      },
+      reconcileTagRename: (renamedTag, removedTagId) => {
+        set((state) => {
+          const replacedTagId = removedTagId ?? renamedTag.id;
+          state.tagCatalog = state.tagCatalog.filter((catalogEntry) => catalogEntry.id !== replacedTagId);
+          const catalogEntryIndex = state.tagCatalog.findIndex((catalogEntry) => catalogEntry.id === renamedTag.id);
+          if (catalogEntryIndex === -1) state.tagCatalog.push(renamedTag);
+          else state.tagCatalog[catalogEntryIndex] = renamedTag;
+          state.tagSuggestions = state.tagCatalog.map((catalogEntry) => catalogEntry.name);
+          state.tagSuggestionsLoadState = "loaded";
+          state.tagSuggestionsError = null;
+          reconcileCachedTaskTagRefs(state, replacedTagId, renamedTag);
+        });
+      },
+      reconcileTagDeletion: (deletedTagId) => {
+        set((state) => {
+          state.tagCatalog = state.tagCatalog.filter((catalogEntry) => catalogEntry.id !== deletedTagId);
+          state.tagSuggestions = state.tagCatalog.map((catalogEntry) => catalogEntry.name);
+          state.tagSuggestionsLoadState = "loaded";
+          state.tagSuggestionsError = null;
+          reconcileCachedTaskTagRefs(state, deletedTagId);
         });
       },
       beginActiveTaskCountLoad: () => ++activeTaskCountRequestGeneration,
@@ -374,6 +455,19 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       },
       upsertTaskEntity: (task) => {
         set((state) => writeTaskEntity(state, task));
+      },
+      invalidateTaskEntities: (taskIds) => {
+        for (const taskId of taskIds) {
+          taskRequestGenerationByTaskId[taskId] = (taskRequestGenerationByTaskId[taskId] ?? 0) + 1;
+          taskEntityRevisionByTaskId[taskId] = (taskEntityRevisionByTaskId[taskId] ?? 0) + 1;
+        }
+        set((state) => {
+          for (const taskId of taskIds) {
+            delete state.taskById[taskId];
+            state.taskLoadStateByTaskId[taskId] = "idle";
+            state.taskErrorByTaskId[taskId] = null;
+          }
+        });
       },
     };
   }),

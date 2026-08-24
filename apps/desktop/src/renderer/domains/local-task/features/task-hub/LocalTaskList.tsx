@@ -97,7 +97,12 @@ export function LocalTaskList({ tasks, onSelect, projectNameById, tagCatalog }: 
                       : t("localTask.states.globalTask")}
                   </Typography>
                 </Box>
-                <LocalTaskTagsDisplay tags={task.tags} maxVisible={2} tagCatalog={tagCatalog} />
+                <LocalTaskTagsDisplay
+                  tagRefs={task.tagRefs}
+                  tags={task.tagRefs.length === 0 ? task.tags : undefined}
+                  maxVisible={2}
+                  tagCatalog={tagCatalog}
+                />
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Chip size="small" label={t(`localTask.status.${task.status}`)} />
                 </Box>

@@ -41,6 +41,9 @@ func TestLocalTaskRPCContractFixture_UsesActualMethodsAndExactPayloads(t *testin
 		MethodLocalTaskListTagCatalog,
 		MethodLocalTaskUpdateTagColor,
 		MethodLocalTaskUpdateTagColor,
+		MethodLocalTaskCreateTag,
+		MethodLocalTaskRenameTag,
+		MethodLocalTaskDeleteTag,
 	}
 	if len(fixture.Requests) != len(methods) {
 		t.Fatalf("fixture requests = %d, want %d", len(fixture.Requests), len(methods))
@@ -67,6 +70,9 @@ func TestLocalTaskRPCContractFixture_PreservesOmittedAndEmptyUpdateTags(t *testi
 			if (update.Tags != nil) != tagCase.HasTags {
 				t.Fatalf("tags present = %t, want %t", update.Tags != nil, tagCase.HasTags)
 			}
+			if tagCase.Name == "empty references" && (update.TagRefs == nil || len(*update.TagRefs) != 0) {
+				t.Fatalf("tag references = %#v, want explicit empty", update.TagRefs)
+			}
 			assertExactJSON(t, tagCase.Params, update)
 		})
 	}
@@ -89,6 +95,12 @@ func assertLocalTaskContractPayload(t *testing.T, method string, payload json.Ra
 		assertExactJSON(t, payload, struct{}{})
 	case MethodLocalTaskUpdateTagColor:
 		assertExactJSON(t, payload, LocalTaskUpdateTagColorParams{})
+	case MethodLocalTaskCreateTag:
+		assertExactJSON(t, payload, LocalTaskCreateTagParams{})
+	case MethodLocalTaskRenameTag:
+		assertExactJSON(t, payload, LocalTaskRenameTagParams{})
+	case MethodLocalTaskDeleteTag:
+		assertExactJSON(t, payload, LocalTaskDeleteTagParams{})
 	default:
 		t.Fatalf("unsupported fixture method %q", method)
 	}
@@ -107,8 +119,12 @@ func assertLocalTaskContractResult(t *testing.T, method string, payload json.Raw
 		assertExactJSON(t, payload, localtask.ContextDetails{})
 	case MethodLocalTaskListTagCatalog:
 		assertExactJSON(t, payload, []localtask.Tag{})
-	case MethodLocalTaskUpdateTagColor:
+	case MethodLocalTaskUpdateTagColor, MethodLocalTaskCreateTag:
 		assertExactJSON(t, payload, localtask.Tag{})
+	case MethodLocalTaskRenameTag:
+		assertExactJSON(t, payload, LocalTaskRenameTagResult{})
+	case MethodLocalTaskDeleteTag:
+		assertExactJSON(t, payload, LocalTaskDeleteTagResult{})
 	default:
 		t.Fatalf("unsupported fixture method %q", method)
 	}

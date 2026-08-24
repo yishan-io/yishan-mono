@@ -9,6 +9,9 @@ func TestLocalTaskMethodNames_AreStable(t *testing.T) {
 		"list tags":          MethodLocalTaskListTags,
 		"list tag catalog":   MethodLocalTaskListTagCatalog,
 		"update tag color":   MethodLocalTaskUpdateTagColor,
+		"create tag":        MethodLocalTaskCreateTag,
+		"rename tag":        MethodLocalTaskRenameTag,
+		"delete tag":        MethodLocalTaskDeleteTag,
 	}
 	want := map[string]string{
 		"context details":    "localTask.getContextDetails",
@@ -16,6 +19,9 @@ func TestLocalTaskMethodNames_AreStable(t *testing.T) {
 		"list tags":          "localTask.listTags",
 		"list tag catalog":   "localTask.listTagCatalog",
 		"update tag color":   "localTask.updateTagColor",
+		"create tag":        "localTask.createTag",
+		"rename tag":        "localTask.renameTag",
+		"delete tag":        "localTask.deleteTag",
 	}
 	for name, method := range tests {
 		if method != want[name] {

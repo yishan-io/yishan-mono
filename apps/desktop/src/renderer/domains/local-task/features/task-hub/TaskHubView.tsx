@@ -30,13 +30,13 @@ import {
   LuSearch,
 } from "react-icons/lu";
 import {
+  createLocalTaskTag,
   loadLocalTaskContext,
   loadLocalTaskTagSuggestions,
   openLocalTaskContextInFileTree,
   refreshLocalTaskHub,
   setLocalTaskHubSearchQuery,
   updateLocalTask,
-  updateLocalTaskTagColor,
 } from "../../commands/localTaskCommands";
 import { localTaskStore } from "../../state/localTaskStore";
 import { WorkspaceTaskDetails } from "../workspace-tasks/WorkspaceTaskDetails";
@@ -62,7 +62,6 @@ export function TaskHubView() {
   const contextLoadStateByTaskId = localTaskStore((state) => state.contextLoadStateByTaskId);
   const contextErrorByTaskId = localTaskStore((state) => state.contextErrorByTaskId);
   const projects = projectStore((state) => state.projects);
-  const tagSuggestions = localTaskStore((state) => state.tagSuggestions);
   const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
@@ -247,9 +246,8 @@ export function TaskHubView() {
             contextLoadState={contextLoadStateByTaskId[selectedTask.id] ?? "idle"}
             contextError={contextErrorByTaskId[selectedTask.id] ?? null}
             isMutationLoading={isMutationLoading}
-            onTagsChange={(tags) => updateLocalTask(selectedTask.id, { tags })}
-            onTagColorChange={updateLocalTaskTagColor}
-            tagSuggestions={tagSuggestions}
+            onTagIdsChange={(tagIds) => updateLocalTask(selectedTask.id, { tagIds })}
+            onCreateTag={createLocalTaskTag}
             tagCatalog={tagCatalog}
           />
         </Box>
@@ -294,12 +292,7 @@ export function TaskHubView() {
             </Box>
             <Collapse in={areFiltersOpen}>
               <Box id="local-task-hub-filters" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                <LocalTaskHubFilters
-                  filters={filters}
-                  projects={projects}
-                  tagSuggestions={tagSuggestions}
-                  tagCatalog={tagCatalog}
-                />
+                <LocalTaskHubFilters filters={filters} projects={projects} tagCatalog={tagCatalog} />
               </Box>
             </Collapse>
           </Box>

@@ -26,11 +26,18 @@ func taskFilter(req rpc.LocalTaskListParams) domain.TaskFilter {
 		filter.WorkspaceID = &workspaceID
 	}
 	filter.Tags = req.Tags
+	filter.TagIDs = req.TagIDs
 	return filter
 }
 
 func (s *Service) validateFilter(ctx context.Context, filter domain.TaskFilter) error {
 	if _, err := domain.NormalizeTags(filter.Tags); err != nil {
+		return err
+	}
+	if err := domain.ValidateTagIDs(filter.TagIDs); err != nil {
+		return err
+	}
+	if err := s.requireKnownTagIDs(ctx, filter.TagIDs); err != nil {
 		return err
 	}
 	if filter.Status != nil && !isValidStatus(*filter.Status) {
@@ -55,4 +62,24 @@ func isValidStatus(status domain.Status) bool {
 
 func isValidPriority(priority domain.Priority) bool {
 	return priority == domain.PriorityLow || priority == domain.PriorityMedium || priority == domain.PriorityHigh
+}
+
+func (s *Service) requireKnownTagIDs(ctx context.Context, tagIDs []string) error {
+	if len(tagIDs) == 0 {
+		return nil
+	}
+	tags, err := s.deps.Repository.ListTags(ctx)
+	if err != nil {
+		return err
+	}
+	knownTagIDs := make(map[string]struct{}, len(tags))
+	for _, tag := range tags {
+		knownTagIDs[tag.ID] = struct{}{}
+	}
+	for _, tagID := range tagIDs {
+		if _, exists := knownTagIDs[tagID]; !exists {
+			return domain.ErrTagNotFound
+		}
+	}
+	return nil
 }

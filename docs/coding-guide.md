@@ -152,6 +152,9 @@ not what it renders (e.g., `ConfirmationDialog`, not `ModalWithTwoButtons`).
 ### MUI usage
 - Use `sx` prop for one-off styles. Extract to a named constant if the same `sx` object
   appears in more than one file.
+- **Never use `TextField` / input `label` props.** Use a placeholder for visible guidance and
+  `aria-label` (or an associated visible label outside the input) for its accessible name. Floating
+  labels that shrink into the top-left outline are prohibited.
 - Do not use inline `style={{}}` for anything other than dynamic computed values (e.g.
   virtualised row positions).
 - Use `Box` for layout. Use `Typography` for text. Do not use raw `<div>` / `<p>` / `<span>`.

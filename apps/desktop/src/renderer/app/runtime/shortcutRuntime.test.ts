@@ -37,27 +37,74 @@ const CONTEXT = {
 } as unknown as ShortContext;
 
 describe("startShortcutRuntime", () => {
+  const runtimeStops: Array<() => void> = [];
+
+  const startRuntime = (input: Parameters<typeof startShortcutRuntime>[0]) => {
+    const stop = startShortcutRuntime(input);
+    runtimeStops.push(stop);
+    return stop;
+  };
+
   afterEach(() => {
+    for (const stop of runtimeStops.splice(0)) {
+      stop();
+    }
     mocked.rpcListeners.length = 0;
     vi.clearAllMocks();
   });
 
-  it("processes window keydown events with the latest definitions and context", () => {
+  it("processes Escape from ordinary window events with the latest definitions and context", () => {
     const definitions = [] as never[];
-    const stop = startShortcutRuntime({
+    const stop = startRuntime({
       getCompiledDefinitions: () => definitions,
       getContext: () => CONTEXT,
       isCaptureActive: () => false,
     });
 
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
     expect(mocked.processShortcuts).toHaveBeenCalledWith(definitions, CONTEXT, expect.any(KeyboardEvent));
     stop();
   });
 
+  it("skips Escape from an inline rename input", () => {
+    const renameInput = document.createElement("input");
+    renameInput.setAttribute("aria-label", "Rename tag");
+    document.body.append(renameInput);
+    const stop = startRuntime({
+      getCompiledDefinitions: () => [] as never[],
+      getContext: () => CONTEXT,
+      isCaptureActive: () => false,
+    });
+
+    renameInput.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+
+    expect(mocked.processShortcuts).not.toHaveBeenCalled();
+    stop();
+    renameInput.remove();
+  });
+
+  it("skips Escape from a descendant of a contenteditable element", () => {
+    const editable = document.createElement("div");
+    editable.setAttribute("contenteditable", "true");
+    const editableChild = document.createElement("span");
+    editable.append(editableChild);
+    document.body.append(editable);
+    const stop = startRuntime({
+      getCompiledDefinitions: () => [] as never[],
+      getContext: () => CONTEXT,
+      isCaptureActive: () => false,
+    });
+
+    editableChild.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+
+    expect(mocked.processShortcuts).not.toHaveBeenCalled();
+    stop();
+    editable.remove();
+  });
+
   it("skips processing while keybinding capture is active", () => {
-    const stop = startShortcutRuntime({
+    const stop = startRuntime({
       getCompiledDefinitions: () => [] as never[],
       getContext: () => CONTEXT,
       isCaptureActive: () => true,
@@ -70,28 +117,31 @@ describe("startShortcutRuntime", () => {
   });
 
   it("processes webview keydown RPC events as synthetic keydown events", () => {
-    const stop = startShortcutRuntime({
+    const stop = startRuntime({
       getCompiledDefinitions: () => [] as never[],
       getContext: () => CONTEXT,
       isCaptureActive: () => false,
     });
 
-    mocked.rpcListeners.forEach((listener) =>
+    for (const listener of mocked.rpcListeners) {
       listener({
         method: "webviewKeydown",
         payload: { key: "k", code: "KeyK", ctrlKey: true },
-      }),
-    );
+      });
+    }
 
     expect(mocked.processShortcuts).toHaveBeenCalledWith([], CONTEXT, expect.any(KeyboardEvent));
-    const synthetic = mocked.processShortcuts.mock.calls[0]![2] as KeyboardEvent;
-    expect(synthetic.key).toBe("k");
-    expect(synthetic.ctrlKey).toBe(true);
+    const syntheticEvent = mocked.processShortcuts.mock.calls[0]?.[2];
+    expect(syntheticEvent).toBeInstanceOf(KeyboardEvent);
+    if (syntheticEvent instanceof KeyboardEvent) {
+      expect(syntheticEvent.key).toBe("k");
+      expect(syntheticEvent.ctrlKey).toBe(true);
+    }
     stop();
   });
 
   it("removes the keydown listener and webview subscription on stop", () => {
-    const stop = startShortcutRuntime({
+    const stop = startRuntime({
       getCompiledDefinitions: () => [] as never[],
       getContext: () => CONTEXT,
       isCaptureActive: () => false,

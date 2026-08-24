@@ -31,6 +31,12 @@ func (h *LocalTaskHandler) Call(ctx context.Context, connection *Connection, met
 		})
 	case MethodLocalTaskUpdateTagColor:
 		return callLocalTaskUpdateTagColor(ctx, params, h.Services.UpdateTagColor)
+	case MethodLocalTaskCreateTag:
+		return callLocalTask(ctx, params, h.Services.CreateTag)
+	case MethodLocalTaskRenameTag:
+		return callLocalTask(ctx, params, h.Services.RenameTag)
+	case MethodLocalTaskDeleteTag:
+		return callLocalTask(ctx, params, h.Services.DeleteTag)
 	case MethodLocalTaskUpdate:
 		return callLocalTask(ctx, params, h.Services.Update)
 	case MethodLocalTaskSearch:
@@ -65,6 +71,15 @@ func callLocalTaskUpdateTagColor(ctx context.Context, params json.RawMessage, ca
 	}
 	if _, hasColor := fields["color"]; !hasColor {
 		return nil, NewRPCError(CodeInvalidParams, "missing color")
+	}
+	selectorCount := 0
+	for _, selector := range []string{"id", "tag", "key"} {
+		if _, hasSelector := fields[selector]; hasSelector {
+			selectorCount++
+		}
+	}
+	if selectorCount != 1 {
+		return nil, NewRPCError(CodeInvalidParams, "exactly one tag selector is required")
 	}
 	return callLocalTask(ctx, params, call)
 }

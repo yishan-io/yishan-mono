@@ -41,7 +41,7 @@ func NewService(deps Deps) *Service {
 func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (any, error) {
 	task := domain.Task{
 		ID: uuid.NewString(), ProjectID: req.ProjectID, Title: req.Title, Description: req.Description,
-		Status: domain.StatusActive, Priority: req.Priority, Tags: req.Tags,
+		Status: domain.StatusActive, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
 	}
 	if task.Priority == "" {
 		task.Priority = domain.PriorityMedium
@@ -86,7 +86,7 @@ func (s *Service) Update(ctx context.Context, req rpc.LocalTaskUpdateParams) (an
 		return nil, err
 	}
 	update := domain.TaskUpdate{
-		Title: req.Title, Description: req.Description, Status: req.Status, Priority: req.Priority, Tags: req.Tags,
+		Title: req.Title, Description: req.Description, Status: req.Status, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
 	}
 	if err := domain.ValidateTaskUpdate(update); err != nil {
 		return nil, err
@@ -136,19 +136,83 @@ func (s *Service) ListTagCatalog(ctx context.Context) (any, error) {
 // UpdateTagColor validates and changes a global Local Task tag catalog color.
 func (s *Service) UpdateTagColor(ctx context.Context, req rpc.LocalTaskUpdateTagColorParams) (any, error) {
 	update := domain.TagColorUpdate{Color: req.Color, CustomColor: req.CustomColor}
+	selectorCount := 0
+	for _, selector := range []string{req.ID, req.Tag, req.Key} {
+		if selector != "" {
+			selectorCount++
+		}
+	}
+	if selectorCount != 1 {
+		return nil, domain.ErrInvalidTag
+	}
+	id := req.ID
+	if id != "" {
+		if err := domain.ValidateTagID(id); err != nil {
+			return nil, err
+		}
+	}
 	if req.Tag != "" {
 		displayName, err := domain.NormalizeTag(req.Tag)
 		if err != nil {
 			return nil, err
 		}
 		update.DisplayName = &displayName
-	} else if err := domain.ValidateTagKey(req.Key); err != nil {
-		return nil, err
+	} else if req.Key != "" {
+		if err := domain.ValidateTagKey(req.Key); err != nil {
+			return nil, err
+		}
+	} else if id == "" {
+		return nil, domain.ErrInvalidTag
 	}
 	if err := domain.ValidateTagColorUpdate(update); err != nil {
 		return nil, err
 	}
-	return s.deps.Repository.UpdateTagColor(ctx, req.Key, update)
+	if id == "" {
+		id = req.Key
+	}
+	return s.deps.Repository.UpdateTagColor(ctx, id, update)
+}
+
+// CreateTag validates and creates one stable Local Task tag.
+func (s *Service) CreateTag(ctx context.Context, req rpc.LocalTaskCreateTagParams) (any, error) {
+	name, err := domain.NormalizeTag(req.Name)
+	if err != nil {
+		return nil, err
+	}
+	return s.deps.Repository.CreateTag(ctx, domain.TagCreate{Name: name})
+}
+
+// RenameTag validates and renames one stable Local Task tag, reporting a merge when one occurs.
+func (s *Service) RenameTag(ctx context.Context, req rpc.LocalTaskRenameTagParams) (any, error) {
+	id := req.ID
+	if err := domain.ValidateTagID(id); err != nil {
+		return nil, err
+	}
+	name, err := domain.NormalizeTag(req.Name)
+	if err != nil {
+		return nil, err
+	}
+	tag, err := s.deps.Repository.RenameTag(ctx, id, name)
+	if err != nil {
+		return nil, err
+	}
+	response := rpc.LocalTaskRenameTagResult{Tag: tag}
+	if tag.ID != id {
+		response.RemovedTagID = &id
+	}
+	return response, nil
+}
+
+// DeleteTag validates and deletes one stable Local Task tag.
+func (s *Service) DeleteTag(ctx context.Context, req rpc.LocalTaskDeleteTagParams) (any, error) {
+	id := req.ID
+	if err := domain.ValidateTagID(id); err != nil {
+		return nil, err
+	}
+	if err := s.deps.Repository.DeleteTag(ctx, id); err != nil {
+		return nil, err
+	}
+	return rpc.LocalTaskDeleteTagResult{DeletedTagID: id}, nil
 }
 
 func tagNames(tags []domain.Tag) []string {

@@ -33,15 +33,14 @@ func TestMigrate_013AddsTagCatalogAndBackfillsExistingTags(t *testing.T) {
 	assert012Schema(t, database)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
-	assertMigrationCount(t, database, 14)
+	assertMigrationCount(t, database, 15)
 
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migration: %v", err)
 	}
-	assertMigrationCount(t, database, 14)
+	assertMigrationCount(t, database, 15)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
-	assert012TagConstraintsAndCascade(t, database)
 	assert013ColorConstraint(t, database)
 }
 
@@ -210,10 +209,10 @@ func assertForeignKeyCheckEmpty(t *testing.T, database *sql.DB) {
 func assert012Schema(t *testing.T, database *sql.DB) {
 	t.Helper()
 	assertTableExists(t, database, "local_task_tags")
-	for _, column := range []string{"local_task_id", "tag", "normalized_tag", "position", "created_at"} {
+	for _, column := range []string{"local_task_id", "tag_id", "position", "created_at"} {
 		assertColumnExists(t, database, "local_task_tags", column)
 	}
-	assertIndexExists(t, database, "idx_local_task_tags_normalized_task")
+	assertIndexExists(t, database, "idx_local_task_tags_tag_task")
 }
 
 func assert012ExistingDataPreserved(t *testing.T, database *sql.DB) {
@@ -293,7 +292,7 @@ func assert013CatalogBackfill(t *testing.T, database *sql.DB) {
 	if got, want := fmt.Sprint(entries), "[alpha|First beta|Beta]"; got != want {
 		t.Fatalf("catalog entries = %s, want %s", got, want)
 	}
-	aliasRows, err := database.Query(`SELECT normalized_tag, tag FROM local_task_tag_catalog_aliases ORDER BY normalized_tag, tag`)
+	aliasRows, err := database.Query(`SELECT catalog.normalized_tag, aliases.tag FROM local_task_tag_catalog_aliases aliases JOIN local_task_tag_catalog catalog ON catalog.id = aliases.tag_id ORDER BY catalog.normalized_tag, aliases.tag`)
 	if err != nil {
 		t.Fatalf("query catalog aliases: %v", err)
 	}
@@ -317,12 +316,20 @@ func assert013CatalogBackfill(t *testing.T, database *sql.DB) {
 func assert013ColorConstraint(t *testing.T, database *sql.DB) {
 	t.Helper()
 	for _, color := range []any{"amber", "blue", "green", "purple", "red", "teal", nil} {
-		if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (normalized_tag, tag, color) VALUES (?, ?, ?)`,
-			fmt.Sprintf("color-%v", color), "Color", color); err != nil {
+		if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, color, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+			fmt.Sprintf("id-color-%v", color), fmt.Sprintf("color-%v", color), "Color", color); err != nil {
 			t.Fatalf("insert valid catalog color %v: %v", color, err)
 		}
 	}
-	if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (normalized_tag, tag, color) VALUES ('color-invalid', 'Color', 'magenta')`); err == nil {
+	if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, color, created_at, updated_at) VALUES ('id-color-invalid', 'color-invalid', 'Color', 'magenta', datetime('now'), datetime('now'))`); err == nil {
 		t.Fatal("expected invalid catalog color to fail")
+	}
+}
+
+func assertTableAbsent(t *testing.T, database *sql.DB, tableName string) {
+	t.Helper()
+	var count int
+	if err := database.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, tableName).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("table %s count = %d, %v; want absent", tableName, count, err)
 	}
 }

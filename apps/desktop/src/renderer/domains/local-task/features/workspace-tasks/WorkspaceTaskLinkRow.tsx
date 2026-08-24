@@ -99,7 +99,13 @@ export function WorkspaceTaskLinkRow({
                 sx={DENSE_CHIP_SX}
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <LocalTaskTagsDisplay tags={task.tags} maxVisible={2} dense tagCatalog={tagCatalog} />
+                <LocalTaskTagsDisplay
+                  tagRefs={task.tagRefs}
+                  tags={task.tagRefs.length === 0 ? task.tags : undefined}
+                  maxVisible={2}
+                  dense
+                  tagCatalog={tagCatalog}
+                />
               </Box>
             </>
           ) : null}

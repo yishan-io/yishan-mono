@@ -42,6 +42,7 @@ const historicalTask: LocalTask = {
   updatedAt: "updated",
   completedAt: "completed",
   tags: [],
+  tagRefs: [],
 };
 const historicalLink: LocalTaskWorkspaceLink = {
   id: "historical-link",

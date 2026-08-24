@@ -8,6 +8,14 @@ import { TaskHubView } from "./TaskHubView";
 
 const commands = vi.hoisted(() => ({
   createLocalTask: vi.fn(async () => undefined),
+  createLocalTaskTag: vi.fn(async (name: string) => ({
+    id: `tag-${name}`,
+    key: name,
+    name,
+    aliases: [name],
+    color: null,
+    customColor: null,
+  })),
   createAndLinkLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
@@ -67,6 +75,7 @@ const task = {
   updatedAt: "2026-01-01T00:00:00Z",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 
 const initialState = localTaskStore.getState();
@@ -128,98 +137,47 @@ describe("TaskHubView", () => {
       title: "New task",
       description: "",
       priority: "medium",
-      tags: [],
+      tagIds: [],
     });
   });
 
-  it("creates tags and applies an AND tag filter through commands", () => {
-    localTaskStore.setState({ tagSuggestions: Array.from({ length: 60 }, (_, index) => `Tag ${index}`) });
+  it("uses catalog IDs for filters and task creation", async () => {
+    localTaskStore.setState({
+      tagCatalog: [
+        { id: "tag-alpha", key: "alpha", name: "alpha", aliases: ["alpha"], color: null, customColor: null },
+      ],
+    });
     render(<TaskHubView />);
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
     const filterInput = screen.getByRole("combobox", { name: "localTask.fields.tags" });
-    fireEvent.change(filterInput, { target: { value: "alpha" } });
-    fireEvent.keyDown(filterInput, { key: "Enter" });
-    fireEvent.keyDown(screen.getByRole("dialog", { name: "localTask.tags.colorPicker" }), { key: "Escape" });
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ tags: ["alpha"] });
+    fireEvent.mouseDown(filterInput);
+    fireEvent.click(await screen.findByRole("option", { name: "alpha" }));
+    await waitFor(() => expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ tagIds: ["tag-alpha"] }));
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.create" }));
     const createTagsInput = screen.getAllByRole("combobox", { name: "localTask.fields.tags" }).at(-1);
-    expect(createTagsInput).toBeTruthy();
-    if (!createTagsInput) return;
-    fireEvent.change(createTagsInput, { target: { value: "  Cafe\u0301  " } });
+    if (!createTagsInput) throw new Error("Expected tag input");
+    fireEvent.change(createTagsInput, { target: { value: "Café" } });
     fireEvent.keyDown(createTagsInput, { key: "Enter" });
-    fireEvent.keyDown(screen.getByRole("dialog", { name: "localTask.tags.colorPicker" }), { key: "Escape" });
+    await waitFor(() => expect(commands.createLocalTaskTag).toHaveBeenCalledWith("Café"));
     fireEvent.change(screen.getByRole("textbox", { name: "localTask.fields.title" }), { target: { value: "Tagged" } });
-    const createButton = screen.getAllByRole("button", { name: "localTask.actions.create" }).at(-1);
-    expect(createButton).toBeTruthy();
-    if (!createButton) return;
-    fireEvent.click(createButton);
+    fireEvent.click(screen.getAllByRole("button", { name: "localTask.actions.create" }).at(-1) as HTMLButtonElement);
     expect(commands.createLocalTask).toHaveBeenCalledWith({
       projectId: undefined,
       title: "Tagged",
       description: "",
       priority: "medium",
-      tags: ["Café"],
+      tagIds: ["tag-Café"],
     });
-  });
-
-  it.each([
-    ["duplicate", ["existing"], "EXISTING", "Tags must be unique."],
-    [
-      "thirteenth tag",
-      Array.from({ length: MAX_LOCAL_TASK_TAGS }, (_, index) => `tag-${index}`),
-      "extra",
-      `A task can have at most ${MAX_LOCAL_TASK_TAGS} tags.`,
-    ],
-    [
-      "overlength tag",
-      [],
-      "a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS + 1),
-      `Tags can contain at most ${MAX_LOCAL_TASK_TAG_CODE_POINTS} characters.`,
-    ],
-  ])("does not call the filter command for an invalid %s draft", (_name, tags, invalidTag, expectedError) => {
-    localTaskStore.setState({ hubFilters: { tags } });
-    render(<TaskHubView />);
-
-    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
-    const tagsInput = screen.getByRole("combobox", { name: "localTask.fields.tags" });
-    fireEvent.change(tagsInput, { target: { value: invalidTag } });
-    fireEvent.keyDown(tagsInput, { key: "Enter" });
-
-    expect(commands.setLocalTaskHubFilters).not.toHaveBeenCalled();
-    expect(screen.getByText(expectedError)).toBeTruthy();
-  });
-
-  it.each([
-    ["duplicate", ["existing"], "EXISTING"],
-    ["overlength", [], "a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS + 1)],
-  ])("disables and does not call create for an invalid visible %s tag draft", (_name, tags, invalidTag) => {
-    render(<TaskHubView />);
-    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.create" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "localTask.fields.title" }), {
-      target: { value: "New task" },
-    });
-    const tagsInput = screen.getByRole("combobox", { name: "localTask.fields.tags" });
-    for (const tag of tags) {
-      fireEvent.change(tagsInput, { target: { value: tag } });
-      fireEvent.keyDown(tagsInput, { key: "Enter" });
-      fireEvent.keyDown(screen.getByRole("dialog", { name: "localTask.tags.colorPicker" }), { key: "Escape" });
-    }
-    fireEvent.change(tagsInput, { target: { value: invalidTag } });
-    fireEvent.keyDown(tagsInput, { key: "Enter" });
-
-    const submitButton = screen.getAllByRole("button", { name: "localTask.actions.create" }).at(-1);
-    expect(submitButton).toBeTruthy();
-    expect((submitButton as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.submit(tagsInput.closest("form") as HTMLFormElement);
-    expect(commands.createLocalTask).not.toHaveBeenCalled();
   });
 
   it("propagates catalog color tokens to Task Hub row tag chips", () => {
     localTaskStore.setState({
-      hubTasks: [{ ...task, tags: ["backend"] }],
-      tagCatalog: [{ key: "backend", name: "backend", aliases: ["backend"], color: "blue", customColor: null }],
+      hubTasks: [{ ...task, tagRefs: [{ id: "tag-backend", name: "backend" }] }],
+      tagCatalog: [
+        { id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "blue", customColor: null },
+      ],
     });
     render(<TaskHubView />);
 
@@ -230,7 +188,18 @@ describe("TaskHubView", () => {
 
   it("shows full Task Hub tag labels without clipping and keeps the overflow count unadorned", () => {
     const longTag = "a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS);
-    localTaskStore.setState({ hubTasks: [{ ...task, tags: [longTag, "second", "third"] }] });
+    localTaskStore.setState({
+      hubTasks: [
+        {
+          ...task,
+          tagRefs: [
+            { id: "tag-long", name: longTag },
+            { id: "tag-second", name: "second" },
+            { id: "tag-third", name: "third" },
+          ],
+        },
+      ],
+    });
     render(<TaskHubView />);
 
     const visibleChip = screen.getByText(longTag).closest(".MuiChip-root");
@@ -245,7 +214,9 @@ describe("TaskHubView", () => {
       { length: MAX_LOCAL_TASK_TAGS },
       (_, index) => `${index}-${"a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS)}`,
     );
-    localTaskStore.setState({ hubTasks: [{ ...task, tags: maximumTags }] });
+    localTaskStore.setState({
+      hubTasks: [{ ...task, tagRefs: maximumTags.map((name, index) => ({ id: `tag-${index}`, name })) }],
+    });
     render(<TaskHubView />);
 
     const taskRow = screen.getByRole("button", { name: /Ship Task Hub/ });

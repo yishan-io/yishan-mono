@@ -1,6 +1,5 @@
 import { Box, Chip, type ChipProps, type Theme } from "@mui/material";
-import { LuX } from "react-icons/lu";
-import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../../localTaskTypes";
 import { getLocalTaskTagCatalogEntry, getLocalTaskTagColorValue } from "./localTaskTagColorPresets";
 
 const localTaskTagChipLabelSx = {
@@ -16,15 +15,13 @@ const localTaskTagChipLabelSx = {
 } as const;
 
 type LocalTaskTagChipProps = {
-  tag: string;
+  tag: string | LocalTaskTagRef;
   tagCatalog: LocalTaskTagCatalogEntry[];
   dense?: boolean;
   disabled?: boolean;
-  onDelete?: (event: React.SyntheticEvent) => void;
   onDotClick?: (event: React.MouseEvent<HTMLElement>) => void;
   onDotMouseDown?: (event: React.MouseEvent<HTMLElement>) => void;
-  deleteAriaLabel?: string;
-  chipProps?: Omit<ChipProps, "icon" | "label" | "size" | "variant">;
+  chipProps?: Omit<ChipProps, "deleteIcon" | "icon" | "label" | "onDelete" | "size" | "variant">;
 };
 
 /** Builds layout styles for one neutral Local Task tag chip. */
@@ -50,13 +47,15 @@ export function LocalTaskTagChip({
   tagCatalog,
   dense = false,
   disabled = false,
-  onDelete,
   onDotClick,
   onDotMouseDown,
-  deleteAriaLabel,
   chipProps,
 }: LocalTaskTagChipProps) {
-  const catalogEntry = getLocalTaskTagCatalogEntry(tag, tagCatalog);
+  const tagID = typeof tag === "string" ? undefined : tag.id;
+  const tagName = typeof tag === "string" ? tag : (tag.name ?? tag.id);
+  const catalogEntry = tagID
+    ? tagCatalog.find((entry) => entry.id === tagID)
+    : getLocalTaskTagCatalogEntry(tagName, tagCatalog);
   const color = catalogEntry?.color ?? null;
   const customColor = catalogEntry?.customColor ?? null;
 
@@ -81,12 +80,10 @@ export function LocalTaskTagChip({
               width: dense ? 6 : 8,
             })}
           />
-          {tag}
+          {tagName}
         </Box>
       }
       disabled={disabled || Boolean(chipProps?.disabled)}
-      onDelete={onDelete}
-      deleteIcon={onDelete ? <LuX aria-label={deleteAriaLabel} /> : undefined}
       sx={getLocalTaskTagChipSx(color, dense)}
     />
   );

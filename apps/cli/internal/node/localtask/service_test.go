@@ -256,3 +256,184 @@ func TestService_ListsTagCatalogAndUpdatesColor(t *testing.T) {
 		t.Fatalf("invalid color error = %v, want invalid tag color", err)
 	}
 }
+
+func TestService_MapsTagIDFilters(t *testing.T) {
+	service, _, repository := newTestService(t)
+	first, err := repository.CreateTag(context.Background(), domain.TagCreate{Name: "First"})
+	if err != nil {
+		t.Fatalf("CreateTag: %v", err)
+	}
+	if _, err := service.Create(context.Background(), rpc.LocalTaskCreateParams{Title: "Tagged", TagRefs: []domain.TagRef{{ID: first.ID}}}); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	listValue, err := service.List(context.Background(), rpc.LocalTaskListParams{TagIDs: []string{first.ID}})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(listValue.([]domain.Task)) != 1 {
+		t.Fatalf("List tag IDs = %#v, want one task", listValue)
+	}
+	searchValue, err := service.Search(context.Background(), rpc.LocalTaskSearchParams{Query: "Tagged", LocalTaskListParams: rpc.LocalTaskListParams{TagIDs: []string{first.ID}}})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(searchValue.([]domain.SearchResult)) != 1 {
+		t.Fatalf("Search tag IDs = %#v, want one task", searchValue)
+	}
+	for _, operation := range []struct {
+		name string
+		call func() error
+	}{
+		{"list", func() error {
+			_, err := service.List(context.Background(), rpc.LocalTaskListParams{TagIDs: []string{"missing"}})
+			return err
+		}},
+		{"search", func() error {
+			_, err := service.Search(context.Background(), rpc.LocalTaskSearchParams{
+				Query: "Tagged", LocalTaskListParams: rpc.LocalTaskListParams{TagIDs: []string{first.ID, "missing"}},
+			})
+			return err
+		}},
+	} {
+		t.Run(operation.name+" rejects unknown tag IDs", func(t *testing.T) {
+			if err := operation.call(); !errors.Is(err, domain.ErrTagNotFound) {
+				t.Fatalf("error = %v, want tag not found", err)
+			}
+		})
+	}
+	for _, operation := range []struct {
+		name string
+		call func() error
+	}{
+		{"list", func() error {
+			_, err := service.List(context.Background(), rpc.LocalTaskListParams{TagIDs: []string{first.ID, first.ID}})
+			return err
+		}},
+		{"search", func() error {
+			_, err := service.Search(context.Background(), rpc.LocalTaskSearchParams{
+				Query: "Tagged", LocalTaskListParams: rpc.LocalTaskListParams{TagIDs: []string{first.ID, first.ID}},
+			})
+			return err
+		}},
+	} {
+		t.Run(operation.name+" rejects duplicate tag IDs", func(t *testing.T) {
+			if err := operation.call(); !errors.Is(err, domain.ErrInvalidTag) {
+				t.Fatalf("error = %v, want invalid tag", err)
+			}
+		})
+	}
+	if _, err := service.List(context.Background(), rpc.LocalTaskListParams{TagIDs: []string{" tag-1 "}}); !errors.Is(err, domain.ErrInvalidTag) {
+		t.Fatalf("List invalid tag ID error = %v, want invalid tag", err)
+	}
+}
+
+func TestService_CreatesAndUpdatesTasksByTagReferenceIDs(t *testing.T) {
+	service, _, repository := newTestService(t)
+	first, err := repository.CreateTag(context.Background(), domain.TagCreate{Name: "First"})
+	if err != nil {
+		t.Fatalf("create first tag: %v", err)
+	}
+	second, err := repository.CreateTag(context.Background(), domain.TagCreate{Name: "Second"})
+	if err != nil {
+		t.Fatalf("create second tag: %v", err)
+	}
+	refs := []domain.TagRef{{ID: first.ID}}
+	createdValue, err := service.Create(context.Background(), rpc.LocalTaskCreateParams{Title: "Tag IDs", TagRefs: refs})
+	if err != nil {
+		t.Fatalf("create with references: %v", err)
+	}
+	created := createdValue.(domain.Task)
+	if !slices.Equal(created.TagRefs, []domain.TagRef{{ID: first.ID, Name: "First"}}) {
+		t.Fatalf("created refs = %#v", created.TagRefs)
+	}
+	updatedRefs := []domain.TagRef{{ID: second.ID}}
+	updatedValue, err := service.Update(context.Background(), rpc.LocalTaskUpdateParams{ID: created.ID, TagRefs: &updatedRefs})
+	if err != nil {
+		t.Fatalf("update with references: %v", err)
+	}
+	if updated := updatedValue.(domain.Task); !slices.Equal(updated.TagRefs, []domain.TagRef{{ID: second.ID, Name: "Second"}}) {
+		t.Fatalf("updated refs = %#v", updated.TagRefs)
+	}
+
+	emptyLegacy := []string{}
+	_, err = service.Create(context.Background(), rpc.LocalTaskCreateParams{Title: "Mixed tags", Tags: emptyLegacy, TagRefs: updatedRefs})
+	if !errors.Is(err, domain.ErrInvalidTag) {
+		t.Fatalf("mixed create error = %v, want invalid tag", err)
+	}
+	_, err = service.Update(context.Background(), rpc.LocalTaskUpdateParams{ID: created.ID, Tags: &emptyLegacy, TagRefs: &updatedRefs})
+	if !errors.Is(err, domain.ErrInvalidTag) {
+		t.Fatalf("mixed update error = %v, want invalid tag", err)
+	}
+}
+
+func TestService_MutatesStableTagIDsAndReportsMerges(t *testing.T) {
+	service, _, _ := newTestService(t)
+	firstValue, err := service.CreateTag(context.Background(), rpc.LocalTaskCreateTagParams{Name: "First"})
+	if err != nil {
+		t.Fatalf("CreateTag first: %v", err)
+	}
+	first := firstValue.(domain.Tag)
+	secondValue, err := service.CreateTag(context.Background(), rpc.LocalTaskCreateTagParams{Name: "Second"})
+	if err != nil {
+		t.Fatalf("CreateTag second: %v", err)
+	}
+	second := secondValue.(domain.Tag)
+
+	renamedValue, err := service.RenameTag(context.Background(), rpc.LocalTaskRenameTagParams{ID: second.ID, Name: "First"})
+	if err != nil {
+		t.Fatalf("RenameTag merge: %v", err)
+	}
+	renamed := renamedValue.(rpc.LocalTaskRenameTagResult)
+	if renamed.Tag.ID != first.ID || renamed.RemovedTagID == nil || *renamed.RemovedTagID != second.ID {
+		t.Fatalf("RenameTag response = %#v", renamed)
+	}
+
+	deletedValue, err := service.DeleteTag(context.Background(), rpc.LocalTaskDeleteTagParams{ID: first.ID})
+	if err != nil {
+		t.Fatalf("DeleteTag: %v", err)
+	}
+	if deleted := deletedValue.(rpc.LocalTaskDeleteTagResult); deleted.DeletedTagID != first.ID {
+		t.Fatalf("DeleteTag response = %#v", deleted)
+	}
+	if _, err := service.DeleteTag(context.Background(), rpc.LocalTaskDeleteTagParams{ID: second.ID}); !errors.Is(err, domain.ErrTagNotFound) {
+		t.Fatalf("DeleteTag stale ID error = %v, want tag not found", err)
+	}
+	if _, err := service.RenameTag(context.Background(), rpc.LocalTaskRenameTagParams{ID: second.ID, Name: "Renamed"}); !errors.Is(err, domain.ErrTagNotFound) {
+		t.Fatalf("RenameTag stale ID error = %v, want tag not found", err)
+	}
+	blue := domain.TagColorBlue
+	if _, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{ID: second.ID, Color: &blue}); !errors.Is(err, domain.ErrTagNotFound) {
+		t.Fatalf("UpdateTagColor stale ID error = %v, want tag not found", err)
+	}
+}
+
+func TestService_TagMutationsRejectInvalidParameters(t *testing.T) {
+	service, _, _ := newTestService(t)
+	if _, err := service.CreateTag(context.Background(), rpc.LocalTaskCreateTagParams{Name: " "}); !errors.Is(err, domain.ErrInvalidTask) {
+		t.Fatalf("CreateTag invalid name error = %v, want invalid task", err)
+	}
+	for _, id := range []string{"", " tag-1 ", "\t"} {
+		if _, err := service.RenameTag(context.Background(), rpc.LocalTaskRenameTagParams{ID: id, Name: "Name"}); !errors.Is(err, domain.ErrInvalidTag) {
+			t.Fatalf("RenameTag invalid ID %q error = %v, want invalid tag", id, err)
+		}
+		if _, err := service.DeleteTag(context.Background(), rpc.LocalTaskDeleteTagParams{ID: id}); !errors.Is(err, domain.ErrInvalidTag) {
+			t.Fatalf("DeleteTag invalid ID %q error = %v, want invalid tag", id, err)
+		}
+		blue := domain.TagColorBlue
+		if _, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{ID: id, Color: &blue}); !errors.Is(err, domain.ErrInvalidTag) {
+			t.Fatalf("UpdateTagColor invalid ID %q error = %v, want invalid tag", id, err)
+		}
+	}
+}
+
+func TestService_UpdateTagColorRejectsMixedSelectors(t *testing.T) {
+	service, _, _ := newTestService(t)
+	blue := domain.TagColorBlue
+
+	_, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{
+		ID: "tag-1", Tag: "stale", Color: &blue,
+	})
+	if !errors.Is(err, domain.ErrInvalidTag) {
+		t.Fatalf("UpdateTagColor error = %v, want invalid tag", err)
+	}
+}

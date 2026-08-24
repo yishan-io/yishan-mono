@@ -37,6 +37,15 @@ func (s *recordingLocalTaskService) ListTagCatalog(context.Context) (any, error)
 func (s *recordingLocalTaskService) UpdateTagColor(context.Context, LocalTaskUpdateTagColorParams) (any, error) {
 	return s.called(MethodLocalTaskUpdateTagColor)
 }
+func (s *recordingLocalTaskService) CreateTag(context.Context, LocalTaskCreateTagParams) (any, error) {
+	return s.called(MethodLocalTaskCreateTag)
+}
+func (s *recordingLocalTaskService) RenameTag(context.Context, LocalTaskRenameTagParams) (any, error) {
+	return s.called(MethodLocalTaskRenameTag)
+}
+func (s *recordingLocalTaskService) DeleteTag(context.Context, LocalTaskDeleteTagParams) (any, error) {
+	return s.called(MethodLocalTaskDeleteTag)
+}
 func (s *recordingLocalTaskService) Update(context.Context, LocalTaskUpdateParams) (any, error) {
 	return s.called(MethodLocalTaskUpdate)
 }
@@ -70,7 +79,10 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 		{MethodLocalTaskList, `{}`},
 		{MethodLocalTaskListTags, `{}`},
 		{MethodLocalTaskListTagCatalog, `{}`},
-		{MethodLocalTaskUpdateTagColor, `{"key":"first","color":null}`},
+		{MethodLocalTaskUpdateTagColor, `{"id":"tag-1","color":null}`},
+		{MethodLocalTaskCreateTag, `{"name":"First"}`},
+		{MethodLocalTaskRenameTag, `{"id":"tag-1","name":"Renamed"}`},
+		{MethodLocalTaskDeleteTag, `{"id":"tag-1"}`},
 		{MethodLocalTaskUpdate, `{"id":"task-1","title":"Updated"}`},
 		{MethodLocalTaskSearch, `{"query":"task"}`},
 		{MethodLocalTaskLinkWorkspace, `{"taskId":"task-1","workspaceId":"workspace-1"}`},
@@ -140,5 +152,45 @@ func TestLocalTaskHandler_UpdateTagColorRequiresColor(t *testing.T) {
 	}
 	if service.calls != 0 {
 		t.Fatalf("service calls = %d, want 0", service.calls)
+	}
+}
+
+func TestLocalTaskHandler_TagMutationsRejectMalformedParams(t *testing.T) {
+	for _, method := range []string{MethodLocalTaskCreateTag, MethodLocalTaskRenameTag, MethodLocalTaskDeleteTag} {
+		t.Run(method, func(t *testing.T) {
+			service := &recordingLocalTaskService{}
+			handler := &LocalTaskHandler{Services: service}
+			_, err := handler.Call(context.Background(), &Connection{}, method, json.RawMessage(`{`))
+			var rpcErr *Error
+			if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams {
+				t.Fatalf("Call error = %v, want invalid params", err)
+			}
+			if service.calls != 0 {
+				t.Fatalf("service calls = %d, want 0", service.calls)
+			}
+		})
+	}
+}
+
+func TestLocalTaskHandler_UpdateTagColorRequiresExactlyOneSelector(t *testing.T) {
+	tests := []string{
+		`{"color":null}`,
+		`{"id":"tag-1","tag":"stale","color":null}`,
+		`{"id":"tag-1","key":"tag-1","color":null}`,
+		`{"tag":"name","key":"name","color":null}`,
+	}
+	for _, params := range tests {
+		t.Run(params, func(t *testing.T) {
+			service := &recordingLocalTaskService{}
+			handler := &LocalTaskHandler{Services: service}
+			_, err := handler.Call(context.Background(), &Connection{}, MethodLocalTaskUpdateTagColor, json.RawMessage(params))
+			var rpcErr *Error
+			if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams {
+				t.Fatalf("Call error = %v, want invalid params", err)
+			}
+			if service.calls != 0 {
+				t.Fatalf("service calls = %d, want 0", service.calls)
+			}
+		})
 	}
 }

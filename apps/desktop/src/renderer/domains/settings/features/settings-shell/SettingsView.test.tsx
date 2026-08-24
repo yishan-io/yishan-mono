@@ -67,6 +67,10 @@ vi.mock("@renderer/domains/agent/features/manage-skills/SkillsSettingsView", () 
   SkillsSettingsView: () => <div data-testid="skills-settings-panel" />,
 }));
 
+vi.mock("@renderer/domains/local-task", () => ({
+  LocalTaskTagsSettingsView: () => <div data-testid="local-task-tags-settings-panel" />,
+}));
+
 describe("SettingsView", () => {
   afterEach(() => {
     window.localStorage.removeItem(DISPLAY_SETTINGS_STORE_STORAGE_KEY);
@@ -221,6 +225,61 @@ describe("SettingsView", () => {
     fireEvent.click(await screen.findByRole("button", { name: /settings\.appearance\.theme\.title/ }));
 
     expect(await screen.findByTestId("settings-theme-option-dark", {}, { timeout: 30000 })).toBeTruthy();
+  });
+
+  it("places Tag Management in the Local Tasks sidebar section", async () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=localTags"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    const tagManagement = await screen.findByRole("button", { name: "settings.items.tagManagement" });
+    expect(tagManagement.parentElement?.parentElement?.parentElement?.textContent).toContain(
+      "settings.sections.localTasks",
+    );
+    expect(tagManagement.querySelector("svg")).toBeTruthy();
+    expect(getComputedStyle(tagManagement).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  });
+
+  it("renders local task tags panel when localTags tab is selected", async () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=localTags"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(await screen.findByTestId("local-task-tags-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
+  });
+
+  it("matches local task tags in search and opens the localTags tab", async () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
+      target: { value: "colors" },
+    });
+
+    expect(await screen.findByText("settings.items.tagManagement")).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole("button", { name: /settings\.localTasks\.tagManagement\.title/ }));
+
+    expect(await screen.findByTestId("local-task-tags-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
   it("renders terminal panel when terminal tab is selected", async () => {

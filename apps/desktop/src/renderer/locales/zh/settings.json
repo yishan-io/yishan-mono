@@ -7,7 +7,8 @@
     "sections": {
       "profile": "个人资料",
       "organization": "组织",
-      "system": "系统"
+      "system": "系统",
+      "localTasks": "本地任务"
     },
     "items": {
       "account": "账号",
@@ -25,7 +26,9 @@
       "terminal": "终端",
       "workspace": "工作区",
       "providers": "模型提供商",
-      "customize": "自定义"
+      "customize": "自定义",
+      "localTags": "本地任务标签",
+      "tagManagement": "标签管理"
     },
     "nodes": {
       "title": "节点",
@@ -767,6 +770,17 @@
         "columns": {
           "name": "名称"
         }
+      }
+    },
+    "localTasks": {
+      "tagManagement": {
+        "title": "标签管理",
+        "description": "搜索本地任务标签并管理其颜色。"
+      },
+      "keywords": {
+        "tags": "标签",
+        "colors": "颜色",
+        "aliases": "别名"
       }
     }
   }

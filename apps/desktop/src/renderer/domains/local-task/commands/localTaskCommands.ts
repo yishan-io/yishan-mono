@@ -2,6 +2,8 @@ import { selectFolderInFileTree } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import {
   createLocalTask as createLocalTaskFromDaemon,
+  createLocalTaskTag as createLocalTaskTagFromDaemon,
+  deleteLocalTaskTag as deleteLocalTaskTagFromDaemon,
   getLocalTaskContext as getLocalTaskContextFromDaemon,
   getLocalTask as getLocalTaskFromDaemon,
   linkLocalTaskWorkspace as linkLocalTaskWorkspaceFromDaemon,
@@ -9,6 +11,7 @@ import {
   listLocalTaskTagCatalog as listLocalTaskTagCatalogFromDaemon,
   listLocalTaskWorkspaceLinks as listLocalTaskWorkspaceLinksFromDaemon,
   listLocalTasks as listLocalTasksFromDaemon,
+  renameLocalTaskTag as renameLocalTaskTagFromDaemon,
   searchLocalTasks as searchLocalTasksFromDaemon,
   unlinkLocalTaskWorkspace as unlinkLocalTaskWorkspaceFromDaemon,
   updateLocalTask as updateLocalTaskFromDaemon,
@@ -20,8 +23,10 @@ import type {
   LocalTask,
   LocalTaskFilters,
   LocalTaskStatus,
+  LocalTaskTagCatalogEntry,
   LocalTaskTagColor,
   LocalTaskTagCustomColor,
+  LocalTaskTagRenameResult,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -224,12 +229,12 @@ export async function createLocalTask(input: CreateLocalTaskInput): Promise<Loca
 
 /** Sets or clears a global tag color and refreshes the authoritative catalog. */
 export async function updateLocalTaskTagColor(
-  tag: string,
+  id: string,
   color: LocalTaskTagColor | null,
   customColor: LocalTaskTagCustomColor | null = null,
 ): Promise<void> {
   await runMutation(async () => {
-    const updatedCatalogEntry = await updateLocalTaskTagColorFromDaemon(tag, color, customColor);
+    const updatedCatalogEntry = await updateLocalTaskTagColorFromDaemon(id, color, customColor);
     localTaskStore.getState().upsertTagCatalogEntry(updatedCatalogEntry);
 
     const requestId = localTaskStore.getState().beginTagCatalogLoad();
@@ -240,6 +245,35 @@ export async function updateLocalTaskTagColor(
       // The RPC already succeeded; retain its entry and expose only the best-effort reload failure.
       localTaskStore.getState().setTagCatalogError(requestId, getErrorMessage(error));
     }
+  });
+}
+
+/** Creates one daemon-owned catalog tag and refreshes authoritative tag state. */
+export async function createLocalTaskTag(name: string): Promise<LocalTaskTagCatalogEntry> {
+  return runMutation(async () => {
+    const tag = await createLocalTaskTagFromDaemon(name);
+    localTaskStore.getState().upsertTagCatalogEntry(tag);
+    return tag;
+  });
+}
+
+/** Renames one daemon-owned catalog tag by stable ID and refreshes authoritative tag state. */
+export async function renameLocalTaskTag(id: string, name: string): Promise<LocalTaskTagRenameResult> {
+  return runMutation(async () => {
+    const result = await renameLocalTaskTagFromDaemon(id, name);
+    const removedTagId = result.removedTagId ?? id;
+    localTaskStore.getState().reconcileTagRename(result.tag, result.removedTagId);
+    localTaskStore.getState().reconcileHubTagFilter(removedTagId, result.tag.id);
+    return result;
+  });
+}
+
+/** Deletes one daemon-owned catalog tag by stable ID and refreshes authoritative tag state. */
+export async function deleteLocalTaskTag(id: string): Promise<void> {
+  await runMutation(async () => {
+    await deleteLocalTaskTagFromDaemon(id);
+    localTaskStore.getState().reconcileTagDeletion(id);
+    localTaskStore.getState().reconcileHubTagFilter(id);
   });
 }
 

@@ -3,13 +3,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowDown, LuArrowUp, LuCircleCheck, LuCirclePause, LuCirclePlay, LuMinus } from "react-icons/lu";
 import { loadLocalTaskContext } from "../../commands/localTaskCommands";
-import type {
-  LocalTask,
-  LocalTaskLoadState,
-  LocalTaskTagCatalogEntry,
-  LocalTaskTagColor,
-  LocalTaskTagCustomColor,
-} from "../../localTaskTypes";
+import type { LocalTask, LocalTaskLoadState, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskTagsEditor } from "../tags/LocalTaskTagsEditor";
 import { TaskDescriptionMarkdown } from "./TaskDescriptionMarkdown";
 
@@ -31,13 +25,8 @@ type WorkspaceTaskDetailsProps = {
   contextError: string | null;
   showTitle?: boolean;
   isMutationLoading: boolean;
-  onTagsChange: (tags: string[]) => Promise<unknown>;
-  onTagColorChange: (
-    key: string,
-    color: LocalTaskTagColor | null,
-    customColor?: LocalTaskTagCustomColor | null,
-  ) => Promise<unknown>;
-  tagSuggestions?: string[];
+  onTagIdsChange: (tagIds: string[]) => Promise<unknown>;
+  onCreateTag: (name: string) => Promise<LocalTaskTagCatalogEntry>;
   tagCatalog?: LocalTaskTagCatalogEntry[];
 };
 
@@ -48,9 +37,8 @@ export function WorkspaceTaskDetails({
   contextError,
   showTitle = true,
   isMutationLoading,
-  onTagsChange,
-  onTagColorChange,
-  tagSuggestions = [],
+  onTagIdsChange,
+  onCreateTag,
   tagCatalog = [],
 }: WorkspaceTaskDetailsProps) {
   const { t } = useTranslation();
@@ -99,11 +87,11 @@ export function WorkspaceTaskDetails({
           }}
         />
         <LocalTaskTagsEditor
-          tags={task.tags}
-          suggestions={tagSuggestions}
+          tagRefs={task.tagRefs}
+          tags={task.tagRefs.length === 0 ? task.tags : undefined}
           tagCatalog={tagCatalog}
-          onTagsChange={onTagsChange}
-          onTagColorChange={onTagColorChange}
+          onTagIdsChange={onTagIdsChange}
+          onCreateTag={onCreateTag}
           isMutationLoading={isMutationLoading}
         />
       </Box>

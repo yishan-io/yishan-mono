@@ -142,3 +142,39 @@ func TestValidateTagKey_RejectsInvalidWireShape(t *testing.T) {
 		t.Fatalf("validate key: %v", err)
 	}
 }
+
+func TestValidateTaskAndUpdate_RejectMixedAndInvalidTagReferences(t *testing.T) {
+	refs := []TagRef{{ID: "tag-1"}}
+	legacy := []string{}
+	if err := ValidateTask(Task{ID: "task-1", Title: "Task", Status: StatusActive, Priority: PriorityMedium, Tags: legacy, TagRefs: refs}); !errors.Is(err, ErrInvalidTag) {
+		t.Fatalf("mixed create references error = %v, want invalid tag", err)
+	}
+	if err := ValidateTaskUpdate(TaskUpdate{Tags: &legacy, TagRefs: &refs}); !errors.Is(err, ErrInvalidTag) {
+		t.Fatalf("mixed update references error = %v, want invalid tag", err)
+	}
+	duplicates := []TagRef{{ID: "tag-1"}, {ID: "tag-1"}}
+	if err := ValidateTaskUpdate(TaskUpdate{TagRefs: &duplicates}); !errors.Is(err, ErrInvalidTag) {
+		t.Fatalf("duplicate references error = %v, want invalid tag", err)
+	}
+	tooMany := make([]TagRef, MaxTagsPerTask+1)
+	for index := range tooMany {
+		tooMany[index] = TagRef{ID: string(rune('a' + index))}
+	}
+	if err := ValidateTaskUpdate(TaskUpdate{TagRefs: &tooMany}); !errors.Is(err, ErrInvalidTag) {
+		t.Fatalf("too many references error = %v, want invalid tag", err)
+	}
+}
+
+func TestValidateTagID_RejectsEmptyAndWhitespacePaddedValues(t *testing.T) {
+	for _, id := range []string{"", " tag-1", "tag-1 ", "\ttag-1"} {
+		if !errors.Is(ValidateTagID(id), ErrInvalidTag) {
+			t.Fatalf("ValidateTagID(%q) = %v, want invalid tag", id, ValidateTagID(id))
+		}
+	}
+	if err := ValidateTagIDs([]string{"tag-1", "tag-1"}); !errors.Is(err, ErrInvalidTag) {
+		t.Fatalf("ValidateTagIDs duplicate = %v, want invalid tag", err)
+	}
+	if err := ValidateTagIDs([]string{"tag-1", "tag-2"}); err != nil {
+		t.Fatalf("ValidateTagIDs: %v", err)
+	}
+}

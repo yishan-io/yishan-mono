@@ -9,6 +9,7 @@ type LocalTaskCreateParams struct {
 	Description string             `json:"description,omitempty"`
 	Priority    localtask.Priority `json:"priority,omitempty"`
 	Tags        []string           `json:"tags,omitempty"`
+	TagRefs     []localtask.TagRef `json:"tagRefs,omitempty"`
 }
 
 // LocalTaskIDParams identifies one Local Task.
@@ -23,14 +24,43 @@ type LocalTaskListParams struct {
 	Priority    *localtask.Priority `json:"priority,omitempty"`
 	WorkspaceID *string             `json:"workspaceId,omitempty"`
 	Tags        []string            `json:"tags,omitempty"`
+	TagIDs      []string            `json:"tagIds,omitempty"`
 }
 
 // LocalTaskUpdateTagColorParams changes a global Local Task tag catalog color.
 type LocalTaskUpdateTagColorParams struct {
+	ID          string  `json:"id,omitempty"`
 	Tag         string  `json:"tag,omitempty"`
 	Key         string  `json:"key,omitempty"`
 	Color       *string `json:"color"`
 	CustomColor *string `json:"customColor"`
+}
+
+// LocalTaskCreateTagParams creates one Local Task tag by display name.
+type LocalTaskCreateTagParams struct {
+	Name string `json:"name"`
+}
+
+// LocalTaskRenameTagParams changes one stable Local Task tag ID's display name.
+type LocalTaskRenameTagParams struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// LocalTaskDeleteTagParams identifies one stable Local Task tag ID to remove.
+type LocalTaskDeleteTagParams struct {
+	ID string `json:"id"`
+}
+
+// LocalTaskRenameTagResult reports the canonical tag and a source ID removed by a merge.
+type LocalTaskRenameTagResult struct {
+	Tag          localtask.Tag `json:"tag"`
+	RemovedTagID *string       `json:"removedTagId,omitempty"`
+}
+
+// LocalTaskDeleteTagResult identifies the stable Local Task tag ID that was deleted.
+type LocalTaskDeleteTagResult struct {
+	DeletedTagID string `json:"deletedTagId"`
 }
 
 // LocalTaskUpdateParams contains mutable Local Task metadata.
@@ -41,6 +71,7 @@ type LocalTaskUpdateParams struct {
 	Status      *localtask.Status   `json:"status,omitempty"`
 	Priority    *localtask.Priority `json:"priority,omitempty"`
 	Tags        *[]string           `json:"tags,omitempty"`
+	TagRefs     *[]localtask.TagRef `json:"tagRefs,omitempty"`
 }
 
 // LocalTaskSearchParams contains a metadata search and optional filters.

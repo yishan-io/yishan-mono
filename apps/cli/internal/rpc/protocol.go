@@ -186,7 +186,7 @@ func mapWorkspaceErrorCode(code workspace.ErrorCode) int {
 
 func mapLocalTaskErrorCode(err error) (int, bool) {
 	switch {
-	case errors.Is(err, localtask.ErrInvalidTask), errors.Is(err, localtask.ErrInvalidLink),
+	case errors.Is(err, localtask.ErrInvalidTask), errors.Is(err, localtask.ErrInvalidLink), errors.Is(err, localtask.ErrInvalidTag),
 		errors.Is(err, localtask.ErrInvalidTagKey), errors.Is(err, localtask.ErrInvalidTagColor):
 		return CodeInvalidParams, true
 	case errors.Is(err, localtask.ErrTaskNotFound), errors.Is(err, localtask.ErrLinkNotFound),
