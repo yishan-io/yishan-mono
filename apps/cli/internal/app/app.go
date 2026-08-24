@@ -208,6 +208,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		Repository:     sqlite.NewLocalTaskStore(cfg.Database),
 		Registry:       registry,
 		WorkspaceStore: store,
+		Events:         events,
 		TaskContextsChanged: func() {
 			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
 		},

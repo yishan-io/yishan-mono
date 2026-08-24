@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LuArrowDown, LuArrowUp, LuCircleCheck, LuCirclePause, LuCirclePlay, LuMinus } from "react-icons/lu";
 import { loadLocalTaskContext } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskLoadState, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
-import { LocalTaskTagsEditor } from "../tags/LocalTaskTagsEditor";
+import { LocalTaskTagsInlineEditor } from "../tags/LocalTaskTagsInlineEditor";
 import { TaskDescriptionMarkdown } from "./TaskDescriptionMarkdown";
 
 const STATUS_ICONS = {
@@ -86,7 +86,7 @@ export function WorkspaceTaskDetails({
             },
           }}
         />
-        <LocalTaskTagsEditor
+        <LocalTaskTagsInlineEditor
           tagRefs={task.tagRefs}
           tags={task.tagRefs.length === 0 ? task.tags : undefined}
           tagCatalog={tagCatalog}

@@ -48,6 +48,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       terminalSessionChanged: "terminal.session.changed",
       terminalAgentChanged: "terminal.agent.changed",
       agentPiEvent: "agent.pi.event",
+      localTaskChanged: "localTask.changed",
     });
   });
 });

@@ -158,6 +158,10 @@ export type RpcSchema = {
         workspaceId: string;
         event: Record<string, unknown>;
       };
+      localTaskChanged: {
+        taskId?: string;
+        change?: "created" | "updated";
+      };
     };
   };
 };

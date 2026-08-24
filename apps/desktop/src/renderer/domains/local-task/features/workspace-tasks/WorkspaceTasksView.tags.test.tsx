@@ -123,14 +123,15 @@ describe("WorkspaceTasksView tags", () => {
     const metadata = screen.getByTestId("local-task-metadata");
     expect(metadata.contains(screen.getByTestId("local-task-status-icon"))).toBe(true);
     expect(metadata.contains(screen.getByText("backend"))).toBe(true);
-    expect(metadata.contains(screen.getByRole("combobox", { name: "localTask.fields.tags" }))).toBe(true);
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.tags" }));
+    // Open the tag selector popover by clicking the add button.
+    fireEvent.click(screen.getByRole("button", { name: "localTask.tags.add" }));
+    // LocalTaskTagSelector renders a listbox; click the "backend" option to deselect it.
     fireEvent.click(await screen.findByRole("option", { name: "backend" }));
 
     await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tagIds: [] }));
 
     act(() => localTaskStore.setState({ isMutationLoading: true }));
-    expect((screen.getByRole("combobox", { name: "localTask.fields.tags" }) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "localTask.tags.add", hidden: true }) as HTMLButtonElement).disabled).toBe(true);
     expect(commands.updateLocalTask).toHaveBeenCalledTimes(1);
   });
 
