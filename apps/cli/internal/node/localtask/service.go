@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	domain "yishan/apps/cli/internal/localtask"
+	eventbus "yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -23,6 +24,7 @@ type Deps struct {
 	Repository          domain.Repository
 	Registry            WorkspaceRegistry
 	WorkspaceStore      workspace.WorkspaceStore
+	Events              *eventbus.Hub
 	TaskContextsChanged func()
 	TaskTitleChanged    func(context.Context, string, string)
 }
@@ -35,6 +37,17 @@ type Service struct {
 // NewService builds the Local Task application service.
 func NewService(deps Deps) *Service {
 	return &Service{deps: deps}
+}
+
+// publishTaskChanged emits a localTaskChanged event to the frontend event hub.
+func (s *Service) publishTaskChanged() {
+	if s.deps.Events == nil {
+		return
+	}
+	s.deps.Events.Publish(eventbus.Event{
+		Topic:   "localTaskChanged",
+		Payload: map[string]any{},
+	})
 }
 
 // Create validates and persists a new Local Task.
@@ -56,6 +69,7 @@ func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (an
 	if s.deps.TaskContextsChanged != nil {
 		s.deps.TaskContextsChanged()
 	}
+	s.publishTaskChanged()
 	return created, nil
 }
 
@@ -98,6 +112,7 @@ func (s *Service) Update(ctx context.Context, req rpc.LocalTaskUpdateParams) (an
 	if req.Title != nil && s.deps.TaskTitleChanged != nil {
 		s.deps.TaskTitleChanged(ctx, updated.ID, updated.Title)
 	}
+	s.publishTaskChanged()
 	return updated, nil
 }
 

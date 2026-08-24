@@ -29,7 +29,8 @@ export type BackendEventName =
   | "open.browser.url"
   | "terminal.session.changed"
   | "terminal.agent.changed"
-  | "agent.pi.event";
+  | "agent.pi.event"
+  | "localTask.changed";
 
 export type NormalizedBackendEvent =
   | {
@@ -111,6 +112,11 @@ export type NormalizedBackendEvent =
       source: "agentPiEvent";
       name: "agent.pi.event";
       payload: RpcFrontendMessagePayload<"agentPiEvent">;
+    }
+  | {
+      source: "localTaskChanged";
+      name: "localTask.changed";
+      payload: RpcFrontendMessagePayload<"localTaskChanged">;
     };
 
 /**
@@ -133,6 +139,7 @@ export const BACKEND_EVENT_NAME_BY_SOURCE = {
   terminalSessionChanged: "terminal.session.changed",
   terminalAgentChanged: "terminal.agent.changed",
   agentPiEvent: "agent.pi.event",
+  localTaskChanged: "localTask.changed",
 } as const satisfies Record<RpcFrontendMessageKey, BackendEventName>;
 
 /**
@@ -372,6 +379,14 @@ export function normalizeBackendEvent(envelope: DesktopEventEnvelope): Normalize
       source: "agentPiEvent",
       name: BACKEND_EVENT_NAME_BY_SOURCE.agentPiEvent,
       payload: payload as RpcFrontendMessagePayload<"agentPiEvent">,
+    };
+  }
+
+  if (envelope.method === "localTaskChanged") {
+    return {
+      source: "localTaskChanged",
+      name: BACKEND_EVENT_NAME_BY_SOURCE.localTaskChanged,
+      payload: payload as RpcFrontendMessagePayload<"localTaskChanged">,
     };
   }
 

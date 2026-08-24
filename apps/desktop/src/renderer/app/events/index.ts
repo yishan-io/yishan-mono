@@ -11,7 +11,7 @@ import { openLink } from "@renderer/domains/browser";
  */
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
-import { refreshActiveLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
+import { refreshActiveLocalTaskCount, refreshLocalTaskHub, refreshSelectedWorkspaceTasks, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
 import { createNotificationEventHandlers } from "@renderer/domains/notification";
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -158,9 +158,19 @@ export function startBackendEventHandlers() {
       }),
   })();
 
+  const stopLocalTaskChanged = subscribeBackendEvent("localTask.changed", (event) => {
+    if (event.source !== "localTaskChanged") {
+      return;
+    }
+    const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
+    void refreshLocalTaskHub();
+    void refreshSelectedWorkspaceTasks(selectedWorkspaceId ?? undefined);
+  });
+
   const stopWebviewOpenUrl = subscribeWebviewOpenUrlHandler();
   return () => {
     stopWebviewOpenUrl();
+    stopLocalTaskChanged();
     stopWorkspaceEventHandlers();
     stopNotificationEventHandlers();
     stopTerminalEventHandlers();
