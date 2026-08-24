@@ -11,10 +11,10 @@ import {
   renameLocalTaskTag,
   updateLocalTaskTagColor,
 } from "../../commands/localTaskCommands";
-import type { LocalTaskTagCatalogEntry, LocalTaskTagColor, LocalTaskTagCustomColor } from "../../localTaskTypes";
+import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
-import { LocalTaskTagColorPicker } from "./LocalTaskTagColorPicker";
 import { LocalTaskTagSettingsRow } from "../../ui/LocalTaskTagSettingsRow";
+import { LocalTaskTagColorPicker } from "./LocalTaskTagColorPicker";
 const TAG_ROW_HEIGHT = 40;
 const TAG_LIST_MAX_HEIGHT = 480;
 const TAG_LIST_PAGE_SIZE = 10;
@@ -166,12 +166,9 @@ export function LocalTaskTagsSettingsView() {
     setColorAnchorPosition(null);
     setColorTag(null);
   }, []);
-  const handleTagColorChange = useCallback(
-    async (tagId: string, color: LocalTaskTagColor | null, customColor: LocalTaskTagCustomColor | null = null) => {
-      await updateLocalTaskTagColor(tagId, color, customColor);
-    },
-    [],
-  );
+  const handleTagColorChange = useCallback(async (tagId: string, color: string | null) => {
+    await updateLocalTaskTagColor(tagId, color);
+  }, []);
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingTag || isDeleting) return;
     setIsDeleting(true);

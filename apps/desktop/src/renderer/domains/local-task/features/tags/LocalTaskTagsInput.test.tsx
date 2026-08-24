@@ -20,7 +20,6 @@ const backendTag: LocalTaskTagCatalogEntry = {
   name: "Backend",
   aliases: ["Backend", "backend"],
   color: null,
-  customColor: null,
 };
 const catalog = [backendTag];
 

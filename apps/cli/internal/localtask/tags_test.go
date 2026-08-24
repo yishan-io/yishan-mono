@@ -97,17 +97,19 @@ func TestValidateTaskAndUpdate_ValidateTags(t *testing.T) {
 	}
 }
 
-func TestValidateTagColor_AcceptsSupportedColorsAndClear(t *testing.T) {
-	blue := TagColorBlue
-	if err := ValidateTagColor(&blue); err != nil {
-		t.Fatalf("validate supported color: %v", err)
+func TestValidateTagColor_AcceptsCanonicalHexAndClear(t *testing.T) {
+	hex := "#3B82F6"
+	if err := ValidateTagColor(&hex); err != nil {
+		t.Fatalf("validate hex color: %v", err)
 	}
 	if err := ValidateTagColor(nil); err != nil {
 		t.Fatalf("validate clear color: %v", err)
 	}
-	invalid := "magenta"
-	if !errors.Is(ValidateTagColor(&invalid), ErrInvalidTagColor) {
-		t.Fatalf("validate invalid color = %v, want %v", ValidateTagColor(&invalid), ErrInvalidTagColor)
+	for _, invalid := range []string{"blue", "#3b82f6", "#3B82F", "3B82F6", "#3B82F60", ""} {
+		v := invalid
+		if !errors.Is(ValidateTagColor(&v), ErrInvalidTagColor) {
+			t.Fatalf("validate %q = %v, want %v", invalid, ValidateTagColor(&v), ErrInvalidTagColor)
+		}
 	}
 }
 

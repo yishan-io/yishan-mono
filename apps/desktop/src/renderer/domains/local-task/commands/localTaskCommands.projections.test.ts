@@ -151,14 +151,10 @@ describe("localTaskCommands projections and detail loading", () => {
       name: "Canonical",
       aliases: ["Canonical"],
       color: null,
-      customColor: null,
     };
     vi.mocked(daemon.localTaskClient.renameTag).mockResolvedValue({ tag: canonicalTag, removedTagId: "tag-merged" });
     localTaskStore.setState({
-      tagCatalog: [
-        { id: "tag-merged", key: "merged", name: "Merged", aliases: ["Merged"], color: null, customColor: null },
-        canonicalTag,
-      ],
+      tagCatalog: [{ id: "tag-merged", key: "merged", name: "Merged", aliases: ["Merged"], color: null }, canonicalTag],
       taskById: { [task.id]: { ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] } },
       hubTasks: [{ ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] }],
       hubFilters: { tagIds: ["tag-merged", "tag-other", "tag-canonical"] },
@@ -193,7 +189,6 @@ describe("localTaskCommands projections and detail loading", () => {
       name: "Deleted",
       aliases: ["Deleted"],
       color: null,
-      customColor: null,
     };
     vi.mocked(daemon.localTaskClient.deleteTag).mockResolvedValue(undefined);
     localTaskStore.setState({

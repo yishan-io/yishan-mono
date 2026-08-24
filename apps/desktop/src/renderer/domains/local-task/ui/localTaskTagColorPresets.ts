@@ -1,10 +1,27 @@
-import type { Theme } from "@mui/material";
-import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens/v1";
-import type { LocalTaskTagCatalogEntry, LocalTaskTagColor } from "../localTaskTypes";
+import type { LocalTaskTagCatalogEntry } from "../localTaskTypes";
 
-/** Returns the dedicated token color assigned to a daemon-owned tag color. */
-export function getLocalTaskTagColorValue(color: LocalTaskTagColor, theme: Theme): string {
-  return SEMANTIC_COLOR_TOKENS[theme.palette.mode].tag[color];
+/** Canonical hex values for the six named presets, keyed by their i18n slug. */
+export const LOCAL_TASK_TAG_PRESET_COLORS = {
+  amber: "#F59E0B",
+  blue: "#3B82F6",
+  green: "#22C55E",
+  purple: "#A855F7",
+  red: "#EF4444",
+  teal: "#14B8A6",
+} as const;
+
+export type LocalTaskTagPresetName = keyof typeof LOCAL_TASK_TAG_PRESET_COLORS;
+
+/** Returns the canonical hex for a preset name, or undefined when not a preset. */
+export function getPresetHex(name: LocalTaskTagPresetName): string {
+  return LOCAL_TASK_TAG_PRESET_COLORS[name];
+}
+
+/** Returns true when hex matches one of the six canonical presets. */
+export function isPresetHex(hex: string): boolean {
+  return Object.values(LOCAL_TASK_TAG_PRESET_COLORS).includes(
+    hex as (typeof LOCAL_TASK_TAG_PRESET_COLORS)[LocalTaskTagPresetName],
+  );
 }
 
 /** Looks up a catalog entry from an exact daemon-provided display alias. */
@@ -13,11 +30,6 @@ export function getLocalTaskTagCatalogEntry(
   catalog: LocalTaskTagCatalogEntry[],
 ): LocalTaskTagCatalogEntry | undefined {
   return catalog.find((entry) => entry.aliases.includes(tag));
-}
-
-/** Looks up a catalog preset color from an exact daemon-provided display alias. */
-export function getLocalTaskTagColor(tag: string, catalog: LocalTaskTagCatalogEntry[]): LocalTaskTagColor | null {
-  return getLocalTaskTagCatalogEntry(tag, catalog)?.color ?? null;
 }
 
 /** Returns whether a tag is selected using only exact daemon-provided aliases. */

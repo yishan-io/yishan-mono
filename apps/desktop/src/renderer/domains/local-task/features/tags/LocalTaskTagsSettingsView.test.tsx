@@ -89,8 +89,7 @@ function createCatalogEntry(index: number): LocalTaskTagCatalogEntry {
     key: `tag-${index}`,
     name: `Tag ${index}`,
     aliases: [`Tag ${index}`, `Alias ${index}`],
-    color: index === 1 ? "blue" : null,
-    customColor: null,
+    color: index === 1 ? "#3B82F6" : null,
   };
 }
 
@@ -209,7 +208,7 @@ describe("LocalTaskTagsSettingsView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.tags.applyCustomColor" }));
 
-    await waitFor(() => expect(commands.updateLocalTaskTagColor).toHaveBeenCalledWith("tag-1", null, "#1A2B3C"));
+    await waitFor(() => expect(commands.updateLocalTaskTagColor).toHaveBeenCalledWith("tag-1", "#1A2B3C"));
   });
 
   it("synchronizes the hex input when the color plane and hue slider change", () => {
@@ -282,7 +281,7 @@ describe("LocalTaskTagsSettingsView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.tags.color.amber" }));
 
-    await waitFor(() => expect(commands.updateLocalTaskTagColor).toHaveBeenCalledWith("tag-1", "amber", null));
+    await waitFor(() => expect(commands.updateLocalTaskTagColor).toHaveBeenCalledWith("tag-1", "#F59E0B"));
     expect(screen.queryByRole("group", { name: "localTask.tags.colorPicker Tag 1" })).toBeNull();
   });
 
@@ -292,7 +291,7 @@ describe("LocalTaskTagsSettingsView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.tags.clearColor" }));
 
-    await waitFor(() => expect(commands.updateLocalTaskTagColor).toHaveBeenCalledWith("tag-1", null, null));
+    await waitFor(() => expect(commands.updateLocalTaskTagColor).toHaveBeenCalledWith("tag-1", null));
   });
 
   it("renames by stable ID and warns before merging into an existing name", async () => {

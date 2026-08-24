@@ -194,3 +194,39 @@ func TestLocalTaskHandler_UpdateTagColorRequiresExactlyOneSelector(t *testing.T)
 		})
 	}
 }
+
+func TestLocalTaskHandler_UpdateTagColorRejectsLegacyCustomColor(t *testing.T) {
+	// {id, color:null, customColor:'#123456'} must be rejected before service dispatch
+	// to guard against version-skew clearing a color that the daemon cannot interpret.
+	tests := []struct {
+		name   string
+		params string
+	}{
+		{
+			name:   "customColor with null color",
+			params: `{"id":"tag-1","color":null,"customColor":"#123456"}`,
+		},
+		{
+			name:   "customColor with explicit color",
+			params: `{"id":"tag-1","color":"#AABBCC","customColor":"#123456"}`,
+		},
+		{
+			name:   "customColor via key selector",
+			params: `{"key":"first","color":null,"customColor":"#123456"}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			service := &recordingLocalTaskService{}
+			handler := &LocalTaskHandler{Services: service}
+			_, err := handler.Call(context.Background(), &Connection{}, MethodLocalTaskUpdateTagColor, json.RawMessage(test.params))
+			var rpcErr *Error
+			if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams {
+				t.Fatalf("Call error = %v, want invalid params (CodeInvalidParams)", err)
+			}
+			if service.calls != 0 {
+				t.Fatalf("service calls = %d, want 0 — customColor must not reach service", service.calls)
+			}
+		})
+	}
+}

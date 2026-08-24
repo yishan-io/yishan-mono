@@ -1,6 +1,6 @@
-import { Box, Chip, type ChipProps, type Theme, useTheme } from "@mui/material";
+import { Box, Chip, type ChipProps, type Theme } from "@mui/material";
 import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../localTaskTypes";
-import { getLocalTaskTagCatalogEntry, getLocalTaskTagColorValue } from "./localTaskTagColorPresets";
+import { getLocalTaskTagCatalogEntry } from "./localTaskTagColorPresets";
 
 const tagChipLabelSx = {
   alignItems: "center",
@@ -51,15 +51,12 @@ export function LocalTaskTagChip({
   onDotMouseDown,
   chipProps,
 }: LocalTaskTagChipProps) {
-  const theme = useTheme();
   const tagID = typeof tag === "string" ? undefined : tag.id;
   const tagName = typeof tag === "string" ? tag : (tag.name ?? tag.id);
   const catalogEntry = tagID
     ? tagCatalog.find((entry) => entry.id === tagID)
     : getLocalTaskTagCatalogEntry(tagName, tagCatalog);
-  const color = catalogEntry?.color ?? null;
-  const customColor = catalogEntry?.customColor ?? null;
-  const dotColor = customColor ?? (color ? getLocalTaskTagColorValue(color, theme) : null);
+  const dotColor = catalogEntry?.color ?? null;
 
   return (
     <Chip

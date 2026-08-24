@@ -44,8 +44,7 @@ describe("DaemonLocalTaskClient", () => {
                 key: "desktop",
                 name: "Desktop",
                 aliases: ["Desktop"],
-                color: "blue",
-                customColor: null,
+                color: "#3B82F6",
               },
             ]
           : {
@@ -53,8 +52,7 @@ describe("DaemonLocalTaskClient", () => {
               key: "desktop",
               name: "Desktop",
               aliases: ["Desktop"],
-              color: "blue",
-              customColor: null,
+              color: "#3B82F6",
             };
       if (method === "localTask.renameTag") {
         return {
@@ -63,8 +61,7 @@ describe("DaemonLocalTaskClient", () => {
             key: "desktop",
             name: "Desktop",
             aliases: ["Desktop"],
-            color: "blue",
-            customColor: null,
+            color: "#3B82F6",
           },
           removedTagId: "tag-merged",
         };
@@ -97,7 +94,7 @@ describe("DaemonLocalTaskClient", () => {
     await client.search("desktop", { status: "active", tags: ["desktop"], tagIds: ["tag-desktop"] });
     await client.listTags();
     await client.listTagCatalog();
-    await client.updateTagColor("tag-desktop", "blue");
+    await client.updateTagColor("tag-desktop", "#3B82F6");
     await client.update("task-1", { status: "completed", tagIds: [] });
     await client.renameTag("tag-merged", "Desktop");
     await client.deleteTag("tag-desktop");
@@ -125,7 +122,7 @@ describe("DaemonLocalTaskClient", () => {
       ["localTask.search", { query: "desktop", status: "active", tags: ["desktop"], tagIds: ["tag-desktop"] }],
       ["localTask.listTags", {}],
       ["localTask.listTagCatalog", {}],
-      ["localTask.updateTagColor", { id: "tag-desktop", color: "blue", customColor: null }],
+      ["localTask.updateTagColor", { id: "tag-desktop", color: "#3B82F6" }],
       ["localTask.update", { id: "task-1", status: "completed", tagRefs: [] }],
       ["localTask.renameTag", { id: "tag-merged", name: "Desktop" }],
       ["localTask.deleteTag", { id: "tag-desktop" }],
@@ -141,13 +138,13 @@ describe("DaemonLocalTaskClient", () => {
   it("preserves removedTagId from a tag merge", async () => {
     const client = new DaemonLocalTaskClient(
       vi.fn(async () => ({
-        tag: { id: "tag-target", key: "target", name: "Target", aliases: ["Target"], color: null, customColor: null },
+        tag: { id: "tag-target", key: "target", name: "Target", aliases: ["Target"], color: null },
         removedTagId: "tag-source",
       })),
     );
 
     await expect(client.renameTag("tag-source", "Target")).resolves.toEqual({
-      tag: { id: "tag-target", key: "target", name: "Target", aliases: ["Target"], color: null, customColor: null },
+      tag: { id: "tag-target", key: "target", name: "Target", aliases: ["Target"], color: null },
       removedTagId: "tag-source",
     });
   });
@@ -226,23 +223,23 @@ describe("DaemonLocalTaskClient", () => {
 it("strictly parses tag catalog entries", async () => {
   const validClient = new DaemonLocalTaskClient(
     vi.fn(async () => [
-      { id: "tag-cafe", key: "café", name: "Café", aliases: ["CAFÉ", "Café"], color: "teal", customColor: null },
-      { id: "tag-plain", key: "plain", name: "Plain", aliases: ["Plain"], color: null, customColor: null },
+      { id: "tag-cafe", key: "café", name: "Café", aliases: ["CAFÉ", "Café"], color: "#14B8A6" },
+      { id: "tag-plain", key: "plain", name: "Plain", aliases: ["Plain"], color: null },
     ]),
   );
   const malformedClient = new DaemonLocalTaskClient(
     vi.fn(async () => [{ id: "tag-key", key: "key", name: "Name", aliases: ["Name"], color: "orange" }]),
   );
   const missingAliasesClient = new DaemonLocalTaskClient(
-    vi.fn(async () => [{ id: "tag-key", key: "key", name: "Name", color: null, customColor: null }]),
+    vi.fn(async () => [{ id: "tag-key", key: "key", name: "Name", color: null }]),
   );
   const missingIDClient = new DaemonLocalTaskClient(
-    vi.fn(async () => [{ key: "key", name: "Name", aliases: ["Name"], color: null, customColor: null }]),
+    vi.fn(async () => [{ key: "key", name: "Name", aliases: ["Name"], color: null }]),
   );
 
   await expect(validClient.listTagCatalog()).resolves.toEqual([
-    { id: "tag-cafe", key: "café", name: "Café", aliases: ["CAFÉ", "Café"], color: "teal", customColor: null },
-    { id: "tag-plain", key: "plain", name: "Plain", aliases: ["Plain"], color: null, customColor: null },
+    { id: "tag-cafe", key: "café", name: "Café", aliases: ["CAFÉ", "Café"], color: "#14B8A6" },
+    { id: "tag-plain", key: "plain", name: "Plain", aliases: ["Plain"], color: null },
   ]);
   await expect(malformedClient.listTagCatalog()).rejects.toThrow("invalid Local Task tag catalog payload");
   await expect(missingAliasesClient.listTagCatalog()).rejects.toThrow("invalid Local Task tag catalog payload");
@@ -257,9 +254,7 @@ describe("stable tag ID mutations", () => {
     });
     const client = new DaemonLocalTaskClient(invoke);
 
-    await expect(client.updateTagColor("stale-tag-id", "blue")).rejects.toThrow("tag not found");
-    expect(invoke.mock.calls).toEqual([
-      ["localTask.updateTagColor", { id: "stale-tag-id", color: "blue", customColor: null }],
-    ]);
+    await expect(client.updateTagColor("stale-tag-id", "#3B82F6")).rejects.toThrow("tag not found");
+    expect(invoke.mock.calls).toEqual([["localTask.updateTagColor", { id: "stale-tag-id", color: "#3B82F6" }]]);
   });
 });

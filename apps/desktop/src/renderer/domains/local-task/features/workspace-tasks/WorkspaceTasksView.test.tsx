@@ -13,7 +13,6 @@ const commands = vi.hoisted(() => ({
     name,
     aliases: [name],
     color: null,
-    customColor: null,
   })),
   loadLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),

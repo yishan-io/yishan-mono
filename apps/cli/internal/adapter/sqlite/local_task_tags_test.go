@@ -195,7 +195,7 @@ func TestLocalTaskStore_RetainsCatalogColorsAcrossAssignments(t *testing.T) {
 		t.Fatalf("initial catalog = %#v, %v", catalog, err)
 	}
 
-	color := localtask.TagColorBlue
+	color := "#3B82F6"
 	updated, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &color})
 	if err != nil || updated.Color == nil || *updated.Color != color || !reflect.DeepEqual(updated.Aliases, []string{"Alpha"}) {
 		t.Fatalf("set catalog color = %#v, %v", updated, err)
@@ -295,7 +295,7 @@ func TestLocalTaskStore_PreservesCatalogIdentityAndColorAfterRestart(t *testing.
 	}
 	store := NewLocalTaskStore(database)
 	_ = createTaggedTask(t, store, "First", []string{"Straße"})
-	color := localtask.TagColorPurple
+	color := "#A855F7"
 	if _, err := store.UpdateTagColor(ctx, "strasse", localtask.TagColorUpdate{Color: &color}); err != nil {
 		t.Fatalf("set catalog color: %v", err)
 	}
@@ -321,30 +321,28 @@ func TestLocalTaskStore_PreservesCatalogIdentityAndColorAfterRestart(t *testing.
 	}
 }
 
-func TestLocalTaskStore_CustomTagColorReplacesPresetAndClears(t *testing.T) {
+func TestLocalTaskStore_ColorRejectsInvalidHexAndClears(t *testing.T) {
 	ctx := context.Background()
 	store, _ := openTestLocalTaskStore(t)
 	createTaggedTask(t, store, "Colored", []string{"alpha"})
-	preset := localtask.TagColorBlue
-	if _, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &preset}); err != nil {
-		t.Fatalf("set preset: %v", err)
+	hex := "#3B82F6"
+	updated, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &hex})
+	if err != nil || updated.Color == nil || *updated.Color != hex {
+		t.Fatalf("set hex color = %#v, %v", updated, err)
 	}
-	custom := "#a1B2c3"
-	updated, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{CustomColor: &custom})
-	if err != nil || updated.Color != nil || updated.CustomColor == nil || *updated.CustomColor != custom {
-		t.Fatalf("set custom = %#v, %v", updated, err)
-	}
-	invalid := "#12345"
-	if _, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{CustomColor: &invalid}); !errors.Is(err, localtask.ErrInvalidTagColor) {
-		t.Fatalf("invalid custom color error = %v", err)
+	for _, invalid := range []string{"#12345", "#a1b2c3", "blue", "#3B82F60"} {
+		v := invalid
+		if _, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &v}); !errors.Is(err, localtask.ErrInvalidTagColor) {
+			t.Fatalf("invalid hex %q error = %v, want invalid color", invalid, err)
+		}
 	}
 	cleared, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{})
-	if err != nil || cleared.Color != nil || cleared.CustomColor != nil {
-		t.Fatalf("clear colors = %#v, %v", cleared, err)
+	if err != nil || cleared.Color != nil {
+		t.Fatalf("clear color = %#v, %v", cleared, err)
 	}
 }
 
-func TestLocalTaskStore_CustomTagColorSurvivesDatabaseRestart(t *testing.T) {
+func TestLocalTaskStore_TagColorSurvivesDatabaseRestart(t *testing.T) {
 	profileDir := t.TempDir()
 	database, err := Open(profileDir)
 	if err != nil {
@@ -355,17 +353,17 @@ func TestLocalTaskStore_CustomTagColorSurvivesDatabaseRestart(t *testing.T) {
 	}
 	store := NewLocalTaskStore(database)
 	createTaggedTask(t, store, "Colored", []string{"alpha"})
-	custom := "#123456"
-	if _, err := store.UpdateTagColor(context.Background(), "alpha", localtask.TagColorUpdate{CustomColor: &custom}); err != nil {
-		t.Fatalf("set custom: %v", err)
+	hex := "#123456"
+	if _, err := store.UpdateTagColor(context.Background(), "alpha", localtask.TagColorUpdate{Color: &hex}); err != nil {
+		t.Fatalf("set hex color: %v", err)
 	}
 	if err := database.Close(); err != nil {
 		t.Fatalf("close database: %v", err)
 	}
-	assertRestartedCustomTagColor(t, profileDir, custom)
+	assertRestartedTagColor(t, profileDir, hex)
 }
 
-func assertRestartedCustomTagColor(t *testing.T, profileDir string, want string) {
+func assertRestartedTagColor(t *testing.T, profileDir string, want string) {
 	t.Helper()
 	database, err := Open(profileDir)
 	if err != nil {
@@ -376,7 +374,7 @@ func assertRestartedCustomTagColor(t *testing.T, profileDir string, want string)
 		t.Fatalf("remigrate database: %v", err)
 	}
 	catalog, err := NewLocalTaskStore(database).ListTags(context.Background())
-	if err != nil || len(catalog) != 1 || catalog[0].CustomColor == nil || *catalog[0].CustomColor != want {
+	if err != nil || len(catalog) != 1 || catalog[0].Color == nil || *catalog[0].Color != want {
 		t.Fatalf("restarted catalog = %#v, %v", catalog, err)
 	}
 }
@@ -384,20 +382,20 @@ func assertRestartedCustomTagColor(t *testing.T, profileDir string, want string)
 func TestLocalTaskStore_EnsuresCatalogEntryAndAliasesWhenColoringNewDisplayTag(t *testing.T) {
 	ctx := context.Background()
 	store, _ := openTestLocalTaskStore(t)
-	preset := localtask.TagColorBlue
-	first, err := store.UpdateTagColor(ctx, "", localtask.TagColorUpdate{DisplayName: stringPointer(" Cafe\u0301 "), Color: &preset})
+	hex := "#3B82F6"
+	first, err := store.UpdateTagColor(ctx, "", localtask.TagColorUpdate{DisplayName: stringPointer(" Cafe\u0301 "), Color: &hex})
 	if err != nil {
-		t.Fatalf("set new preset color: %v", err)
+		t.Fatalf("set new hex color: %v", err)
 	}
-	if first.Key != "café" || first.Name != "Café" || !reflect.DeepEqual(first.Aliases, []string{"Café"}) || first.Color == nil || *first.Color != preset {
+	if first.Key != "café" || first.Name != "Café" || !reflect.DeepEqual(first.Aliases, []string{"Café"}) || first.Color == nil || *first.Color != hex {
 		t.Fatalf("new catalog entry = %#v", first)
 	}
-	custom := "#123456"
-	second, err := store.UpdateTagColor(ctx, "", localtask.TagColorUpdate{DisplayName: stringPointer("CAFÉ"), CustomColor: &custom})
+	hex2 := "#123456"
+	second, err := store.UpdateTagColor(ctx, "", localtask.TagColorUpdate{DisplayName: stringPointer("CAFÉ"), Color: &hex2})
 	if err != nil {
-		t.Fatalf("set new custom color: %v", err)
+		t.Fatalf("set updated hex color: %v", err)
 	}
-	if second.Key != "café" || !reflect.DeepEqual(second.Aliases, []string{"CAFÉ", "Café"}) || second.Color != nil || second.CustomColor == nil || *second.CustomColor != custom {
+	if second.Key != "café" || !reflect.DeepEqual(second.Aliases, []string{"CAFÉ", "Café"}) || second.Color == nil || *second.Color != hex2 {
 		t.Fatalf("updated catalog entry = %#v", second)
 	}
 }
@@ -427,7 +425,7 @@ func TestLocalTaskStore_UsesStableTagIDsForReferencesFiltersAndCatalogMutations(
 		t.Fatalf("filter IDs = %#v, %v", listed, err)
 	}
 
-	color := localtask.TagColorBlue
+	color := "#3B82F6"
 	if _, err := store.UpdateTagColor(ctx, alpha.ID, localtask.TagColorUpdate{Color: &color}); err != nil {
 		t.Fatalf("color alpha: %v", err)
 	}

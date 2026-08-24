@@ -1,7 +1,6 @@
 import { Alert, Box, IconButton, TextField, Tooltip, Typography } from "@mui/material";
 import { LuTrash2 } from "react-icons/lu";
 import type { LocalTaskTagCatalogEntry } from "../localTaskTypes";
-import { getLocalTaskTagColorValue } from "./localTaskTagColorPresets";
 
 type LocalTaskTagSettingsRowProps = {
   readonly editedName: string;
@@ -69,8 +68,7 @@ export function LocalTaskTagSettingsRow({
         disabled={isEditDisabled}
         onClick={(event) => onOpenColorPicker(event.currentTarget)}
         sx={(theme) => ({
-          backgroundColor:
-            tag.customColor ?? (tag.color ? getLocalTaskTagColorValue(tag.color, theme) : theme.palette.text.disabled),
+          backgroundColor: tag.color ?? theme.palette.text.disabled,
           border: 0,
           borderRadius: "50%",
           cursor: "pointer",

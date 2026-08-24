@@ -2,12 +2,17 @@ import { Alert, Box, Button, InputBase, Popover, Typography } from "@mui/materia
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { LocalTaskTagCatalogEntry, LocalTaskTagColor, LocalTaskTagCustomColor } from "../../localTaskTypes";
+import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import {
+  LOCAL_TASK_TAG_PRESET_COLORS,
+  type LocalTaskTagPresetName,
+  getLocalTaskTagCatalogEntry,
+  isPresetHex,
+} from "../../ui/localTaskTagColorPresets";
 import { LocalTaskTagHsvPicker } from "./LocalTaskTagHsvPicker";
 import { type HsvColor, getHexFromHsv, getHsvFromHex, isValidHexColor } from "./localTaskTagColorHsv";
-import { getLocalTaskTagCatalogEntry, getLocalTaskTagColorValue } from "../../ui/localTaskTagColorPresets";
 
-const TAG_COLORS = ["amber", "blue", "green", "purple", "red", "teal"] as const;
+const PRESET_NAMES = Object.keys(LOCAL_TASK_TAG_PRESET_COLORS) as LocalTaskTagPresetName[];
 const DEFAULT_CUSTOM_COLOR: HsvColor = { hue: 0, saturation: 100, value: 100 };
 const COLOR_WHEEL_BACKGROUND =
   "conic-gradient(from 0deg, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%))";
@@ -20,11 +25,7 @@ type LocalTaskTagColorPickerProps = {
   tagName: string | null;
   tagCatalog: LocalTaskTagCatalogEntry[];
   disabled: boolean;
-  onTagColorChange?: (
-    tag: string,
-    color: LocalTaskTagColor | null,
-    customColor?: LocalTaskTagCustomColor | null,
-  ) => Promise<unknown>;
+  onTagColorChange?: (tag: string, color: string | null) => Promise<unknown>;
   onClose: () => void;
 };
 
@@ -62,13 +63,13 @@ export function LocalTaskTagColorPicker({
   }, [isColorPickerOpen]);
 
   const handleColorChange = useCallback(
-    async (color: LocalTaskTagColor | null, customColor: LocalTaskTagCustomColor | null = null) => {
+    async (color: string | null) => {
       const id = tagId ?? colorTag?.id;
       if (!id || !onTagColorChange || isColorUpdating) return;
       setIsColorUpdating(true);
       setColorUpdateError(null);
       try {
-        await onTagColorChange(id, color, customColor);
+        await onTagColorChange(id, color);
         setCustomColorAnchor(null);
         onClose();
       } catch (error) {
@@ -82,13 +83,15 @@ export function LocalTaskTagColorPicker({
 
   const handleOpenCustomColorEditor = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
-      const initialColor = colorTag?.customColor ?? getHexFromHsv(DEFAULT_CUSTOM_COLOR);
-      setCustomColorDraft(initialColor);
-      setCustomColorHsv(getHsvFromHex(initialColor) ?? DEFAULT_CUSTOM_COLOR);
+      const currentColor = colorTag?.color;
+      const initialHex =
+        currentColor && !isPresetHex(currentColor) ? currentColor : getHexFromHsv(DEFAULT_CUSTOM_COLOR);
+      setCustomColorDraft(initialHex);
+      setCustomColorHsv(getHsvFromHex(initialHex) ?? DEFAULT_CUSTOM_COLOR);
       setIsCustomColorInvalid(false);
       setCustomColorAnchor(event.currentTarget);
     },
-    [colorTag?.customColor],
+    [colorTag?.color],
   );
   const handleCloseCustomColorEditor = useCallback(() => {
     if (!isColorUpdating) setCustomColorAnchor(null);
@@ -98,7 +101,7 @@ export function LocalTaskTagColorPicker({
       setIsCustomColorInvalid(true);
       return;
     }
-    void handleColorChange(null, customColorDraft.toUpperCase() as LocalTaskTagCustomColor);
+    void handleColorChange(customColorDraft.toUpperCase());
   }, [customColorDraft, handleColorChange]);
   const handleCloseColorPicker = useCallback(() => {
     if (isColorUpdating) return;
@@ -117,6 +120,9 @@ export function LocalTaskTagColorPicker({
     if (parsedColor) setCustomColorHsv(parsedColor);
     setIsCustomColorInvalid(false);
   }, []);
+
+  const currentColor = colorTag?.color ?? null;
+  const hasCustomColor = currentColor !== null && !isPresetHex(currentColor);
 
   return (
     <Popover
@@ -140,18 +146,18 @@ export function LocalTaskTagColorPicker({
         >
           <ColorSwatch
             aria-label={t("localTask.tags.clearColor")}
-            isSelected={!colorTag?.color && !colorTag?.customColor}
+            isSelected={currentColor === null}
             disabled={disabled || isColorUpdating}
             onClick={() => void handleColorChange(null)}
           />
-          {TAG_COLORS.map((color) => (
+          {PRESET_NAMES.map((name) => (
             <ColorSwatch
-              key={color}
-              aria-label={t(`localTask.tags.color.${color}`)}
-              color={color}
-              isSelected={colorTag?.color === color}
+              key={name}
+              aria-label={t(`localTask.tags.color.${name}`)}
+              hex={LOCAL_TASK_TAG_PRESET_COLORS[name]}
+              isSelected={currentColor === LOCAL_TASK_TAG_PRESET_COLORS[name]}
               disabled={disabled || isColorUpdating}
-              onClick={() => void handleColorChange(color)}
+              onClick={() => void handleColorChange(LOCAL_TASK_TAG_PRESET_COLORS[name])}
             />
           ))}
           <Box aria-hidden="true" sx={{ alignSelf: "stretch", borderLeft: 1, borderColor: "divider", mx: 0.5 }} />
@@ -165,7 +171,7 @@ export function LocalTaskTagColorPicker({
             sx={colorWheelButtonSx}
             onClick={handleOpenCustomColorEditor}
           >
-            {colorTag?.customColor ? "✓" : null}
+            {hasCustomColor ? "✓" : null}
           </Box>
         </Box>
         <Popover
@@ -233,13 +239,13 @@ export function LocalTaskTagColorPicker({
 
 type ColorSwatchProps = {
   "aria-label": string;
-  color?: LocalTaskTagColor;
+  hex?: string;
   disabled: boolean;
   isSelected: boolean;
   onClick: () => void;
 };
 
-function ColorSwatch({ "aria-label": ariaLabel, color, disabled, isSelected, onClick }: ColorSwatchProps) {
+function ColorSwatch({ "aria-label": ariaLabel, hex, disabled, isSelected, onClick }: ColorSwatchProps) {
   return (
     <Box
       aria-label={ariaLabel}
@@ -249,7 +255,7 @@ function ColorSwatch({ "aria-label": ariaLabel, color, disabled, isSelected, onC
       type="button"
       sx={(theme) => ({
         alignItems: "center",
-        backgroundColor: color ? getLocalTaskTagColorValue(color, theme) : theme.palette.action.selected,
+        backgroundColor: hex ?? theme.palette.action.selected,
         border: isSelected ? 0 : 1,
         borderColor: "divider",
         borderRadius: "50%",

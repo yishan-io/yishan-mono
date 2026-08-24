@@ -20,7 +20,6 @@ const catalog = [
     name: "Backend",
     aliases: ["Backend", "backend"],
     color: null,
-    customColor: null,
   },
 ];
 

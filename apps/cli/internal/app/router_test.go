@@ -74,12 +74,12 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		t.Fatalf("tag catalog = %#v", catalog)
 	}
 	updatedTagValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskUpdateTagColor,
-		json.RawMessage(`{"id":"`+catalog[0].ID+`","color":"blue"}`))
+		json.RawMessage(`{"id":"`+catalog[0].ID+`","color":"#3B82F6"}`))
 	if err != nil {
 		t.Fatalf("update tag color: %v", err)
 	}
 	updatedTag := updatedTagValue.(domain.Tag)
-	if updatedTag.Color == nil || *updatedTag.Color != domain.TagColorBlue {
+	if updatedTag.Color == nil || *updatedTag.Color != "#3B82F6" {
 		t.Fatalf("updated tag = %#v", updatedTag)
 	}
 	for _, params := range []json.RawMessage{
@@ -164,7 +164,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		params json.RawMessage
 	}{
 		{rpc.MethodLocalTaskRenameTag, json.RawMessage(`{"id":"` + createdTag.ID + `","name":"Renamed"}`)},
-		{rpc.MethodLocalTaskUpdateTagColor, json.RawMessage(`{"id":"` + createdTag.ID + `","color":"blue"}`)},
+		{rpc.MethodLocalTaskUpdateTagColor, json.RawMessage(`{"id":"` + createdTag.ID + `","color":"#3B82F6"}`)},
 		{rpc.MethodLocalTaskDeleteTag, json.RawMessage(`{"id":"` + createdTag.ID + `"}`)},
 	} {
 		if _, err := router.Call(context.Background(), &rpc.Connection{}, staleMutation.method, staleMutation.params); err == nil || rpc.MapRPCError(err).Code != rpc.CodeNotFound {

@@ -5,7 +5,6 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskTagChip } from "../../ui/LocalTaskTagChip";
-import { getLocalTaskTagColorValue } from "../../ui/localTaskTagColorPresets";
 
 type LocalTaskTagsInputProps = {
   tagIds?: string[];
@@ -89,9 +88,7 @@ export function LocalTaskTagsInput({
             aria-hidden="true"
             data-local-task-tag-dot
             sx={(theme) => ({
-              bgcolor:
-                option.customColor ??
-                (option.color ? getLocalTaskTagColorValue(option.color, theme) : theme.palette.text.disabled),
+              bgcolor: option.color ?? theme.palette.text.disabled,
               borderRadius: "50%",
               height: 8,
               width: 8,

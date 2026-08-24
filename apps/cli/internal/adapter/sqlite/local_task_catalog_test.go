@@ -37,11 +37,11 @@ func TestLocalTaskStore_RenameTagMergeRetainsRequestedAliasColorsReferencesAndOr
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	targetColor := localtask.TagColorBlue
+	targetColor := "#3B82F6"
 	if _, err := store.UpdateTagColor(ctx, target.ID, localtask.TagColorUpdate{Color: &targetColor}); err != nil {
 		t.Fatalf("color target: %v", err)
 	}
-	sourceColor := localtask.TagColorRed
+	sourceColor := "#EF4444"
 	if _, err := store.UpdateTagColor(ctx, source.ID, localtask.TagColorUpdate{Color: &sourceColor}); err != nil {
 		t.Fatalf("color source: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestLocalTaskStore_UpdateTagColorRollsBackNewTagWhenColorUpdateFails(t *tes
 		WHEN NEW.tag = 'Atomic' BEGIN SELECT RAISE(ABORT, 'color rejected'); END`); err != nil {
 		t.Fatal(err)
 	}
-	color := localtask.TagColorBlue
+	color := "#3B82F6"
 	_, err := store.UpdateTagColor(ctx, "", localtask.TagColorUpdate{DisplayName: stringPointer("Atomic"), Color: &color})
 	if err == nil {
 		t.Fatal("expected color update to abort")
@@ -101,7 +101,7 @@ func TestLocalTaskStore_MergeTagsTransfersSourceColorAndPreservesReferenceOrder(
 	if err != nil {
 		t.Fatalf("create source: %v", err)
 	}
-	sourceColor := localtask.TagColorRed
+	sourceColor := "#EF4444"
 	if _, err := store.UpdateTagColor(ctx, source.ID, localtask.TagColorUpdate{Color: &sourceColor}); err != nil {
 		t.Fatalf("color source: %v", err)
 	}

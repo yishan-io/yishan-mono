@@ -21,7 +21,7 @@ func TestMigrate_015RebuildsTagRelationsWithOpaqueIDs(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("upgrade through 014: %v", err)
 	}
-	assertMigrationCount(t, database, 15)
+	assertMigrationCount(t, database, 16)
 	assertColumnExists(t, database, "local_task_tag_catalog", "id")
 	assertColumnAbsent(t, database, "local_task_tags", "tag")
 	assertColumnAbsent(t, database, "local_task_tags", "normalized_tag")
@@ -33,7 +33,7 @@ func TestMigrate_015RebuildsTagRelationsWithOpaqueIDs(t *testing.T) {
 	if err := database.QueryRow(`SELECT id, tag, color FROM local_task_tag_catalog WHERE normalized_tag = 'alpha'`).Scan(&tagID, &name, &color); err != nil {
 		t.Fatalf("load alpha catalog: %v", err)
 	}
-	if tagID == "" || name != "First" || color != "blue" {
+	if tagID == "" || name != "First" || color != "#3B82F6" {
 		t.Fatalf("alpha catalog = %q %q %q", tagID, name, color)
 	}
 	var relationCount int
@@ -50,7 +50,7 @@ func TestMigrate_015RebuildsTagRelationsWithOpaqueIDs(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migrate: %v", err)
 	}
-	assertMigrationCount(t, database, 15)
+	assertMigrationCount(t, database, 16)
 }
 
 func TestMigrate_015RejectsMissingRelationCatalogWithoutChangingPriorSchema(t *testing.T) {
@@ -109,7 +109,7 @@ func TestMigrate_015PreservesCatalogAndAssignmentDataAfterReopen(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("remigrate reopened database: %v", err)
 	}
-	assertMigrationCount(t, database, 15)
+	assertMigrationCount(t, database, 16)
 	assert015CatalogFixtures(t, database)
 	assertForeignKeyCheckEmpty(t, database)
 }
@@ -134,13 +134,14 @@ func seed015CatalogFixtures(t *testing.T, database interface {
 
 func assert015CatalogFixtures(t *testing.T, database *sql.DB) {
 	t.Helper()
-	var color, customColor *string
-	if err := database.QueryRow(`SELECT color,custom_color FROM local_task_tag_catalog WHERE normalized_tag='alpha'`).Scan(&color, &customColor); err != nil || color != nil || customColor == nil || *customColor != "#123456" {
-		t.Fatalf("alpha color = %v, %v, %v", color, customColor, err)
+	// After migration 016, custom_color values are promoted and uppercased into color.
+	var color *string
+	if err := database.QueryRow(`SELECT color FROM local_task_tag_catalog WHERE normalized_tag='alpha'`).Scan(&color); err != nil || color == nil || *color != "#123456" {
+		t.Fatalf("alpha color = %v, %v", color, err)
 	}
-	var unassignedName, unassignedCustom string
-	if err := database.QueryRow(`SELECT tag,custom_color FROM local_task_tag_catalog WHERE normalized_tag='unassigned'`).Scan(&unassignedName, &unassignedCustom); err != nil || unassignedName != "Unassigned" || unassignedCustom != "#abcdef" {
-		t.Fatalf("unassigned catalog = %q, %q, %v", unassignedName, unassignedCustom, err)
+	var unassignedName, unassignedColor string
+	if err := database.QueryRow(`SELECT tag,color FROM local_task_tag_catalog WHERE normalized_tag='unassigned'`).Scan(&unassignedName, &unassignedColor); err != nil || unassignedName != "Unassigned" || unassignedColor != "#ABCDEF" {
+		t.Fatalf("unassigned catalog = %q, %q, %v", unassignedName, unassignedColor, err)
 	}
 	rows, err := database.Query(`SELECT catalog.tag FROM local_task_tags relations JOIN local_task_tag_catalog catalog ON catalog.id=relations.tag_id WHERE relations.local_task_id='task-active' ORDER BY relations.position`)
 	if err != nil {

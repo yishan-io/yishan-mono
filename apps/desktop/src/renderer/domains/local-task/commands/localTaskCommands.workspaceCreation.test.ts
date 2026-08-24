@@ -63,7 +63,7 @@ describe("Local Task workspace creation and document commands", () => {
     vi.mocked(daemon.localTaskClient.list).mockResolvedValue([task]);
     vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([link]);
     vi.mocked(daemon.localTaskClient.listTagCatalog).mockResolvedValue([
-      { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
+      { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "#3B82F6" },
     ]);
     localTaskStore.setState({ selectedWorkspaceId: "workspace-1" });
 
@@ -81,7 +81,7 @@ describe("Local Task workspace creation and document commands", () => {
     vi.mocked(daemon.localTaskClient.create).mockResolvedValue(task);
     vi.mocked(daemon.localTaskClient.linkWorkspace).mockRejectedValue(new Error("link failed"));
     vi.mocked(daemon.localTaskClient.listTagCatalog).mockResolvedValue([
-      { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: "green", customColor: null },
+      { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: "#22C55E" },
     ]);
 
     const result = await createAndLinkLocalTask({ title: "Task" }, "workspace-1");

@@ -22,8 +22,7 @@ describe("LocalTaskTagsDisplay", () => {
               key: maximumLengthTag,
               name: maximumLengthTag,
               aliases: [maximumLengthTag],
-              color: "blue",
-              customColor: null,
+              color: "#3B82F6",
             },
           ]}
         />

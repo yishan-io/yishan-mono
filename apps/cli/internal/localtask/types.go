@@ -82,12 +82,11 @@ type Task struct {
 
 // Tag is one globally retained Local Task tag catalog entry.
 type Tag struct {
-	ID          string   `json:"id"`
-	Key         string   `json:"key"`
-	Name        string   `json:"name"`
-	Aliases     []string `json:"aliases"`
-	Color       *string  `json:"color"`
-	CustomColor *string  `json:"customColor"`
+	ID      string   `json:"id"`
+	Key     string   `json:"key"`
+	Name    string   `json:"name"`
+	Aliases []string `json:"aliases"`
+	Color   *string  `json:"color"`
 }
 
 // TagRef identifies an assigned catalog tag.
@@ -99,10 +98,9 @@ type TagRef struct {
 // TagCreate describes a new catalog entry.
 type TagCreate struct{ Name string }
 
-// TagColorUpdate is one mutually exclusive global tag color selection.
+// TagColorUpdate is a nullable canonical hex color update for a tag catalog entry.
 type TagColorUpdate struct {
 	Color       *string
-	CustomColor *string
 	DisplayName *string
 }
 

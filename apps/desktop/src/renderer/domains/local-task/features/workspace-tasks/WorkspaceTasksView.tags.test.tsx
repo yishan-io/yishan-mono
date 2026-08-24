@@ -12,7 +12,6 @@ const commands = vi.hoisted(() => ({
     name,
     aliases: [name],
     color: null,
-    customColor: null,
   })),
   loadLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
@@ -117,9 +116,7 @@ describe("WorkspaceTasksView tags", () => {
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
-      tagCatalog: [
-        { id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: null, customColor: null },
-      ],
+      tagCatalog: [{ id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: null }],
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
@@ -142,9 +139,7 @@ describe("WorkspaceTasksView tags", () => {
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
-      tagCatalog: [
-        { id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "teal", customColor: null },
-      ],
+      tagCatalog: [{ id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "#14B8A6" }],
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 

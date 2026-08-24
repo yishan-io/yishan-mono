@@ -81,5 +81,8 @@ func callLocalTaskUpdateTagColor(ctx context.Context, params json.RawMessage, ca
 	if selectorCount != 1 {
 		return nil, NewRPCError(CodeInvalidParams, "exactly one tag selector is required")
 	}
+	if _, hasLegacy := fields["customColor"]; hasLegacy {
+		return nil, NewRPCError(CodeInvalidParams, "customColor is not a valid parameter; use color")
+	}
 	return callLocalTask(ctx, params, call)
 }

@@ -2,14 +2,13 @@ import { Box, Checkbox, TextField } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { getLocalTaskTagsValidationError, normalizeLocalTaskTag } from "../../localTaskTags";
-import type { LocalTaskTagCatalogEntry, LocalTaskTagColor, LocalTaskTagCustomColor } from "../../localTaskTypes";
-import { LocalTaskTagColorPicker } from "./LocalTaskTagColorPicker";
+import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import {
   getLocalTaskTagCatalogEntry,
-  getLocalTaskTagColorValue,
   isLocalTaskTagSelected,
   toggleLocalTaskTagSelection,
 } from "../../ui/localTaskTagColorPresets";
+import { LocalTaskTagColorPicker } from "./LocalTaskTagColorPicker";
 
 const TAG_OPTION_HEIGHT = 36;
 type LocalTaskTagSelectorProps = {
@@ -17,11 +16,7 @@ type LocalTaskTagSelectorProps = {
   suggestions: string[];
   tagCatalog: LocalTaskTagCatalogEntry[];
   onChange: (tags: string[]) => void;
-  onTagColorChange?: (
-    tag: string,
-    color: LocalTaskTagColor | null,
-    customColor?: LocalTaskTagCustomColor | null,
-  ) => Promise<unknown>;
+  onTagColorChange?: (tag: string, color: string | null) => Promise<unknown>;
   disabled: boolean;
   label: string;
   autoFocus: boolean;
@@ -234,9 +229,7 @@ export function LocalTaskTagSelector({
                     component="span"
                     aria-hidden="true"
                     sx={(theme) => ({
-                      bgcolor:
-                        entry?.customColor ??
-                        (entry?.color ? getLocalTaskTagColorValue(entry.color, theme) : theme.palette.text.disabled),
+                      bgcolor: entry?.color ?? theme.palette.text.disabled,
                       borderRadius: "50%",
                       height: 8,
                       width: 8,

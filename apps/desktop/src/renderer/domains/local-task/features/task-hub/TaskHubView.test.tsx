@@ -14,7 +14,6 @@ const commands = vi.hoisted(() => ({
     name,
     aliases: [name],
     color: null,
-    customColor: null,
   })),
   createAndLinkLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
@@ -143,9 +142,7 @@ describe("TaskHubView", () => {
 
   it("uses catalog IDs for filters and task creation", async () => {
     localTaskStore.setState({
-      tagCatalog: [
-        { id: "tag-alpha", key: "alpha", name: "alpha", aliases: ["alpha"], color: null, customColor: null },
-      ],
+      tagCatalog: [{ id: "tag-alpha", key: "alpha", name: "alpha", aliases: ["alpha"], color: null }],
     });
     render(<TaskHubView />);
 
@@ -175,9 +172,7 @@ describe("TaskHubView", () => {
   it("propagates catalog color tokens to Task Hub row tag chips", () => {
     localTaskStore.setState({
       hubTasks: [{ ...task, tagRefs: [{ id: "tag-backend", name: "backend" }] }],
-      tagCatalog: [
-        { id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "blue", customColor: null },
-      ],
+      tagCatalog: [{ id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "#3B82F6" }],
     });
     render(<TaskHubView />);
 

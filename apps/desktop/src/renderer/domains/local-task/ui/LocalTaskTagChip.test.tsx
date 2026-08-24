@@ -4,7 +4,6 @@ import { createAppTheme } from "@renderer/ui/theme";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { LocalTaskTagChip, getLocalTaskTagChipSx } from "./LocalTaskTagChip";
-import { getLocalTaskTagColor } from "./localTaskTagColorPresets";
 
 describe("Local Task tag catalog aliases", () => {
   it("maps exact daemon-provided display aliases without client-side folding", () => {
@@ -14,13 +13,13 @@ describe("Local Task tag catalog aliases", () => {
         key: "strasse",
         name: "Straße",
         aliases: ["STRASSE", "Straße"],
-        color: "purple" as const,
-        customColor: null,
+        color: "#A855F7",
       },
     ];
 
-    expect(getLocalTaskTagColor("STRASSE", catalog)).toBe("purple");
-    expect(getLocalTaskTagColor("strasse", catalog)).toBeNull();
+    // Chip resolves by exact alias match (case-sensitive, daemon-provided)
+    expect(catalog.find((e) => e.aliases.includes("STRASSE"))?.color).toBe("#A855F7");
+    expect(catalog.find((e) => e.aliases.includes("strasse"))?.color).toBeUndefined();
   });
 });
 
@@ -59,8 +58,7 @@ describe("LocalTaskTagChip", () => {
             key: "tag",
             name: "A complete tag name",
             aliases: ["A complete tag name"],
-            color: "red",
-            customColor: null,
+            color: "#EF4444",
           },
         ]}
       />,

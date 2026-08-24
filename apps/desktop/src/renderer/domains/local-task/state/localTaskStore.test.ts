@@ -96,8 +96,8 @@ describe("localTaskStore", () => {
   it("stores daemon tag suggestions and retains values when a refresh fails", () => {
     let requestId = localTaskStore.getState().beginTagCatalogLoad();
     localTaskStore.getState().setTagCatalog(requestId, [
-      { id: "tag-fixture", key: "desktop", name: "desktop", aliases: ["desktop"], color: null, customColor: null },
-      { id: "tag-fixture", key: "cli", name: "cli", aliases: ["cli"], color: null, customColor: null },
+      { id: "tag-fixture", key: "desktop", name: "desktop", aliases: ["desktop"], color: null },
+      { id: "tag-fixture", key: "cli", name: "cli", aliases: ["cli"], color: null },
     ]);
     requestId = localTaskStore.getState().beginTagCatalogLoad();
     localTaskStore.getState().setTagCatalogError(requestId, "offline");
@@ -115,12 +115,12 @@ describe("localTaskStore", () => {
     localTaskStore
       .getState()
       .setTagCatalog(staleRequestId, [
-        { id: "tag-fixture", key: "stale", name: "stale", aliases: ["stale"], color: null, customColor: null },
+        { id: "tag-fixture", key: "stale", name: "stale", aliases: ["stale"], color: null },
       ]);
     localTaskStore
       .getState()
       .setTagCatalog(currentRequestId, [
-        { id: "tag-fixture", key: "current", name: "current", aliases: ["current"], color: null, customColor: null },
+        { id: "tag-fixture", key: "current", name: "current", aliases: ["current"], color: null },
       ]);
 
     expect(localTaskStore.getState().tagSuggestions).toEqual(["current"]);
@@ -143,13 +143,13 @@ describe("localTaskStore", () => {
 it("stores catalog entries and derives autocomplete names without normalizing daemon keys", () => {
   const requestId = localTaskStore.getState().beginTagCatalogLoad();
   localTaskStore.getState().setTagCatalog(requestId, [
-    { id: "tag-fixture", key: "café", name: "Café", aliases: ["Café"], color: "teal", customColor: null },
-    { id: "tag-fixture", key: "backend", name: "Backend", aliases: ["Backend"], color: null, customColor: null },
+    { id: "tag-fixture", key: "café", name: "Café", aliases: ["Café"], color: "#14B8A6" },
+    { id: "tag-fixture", key: "backend", name: "Backend", aliases: ["Backend"], color: null },
   ]);
 
   expect(localTaskStore.getState().tagCatalog).toEqual([
-    { id: "tag-fixture", key: "café", name: "Café", aliases: ["Café"], color: "teal", customColor: null },
-    { id: "tag-fixture", key: "backend", name: "Backend", aliases: ["Backend"], color: null, customColor: null },
+    { id: "tag-fixture", key: "café", name: "Café", aliases: ["Café"], color: "#14B8A6" },
+    { id: "tag-fixture", key: "backend", name: "Backend", aliases: ["Backend"], color: null },
   ]);
   expect(localTaskStore.getState().tagSuggestions).toEqual(["Café", "Backend"]);
 });

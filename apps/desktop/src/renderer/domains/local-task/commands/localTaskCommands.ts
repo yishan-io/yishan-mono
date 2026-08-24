@@ -7,8 +7,6 @@ import type {
   LocalTaskFilters,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
-  LocalTaskTagColor,
-  LocalTaskTagCustomColor,
   LocalTaskTagRenameResult,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
@@ -163,7 +161,8 @@ export function loadLocalTask(taskId: string): Promise<LocalTask> {
   if (existingLoad) return existingLoad;
 
   const requestId = localTaskStore.getState().beginTaskLoad(taskId);
-  const load = localTaskClient.get(taskId)
+  const load = localTaskClient
+    .get(taskId)
     .then((task) => {
       localTaskStore.getState().setTaskEntity(requestId, taskId, task);
       return task;
@@ -181,10 +180,7 @@ export function loadLocalTask(taskId: string): Promise<LocalTask> {
 export async function loadLocalTaskLinkCandidates(workspaceId: string): Promise<void> {
   const requestId = localTaskStore.getState().beginLinkCandidateLoad(workspaceId);
   try {
-    const [tasks, links] = await Promise.all([
-      localTaskClient.list(),
-      localTaskClient.listWorkspaceLinks(workspaceId),
-    ]);
+    const [tasks, links] = await Promise.all([localTaskClient.list(), localTaskClient.listWorkspaceLinks(workspaceId)]);
     const currentlyLinkedTaskIds = new Set(
       links
         .filter((link) => link.workspaceId === workspaceId && link.unlinkedAt === null)
@@ -211,13 +207,9 @@ export async function createLocalTask(input: CreateLocalTaskInput): Promise<Loca
 }
 
 /** Sets or clears a global tag color and refreshes the authoritative catalog. */
-export async function updateLocalTaskTagColor(
-  id: string,
-  color: LocalTaskTagColor | null,
-  customColor: LocalTaskTagCustomColor | null = null,
-): Promise<void> {
+export async function updateLocalTaskTagColor(id: string, color: string | null): Promise<void> {
   await runMutation(async () => {
-    const updatedCatalogEntry = await localTaskClient.updateTagColor(id, color, customColor);
+    const updatedCatalogEntry = await localTaskClient.updateTagColor(id, color);
     localTaskStore.getState().upsertTagCatalogEntry(updatedCatalogEntry);
 
     const requestId = localTaskStore.getState().beginTagCatalogLoad();

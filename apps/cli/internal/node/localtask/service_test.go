@@ -221,7 +221,7 @@ func TestService_ListsTagCatalogAndUpdatesColor(t *testing.T) {
 		t.Fatalf("catalog = %#v", catalog)
 	}
 
-	blue := domain.TagColorBlue
+	blue := "#3B82F6"
 	updatedValue, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{
 		Key: "first", Color: &blue,
 	})
@@ -233,15 +233,15 @@ func TestService_ListsTagCatalogAndUpdatesColor(t *testing.T) {
 		t.Fatalf("updated catalog tag = %#v", updated)
 	}
 
-	custom := "#123456"
+	hex2 := "#123456"
 	newTagValue, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{
-		Tag: " Cafe\u0301 ", CustomColor: &custom,
+		Tag: " Cafe\u0301 ", Color: &hex2,
 	})
 	if err != nil {
 		t.Fatalf("UpdateTagColor new display tag: %v", err)
 	}
 	newTag := newTagValue.(domain.Tag)
-	if newTag.Key != "café" || newTag.Name != "Café" || newTag.CustomColor == nil || *newTag.CustomColor != custom {
+	if newTag.Key != "café" || newTag.Name != "Café" || newTag.Color == nil || *newTag.Color != hex2 {
 		t.Fatalf("new display tag catalog entry = %#v", newTag)
 	}
 
@@ -401,7 +401,7 @@ func TestService_MutatesStableTagIDsAndReportsMerges(t *testing.T) {
 	if _, err := service.RenameTag(context.Background(), rpc.LocalTaskRenameTagParams{ID: second.ID, Name: "Renamed"}); !errors.Is(err, domain.ErrTagNotFound) {
 		t.Fatalf("RenameTag stale ID error = %v, want tag not found", err)
 	}
-	blue := domain.TagColorBlue
+	blue := "#3B82F6"
 	if _, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{ID: second.ID, Color: &blue}); !errors.Is(err, domain.ErrTagNotFound) {
 		t.Fatalf("UpdateTagColor stale ID error = %v, want tag not found", err)
 	}
@@ -419,7 +419,7 @@ func TestService_TagMutationsRejectInvalidParameters(t *testing.T) {
 		if _, err := service.DeleteTag(context.Background(), rpc.LocalTaskDeleteTagParams{ID: id}); !errors.Is(err, domain.ErrInvalidTag) {
 			t.Fatalf("DeleteTag invalid ID %q error = %v, want invalid tag", id, err)
 		}
-		blue := domain.TagColorBlue
+		blue := "#3B82F6"
 		if _, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{ID: id, Color: &blue}); !errors.Is(err, domain.ErrInvalidTag) {
 			t.Fatalf("UpdateTagColor invalid ID %q error = %v, want invalid tag", id, err)
 		}
@@ -428,7 +428,7 @@ func TestService_TagMutationsRejectInvalidParameters(t *testing.T) {
 
 func TestService_UpdateTagColorRejectsMixedSelectors(t *testing.T) {
 	service, _, _ := newTestService(t)
-	blue := domain.TagColorBlue
+	blue := "#3B82F6"
 
 	_, err := service.UpdateTagColor(context.Background(), rpc.LocalTaskUpdateTagColorParams{
 		ID: "tag-1", Tag: "stale", Color: &blue,

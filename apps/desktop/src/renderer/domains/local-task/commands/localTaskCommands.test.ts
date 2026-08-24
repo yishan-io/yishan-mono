@@ -84,8 +84,8 @@ afterEach(() => {
 describe("localTaskCommands", () => {
   it("loads tag suggestions into store-owned state and retains errors", async () => {
     vi.mocked(daemon.localTaskClient.listTagCatalog).mockResolvedValue([
-      { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
-      { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+      { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "#3B82F6" },
+      { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null },
     ]);
 
     await loadLocalTaskTagSuggestions();
@@ -93,8 +93,8 @@ describe("localTaskCommands", () => {
     expect(daemon.localTaskClient.listTagCatalog).toHaveBeenCalledWith();
     expect(localTaskStore.getState()).toMatchObject({
       tagCatalog: [
-        { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
-        { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+        { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "#3B82F6" },
+        { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null },
       ],
       tagSuggestions: ["Desktop", "CLI"],
       tagSuggestionsLoadState: "loaded",
@@ -106,8 +106,8 @@ describe("localTaskCommands", () => {
 
     expect(localTaskStore.getState()).toMatchObject({
       tagCatalog: [
-        { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "blue", customColor: null },
-        { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null, customColor: null },
+        { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "#3B82F6" },
+        { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: null },
       ],
       tagSuggestions: ["Desktop", "CLI"],
       tagSuggestionsLoadState: "error",
@@ -175,7 +175,10 @@ describe("localTaskCommands", () => {
     await setLocalTaskHubSearchQuery("  desktop  ");
     await refreshLocalTaskHub();
 
-    expect(daemon.localTaskClient.search).toHaveBeenLastCalledWith("desktop", { projectId: "project-1", status: "paused" });
+    expect(daemon.localTaskClient.search).toHaveBeenLastCalledWith("desktop", {
+      projectId: "project-1",
+      status: "paused",
+    });
     expect(localTaskStore.getState().hubTasks).toEqual([{ ...task, rank: -1 }]);
   });
 
@@ -226,15 +229,14 @@ describe("localTaskCommands", () => {
       key: "backend",
       name: "Backend",
       aliases: ["Backend"],
-      color: "blue" as const,
-      customColor: null,
+      color: "#3B82F6",
     };
     vi.mocked(daemon.localTaskClient.updateTagColor).mockResolvedValue(coloredTag);
     vi.mocked(daemon.localTaskClient.listTagCatalog).mockResolvedValue([coloredTag]);
 
-    await updateLocalTaskTagColor("backend", "blue");
+    await updateLocalTaskTagColor("backend", "#3B82F6");
 
-    expect(daemon.localTaskClient.updateTagColor).toHaveBeenCalledWith("backend", "blue", null);
+    expect(daemon.localTaskClient.updateTagColor).toHaveBeenCalledWith("backend", "#3B82F6");
     expect(daemon.localTaskClient.listTagCatalog).toHaveBeenCalledOnce();
     expect(localTaskStore.getState().tagCatalog).toEqual([coloredTag]);
   });
@@ -245,17 +247,16 @@ describe("localTaskCommands", () => {
       key: "backend",
       name: "Backend",
       aliases: ["Backend"],
-      color: "blue" as const,
-      customColor: null,
+      color: "#3B82F6",
     };
     localTaskStore.setState({
-      tagCatalog: [{ ...coloredTag, color: "red", customColor: null }],
+      tagCatalog: [{ ...coloredTag, color: "#EF4444" }],
       tagSuggestions: ["Backend"],
     });
     vi.mocked(daemon.localTaskClient.updateTagColor).mockResolvedValue(coloredTag);
     vi.mocked(daemon.localTaskClient.listTagCatalog).mockRejectedValue(new Error("catalog reload failed"));
 
-    await expect(updateLocalTaskTagColor("backend", "blue")).resolves.toBeUndefined();
+    await expect(updateLocalTaskTagColor("backend", "#3B82F6")).resolves.toBeUndefined();
 
     expect(localTaskStore.getState()).toMatchObject({
       tagCatalog: [coloredTag],
@@ -272,8 +273,7 @@ describe("localTaskCommands", () => {
         key: "backend",
         name: "Backend",
         aliases: ["Backend"],
-        color: "red" as const,
-        customColor: null,
+        color: "#EF4444",
       },
     ];
     localTaskStore.setState({ tagCatalog: existingCatalog });
@@ -296,8 +296,7 @@ describe("localTaskCommands", () => {
         key: "strasse",
         name: "Straße",
         aliases: ["STRASSE", "Straße"],
-        color: "purple",
-        customColor: null,
+        color: "#A855F7",
       },
     ]);
 
@@ -310,8 +309,7 @@ describe("localTaskCommands", () => {
         key: "strasse",
         name: "Straße",
         aliases: ["STRASSE", "Straße"],
-        color: "purple",
-        customColor: null,
+        color: "#A855F7",
       },
     ]);
   });

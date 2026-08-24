@@ -28,12 +28,12 @@ type LocalTaskListParams struct {
 }
 
 // LocalTaskUpdateTagColorParams changes a global Local Task tag catalog color.
+// Color is the canonical uppercase #RRGGBB hex value, or null to clear.
 type LocalTaskUpdateTagColorParams struct {
-	ID          string  `json:"id,omitempty"`
-	Tag         string  `json:"tag,omitempty"`
-	Key         string  `json:"key,omitempty"`
-	Color       *string `json:"color"`
-	CustomColor *string `json:"customColor"`
+	ID    string  `json:"id,omitempty"`
+	Tag   string  `json:"tag,omitempty"`
+	Key   string  `json:"key,omitempty"`
+	Color *string `json:"color"`
 }
 
 // LocalTaskCreateTagParams creates one Local Task tag by display name.

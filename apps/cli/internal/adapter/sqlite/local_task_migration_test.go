@@ -33,12 +33,12 @@ func TestMigrate_013AddsTagCatalogAndBackfillsExistingTags(t *testing.T) {
 	assert012Schema(t, database)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
-	assertMigrationCount(t, database, 15)
+	assertMigrationCount(t, database, 16)
 
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migration: %v", err)
 	}
-	assertMigrationCount(t, database, 15)
+	assertMigrationCount(t, database, 16)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
 	assert013ColorConstraint(t, database)
@@ -315,14 +315,18 @@ func assert013CatalogBackfill(t *testing.T, database *sql.DB) {
 
 func assert013ColorConstraint(t *testing.T, database *sql.DB) {
 	t.Helper()
-	for _, color := range []any{"amber", "blue", "green", "purple", "red", "teal", nil} {
+	// After migration 016 the constraint accepts canonical uppercase #RRGGBB or NULL.
+	for _, color := range []any{"#F59E0B", "#3B82F6", "#22C55E", "#A855F7", "#EF4444", "#14B8A6", nil} {
 		if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, color, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
 			fmt.Sprintf("id-color-%v", color), fmt.Sprintf("color-%v", color), "Color", color); err != nil {
 			t.Fatalf("insert valid catalog color %v: %v", color, err)
 		}
 	}
-	if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, color, created_at, updated_at) VALUES ('id-color-invalid', 'color-invalid', 'Color', 'magenta', datetime('now'), datetime('now'))`); err == nil {
-		t.Fatal("expected invalid catalog color to fail")
+	for _, invalid := range []string{"magenta", "blue", "#3b82f6", "#3B82F"} {
+		if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, color, created_at, updated_at) VALUES (?, ?, 'Color', ?, datetime('now'), datetime('now'))`,
+			"id-inv-"+invalid, "inv-"+invalid, invalid); err == nil {
+			t.Fatalf("expected invalid catalog color %q to fail", invalid)
+		}
 	}
 }
 

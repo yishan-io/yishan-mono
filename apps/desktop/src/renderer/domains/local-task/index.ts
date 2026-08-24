@@ -30,7 +30,6 @@ export type {
   LocalTaskSearchResult,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
-  LocalTaskTagColor,
   LocalTaskTagRef,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,

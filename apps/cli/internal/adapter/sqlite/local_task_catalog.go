@@ -12,7 +12,7 @@ import (
 
 // ListTags returns globally retained Local Task tag catalog entries by stable ID.
 func (store *LocalTaskStore) ListTags(ctx context.Context) ([]localtask.Tag, error) {
-	rows, err := store.database.QueryContext(ctx, `SELECT catalog.id,catalog.normalized_tag,catalog.tag,catalog.color,catalog.custom_color,aliases.tag FROM local_task_tag_catalog catalog JOIN local_task_tag_catalog_aliases aliases ON aliases.tag_id=catalog.id ORDER BY catalog.normalized_tag,aliases.tag`)
+	rows, err := store.database.QueryContext(ctx, `SELECT catalog.id,catalog.normalized_tag,catalog.tag,catalog.color,aliases.tag FROM local_task_tag_catalog catalog JOIN local_task_tag_catalog_aliases aliases ON aliases.tag_id=catalog.id ORDER BY catalog.normalized_tag,aliases.tag`)
 	if err != nil {
 		return nil, fmt.Errorf("list local task tag catalog: %w", err)
 	}
@@ -21,7 +21,7 @@ func (store *LocalTaskStore) ListTags(ctx context.Context) ([]localtask.Tag, err
 	for rows.Next() {
 		var tag localtask.Tag
 		var alias string
-		if err := rows.Scan(&tag.ID, &tag.Key, &tag.Name, &tag.Color, &tag.CustomColor, &alias); err != nil {
+		if err := rows.Scan(&tag.ID, &tag.Key, &tag.Name, &tag.Color, &alias); err != nil {
 			return nil, fmt.Errorf("scan local task tag catalog: %w", err)
 		}
 		if len(tags) == 0 || tags[len(tags)-1].ID != tag.ID {
@@ -150,29 +150,29 @@ func (store *LocalTaskStore) mergeTags(ctx context.Context, tx *sql.Tx, targetID
 }
 
 func preserveMergedTagColor(ctx context.Context, tx *sql.Tx, targetID, sourceID string) error {
-	targetColor, targetCustom, err := loadTagColors(ctx, tx, targetID)
+	targetColor, err := loadTagColor(ctx, tx, targetID)
 	if err != nil {
 		return err
 	}
-	sourceColor, sourceCustom, err := loadTagColors(ctx, tx, sourceID)
+	sourceColor, err := loadTagColor(ctx, tx, sourceID)
 	if err != nil {
 		return err
 	}
-	if targetColor != nil || targetCustom != nil || (sourceColor == nil && sourceCustom == nil) {
+	if targetColor != nil || sourceColor == nil {
 		return nil
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE local_task_tag_catalog SET color=?,custom_color=? WHERE id=?`, sourceColor, sourceCustom, targetID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE local_task_tag_catalog SET color=? WHERE id=?`, sourceColor, targetID); err != nil {
 		return fmt.Errorf("preserve merged tag color: %w", err)
 	}
 	return nil
 }
 
-func loadTagColors(ctx context.Context, tx *sql.Tx, id string) (*string, *string, error) {
-	var color, customColor *string
-	if err := tx.QueryRowContext(ctx, `SELECT color,custom_color FROM local_task_tag_catalog WHERE id=?`, id).Scan(&color, &customColor); err != nil {
-		return nil, nil, tagNotFound(err)
+func loadTagColor(ctx context.Context, tx *sql.Tx, id string) (*string, error) {
+	var color *string
+	if err := tx.QueryRowContext(ctx, `SELECT color FROM local_task_tag_catalog WHERE id=?`, id).Scan(&color); err != nil {
+		return nil, tagNotFound(err)
 	}
-	return color, customColor, nil
+	return color, nil
 }
 
 func moveTagAliases(ctx context.Context, tx *sql.Tx, targetID, sourceID string) error {
@@ -231,7 +231,7 @@ func (store *LocalTaskStore) DeleteTag(ctx context.Context, id string) error {
 
 // UpdateTagColor sets or clears a global Local Task tag catalog color by stable ID.
 func (store *LocalTaskStore) UpdateTagColor(ctx context.Context, id string, update localtask.TagColorUpdate) (localtask.Tag, error) {
-	if err := localtask.ValidateTagColorUpdate(update); err != nil {
+	if err := localtask.ValidateTagColor(update.Color); err != nil {
 		return localtask.Tag{}, err
 	}
 	if update.DisplayName != nil {
@@ -285,7 +285,7 @@ func (store *LocalTaskStore) resolveTagID(ctx context.Context, id string) (strin
 }
 
 func updateLocalTaskTagColor(ctx context.Context, q localTaskQueryer, id string, update localtask.TagColorUpdate) error {
-	result, err := q.ExecContext(ctx, `UPDATE local_task_tag_catalog SET color=?,custom_color=?,updated_at=datetime('now') WHERE id=?`, update.Color, update.CustomColor, id)
+	result, err := q.ExecContext(ctx, `UPDATE local_task_tag_catalog SET color=?,updated_at=datetime('now') WHERE id=?`, update.Color, id)
 	if err != nil {
 		return fmt.Errorf("update local task tag color: %w", err)
 	}

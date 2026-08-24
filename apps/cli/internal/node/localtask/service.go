@@ -135,7 +135,7 @@ func (s *Service) ListTagCatalog(ctx context.Context) (any, error) {
 
 // UpdateTagColor validates and changes a global Local Task tag catalog color.
 func (s *Service) UpdateTagColor(ctx context.Context, req rpc.LocalTaskUpdateTagColorParams) (any, error) {
-	update := domain.TagColorUpdate{Color: req.Color, CustomColor: req.CustomColor}
+	update := domain.TagColorUpdate{Color: req.Color}
 	selectorCount := 0
 	for _, selector := range []string{req.ID, req.Tag, req.Key} {
 		if selector != "" {
@@ -164,7 +164,7 @@ func (s *Service) UpdateTagColor(ctx context.Context, req rpc.LocalTaskUpdateTag
 	} else if id == "" {
 		return nil, domain.ErrInvalidTag
 	}
-	if err := domain.ValidateTagColorUpdate(update); err != nil {
+	if err := domain.ValidateTagColor(update.Color); err != nil {
 		return nil, err
 	}
 	if id == "" {
