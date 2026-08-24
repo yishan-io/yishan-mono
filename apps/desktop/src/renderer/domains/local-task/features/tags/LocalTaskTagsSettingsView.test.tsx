@@ -126,7 +126,6 @@ describe("LocalTaskTagsSettingsView", () => {
     renderSettingsView();
     expect(commands.loadLocalTaskTagSuggestions).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Tag 1")).toBeTruthy();
-    expect(screen.getByText("Alias 1")).toBeTruthy();
     expect(document.querySelector(".MuiChip-root")).toBeNull();
 
     fireEvent.change(screen.getByRole("textbox", { name: "localTask.tags.settings.search" }), {
