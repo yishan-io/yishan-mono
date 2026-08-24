@@ -56,8 +56,11 @@ func buildLocalTaskFilter(filter localtask.TaskFilter, table string) ([]string, 
 	if filter.WorkspaceID != nil {
 		where, arguments = appendTaskWorkspaceFilter(where, arguments, table, *filter.WorkspaceID)
 	}
+	for _, tagID := range filter.TagIDs {
+		where, arguments = appendTaskTagFilter(where, arguments, table, "tag_id", tagID)
+	}
 	for _, normalizedTag := range normalizedTaskFilterTags(filter.Tags) {
-		where, arguments = appendTaskTagFilter(where, arguments, table, normalizedTag)
+		where, arguments = appendTaskTagFilter(where, arguments, table, "catalog.normalized_tag", normalizedTag)
 	}
 	return where, arguments
 }
@@ -82,10 +85,9 @@ func normalizedTaskFilterTags(tags []string) []string {
 	return keys
 }
 
-func appendTaskTagFilter(where []string, arguments []any, table string, normalizedTag string) ([]string, []any) {
-	condition := `EXISTS (SELECT 1 FROM local_task_tags WHERE local_task_id = ` + table + `.id
-		AND normalized_tag = ?)`
-	return append(where, condition), append(arguments, normalizedTag)
+func appendTaskTagFilter(where []string, arguments []any, table string, column string, value string) ([]string, []any) {
+	condition := `EXISTS (SELECT 1 FROM local_task_tags JOIN local_task_tag_catalog AS catalog ON catalog.id = local_task_tags.tag_id WHERE local_task_id = ` + table + `.id AND ` + column + ` = ?)`
+	return append(where, condition), append(arguments, value)
 }
 
 func appendTaskWorkspaceFilter(where []string, arguments []any, table string, workspaceID string) ([]string, []any) {

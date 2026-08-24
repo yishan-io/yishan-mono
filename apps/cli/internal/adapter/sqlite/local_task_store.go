@@ -37,11 +37,13 @@ func (store *LocalTaskStore) Create(ctx context.Context, task localtask.Task) (l
 }
 
 func (store *LocalTaskStore) insertTask(ctx context.Context, task localtask.Task) (localtask.Task, error) {
-	normalizedTags, err := localtask.NormalizeTags(task.Tags)
-	if err != nil {
-		return localtask.Task{}, err
+	if task.Tags != nil {
+		normalizedTags, err := localtask.NormalizeTags(task.Tags)
+		if err != nil {
+			return localtask.Task{}, err
+		}
+		task.Tags = normalizedTags
 	}
-	task.Tags = normalizedTags
 	transaction, err := store.database.BeginTx(ctx, nil)
 	if err != nil {
 		return localtask.Task{}, fmt.Errorf("begin create local task: %w", err)
@@ -53,7 +55,12 @@ func (store *LocalTaskStore) insertTask(ctx context.Context, task localtask.Task
 		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
 		return localtask.Task{}, fmt.Errorf("create local task: %w", err)
 	}
-	if err := insertLocalTaskTags(ctx, transaction, task.ID, task.Tags); err != nil {
+	if task.TagRefs != nil {
+		if err := insertLocalTaskTagRefs(ctx, transaction, task.ID, task.TagRefs); err != nil {
+			_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
+			return localtask.Task{}, err
+		}
+	} else if err := insertLocalTaskTags(ctx, transaction, task.ID, task.Tags); err != nil {
 		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
 		return localtask.Task{}, err
 	}
@@ -97,7 +104,7 @@ func (store *LocalTaskStore) Update(ctx context.Context, taskID string, update l
 		return localtask.Task{}, err
 	}
 	query, arguments := buildLocalTaskUpdate(update)
-	if query == "" && update.Tags == nil {
+	if query == "" && update.Tags == nil && update.TagRefs == nil {
 		return store.Get(ctx, taskID)
 	}
 	transaction, err := store.database.BeginTx(ctx, nil)
@@ -114,7 +121,12 @@ func (store *LocalTaskStore) Update(ctx context.Context, taskID string, update l
 		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
 		return localtask.Task{}, err
 	}
-	if update.Tags != nil {
+	if update.TagRefs != nil {
+		if err := replaceLocalTaskTagRefs(ctx, transaction, taskID, *update.TagRefs); err != nil {
+			_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
+			return localtask.Task{}, err
+		}
+	} else if update.Tags != nil {
 		tags, err := localtask.NormalizeTags(*update.Tags)
 		if err != nil {
 			_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
@@ -185,33 +197,6 @@ func hydrateLocalTaskSearchResultTags(ctx context.Context, queryer localTaskQuer
 		taskPointers[index] = &results[index].Task
 	}
 	return hydrateLocalTaskTags(ctx, queryer, taskPointers)
-}
-
-// ListTags returns one deterministic display spelling for each known normalized tag.
-func (store *LocalTaskStore) ListTags(ctx context.Context) ([]string, error) {
-	rows, err := store.database.QueryContext(ctx, `SELECT normalized_tag, tag, local_task_id, position FROM local_task_tags
-		ORDER BY normalized_tag, tag, local_task_id, position`)
-	if err != nil {
-		return nil, fmt.Errorf("list local task tags: %w", err)
-	}
-	defer rows.Close()
-	tags := make([]string, 0)
-	seenKeys := make(map[string]struct{})
-	for rows.Next() {
-		var normalizedTag, tag, taskID string
-		var position int
-		if err := rows.Scan(&normalizedTag, &tag, &taskID, &position); err != nil {
-			return nil, fmt.Errorf("scan local task tag: %w", err)
-		}
-		if _, exists := seenKeys[normalizedTag]; !exists {
-			seenKeys[normalizedTag] = struct{}{}
-			tags = append(tags, tag)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate local task tags: %w", err)
-	}
-	return tags, nil
 }
 
 // LinkWorkspace creates a historical link from a Local Task to a local workspace.

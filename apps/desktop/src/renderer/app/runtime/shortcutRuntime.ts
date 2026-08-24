@@ -2,6 +2,23 @@ import { subscribeDesktopRpcEvent } from "../../events/desktopRpcEventBus";
 import { type compileShortcutDefinitions, processShortcuts } from "../../shortcuts/shortcutRunner";
 import type { ShortContext } from "../../shortcuts/types";
 
+function shouldSkipGlobalShortcutProcessing(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  const editableElement = target.closest("input, textarea, select, [contenteditable]");
+  if (!editableElement) {
+    return false;
+  }
+
+  if (editableElement.matches("input, textarea, select")) {
+    return true;
+  }
+
+  return editableElement.getAttribute("contenteditable") !== "false";
+}
+
 export type ShortcutRuntimeInput = {
   /** Returns the latest compiled shortcut definitions. */
   getCompiledDefinitions: () => ReturnType<typeof compileShortcutDefinitions>;
@@ -21,7 +38,7 @@ export type ShortcutRuntimeInput = {
  */
 export function startShortcutRuntime(input: ShortcutRuntimeInput): () => void {
   const handleWindowKeydown = (event: KeyboardEvent) => {
-    if (input.isCaptureActive()) {
+    if (input.isCaptureActive() || shouldSkipGlobalShortcutProcessing(event.target)) {
       return;
     }
 

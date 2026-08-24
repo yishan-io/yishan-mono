@@ -39,6 +39,9 @@ export { EditorSettingsView } from "../editor/EditorSettingsView";
 export { KeybindingsSettingsView } from "../keybindings/KeybindingsSettingsView";
 export { LanguageSettingsView } from "../language/LanguageSettingsView";
 export { LinkSettingsView } from "../link/LinkSettingsView";
+export const LocalTaskTagsSettingsView = lazy(() =>
+  import("@renderer/domains/local-task").then((m) => ({ default: m.LocalTaskTagsSettingsView })),
+);
 export { MarkdownSettingsView } from "../markdown/MarkdownSettingsView";
 export const NodesSettingsView = lazy(() =>
   import("@renderer/domains/node").then((m) => ({ default: m.NodesSettingsView })),

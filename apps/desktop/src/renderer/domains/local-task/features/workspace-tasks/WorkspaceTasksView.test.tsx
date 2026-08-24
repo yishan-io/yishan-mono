@@ -7,6 +7,13 @@ import { localTaskStore } from "../../state/localTaskStore";
 import { WorkspaceTasksView } from "./WorkspaceTasksView";
 
 const commands = vi.hoisted(() => ({
+  createLocalTaskTag: vi.fn(async (name: string) => ({
+    id: `tag-${name}`,
+    key: name,
+    name,
+    aliases: [name],
+    color: null,
+  })),
   loadLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
@@ -18,6 +25,7 @@ const commands = vi.hoisted(() => ({
   selectWorkspaceLocalTask: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
   updateLocalTask: vi.fn(async () => undefined),
+  updateLocalTaskTagColor: vi.fn(async () => undefined),
   updateLocalTaskLinkStatus: vi.fn(async () => undefined),
 }));
 vi.mock("../../commands/localTaskCommands", () => commands);
@@ -32,6 +40,7 @@ vi.mock("@tanstack/react-virtual", () => ({
     getTotalSize: () => count * 128,
     getVirtualItems: () =>
       Array.from({ length: Math.min(count, 8) }, (_, index) => ({ index, key: index, start: index * 128, size: 128 })),
+    scrollToIndex: vi.fn(),
   }),
 }));
 
@@ -46,6 +55,7 @@ const primaryTask = {
   updatedAt: "2026-01-01",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 const relatedTask = {
   ...primaryTask,
@@ -220,7 +230,7 @@ describe("WorkspaceTasksView", () => {
     fireEvent.submit(form);
     await waitFor(() =>
       expect(commands.createAndLinkLocalTask).toHaveBeenCalledWith(
-        { projectId: undefined, title: "Workspace task", description: "", priority: "medium", tags: [] },
+        { projectId: undefined, title: "Workspace task", description: "", priority: "medium", tagIds: [] },
         "workspace-1",
       ),
     );

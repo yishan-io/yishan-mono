@@ -6,6 +6,13 @@ import { localTaskStore } from "../../state/localTaskStore";
 import { WorkspaceTasksView } from "./WorkspaceTasksView";
 
 const commands = vi.hoisted(() => ({
+  createLocalTaskTag: vi.fn(async (name: string) => ({
+    id: `tag-${name}`,
+    key: name,
+    name,
+    aliases: [name],
+    color: null,
+  })),
   loadLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
@@ -17,6 +24,7 @@ const commands = vi.hoisted(() => ({
   selectWorkspaceLocalTask: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
   updateLocalTask: vi.fn(async () => undefined),
+  updateLocalTaskTagColor: vi.fn(async () => undefined),
   updateLocalTaskLinkStatus: vi.fn(async () => undefined),
 }));
 vi.mock("../../commands/localTaskCommands", () => commands);
@@ -31,6 +39,7 @@ vi.mock("@tanstack/react-virtual", () => ({
     getTotalSize: () => count * 128,
     getVirtualItems: () =>
       Array.from({ length: Math.min(count, 8) }, (_, index) => ({ index, key: index, start: index * 128, size: 128 })),
+    scrollToIndex: vi.fn(),
   }),
 }));
 
@@ -45,6 +54,7 @@ const primaryTask = {
   updatedAt: "2026-01-01",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 const relatedTask = {
   ...primaryTask,
@@ -101,47 +111,69 @@ describe("WorkspaceTasksView tags", () => {
     localTaskStore.setState(initialState, true);
   });
 
-  it("removes a detail tag through the update command and disables controls during mutations", async () => {
-    const taggedTask = { ...primaryTask, tags: ["backend"] };
+  it("removes a detail tag through its selector and disables selector changes during mutations", async () => {
+    const taggedTask = { ...primaryTask, tagRefs: [{ id: "tag-backend", name: "backend" }] };
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
+      tagCatalog: [{ id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: null }],
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
     const metadata = screen.getByTestId("local-task-metadata");
     expect(metadata.contains(screen.getByTestId("local-task-status-icon"))).toBe(true);
     expect(metadata.contains(screen.getByText("backend"))).toBe(true);
-    expect(metadata.contains(screen.getByRole("button", { name: "localTask.tags.add" }))).toBe(true);
-    fireEvent.click(screen.getByLabelText("localTask.tags.delete"));
+    expect(metadata.contains(screen.getByRole("combobox", { name: "localTask.fields.tags" }))).toBe(true);
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.tags" }));
+    fireEvent.click(await screen.findByRole("option", { name: "backend" }));
 
-    await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tags: [] }));
+    await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tagIds: [] }));
+
     act(() => localTaskStore.setState({ isMutationLoading: true }));
-    expect((screen.getByRole("button", { name: "localTask.tags.add" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("combobox", { name: "localTask.fields.tags" }) as HTMLInputElement).disabled).toBe(true);
+    expect(commands.updateLocalTask).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the workspace row overflow count outside the clipped visible-tag region", () => {
-    const taggedTask = { ...primaryTask, tags: ["first", "second", "third"] };
+  it("propagates catalog color tokens to workspace rows and detail editor chips", () => {
+    const taggedTask = { ...primaryTask, tagRefs: [{ id: "tag-backend", name: "backend" }] };
+    localTaskStore.setState({
+      workspaceTasks: [taggedTask, relatedTask],
+      taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
+      tagCatalog: [{ id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "#14B8A6" }],
+    });
+    render(<WorkspaceTasksView workspaceId="workspace-1" />);
+
+    const rowChip = screen.getByText("backend").closest(".MuiChip-root");
+    expect(rowChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
+    expect(rowChip?.querySelector(".MuiChip-icon")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
+    const detailChip = within(screen.getByTestId("local-task-metadata")).getByText("backend").closest(".MuiChip-root");
+    expect(detailChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
+    expect(detailChip?.querySelector(".MuiChip-icon")).toBeNull();
+  });
+
+  it("shows full workspace row labels and leaves the overflow count unadorned", () => {
+    const longTag = "first".repeat(6);
+    const taggedTask = {
+      ...primaryTask,
+      tagRefs: [
+        { id: "tag-long", name: longTag },
+        { id: "tag-second", name: "second" },
+        { id: "tag-third", name: "third" },
+      ],
+    };
     localTaskStore.setState({
       workspaceTasks: [taggedTask, relatedTask],
       taskById: { [taggedTask.id]: taggedTask, [relatedTask.id]: relatedTask },
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
-    const firstTagChip = screen.getByText("first").closest(".MuiChip-root");
-    expect(getComputedStyle(firstTagChip as Element).height).toBe("18px");
-    const taskCard = firstTagChip?.closest(".MuiPaper-root");
-    expect(taskCard).toBeTruthy();
-    if (!taskCard) return;
-    const statusChip = within(taskCard as HTMLElement).getByText("localTask.status.active");
-    const priorityChip = within(taskCard as HTMLElement).getByText("localTask.priority.high");
-    expect(statusChip.compareDocumentPosition(priorityChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(priorityChip.compareDocumentPosition(firstTagChip as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(getComputedStyle(firstTagChip as Element).flexGrow).toBe("0");
+    const firstTagChip = screen.getByText(longTag).closest(".MuiChip-root");
+    expect(getComputedStyle(firstTagChip as Element).minHeight).toBe("18px");
+    expect(getComputedStyle(firstTagChip as Element).maxWidth).not.toBe("88px");
+    expect(firstTagChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     const overflowChip = screen.getByText("+1").closest(".MuiChip-root");
-    expect(overflowChip).toBeTruthy();
-    expect(getComputedStyle(overflowChip?.previousElementSibling as Element).overflow).toBe("hidden");
-    expect(getComputedStyle(overflowChip?.parentElement as Element).overflow).toBe("visible");
-    expect(getComputedStyle(overflowChip?.closest(".MuiPaper-root") as Element).overflow).toBe("visible");
+    expect(overflowChip?.querySelector("svg")).toBeNull();
   });
 });

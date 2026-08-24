@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"fmt"
 	"path/filepath"
 	"testing"
 )
@@ -18,25 +19,29 @@ func TestMigrate_011RemovesLinkRoleAndPreservesLinks(t *testing.T) {
 	assertMigrationCount(t, database, 11)
 }
 
-func TestMigrate_012AddsTagsAndPreservesExistingData(t *testing.T) {
+func TestMigrate_013AddsTagCatalogAndBackfillsExistingTags(t *testing.T) {
 	database := openMigrationTestDatabase(t)
 	applyMigrationsThrough010(t, database)
 	seedPre011WorkspaceLinks(t, database)
 	applyMigrationFixture(t, database, "011_remove_local_task_link_role.sql")
+	applyMigrationFixture(t, database, "012_local_task_tags.sql")
+	seedPre013Tags(t, database)
 
 	if err := Migrate(database); err != nil {
 		t.Fatalf("upgrade through 012: %v", err)
 	}
 	assert012Schema(t, database)
 	assert012ExistingDataPreserved(t, database)
-	assertMigrationCount(t, database, 12)
+	assert013CatalogBackfill(t, database)
+	assertMigrationCount(t, database, 16)
 
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migration: %v", err)
 	}
-	assertMigrationCount(t, database, 12)
+	assertMigrationCount(t, database, 16)
 	assert012ExistingDataPreserved(t, database)
-	assert012TagConstraintsAndCascade(t, database)
+	assert013CatalogBackfill(t, database)
+	assert013ColorConstraint(t, database)
 }
 
 func openMigrationTestDatabase(t *testing.T) *sql.DB {
@@ -204,10 +209,10 @@ func assertForeignKeyCheckEmpty(t *testing.T, database *sql.DB) {
 func assert012Schema(t *testing.T, database *sql.DB) {
 	t.Helper()
 	assertTableExists(t, database, "local_task_tags")
-	for _, column := range []string{"local_task_id", "tag", "normalized_tag", "position", "created_at"} {
+	for _, column := range []string{"local_task_id", "tag_id", "position", "created_at"} {
 		assertColumnExists(t, database, "local_task_tags", column)
 	}
-	assertIndexExists(t, database, "idx_local_task_tags_normalized_task")
+	assertIndexExists(t, database, "idx_local_task_tags_tag_task")
 }
 
 func assert012ExistingDataPreserved(t *testing.T, database *sql.DB) {
@@ -218,8 +223,8 @@ func assert012ExistingDataPreserved(t *testing.T, database *sql.DB) {
 		t.Fatalf("local task count = %d, %v; want 4", taskCount, err)
 	}
 	var tagCount int
-	if err := database.QueryRow(`SELECT COUNT(*) FROM local_task_tags`).Scan(&tagCount); err != nil || tagCount != 0 {
-		t.Fatalf("local task tag count = %d, %v; want 0", tagCount, err)
+	if err := database.QueryRow(`SELECT COUNT(*) FROM local_task_tags`).Scan(&tagCount); err != nil || tagCount != 3 {
+		t.Fatalf("local task tag count = %d, %v; want 3", tagCount, err)
 	}
 	assertForeignKeyCheckEmpty(t, database)
 }
@@ -249,4 +254,86 @@ func assert012TagConstraintsAndCascade(t *testing.T, database *sql.DB) {
 		t.Fatalf("cascaded tag count = %d, %v; want 0", tagCount, err)
 	}
 	assertForeignKeyCheckEmpty(t, database)
+}
+
+func seedPre013Tags(t *testing.T, database *sql.DB) {
+	t.Helper()
+	if _, err := database.Exec(`INSERT INTO local_task_tags (local_task_id, tag, normalized_tag, position)
+		VALUES ('task-unlinked', 'Later', 'alpha', 0), ('task-paused', 'First', 'alpha', 1),
+		('task-completed', 'Beta', 'beta', 0)`); err != nil {
+		t.Fatalf("seed pre-013 tags: %v", err)
+	}
+}
+
+func assert013CatalogBackfill(t *testing.T, database *sql.DB) {
+	t.Helper()
+	assertTableExists(t, database, "local_task_tag_catalog")
+	assertTableExists(t, database, "local_task_tag_catalog_aliases")
+	rows, err := database.Query(`SELECT normalized_tag, tag, color FROM local_task_tag_catalog ORDER BY normalized_tag`)
+	if err != nil {
+		t.Fatalf("query catalog: %v", err)
+	}
+	defer rows.Close()
+	var entries []string
+	for rows.Next() {
+		var key, name string
+		var color *string
+		if err := rows.Scan(&key, &name, &color); err != nil {
+			t.Fatalf("scan catalog entry: %v", err)
+		}
+		if color != nil {
+			t.Fatalf("catalog color for %q = %q, want null", key, *color)
+		}
+		entries = append(entries, key+"|"+name)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate catalog entries: %v", err)
+	}
+	if got, want := fmt.Sprint(entries), "[alpha|First beta|Beta]"; got != want {
+		t.Fatalf("catalog entries = %s, want %s", got, want)
+	}
+	aliasRows, err := database.Query(`SELECT catalog.normalized_tag, aliases.tag FROM local_task_tag_catalog_aliases aliases JOIN local_task_tag_catalog catalog ON catalog.id = aliases.tag_id ORDER BY catalog.normalized_tag, aliases.tag`)
+	if err != nil {
+		t.Fatalf("query catalog aliases: %v", err)
+	}
+	defer aliasRows.Close()
+	var aliases []string
+	for aliasRows.Next() {
+		var key, name string
+		if err := aliasRows.Scan(&key, &name); err != nil {
+			t.Fatalf("scan catalog alias: %v", err)
+		}
+		aliases = append(aliases, key+"|"+name)
+	}
+	if err := aliasRows.Err(); err != nil {
+		t.Fatalf("iterate catalog aliases: %v", err)
+	}
+	if got, want := fmt.Sprint(aliases), "[alpha|First alpha|Later beta|Beta]"; got != want {
+		t.Fatalf("catalog aliases = %s, want %s", got, want)
+	}
+}
+
+func assert013ColorConstraint(t *testing.T, database *sql.DB) {
+	t.Helper()
+	// After migration 016 the constraint accepts canonical uppercase #RRGGBB or NULL.
+	for _, color := range []any{"#F59E0B", "#3B82F6", "#22C55E", "#A855F7", "#EF4444", "#14B8A6", nil} {
+		if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, color, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+			fmt.Sprintf("id-color-%v", color), fmt.Sprintf("color-%v", color), "Color", color); err != nil {
+			t.Fatalf("insert valid catalog color %v: %v", color, err)
+		}
+	}
+	for _, invalid := range []string{"magenta", "blue", "#3b82f6", "#3B82F"} {
+		if _, err := database.Exec(`INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, color, created_at, updated_at) VALUES (?, ?, 'Color', ?, datetime('now'), datetime('now'))`,
+			"id-inv-"+invalid, "inv-"+invalid, invalid); err == nil {
+			t.Fatalf("expected invalid catalog color %q to fail", invalid)
+		}
+	}
+}
+
+func assertTableAbsent(t *testing.T, database *sql.DB, tableName string) {
+	t.Helper()
+	var count int
+	if err := database.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, tableName).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("table %s count = %d, %v; want absent", tableName, count, err)
+	}
 }

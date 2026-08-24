@@ -1,11 +1,14 @@
 /** Local Task Domain public API. */
 export {
   createLocalTask,
+  createLocalTaskTag,
+  deleteLocalTaskTag,
   linkLocalTaskWorkspace,
   loadLocalTask,
   loadLocalTaskContext,
   loadLocalTaskLinks,
   loadLocalTaskTagSuggestions,
+  renameLocalTaskTag,
   refreshActiveLocalTaskCount,
   refreshLocalTaskHub,
   refreshSelectedWorkspaceTasks,
@@ -15,6 +18,7 @@ export {
   unlinkLocalTaskWorkspace,
   updateLocalTask,
   updateLocalTaskLinkStatus,
+  updateLocalTaskTagColor,
 } from "./commands/localTaskCommands";
 export type {
   CreateLocalTaskInput,
@@ -25,6 +29,8 @@ export type {
   LocalTaskPriority,
   LocalTaskSearchResult,
   LocalTaskStatus,
+  LocalTaskTagCatalogEntry,
+  LocalTaskTagRef,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "./localTaskTypes";
@@ -38,3 +44,5 @@ export { localTaskStore, type LocalTaskStoreState } from "./state/localTaskStore
 
 export { TaskHubView } from "./features/task-hub/TaskHubView";
 export { WorkspaceTasksView } from "./features/workspace-tasks/WorkspaceTasksView";
+
+export { LocalTaskTagsSettingsView } from "./features/tags/LocalTaskTagsSettingsView";

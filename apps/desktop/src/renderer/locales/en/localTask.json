@@ -91,9 +91,48 @@
     },
     "tags": {
       "add": "Add tags",
-      "addTitle": "Add tags",
       "addInput": "New tags",
-      "delete": "Remove {{tag}}"
+      "delete": "Remove {{tag}}",
+      "creationUnavailable": "Tag creation is unavailable.",
+      "unresolvedLegacy": "This task has an unresolved legacy tag. Refresh tag data before editing.",
+      "colorPicker": "Set color for {{tag}}",
+      "clearColor": "Clear color",
+      "color": {
+        "amber": "Amber",
+        "blue": "Blue",
+        "green": "Green",
+        "purple": "Purple",
+        "red": "Red",
+        "teal": "Teal"
+      },
+      "presetColors": "Preset colors",
+      "customizeColor": "Customize color",
+      "customColorHex": "HEX",
+      "customColorInput": "Custom color",
+      "customColorPlaceholder": "#RRGGBB",
+      "customColorPreview": "Custom color preview",
+      "customColorInvalid": "Enter a valid #RRGGBB color.",
+      "applyCustomColor": "Apply",
+      "cancelCustomColor": "Cancel",
+      "editColor": "Edit color for {{tag}}",
+      "settings": {
+        "title": "Task tags",
+        "description": "Search, rename, color, and delete task tags.",
+        "search": "Search tags",
+        "loading": "Loading tags",
+        "empty": "No tags match the current search.",
+        "list": "Task tag catalog",
+        "rename": "Rename {{tag}}",
+        "renamePlaceholder": "Tag name",
+        "nameRequired": "Enter a tag name.",
+        "mergeWarning": "Renaming to “{{tag}}” merges this tag with the existing tag.",
+        "delete": "Delete",
+        "deleteTitle": "Delete tag?",
+        "deleteDescription": "Delete “{{tag}}”? This removes the tag association from every task.",
+        "confirmDelete": "Delete tag"
+      },
+      "customColorPlane": "Saturation and value",
+      "customColorHue": "Hue"
     }
   }
 }

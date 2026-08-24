@@ -37,6 +37,12 @@ func NormalizeTags(tags []string) ([]string, error) {
 	return normalizedTags, nil
 }
 
+// NormalizeTag returns the daemon-normalized display spelling for a valid tag.
+func NormalizeTag(tag string) (string, error) {
+	normalizedTag, _, err := normalizeTag(tag)
+	return normalizedTag, err
+}
+
 // NormalizeTagKey returns the persisted, case-insensitive key for a valid tag.
 func NormalizeTagKey(tag string) (string, error) {
 	_, key, err := normalizeTag(tag)
@@ -49,4 +55,38 @@ func normalizeTag(tag string) (string, string, error) {
 		return "", "", ErrInvalidTask
 	}
 	return normalizedTag, cases.Fold().String(normalizedTag), nil
+}
+
+// ValidateTagColor validates a nullable canonical uppercase #RRGGBB hex color.
+// Nil clears the color. Non-nil must be exactly "#" followed by six uppercase
+// hex digits (0-9, A-F).
+func ValidateTagColor(color *string) error {
+	if color == nil {
+		return nil
+	}
+	if !isCanonicalHexColor(*color) {
+		return ErrInvalidTagColor
+	}
+	return nil
+}
+
+// isCanonicalHexColor returns true for exactly "#RRGGBB" with uppercase A-F.
+func isCanonicalHexColor(color string) bool {
+	if len(color) != 7 || color[0] != '#' {
+		return false
+	}
+	for _, c := range color[1:] {
+		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
+// ValidateTagKey validates a daemon-normalized tag catalog key.
+func ValidateTagKey(key string) error {
+	if key == "" || !utf8.ValidString(key) || strings.TrimSpace(key) != key {
+		return ErrInvalidTagKey
+	}
+	return nil
 }

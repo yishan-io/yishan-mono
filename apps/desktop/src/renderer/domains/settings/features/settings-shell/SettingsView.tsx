@@ -22,6 +22,7 @@ import {
   KeybindingsSettingsView,
   LanguageSettingsView,
   LinkSettingsView,
+  LocalTaskTagsSettingsView,
   MarkdownSettingsView,
   MemberSettingsView,
   MemorySettingsView,
@@ -62,6 +63,7 @@ export function SettingsView() {
       selectedTabParam === "keybindings" ||
       selectedTabParam === "language" ||
       selectedTabParam === "links" ||
+      selectedTabParam === "localTags" ||
       selectedTabParam === "members" ||
       selectedTabParam === "memory" ||
       selectedTabParam === "nodes" ||
@@ -186,6 +188,11 @@ export function SettingsView() {
       links: (
         <Suspense fallback={null}>
           <LinkSettingsView />
+        </Suspense>
+      ),
+      localTags: (
+        <Suspense fallback={null}>
+          <LocalTaskTagsSettingsView />
         </Suspense>
       ),
       members: (

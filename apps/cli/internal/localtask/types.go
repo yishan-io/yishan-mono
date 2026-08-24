@@ -36,6 +36,14 @@ var (
 	ErrInvalidLink = errors.New("invalid local task workspace link")
 	// ErrContextUnavailable indicates no approved local context path can be resolved.
 	ErrContextUnavailable = errors.New("local task context unavailable")
+	// ErrInvalidTagKey indicates a tag catalog key is not daemon-normalized.
+	ErrInvalidTagKey = errors.New("invalid local task tag key")
+	// ErrInvalidTagColor indicates a tag color is not in the supported palette.
+	ErrInvalidTagColor = errors.New("invalid local task tag color")
+	// ErrTagNotFound indicates a requested Local Task tag catalog entry does not exist.
+	ErrTagNotFound = errors.New("local task tag not found")
+	// ErrInvalidTag indicates a tag entity or reference is invalid.
+	ErrInvalidTag = errors.New("invalid local task tag")
 )
 
 // Status is a Local Task lifecycle state.
@@ -69,6 +77,31 @@ type Task struct {
 	UpdatedAt   string   `json:"updatedAt"`
 	CompletedAt *string  `json:"completedAt"`
 	Tags        []string `json:"tags"`
+	TagRefs     []TagRef `json:"tagRefs"`
+}
+
+// Tag is one globally retained Local Task tag catalog entry.
+type Tag struct {
+	ID      string   `json:"id"`
+	Key     string   `json:"key"`
+	Name    string   `json:"name"`
+	Aliases []string `json:"aliases"`
+	Color   *string  `json:"color"`
+}
+
+// TagRef identifies an assigned catalog tag.
+type TagRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name,omitempty"`
+}
+
+// TagCreate describes a new catalog entry.
+type TagCreate struct{ Name string }
+
+// TagColorUpdate is a nullable canonical hex color update for a tag catalog entry.
+type TagColorUpdate struct {
+	Color       *string
+	DisplayName *string
 }
 
 // ContextDetails contains derived filesystem locations for v1 task documents.
@@ -104,6 +137,7 @@ type TaskFilter struct {
 	Priority    *Priority
 	WorkspaceID *string
 	Tags        []string
+	TagIDs      []string
 }
 
 // TaskUpdate contains mutable Local Task fields.
@@ -113,6 +147,7 @@ type TaskUpdate struct {
 	Status      *Status
 	Priority    *Priority
 	Tags        *[]string
+	TagRefs     *[]TagRef
 }
 
 // SearchResult is a Local Task metadata FTS result.
@@ -128,7 +163,12 @@ type Repository interface {
 	List(context.Context, TaskFilter) ([]Task, error)
 	Update(context.Context, string, TaskUpdate) (Task, error)
 	Search(context.Context, string, TaskFilter) ([]SearchResult, error)
-	ListTags(context.Context) ([]string, error)
+	ListTags(context.Context) ([]Tag, error)
+	CreateTag(context.Context, TagCreate) (Tag, error)
+	RenameTag(context.Context, string, string) (Tag, error)
+	MergeTags(context.Context, string, string) (Tag, error)
+	DeleteTag(context.Context, string) error
+	UpdateTagColor(context.Context, string, TagColorUpdate) (Tag, error)
 	LinkWorkspace(context.Context, WorkspaceLink) (WorkspaceLink, error)
 	UnlinkWorkspace(context.Context, string) error
 	UpdateWorkspaceLinkStatus(context.Context, string, Status) (WorkspaceLink, error)
@@ -144,7 +184,7 @@ func ValidateTask(task Task) error {
 	if !isValidStatus(task.Status) || !isValidPriority(task.Priority) {
 		return ErrInvalidTask
 	}
-	if _, err := NormalizeTags(task.Tags); err != nil {
+	if err := validateTaskTagAssociations(task.Tags, task.TagRefs); err != nil {
 		return err
 	}
 	return nil
@@ -161,10 +201,67 @@ func ValidateTaskUpdate(update TaskUpdate) error {
 	if update.Priority != nil && !isValidPriority(*update.Priority) {
 		return ErrInvalidTask
 	}
+	var tags []string
 	if update.Tags != nil {
-		if _, err := NormalizeTags(*update.Tags); err != nil {
+		tags = *update.Tags
+	}
+	var refs []TagRef
+	if update.TagRefs != nil {
+		refs = *update.TagRefs
+	}
+	if err := validateTaskTagAssociations(tags, refs); err != nil {
+		return err
+	}
+	if update.Tags != nil && update.TagRefs != nil {
+		return ErrInvalidTag
+	}
+	return nil
+}
+
+func validateTaskTagAssociations(tags []string, refs []TagRef) error {
+	if tags != nil && refs != nil {
+		return ErrInvalidTag
+	}
+	if tags != nil {
+		if _, err := NormalizeTags(tags); err != nil {
 			return err
 		}
+	}
+	if len(refs) > MaxTagsPerTask {
+		return ErrInvalidTag
+	}
+	seen := make(map[string]struct{}, len(refs))
+	for _, ref := range refs {
+		if strings.TrimSpace(ref.ID) == "" || strings.TrimSpace(ref.ID) != ref.ID {
+			return ErrInvalidTag
+		}
+		if _, ok := seen[ref.ID]; ok {
+			return ErrInvalidTag
+		}
+		seen[ref.ID] = struct{}{}
+	}
+	return nil
+}
+
+// ValidateTagID validates an opaque stable Local Task tag ID.
+func ValidateTagID(id string) error {
+	if id == "" || strings.TrimSpace(id) != id {
+		return ErrInvalidTag
+	}
+	return nil
+}
+
+// ValidateTagIDs validates opaque stable Local Task tag IDs.
+func ValidateTagIDs(ids []string) error {
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if err := ValidateTagID(id); err != nil {
+			return err
+		}
+		if _, exists := seen[id]; exists {
+			return ErrInvalidTag
+		}
+		seen[id] = struct{}{}
 	}
 	return nil
 }

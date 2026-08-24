@@ -48,6 +48,7 @@ describe("i18n", () => {
 
     expect(i18n.t("common.actions.cancel")).toBe(resources.en.common.common.actions.cancel);
     expect(i18n.t("settings.title")).toBe(resources.en.settings.settings.title);
+    expect(i18n.t("settings.items.tagManagement")).toBe(resources.en.settings.settings.items.tagManagement);
     expect(i18n.t("workspace.actions.create")).toBe(resources.en.workspace.workspace.actions.create);
   });
 
@@ -56,6 +57,7 @@ describe("i18n", () => {
 
     expect(i18n.t("common.actions.cancel")).toBe(resources.zh.common.common.actions.cancel);
     expect(i18n.t("settings.title")).toBe(resources.zh.settings.settings.title);
+    expect(i18n.t("settings.items.tagManagement")).toBe(resources.zh.settings.settings.items.tagManagement);
     expect(i18n.t("workspace.actions.create")).toBe(resources.zh.workspace.workspace.actions.create);
     expect(window.localStorage.getItem(I18N_LANGUAGE_STORAGE_KEY)).toBe("zh");
   });

@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -43,7 +44,7 @@ func TestLocalTaskStore_RollsBackTagWritesWhenTriggerAborts(t *testing.T) {
 	ctx := context.Background()
 	store, _ := openTestLocalTaskStore(t)
 	if _, err := store.database.Exec(`CREATE TRIGGER abort_bad_tag BEFORE INSERT ON local_task_tags
-		WHEN NEW.tag = 'abort' BEGIN SELECT RAISE(ABORT, 'tag rejected'); END`); err != nil {
+		WHEN NEW.tag_id = (SELECT id FROM local_task_tag_catalog WHERE tag = 'abort') BEGIN SELECT RAISE(ABORT, 'tag rejected'); END`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.Create(ctx, localtask.Task{Title: "Rejected", Status: localtask.StatusActive,
@@ -111,8 +112,8 @@ func TestLocalTaskStore_HydratesTagBatchesAndListsDeterministicSuggestions(t *te
 	ctx := context.Background()
 	store, _ := openTestLocalTaskStore(t)
 	emptyTags, err := store.ListTags(ctx)
-	if err != nil || !reflect.DeepEqual(emptyTags, []string{}) {
-		t.Fatalf("empty suggestions = %#v, %v", emptyTags, err)
+	if err != nil || !reflect.DeepEqual(emptyTags, []localtask.Tag{}) {
+		t.Fatalf("empty catalog = %#v, %v", emptyTags, err)
 	}
 	const fixtureTimestamp = "2025-01-01 00:00:00"
 	for index := 0; index <= sqliteBindChunkSize; index++ {
@@ -125,10 +126,19 @@ func TestLocalTaskStore_HydratesTagBatchesAndListsDeterministicSuggestions(t *te
 	}
 	firstChunkTaskID := "batch-" + string(rune(sqliteBindChunkSize-1+1000))
 	secondChunkTaskID := "batch-" + string(rune(sqliteBindChunkSize+1000))
-	if _, err := store.database.ExecContext(ctx, `INSERT INTO local_task_tags (local_task_id, tag, normalized_tag, position)
-		VALUES (?, 'first', 'first', 0), (?, 'second', 'second', 1),
-			(?, 'third', 'third', 0), (?, 'fourth', 'fourth', 1),
-			(?, 'Zebra', 'zebra', 0), (?, 'Alpha', 'alpha', 0), (?, 'ALPHA', 'alpha', 0)`,
+	if _, err := store.database.ExecContext(ctx, `INSERT INTO local_task_tag_catalog (id, normalized_tag, tag, created_at, updated_at) VALUES
+		('tag-first','first','first',datetime('now'),datetime('now')),('tag-second','second','second',datetime('now'),datetime('now')),
+		('tag-third','third','third',datetime('now'),datetime('now')),('tag-fourth','fourth','fourth',datetime('now'),datetime('now')),
+		('tag-zebra','zebra','Zebra',datetime('now'),datetime('now')),('tag-alpha','alpha','Alpha',datetime('now'),datetime('now'))`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.database.ExecContext(ctx, `INSERT INTO local_task_tag_catalog_aliases (tag_id, tag) SELECT id, tag FROM local_task_tag_catalog`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.database.ExecContext(ctx, `INSERT INTO local_task_tags (local_task_id, tag_id, position, created_at)
+		VALUES (?, 'tag-first', 0, datetime('now')), (?, 'tag-second', 1, datetime('now')),
+			(?, 'tag-third', 0, datetime('now')), (?, 'tag-fourth', 1, datetime('now')),
+			(?, 'tag-zebra', 0, datetime('now')), (?, 'tag-alpha', 0, datetime('now')), (?, 'tag-alpha', 0, datetime('now'))`,
 		firstChunkTaskID, firstChunkTaskID, secondChunkTaskID, secondChunkTaskID,
 		"batch-Ϩ", "batch-ϩ", "batch-Ϫ"); err != nil {
 		t.Fatal(err)
@@ -152,8 +162,8 @@ func TestLocalTaskStore_HydratesTagBatchesAndListsDeterministicSuggestions(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(tags, []string{"ALPHA", "first", "fourth", "second", "third", "Zebra"}) {
-		t.Fatalf("suggestions = %#v", tags)
+	if len(tags) != 6 {
+		t.Fatalf("catalog entries = %#v, want six fixture tags", tags)
 	}
 }
 
@@ -175,3 +185,274 @@ func createTaggedTask(t *testing.T, store *LocalTaskStore, title string, tags []
 }
 
 func statusPointer(status localtask.Status) *localtask.Status { return &status }
+
+func TestLocalTaskStore_RetainsCatalogColorsAcrossAssignments(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	created := createTaggedTask(t, store, "Colored", []string{" Alpha "})
+	catalog, err := store.ListTags(ctx)
+	if err != nil || !reflect.DeepEqual(withoutTagIDs(catalog), []localtask.Tag{{Key: "alpha", Name: "Alpha", Aliases: []string{"Alpha"}, Color: nil}}) {
+		t.Fatalf("initial catalog = %#v, %v", catalog, err)
+	}
+
+	color := "#3B82F6"
+	updated, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &color})
+	if err != nil || updated.Color == nil || *updated.Color != color || !reflect.DeepEqual(updated.Aliases, []string{"Alpha"}) {
+		t.Fatalf("set catalog color = %#v, %v", updated, err)
+	}
+	clear := []string{}
+	if _, err := store.Update(ctx, created.ID, localtask.TaskUpdate{Tags: &clear}); err != nil {
+		t.Fatalf("clear task assignments: %v", err)
+	}
+	catalog, err = store.ListTags(ctx)
+	if err != nil || len(catalog) != 1 || catalog[0].Color == nil || *catalog[0].Color != color {
+		t.Fatalf("retained catalog = %#v, %v", catalog, err)
+	}
+
+	if _, err := store.UpdateTagColor(ctx, " Alpha", localtask.TagColorUpdate{Color: &color}); !errors.Is(err, localtask.ErrInvalidTagKey) {
+		t.Fatalf("invalid key shape error = %v", err)
+	}
+	invalid := "magenta"
+	if _, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &invalid}); !errors.Is(err, localtask.ErrInvalidTagColor) {
+		t.Fatalf("invalid color error = %v", err)
+	}
+	if _, err := store.UpdateTagColor(ctx, "missing", localtask.TagColorUpdate{Color: &color}); !errors.Is(err, localtask.ErrTagNotFound) {
+		t.Fatalf("missing catalog entry error = %v", err)
+	}
+	cleared, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{})
+	if err != nil || cleared.Color != nil {
+		t.Fatalf("clear catalog color = %#v, %v", cleared, err)
+	}
+}
+
+func TestLocalTaskStore_ListsEveryPersistedDisplayAliasForCatalogKey(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	_ = createTaggedTask(t, store, "First", []string{"Straße"})
+	_ = createTaggedTask(t, store, "Second", []string{"STRASSE"})
+
+	catalog, err := store.ListTags(ctx)
+	if err != nil {
+		t.Fatalf("list catalog: %v", err)
+	}
+	if !reflect.DeepEqual(withoutTagIDs(catalog), []localtask.Tag{{
+		Key: "strasse", Name: "Straße", Aliases: []string{"STRASSE", "Straße"}, Color: nil,
+	}}) {
+		t.Fatalf("catalog aliases = %#v", catalog)
+	}
+}
+
+func TestLocalTaskStore_RetainsEveryAliasAfterFinalAssignmentIsRemoved(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	first := createTaggedTask(t, store, "First", []string{"Straße"})
+	second := createTaggedTask(t, store, "Second", []string{"STRASSE"})
+	clear := []string{}
+	if _, err := store.Update(ctx, first.ID, localtask.TaskUpdate{Tags: &clear}); err != nil {
+		t.Fatalf("clear first assignments: %v", err)
+	}
+	if _, err := store.Update(ctx, second.ID, localtask.TaskUpdate{Tags: &clear}); err != nil {
+		t.Fatalf("clear final assignments: %v", err)
+	}
+
+	catalog, err := store.ListTags(ctx)
+	if err != nil {
+		t.Fatalf("list catalog: %v", err)
+	}
+	if !reflect.DeepEqual(withoutTagIDs(catalog), []localtask.Tag{{
+		Key: "strasse", Name: "Straße", Aliases: []string{"STRASSE", "Straße"}, Color: nil,
+	}}) {
+		t.Fatalf("retained catalog aliases = %#v", catalog)
+	}
+}
+
+func TestLocalTaskStore_RollsBackCatalogAndAssignmentWritesTogether(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	if _, err := store.database.Exec(`CREATE TRIGGER abort_catalog BEFORE INSERT ON local_task_tags
+		WHEN NEW.tag_id = (SELECT id FROM local_task_tag_catalog WHERE tag = 'abort') BEGIN SELECT RAISE(ABORT, 'tag rejected'); END`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Create(ctx, localtask.Task{Title: "Rejected", Status: localtask.StatusActive,
+		Priority: localtask.PriorityMedium, Tags: []string{"abort"}}); err == nil {
+		t.Fatal("expected create to abort")
+	}
+	catalog, err := store.ListTags(ctx)
+	if err != nil || len(catalog) != 0 {
+		t.Fatalf("rolled back catalog = %#v, %v", catalog, err)
+	}
+}
+
+func TestLocalTaskStore_PreservesCatalogIdentityAndColorAfterRestart(t *testing.T) {
+	ctx := context.Background()
+	profileDir := t.TempDir()
+	database, err := Open(profileDir)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	store := NewLocalTaskStore(database)
+	_ = createTaggedTask(t, store, "First", []string{"Straße"})
+	color := "#A855F7"
+	if _, err := store.UpdateTagColor(ctx, "strasse", localtask.TagColorUpdate{Color: &color}); err != nil {
+		t.Fatalf("set catalog color: %v", err)
+	}
+	_ = createTaggedTask(t, store, "Second", []string{"STRASSE"})
+	if err := database.Close(); err != nil {
+		t.Fatalf("close database: %v", err)
+	}
+
+	database, err = Open(profileDir)
+	if err != nil {
+		t.Fatalf("reopen database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := Migrate(database); err != nil {
+		t.Fatalf("rerun migration: %v", err)
+	}
+	catalog, err := NewLocalTaskStore(database).ListTags(ctx)
+	if err != nil || len(catalog) != 1 {
+		t.Fatalf("restarted catalog = %#v, %v", catalog, err)
+	}
+	if catalog[0].Key != "strasse" || catalog[0].Name != "Straße" || !reflect.DeepEqual(catalog[0].Aliases, []string{"STRASSE", "Straße"}) || catalog[0].Color == nil || *catalog[0].Color != color {
+		t.Fatalf("restarted catalog entry = %#v", catalog[0])
+	}
+}
+
+func TestLocalTaskStore_ColorRejectsInvalidHexAndClears(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	createTaggedTask(t, store, "Colored", []string{"alpha"})
+	hex := "#3B82F6"
+	updated, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &hex})
+	if err != nil || updated.Color == nil || *updated.Color != hex {
+		t.Fatalf("set hex color = %#v, %v", updated, err)
+	}
+	for _, invalid := range []string{"#12345", "#a1b2c3", "blue", "#3B82F60"} {
+		v := invalid
+		if _, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{Color: &v}); !errors.Is(err, localtask.ErrInvalidTagColor) {
+			t.Fatalf("invalid hex %q error = %v, want invalid color", invalid, err)
+		}
+	}
+	cleared, err := store.UpdateTagColor(ctx, "alpha", localtask.TagColorUpdate{})
+	if err != nil || cleared.Color != nil {
+		t.Fatalf("clear color = %#v, %v", cleared, err)
+	}
+}
+
+func TestLocalTaskStore_TagColorSurvivesDatabaseRestart(t *testing.T) {
+	profileDir := t.TempDir()
+	database, err := Open(profileDir)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	store := NewLocalTaskStore(database)
+	createTaggedTask(t, store, "Colored", []string{"alpha"})
+	hex := "#123456"
+	if _, err := store.UpdateTagColor(context.Background(), "alpha", localtask.TagColorUpdate{Color: &hex}); err != nil {
+		t.Fatalf("set hex color: %v", err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatalf("close database: %v", err)
+	}
+	assertRestartedTagColor(t, profileDir, hex)
+}
+
+func assertRestartedTagColor(t *testing.T, profileDir string, want string) {
+	t.Helper()
+	database, err := Open(profileDir)
+	if err != nil {
+		t.Fatalf("reopen database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("remigrate database: %v", err)
+	}
+	catalog, err := NewLocalTaskStore(database).ListTags(context.Background())
+	if err != nil || len(catalog) != 1 || catalog[0].Color == nil || *catalog[0].Color != want {
+		t.Fatalf("restarted catalog = %#v, %v", catalog, err)
+	}
+}
+
+func TestLocalTaskStore_EnsuresCatalogEntryAndAliasesWhenColoringNewDisplayTag(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	hex := "#3B82F6"
+	first, err := store.UpdateTagColor(ctx, "", localtask.TagColorUpdate{DisplayName: stringPointer(" Cafe\u0301 "), Color: &hex})
+	if err != nil {
+		t.Fatalf("set new hex color: %v", err)
+	}
+	if first.Key != "café" || first.Name != "Café" || !reflect.DeepEqual(first.Aliases, []string{"Café"}) || first.Color == nil || *first.Color != hex {
+		t.Fatalf("new catalog entry = %#v", first)
+	}
+	hex2 := "#123456"
+	second, err := store.UpdateTagColor(ctx, "", localtask.TagColorUpdate{DisplayName: stringPointer("CAFÉ"), Color: &hex2})
+	if err != nil {
+		t.Fatalf("set updated hex color: %v", err)
+	}
+	if second.Key != "café" || !reflect.DeepEqual(second.Aliases, []string{"CAFÉ", "Café"}) || second.Color == nil || *second.Color != hex2 {
+		t.Fatalf("updated catalog entry = %#v", second)
+	}
+}
+
+func TestLocalTaskStore_UsesStableTagIDsForReferencesFiltersAndCatalogMutations(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	alpha, err := store.CreateTag(ctx, localtask.TagCreate{Name: "Alpha"})
+	if err != nil {
+		t.Fatalf("create alpha: %v", err)
+	}
+	beta, err := store.CreateTag(ctx, localtask.TagCreate{Name: "BETA"})
+	if err != nil {
+		t.Fatalf("create beta: %v", err)
+	}
+	first := createTestLocalTask(t, store, "First")
+	refs := []localtask.TagRef{{ID: alpha.ID}, {ID: beta.ID}}
+	if _, err := store.Update(ctx, first.ID, localtask.TaskUpdate{TagRefs: &refs}); err != nil {
+		t.Fatalf("set refs: %v", err)
+	}
+	assigned, loadErr := store.Get(ctx, first.ID)
+	if loadErr != nil || !reflect.DeepEqual(assigned.TagRefs, []localtask.TagRef{{ID: alpha.ID, Name: "Alpha"}, {ID: beta.ID, Name: "BETA"}}) {
+		t.Fatalf("assigned refs = %#v, %v", assigned.TagRefs, loadErr)
+	}
+	listed, err := store.List(ctx, localtask.TaskFilter{TagIDs: []string{alpha.ID, beta.ID}})
+	if err != nil || len(listed) != 1 || listed[0].ID != first.ID {
+		t.Fatalf("filter IDs = %#v, %v", listed, err)
+	}
+
+	color := "#3B82F6"
+	if _, err := store.UpdateTagColor(ctx, alpha.ID, localtask.TagColorUpdate{Color: &color}); err != nil {
+		t.Fatalf("color alpha: %v", err)
+	}
+	merged, err := store.MergeTags(ctx, alpha.ID, beta.ID)
+	if err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if merged.ID != alpha.ID || merged.Color == nil || *merged.Color != color {
+		t.Fatalf("merged = %#v", merged)
+	}
+	loaded, err := store.Get(ctx, first.ID)
+	if err != nil || !reflect.DeepEqual(loaded.TagRefs, []localtask.TagRef{{ID: alpha.ID, Name: "Alpha"}}) {
+		t.Fatalf("merged refs = %#v, %v", loaded.TagRefs, err)
+	}
+	if err := store.DeleteTag(ctx, alpha.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	loaded, err = store.Get(ctx, first.ID)
+	if err != nil || len(loaded.TagRefs) != 0 {
+		t.Fatalf("deleted refs = %#v, %v", loaded.TagRefs, err)
+	}
+}
+
+func withoutTagIDs(tags []localtask.Tag) []localtask.Tag {
+	copyTags := append([]localtask.Tag(nil), tags...)
+	for index := range copyTags {
+		copyTags[index].ID = ""
+	}
+	return copyTags
+}

@@ -3,10 +3,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowDown, LuArrowUp, LuMinus } from "react-icons/lu";
-import type { LocalTask } from "../../localTaskTypes";
-import { LocalTaskTagsDisplay } from "../tags/LocalTaskTagsDisplay";
+import type { LocalTask, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 
-const TASK_ROW_HEIGHT = 88;
+const TASK_ROW_ESTIMATE = 112;
 
 const PRIORITY_ICONS = {
   low: LuArrowDown,
@@ -18,16 +18,18 @@ type LocalTaskListProps = {
   tasks: LocalTask[];
   onSelect: (taskId: string) => void;
   projectNameById: Readonly<Record<string, string>>;
+  tagCatalog: LocalTaskTagCatalogEntry[];
 };
 
 /** Renders a virtualized Local Task result list. */
-export function LocalTaskList({ tasks, onSelect, projectNameById }: LocalTaskListProps) {
+export function LocalTaskList({ tasks, onSelect, projectNameById, tagCatalog }: LocalTaskListProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: tasks.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => TASK_ROW_HEIGHT,
+    estimateSize: () => TASK_ROW_ESTIMATE,
+    measureElement: (element) => element.getBoundingClientRect().height,
     overscan: 8,
   });
 
@@ -41,8 +43,10 @@ export function LocalTaskList({ tasks, onSelect, projectNameById }: LocalTaskLis
           return (
             <Box
               key={task.id}
+              ref={virtualizer.measureElement}
+              data-index={virtualRow.index}
               style={{ transform: `translateY(${virtualRow.start}px)` }}
-              sx={{ position: "absolute", top: 0, left: 0, width: "100%", height: TASK_ROW_HEIGHT, px: 2, py: 0.5 }}
+              sx={{ position: "absolute", top: 0, left: 0, width: "100%", px: 2, py: 0.5 }}
             >
               <Paper
                 component="button"
@@ -51,7 +55,7 @@ export function LocalTaskList({ tasks, onSelect, projectNameById }: LocalTaskLis
                 onClick={() => onSelect(task.id)}
                 sx={{
                   width: "100%",
-                  height: "100%",
+                  minHeight: TASK_ROW_ESTIMATE - 8,
                   px: 1.5,
                   py: 1,
                   display: "flex",
@@ -93,7 +97,12 @@ export function LocalTaskList({ tasks, onSelect, projectNameById }: LocalTaskLis
                       : t("localTask.states.globalTask")}
                   </Typography>
                 </Box>
-                <LocalTaskTagsDisplay tags={task.tags} maxVisible={2} />
+                <LocalTaskTagsDisplay
+                  tagRefs={task.tagRefs}
+                  tags={task.tagRefs.length === 0 ? task.tags : undefined}
+                  maxVisible={2}
+                  tagCatalog={tagCatalog}
+                />
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Chip size="small" label={t(`localTask.status.${task.status}`)} />
                 </Box>

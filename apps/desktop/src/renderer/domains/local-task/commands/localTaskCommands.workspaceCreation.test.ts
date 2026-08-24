@@ -7,18 +7,25 @@ import { createAndLinkLocalTask, openLocalTaskContextInFileTree } from "./localT
 const selectFolderInFileTree = vi.hoisted(() => vi.fn());
 vi.mock("@renderer/domains/workspace", () => ({ selectFolderInFileTree }));
 vi.mock("../daemon/localTaskDaemonClient", () => ({
-  createLocalTask: vi.fn(),
-  getLocalTask: vi.fn(),
-  listLocalTasks: vi.fn(),
-  searchLocalTasks: vi.fn(),
-  updateLocalTask: vi.fn(),
-  getLocalTaskContext: vi.fn(),
-  linkLocalTaskWorkspace: vi.fn(),
-  unlinkLocalTaskWorkspace: vi.fn(),
-  updateLocalTaskLinkStatus: vi.fn(),
-  listLocalTaskWorkspaceLinks: vi.fn(),
-  listLocalTaskLinks: vi.fn(),
-  listLocalTaskTags: vi.fn(),
+  localTaskClient: {
+    create: vi.fn(),
+    get: vi.fn(),
+    list: vi.fn(),
+    search: vi.fn(),
+    listTags: vi.fn(),
+    listTagCatalog: vi.fn(),
+    updateTagColor: vi.fn(),
+    createTag: vi.fn(),
+    renameTag: vi.fn(),
+    deleteTag: vi.fn(),
+    update: vi.fn(),
+    getContext: vi.fn(),
+    linkWorkspace: vi.fn(),
+    unlinkWorkspace: vi.fn(),
+    updateLinkStatus: vi.fn(),
+    listWorkspaceLinks: vi.fn(),
+    listTaskLinks: vi.fn(),
+  },
 }));
 
 const task: LocalTask = {
@@ -32,6 +39,7 @@ const task: LocalTask = {
   updatedAt: "updated",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 const link: LocalTaskWorkspaceLink = {
   id: "link-1",
@@ -50,29 +58,39 @@ afterEach(() => {
 
 describe("Local Task workspace creation and document commands", () => {
   it("creates and links a workspace task", async () => {
-    vi.mocked(daemon.createLocalTask).mockResolvedValue(task);
-    vi.mocked(daemon.linkLocalTaskWorkspace).mockResolvedValue(link);
-    vi.mocked(daemon.listLocalTasks).mockResolvedValue([task]);
-    vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([link]);
+    vi.mocked(daemon.localTaskClient.create).mockResolvedValue(task);
+    vi.mocked(daemon.localTaskClient.linkWorkspace).mockResolvedValue(link);
+    vi.mocked(daemon.localTaskClient.list).mockResolvedValue([task]);
+    vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([link]);
+    vi.mocked(daemon.localTaskClient.listTagCatalog).mockResolvedValue([
+      { id: "tag-fixture", key: "desktop", name: "Desktop", aliases: ["Desktop"], color: "#3B82F6" },
+    ]);
     localTaskStore.setState({ selectedWorkspaceId: "workspace-1" });
 
     const result = await createAndLinkLocalTask({ title: "Task" }, "workspace-1");
 
     expect(result).toEqual({ status: "linked", task });
 
-    expect(daemon.createLocalTask).toHaveBeenCalledWith({ title: "Task" });
-    expect(daemon.linkLocalTaskWorkspace).toHaveBeenCalledWith("task-1", "workspace-1");
+    expect(daemon.localTaskClient.create).toHaveBeenCalledWith({ title: "Task" });
+    expect(daemon.localTaskClient.linkWorkspace).toHaveBeenCalledWith("task-1", "workspace-1");
+    expect(daemon.localTaskClient.listTagCatalog).toHaveBeenCalledOnce();
+    expect(localTaskStore.getState().tagSuggestions).toEqual(["Desktop"]);
   });
 
   it("retains the created task when linking fails", async () => {
-    vi.mocked(daemon.createLocalTask).mockResolvedValue(task);
-    vi.mocked(daemon.linkLocalTaskWorkspace).mockRejectedValue(new Error("link failed"));
+    vi.mocked(daemon.localTaskClient.create).mockResolvedValue(task);
+    vi.mocked(daemon.localTaskClient.linkWorkspace).mockRejectedValue(new Error("link failed"));
+    vi.mocked(daemon.localTaskClient.listTagCatalog).mockResolvedValue([
+      { id: "tag-fixture", key: "cli", name: "CLI", aliases: ["CLI"], color: "#22C55E" },
+    ]);
 
     const result = await createAndLinkLocalTask({ title: "Task" }, "workspace-1");
 
     expect(result).toEqual({ status: "created", task, linkError: "link failed" });
     expect(localTaskStore.getState().taskById[task.id]).toEqual(task);
-    expect(daemon.createLocalTask).toHaveBeenCalledTimes(1);
+    expect(daemon.localTaskClient.create).toHaveBeenCalledTimes(1);
+    expect(daemon.localTaskClient.listTagCatalog).toHaveBeenCalledOnce();
+    expect(localTaskStore.getState().tagSuggestions).toEqual(["CLI"]);
   });
 
   it("opens the Task Context directory in the workspace file tree", () => {

@@ -91,9 +91,48 @@
     },
     "tags": {
       "add": "添加标签",
-      "addTitle": "添加标签",
       "addInput": "新标签",
-      "delete": "移除 {{tag}}"
+      "delete": "移除 {{tag}}",
+      "creationUnavailable": "无法创建标签。",
+      "unresolvedLegacy": "此任务包含无法解析的旧标签。请刷新标签数据后再编辑。",
+      "colorPicker": "设置 {{tag}} 的颜色",
+      "clearColor": "清除颜色",
+      "color": {
+        "amber": "琥珀色",
+        "blue": "蓝色",
+        "green": "绿色",
+        "purple": "紫色",
+        "red": "红色",
+        "teal": "青色"
+      },
+      "presetColors": "预设颜色",
+      "customizeColor": "自定义颜色",
+      "customColorHex": "HEX",
+      "customColorInput": "自定义颜色",
+      "customColorPlaceholder": "#RRGGBB",
+      "customColorPreview": "自定义颜色预览",
+      "customColorInvalid": "请输入有效的 #RRGGBB 颜色。",
+      "applyCustomColor": "应用",
+      "cancelCustomColor": "取消",
+      "editColor": "编辑 {{tag}} 的颜色",
+      "settings": {
+        "title": "任务标签",
+        "description": "搜索、重命名、设置颜色和删除任务标签。",
+        "search": "搜索标签",
+        "loading": "正在加载标签",
+        "empty": "没有符合当前搜索条件的标签。",
+        "list": "任务标签目录",
+        "rename": "重命名 {{tag}}",
+        "renamePlaceholder": "标签名称",
+        "nameRequired": "请输入标签名称。",
+        "mergeWarning": "重命名为“{{tag}}”会将此标签合并到现有标签中。",
+        "delete": "删除",
+        "deleteTitle": "删除标签？",
+        "deleteDescription": "要删除“{{tag}}”吗？这会移除所有任务上的此标签关联。",
+        "confirmDelete": "删除标签"
+      },
+      "customColorPlane": "饱和度和明度",
+      "customColorHue": "色相"
     }
   }
 }

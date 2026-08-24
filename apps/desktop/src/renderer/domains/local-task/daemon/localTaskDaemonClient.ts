@@ -8,6 +8,8 @@ import type {
   LocalTaskPriority,
   LocalTaskSearchResult,
   LocalTaskStatus,
+  LocalTaskTagCatalogEntry,
+  LocalTaskTagRenameResult,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -52,6 +54,43 @@ function requireStringArray(record: Record<string, unknown>, field: string, payl
   return fieldValue;
 }
 
+function parseTagRef(payload: unknown): { id: string; name?: string } {
+  const record = requireRecord(payload, "Local Task tag reference");
+  const name = record.name;
+  if (name !== undefined && typeof name !== "string") {
+    throw new TypeError("invalid Local Task tag reference payload");
+  }
+  return { id: requireString(record, "id", "Local Task tag reference"), ...(name === undefined ? {} : { name }) };
+}
+
+function parseTagRefs(payload: unknown): { id: string; name?: string }[] {
+  if (!Array.isArray(payload)) throw new TypeError("invalid Local Task tag references payload");
+  return payload.map(parseTagRef);
+}
+
+/** Returns true when value is a valid canonical uppercase #RRGGBB hex string. */
+function isCanonicalHexColor(color: unknown): color is string {
+  return typeof color === "string" && /^#[0-9A-F]{6}$/.test(color);
+}
+
+function parseTagCatalogEntry(payload: unknown): LocalTaskTagCatalogEntry {
+  const record = requireRecord(payload, "Local Task tag catalog");
+  const color = record.color;
+  if (color !== null && !isCanonicalHexColor(color)) throw new TypeError("invalid Local Task tag catalog payload");
+  return {
+    id: requireString(record, "id", "Local Task tag catalog"),
+    key: requireString(record, "key", "Local Task tag catalog"),
+    name: requireString(record, "name", "Local Task tag catalog"),
+    aliases: requireStringArray(record, "aliases", "Local Task tag catalog"),
+    color: color as string | null,
+  };
+}
+
+function parseTagCatalog(payload: unknown): LocalTaskTagCatalogEntry[] {
+  if (!Array.isArray(payload)) throw new TypeError("invalid Local Task tag catalog payload");
+  return payload.map(parseTagCatalogEntry);
+}
+
 function parseTask(payload: unknown): LocalTask {
   const record = requireRecord(payload, "Local Task");
   if (!isStatus(record.status) || !isPriority(record.priority) || typeof record.description !== "string") {
@@ -68,6 +107,7 @@ function parseTask(payload: unknown): LocalTask {
     updatedAt: requireString(record, "updatedAt", "Local Task"),
     completedAt: requireNullableString(record, "completedAt", "Local Task"),
     tags: requireStringArray(record, "tags", "Local Task"),
+    tagRefs: parseTagRefs(record.tagRefs),
   };
 }
 
@@ -113,13 +153,21 @@ function parseContext(payload: unknown): LocalTaskContextDetails {
   };
 }
 
+function mapTagIDsToRefs<Input extends { tagIds?: string[] }>(
+  input: Input,
+): Omit<Input, "tagIds"> & { tagRefs?: { id: string }[] } {
+  const { tagIds, ...legacyInput } = input;
+  if (tagIds === undefined) return legacyInput;
+  return { ...legacyInput, tagRefs: tagIds.map((id) => ({ id })) };
+}
+
 /** Typed adapter for the daemon's complete `localTask.*` RPC namespace. */
 export class DaemonLocalTaskClient {
   constructor(private readonly invoke: InvokeFn) {}
 
   /** Creates one Local Task. */
   async create(input: CreateLocalTaskInput): Promise<LocalTask> {
-    return parseTask(await this.invoke("localTask.create", input));
+    return parseTask(await this.invoke("localTask.create", mapTagIDsToRefs(input)));
   }
 
   /** Loads one Local Task by ID. */
@@ -148,9 +196,39 @@ export class DaemonLocalTaskClient {
     return payload;
   }
 
+  /** Lists daemon-owned global Local Task tag catalog entries. */
+  async listTagCatalog(): Promise<LocalTaskTagCatalogEntry[]> {
+    return parseTagCatalog(await this.invoke("localTask.listTagCatalog", {}));
+  }
+
+  /** Sets or clears a daemon-owned global Local Task tag catalog color. */
+  async updateTagColor(id: string, color: string | null): Promise<LocalTaskTagCatalogEntry> {
+    return parseTagCatalogEntry(await this.invoke("localTask.updateTagColor", { id, color }));
+  }
+
+  /** Creates one daemon-owned Local Task catalog tag. */
+  async createTag(name: string): Promise<LocalTaskTagCatalogEntry> {
+    return parseTagCatalogEntry(await this.invoke("localTask.createTag", { name }));
+  }
+
+  /** Renames one daemon-owned Local Task catalog tag by stable ID. */
+  async renameTag(id: string, name: string): Promise<LocalTaskTagRenameResult> {
+    const payload = requireRecord(await this.invoke("localTask.renameTag", { id, name }), "Local Task tag rename");
+    const removedTagId = payload.removedTagId;
+    if (removedTagId !== undefined && typeof removedTagId !== "string") {
+      throw new TypeError("invalid Local Task tag rename payload");
+    }
+    return { tag: parseTagCatalogEntry(payload.tag), ...(removedTagId === undefined ? {} : { removedTagId }) };
+  }
+
+  /** Deletes one daemon-owned Local Task catalog tag by stable ID. */
+  async deleteTag(id: string): Promise<void> {
+    await this.invoke("localTask.deleteTag", { id });
+  }
+
   /** Updates mutable Local Task metadata. */
   async update(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
-    return parseTask(await this.invoke("localTask.update", { id: taskId, ...input }));
+    return parseTask(await this.invoke("localTask.update", { id: taskId, ...mapTagIDsToRefs(input) }));
   }
 
   /** Loads derived Task Context document paths. */
@@ -184,59 +262,4 @@ export class DaemonLocalTaskClient {
   }
 }
 
-const localTaskClient = new DaemonLocalTaskClient(request);
-
-/** Creates one Local Task through the daemon. */
-export async function createLocalTask(input: CreateLocalTaskInput): Promise<LocalTask> {
-  return localTaskClient.create(input);
-}
-/** Loads one Local Task through the daemon. */
-export async function getLocalTask(taskId: string): Promise<LocalTask> {
-  return localTaskClient.get(taskId);
-}
-/** Lists Local Tasks through the daemon. */
-export async function listLocalTasks(filters: LocalTaskFilters = {}): Promise<LocalTask[]> {
-  return localTaskClient.list(filters);
-}
-/** Searches Local Task metadata through the daemon. */
-export async function searchLocalTasks(
-  query: string,
-  filters: LocalTaskFilters = {},
-): Promise<LocalTaskSearchResult[]> {
-  return localTaskClient.search(query, filters);
-}
-/** Lists globally suggested Local Task tags through the daemon. */
-export async function listLocalTaskTags(): Promise<string[]> {
-  return localTaskClient.listTags();
-}
-/** Updates one Local Task through the daemon. */
-export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
-  return localTaskClient.update(taskId, input);
-}
-/** Loads Task Context paths through the daemon. */
-export async function getLocalTaskContext(taskId: string): Promise<LocalTaskContextDetails> {
-  return localTaskClient.getContext(taskId);
-}
-/** Links one Local Task to one local workspace. */
-export async function linkLocalTaskWorkspace(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
-  return localTaskClient.linkWorkspace(taskId, workspaceId);
-}
-/** Unlinks one Local Task workspace relationship. */
-export async function unlinkLocalTaskWorkspace(linkId: string): Promise<void> {
-  return localTaskClient.unlinkWorkspace(linkId);
-}
-/** Updates one Local Task workspace link status. */
-export async function updateLocalTaskLinkStatus(
-  linkId: string,
-  status: LocalTaskStatus,
-): Promise<LocalTaskWorkspaceLink> {
-  return localTaskClient.updateLinkStatus(linkId, status);
-}
-/** Lists historical Local Task links for one workspace. */
-export async function listLocalTaskWorkspaceLinks(workspaceId: string): Promise<LocalTaskWorkspaceLink[]> {
-  return localTaskClient.listWorkspaceLinks(workspaceId);
-}
-/** Lists historical workspace links for one Local Task. */
-export async function listLocalTaskLinks(taskId: string): Promise<LocalTaskWorkspaceLink[]> {
-  return localTaskClient.listTaskLinks(taskId);
-}
+export const localTaskClient = new DaemonLocalTaskClient(request);

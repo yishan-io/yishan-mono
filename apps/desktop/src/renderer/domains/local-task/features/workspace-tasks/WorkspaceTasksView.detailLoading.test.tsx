@@ -8,18 +8,25 @@ import { localTaskStore } from "../../state/localTaskStore";
 import { WorkspaceTasksView } from "./WorkspaceTasksView";
 
 vi.mock("../../daemon/localTaskDaemonClient", () => ({
-  createLocalTask: vi.fn(),
-  getLocalTask: vi.fn(),
-  listLocalTasks: vi.fn(),
-  listLocalTaskTags: vi.fn(async () => []),
-  searchLocalTasks: vi.fn(),
-  updateLocalTask: vi.fn(),
-  getLocalTaskContext: vi.fn(),
-  linkLocalTaskWorkspace: vi.fn(),
-  unlinkLocalTaskWorkspace: vi.fn(),
-  updateLocalTaskLinkStatus: vi.fn(),
-  listLocalTaskWorkspaceLinks: vi.fn(),
-  listLocalTaskLinks: vi.fn(),
+  localTaskClient: {
+    create: vi.fn(),
+    get: vi.fn(),
+    list: vi.fn(),
+    listTags: vi.fn(async () => []),
+    search: vi.fn(),
+    listTagCatalog: vi.fn(),
+    updateTagColor: vi.fn(),
+    createTag: vi.fn(),
+    renameTag: vi.fn(),
+    deleteTag: vi.fn(),
+    update: vi.fn(),
+    getContext: vi.fn(),
+    linkWorkspace: vi.fn(),
+    unlinkWorkspace: vi.fn(),
+    updateLinkStatus: vi.fn(),
+    listWorkspaceLinks: vi.fn(),
+    listTaskLinks: vi.fn(),
+  },
 }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@tanstack/react-virtual", () => ({
@@ -41,6 +48,7 @@ const historicalTask: LocalTask = {
   updatedAt: "updated",
   completedAt: "completed",
   tags: [],
+  tagRefs: [],
 };
 const historicalLink: LocalTaskWorkspaceLink = {
   id: "historical-link",
@@ -68,8 +76,8 @@ afterEach(() => {
 describe("WorkspaceTasksView detail loading", () => {
   it("issues at most one delayed detail request per task while mounted visibility and store state change", async () => {
     const delayed = deferredTask();
-    vi.mocked(daemon.getLocalTask).mockReturnValue(delayed.promise);
-    vi.mocked(daemon.getLocalTaskContext).mockResolvedValue({
+    vi.mocked(daemon.localTaskClient.get).mockReturnValue(delayed.promise);
+    vi.mocked(daemon.localTaskClient.getContext).mockResolvedValue({
       directory: "/context/historical-task",
       planPath: "/context/historical-task/plan.md",
       notesPath: "/context/historical-task/notes.md",
@@ -87,9 +95,9 @@ describe("WorkspaceTasksView detail loading", () => {
         <WorkspaceTasksView workspaceId="workspace-1" />
       </section>,
     );
-    expect(daemon.getLocalTask).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.get).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /historical-task/ }));
-    expect(daemon.getLocalTask).toHaveBeenCalledTimes(1);
+    expect(daemon.localTaskClient.get).toHaveBeenCalledTimes(1);
 
     localTaskStore.getState().upsertTaskEntity({ ...historicalTask, id: "unrelated-task" });
     view.rerender(
@@ -102,18 +110,18 @@ describe("WorkspaceTasksView detail loading", () => {
         <WorkspaceTasksView workspaceId="workspace-1" />
       </section>,
     );
-    expect(daemon.getLocalTask).toHaveBeenCalledTimes(1);
-    expect(daemon.getLocalTask).toHaveBeenCalledWith(historicalTask.id);
+    expect(daemon.localTaskClient.get).toHaveBeenCalledTimes(1);
+    expect(daemon.localTaskClient.get).toHaveBeenCalledWith(historicalTask.id);
 
     delayed.resolve(historicalTask);
     await waitFor(() => expect(localTaskStore.getState().taskById[historicalTask.id]).toEqual(historicalTask));
-    expect(daemon.getLocalTask).toHaveBeenCalledTimes(1);
+    expect(daemon.localTaskClient.get).toHaveBeenCalledTimes(1);
   });
   it("shows a historical detail failure and retries the same task", async () => {
-    vi.mocked(daemon.getLocalTask)
+    vi.mocked(daemon.localTaskClient.get)
       .mockRejectedValueOnce(new Error("transient detail failure"))
       .mockResolvedValueOnce(historicalTask);
-    vi.mocked(daemon.getLocalTaskContext).mockResolvedValue({
+    vi.mocked(daemon.localTaskClient.getContext).mockResolvedValue({
       directory: "/context/historical-task",
       planPath: "/context/historical-task/plan.md",
       notesPath: "/context/historical-task/notes.md",
@@ -133,7 +141,7 @@ describe("WorkspaceTasksView detail loading", () => {
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.retry" }));
 
     await waitFor(() => expect(screen.getAllByText("Delayed historical task").length).toBe(1));
-    expect(daemon.getLocalTask).toHaveBeenCalledTimes(2);
-    expect(daemon.getLocalTask).toHaveBeenLastCalledWith(historicalTask.id);
+    expect(daemon.localTaskClient.get).toHaveBeenCalledTimes(2);
+    expect(daemon.localTaskClient.get).toHaveBeenLastCalledWith(historicalTask.id);
   });
 });

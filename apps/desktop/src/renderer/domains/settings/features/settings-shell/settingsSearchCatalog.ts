@@ -16,7 +16,7 @@ import {
   BiUser,
   BiWorld,
 } from "react-icons/bi";
-import { LuHammer, LuPuzzle } from "react-icons/lu";
+import { LuPuzzle, LuTags } from "react-icons/lu";
 import {
   ACCOUNT_SEARCH_ITEMS,
   APPEARANCE_SEARCH_ITEMS,
@@ -28,6 +28,7 @@ import {
   KEYBINDINGS_SEARCH_ITEMS,
   LANGUAGE_SEARCH_ITEMS,
   LINKS_SEARCH_ITEMS,
+  LOCAL_TAGS_SEARCH_ITEMS,
   MEMBERS_SEARCH_ITEMS,
   MEMORY_SEARCH_ITEMS,
   NODES_SEARCH_ITEMS,
@@ -47,6 +48,7 @@ export type SettingsTab =
   | "daemon"
   | "keybindings"
   | "links"
+  | "localTags"
   | "members"
   | "memory"
   | "nodes"
@@ -101,6 +103,10 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
     ],
   },
   {
+    titleKey: "settings.sections.localTasks",
+    items: [{ tab: "localTags", labelKey: "settings.items.tagManagement", icon: LuTags }],
+  },
+  {
     titleKey: "settings.sections.system",
     items: [
       { tab: "providers", labelKey: "settings.items.providers", icon: BiWorld },
@@ -141,6 +147,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...COMPUTER_USE_SEARCH_ITEMS,
   ...DAEMON_SEARCH_ITEMS,
   ...MEMORY_SEARCH_ITEMS,
+  ...LOCAL_TAGS_SEARCH_ITEMS,
   ...GIT_WORKSPACE_SEARCH_ITEMS,
   ...TERMINAL_SEARCH_ITEMS,
   ...SERVICE_TOKEN_SEARCH_ITEMS,

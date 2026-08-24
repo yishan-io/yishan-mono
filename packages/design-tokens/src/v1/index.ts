@@ -162,6 +162,14 @@ export const SEMANTIC_COLOR_TOKENS = {
     },
     primary: COLOR_PRIMITIVES.brand.amber600,
     secondary: "#eceff3",
+    tag: {
+      amber: "#9c5a00",
+      blue: "#0067a3",
+      green: "#167043",
+      purple: "#7042a8",
+      red: "#ad3333",
+      teal: "#00766f",
+    },
     gitDiff: {
       added: "#2ea043",
       modified: "#1a7fd4",
@@ -221,6 +229,14 @@ export const SEMANTIC_COLOR_TOKENS = {
     },
     primary: "#9ddb72",
     secondary: "#3f5750",
+    tag: {
+      amber: "#ffc166",
+      blue: "#74c6ff",
+      green: "#7de3a5",
+      purple: "#d3aeff",
+      red: "#ffaaa5",
+      teal: "#6de0d6",
+    },
     gitDiff: {
       added: "#3fb950",
       modified: "#58a6ff",

@@ -2,21 +2,33 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as daemon from "../daemon/localTaskDaemonClient";
 import type { LocalTask, LocalTaskWorkspaceLink } from "../localTaskTypes";
 import { localTaskStore } from "../state/localTaskStore";
-import { loadLocalTask, loadLocalTaskLinkCandidates } from "./localTaskCommands";
+import {
+  deleteLocalTaskTag,
+  loadLocalTask,
+  loadLocalTaskLinkCandidates,
+  renameLocalTaskTag,
+} from "./localTaskCommands";
 
 vi.mock("../daemon/localTaskDaemonClient", () => ({
-  createLocalTask: vi.fn(),
-  getLocalTask: vi.fn(),
-  listLocalTasks: vi.fn(),
-  searchLocalTasks: vi.fn(),
-  updateLocalTask: vi.fn(),
-  getLocalTaskContext: vi.fn(),
-  linkLocalTaskWorkspace: vi.fn(),
-  unlinkLocalTaskWorkspace: vi.fn(),
-  updateLocalTaskLinkStatus: vi.fn(),
-  listLocalTaskWorkspaceLinks: vi.fn(),
-  listLocalTaskLinks: vi.fn(),
-  listLocalTaskTags: vi.fn(),
+  localTaskClient: {
+    create: vi.fn(),
+    get: vi.fn(),
+    list: vi.fn(),
+    search: vi.fn(),
+    listTags: vi.fn(),
+    listTagCatalog: vi.fn(),
+    updateTagColor: vi.fn(),
+    createTag: vi.fn(),
+    renameTag: vi.fn(),
+    deleteTag: vi.fn(),
+    update: vi.fn(),
+    getContext: vi.fn(),
+    linkWorkspace: vi.fn(),
+    unlinkWorkspace: vi.fn(),
+    updateLinkStatus: vi.fn(),
+    listWorkspaceLinks: vi.fn(),
+    listTaskLinks: vi.fn(),
+  },
 }));
 
 const initialState = localTaskStore.getState();
@@ -31,6 +43,7 @@ const task: LocalTask = {
   updatedAt: "updated",
   completedAt: null,
   tags: [],
+  tagRefs: [],
 };
 const link: LocalTaskWorkspaceLink = {
   id: "link-1",
@@ -64,8 +77,8 @@ describe("localTaskCommands projections and detail loading", () => {
       { ...task, id: "current-and-historical", title: "Current and historical" },
       { ...task, id: "never-linked", title: "Never linked" },
     ];
-    vi.mocked(daemon.listLocalTasks).mockResolvedValue(tasks);
-    vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([
+    vi.mocked(daemon.localTaskClient.list).mockResolvedValue(tasks);
+    vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([
       { ...link, id: "active", localTaskId: "current-active", status: "active", unlinkedAt: null },
       { ...link, id: "paused", localTaskId: "current-paused", status: "paused", unlinkedAt: null },
       { ...link, id: "completed", localTaskId: "current-completed", status: "completed", unlinkedAt: null },
@@ -89,7 +102,7 @@ describe("localTaskCommands projections and detail loading", () => {
 
     await loadLocalTaskLinkCandidates("workspace-1");
 
-    expect(daemon.listLocalTasks).toHaveBeenCalledWith();
+    expect(daemon.localTaskClient.list).toHaveBeenCalledWith();
     expect(localTaskStore.getState()).toMatchObject({
       linkCandidateWorkspaceId: "workspace-1",
       linkCandidateLoadState: "loaded",
@@ -104,8 +117,8 @@ describe("localTaskCommands projections and detail loading", () => {
 
   it("stores link-candidate loading errors for retry without changing hub results", async () => {
     localTaskStore.setState({ hubTasks: [task] });
-    vi.mocked(daemon.listLocalTasks).mockRejectedValue(new Error("candidate list unavailable"));
-    vi.mocked(daemon.listLocalTaskWorkspaceLinks).mockResolvedValue([]);
+    vi.mocked(daemon.localTaskClient.list).mockRejectedValue(new Error("candidate list unavailable"));
+    vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([]);
 
     await loadLocalTaskLinkCandidates("workspace-1");
 
@@ -119,16 +132,91 @@ describe("localTaskCommands projections and detail loading", () => {
 
   it("deduplicates delayed per-task detail loads for concurrent mounted and hidden callers", async () => {
     const delayedTask = createDeferred<LocalTask>();
-    vi.mocked(daemon.getLocalTask).mockReturnValue(delayedTask.promise);
+    vi.mocked(daemon.localTaskClient.get).mockReturnValue(delayedTask.promise);
 
     const mountedLoad = loadLocalTask("task-1");
     const hiddenStateLoad = loadLocalTask("task-1");
     const unrelatedLoad = loadLocalTask("task-1");
 
-    expect(daemon.getLocalTask).toHaveBeenCalledTimes(1);
-    expect(daemon.getLocalTask).toHaveBeenCalledWith("task-1");
+    expect(daemon.localTaskClient.get).toHaveBeenCalledTimes(1);
+    expect(daemon.localTaskClient.get).toHaveBeenCalledWith("task-1");
     delayedTask.resolve(task);
     await Promise.all([mountedLoad, hiddenStateLoad, unrelatedLoad]);
-    expect(daemon.getLocalTask).toHaveBeenCalledTimes(1);
+    expect(daemon.localTaskClient.get).toHaveBeenCalledTimes(1);
+  });
+  it("reconciles a merged tag across cached projections without reloading global task data", async () => {
+    const canonicalTag = {
+      id: "tag-canonical",
+      key: "canonical",
+      name: "Canonical",
+      aliases: ["Canonical"],
+      color: null,
+    };
+    vi.mocked(daemon.localTaskClient.renameTag).mockResolvedValue({ tag: canonicalTag, removedTagId: "tag-merged" });
+    localTaskStore.setState({
+      tagCatalog: [{ id: "tag-merged", key: "merged", name: "Merged", aliases: ["Merged"], color: null }, canonicalTag],
+      taskById: { [task.id]: { ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] } },
+      hubTasks: [{ ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] }],
+      hubFilters: { tagIds: ["tag-merged", "tag-other", "tag-canonical"] },
+      workspaceTasks: [{ ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] }],
+      linkCandidateTasks: [{ ...task, tagRefs: [{ id: "tag-merged", name: "Merged" }] }],
+    });
+
+    await expect(renameLocalTaskTag("tag-merged", "Canonical")).resolves.toMatchObject({ removedTagId: "tag-merged" });
+
+    const state = localTaskStore.getState();
+    expect(state.tagCatalog).toEqual([canonicalTag]);
+    expect(state.hubFilters).toEqual({ tagIds: ["tag-canonical", "tag-other"] });
+    for (const cachedTask of [
+      state.taskById[task.id],
+      state.hubTasks[0],
+      state.workspaceTasks[0],
+      state.linkCandidateTasks[0],
+    ]) {
+      expect(cachedTask?.tagRefs).toEqual([{ id: "tag-canonical", name: "Canonical" }]);
+    }
+    expect(daemon.localTaskClient.listTagCatalog).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.list).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.search).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.listWorkspaceLinks).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.get).not.toHaveBeenCalled();
+  });
+
+  it("reconciles a deleted tag across cached projections without reloading global task data", async () => {
+    const deletedTag = {
+      id: "tag-deleted",
+      key: "deleted",
+      name: "Deleted",
+      aliases: ["Deleted"],
+      color: null,
+    };
+    vi.mocked(daemon.localTaskClient.deleteTag).mockResolvedValue(undefined);
+    localTaskStore.setState({
+      tagCatalog: [deletedTag],
+      taskById: { [task.id]: { ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] } },
+      hubTasks: [{ ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] }],
+      hubFilters: { tagIds: ["tag-deleted", "tag-other"] },
+      workspaceTasks: [{ ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] }],
+      linkCandidateTasks: [{ ...task, tagRefs: [{ id: "tag-deleted", name: "Deleted" }] }],
+    });
+
+    await deleteLocalTaskTag("tag-deleted");
+
+    const state = localTaskStore.getState();
+    expect(state.tagCatalog).toEqual([]);
+    expect(state.hubFilters).toEqual({ tagIds: ["tag-other"] });
+    for (const cachedTask of [
+      state.taskById[task.id],
+      state.hubTasks[0],
+      state.workspaceTasks[0],
+      state.linkCandidateTasks[0],
+    ]) {
+      expect(cachedTask?.tagRefs).toEqual([]);
+    }
+    expect(daemon.localTaskClient.listTagCatalog).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.list).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.search).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.listWorkspaceLinks).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.get).not.toHaveBeenCalled();
   });
 });

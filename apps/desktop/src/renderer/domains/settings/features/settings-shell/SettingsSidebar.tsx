@@ -16,6 +16,14 @@ import { type SettingsSearchResult, renderExperimentalSidebarLabel, renderSideba
 import type { SettingsTab } from "./settingsSearchCatalog";
 import { SETTINGS_NAV_SECTIONS } from "./settingsSearchCatalog";
 
+const settingsSidebarItemSx = {
+  borderRadius: 1,
+  minHeight: 34,
+  "&.Mui-selected, &.Mui-selected:hover": {
+    backgroundColor: "transparent",
+  },
+};
+
 interface SettingsSidebarProps {
   readonly focusedItemParam: string | null;
   readonly isMacWindowControlsInsetReserved: boolean;
@@ -82,7 +90,7 @@ export function SettingsSidebar({
                     key={result.id}
                     selected={isSelected}
                     onClick={() => onSelectSearchResult(result)}
-                    sx={{ borderRadius: 1, minHeight: 38 }}
+                    sx={{ ...settingsSidebarItemSx, minHeight: 38 }}
                   >
                     <ListItemIcon sx={{ minWidth: 28 }}>
                       <Icon size={16} />
@@ -127,7 +135,7 @@ export function SettingsSidebar({
                         key={item.tab}
                         selected={selectedTab === item.tab}
                         onClick={() => onSelectTab(item.tab)}
-                        sx={{ borderRadius: 1, minHeight: 34 }}
+                        sx={settingsSidebarItemSx}
                       >
                         <ListItemIcon sx={{ minWidth: 28 }}>
                           <Icon size={16} />

@@ -16,7 +16,7 @@ import {
   BiUser,
   BiWorld,
 } from "react-icons/bi";
-import { LuHammer, LuPuzzle } from "react-icons/lu";
+import { LuHammer, LuPuzzle, LuTags } from "react-icons/lu";
 import type { SettingsSearchCatalogItem } from "./settingsSearchCatalog";
 
 /**
@@ -401,6 +401,22 @@ export const SERVICE_TOKEN_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
+export const LOCAL_TAGS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+  {
+    id: "local-tags-colors",
+    tab: "localTags",
+    icon: LuTags,
+    labelKey: "settings.localTasks.tagManagement.title",
+    sectionLabelKey: "settings.items.tagManagement",
+    keywordKeys: [
+      "settings.localTasks.tagManagement.description",
+      "settings.localTasks.keywords.tags",
+      "settings.localTasks.keywords.colors",
+      "settings.localTasks.keywords.aliases",
+    ],
+  },
+];
+
 export const MEMORY_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "memory-summarizer",

@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowDown, LuArrowUp, LuCircleCheck, LuCirclePause, LuCirclePlay, LuMinus } from "react-icons/lu";
 import { loadLocalTaskContext } from "../../commands/localTaskCommands";
-import type { LocalTask, LocalTaskLoadState } from "../../localTaskTypes";
+import type { LocalTask, LocalTaskLoadState, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskTagsEditor } from "../tags/LocalTaskTagsEditor";
 import { TaskDescriptionMarkdown } from "./TaskDescriptionMarkdown";
 
@@ -25,8 +25,9 @@ type WorkspaceTaskDetailsProps = {
   contextError: string | null;
   showTitle?: boolean;
   isMutationLoading: boolean;
-  onTagsChange: (tags: string[]) => Promise<unknown>;
-  tagSuggestions?: string[];
+  onTagIdsChange: (tagIds: string[]) => Promise<unknown>;
+  onCreateTag: (name: string) => Promise<LocalTaskTagCatalogEntry>;
+  tagCatalog?: LocalTaskTagCatalogEntry[];
 };
 
 /** Renders metadata, lifecycle actions, and Task Context controls for the selected workspace task. */
@@ -36,8 +37,9 @@ export function WorkspaceTaskDetails({
   contextError,
   showTitle = true,
   isMutationLoading,
-  onTagsChange,
-  tagSuggestions = [],
+  onTagIdsChange,
+  onCreateTag,
+  tagCatalog = [],
 }: WorkspaceTaskDetailsProps) {
   const { t } = useTranslation();
   const handleRetryContext = useCallback(() => void loadLocalTaskContext(task.id), [task.id]);
@@ -85,9 +87,11 @@ export function WorkspaceTaskDetails({
           }}
         />
         <LocalTaskTagsEditor
-          tags={task.tags}
-          suggestions={tagSuggestions}
-          onTagsChange={onTagsChange}
+          tagRefs={task.tagRefs}
+          tags={task.tagRefs.length === 0 ? task.tags : undefined}
+          tagCatalog={tagCatalog}
+          onTagIdsChange={onTagIdsChange}
+          onCreateTag={onCreateTag}
           isMutationLoading={isMutationLoading}
         />
       </Box>

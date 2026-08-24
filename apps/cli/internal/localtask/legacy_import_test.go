@@ -30,8 +30,22 @@ func (repository *legacyImportRepository) Update(context.Context, string, TaskUp
 func (repository *legacyImportRepository) Search(context.Context, string, TaskFilter) ([]SearchResult, error) {
 	return nil, nil
 }
-func (repository *legacyImportRepository) ListTags(context.Context) ([]string, error) {
-	return []string{}, nil
+func (repository *legacyImportRepository) ListTags(context.Context) ([]Tag, error) {
+	return []Tag{}, nil
+}
+func (repository *legacyImportRepository) CreateTag(context.Context, TagCreate) (Tag, error) {
+	return Tag{}, nil
+}
+func (repository *legacyImportRepository) RenameTag(context.Context, string, string) (Tag, error) {
+	return Tag{}, nil
+}
+func (repository *legacyImportRepository) MergeTags(context.Context, string, string) (Tag, error) {
+	return Tag{}, nil
+}
+func (repository *legacyImportRepository) DeleteTag(context.Context, string) error { return nil }
+
+func (repository *legacyImportRepository) UpdateTagColor(context.Context, string, TagColorUpdate) (Tag, error) {
+	return Tag{}, nil
 }
 func (repository *legacyImportRepository) LinkWorkspace(context.Context, WorkspaceLink) (WorkspaceLink, error) {
 	return WorkspaceLink{}, nil

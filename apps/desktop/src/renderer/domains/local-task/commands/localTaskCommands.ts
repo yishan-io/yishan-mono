@@ -1,24 +1,13 @@
 import { selectFolderInFileTree } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import {
-  createLocalTask as createLocalTaskFromDaemon,
-  getLocalTaskContext as getLocalTaskContextFromDaemon,
-  getLocalTask as getLocalTaskFromDaemon,
-  linkLocalTaskWorkspace as linkLocalTaskWorkspaceFromDaemon,
-  listLocalTaskLinks as listLocalTaskLinksFromDaemon,
-  listLocalTaskTags as listLocalTaskTagsFromDaemon,
-  listLocalTaskWorkspaceLinks as listLocalTaskWorkspaceLinksFromDaemon,
-  listLocalTasks as listLocalTasksFromDaemon,
-  searchLocalTasks as searchLocalTasksFromDaemon,
-  unlinkLocalTaskWorkspace as unlinkLocalTaskWorkspaceFromDaemon,
-  updateLocalTask as updateLocalTaskFromDaemon,
-  updateLocalTaskLinkStatus as updateLocalTaskLinkStatusFromDaemon,
-} from "../daemon/localTaskDaemonClient";
+import { localTaskClient } from "../daemon/localTaskDaemonClient";
 import type {
   CreateLocalTaskInput,
   LocalTask,
   LocalTaskFilters,
   LocalTaskStatus,
+  LocalTaskTagCatalogEntry,
+  LocalTaskTagRenameResult,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -64,6 +53,10 @@ async function refreshAfterMutation(): Promise<void> {
   ]);
 }
 
+async function refreshAfterTaskMutation(): Promise<void> {
+  await Promise.all([refreshAfterMutation(), loadLocalTaskTagSuggestions()]);
+}
+
 async function runMutation<T>(operation: () => Promise<T>): Promise<T> {
   localTaskStore.getState().beginMutation();
   try {
@@ -78,12 +71,12 @@ async function runMutation<T>(operation: () => Promise<T>): Promise<T> {
 
 /** Loads daemon-owned Local Task tag suggestions into store-owned state. */
 export async function loadLocalTaskTagSuggestions(): Promise<void> {
-  const requestId = localTaskStore.getState().beginTagSuggestionsLoad();
+  const requestId = localTaskStore.getState().beginTagCatalogLoad();
   try {
-    const tags = await listLocalTaskTagsFromDaemon();
-    localTaskStore.getState().setTagSuggestions(requestId, tags);
+    const catalog = await localTaskClient.listTagCatalog();
+    localTaskStore.getState().setTagCatalog(requestId, catalog);
   } catch (error) {
-    localTaskStore.getState().setTagSuggestionsError(requestId, getErrorMessage(error));
+    localTaskStore.getState().setTagCatalogError(requestId, getErrorMessage(error));
   }
 }
 
@@ -91,7 +84,7 @@ export async function loadLocalTaskTagSuggestions(): Promise<void> {
 export async function refreshActiveLocalTaskCount(): Promise<void> {
   const requestId = localTaskStore.getState().beginActiveTaskCountLoad();
   try {
-    const activeTasks = await listLocalTasksFromDaemon({ status: "active" });
+    const activeTasks = await localTaskClient.list({ status: "active" });
     localTaskStore.getState().setActiveTaskCount(requestId, activeTasks.length);
   } catch (error) {
     console.error("Failed to refresh active Local Task count", error);
@@ -105,8 +98,8 @@ export async function refreshLocalTaskHub(): Promise<void> {
   const requestId = localTaskStore.getState().beginHubLoad();
   try {
     const [hubTasks, activeTasks] = await Promise.all([
-      query ? searchLocalTasksFromDaemon(query, hubFilters) : listLocalTasksFromDaemon(hubFilters),
-      listLocalTasksFromDaemon({ status: "active" }),
+      query ? localTaskClient.search(query, hubFilters) : localTaskClient.list(hubFilters),
+      localTaskClient.list({ status: "active" }),
     ]);
     localTaskStore.getState().setHubResults(requestId, hubTasks, activeTasks.length);
   } catch (error) {
@@ -133,8 +126,8 @@ export async function refreshSelectedWorkspaceTasks(workspaceId?: string): Promi
   const requestId = localTaskStore.getState().beginWorkspaceLoad(selectedWorkspaceId);
   try {
     const [tasks, links] = await Promise.all([
-      listLocalTasksFromDaemon({ workspaceId: selectedWorkspaceId }),
-      listLocalTaskWorkspaceLinksFromDaemon(selectedWorkspaceId),
+      localTaskClient.list({ workspaceId: selectedWorkspaceId }),
+      localTaskClient.listWorkspaceLinks(selectedWorkspaceId),
     ]);
     localTaskStore.getState().setWorkspaceData(requestId, selectedWorkspaceId, tasks, links);
   } catch (error) {
@@ -155,7 +148,7 @@ export async function selectLocalTaskWorkspace(workspaceId: string | null): Prom
 export async function loadLocalTaskContext(taskId: string): Promise<void> {
   const requestId = localTaskStore.getState().beginContextLoad(taskId);
   try {
-    const context = await getLocalTaskContextFromDaemon(taskId);
+    const context = await localTaskClient.getContext(taskId);
     localTaskStore.getState().setContext(requestId, taskId, context);
   } catch (error) {
     localTaskStore.getState().setContextError(requestId, taskId, getErrorMessage(error));
@@ -168,7 +161,8 @@ export function loadLocalTask(taskId: string): Promise<LocalTask> {
   if (existingLoad) return existingLoad;
 
   const requestId = localTaskStore.getState().beginTaskLoad(taskId);
-  const load = getLocalTaskFromDaemon(taskId)
+  const load = localTaskClient
+    .get(taskId)
     .then((task) => {
       localTaskStore.getState().setTaskEntity(requestId, taskId, task);
       return task;
@@ -186,10 +180,7 @@ export function loadLocalTask(taskId: string): Promise<LocalTask> {
 export async function loadLocalTaskLinkCandidates(workspaceId: string): Promise<void> {
   const requestId = localTaskStore.getState().beginLinkCandidateLoad(workspaceId);
   try {
-    const [tasks, links] = await Promise.all([
-      listLocalTasksFromDaemon(),
-      listLocalTaskWorkspaceLinksFromDaemon(workspaceId),
-    ]);
+    const [tasks, links] = await Promise.all([localTaskClient.list(), localTaskClient.listWorkspaceLinks(workspaceId)]);
     const currentlyLinkedTaskIds = new Set(
       links
         .filter((link) => link.workspaceId === workspaceId && link.unlinkedAt === null)
@@ -208,19 +199,65 @@ export async function loadLocalTaskLinkCandidates(workspaceId: string): Promise<
 /** Creates a Local Task and refreshes authoritative list projections. */
 export async function createLocalTask(input: CreateLocalTaskInput): Promise<LocalTask> {
   return runMutation(async () => {
-    const task = await createLocalTaskFromDaemon(input);
+    const task = await localTaskClient.create(input);
     localTaskStore.getState().upsertTaskEntity(task);
-    await refreshAfterMutation();
+    await refreshAfterTaskMutation();
     return task;
+  });
+}
+
+/** Sets or clears a global tag color and refreshes the authoritative catalog. */
+export async function updateLocalTaskTagColor(id: string, color: string | null): Promise<void> {
+  await runMutation(async () => {
+    const updatedCatalogEntry = await localTaskClient.updateTagColor(id, color);
+    localTaskStore.getState().upsertTagCatalogEntry(updatedCatalogEntry);
+
+    const requestId = localTaskStore.getState().beginTagCatalogLoad();
+    try {
+      const catalog = await localTaskClient.listTagCatalog();
+      localTaskStore.getState().setTagCatalog(requestId, catalog);
+    } catch (error) {
+      // The RPC already succeeded; retain its entry and expose only the best-effort reload failure.
+      localTaskStore.getState().setTagCatalogError(requestId, getErrorMessage(error));
+    }
+  });
+}
+
+/** Creates one daemon-owned catalog tag and refreshes authoritative tag state. */
+export async function createLocalTaskTag(name: string): Promise<LocalTaskTagCatalogEntry> {
+  return runMutation(async () => {
+    const tag = await localTaskClient.createTag(name);
+    localTaskStore.getState().upsertTagCatalogEntry(tag);
+    return tag;
+  });
+}
+
+/** Renames one daemon-owned catalog tag by stable ID and refreshes authoritative tag state. */
+export async function renameLocalTaskTag(id: string, name: string): Promise<LocalTaskTagRenameResult> {
+  return runMutation(async () => {
+    const result = await localTaskClient.renameTag(id, name);
+    const removedTagId = result.removedTagId ?? id;
+    localTaskStore.getState().reconcileTagRename(result.tag, result.removedTagId);
+    localTaskStore.getState().reconcileHubTagFilter(removedTagId, result.tag.id);
+    return result;
+  });
+}
+
+/** Deletes one daemon-owned catalog tag by stable ID and refreshes authoritative tag state. */
+export async function deleteLocalTaskTag(id: string): Promise<void> {
+  await runMutation(async () => {
+    await localTaskClient.deleteTag(id);
+    localTaskStore.getState().reconcileTagDeletion(id);
+    localTaskStore.getState().reconcileHubTagFilter(id);
   });
 }
 
 /** Updates a Local Task and refreshes authoritative list projections. */
 export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
   return runMutation(async () => {
-    const task = await updateLocalTaskFromDaemon(taskId, input);
+    const task = await localTaskClient.update(taskId, input);
     localTaskStore.getState().upsertTaskEntity(task);
-    await refreshAfterMutation();
+    await refreshAfterTaskMutation();
     return task;
   });
 }
@@ -231,7 +268,7 @@ export async function linkLocalTaskWorkspace(taskId: string, workspaceId: string
     const taskIds = invalidateTaskLinkProjections(
       getTrackedTaskLinkProjectionIds().filter((trackedTaskId) => trackedTaskId === taskId),
     );
-    const link = await linkLocalTaskWorkspaceFromDaemon(taskId, workspaceId);
+    const link = await localTaskClient.linkWorkspace(taskId, workspaceId);
     await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
     return link;
   });
@@ -241,7 +278,7 @@ export async function linkLocalTaskWorkspace(taskId: string, workspaceId: string
 export async function unlinkLocalTaskWorkspace(linkId: string): Promise<void> {
   await runMutation(async () => {
     const taskIds = invalidateTaskLinkProjections(getAffectedTaskLinkProjectionIds((link) => link.id === linkId));
-    await unlinkLocalTaskWorkspaceFromDaemon(linkId);
+    await localTaskClient.unlinkWorkspace(linkId);
     await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
   });
 }
@@ -253,7 +290,7 @@ export async function updateLocalTaskLinkStatus(
 ): Promise<LocalTaskWorkspaceLink> {
   return runMutation(async () => {
     const taskIds = invalidateTaskLinkProjections(getAffectedTaskLinkProjectionIds((link) => link.id === linkId));
-    const link = await updateLocalTaskLinkStatusFromDaemon(linkId, status);
+    const link = await localTaskClient.updateLinkStatus(linkId, status);
     if (getTrackedTaskLinkProjectionIds().includes(link.localTaskId)) {
       taskIds.push(link.localTaskId);
     }
@@ -266,7 +303,7 @@ export async function updateLocalTaskLinkStatus(
 export async function loadLocalTaskLinks(taskId: string): Promise<void> {
   const requestId = localTaskStore.getState().beginTaskLinksLoad(taskId);
   try {
-    const links = await listLocalTaskLinksFromDaemon(taskId);
+    const links = await localTaskClient.listTaskLinks(taskId);
     localTaskStore.getState().setTaskLinks(requestId, taskId, links);
   } catch (error) {
     localTaskStore.getState().setTaskLinksError(requestId, taskId, getErrorMessage(error));
@@ -286,7 +323,7 @@ export async function createAndLinkLocalTask(
   localTaskStore.getState().beginMutation();
   let task: LocalTask;
   try {
-    task = await createLocalTaskFromDaemon(input);
+    task = await localTaskClient.create(input);
     localTaskStore.getState().upsertTaskEntity(task);
   } catch (error) {
     localTaskStore.getState().finishMutation(getErrorMessage(error));
@@ -294,15 +331,15 @@ export async function createAndLinkLocalTask(
   }
 
   try {
-    await linkLocalTaskWorkspaceFromDaemon(task.id, workspaceId);
+    await localTaskClient.linkWorkspace(task.id, workspaceId);
   } catch (error) {
     const linkError = getErrorMessage(error);
-    await refreshAfterMutation();
+    await refreshAfterTaskMutation();
     localTaskStore.getState().finishMutation(linkError);
     return { status: "created", task, linkError };
   }
 
-  await refreshAfterMutation();
+  await refreshAfterTaskMutation();
   localTaskStore.getState().finishMutation();
   return { status: "linked", task };
 }

@@ -1,82 +1,86 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MAX_LOCAL_TASK_TAGS, MAX_LOCAL_TASK_TAG_CODE_POINTS } from "../../localTaskTags";
+import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskTagsInput } from "./LocalTaskTagsInput";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
     getTotalSize: () => count * 36,
-    getVirtualItems: () =>
-      Array.from({ length: Math.min(count, 8) }, (_, index) => ({ index, start: index * 36, size: 36 })),
+    getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ index, start: index * 36, size: 36 })),
     scrollToIndex: vi.fn(),
   }),
 }));
 
+const backendTag: LocalTaskTagCatalogEntry = {
+  id: "tag-backend",
+  key: "backend",
+  name: "Backend",
+  aliases: ["Backend", "backend"],
+  color: null,
+};
+const catalog = [backendTag];
+
 describe("LocalTaskTagsInput", () => {
   afterEach(cleanup);
-  it("normalizes created tags, reports validation errors, and virtualizes more than fifty suggestions", () => {
+
+  it("selects catalog IDs", async () => {
     const onChange = vi.fn();
-    const suggestions = Array.from({ length: 60 }, (_, index) => `Tag ${index}`);
-    render(<LocalTaskTagsInput tags={[]} suggestions={suggestions} onChange={onChange} />);
+    render(<LocalTaskTagsInput tagIds={["tag-backend"]} tagCatalog={catalog} onChange={onChange} />);
 
-    const input = screen.getByRole("combobox", { name: "localTask.fields.tags" });
-    fireEvent.change(input, { target: { value: "  Cafe\u0301  " } });
-    fireEvent.keyDown(input, { key: "Enter" });
-    expect(onChange).toHaveBeenCalledWith(["Café"]);
-
-    fireEvent.mouseDown(input);
-    expect(screen.getByText("Tag 0")).toBeTruthy();
-    expect(screen.queryByText("Tag 59")).toBeNull();
-
-    render(<LocalTaskTagsInput tags={["duplicate", "Duplicate"]} suggestions={[]} onChange={onChange} />);
-    expect(screen.getByText("Tags must be unique.")).toBeTruthy();
+    expect(screen.getByText("Backend")).toBeTruthy();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.tags" }));
+    fireEvent.click(screen.getByRole("option", { name: "Backend" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([]));
   });
 
-  it("reports invalid visible draft state to its parent", () => {
-    const onDraftValidityChange = vi.fn();
-    render(
-      <LocalTaskTagsInput
-        tags={["existing"]}
-        suggestions={[]}
-        onChange={vi.fn()}
-        onDraftValidityChange={onDraftValidityChange}
-      />,
+  it("creates a free-solo tag before emitting its catalog ID", async () => {
+    const onChange = vi.fn();
+    const onCreateTag = vi.fn(
+      async (): Promise<LocalTaskTagCatalogEntry> => ({ ...backendTag, id: "tag-new", key: "new", name: "New" }),
     );
+    render(<LocalTaskTagsInput tagIds={[]} tagCatalog={catalog} onChange={onChange} onCreateTag={onCreateTag} />);
 
     const input = screen.getByRole("combobox", { name: "localTask.fields.tags" });
-    fireEvent.change(input, { target: { value: "EXISTING" } });
+    fireEvent.change(input, { target: { value: "New" } });
     fireEvent.keyDown(input, { key: "Enter" });
-
-    expect(onDraftValidityChange).toHaveBeenLastCalledWith(false);
+    await waitFor(() => expect(onCreateTag).toHaveBeenCalledWith("New"));
+    expect(onChange).toHaveBeenCalledWith(["tag-new"]);
   });
 
-  it.each([
-    ["duplicate", ["existing"], "EXISTING", "Tags must be unique."],
-    [
-      "thirteenth tag",
-      Array.from({ length: MAX_LOCAL_TASK_TAGS }, (_, index) => `tag-${index}`),
-      "extra",
-      `A task can have at most ${MAX_LOCAL_TASK_TAGS} tags.`,
-    ],
-    [
-      "overlength tag",
-      [],
-      "a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS + 1),
-      `Tags can contain at most ${MAX_LOCAL_TASK_TAG_CODE_POINTS} characters.`,
-    ],
-  ])("keeps an invalid %s draft local without calling onChange", (_name, tags, invalidTag, expectedError) => {
+  it("shows an error and does not emit a selection when catalog creation rejects", async () => {
     const onChange = vi.fn();
-    render(<LocalTaskTagsInput tags={tags} suggestions={[]} onChange={onChange} />);
+    const onCreateTag = vi.fn(async () => Promise.reject(new Error("catalog unavailable")));
+    render(<LocalTaskTagsInput tagIds={[]} tagCatalog={catalog} onChange={onChange} onCreateTag={onCreateTag} />);
 
     const input = screen.getByRole("combobox", { name: "localTask.fields.tags" });
-    fireEvent.change(input, { target: { value: invalidTag } });
+    fireEvent.change(input, { target: { value: "New" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
+    expect(await screen.findByText("catalog unavailable")).toBeTruthy();
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByText(expectedError)).toBeTruthy();
-    expect(screen.getByText(invalidTag)).toBeTruthy();
+  });
+
+  it("resolves a named legacy tag through catalog aliases", () => {
+    render(<LocalTaskTagsInput tags={["backend"]} tagCatalog={catalog} onChange={vi.fn()} />);
+    expect(screen.getByText("Backend")).toBeTruthy();
+    expect(screen.queryByText("localTask.tags.unresolvedLegacy")).toBeNull();
+  });
+
+  it("renders selected chips without a delete control because selection changes in the popover", () => {
+    render(<LocalTaskTagsInput tagIds={["tag-backend"]} tagCatalog={catalog} onChange={vi.fn()} />);
+
+    const chip = screen.getByText("Backend").closest(".MuiChip-root");
+    expect(chip?.querySelector(".MuiChip-deleteIcon")).toBeNull();
+    expect(chip?.querySelector('[aria-label*="delete" i]')).toBeNull();
+  });
+
+  it("keeps an unresolved named legacy tag visible and disables editing", () => {
+    render(<LocalTaskTagsInput tags={["retired-name"]} tagCatalog={catalog} onChange={vi.fn()} />);
+    expect(screen.getByText("retired-name")).toBeTruthy();
+    expect(screen.getByText("localTask.tags.unresolvedLegacy")).toBeTruthy();
+    expect((screen.getByRole("combobox", { name: "localTask.fields.tags" }) as HTMLInputElement).disabled).toBe(true);
   });
 });

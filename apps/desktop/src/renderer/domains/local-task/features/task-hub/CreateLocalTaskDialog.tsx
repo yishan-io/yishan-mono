@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import {
   createAndLinkLocalTask,
   createLocalTask,
+  createLocalTaskTag,
   linkLocalTaskWorkspace,
   loadLocalTaskTagSuggestions,
 } from "../../commands/localTaskCommands";
@@ -41,13 +42,12 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
   const { t } = useTranslation();
   const projects = projectStore((state) => state.projects);
   const isMutationLoading = localTaskStore((state) => state.isMutationLoading);
-  const tagSuggestions = localTaskStore((state) => state.tagSuggestions);
+  const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [project, setProject] = useState<WorkspaceProjectRecord | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<LocalTaskPriority>("medium");
-  const [tags, setTags] = useState<string[]>([]);
-  const [isTagsDraftValid, setIsTagsDraftValid] = useState(true);
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdTask, setCreatedTask] = useState<LocalTask | null>(null);
   const [partialLinkError, setPartialLinkError] = useState<string | null>(null);
@@ -69,8 +69,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
     setTitle("");
     setDescription("");
     setPriority("medium");
-    setTags([]);
-    setIsTagsDraftValid(true);
+    setTagIds([]);
     setSubmitError(null);
     setCreatedTask(null);
     setPartialLinkError(null);
@@ -80,7 +79,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
     async (event) => {
       event.preventDefault();
       const trimmedTitle = title.trim();
-      if (!trimmedTitle || isMutationLoading || !isTagsDraftValid) return;
+      if (!trimmedTitle || isMutationLoading) return;
       setSubmitError(null);
       setPartialLinkError(null);
       try {
@@ -94,7 +93,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
           title: trimmedTitle,
           description: description.trim(),
           priority,
-          tags,
+          tagIds,
         };
         if (!workspaceId) {
           await createLocalTask(input);
@@ -114,18 +113,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
         else setSubmitError(errorMessage);
       }
     },
-    [
-      createdTask,
-      description,
-      isMutationLoading,
-      priority,
-      project?.id,
-      resetAndClose,
-      tags,
-      isTagsDraftValid,
-      title,
-      workspaceId,
-    ],
+    [createdTask, description, isMutationLoading, priority, project?.id, resetAndClose, tagIds, title, workspaceId],
   );
   const handleDialogClose = useCallback(() => {
     if (!isMutationLoading) resetAndClose();
@@ -175,10 +163,10 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
             onChange={(event) => setDescription(event.target.value)}
           />
           <LocalTaskTagsInput
-            tags={tags}
-            suggestions={tagSuggestions}
-            onChange={setTags}
-            onDraftValidityChange={setIsTagsDraftValid}
+            tagIds={tagIds}
+            tagCatalog={tagCatalog}
+            onChange={setTagIds}
+            onCreateTag={createLocalTaskTag}
             disabled={isMutationLoading || Boolean(createdTask)}
           />
           <TextField
@@ -198,7 +186,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
           <Button disabled={isMutationLoading} onClick={handleDialogClose}>
             {t("common.actions.cancel")}
           </Button>
-          <Button type="submit" variant="contained" disabled={!title.trim() || isMutationLoading || !isTagsDraftValid}>
+          <Button type="submit" variant="contained" disabled={!title.trim() || isMutationLoading}>
             {isMutationLoading ? (
               <CircularProgress size={16} color="inherit" />
             ) : createdTask ? (
