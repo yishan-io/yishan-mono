@@ -1,5 +1,5 @@
 import { Box, Chip } from "@mui/material";
-import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../../localTaskTypes";
+import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../localTaskTypes";
 import { LocalTaskTagChip } from "./LocalTaskTagChip";
 
 type LocalTaskTagsDisplayProps = {

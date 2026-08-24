@@ -14,7 +14,7 @@ import {
 import type { LocalTaskTagCatalogEntry, LocalTaskTagColor, LocalTaskTagCustomColor } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
 import { LocalTaskTagColorPicker } from "./LocalTaskTagColorPicker";
-import { LocalTaskTagSettingsRow } from "./LocalTaskTagSettingsRow";
+import { LocalTaskTagSettingsRow } from "../../ui/LocalTaskTagSettingsRow";
 const TAG_ROW_HEIGHT = 40;
 const TAG_LIST_MAX_HEIGHT = 480;
 const TAG_LIST_PAGE_SIZE = 10;

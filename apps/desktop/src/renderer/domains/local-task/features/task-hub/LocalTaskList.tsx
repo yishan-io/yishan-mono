@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowDown, LuArrowUp, LuMinus } from "react-icons/lu";
 import type { LocalTask, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
-import { LocalTaskTagsDisplay } from "../tags/LocalTaskTagsDisplay";
+import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 
 const TASK_ROW_ESTIMATE = 112;
 

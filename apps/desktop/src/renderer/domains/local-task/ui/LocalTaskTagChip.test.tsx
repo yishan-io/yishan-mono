@@ -26,7 +26,7 @@ describe("Local Task tag catalog aliases", () => {
 
 describe("getLocalTaskTagChipSx", () => {
   it("keeps chip surfaces neutral while preserving wrapped full names", () => {
-    const style = getLocalTaskTagChipSx("purple", true)(createAppTheme("light"));
+    const style = getLocalTaskTagChipSx(true)(createAppTheme("light"));
 
     expect(style).toMatchObject({ height: "auto", minHeight: 18 });
     expect(style).not.toHaveProperty("borderColor");
@@ -40,7 +40,16 @@ describe("getLocalTaskTagChipSx", () => {
     });
   });
 
-  it("renders a color dot instead of a tag icon and leaves the chip uncolored", () => {
+  it("omits minHeight when not dense", () => {
+    const style = getLocalTaskTagChipSx(false)(createAppTheme("light"));
+
+    expect(style).not.toHaveProperty("minHeight");
+    expect(style).toHaveProperty("height", "auto");
+  });
+});
+
+describe("LocalTaskTagChip", () => {
+  it("renders a color dot and label without an icon svg", () => {
     render(
       <LocalTaskTagChip
         tag="A complete tag name"
@@ -58,7 +67,7 @@ describe("getLocalTaskTagChipSx", () => {
     );
 
     const chip = screen.getByText("A complete tag name").closest(".MuiChip-root");
-    expect(chip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(chip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(chip?.querySelector("svg")).toBeNull();
     expect(chip?.getAttribute("style")).toBeNull();
   });

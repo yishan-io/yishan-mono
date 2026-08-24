@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LuEllipsis } from "react-icons/lu";
 import { unlinkLocalTaskWorkspace, updateLocalTaskLinkStatus } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
-import { LocalTaskTagsDisplay } from "../tags/LocalTaskTagsDisplay";
+import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 
 const DENSE_CHIP_SX = {
   height: 18,

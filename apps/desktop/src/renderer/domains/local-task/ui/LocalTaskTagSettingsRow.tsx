@@ -1,6 +1,6 @@
 import { Alert, Box, IconButton, TextField, Tooltip, Typography } from "@mui/material";
 import { LuTrash2 } from "react-icons/lu";
-import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import type { LocalTaskTagCatalogEntry } from "../localTaskTypes";
 import { getLocalTaskTagColorValue } from "./localTaskTagColorPresets";
 
 type LocalTaskTagSettingsRowProps = {

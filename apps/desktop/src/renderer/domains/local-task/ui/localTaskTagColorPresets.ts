@@ -1,6 +1,6 @@
 import type { Theme } from "@mui/material";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens/v1";
-import type { LocalTaskTagCatalogEntry, LocalTaskTagColor } from "../../localTaskTypes";
+import type { LocalTaskTagCatalogEntry, LocalTaskTagColor } from "../localTaskTypes";
 
 /** Returns the dedicated token color assigned to a daemon-owned tag color. */
 export function getLocalTaskTagColorValue(color: LocalTaskTagColor, theme: Theme): string {

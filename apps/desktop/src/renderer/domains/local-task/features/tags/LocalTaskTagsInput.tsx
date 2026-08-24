@@ -4,8 +4,8 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
-import { LocalTaskTagChip } from "./LocalTaskTagChip";
-import { getLocalTaskTagColorValue } from "./localTaskTagColorPresets";
+import { LocalTaskTagChip } from "../../ui/LocalTaskTagChip";
+import { getLocalTaskTagColorValue } from "../../ui/localTaskTagColorPresets";
 
 type LocalTaskTagsInputProps = {
   tagIds?: string[];

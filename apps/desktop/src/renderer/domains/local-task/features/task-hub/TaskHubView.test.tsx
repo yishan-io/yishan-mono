@@ -182,7 +182,7 @@ describe("TaskHubView", () => {
     render(<TaskHubView />);
 
     const chip = screen.getByText("backend").closest(".MuiChip-root");
-    expect(chip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(chip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(chip?.querySelector(".MuiChip-icon")).toBeNull();
   });
 
@@ -205,7 +205,7 @@ describe("TaskHubView", () => {
     const visibleChip = screen.getByText(longTag).closest(".MuiChip-root");
     const overflowChip = screen.getByText("+1").closest(".MuiChip-root");
     expect(getComputedStyle(visibleChip as Element).maxWidth).not.toBe("120px");
-    expect(visibleChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(visibleChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(overflowChip?.querySelector("svg")).toBeNull();
   });
 

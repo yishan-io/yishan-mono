@@ -1,8 +1,8 @@
-import { Box, Chip, type ChipProps, type Theme } from "@mui/material";
-import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../../localTaskTypes";
+import { Box, Chip, type ChipProps, type Theme, useTheme } from "@mui/material";
+import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../localTaskTypes";
 import { getLocalTaskTagCatalogEntry, getLocalTaskTagColorValue } from "./localTaskTagColorPresets";
 
-const localTaskTagChipLabelSx = {
+const tagChipLabelSx = {
   alignItems: "center",
   display: "flex",
   gap: 0.5,
@@ -14,6 +14,23 @@ const localTaskTagChipLabelSx = {
   wordBreak: "break-word",
 } as const;
 
+/** Builds layout styles for one Local Task tag chip. */
+export function getLocalTaskTagChipSx(dense: boolean) {
+  return (_theme: Theme) => ({
+    flexShrink: 0,
+    height: "auto",
+    maxWidth: "100%",
+    "& .MuiChip-label": tagChipLabelSx,
+    ...(dense
+      ? {
+          minHeight: 18,
+          fontSize: "0.6875rem",
+          "& .MuiChip-label": { ...tagChipLabelSx, px: 0.625 },
+        }
+      : {}),
+  });
+}
+
 type LocalTaskTagChipProps = {
   tag: string | LocalTaskTagRef;
   tagCatalog: LocalTaskTagCatalogEntry[];
@@ -24,24 +41,7 @@ type LocalTaskTagChipProps = {
   chipProps?: Omit<ChipProps, "deleteIcon" | "icon" | "label" | "onDelete" | "size" | "variant">;
 };
 
-/** Builds layout styles for one neutral Local Task tag chip. */
-export function getLocalTaskTagChipSx(_color: LocalTaskTagCatalogEntry["color"], dense: boolean) {
-  return (_theme: Theme) => ({
-    flexShrink: 0,
-    height: "auto",
-    maxWidth: "100%",
-    "& .MuiChip-label": localTaskTagChipLabelSx,
-    ...(dense
-      ? {
-          minHeight: 18,
-          fontSize: "0.6875rem",
-          "& .MuiChip-label": { ...localTaskTagChipLabelSx, px: 0.625 },
-        }
-      : {}),
-  });
-}
-
-/** Renders one Local Task tag as a neutral chip with a catalog-color dot. */
+/** Resolves tag ref/catalog/color and renders a Local Task tag chip. */
 export function LocalTaskTagChip({
   tag,
   tagCatalog,
@@ -51,6 +51,7 @@ export function LocalTaskTagChip({
   onDotMouseDown,
   chipProps,
 }: LocalTaskTagChipProps) {
+  const theme = useTheme();
   const tagID = typeof tag === "string" ? undefined : tag.id;
   const tagName = typeof tag === "string" ? tag : (tag.name ?? tag.id);
   const catalogEntry = tagID
@@ -58,6 +59,7 @@ export function LocalTaskTagChip({
     : getLocalTaskTagCatalogEntry(tagName, tagCatalog);
   const color = catalogEntry?.color ?? null;
   const customColor = catalogEntry?.customColor ?? null;
+  const dotColor = customColor ?? (color ? getLocalTaskTagColorValue(color, theme) : null);
 
   return (
     <Chip
@@ -65,26 +67,26 @@ export function LocalTaskTagChip({
       size="small"
       variant="outlined"
       label={
-        <Box component="span" sx={localTaskTagChipLabelSx}>
+        <Box component="span" sx={tagChipLabelSx}>
           <Box
             component="span"
             aria-hidden="true"
-            data-local-task-tag-dot
+            data-tag-chip-dot
             onClick={onDotClick}
             onMouseDown={onDotMouseDown}
-            sx={(theme) => ({
-              bgcolor: customColor ?? (color ? getLocalTaskTagColorValue(color, theme) : theme.palette.text.disabled),
+            sx={{
+              bgcolor: dotColor ?? "text.disabled",
               borderRadius: "50%",
               flex: "0 0 auto",
               height: dense ? 6 : 8,
               width: dense ? 6 : 8,
-            })}
+            }}
           />
           {tagName}
         </Box>
       }
       disabled={disabled || Boolean(chipProps?.disabled)}
-      sx={getLocalTaskTagChipSx(color, dense)}
+      sx={getLocalTaskTagChipSx(dense)}
     />
   );
 }

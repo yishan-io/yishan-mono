@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { LocalTaskTagCatalogEntry, LocalTaskTagColor, LocalTaskTagCustomColor } from "../../localTaskTypes";
 import { LocalTaskTagHsvPicker } from "./LocalTaskTagHsvPicker";
 import { type HsvColor, getHexFromHsv, getHsvFromHex, isValidHexColor } from "./localTaskTagColorHsv";
-import { getLocalTaskTagCatalogEntry, getLocalTaskTagColorValue } from "./localTaskTagColorPresets";
+import { getLocalTaskTagCatalogEntry, getLocalTaskTagColorValue } from "../../ui/localTaskTagColorPresets";
 
 const TAG_COLORS = ["amber", "blue", "green", "purple", "red", "teal"] as const;
 const DEFAULT_CUSTOM_COLOR: HsvColor = { hue: 0, saturation: 100, value: 100 };

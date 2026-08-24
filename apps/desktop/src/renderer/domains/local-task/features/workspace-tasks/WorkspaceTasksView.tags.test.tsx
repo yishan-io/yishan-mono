@@ -149,12 +149,12 @@ describe("WorkspaceTasksView tags", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
     const rowChip = screen.getByText("backend").closest(".MuiChip-root");
-    expect(rowChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(rowChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(rowChip?.querySelector(".MuiChip-icon")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
     const detailChip = within(screen.getByTestId("local-task-metadata")).getByText("backend").closest(".MuiChip-root");
-    expect(detailChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(detailChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(detailChip?.querySelector(".MuiChip-icon")).toBeNull();
   });
 
@@ -177,7 +177,7 @@ describe("WorkspaceTasksView tags", () => {
     const firstTagChip = screen.getByText(longTag).closest(".MuiChip-root");
     expect(getComputedStyle(firstTagChip as Element).minHeight).toBe("18px");
     expect(getComputedStyle(firstTagChip as Element).maxWidth).not.toBe("88px");
-    expect(firstTagChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(firstTagChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     const overflowChip = screen.getByText("+1").closest(".MuiChip-root");
     expect(overflowChip?.querySelector("svg")).toBeNull();
   });

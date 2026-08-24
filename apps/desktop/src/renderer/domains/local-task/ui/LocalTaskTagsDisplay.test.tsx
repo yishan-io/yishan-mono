@@ -3,7 +3,7 @@
 import { Box } from "@mui/material";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { MAX_LOCAL_TASK_TAG_CODE_POINTS } from "../../localTaskTags";
+import { MAX_LOCAL_TASK_TAG_CODE_POINTS } from "../localTaskTags";
 import { LocalTaskTagsDisplay } from "./LocalTaskTagsDisplay";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -35,7 +35,7 @@ describe("LocalTaskTagsDisplay", () => {
     expect(overflowChip).toBeTruthy();
     expect(visibleChip).toBeTruthy();
     expect(getComputedStyle(visibleChip as Element).maxWidth).not.toBe("120px");
-    expect(visibleChip?.querySelector("[data-local-task-tag-dot]")).toBeTruthy();
+    expect(visibleChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(getComputedStyle(visibleChip as Element).flexShrink).not.toBe("1");
     expect(overflowChip?.querySelector("svg")).toBeNull();
   });

@@ -9,7 +9,7 @@ import {
   getLocalTaskTagColorValue,
   isLocalTaskTagSelected,
   toggleLocalTaskTagSelection,
-} from "./localTaskTagColorPresets";
+} from "../../ui/localTaskTagColorPresets";
 
 const TAG_OPTION_HEIGHT = 36;
 type LocalTaskTagSelectorProps = {
