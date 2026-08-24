@@ -3,6 +3,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPlus } from "react-icons/lu";
+import { updateLocalTaskTagColor } from "../../commands/localTaskCommands";
 import type { LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../../localTaskTypes";
 import { LocalTaskTagChip } from "../../ui/LocalTaskTagChip";
 import { LocalTaskTagSelector } from "./LocalTaskTagSelector";
@@ -92,6 +93,14 @@ export function LocalTaskTagsInlineEditor({
     [tagCatalog, onCreateTag, onTagIdsChange],
   );
 
+  // Bridge for LocalTaskTagColorPicker: first arg is a catalog ID (resolved inside the picker).
+  const handleTagColorChange = useCallback(
+    async (tagId: string, color: string | null) => {
+      await updateLocalTaskTagColor(tagId, color);
+    },
+    [],
+  );
+
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", minWidth: 0 }}>
       {displayTagRefs.map((ref) => (
@@ -134,6 +143,7 @@ export function LocalTaskTagsInlineEditor({
           suggestions={suggestions}
           tagCatalog={tagCatalog}
           onChange={handleSelectorChange}
+          onTagColorChange={handleTagColorChange}
           disabled={isMutationLoading}
           label={t("localTask.fields.tags")}
           autoFocus
