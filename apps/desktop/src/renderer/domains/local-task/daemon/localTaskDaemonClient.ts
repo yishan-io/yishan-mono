@@ -13,6 +13,7 @@ import type {
   LocalTaskTagCatalogEntry,
   LocalTaskTagRenameResult,
   LocalTaskWorkspaceDisplay,
+  LocalTaskWorkspaceDisplayStatus,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -159,13 +160,19 @@ function parseProjectDisplay(payload: unknown): LocalTaskProjectDisplay {
 function parseWorkspaceDisplay(payload: unknown): LocalTaskWorkspaceDisplay {
   const record = requireRecord(payload, "Local Task workspace display");
   const kind = record.kind;
-  if (kind !== "managed" && kind !== "local" && kind !== "folder") {
+  const status = record.status;
+  if (
+    (kind !== "managed" && kind !== "local" && kind !== "folder") ||
+    (status !== "provisioning" && status !== "active" && status !== "closing" && status !== "closed")
+  ) {
     throw new TypeError("invalid Local Task details payload");
   }
   return {
     id: requireString(record, "id", "Local Task workspace display"),
+    projectId: requireString(record, "projectId", "Local Task workspace display"),
     name: requireString(record, "name", "Local Task workspace display"),
     kind,
+    status: status as LocalTaskWorkspaceDisplayStatus,
   };
 }
 

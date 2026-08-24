@@ -74,7 +74,7 @@ func (s *Service) resolveLinkedWorkspaces(ctx context.Context) (map[string]resol
 
 func resolvedStoredWorkspace(stored workspace.StoredWorkspace) resolvedWorkspace {
 	return resolvedWorkspace{
-		display:                 domain.WorkspaceDisplay{ID: stored.ID, Name: workspaceName(stored.Name, stored.LocalPath), Kind: workspaceDisplayKind(stored.Kind)},
+		display:                 domain.WorkspaceDisplay{ID: stored.ID, ProjectID: stored.ProjectID, Name: workspaceName(stored.Name, stored.LocalPath), Kind: workspaceDisplayKind(stored.Kind), Status: workspaceDisplayStatus(stored.Status)},
 		organizationID:          stored.OrganizationID,
 		projectID:               stored.ProjectID,
 		persistedOrganizationID: stored.OrganizationID,
@@ -112,6 +112,22 @@ func workspaceDisplayKind(kind string) domain.WorkspaceDisplayKind {
 		return domain.WorkspaceDisplayKindFolder
 	default:
 		return domain.WorkspaceDisplayKindManaged
+	}
+}
+
+// workspaceDisplayStatus translates persisted lifecycle records into the stable
+// localTask.getDetails wire contract. Unknown legacy states are closed so they
+// remain non-navigable rather than being mistaken for active workspaces.
+func workspaceDisplayStatus(status string) domain.WorkspaceDisplayStatus {
+	switch workspace.Status(status) {
+	case workspace.StatusProvisioning:
+		return domain.WorkspaceDisplayStatusProvisioning
+	case workspace.StatusActive:
+		return domain.WorkspaceDisplayStatusActive
+	case workspace.StatusClosing:
+		return domain.WorkspaceDisplayStatusClosing
+	default:
+		return domain.WorkspaceDisplayStatusClosed
 	}
 }
 

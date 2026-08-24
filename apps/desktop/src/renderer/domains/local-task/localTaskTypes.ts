@@ -46,11 +46,16 @@ export type LocalTaskProjectDisplay = {
  */
 export type LocalTaskWorkspaceDisplayKind = "managed" | "local" | "folder";
 
+/** Persisted workspace lifecycle status emitted by `localTask.getDetails`. */
+export type LocalTaskWorkspaceDisplayStatus = "provisioning" | "active" | "closing" | "closed";
+
 /** Daemon-resolved workspace display metadata for a Local Task detail view. */
 export type LocalTaskWorkspaceDisplay = {
   id: string;
+  projectId: string;
   name: string;
   kind: LocalTaskWorkspaceDisplayKind;
+  status: LocalTaskWorkspaceDisplayStatus;
 };
 
 /** Detail projection containing a task and daemon-resolved display relationships. */

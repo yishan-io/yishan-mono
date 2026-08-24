@@ -18,6 +18,8 @@ const commands = vi.hoisted(() => ({
   loadLocalTaskContext: vi.fn(async () => undefined),
   loadLocalTaskDetails: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
+  navigateToLocalTaskProject: vi.fn(),
+  navigateToLocalTaskWorkspace: vi.fn(),
   loadLocalTaskLinkCandidates: vi.fn(async () => undefined),
   refreshSelectedWorkspaceTasks: vi.fn(async () => undefined),
   linkLocalTaskWorkspace: vi.fn(),
@@ -114,7 +116,9 @@ describe("WorkspaceTasksView", () => {
         [primaryTask.id]: {
           task: primaryTask,
           project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
-          workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" }],
+          workspaces: [
+            { id: "workspace-1", projectId: "project-1", name: "Workspace One", kind: "local", status: "active" },
+          ],
         },
       },
       detailsLoadStateByTaskId: { [primaryTask.id]: "loaded" },
@@ -144,13 +148,10 @@ describe("WorkspaceTasksView", () => {
     expect(commands.selectWorkspaceLocalTask).toHaveBeenCalledWith("task-primary");
     expect(screen.getByText("Primary details")).toBeTruthy();
     expect(screen.getAllByText("Primary task")).toHaveLength(1);
-    const detailHeader = screen.getByRole("button", { name: "common.actions.back" }).parentElement;
-    expect(detailHeader).toBeTruthy();
-    if (detailHeader) {
-      expect(within(detailHeader).getByRole("button", { name: "localTask.context.openFolder" })).toBeTruthy();
-      expect(within(detailHeader).getByRole("button", { name: "localTask.actions.pauseTask" })).toBeTruthy();
-      expect(within(detailHeader).getByRole("button", { name: "localTask.actions.completeTask" })).toBeTruthy();
-    }
+    expect(screen.getByRole("button", { name: "common.actions.back" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "localTask.context.openFolder" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "localTask.actions.pauseTask" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "localTask.actions.completeTask" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Related task/ })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
@@ -177,6 +178,38 @@ describe("WorkspaceTasksView", () => {
     expect(screen.getByText("Project One")).toBeTruthy();
     expect(screen.getByTestId("local-task-project-icon")).toBeTruthy();
     expect(screen.getByText("Workspace One")).toBeTruthy();
+  });
+
+  it("navigates through commands for the project and active workspace, but not inactive workspaces", () => {
+    localTaskStore.setState({
+      detailsByTaskId: {
+        [primaryTask.id]: {
+          task: primaryTask,
+          project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+          workspaces: [
+            { id: "workspace-1", projectId: "project-1", name: "Workspace One", kind: "local", status: "active" },
+            {
+              id: "workspace-closed",
+              projectId: "project-1",
+              name: "Closed workspace",
+              kind: "managed",
+              status: "closed",
+            },
+          ],
+        },
+      },
+    });
+    render(<WorkspaceTasksView workspaceId="workspace-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
+    fireEvent.click(screen.getByTestId("local-task-project-navigation"));
+    fireEvent.click(screen.getByTestId("local-task-workspace-navigation"));
+
+    expect(commands.navigateToLocalTaskProject).toHaveBeenCalledWith("project-1");
+    expect(commands.navigateToLocalTaskWorkspace).toHaveBeenCalledWith("workspace-1", "project-1");
+    expect(screen.getByText("localTask.workspaceStatus.active")).toBeTruthy();
+    expect(screen.getByText("localTask.workspaceStatus.closed")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Closed workspace/ })).toBeNull();
   });
 
   it("keeps card menus independent from task-details navigation", () => {
@@ -424,7 +457,8 @@ describe("WorkspaceTasksView", () => {
     expect(commands.updateLocalTaskLinkStatus).toHaveBeenCalledWith("link-primary", "paused");
 
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
-    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.pauseTask" }));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.status" }));
+    fireEvent.click(screen.getByRole("option", { name: "localTask.status.paused" }));
     expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { status: "paused" });
   });
 
@@ -440,13 +474,12 @@ describe("WorkspaceTasksView", () => {
     expect(list.querySelector(":scope > div")).toBeNull();
   });
 
-  it("opens one Task Context directory link in the workspace file tree", () => {
+  it("renders Task Context metadata in the workspace detail", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
 
     expect(screen.getByText("Project One")).toBeTruthy();
     expect(screen.getByText("Workspace One")).toBeTruthy();
-    expect(screen.getByText("/contexts/task-primary")).toBeTruthy();
     expect(screen.getByText("plan.md")).toBeTruthy();
     expect(screen.getByText("notes.md")).toBeTruthy();
     expect(screen.getByText("outcome.md")).toBeTruthy();
@@ -458,8 +491,6 @@ describe("WorkspaceTasksView", () => {
     fireEvent.mouseDown(prioritySelect);
     fireEvent.click(screen.getByRole("option", { name: "localTask.priority.low" }));
     expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { priority: "low" });
-    fireEvent.click(screen.getByRole("button", { name: "localTask.context.openFolder" }));
-    expect(commands.openLocalTaskContextInFileTree).toHaveBeenCalledWith("task-primary");
   });
 
   it("renders Task Context failure and retries the selected task", () => {
@@ -471,9 +502,7 @@ describe("WorkspaceTasksView", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
     expect(screen.getByRole("alert").textContent).toContain("context failed");
-    const contextButton = screen.getByRole("button", { name: "localTask.context.openFolder" }) as HTMLButtonElement;
-    expect(contextButton.disabled).toBe(false);
-    fireEvent.click(contextButton);
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.retry" }));
     expect(commands.loadLocalTaskContext).toHaveBeenCalledWith("task-primary");
   });
 

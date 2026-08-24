@@ -20,7 +20,8 @@ import {
   loadLocalTaskContext,
   loadLocalTaskDetails,
   loadLocalTaskTagSuggestions,
-  openLocalTaskContextInFileTree,
+  navigateToLocalTaskProject,
+  navigateToLocalTaskWorkspace,
   refreshSelectedWorkspaceTasks,
   selectWorkspaceLocalTask,
   updateLocalTask,
@@ -141,18 +142,6 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
     },
     [detailTaskId],
   );
-  const handleToggleDetailStatus = useCallback(() => {
-    if (selectedTask) handleDetailStatus(selectedTask.status === "active" ? "paused" : "active");
-  }, [handleDetailStatus, selectedTask]);
-  const handleCompleteDetail = useCallback(() => handleDetailStatus("completed"), [handleDetailStatus]);
-  const handleOpenContextFolder = useCallback(() => {
-    if (!selectedTask) return;
-    if (contextByTaskId[selectedTask.id]) {
-      openLocalTaskContextInFileTree(selectedTask.id);
-      return;
-    }
-    void loadLocalTaskContext(selectedTask.id);
-  }, [contextByTaskId, selectedTask]);
   const handleRetryDetails = useCallback(() => {
     if (selectedTask) {
       void loadLocalTaskDetails(selectedTask.id).catch((loadError) =>
@@ -194,15 +183,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
       ) : null}
       {detailTaskId ? (
         <>
-          <WorkspaceTaskDetailHeader
-            task={selectedTask}
-            isMutationLoading={isMutationLoading}
-            isContextLoading={selectedTask ? contextLoadStateByTaskId[selectedTask.id] === "loading" : false}
-            onBack={handleBack}
-            onOpenContextFolder={handleOpenContextFolder}
-            onToggleStatus={handleToggleDetailStatus}
-            onComplete={handleCompleteDetail}
-          />
+          <WorkspaceTaskDetailHeader onBack={handleBack} />
           {selectedTask ? (
             <WorkspaceTaskDetails
               task={selectedTask}
@@ -218,6 +199,8 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               onPriorityChange={handleDetailPriority}
               onTagIdsChange={(tagIds) => updateLocalTask(selectedTask.id, { tagIds })}
               onCreateTag={createLocalTaskTag}
+              onProjectNavigate={navigateToLocalTaskProject}
+              onWorkspaceNavigate={navigateToLocalTaskWorkspace}
               tagCatalog={tagCatalog}
             />
           ) : taskLoadStateByTaskId[detailTaskId] === "error" ? (

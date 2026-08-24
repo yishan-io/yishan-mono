@@ -13,11 +13,23 @@ const (
 	WorkspaceDisplayKindFolder  WorkspaceDisplayKind = "folder"
 )
 
+// WorkspaceDisplayStatus is the persisted workspace lifecycle status wire contract.
+type WorkspaceDisplayStatus string
+
+const (
+	WorkspaceDisplayStatusProvisioning WorkspaceDisplayStatus = "provisioning"
+	WorkspaceDisplayStatusActive       WorkspaceDisplayStatus = "active"
+	WorkspaceDisplayStatusClosing      WorkspaceDisplayStatus = "closing"
+	WorkspaceDisplayStatusClosed       WorkspaceDisplayStatus = "closed"
+)
+
 // WorkspaceDisplay is the resolved display metadata for a currently linked workspace.
 type WorkspaceDisplay struct {
-	ID   string               `json:"id"`
-	Name string               `json:"name"`
-	Kind WorkspaceDisplayKind `json:"kind"`
+	ID        string                 `json:"id"`
+	ProjectID string                 `json:"projectId"`
+	Name      string                 `json:"name"`
+	Kind      WorkspaceDisplayKind   `json:"kind"`
+	Status    WorkspaceDisplayStatus `json:"status"`
 }
 
 // ProjectDisplay is the resolved display metadata for a linked workspace's project.

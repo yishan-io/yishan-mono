@@ -132,7 +132,15 @@ describe("localTaskStore", () => {
     const details = {
       task,
       project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
-      workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" as const }],
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-1",
+          name: "Workspace One",
+          kind: "local" as const,
+          status: "active" as const,
+        },
+      ],
     };
     localTaskStore.getState().setDetails(staleRequestId, "task-1", { ...details, project: null });
     localTaskStore.getState().setDetails(requestId, "task-1", details);

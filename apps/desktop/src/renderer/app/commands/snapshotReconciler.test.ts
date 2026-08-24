@@ -105,8 +105,11 @@ describe("reconcileWorkspaceSnapshot (moves to app/commands after P30)", () => {
       previousState: emptyPreviousState(),
     });
 
-    expect(result.workspaces[0]?.name).toBe("local");
-    expect(result.workspaces[0]?.title).toBe("local");
+    expect(result.workspaces[0]).toMatchObject({
+      name: "local",
+      title: "local",
+      kind: "local",
+    });
   });
 
   it("drops closed workspace rows (tombstones)", () => {

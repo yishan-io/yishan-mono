@@ -1,4 +1,13 @@
-import { Box, FormControl, MenuItem, Select, type SelectChangeEvent, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  ButtonBase,
+  FormControl,
+  MenuItem,
+  Select,
+  type SelectChangeEvent,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { renderProjectIcon } from "@renderer/domains/project";
 import { useCallback } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
@@ -19,7 +28,6 @@ const STATUS_OPTIONS: LocalTaskStatus[] = ["active", "paused", "completed"];
 const PRIORITY_OPTIONS: LocalTaskPriority[] = ["low", "medium", "high"];
 const COMPACT_METADATA_SELECT_SX = { typography: "caption", "& .MuiSelect-select": { py: 0.5, pl: 1, pr: 4 } };
 const SIDEBAR_SECTION_TITLE_SX = { display: "block", mb: 0.5 };
-const CONTEXT_FILES_TITLE_SX = { ...SIDEBAR_SECTION_TITLE_SX, mt: 1 };
 
 type WorkspaceTaskMetadataSidebarProps = {
   task: LocalTask;
@@ -32,6 +40,8 @@ type WorkspaceTaskMetadataSidebarProps = {
   onPriorityChange: (priority: LocalTaskPriority) => void;
   onTagIdsChange: (tagIds: string[]) => Promise<unknown>;
   onCreateTag: (name: string) => Promise<LocalTaskTagCatalogEntry>;
+  onProjectNavigate?: (projectId: string) => void;
+  onWorkspaceNavigate?: (workspaceId: string, projectId: string) => void;
   t: (key: string) => string;
 };
 
@@ -47,6 +57,8 @@ export function WorkspaceTaskMetadataSidebar({
   onPriorityChange,
   onTagIdsChange,
   onCreateTag,
+  onProjectNavigate,
+  onWorkspaceNavigate,
   t,
 }: WorkspaceTaskMetadataSidebarProps) {
   const handleStatusChange = useCallback(
@@ -59,6 +71,7 @@ export function WorkspaceTaskMetadataSidebar({
   );
   const StatusIcon = STATUS_ICONS[task.status];
   const PriorityIcon = PRIORITY_ICONS[task.priority];
+  const project = details?.project;
 
   return (
     <Stack
@@ -149,8 +162,12 @@ export function WorkspaceTaskMetadataSidebar({
         <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
           {t("localTask.fields.project")}
         </Typography>
-        {details?.project ? (
-          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
+        {project ? (
+          <ButtonBase
+            data-testid="local-task-project-navigation"
+            onClick={() => onProjectNavigate?.(project.id)}
+            sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, borderRadius: 0.5, textAlign: "left" }}
+          >
             <Box
               data-testid="local-task-project-icon"
               sx={{
@@ -160,17 +177,17 @@ export function WorkspaceTaskMetadataSidebar({
                 width: 16,
                 height: 16,
                 borderRadius: 0.5,
-                bgcolor: details.project.color,
+                bgcolor: project.color,
                 color: "common.white",
                 fontSize: 10,
                 fontWeight: 700,
                 flexShrink: 0,
               }}
             >
-              {renderProjectIcon(details.project.icon, 10)}
+              {renderProjectIcon(project.icon, 10)}
             </Box>
-            <Typography variant="body2">{details.project.name}</Typography>
-          </Box>
+            <Typography variant="body2">{project.name}</Typography>
+          </ButtonBase>
         ) : (
           <Typography variant="body2" color="text.secondary">
             {task.projectId === null && details?.workspaces.length === 0
@@ -184,7 +201,7 @@ export function WorkspaceTaskMetadataSidebar({
           {t("localTask.fields.workspace")}
         </Typography>
         {(details?.workspaces.length ?? 0) > 0 ? (
-          <Stack component="ul" spacing={0.25} sx={{ my: 0, pl: 2 }}>
+          <Stack component="ul" spacing={0.25} sx={{ my: 0, p: 0, listStyle: "none" }}>
             {details?.workspaces.map((workspaceDisplay) => {
               const WorkspaceIcon =
                 workspaceDisplay.kind === "local"
@@ -192,10 +209,33 @@ export function WorkspaceTaskMetadataSidebar({
                   : workspaceDisplay.kind === "folder"
                     ? LuFolder
                     : HiCubeTransparent;
+              const isActive = workspaceDisplay.status === "active";
               return (
                 <Box component="li" key={workspaceDisplay.id} sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                  <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
-                  <Typography variant="body2">{workspaceDisplay.name}</Typography>
+                  {isActive ? (
+                    <ButtonBase
+                      data-testid="local-task-workspace-navigation"
+                      onClick={() => onWorkspaceNavigate?.(workspaceDisplay.id, workspaceDisplay.projectId)}
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.75,
+                        borderRadius: 0.5,
+                        textAlign: "left",
+                      }}
+                    >
+                      <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
+                      <Typography variant="body2">{workspaceDisplay.name}</Typography>
+                    </ButtonBase>
+                  ) : (
+                    <>
+                      <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
+                      <Typography variant="body2">{workspaceDisplay.name}</Typography>
+                    </>
+                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    {t(`localTask.workspaceStatus.${workspaceDisplay.status}`)}
+                  </Typography>
                 </Box>
               );
             })}
@@ -215,12 +255,6 @@ export function WorkspaceTaskMetadataSidebar({
       {context ? (
         <Box>
           <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
-            {t("localTask.context.directory")}
-          </Typography>
-          <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
-            {context.directory}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={CONTEXT_FILES_TITLE_SX}>
             {t("localTask.context.files")}
           </Typography>
           <Stack component="ul" spacing={0.25} sx={{ my: 0, pl: 2 }}>

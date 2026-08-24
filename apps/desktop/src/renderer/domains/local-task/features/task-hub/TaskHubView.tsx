@@ -19,7 +19,6 @@ import { useTranslation } from "react-i18next";
 import { LuArrowLeft, LuListFilter, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw, LuSearch } from "react-icons/lu";
 import {
   loadLocalTaskTagSuggestions,
-  openLocalTaskContextInFileTree,
   refreshLocalTaskHub,
   setLocalTaskHubSearchQuery,
 } from "../../commands/localTaskCommands";
@@ -27,7 +26,6 @@ import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 import { LocalTaskHubFilters } from "./LocalTaskHubFilters";
 import { LocalTaskList } from "./LocalTaskList";
-import { TaskHubDetailHeaderActions } from "./TaskHubDetailHeaderActions";
 import { TaskHubTaskDetails } from "./TaskHubTaskDetails";
 import { useTaskHubDetailProjection } from "./useTaskHubDetailProjection";
 
@@ -99,19 +97,6 @@ export function TaskHubView() {
     [t],
   );
   const handleBackToList = useCallback(() => setSelectedTaskId(null), []);
-  const handleOpenContextFolder = useCallback(() => {
-    if (!selectedTask) return;
-    if (detailProjection.context) {
-      openLocalTaskContextInFileTree(selectedTask.id);
-      return;
-    }
-    // fire-and-forget: Local Task store owns loading and error state.
-    void detailProjection.handleRetryContext();
-  }, [detailProjection, selectedTask]);
-  const handleToggleDetailStatus = useCallback(() => {
-    if (selectedTask) detailProjection.handleDetailStatus(selectedTask.status === "active" ? "paused" : "active");
-  }, [detailProjection, selectedTask]);
-  const handleCompleteDetail = useCallback(() => detailProjection.handleDetailStatus("completed"), [detailProjection]);
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -142,15 +127,7 @@ export function TaskHubView() {
         </Box>
         <Box sx={{ flex: 1 }} />
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {selectedTask ? (
-            <TaskHubDetailHeaderActions
-              task={selectedTask}
-              detailProjection={detailProjection}
-              onOpenContextFolder={handleOpenContextFolder}
-              onToggleStatus={handleToggleDetailStatus}
-              onComplete={handleCompleteDetail}
-            />
-          ) : (
+          {selectedTask ? null : (
             <Button size="small" variant="text" color="inherit" startIcon={<LuPlus />} onClick={handleOpenCreate}>
               {t("localTask.actions.create")}
             </Button>

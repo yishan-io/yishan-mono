@@ -19,6 +19,8 @@ const commands = vi.hoisted(() => ({
   loadLocalTaskContext: vi.fn(async () => undefined),
   loadLocalTaskDetails: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
+  navigateToLocalTaskProject: vi.fn(),
+  navigateToLocalTaskWorkspace: vi.fn(),
   openLocalTaskContextInFileTree: vi.fn(),
   refreshLocalTaskHub: vi.fn(async () => undefined),
   setLocalTaskHubFilters: vi.fn(async () => undefined),
@@ -92,8 +94,8 @@ describe("TaskHubView", () => {
           task,
           project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
           workspaces: [
-            { id: "workspace-1", name: "Workspace One", kind: "local" },
-            { id: "workspace-2", name: "Workspace Two", kind: "managed" },
+            { id: "workspace-1", projectId: "project-1", name: "Workspace One", kind: "local", status: "active" },
+            { id: "workspace-2", projectId: "project-1", name: "Workspace Two", kind: "managed", status: "closed" },
           ],
         },
       },
@@ -268,10 +270,9 @@ describe("TaskHubView", () => {
     expect(screen.queryByRole("button", { name: "localTask.actions.create" })).toBeNull();
     const detailTitleBar = screen.getByTestId("local-task-hub-title");
     expect(screen.getByRole("button", { name: "common.actions.back" }).closest("[data-testid]")).toBe(detailTitleBar);
-    expect(screen.getByRole("button", { name: "localTask.context.openFolder" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.pauseTask" }));
-    expect(commands.updateLocalTask).toHaveBeenCalledWith("task-1", { status: "paused" });
-    expect(screen.getByRole("button", { name: "localTask.actions.completeTask" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "localTask.context.openFolder" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "localTask.actions.pauseTask" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "localTask.actions.completeTask" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
     expect(screen.getByRole("textbox", { name: "localTask.search.label" })).toBeTruthy();

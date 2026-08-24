@@ -94,12 +94,9 @@ export function LocalTaskTagsInlineEditor({
   );
 
   // Bridge for LocalTaskTagColorPicker: first arg is a catalog ID (resolved inside the picker).
-  const handleTagColorChange = useCallback(
-    async (tagId: string, color: string | null) => {
-      await updateLocalTaskTagColor(tagId, color);
-    },
-    [],
-  );
+  const handleTagColorChange = useCallback(async (tagId: string, color: string | null) => {
+    await updateLocalTaskTagColor(tagId, color);
+  }, []);
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", minWidth: 0 }}>

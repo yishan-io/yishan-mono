@@ -154,9 +154,21 @@ describe("WorkspaceTaskDetails", () => {
           task,
           project: null,
           workspaces: [
-            { id: "workspace-local", name: "Local workspace", kind: "local" },
-            { id: "workspace-managed", name: "Managed workspace", kind: "managed" },
-            { id: "workspace-folder", name: "Folder workspace", kind: "folder" },
+            { id: "workspace-local", projectId: "project-1", name: "Local workspace", kind: "local", status: "active" },
+            {
+              id: "workspace-managed",
+              projectId: "project-1",
+              name: "Managed workspace",
+              kind: "managed",
+              status: "active",
+            },
+            {
+              id: "workspace-folder",
+              projectId: "project-1",
+              name: "Folder workspace",
+              kind: "folder",
+              status: "closed",
+            },
           ],
         }}
         isMutationLoading={false}

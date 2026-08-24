@@ -4,6 +4,8 @@ export {
   createLocalTaskTag,
   deleteLocalTaskTag,
   linkLocalTaskWorkspace,
+  navigateToLocalTaskProject,
+  navigateToLocalTaskWorkspace,
   loadLocalTask,
   loadLocalTaskContext,
   loadLocalTaskDetails,

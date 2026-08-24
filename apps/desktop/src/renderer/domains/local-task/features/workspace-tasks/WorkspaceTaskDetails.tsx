@@ -28,6 +28,8 @@ type WorkspaceTaskDetailsProps = {
   onPriorityChange: (priority: LocalTaskPriority) => void;
   onTagIdsChange: (tagIds: string[]) => Promise<unknown>;
   onCreateTag: (name: string) => Promise<LocalTaskTagCatalogEntry>;
+  onProjectNavigate?: (projectId: string) => void;
+  onWorkspaceNavigate?: (workspaceId: string, projectId: string) => void;
   onRetryDetails?: () => void;
   tagCatalog?: LocalTaskTagCatalogEntry[];
 };
@@ -47,6 +49,8 @@ export function WorkspaceTaskDetails({
   onPriorityChange,
   onTagIdsChange,
   onCreateTag,
+  onProjectNavigate,
+  onWorkspaceNavigate,
   onRetryDetails,
   tagCatalog = [],
 }: WorkspaceTaskDetailsProps) {
@@ -111,6 +115,8 @@ export function WorkspaceTaskDetails({
           onPriorityChange={onPriorityChange}
           onTagIdsChange={onTagIdsChange}
           onCreateTag={onCreateTag}
+          onProjectNavigate={onProjectNavigate}
+          onWorkspaceNavigate={onWorkspaceNavigate}
           t={t}
         />
       </Box>

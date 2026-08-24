@@ -138,6 +138,12 @@
       },
       "customColorPlane": "饱和度和明度",
       "customColorHue": "色相"
+    },
+    "workspaceStatus": {
+      "provisioning": "正在准备",
+      "active": "活跃",
+      "closing": "正在关闭",
+      "closed": "已关闭"
     }
   }
 }

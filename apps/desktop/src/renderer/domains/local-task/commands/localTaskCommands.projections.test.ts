@@ -139,7 +139,15 @@ describe("localTaskCommands projections and detail loading", () => {
     const details = {
       task,
       project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
-      workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" as const }],
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-1",
+          name: "Workspace One",
+          kind: "local" as const,
+          status: "active" as const,
+        },
+      ],
     };
     vi.mocked(daemon.localTaskClient.getDetails).mockResolvedValue(details);
 
@@ -153,7 +161,15 @@ describe("localTaskCommands projections and detail loading", () => {
     const details = { task, project: null, workspaces: [] };
     const linkedDetails = {
       ...details,
-      workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" as const }],
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-1",
+          name: "Workspace One",
+          kind: "local" as const,
+          status: "active" as const,
+        },
+      ],
     };
     vi.mocked(daemon.localTaskClient.getDetails)
       .mockResolvedValueOnce(details)
@@ -180,7 +196,15 @@ describe("localTaskCommands projections and detail loading", () => {
     const freshDetails = {
       task,
       project: null,
-      workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" as const }],
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-1",
+          name: "Workspace One",
+          kind: "local" as const,
+          status: "active" as const,
+        },
+      ],
     };
     localTaskStore.setState({
       detailsByTaskId: { [task.id]: { task, project: null, workspaces: [] } },
@@ -214,7 +238,15 @@ describe("localTaskCommands projections and detail loading", () => {
     const refreshedDetails = {
       task,
       project: null,
-      workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" as const }],
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-1",
+          name: "Workspace One",
+          kind: "local" as const,
+          status: "active" as const,
+        },
+      ],
     };
     vi.mocked(daemon.localTaskClient.getDetails)
       .mockReturnValueOnce(staleDetails.promise)

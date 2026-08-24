@@ -138,6 +138,12 @@
       },
       "customColorPlane": "Saturation and value",
       "customColorHue": "Hue"
+    },
+    "workspaceStatus": {
+      "provisioning": "Provisioning",
+      "active": "Active",
+      "closing": "Closing",
+      "closed": "Closed"
     }
   }
 }

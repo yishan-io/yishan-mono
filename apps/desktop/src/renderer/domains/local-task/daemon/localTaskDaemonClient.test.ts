@@ -71,7 +71,9 @@ describe("DaemonLocalTaskClient", () => {
         return {
           task: taskPayload,
           project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
-          workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" }],
+          workspaces: [
+            { id: "workspace-1", projectId: "project-1", name: "Workspace One", kind: "local", status: "active" },
+          ],
         };
       }
       if (method === "localTask.getContextDetails") {
@@ -273,9 +275,9 @@ it("strictly parses the documented Local Task detail workspace-kind wire contrac
     task: taskPayload,
     project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
     workspaces: [
-      { id: "workspace-managed", name: "Managed workspace", kind: "managed" },
-      { id: "workspace-local", name: "Primary checkout", kind: "local" },
-      { id: "workspace-folder", name: "Folder workspace", kind: "folder" },
+      { id: "workspace-managed", projectId: "project-1", name: "Managed workspace", kind: "managed", status: "active" },
+      { id: "workspace-local", projectId: "project-1", name: "Primary checkout", kind: "local", status: "active" },
+      { id: "workspace-folder", projectId: "project-1", name: "Folder workspace", kind: "folder", status: "closed" },
     ],
   };
   const client = new DaemonLocalTaskClient(vi.fn(async () => projection));
@@ -285,6 +287,13 @@ it("strictly parses the documented Local Task detail workspace-kind wire contrac
     await expect(
       new DaemonLocalTaskClient(
         vi.fn(async () => ({ ...projection, workspaces: [{ ...projection.workspaces[0], kind }] })),
+      ).getDetails("task-1"),
+    ).rejects.toThrow("invalid Local Task details payload");
+  }
+  for (const status of ["paused", "completed", "unknown", 1]) {
+    await expect(
+      new DaemonLocalTaskClient(
+        vi.fn(async () => ({ ...projection, workspaces: [{ ...projection.workspaces[0], status }] })),
       ).getDetails("task-1"),
     ).rejects.toThrow("invalid Local Task details payload");
   }

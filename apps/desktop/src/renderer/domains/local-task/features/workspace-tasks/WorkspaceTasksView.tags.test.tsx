@@ -17,6 +17,8 @@ const commands = vi.hoisted(() => ({
   loadLocalTaskContext: vi.fn(async () => undefined),
   loadLocalTaskDetails: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
+  navigateToLocalTaskProject: vi.fn(),
+  navigateToLocalTaskWorkspace: vi.fn(),
   loadLocalTaskLinkCandidates: vi.fn(async () => undefined),
   refreshSelectedWorkspaceTasks: vi.fn(async () => undefined),
   linkLocalTaskWorkspace: vi.fn(),

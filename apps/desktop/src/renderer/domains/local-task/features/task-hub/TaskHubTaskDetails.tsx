@@ -1,4 +1,5 @@
 import { Alert, Box } from "@mui/material";
+import { navigateToLocalTaskProject, navigateToLocalTaskWorkspace } from "../../commands/localTaskCommands";
 import type { LocalTask } from "../../localTaskTypes";
 import { WorkspaceTaskDetails } from "../workspace-tasks/WorkspaceTaskDetails";
 import type { TaskHubDetailProjection } from "./useTaskHubDetailProjection";
@@ -31,6 +32,8 @@ export function TaskHubTaskDetails({ task, detailProjection }: TaskHubTaskDetail
         onPriorityChange={detailProjection.handleDetailPriority}
         onTagIdsChange={detailProjection.handleDetailTagIdsChange}
         onCreateTag={detailProjection.createLocalTaskTag}
+        onProjectNavigate={navigateToLocalTaskProject}
+        onWorkspaceNavigate={navigateToLocalTaskWorkspace}
         tagCatalog={detailProjection.tagCatalog}
       />
     </Box>

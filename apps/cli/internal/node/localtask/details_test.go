@@ -51,7 +51,7 @@ func TestService_GetDetailsReturnsResolvedDisplays(t *testing.T) {
 	}
 	details := value.(domain.Details)
 	if details.Task.ID != task.ID || len(details.Workspaces) != 1 || details.Workspaces[0] != (domain.WorkspaceDisplay{
-		ID: "workspace-1", Name: "Feature branch", Kind: domain.WorkspaceDisplayKindManaged,
+		ID: "workspace-1", ProjectID: "project-1", Name: "Feature branch", Kind: domain.WorkspaceDisplayKindManaged, Status: domain.WorkspaceDisplayStatusActive,
 	}) || details.Project == nil || *details.Project != resolver.project || resolver.calls != 1 {
 		t.Fatalf("details = %#v, resolver calls = %d", details, resolver.calls)
 	}
@@ -201,5 +201,26 @@ func TestService_GetDetailsExcludesUnlinkedWorkspaceAndProjectDisplay(t *testing
 	details := value.(domain.Details)
 	if len(details.Workspaces) != 0 || details.Project != nil || resolver.calls != 0 {
 		t.Fatalf("details = %#v, resolver calls = %d", details, resolver.calls)
+	}
+}
+
+func TestWorkspaceDisplayStatus_MapsPersistedLifecycleToDetailWireContract(t *testing.T) {
+	testCases := []struct {
+		name   string
+		status string
+		want   domain.WorkspaceDisplayStatus
+	}{
+		{name: "provisioning", status: "provisioning", want: domain.WorkspaceDisplayStatusProvisioning},
+		{name: "active", status: "active", want: domain.WorkspaceDisplayStatusActive},
+		{name: "closing", status: "closing", want: domain.WorkspaceDisplayStatusClosing},
+		{name: "closed", status: "closed", want: domain.WorkspaceDisplayStatusClosed},
+		{name: "unknown legacy status is closed", status: "legacy", want: domain.WorkspaceDisplayStatusClosed},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := workspaceDisplayStatus(testCase.status); got != testCase.want {
+				t.Fatalf("workspaceDisplayStatus(%q) = %q, want %q", testCase.status, got, testCase.want)
+			}
+		})
 	}
 }

@@ -1,4 +1,5 @@
-import { selectFolderInFileTree } from "@renderer/domains/workspace";
+import { activateWorkspace } from "@renderer/domains/workbench";
+import { resolveLocalWorkspaceIdForProject, selectFolderInFileTree, workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { localTaskClient } from "../daemon/localTaskDaemonClient";
 import type {
@@ -413,4 +414,15 @@ export function openLocalTaskContextInFileTree(taskId: string): void {
 /** Selects which workspace-linked Local Task is shown in the details panel. */
 export function selectWorkspaceLocalTask(taskId: string): void {
   localTaskStore.getState().selectWorkspaceTask(taskId);
+}
+
+/** Activates an active workspace shown by a Local Task detail projection. */
+export function navigateToLocalTaskWorkspace(workspaceId: string, projectId: string): void {
+  activateWorkspace({ workspaceId, projectId });
+}
+
+/** Activates a project's hydrated local primary workspace from Local Task details. */
+export function navigateToLocalTaskProject(projectId: string): void {
+  const workspaceId = resolveLocalWorkspaceIdForProject(workspaceStore.getState().workspaces, projectId);
+  if (workspaceId) activateWorkspace({ workspaceId, projectId });
 }
